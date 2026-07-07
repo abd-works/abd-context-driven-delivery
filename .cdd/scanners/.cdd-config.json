@@ -4,6 +4,7 @@
       "capability": "cdd-capability",
       "commands": [
         "deploy",
+        "inject",
         "clean"
       ]
     }
