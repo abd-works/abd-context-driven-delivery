@@ -1,0 +1,68 @@
+{
+  "epics": [
+    {
+      "name": "Move money",
+      "sequentialOrder": 1,
+      "estimate": "approx 22-27 total stories",
+      "subEpics": [
+        {
+          "name": "Compose transfer",
+          "sequentialOrder": 1,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Draft transfer details",
+              "users": [
+                "Treasurer"
+              ],
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": []
+            }
+          ],
+          "estimate": "approx 2-3 more stories (various transfer detail entry and validation)"
+        },
+        {
+          "name": "Approve transfer",
+          "sequentialOrder": 2,
+          "subEpics": [],
+          "stories": [],
+          "estimate": "approx 4-6 more stories (review, approve, reject, etc)"
+        },
+        {
+          "name": "Route transfer",
+          "sequentialOrder": 3,
+          "subEpics": [],
+          "stories": [
+            {
+              "name": "Route transfer before cutoff",
+              "users": [
+                "Treasurer"
+              ],
+              "sequentialOrder": 1,
+              "storyType": "user",
+              "scenarios": []
+            },
+            {
+              "name": "Route transfer after cutoff",
+              "users": [
+                "Treasurer"
+              ],
+              "sequentialOrder": 2,
+              "storyType": "user",
+              "scenarios": []
+            }
+          ],
+          "estimate": "approx 2-3 more stories (eg fraud routing)"
+        },
+        {
+          "name": "Track transfer",
+          "sequentialOrder": 4,
+          "subEpics": [],
+          "stories": [],
+          "estimate": "approx 2-3 more stories (view transfer statuses, pending, settled, rejected, etc)"
+        }
+      ]
+    }
+  ]
+}

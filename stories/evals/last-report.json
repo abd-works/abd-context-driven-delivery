@@ -1,0 +1,19 @@
+{
+  "started_at": "2026-07-05T15:32:37.674923+00:00",
+  "mode": "coarse",
+  "rule_results": [],
+  "ai_judge_results": [],
+  "coarse_results": [
+    {
+      "case": "04-specification",
+      "agent_exit": 0,
+      "scanners_clean": true,
+      "missing_expected_files": [],
+      "extra_actual_files": [],
+      "violations": [],
+      "elapsed_seconds": 2636.5535329999984,
+      "ai_judge_verdict": "ERROR",
+      "ai_judge_reason": "AI judge exited 1 with no parseable verdict.\nstdout='ts instructions.\\n\\n\\nChecking for additional artifacts (story-graph.json, draw.io) not included in the prompt.\\n\\n\\nChecking for additional artifacts (story-graph.json, draw.io) not included in the prompt.'\nstderr='RetriableError: [unavailable] getaddrinfo ENOTFOUND agentn.global.api5.cursor.sh'"
+    }
+  ]
+}

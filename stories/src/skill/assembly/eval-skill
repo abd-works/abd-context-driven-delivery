@@ -1,0 +1,10 @@
+Given a skill 
+    that can interrogate through grill-me questions
+    defined through concepts
+    and specific rule
+
+    and the following context 
+    with the follwing artifacts already generated
+when the skill is invoked through ai chat with a prompt
+then the ai chat invokes grill-me 
+that

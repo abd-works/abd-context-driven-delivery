@@ -1,0 +1,9 @@
+"""enforce — validate artifacts against rules.
+
+Delegates entirely to enforce.scanners.scanner.
+"""
+from enforce.scanners.scanners import main
+import sys
+
+if __name__ == "__main__":
+    sys.exit(main())

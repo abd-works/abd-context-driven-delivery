@@ -1,0 +1,8 @@
+Eval run  mode=coarse  at 2026-07-05T15:32:37.674923+00:00
+
+
+Coarse cases:  0/1 passed
+  FAIL  04-specification  agent=exit0  missing=0  violations=0  judge=ERROR
+    judge: AI judge exited 1 with no parseable verdict.
+stdout='ts instructions.\n\n\nChecking for additional artifacts (story-graph.json, draw.io) not included in the prompt.\n\n\nChecking for additional artifacts (story-graph.json, draw.io) not included in the prompt.'
+stderr='RetriableError: [unavailable] getaddrinfo ENOTFOUND agentn.global.api5.cursor.sh'

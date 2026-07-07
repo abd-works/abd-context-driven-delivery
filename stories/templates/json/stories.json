@@ -1,0 +1,76 @@
+{
+  "product": "<Product / Feature Name>",
+  "sources": ["<source file 1>", "<source file 2>"],
+  "scope": {
+    "in": "<what is included>",
+    "out": "<what is explicitly excluded>"
+  },
+  "epics": [
+    {
+      "name": "<Epic Verb-Noun>",
+      "sequential_order": 1,
+      "domain_concepts": ["<concept>"],
+      "sub_epics": [
+        {
+          "name": "<Sub-Epic Verb-Noun>",
+          "sequential_order": 1,
+          "stories": [
+            {
+              "name": "<Story Verb-Noun>",
+              "actor": "<Actor>",
+              "type": "user",
+              "domain_terms": ["<term 1>", "<term 2>"],
+              "evidence": [
+                { "source": "<document / system>", "location": "<page / section>" }
+              ],
+              "scenarios": [
+                {
+                  "name": "<main-flow scenario name>",
+                  "kind": "main-flow",
+                  "steps": [
+                    { "given": "<precondition>" },
+                    { "when":  "the **<actor>** <triggering action>" },
+                    { "then":  "the **<term>** <observable outcome>" },
+                    { "and":   "<additional outcome>" }
+                  ]
+                },
+                {
+                  "name": "<negative scenario name>",
+                  "kind": "inline",
+                  "steps": [
+                    { "given": "<alternate precondition>" },
+                    { "when":  "<alternate action>" },
+                    { "then":  "<negative outcome>" },
+                    { "but":   "<state that does NOT change>" }
+                  ]
+                },
+                {
+                  "name": "<outline scenario name>",
+                  "kind": "outline",
+                  "examples": [
+                    { "scenario": "Scenario 1", "param_a": "<value>", "expected_result": "<outcome 1>" },
+                    { "scenario": "Scenario 2", "param_a": "<value>", "expected_result": "<outcome 2>" }
+                  ],
+                  "steps": [
+                    { "given": "<shared Given or explicit here>" },
+                    { "when":  "the **<actor>** <action with {param_a}>" },
+                    { "then":  "result: {expected_result}" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "thin_slices": [
+    {
+      "increment": 1,
+      "outcome": "<Marketable outcome>",
+      "slicing_notes": "<manual steps, stubs, reduced NFRs, slicing dimension>",
+      "stories": ["<Story Verb-Noun>", "<Story Verb-Noun>"]
+    }
+  ],
+  "context_gaps": []
+}
