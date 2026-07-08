@@ -1,0 +1,10 @@
+---
+description: Project conventions — section refs to read before writing docs or surfaces
+alwaysApply: true
+---
+
+Follow project conventions:
+
+read @conventions/conventions § No readme unless asked
+read @conventions/conventions § Describe what it does
+read @conventions/conventions § No section divider comments

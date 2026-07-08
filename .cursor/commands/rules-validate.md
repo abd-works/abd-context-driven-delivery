@@ -1,5 +1,5 @@
 # rules — Validate
 
-Check an artifact against one or all rules.
+Validate an artifact against one or all rules.
 
-read `@rules` §Validate
+read in full → `.cdd/rules/rules.md` §Validate

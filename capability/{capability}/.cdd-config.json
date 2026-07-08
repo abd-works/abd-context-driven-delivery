@@ -1,6 +1,1 @@
-{
-  "injectable": [],
-  "injected": [
-    { "capability": "cdd-capability", "commands": ["deploy", "clean", "create", "inject"] }
-  ]
-}
+{}
