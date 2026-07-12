@@ -1,0 +1,13 @@
+Running the exact command in the workspace.
+Running the exact command in the workspace.
+The command is still running — likely waiting for stdin. Checking its output.
+The command is still running — likely waiting for stdin. Checking its output.
+The command is running:
+
+```bash
+python -m tools run -
+```
+
+It’s still active in the workspace and hasn’t produced output yet. The `-` argument tells it to read from stdin, so it’s likely waiting for input.
+
+If you want it to do something specific, send what should go on stdin (a file path, prompt text, etc.) and I can pipe that in or rerun it with the right input.

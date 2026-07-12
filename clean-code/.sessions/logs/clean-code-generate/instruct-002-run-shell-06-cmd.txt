@@ -1,0 +1,1 @@
+cd C:\dev\abd-context-driven-delivery; python -c "from generator.generator_support import load_clean_code, invoke_tool; cc = load_clean_code(format_name='python'); report = invoke_tool(cc, 'scan', {'paths': ['packages/cart.py']}); import json; print(json.dumps(report, indent=2) if isinstance(report, dict) else report)"

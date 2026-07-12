@@ -1,0 +1,58 @@
+Your General Lee is ready — engine running.
+
+```yaml
+ok: true
+toolset: tools.example.car:Car
+tool: start
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee — a rebellious, high-spirited orange 1969 Dodge Charger
+    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
+    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
+    every Hazzard adventure.
+  running: true
+```
+
+**General Lee** — 1969 Dodge Charger, orange with the flag on the roof. Rebellious, high-spirited, fiercely loyal country boy who lives for creek jumps, outrunning Sheriff Rosco, and riding with Bo and Luke through every Hazzard adventure.
+
+Want to take him for a spin? You can `drive`, `accelerate`, or have him `speak` in character.Your General Lee is ready — engine running.
+
+```yaml
+ok: true
+toolset: tools.example.car:Car
+tool: start
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee — a rebellious, high-spirited orange 1969 Dodge Charger
+    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
+    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
+    every Hazzard adventure.
+  running: true
+```
+
+**General Lee** — 1969 Dodge Charger, orange with the flag on the roof. Rebellious, high-spirited, fiercely loyal country boy who lives for creek jumps, outrunning Sheriff Rosco, and riding with Bo and Luke through every Hazzard adventure.
+
+Want to take him for a spin? You can `drive`, `accelerate`, or have him `speak` in character.Your General Lee is ready — engine running.
+
+```yaml
+ok: true
+toolset: tools.example.car:Car
+tool: start
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee — a rebellious, high-spirited orange 1969 Dodge Charger
+    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
+    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
+    every Hazzard adventure.
+  running: true
+```
+
+**General Lee** — 1969 Dodge Charger, orange with the flag on the roof. Rebellious, high-spirited, fiercely loyal country boy who lives for creek jumps, outrunning Sheriff Rosco, and riding with Bo and Luke through every Hazzard adventure.
+
+Want to take him for a spin? You can `drive`, `accelerate`, or have him `speak` in character.

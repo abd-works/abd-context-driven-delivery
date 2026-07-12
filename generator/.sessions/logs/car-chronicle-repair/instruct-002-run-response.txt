@@ -1,0 +1,34 @@
+`python -m tools run -` completed successfully (`ok: true`, `action: generate`).
+
+The CLI returned generate instructions for CarChronicle:
+
+- Apply concept rules: `use-driving-voice`, `record-mileage`, `name-the-route`
+- Match the rainy commute and weekend lake run examples
+- Fill the driving log template (date, route, miles, odometer, narrative)
+- Run **validate** when done, and re-validate until it passes
+
+`tools: []` — no tool calls are suggested before writing the artifact.
+
+Note: `-` reads the request from stdin, so I piped the `invoke-new` generate request for `CarChronicle`. Without that, the command blocks waiting for input.`python -m tools run -` completed successfully (`ok: true`, `action: generate`).
+
+The CLI returned generate instructions for CarChronicle:
+
+- Apply concept rules: `use-driving-voice`, `record-mileage`, `name-the-route`
+- Match the rainy commute and weekend lake run examples
+- Fill the driving log template (date, route, miles, odometer, narrative)
+- Run **validate** when done, and re-validate until it passes
+
+`tools: []` — no tool calls are suggested before writing the artifact.
+
+Note: `-` reads the request from stdin, so I piped the `invoke-new` generate request for `CarChronicle`. Without that, the command blocks waiting for input.`python -m tools run -` completed successfully (`ok: true`, `action: generate`).
+
+The CLI returned generate instructions for CarChronicle:
+
+- Apply concept rules: `use-driving-voice`, `record-mileage`, `name-the-route`
+- Match the rainy commute and weekend lake run examples
+- Fill the driving log template (date, route, miles, odometer, narrative)
+- Run **validate** when done, and re-validate until it passes
+
+`tools: []` — no tool calls are suggested before writing the artifact.
+
+Note: `-` reads the request from stdin, so I piped the `invoke-new` generate request for `CarChronicle`. Without that, the command blocks waiting for input.

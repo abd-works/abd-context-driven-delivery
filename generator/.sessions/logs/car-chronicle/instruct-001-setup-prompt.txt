@@ -1,0 +1,1 @@
+Read generator/example/car_chronicle.py from the workspace.

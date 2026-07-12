@@ -1,0 +1,37 @@
+Reading `clean-code/clean-code.py`.
+Reading `clean-code/clean-code.py`.
+Here is the contents of `clean-code/clean-code.py`:
+
+```1:4:clean-code/clean-code.py
+# @toolset-manifest python -m tools manifest clean_code.clean_code:CleanCode
+from clean_code.clean_code import CleanCode
+
+__all__ = ["CleanCode"]
+```
+
+It’s a thin entry point: it re-exports `CleanCode` from `clean_code.clean_code` and declares that as the public API via `__all__`. The toolset manifest comment points at `clean_code.clean_code:CleanCode` as the manifest target.
+
+If you want the full `CleanCode` implementation, I can read `clean_code/clean_code.py` next.Here is the contents of `clean-code/clean-code.py`:
+
+```1:4:clean-code/clean-code.py
+# @toolset-manifest python -m tools manifest clean_code.clean_code:CleanCode
+from clean_code.clean_code import CleanCode
+
+__all__ = ["CleanCode"]
+```
+
+It’s a thin entry point: it re-exports `CleanCode` from `clean_code.clean_code` and declares that as the public API via `__all__`. The toolset manifest comment points at `clean_code.clean_code:CleanCode` as the manifest target.
+
+If you want the full `CleanCode` implementation, I can read `clean_code/clean_code.py` next.Reading `clean-code/clean-code.py`.
+Here is the contents of `clean-code/clean-code.py`:
+
+```1:4:clean-code/clean-code.py
+# @toolset-manifest python -m tools manifest clean_code.clean_code:CleanCode
+from clean_code.clean_code import CleanCode
+
+__all__ = ["CleanCode"]
+```
+
+It’s a thin entry point: it re-exports `CleanCode` from `clean_code.clean_code` and declares that as the public API via `__all__`. The toolset manifest comment points at `clean_code.clean_code:CleanCode` as the manifest target.
+
+If you want the full `CleanCode` implementation, I can read `clean_code/clean_code.py` next.

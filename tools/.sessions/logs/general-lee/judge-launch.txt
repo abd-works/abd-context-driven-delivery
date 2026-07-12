@@ -1,0 +1,1 @@
+Read tools/.sessions/logs/general-lee/judge-prompt.txt and follow it exactly. Reply with only one JSON line as specified in that file.

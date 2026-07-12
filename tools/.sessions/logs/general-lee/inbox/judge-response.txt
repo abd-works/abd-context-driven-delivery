@@ -1,0 +1,1 @@
+{"verdict":"PASS","reason":"The output explicitly describes General Lee as rebellious, high-spirited, and a loyal country boy, matching all three rubric requirements."}

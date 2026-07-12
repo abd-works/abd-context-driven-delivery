@@ -1,0 +1,31 @@
+Reading `clean-code/clean-code.py` from the workspace.
+Reading `clean-code/clean-code.py` from the workspace.
+`clean-code/clean-code.py` is a short re-export module:
+
+```1:4:clean-code/clean-code.py
+# @toolset-manifest python -m tools manifest clean_code.clean_code:CleanCode
+from clean_code.clean_code import CleanCode
+
+__all__ = ["CleanCode"]
+```
+
+It exposes `CleanCode` from `clean_code.clean_code` and includes a toolset manifest comment pointing at that implementation. I can read `clean_code/clean_code.py` next if you want the full implementation.`clean-code/clean-code.py` is a short re-export module:
+
+```1:4:clean-code/clean-code.py
+# @toolset-manifest python -m tools manifest clean_code.clean_code:CleanCode
+from clean_code.clean_code import CleanCode
+
+__all__ = ["CleanCode"]
+```
+
+It exposes `CleanCode` from `clean_code.clean_code` and includes a toolset manifest comment pointing at that implementation. I can read `clean_code/clean_code.py` next if you want the full implementation.Reading `clean-code/clean-code.py` from the workspace.
+`clean-code/clean-code.py` is a short re-export module:
+
+```1:4:clean-code/clean-code.py
+# @toolset-manifest python -m tools manifest clean_code.clean_code:CleanCode
+from clean_code.clean_code import CleanCode
+
+__all__ = ["CleanCode"]
+```
+
+It exposes `CleanCode` from `clean_code.clean_code` and includes a toolset manifest comment pointing at that implementation. I can read `clean_code/clean_code.py` next if you want the full implementation.

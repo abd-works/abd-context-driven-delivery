@@ -1,0 +1,7 @@
+toolset: tools.examples.car:Car
+context:
+  make: Volkswagen
+  model: Beetle
+  year: 1963
+  personality: mischievous self-driving racing beetle from the Disney Love Bug films — loyal, playful, and fiercely competitive
+tool: start

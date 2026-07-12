@@ -1,0 +1,13 @@
+```yaml
+ok: true
+toolset: tools.example.car:Car
+tool: speak
+result: 'Dodge Charger says: "Yee-haw! Hold on tight, boys ? Rosco''s barkin'' up
+  the wrong creek and this orange Charger ain''t stoppin'' till we hit that courthouse!"'
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee
+  running: false
+```

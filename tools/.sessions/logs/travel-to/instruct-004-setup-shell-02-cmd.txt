@@ -1,0 +1,11 @@
+@'
+toolset: tools.example.car:Car
+context:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee
+tool: speak
+arguments:
+  line: "Yee-haw! Hold on tight, boys — Rosco's barkin' up the wrong creek and this orange Charger ain't stoppin' till we hit that courthouse!"
+'@ | python -m tools run -

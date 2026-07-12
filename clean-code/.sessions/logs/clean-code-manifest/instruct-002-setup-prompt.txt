@@ -1,0 +1,1 @@
+Run the manifest command from the @toolset-manifest comment at the top of clean-code/clean-code.py. Show the manifest output.

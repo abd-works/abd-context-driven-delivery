@@ -1,0 +1,193 @@
+Manifest output from `python -m tools manifest clean_code.clean_code:CleanCode`:
+
+```yaml
+---
+type: cleancode
+capabilities:
+- tool
+- agent
+signature:
+  instructions: § Instructions
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest clean_code.clean_code:CleanCode
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      format: str
+  scan:
+    kind: tool
+    instructions: § Scan
+    parameters:
+      paths: list[str]
+    returns: str
+  scanners:
+    kind: tool
+    instructions: Return the registered scanner rule catalog.
+    returns: str
+  generate:
+    kind: action
+    tools:
+    - concepts
+    - examples
+    - formats
+    - template
+    - generate_output
+    instructions: § Generate
+    returns: str
+  satisfy:
+    kind: action
+    tools:
+    - concepts
+    - template
+    instructions: § Satisfy
+    returns: str
+  validate:
+    kind: action
+    tools:
+    - concepts
+    - scan
+    instructions: § Validate
+    returns: str
+  format:
+    kind: resource
+    type: str
+---
+```
+
+The CleanCode toolset exposes constructor `new(format)`, tools `scan` and `scanners`, and actions `generate`, `satisfy`, and `validate`, plus meta operations `read_manifest` and `invoke`.Manifest output from `python -m tools manifest clean_code.clean_code:CleanCode`:
+
+```yaml
+---
+type: cleancode
+capabilities:
+- tool
+- agent
+signature:
+  instructions: § Instructions
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest clean_code.clean_code:CleanCode
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      format: str
+  scan:
+    kind: tool
+    instructions: § Scan
+    parameters:
+      paths: list[str]
+    returns: str
+  scanners:
+    kind: tool
+    instructions: Return the registered scanner rule catalog.
+    returns: str
+  generate:
+    kind: action
+    tools:
+    - concepts
+    - examples
+    - formats
+    - template
+    - generate_output
+    instructions: § Generate
+    returns: str
+  satisfy:
+    kind: action
+    tools:
+    - concepts
+    - template
+    instructions: § Satisfy
+    returns: str
+  validate:
+    kind: action
+    tools:
+    - concepts
+    - scan
+    instructions: § Validate
+    returns: str
+  format:
+    kind: resource
+    type: str
+---
+```
+
+The CleanCode toolset exposes constructor `new(format)`, tools `scan` and `scanners`, and actions `generate`, `satisfy`, and `validate`, plus meta operations `read_manifest` and `invoke`.Manifest output from `python -m tools manifest clean_code.clean_code:CleanCode`:
+
+```yaml
+---
+type: cleancode
+capabilities:
+- tool
+- agent
+signature:
+  instructions: § Instructions
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest clean_code.clean_code:CleanCode
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      format: str
+  scan:
+    kind: tool
+    instructions: § Scan
+    parameters:
+      paths: list[str]
+    returns: str
+  scanners:
+    kind: tool
+    instructions: Return the registered scanner rule catalog.
+    returns: str
+  generate:
+    kind: action
+    tools:
+    - concepts
+    - examples
+    - formats
+    - template
+    - generate_output
+    instructions: § Generate
+    returns: str
+  satisfy:
+    kind: action
+    tools:
+    - concepts
+    - template
+    instructions: § Satisfy
+    returns: str
+  validate:
+    kind: action
+    tools:
+    - concepts
+    - scan
+    instructions: § Validate
+    returns: str
+  format:
+    kind: resource
+    type: str
+---
+```
+
+The CleanCode toolset exposes constructor `new(format)`, tools `scan` and `scanners`, and actions `generate`, `satisfy`, and `validate`, plus meta operations `read_manifest` and `invoke`.

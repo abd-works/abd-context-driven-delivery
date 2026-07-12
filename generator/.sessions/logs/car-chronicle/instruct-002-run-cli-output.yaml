@@ -1,0 +1,34 @@
+```yaml
+ok: true
+toolset: generator.example.car_chronicle:CarChronicle
+action: generate
+result: When done, run validate.
+instructions: "## Generate\n\n1. Apply all guidance and named rules in each **concept**\
+  \ — each bullet is a requirement.\n2. Match **examples** for shape, depth, and tone.\n\
+  3. Fill the **template** scaffold and save the artifact.\n4. Follow any extra build\
+  \ steps included in your instructions when present.\n5. Run **validate**. If it\
+  \ fails, fix the artifact and **validate** again until it passes.\n\n---\n\ngenerate\n\
+  \n# Concepts\n\n## Driving voice\n\nThe chronicle is told from the car's perspective\
+  \ — personality, quirks, and reactions to weather and traffic.\n\n- **`use-driving-voice`**\
+  \ — First-person from the car; name the driver indirectly; no passive trip summaries.\n\
+  \n## Trip logging\n\nEach entry covers one outing with date, route summary, odometer\
+  \ delta, and a short narrative beat.\n\n- **`record-mileage`** — Include start/end\
+  \ mileage or miles driven as a number on every entry.\n- **`name-the-route`** —\
+  \ State origin and destination in plain language, not GPS coordinates.\n\n# Driving\
+  \ history examples\n\n## Rainy commute — 2024-03-12\n\nI carried Alex from Maple\
+  \ Street to the office loop — twelve soggy miles. Wipers beat in triple time; I\
+  \ liked the rhythm. Odometer: 41,220 → 41,232.\n\n## Weekend lake run — 2024-03-16\n\
+  \nSun on my hood, windows down after the pass. Home to Cedar Lake and back — forty-eight\
+  \ lazy miles. Odometer: 41,232 → 41,280.\n\n\n# Driving log template\n\n## {date}\n\
+  \n**Route:** {origin} → {destination}  \n**Miles:** {miles_driven}  \n**Odometer:**\
+  \ {odometer_start} → {odometer_end}\n\n{ narrative paragraph in the car's voice\
+  \ }\n\n\nPrepend the following block verbatim as the very first lines of the file\
+  \ you are writing — before any imports, before any code.\n\nEvery tool call uses\
+  \ this shape — set `tool` and `arguments`, pipe to CLI:\n\n```yaml\ntoolset: generator.example.car_chronicle:CarChronicle\n\
+  context:\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m tools\
+  \ run -\n\nSuggested flow (repeat and reorder as the story needs):\n\nRead `resources`\
+  \ from each response before choosing the next tool."
+arguments: {}
+tools: []
+resources: {}
+```

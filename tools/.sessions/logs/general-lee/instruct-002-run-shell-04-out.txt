@@ -1,0 +1,120 @@
+getattr(candidate, "_is_toolset", False) or getattr(candidate, "_is_generator", False)
+        )
+
+    def load(self, path: str) -> type:
+        module_name, _, class_name = path.partition(":")
+        if not class_name:
+            raise ValueError(f"expected <module>:<Class>, got {path!r}")
+        module = __import__(module_name, fromlist=[class_name])
+        loaded = getattr(module, class_name)
+        if not self.check_toolset(loaded):
+            raise TypeError(f"{path} is not a @toolset class")
+        return loaded
+
+
+class ToolsetRunner:
+    """Invokes one tool from a YAML request dict. Subclass and replace ``instance()`` to extend."""
+
+    _instance: ToolsetRunner | None = None
+
+    def __init__(self) -> None:
+        self._loader = ToolsetLoader.instance()
+        self._yaml = ManifestYaml.instance()
+
+    @classmethod
+    def instance(cls) -> ToolsetRunner:
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    @classmethod
+    def set_instance(cls, runner: ToolsetRunner | None) -> None:
+        cls._instance = runner
+
+    def run_request(self, request: dict[str, Any]) -> dict[str, Any]:
+        parsed = self._parse_run_request(request)
+        toolset_cls = self._loader.load(str(parsed.toolset_path))
+        instance = self._build_instance(toolset_cls, parsed.context)
+        if parsed.action_name:
+            return self._run_action(request, parsed, instance)
+        return self._run_tool(request, parsed, instance)
+
+    def _run_tool(
+        self,
+        request: dict[str, Any],
+        parsed: "_RunRequest",
+        instance: Toolset,
+    ) -> dict[str, Any]:
+        result = self._invoke_tool(instance, str(parsed.tool_name), parsed.arguments)
+        return self._build_tool_response(request, parsed.toolset_path, parsed.tool_name, instance, result)
+
+    def _run_action(
+        self,
+        request: dict[str, Any],
+        parsed: "_RunRequest",
+        instance: Toolset,
+    ) -> dict[str, Any]:
+        from agents.runner import ActionRunner
+
+        return ActionRunner.instance().run(
+            request,
+            toolset_path=parsed.toolset_path,
+            action_name=parsed.action_name,
+            context=parsed.context,
+            arguments=parsed.arguments,
+            instance=instance,
+        )
+
+    def _parse_run_request(self, request: dict[str, Any]) -> "_RunRequest":
+        if not isinstance(request, dict):
+            raise RunError("request must be a YAML mapping", response={"ok": False, "error": "invalid request"})
+        toolset_path = request.get("toolset")
+        if not toolset_path:
+            raise RunError("request missing toolset", response={"ok": False, "error": "request missing toolset"})
+        tool_name = request.get("tool")
+        action_name = request.get("action")
+        if tool_name and action_name:
+            raise RunError(
+                "request must use tool or action, not both",
+                response={"ok": False, "error": "tool and action are mutually exclusive"},
+            )
+        if not tool_name and not action_name:
+            raise RunError(
+                "request missing tool or action",
+                response={"ok": False, "error": "request missing tool or action"},
+            )
+        context = self._mapping_field(request, "context", default={})
+        arguments = self._mapping_field(request, "arguments", default={})
+        return _RunRequest(
+            toolset_path=toolset_path,
+            tool_name=tool_name,
+            action_name=action_name,
+            context=context,
+            arguments=arguments,
+        )
+
+    def _mapping_field(
+        self, request: dict[str, Any], field_name: str, *, default: dict[str, Any]
+    ) -> dict[str, Any]:
+        field_value = request.get(field_name, default)
+        if not isinstance(field_value, dict):
+            raise RunError(
+                f"{field_name} must be a mapping",
+                response={"ok": False, "error": f"invalid {field_name}"},
+            )
+        return field_value
+
+    def _build_instance(self, toolset_cls: type, context: dict[str, Any]) -> Toolset:
+        try:
+            return toolset_cls(**context)
+        except TypeError as exc:
+            raise RunError(
+                f"invalid context for {toolset_cls.manifest_path}: {exc}",
+                response={"ok": False, "error": "invalid context", "detail": str(exc)},
+            ) from exc
+
+    def _invoke_tool(self, instance: Toolset, tool_name: str, arguments: dict[str, Any]) -> Any:
+        if tool_name not in instance.tools:
+            raise RunError(
+                f"unknown tool {tool_name!r}",
+                response={"ok": False, "tool": tool_name, "error": "unknown tool"},

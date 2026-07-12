@@ -1,0 +1,3 @@
+Create a car based on the general lee from the Dukes of Hazzard.
+
+IMPORTANT: Invoke python -m tools run via shell. Return the complete fenced YAML stdout from the CLI. Do not summarize.

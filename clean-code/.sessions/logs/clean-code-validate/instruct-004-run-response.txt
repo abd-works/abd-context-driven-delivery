@@ -1,0 +1,82 @@
+Running CleanCode validation on `packages/cart.py` using the Python format.
+Running CleanCode validation on `packages/cart.py` using the Python format.
+**Validation result:** `packages/cart.py` passes all CleanCode rules for format `python`.
+
+**CleanCode validate action**
+- **Action:** `validate`
+- **Tools invoked:** `scan` (against the 17 Python scanner rules)
+
+**Scan report**
+
+```json
+{
+  "ok": true,
+  "violations": []
+}
+```
+
+**Rules checked (all passed)**
+
+| Category | Rules |
+|---|---|
+| Domain language | `use-domain-language` |
+| Class design | `keep-classes-single-responsibility`, `enforce-encapsulation`, `eliminate-duplication`, `use-explicit-dependencies` |
+| Functions | `keep-functions-single-responsibility`, `separate-concerns`, `keep-functions-small-focused`, `use-clear-function-parameters`, `simplify-control-flow`, `maintain-abstraction-levels` |
+| Naming | `use-intention-revealing-names`, `provide-meaningful-context`, `use-consistent-naming` |
+| Errors | `use-exceptions-properly`, `never-swallow-exceptions` |
+| Comments | `stop-writing-useless-comments` |
+
+The Cart module conforms to the clean code rubric: domain entities (`Cart`, `LineItem`, `Product`) own their behavior, state is encapsulated, `subtotal` is a computed property, and invalid quantities raise a domain exception (`InvalidQuantityError`).**Validation result:** `packages/cart.py` passes all CleanCode rules for format `python`.
+
+**CleanCode validate action**
+- **Action:** `validate`
+- **Tools invoked:** `scan` (against the 17 Python scanner rules)
+
+**Scan report**
+
+```json
+{
+  "ok": true,
+  "violations": []
+}
+```
+
+**Rules checked (all passed)**
+
+| Category | Rules |
+|---|---|
+| Domain language | `use-domain-language` |
+| Class design | `keep-classes-single-responsibility`, `enforce-encapsulation`, `eliminate-duplication`, `use-explicit-dependencies` |
+| Functions | `keep-functions-single-responsibility`, `separate-concerns`, `keep-functions-small-focused`, `use-clear-function-parameters`, `simplify-control-flow`, `maintain-abstraction-levels` |
+| Naming | `use-intention-revealing-names`, `provide-meaningful-context`, `use-consistent-naming` |
+| Errors | `use-exceptions-properly`, `never-swallow-exceptions` |
+| Comments | `stop-writing-useless-comments` |
+
+The Cart module conforms to the clean code rubric: domain entities (`Cart`, `LineItem`, `Product`) own their behavior, state is encapsulated, `subtotal` is a computed property, and invalid quantities raise a domain exception (`InvalidQuantityError`).Running CleanCode validation on `packages/cart.py` using the Python format.
+**Validation result:** `packages/cart.py` passes all CleanCode rules for format `python`.
+
+**CleanCode validate action**
+- **Action:** `validate`
+- **Tools invoked:** `scan` (against the 17 Python scanner rules)
+
+**Scan report**
+
+```json
+{
+  "ok": true,
+  "violations": []
+}
+```
+
+**Rules checked (all passed)**
+
+| Category | Rules |
+|---|---|
+| Domain language | `use-domain-language` |
+| Class design | `keep-classes-single-responsibility`, `enforce-encapsulation`, `eliminate-duplication`, `use-explicit-dependencies` |
+| Functions | `keep-functions-single-responsibility`, `separate-concerns`, `keep-functions-small-focused`, `use-clear-function-parameters`, `simplify-control-flow`, `maintain-abstraction-levels` |
+| Naming | `use-intention-revealing-names`, `provide-meaningful-context`, `use-consistent-naming` |
+| Errors | `use-exceptions-properly`, `never-swallow-exceptions` |
+| Comments | `stop-writing-useless-comments` |
+
+The Cart module conforms to the clean code rubric: domain entities (`Cart`, `LineItem`, `Product`) own their behavior, state is encapsulated, `subtotal` is a computed property, and invalid quantities raise a domain exception (`InvalidQuantityError`).

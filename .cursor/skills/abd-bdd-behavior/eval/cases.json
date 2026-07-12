@@ -1,0 +1,146 @@
+{
+  "skill": "abd-bdd-behavior",
+  "version": 2,
+  "notes": "Fixture registry. The pass fixture is the canonical state-oriented shape applied to a single domain (story-graph-ops): '## Story Model / ## Documents / ## Diagrams / ## Code' as markdown headings; every top-level describe is a domain concept ('a Story Map', 'a Markdown document', 'a diagram Story Map', 'a code Story Map', 'a DrawIO Story Map', 'a TypeScript story-spec Story Map'); Diagrams and Code apply the abstract-subject-then-concrete-backends pattern; every leaf is 'it should ...' observing an outside-verifiable result. Fail fixtures each isolate one violation so a scanner (once written) can target it directly.",
+  "rules": [
+    "abstract-subject-then-concrete-backends",
+    "business-readable-language",
+    "category-headings-not-subjects",
+    "domain-practice-alignment",
+    "every-describe-has-behavior",
+    "observations-are-results-not-mechanics",
+    "plain-english-only",
+    "state-oriented-hierarchy",
+    "subjects-are-domain-concepts"
+  ],
+  "cases": [
+    {
+      "id": "pass/state-oriented-story-map",
+      "kind": "pass",
+      "path": "pass/state-oriented-story-map",
+      "primary_artifact": "behavior.md",
+      "description": "Canonical passing shape for a domain with multiple format backends. Categories are `##` headings; every top-level describe is a domain-concept subject; leaves observe results, not mechanics; state elaborations use `with` and `that`; Diagrams and Code apply the abstract-subject-then-concrete-backends pattern with `a diagram Story Map` / `a code Story Map` as the abstract subjects and `a DrawIO Story Map` / `a TypeScript story-spec Story Map` as thin concrete backends. Every rule reports clean.",
+      "expect": {
+        "abstract-subject-then-concrete-backends": "clean",
+        "business-readable-language": "clean",
+        "category-headings-not-subjects": "clean",
+        "domain-practice-alignment": "clean",
+        "every-describe-has-behavior": "clean",
+        "observations-are-results-not-mechanics": "clean",
+        "plain-english-only": "clean",
+        "state-oriented-hierarchy": "clean",
+        "subjects-are-domain-concepts": "clean"
+      }
+    },
+    {
+      "id": "fail/leaves-not-state-oriented",
+      "kind": "fail",
+      "path": "fail/leaves-not-state-oriented",
+      "primary_artifact": "behavior.md",
+      "description": "Primary target: state-oriented-hierarchy. Describes are bare class names (StoryMap, Epic, SubEpic); leaves restate the operation as if the class were the actor ('should add an Epic to a StoryMap'). No subject noun phrase, no state buildup, no observations of state. Also fires category-headings-not-subjects (top-level 'Story Model' is a category label, not a subject); state-oriented-hierarchy independently flags 'Story Model' as not a valid subject noun phrase. Note: 'StoryMap', 'Epic', 'SubEpic' pass subjects-are-domain-concepts because they are legitimate domain concepts (the rule targets plumbing subjects like '-Node', '-Ast', '-Synchronizer', not domain concepts that happen to be written in CamelCase).",
+      "expect": {
+        "abstract-subject-then-concrete-backends": "clean",
+        "business-readable-language": "clean",
+        "category-headings-not-subjects": "violate",
+        "domain-practice-alignment": "clean",
+        "every-describe-has-behavior": "clean",
+        "observations-are-results-not-mechanics": "clean",
+        "plain-english-only": "clean",
+        "state-oriented-hierarchy": "violate",
+        "subjects-are-domain-concepts": "clean"
+      },
+      "gap": {
+        "detected_by_existing_rules": false,
+        "action": "New rule + scanner needed. See rules/state-oriented-hierarchy.md. Until a scanner is written, this fixture serves as a permanent regression example."
+      }
+    },
+    {
+      "id": "fail/observations-are-mechanics",
+      "kind": "fail",
+      "path": "fail/observations-are-mechanics",
+      "primary_artifact": "behavior.md",
+      "description": "Primary target: observations-are-results-not-mechanics. Every leaf observes an internal mechanic — a super call ('via super.updateSelf'), a factory name ('createChildXxx'), a private helper ('findMatch'), a call-order fact ('first via ...', 'before creating any new child'), or an absence-of-event ('should never be replaced'). Also fires: subjects-are-domain-concepts (subjects 'a StoryNode', 'a DiagramStoryNode', 'a CodeStoryNode' are code stereotypes with no independent domain meaning); domain-practice-alignment (same subjects aren't in the domain glossary); business-readable-language (leaves are saturated with engineering vocabulary like translateFrom, super.updateSelf, findMatch, childCollections). All four rules point at the same underlying failure from different angles.",
+      "expect": {
+        "abstract-subject-then-concrete-backends": "clean",
+        "business-readable-language": "violate",
+        "category-headings-not-subjects": "clean",
+        "domain-practice-alignment": "violate",
+        "every-describe-has-behavior": "clean",
+        "observations-are-results-not-mechanics": "violate",
+        "plain-english-only": "clean",
+        "state-oriented-hierarchy": "clean",
+        "subjects-are-domain-concepts": "violate"
+      },
+      "gap": {
+        "detected_by_existing_rules": false,
+        "action": "New rule + scanner needed. See rules/observations-are-results-not-mechanics.md. Until a scanner is written, this fixture serves as a permanent regression example."
+      }
+    },
+    {
+      "id": "fail/subjects-are-code-stereotypes",
+      "kind": "fail",
+      "path": "fail/subjects-are-code-stereotypes",
+      "primary_artifact": "behavior.md",
+      "description": "Primary target: subjects-are-domain-concepts. Every top-level describe is a code-level class name, not a domain concept: 'a LanguageAst' and 'a TypeScriptAst' are compiler-implementation stereotypes; 'a CodeStoryNode' and 'a DiagramStoryNode' are abstract class names exposed instead of the domain concepts they represent ('a code Story Map', 'a diagram Story Map'); 'a RowPositions' is a layout helper; 'a MarkdownSynchronizer' and 'a TypeScriptSynchronizer' are service-class stereotypes. Also fires domain-practice-alignment for the same reason (code stereotypes aren't in the domain glossary). State-oriented and observations-as-results pass because those aspects were kept well-formed; the failure is in the choice of subject.",
+      "expect": {
+        "abstract-subject-then-concrete-backends": "clean",
+        "business-readable-language": "clean",
+        "category-headings-not-subjects": "clean",
+        "domain-practice-alignment": "violate",
+        "every-describe-has-behavior": "clean",
+        "observations-are-results-not-mechanics": "clean",
+        "plain-english-only": "clean",
+        "state-oriented-hierarchy": "clean",
+        "subjects-are-domain-concepts": "violate"
+      },
+      "gap": {
+        "detected_by_existing_rules": false,
+        "action": "New rule + scanner needed. See rules/subjects-are-domain-concepts.md. Until a scanner is written, this fixture serves as a permanent regression example."
+      }
+    },
+    {
+      "id": "fail/backends-restate-shared-behavior",
+      "kind": "fail",
+      "path": "fail/backends-restate-shared-behavior",
+      "primary_artifact": "behavior.md",
+      "description": "Diagrams and Code sections skip the abstract domain subject and jump straight to concrete backends. Every backend then duplicates the same structural, reconciliation, and folder-tree observations verbatim under its own subject. State-oriented, subject-legitimate, and observation-as-result rules all pass — but adding a new backend requires copy-pasting every shared observation, and the specifications will silently drift over time.",
+      "expect": {
+        "abstract-subject-then-concrete-backends": "violate",
+        "business-readable-language": "clean",
+        "category-headings-not-subjects": "clean",
+        "domain-practice-alignment": "clean",
+        "every-describe-has-behavior": "clean",
+        "observations-are-results-not-mechanics": "clean",
+        "plain-english-only": "clean",
+        "state-oriented-hierarchy": "clean",
+        "subjects-are-domain-concepts": "clean"
+      },
+      "gap": {
+        "detected_by_existing_rules": false,
+        "action": "New rule + scanner needed. See rules/abstract-subject-then-concrete-backends.md. Until a scanner is written, this fixture serves as a permanent regression example."
+      }
+    },
+    {
+      "id": "fail/top-level-describe-is-category-label",
+      "kind": "fail",
+      "path": "fail/top-level-describe-is-category-label",
+      "primary_artifact": "behavior.md",
+      "description": "Primary target: category-headings-not-subjects. Organizational category labels ('Story Model', 'Documents', 'Diagrams', 'Code') are used as top-level describes rather than as `##` markdown headings. Also fires: state-oriented-hierarchy (the labels are bare CamelCase / bare noun-groups, not valid subject noun phrases per the updated rule) and domain-practice-alignment (organizational scaffolding isn't in the domain glossary). All three rules point at the same underlying shape failure — the top-level shouldn't have described these at all.",
+      "expect": {
+        "abstract-subject-then-concrete-backends": "clean",
+        "business-readable-language": "clean",
+        "category-headings-not-subjects": "violate",
+        "domain-practice-alignment": "violate",
+        "every-describe-has-behavior": "clean",
+        "observations-are-results-not-mechanics": "clean",
+        "plain-english-only": "clean",
+        "state-oriented-hierarchy": "violate",
+        "subjects-are-domain-concepts": "clean"
+      },
+      "gap": {
+        "detected_by_existing_rules": false,
+        "action": "New rule + scanner needed. See rules/category-headings-not-subjects.md. Until a scanner is written, this fixture serves as a permanent regression example."
+      }
+    }
+  ]
+}

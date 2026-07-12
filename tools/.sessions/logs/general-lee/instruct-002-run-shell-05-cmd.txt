@@ -1,0 +1,1 @@
+python -m tools manifest tools.example.car:Car --plain 2>&1 | head -5

@@ -1,0 +1,5 @@
+```yaml
+ok: false
+action: scan
+error: unknown action
+```

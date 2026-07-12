@@ -1,0 +1,1 @@
+General Lee shook the mud from her tires and laughed at Rosco's siren fading behind us. I fired her up, kept the back roads hot, and let her speak over the engine: "Courthouse steps ain't far, cousin — hold on." We slid into Hazzard square and stopped at the steps with dust still rolling off the hood.

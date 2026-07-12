@@ -1,0 +1,1 @@
+Read agents/.sessions/logs/travel-to/judge-prompt.txt and follow it exactly. Reply with only one JSON line as specified in that file.

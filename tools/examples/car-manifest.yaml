@@ -1,0 +1,73 @@
+---
+type: car
+capabilities:
+- tool
+signature:
+  instructions: Operate a car — start, stop, and read current state.
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest tools.examples.car:Car
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: create a new car based on the description given and assign it a
+      personality that is fun and flavorful with a unique name and a unique description
+    parameters:
+      make: str
+      model: str
+      year: int
+      personality: str
+  accelerate:
+    kind: tool
+    instructions: Speed up by the given amount.
+    parameters:
+      amount: float
+    returns: str
+  decelerate:
+    kind: tool
+    instructions: Slow down by the given amount.
+    parameters:
+      amount: float
+    returns: str
+  drive:
+    kind: tool
+    instructions: Drive the given number of miles. Engine must be running.
+    parameters:
+      miles: float
+    returns: str
+  speak:
+    kind: tool
+    instructions: Say something in character according to personality.
+    parameters:
+      line: str
+    returns: str
+  start:
+    kind: tool
+    instructions: Start the engine.
+    returns: None
+  stop:
+    kind: tool
+    instructions: Stop the engine.
+    returns: None
+  make:
+    kind: resource
+    type: str
+  model:
+    kind: resource
+    type: str
+  year:
+    kind: resource
+    type: int
+  personality:
+    kind: resource
+    type: str
+  running:
+    kind: resource
+    type: bool
+---
+

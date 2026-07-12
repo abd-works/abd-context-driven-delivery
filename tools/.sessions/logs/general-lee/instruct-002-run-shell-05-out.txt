@@ -1,0 +1,7 @@
+head : The term 'head' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
+the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At C:\Users\thoma\AppData\Local\Temp\ps-script-48cb67de-6a67-46fd-88b7-61fe21e7e159.ps1:7 char:63
++ python -m tools manifest tools.example.car:Car --plain 2>&1 | head -5
++                                                               ~~~~
+    + CategoryInfo          : ObjectNotFound: (head:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException

@@ -1,0 +1,26 @@
+At C:\Users\thoma\AppData\Local\Temp\ps-script-e2f66478-6cc6-4306-8a51-f63312a62c9e.ps1:7 char:39
++ cd C:\dev\abd-context-driven-delivery && python -m tools run - <<'EOF ...
++                                       ~~
+The token '&&' is not a valid statement separator in this version.
+At C:\Users\thoma\AppData\Local\Temp\ps-script-e2f66478-6cc6-4306-8a51-f63312a62c9e.ps1:7 char:65
++ ... d C:\dev\abd-context-driven-delivery && python -m tools run - <<'EOF'
++                                                                    ~
+Missing file specification after redirection operator.
+At C:\Users\thoma\AppData\Local\Temp\ps-script-e2f66478-6cc6-4306-8a51-f63312a62c9e.ps1:7 char:64
++ ... d C:\dev\abd-context-driven-delivery && python -m tools run - <<'EOF'
++                                                                   ~
+The '<' operator is reserved for future use.
+At C:\Users\thoma\AppData\Local\Temp\ps-script-e2f66478-6cc6-4306-8a51-f63312a62c9e.ps1:7 char:65
++ ... d C:\dev\abd-context-driven-delivery && python -m tools run - <<'EOF'
++                                                                    ~
+The '<' operator is reserved for future use.
+At C:\Users\thoma\AppData\Local\Temp\ps-script-e2f66478-6cc6-4306-8a51-f63312a62c9e.ps1:14 char:6
++     - packages/cart.py
++      ~
+Missing expression after unary operator '-'.
+At C:\Users\thoma\AppData\Local\Temp\ps-script-e2f66478-6cc6-4306-8a51-f63312a62c9e.ps1:14 char:7
++     - packages/cart.py
++       ~~~~~~~~~~~~~~~~
+Unexpected token 'packages/cart.py' in expression or statement.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : InvalidEndOfLine

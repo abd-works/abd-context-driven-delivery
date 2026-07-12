@@ -1,0 +1,1 @@
+{'ok': False, 'violations': [{'rule': 'use-intention-revealing-names', 'violation_message': "Name 'item' is too generic. Use a domain-specific name.", 'severity': 'error', 'line_number': 49, 'location': 'packages\\cart.py'}]}

@@ -1,0 +1,10 @@
+You are an AI judge.
+Evaluate OUTPUT against RUBRIC.
+Reply with ONLY one JSON object on one line — no markdown, no code fences, no commentary.
+The JSON must have keys verdict (PASS or FAIL) and reason (one sentence).
+
+--- RUBRIC ---
+The car should be a rebellious, high-spirited, and loyal country boy.
+
+--- OUTPUT ---
+General Lee ? a rebellious, high-spirited orange 1969 Dodge Charger with the Confederate flag on the roof. Fiercely loyal country boy who lives for jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through every Hazzard adventure.

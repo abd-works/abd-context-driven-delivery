@@ -1,0 +1,80 @@
+"""Mamba BDD harness for cursor-agent toolset scenarios."""
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+import sys
+import threading
+import time
+from contextlib import contextmanager
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Iterator
+
+from tools.tool import ManifestYaml
+
+_AGENTIC_ROOT = Path(__file__).resolve().parent.parent / "_retired" / "agentic-tdd"
+if str(_AGENTIC_ROOT) not in sys.path:
+    sys.path.insert(0, str(_AGENTIC_ROOT))
+
+from agentic_tdd import AgentResult, AgentSession, JudgeResult  # noqa: E402
+
+_TOOLS_RUN = re.compile(r"(?:python\s+-m\s+tools\s+run|tools\s+run\b)", re.IGNORECASE)
+_JUDGE_PROMPT = """\
+You are an AI judge. Evaluate the output below against the rubric and reply
+with a single JSON object on one line — no code fences, no commentary:
+
+{{"verdict": "PASS" | "FAIL", "reason": "<one sentence>"}}
+
+--- RUBRIC ---
+{rubric}
+
+--- OUTPUT ---
+{output}
+"""
+
+
+def _log(msg: str) -> None:
+    ts = time.strftime("%H:%M:%S")
+    sys.__stdout__.write(f"[tool_bdd {ts}] {msg}\n")
+    sys.__stdout__.flush()
+
+
+@dataclass(frozen=True)
+class RunResponse:
+    """Parsed fenced YAML from ``python -m tools run`` CLI stdout."""
+
+    ok: bool
+    toolset: str
+    result: Any
+    resources: dict[str, Any]
+    tool: str | None = None
+    action: str | None = None
+    instructions: str | None = None
+    tools: list[str] | None = None
+    arguments: dict[str, Any] | None = None
+
+    @classmethod
+    def from_cli_output(cls, text: str) -> RunResponse:
+        data = ManifestYaml.instance().load_fenced(text)
+        if not isinstance(data, dict):
+            raise ValueError(f"tools run output is not a mapping: {text[:200]!r}")
+        tools_field = data.get("tools")
+        return cls(
+            ok=bool(data.get("ok")),
+            toolset=str(data.get("toolset", "")),
+            tool=str(data["tool"]) if data.get("tool") else None,
+            action=str(data["action"]) if data.get("action") else None,
+            result=data.get("result"),
+            instructions=str(data["instructions"]) if data.get("instructions") else None,
+            tools=list(tools_field) if isinstance(tools_field, list) else None,
+            arguments=dict(data["arguments"]) if isinstance(data.get("arguments"), dict) else None,
+            resources=dict(data.get("resources") or {}),
+        )
+
+
+_RUN_PROMPT_SUFFIX = (
+    "\n\nIMPORTANT: Invoke python -m tools run via shell. "
+    "Return the complete fenced YAML stdout from the CLI. Do not summarize."
+)

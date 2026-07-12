@@ -1,0 +1,31 @@
+Reading `clean-code/clean-code.py`.
+Reading `clean-code/clean-code.py`.
+Here is the contents of `clean-code/clean-code.py`:
+
+```1:4:clean-code/clean-code.py
+# @toolset-manifest python -m tools manifest clean_code.clean_code:CleanCode
+from clean_code.clean_code import CleanCode
+
+__all__ = ["CleanCode"]
+```
+
+It’s a thin entry point: it declares the toolset manifest and re-exports `CleanCode` from `clean_code.clean_code`. The implementation lives in that module, not here.Here is the contents of `clean-code/clean-code.py`:
+
+```1:4:clean-code/clean-code.py
+# @toolset-manifest python -m tools manifest clean_code.clean_code:CleanCode
+from clean_code.clean_code import CleanCode
+
+__all__ = ["CleanCode"]
+```
+
+It’s a thin entry point: it declares the toolset manifest and re-exports `CleanCode` from `clean_code.clean_code`. The implementation lives in that module, not here.Reading `clean-code/clean-code.py`.
+Here is the contents of `clean-code/clean-code.py`:
+
+```1:4:clean-code/clean-code.py
+# @toolset-manifest python -m tools manifest clean_code.clean_code:CleanCode
+from clean_code.clean_code import CleanCode
+
+__all__ = ["CleanCode"]
+```
+
+It’s a thin entry point: it declares the toolset manifest and re-exports `CleanCode` from `clean_code.clean_code`. The implementation lives in that module, not here.

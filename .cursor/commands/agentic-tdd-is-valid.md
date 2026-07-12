@@ -1,1 +1,0 @@
-read @capability § Is Valid

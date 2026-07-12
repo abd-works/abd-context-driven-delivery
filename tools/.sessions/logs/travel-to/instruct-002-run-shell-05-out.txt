@@ -1,0 +1,199 @@
+action_name=action_name,
+            context=context,
+            arguments=arguments,
+        )
+
+    def _mapping_field(
+        self, request: dict[str, Any], field_name: str, *, default: dict[str, Any]
+    ) -> dict[str, Any]:
+        field_value = request.get(field_name, default)
+        if not isinstance(field_value, dict):
+            raise RunError(
+                f"{field_name} must be a mapping",
+                response={"ok": False, "error": f"invalid {field_name}"},
+            )
+        return field_value
+
+    def _build_instance(self, toolset_cls: type, context: dict[str, Any]) -> Toolset:
+        try:
+            return toolset_cls(**context)
+        except TypeError as exc:
+            raise RunError(
+                f"invalid context for {toolset_cls.manifest_path}: {exc}",
+                response={"ok": False, "error": "invalid context", "detail": str(exc)},
+            ) from exc
+
+    def _invoke_tool(self, instance: Toolset, tool_name: str, arguments: dict[str, Any]) -> Any:
+        if tool_name not in instance.tools:
+            raise RunError(
+                f"unknown tool {tool_name!r}",
+                response={"ok": False, "tool": tool_name, "error": "unknown tool"},
+            )
+        tool = instance.tools[tool_name]
+        self._validate_arguments(tool, arguments)
+        return getattr(instance, tool_name)(**arguments)
+
+    def _validate_arguments(self, tool: Tool, arguments: dict[str, Any]) -> None:
+        reader = SignatureReader.instance()
+        schema = reader.input_schema(tool.callable)
+        missing = [name for name in schema.get("required", []) if name not in arguments]
+        if missing:
+            raise RunError(
+                f"{tool.name} missing required arguments: {', '.join(missing)}",
+                response={
+                    "ok": False,
+                    "tool": tool.name,
+                    "error": "missing required arguments",
+                    "missing": missing,
+                },
+            )
+
+    def _build_tool_response(
+        self,
+        request: dict[str, Any],
+        toolset_path: Any,
+        tool_name: Any,
+        instance: Toolset,
+        result: Any,
+    ) -> dict[str, Any]:
+        response: dict[str, Any] = {
+            "ok": True,
+            "toolset": str(toolset_path),
+            "tool": str(tool_name),
+            "result": self._yaml.serialize_value(result),
+        }
+        if request.get("include_resources", True):
+            response["resources"] = self._yaml.serialize_value(instance.resources)
+        return response
+
+
+@dataclass(frozen=True)
+class _RunRequest:
+    toolset_path: Any
+    tool_name: Any
+    action_name: Any
+    context: dict[str, Any]
+    arguments: dict[str, Any]
+
+
+class Toolset:
+    """Injected by @toolset — use the decorator, not direct subclassing."""
+
+    def __init__(self) -> None:
+        pass
+
+    @property
+    def instructions(self) -> str:
+        return (self.__class__.__doc__ or "").strip()
+
+    @property
+    def tools(self) -> dict[str, Tool]:
+        return discover_tools(self)
+
+    @property
+    def actions(self) -> dict[str, Any]:
+        from agents.discovery import discover_actions
+
+        return discover_actions(self)
+
+    @property
+    def resource_entries(self) -> dict[str, Resource]:
+        return discover_resources(self)
+
+    @property
+    def resources(self) -> dict[str, Any]:
+        return {name: getattr(self, name) for name in self.resource_entries}
+
+    @property
+    def signature(self) -> dict[str, Any]:
+        from tools.manifest import ManifestBuilder
+
+        return ManifestBuilder(self).build()
+
+    @property
+    def capabilities(self) -> list[str]:
+        from agents.discovery import has_actions
+
+        caps = ["tool"]
+        if has_actions(self):
+            caps.append("agent")
+        return caps
+
+    @property
+    def front_matter(self) -> str:
+        cls = type(self)
+        return ManifestYaml.instance().frontmatter(
+            {
+                "type": cls.toolset_slug,
+                "capabilities": self.capabilities,
+                "signature": self.signature,
+            }
+        )
+
+    @classproperty
+    def toolset_slug(cls) -> str:
+        return cls.__name__.lower()
+
+    @classproperty
+    def manifest_path(cls) -> str:
+        return f"{cls.__module__}:{cls.__name__}"
+
+    @classproperty
+    def manifest_command(cls) -> str:
+        return f"python -m tools manifest {cls.manifest_path}"
+
+    @classproperty
+    def run_command(cls) -> str:
+        return "python -m tools run <request.yaml|->"
+
+    @classproperty
+    def manifest(cls) -> Toolset:
+        """Toolset without context — read front matter and MCP shape without running tools."""
+        if not ToolsetLoader.instance().check_toolset(cls):
+            raise TypeError(f"{cls.__name__} is not a @toolset class")
+        instance = object.__new__(cls)
+        Toolset.__init__(instance)
+        return instance
+
+
+@dataclass(frozen=True)
+class Tool:
+    """One invokable action on a toolset."""
+
+    name: str
+    callable: Callable[..., Any]
+
+    @property
+    def instructions(self) -> str:
+        return SignatureReader.instance().member_instructions(self.callable)
+
+    @property
+    def manifest(self) -> dict[str, Any]:
+        """MCP Tool — name, description, inputSchema, optional outputSchema."""
+        reader = SignatureReader.instance()
+        entry: dict[str, Any] = {
+            "name": self.name,
+            "description": self.instructions,
+            "inputSchema": reader.input_schema(self.callable),
+        }
+        output = reader.output_schema(self.callable)
+        if output is not None:
+            entry["outputSchema"] = output
+        return entry
+
+    @property
+    def signature_entry(self) -> dict[str, Any]:
+        reader = SignatureReader.instance()
+        entry: dict[str, Any] = {"kind": "tool"}
+        if self.instructions:
+            entry["instructions"] = self.instructions
+        parameters = reader.simple_parameters(self.callable)
+        if parameters:
+            entry["parameters"] = parameters
+        returns = reader.simple_return_type(self.callable)
+        if returns:
+            entry["returns"] = returns
+        return entry
+
+    def add_to_signature(self, signature: dict[str, Any]) -> None:
+        signature[self.name] = self.signature_entry

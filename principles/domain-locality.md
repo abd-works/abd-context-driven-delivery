@@ -20,8 +20,9 @@ enforce/
     vehicle-has-means/
       vehicle-has-means-rule.md
       vehicle-has-means-scanner.py
-      examples/pass/
-      examples/fail/
+      examples/<descriptive-folder>/
+        faultyAsset
+        repairedAsset
   validate-artifact-rules-test.py
 ```
 

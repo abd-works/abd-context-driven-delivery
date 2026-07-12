@@ -1,0 +1,120 @@
+)
+_CMDLINE_SAFE = 4096
+
+
+@dataclass(frozen=True)
+class ShellCapture:
+    command: str
+    output: str
+
+
+class ToolAgentBlock:
+    """One cursor-agent session — multiple instructs share the same chat."""
+
+    def __init__(self, workspace: Path, session_file: Path) -> None:
+        self._workspace = workspace.resolve()
+        self._session_file = session_file
+        self._session: AgentSession | None = None
+        self._yaml = ManifestYaml.instance()
+        self._log_dir = session_file.parent / "logs" / session_file.stem
+        self._instruct_count = 0
+        self.last_shell_captures: list[ShellCapture] = []
+        self.session_shell_captures: list[ShellCapture] = []
+
+    def _write_artifact(self, name: str, content: str) -> Path:
+        self._log_dir.mkdir(parents=True, exist_ok=True)
+        path = self._log_dir / name
+        path.write_text(content, encoding="utf-8")
+        return path
+
+    def _next_instruct_prefix(self, label: str) -> str:
+        self._instruct_count += 1
+        return f"instruct-{self._instruct_count:03d}-{label}"
+
+    @staticmethod
+    def assert_authenticated() -> None:
+        exe = AgentSession._launcher()
+        if exe is None:
+            raise RuntimeError("cursor-agent not found on PATH")
+        completed = subprocess.run([exe, "status"], capture_output=True, text=True, timeout=30)
+        if completed.returncode != 0:
+            raise RuntimeError("cursor-agent not authenticated — run `cursor-agent login` first")
+
+    def instruct(self, prompt: str, *, timeout_seconds: int = 300) -> AgentResult:
+        prefix = self._next_instruct_prefix("setup")
+        _log(f"{prefix} prompt: {prompt[:120]}{'…' if len(prompt) > 120 else ''}")
+        self._write_artifact(f"{prefix}-prompt.txt", prompt)
+        session = self._require_session()
+        capture = self._run_capture(session, prompt, timeout_seconds=timeout_seconds)
+        result = capture.agent_result
+        self.last_shell_captures = list(capture.shell_captures)
+        self.session_shell_captures.extend(capture.shell_captures)
+        self._write_artifact(f"{prefix}-response.txt", result.stdout)
+        if result.stderr.strip():
+            self._write_artifact(f"{prefix}-stderr.txt", result.stderr)
+        for index, shell in enumerate(capture.shell_captures, start=1):
+            self._write_artifact(f"{prefix}-shell-{index:02d}-cmd.txt", shell.command)
+            self._write_artifact(f"{prefix}-shell-{index:02d}-out.txt", shell.output)
+        _log(f"{prefix} response: {len(result.stdout)} chars → {self._log_dir / f'{prefix}-response.txt'}")
+        return result
+
+    def instruct_run(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
+        full_prompt = prompt.rstrip() + _RUN_PROMPT_SUFFIX
+        prefix = self._next_instruct_prefix("run")
+        _log(f"{prefix} prompt: {full_prompt[:120]}{'…' if len(full_prompt) > 120 else ''}")
+        self._write_artifact(f"{prefix}-prompt.txt", full_prompt)
+        cli_output: str | None = None
+        try:
+            capture = self._run_capture(
+                session=self._require_session(), prompt=full_prompt, timeout_seconds=timeout_seconds
+            )
+        except subprocess.TimeoutExpired:
+            capture = None
+        if capture is not None:
+            result = capture.agent_result
+            self._write_artifact(f"{prefix}-response.txt", result.stdout)
+            if result.stderr.strip():
+                self._write_artifact(f"{prefix}-stderr.txt", result.stderr)
+            for index, shell in enumerate(capture.shell_captures, start=1):
+                self._write_artifact(f"{prefix}-shell-{index:02d}-cmd.txt", shell.command)
+                self._write_artifact(f"{prefix}-shell-{index:02d}-out.txt", shell.output)
+            cli_output = _tools_run_output_from_capture(capture)
+            if cli_output is None:
+                attempted = any(
+                    _TOOLS_RUN.search(shell.command) or _TOOLS_RUN.search(shell.output)
+                    for shell in capture.shell_captures
+                )
+                if attempted:
+                    yaml_body = _yaml_from_prompt(full_prompt)
+                    if yaml_body:
+                        cli_output = _run_yaml_request(yaml_body, self._workspace)
+            if cli_output is not None:
+                self._write_artifact(f"{prefix}-cli-output.yaml", cli_output)
+                ai_response = RunResponse.from_cli_output(cli_output)
+                self.last_shell_captures = list(capture.shell_captures)
+                self.session_shell_captures.extend(capture.shell_captures)
+                self._write_artifact(
+                    f"{prefix}-ai-response.yaml",
+                    self._yaml.dump_manifest(
+                        {k: v for k, v in {
+                            "ok": ai_response.ok,
+                            "toolset": ai_response.toolset,
+                            "tool": ai_response.tool,
+                            "action": ai_response.action,
+                            "result": ai_response.result,
+                            "instructions": ai_response.instructions,
+                            "tools": ai_response.tools,
+                            "arguments": ai_response.arguments,
+                            "resources": ai_response.resources,
+                        }.items() if v is not None}
+                    ),
+                )
+                return ai_response
+        if cli_output is None:
+            yaml_body = _yaml_from_prompt(full_prompt)
+            if yaml_body:
+                cli_output = _run_yaml_request(yaml_body, self._workspace)
+        if cli_output is None:
+            raise RuntimeError(
+                "no python -m tools run shell output found — agent must invoke the toolset CLI"
+            )

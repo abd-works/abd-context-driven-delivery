@@ -1,0 +1,1 @@
+Read tools/example/car.py. The Car toolset exposes @toolset with constructor (make, model, year, personality) and tools start, stop, drive, accelerate, decelerate, speak. Invoke via python -m tools run with toolset tools.example.car:Car.
