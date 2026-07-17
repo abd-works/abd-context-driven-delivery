@@ -7,7 +7,7 @@ Generator spec: generator/generator_spec.py — ActionRunner expansion + direct 
 Agent spec: generator/generator_agent_spec.py — agent follows instructions; assert shell tool calls
 Primitives spec: primitives/primitives_spec.py — Instruction, DeclaredProperty, DeclaredOperation
 Scanner spec: scanners/scanner_spec.py — Scanner, Violation, execute_scan, ScannerCollection
-Per-scanner repair fixtures: clean-code/examples/<rule>/faultyAsset and repairedAsset (scanners_spec.py)
+Per-scanner repair fixtures: clean_code/examples/<rule>/faultyAsset and repairedAsset (scanners_spec.py)
 -->
 
 Instructions

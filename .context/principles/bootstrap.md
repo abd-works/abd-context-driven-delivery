@@ -1,0 +1,1 @@
+All features are built using the same capability pattern — including the capability pattern itself.

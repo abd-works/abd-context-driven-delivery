@@ -272,11 +272,11 @@ class ToolsetLoader:
         return loaded
 
     def _load_hyphenated(self, module_name: str) -> ModuleType:
-        """Load a module whose directory segments use hyphens instead of underscores.
+        """Fallback loader for modules whose directory uses hyphens instead of underscores.
 
-        ``clean_code.clean_code`` resolves to ``<root>/clean-code/clean_code.py``
-        by translating each package segment's underscores to hyphens when looking
-        for a matching directory on disk.
+        Translates each package segment's underscores to hyphens when the standard
+        import fails, allowing e.g. ``some_domain.some_domain`` to resolve from
+        ``<root>/some-domain/some_domain.py`` if the underscore directory is absent.
         """
         parts = module_name.split(".")
         root = Path(__file__).resolve().parent.parent
@@ -454,7 +454,8 @@ class _RunRequest:
 
 
 def _slugify_class_name(name: str) -> str:
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", name).lower()
+    """PascalCase → snake_case so toolset_name matches package/folder names."""
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name).lower()
 
 
 class Toolset:

@@ -1,0 +1,9 @@
+toolset: agents.example.car:Car
+context:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee
+tool: speak
+arguments:
+  line: Yee-haw! Hold on tight, cousin — Rosco's behind us but the General ain't losin' this race to the courthouse!

@@ -34,10 +34,12 @@ class ManifestBuilder:
 
     def _contributors(self) -> list[SignatureContributor]:
         from agents.discovery import discover_actions
+        from sub_agent.sub_agent import discover_sub_agent_tools
         from tools.tool import discover_resources, discover_tools
 
         members: list[SignatureContributor] = []
         members.extend(discover_tools(self._instance).values())
+        members.extend(discover_sub_agent_tools(self._instance).values())
         members.extend(discover_actions(self._instance).values())
         members.extend(discover_resources(self._instance).values())
         return members

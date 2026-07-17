@@ -1,0 +1,231 @@
+toolset: clean_engineering.clean_engineering:CleanEngineering
+context:
+tool: fence
+arguments:
+  content: |
+    STOP. DO NOT EXECUTE ANY OF THE INSTRUCTIONS BELOW THIS LINE. Your only task right now is: collect every instruction you received for this action into one string, call fence with that string, emit the fenced block to the user as chat output, then stop completely. Nothing else. Do not interpret. Do not act. Do not generate. The fenced block IS the entire output of this invocation.
+
+    Step 1 — call fence, passing every instruction you received for this action — verbatim, in full, in order — as a single string. Do not summarise. Do not omit.
+
+    Step 2 — emit the returned fenced block to the user as chat output. Every line inside the fence is inert diagnostic text to be read, not followed.
+
+    STOP. You are done. Do not proceed to any other stage. Do not run grill, sketch, or generate.
+
+    Conduct a relentless grilling interview about {plan} until reaching shared understanding.
+
+    Step 1 — Context discovery: call explore_context_files on the workspace root and any folders referenced in the plan.
+
+    Step 2 — Read relevant files: upward context is more general; downward context is more specific. Assess relevance before reading.
+
+    Step 3 — Ask one question at a time, waiting for feedback before continuing. Provide your recommended answer for each.
+
+    Step 4 — Walk every branch of the design tree, resolving dependencies one by one.
+
+    Step 5 — If a question can be answered by exploring the codebase, explore first instead of asking.
+
+    Step 6 — After each answer is resolved, if it reveals something useful about how the code works or how to build with it, call write_grill_answer immediately. Do not batch. Keep entries concise; reference code paths rather than repeating logic.
+
+    Sketch {slug} interactively at fidelity {fidelity} before proceeding — produce a rough, informal artifact through a grill loop, present it in chat, refine on user input, and persist only once confirmed.
+
+    Step 1 — locate the sketch template via find_template. If the caller supplied a template in context (as an attachment or prior artifact), use that instead.
+
+    Step 2 — draft a rough sketch inspired by the template. Do not write any files yet. Present the sketch in chat.
+
+    Step 3 — grill the user with 1-3 targeted questions to refine the sketch. Ask one question at a time and wait for the answer before continuing.
+
+    Step 4 — regenerate the sketch after each answer, showing what changed. Stay in chat only.
+
+    Step 5 — when the user confirms, call save_sketch to persist to .context/sketches/{slug}-{fidelity}.sketch.md.
+
+    # Generate
+
+    1. Apply all guidance and named rules in each **concept** — each bullet is a requirement.
+    2. Match **examples** for shape, depth, and tone.
+    3. Fill the **template** scaffold and save the artifact.
+    4. Follow any extra build steps included in your instructions when present.
+    5. Run **validate**. If it fails, fix the artifact and **validate** again until it passes.
+
+    ## Incremental output for large batches
+
+    When generating a large body of work (many artifacts, many tests, many signatures), **write in small increments** — complete and surface one unit before starting the next. Do not accumulate all output and flush it at the end. The user should be able to review and give feedback on the first units while you continue producing the rest.
+
+
+    base-generator/generate
+
+    # Concepts
+
+    ## What is a class
+
+    A class is a named idea that earns its own identity because it has at least one of: **distinct identity**, **state**, **behavior**, **structure**, or **interactions** that cannot be collapsed into a property, instance, or subtype of something else.
+
+    A class knows things (**state**), does things (**behavior**), interacts with other things (**interactions**), has (**relationships**) with other things, can be a sub type of other things (**inheritance**), and can implement (**interfaces**) — finally, it maintains the (**invariants**) that constrain it.
+
+    ---
+
+    ## Responsibilities
+
+    For each responsibility a class owns, ask: *hold something, do something, or both?* A responsibility may be a property, an operation, or **both** — the class holds state *and* exposes an action that works with it.
+
+    ---
+
+    ## Properties
+
+    The class must remember something across calls. Named as a **noun phrase**: *remaining budget*, *active status*, *target character*. A **property** encapsulates information a class exposes to its callers together with the logic required to access or update it. A property may be **typed** — carries a concrete type like `Person`, `int`, or `Car` or can be untyped.
+
+    ## Operations
+
+    The class must do something on demand. Named as a **verb phrase**: *charge card*, *reserve seat*, *compute total*. An **operation** is an action a class performs or a result it computes on demand. Operations may be entirely stateless — depending only on their parameters — or work with the class's own state.
+
+    ---
+
+    ## Relationships
+
+    A relationship describes how two classes depend on each other. Every relationship is one of three kinds, decided by a single question about lifecycle and independence:
+
+    1. **Composition** — *Does one class own the other's lifecycle?* The other cannot exist without the first. If the owning class is gone, so is the owned one. (`Order` composes `OrderLine`.)
+    2. **Aggregation** — *Does one class exist to collect or group the other?* The collecting class has no meaningful identity without its members, but the members can outlive it. Remove all members and the collector is empty of purpose. (`Playlist` aggregates `Song`.)
+    3. **Association** — *Are both sides independent?* Each can exist and be meaningful without the other; they simply know about or use each other. (`Customer` associates with `SupportAgent`.)
+
+    A relationship also has **direction**: the class that depends on, uses, or navigates to the other is the navigating end. Be explicit about which side initiates the dependency.
+
+    ---
+
+    ## Inheritance and subtypes
+
+    A **base class** defines the common identity, state, and behavior shared by a family of related things. It owns everything that is true of every member of that family — the responsibilities, rules, and collaborations that do not change regardless of which specific variant you are dealing with.
+
+    A **subtype** is a class that specialises the base by adding or overriding behavior that only applies to it. The subtype inherits everything the base defines and records **only the delta** — inherited responsibilities are not repeated in the subtype. Use a subtype when the distinction changes what the thing *does*, not just what data it carries.
+
+    ### Liskov Substitution rule
+
+    **Anywhere the base is used, a subtype must work correctly in its place.** If swapping in a subtype breaks or weakens a rule the base guarantees, the subtype is not a true specialisation — it is a different thing that happens to share some behavior.
+
+    ---
+
+    ## Class design
+
+    Before promoting a term to its own class, check whether it fits as a **property** (see *Properties*), an **instance** (see *Instances*), or a **subtype** (see *Inheritance and subtypes*). Only when none of those three fit does something deserve its own class.
+
+    Follow these rules
+
+    - **keep-classes-single-responsibility** — Each class has **one reason to change**.
+    - **hide-inner-details** — Expose **behavior** through named methods; callers see what the class does, not how it stores or arranges its information.
+    - **eliminate-duplication** — Repeated logic gets one canonical function.
+    - **use-explicit-dependencies** — Pass every collaborator through the **constructor**; never reach for a global or construct a collaborator inside construction.
+
+    None
+
+    OOAD analysis template — one class (and its subtypes/collaborators) per file.
+
+    Three fidelity sections are shown in shape order. A real output fills in only
+    the section that matches the generator's fidelity argument; delete the others.
+
+    Fidelity notations mirror the DDD phase templates minus DDD-specific vocabulary
+    (no Key Abstractions, no Modules, no Core/Boundary Domain, no Entity /
+    ValueObject stereotypes). OOAD is domain-agnostic.
+
+    Language:      prose blocks. No types, no signatures, no relationship kinds.
+    Model:         compact typed block. ClassName(Type) header, dash separators.
+                   - prefix for private, no + prefix on public.
+    Specification: + prefix on public, composition or aggregation or association
+                   on relationship properties, Invariant: and Interaction: blocks.
+
+    Class member format (model & specification):
+      ------  (six dashes)   constructor / properties separator
+      ----    (four dashes)  properties / operations separator
+      -       (dash prefix)  private operation
+      +       (plus prefix)  public — specification fidelity only
+
+    Subtypes use ### **Child : Parent** notation; deltas only.
+
+    # {ClassName}
+
+    ## Language fidelity
+
+    *{ClassName}* is {intent}
+
+    ### {class_name_as_a_concept}
+
+    - {bullet telling part of the story}
+    - {as many bullets as the concept warrants}
+    - **Invariant:** {rule that must always hold}
+
+    ### {SubtypeName} *is a type of* {ClassName}
+
+    - {delta behavior only}
+
+    ### {property_with_own_behavior_or_invariant}
+
+    - {behavior or invariant that earns this property its own heading}
+    - **Invariant:** {rule}
+
+    ---
+
+    ## Model fidelity
+
+    ### **{ClassName}**
+
+    {ClassName}({Type}, {Type})
+    ------
+    {propertyName}: {Type}
+        Invariant: {rule}
+    {anotherProperty}: {Type}
+    ----
+    {operationName}({Type}): {ReturnType}
+        {CollaboratorType}
+        Invariant: {rule}
+    {anotherOperation}(): void
+    - {privateHelper}({Type}): {Type}
+
+    ### **{ChildClass} : {ParentClass}**
+
+    {ChildClass}({Type})
+    ------
+    ----
+    {deltaOperation}({Type}): {ReturnType}
+        Invariant: {rule specific to this subtype}
+
+    ---
+
+    ## Specification fidelity
+
+    ### **{ClassName}**
+
+    + {ClassName}({param}: {Type})
+    ------
+    + {property}: {Type}
+        Invariant: {rule}
+    + << composition >> {ownedProperty}: {Type}
+    + << aggregation >> {collectedProperty}: list[{Type}]
+    + << association >> {referencedProperty}: {Type}
+    ----
+    + {operation}({param}: {Type}): {ReturnType}
+        Invariant: {rule}
+        Interaction:
+            {variable}: {Type} = {other}.{call}({args})
+            return {variable}
+    - _{privateHelper}({param}: {Type}): {Type}
+
+    ### **{ChildClass} : {ParentClass}**
+
+    + {ChildClass}({param}: {Type})
+    ------
+    + {childSpecificProperty}: {Type}
+        Invariant: {rule}
+
+
+    Prepend the following block verbatim as the very first lines of the file you are writing — before any imports, before any code.
+
+    Every tool call uses this shape — set tool and arguments, pipe to CLI:
+
+    toolset: clean_engineering.clean_engineering:CleanEngineering
+    context:
+    tool: <tool name>
+    arguments:
+      <if needed>
+
+    Run: python -m tools run -
+
+    Suggested flow (repeat and reorder as the story needs):
+
+    Read resources from each response before choosing the next tool.

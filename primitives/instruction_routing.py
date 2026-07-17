@@ -15,17 +15,41 @@ def path_for_name(module_dir: Path, name: str) -> str:
     return "\u00a7 " + name.title()
 
 
-def path_for_template(module_dir: Path, domain_slug: str, active_format: str | None) -> str:
-    template_stem = f"{domain_slug}-template"
+def _slug_variants(domain_slug: str) -> list[str]:
+    """toolset_name is snake_case; on-disk domain files often use hyphens."""
+    variants = [domain_slug]
+    for alt in (domain_slug.replace("_", "-"), domain_slug.replace("-", "_")):
+        if alt not in variants:
+            variants.append(alt)
+    return variants
+
+
+def path_for_templates(module_dir: Path, domain_slug: str, active_format: str | None) -> str:
+    """Relative path hint for the domain artifact templates file or folder."""
+    shared = module_dir / "templates"
+    if shared.is_dir():
+        for slug in _slug_variants(domain_slug):
+            for stem in (f"{slug}-templates", f"{slug}-template"):
+                for path in sorted(shared.glob(f"{stem}.*")):
+                    return path.relative_to(module_dir).as_posix()
+        return "templates"
+    for slug in _slug_variants(domain_slug):
+        for stem in (f"{slug}-templates", f"{slug}-template"):
+            if active_format:
+                format_dir = module_dir / "formats" / active_format
+                if format_dir.is_dir():
+                    for path in sorted(format_dir.glob(f"{stem}.*")):
+                        return path.relative_to(module_dir).as_posix()
+            for path in sorted(module_dir.glob(f"{stem}.*")):
+                return path.name
+    primary = _slug_variants(domain_slug)[0]
     if active_format:
-        format_dir = module_dir / "formats" / active_format
-        if format_dir.is_dir():
-            for path in sorted(format_dir.glob(f"{template_stem}.*")):
-                return path.relative_to(module_dir).as_posix()
-            return f"formats/{active_format}/{template_stem}"
-    for path in sorted(module_dir.glob(f"{template_stem}.*")):
-        return path.name
-    return template_stem
+        return f"formats/{active_format}/{primary}-templates"
+    return f"{primary}-templates"
+
+
+# Back-compat alias
+path_for_template = path_for_templates
 
 
 def format_keys(module_dir: Path) -> list[str]:

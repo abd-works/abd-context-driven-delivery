@@ -1,0 +1,4 @@
+General Lee fired up on the muddy back roads of Hazzard County with Sheriff Rosco in pursuit. The orange Dodge Charger slid through red clay, engine roaring toward the courthouse.
+
+tool: start — engine running.
+tool: speak — Dodge Charger says: "Yee-haw! Hold on tight, cousin — Rosco's behind us but the General ain't losin' this race to the courthouse!"

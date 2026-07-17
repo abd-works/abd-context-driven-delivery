@@ -1,7 +1,7 @@
 # @toolset-manifest python -m tools manifest generator.generator:Generator
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Build or patch Generator domains — scaffold @generator_class_annotation toolsets."""
+"""Build or patch Generator domains — scaffold @generator toolsets."""
 
 from __future__ import annotations
 
@@ -36,15 +36,15 @@ class Generator(Toolset):
     def rules(self) -> Instruction: ...
 
     @instruction
-    def domain_generate(self) -> Instruction: ...
+    def generate_instructions(self) -> Instruction: ...
+
+    @instruction
+    def document_instructions(self) -> Instruction: ...
 
     @instruction
     def examples(self) -> Instruction: ...
 
-    @instruction(group="formats", filter_key="format")
-    def template(self) -> Instruction: ...
-
-    @instruction(collection=True)
+    @instruction
     def templates(self) -> Instruction: ...
 
     @action
@@ -62,21 +62,16 @@ class Generator(Toolset):
         return ""
 
     def _scanner_collection(self) -> ScannerCollection:
-        scanner_root = self.module_dir / "scanners"
-        formats_dir = self.module_dir / "formats"
-        if formats_dir.is_dir() and self.format:
-            scanner_root = formats_dir / self.format / "scanners"
-        return ScannerCollection(self.module_dir, scanner_root)
+        return ScannerCollection()
 
     @action
     def generate(self) -> str:
         """base-generator/generate"""
         self.concepts
         self.rules
-        self.domain_generate
+        self.generate_instructions
         self.examples
         self.templates
-        self.template
         self.generate_output()
         self.add_generate_header_to_generated()
         return "When done, run validate."
@@ -89,10 +84,21 @@ class Generator(Toolset):
         return "Validation report."
 
     @action
+    def document(self, paths: list[str]) -> str:
+        """base-generator/document"""
+        self.concepts
+        self.document_instructions
+        self.templates
+        self.scan(paths)
+        self.generate_output()
+        self.add_generate_header_to_generated()
+        return "Document existing state — violations flagged, none corrected."
+
+    @action
     def satisfy(self) -> str:
         """base-generator/satisfy"""
         self.concepts
-        self.template
+        self.templates
         return "When done, run validate."
 
     @action
@@ -101,7 +107,7 @@ class Generator(Toolset):
         self.scan()
         self.concepts
         self.examples
-        self.template
+        self.templates
         self.validate()
         return "Repair {asset} until validate passes."
 
@@ -118,12 +124,12 @@ Generator._is_toolset = True  # type: ignore[attr-defined]
 ActionRunner.instance().validate_toolset(Generator)
 
 
-def generator_class_annotation(cls: T) -> T:
+def generator(cls: T) -> T:
     if getattr(cls, "_is_generator", False):
         return cls
     if issubclass(cls, Generator):
         raise TypeError(
-            f"{cls.__name__} must use @generator_class_annotation — do not subclass Generator directly"
+            f"{cls.__name__} must use @generator — do not subclass Generator directly"
         )
     merged = type(
         cls.__name__,

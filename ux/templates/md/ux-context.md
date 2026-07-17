@@ -1,0 +1,11 @@
+# UX context — {{SCOPE}}
+
+Optional notes that are not easily visible on screens (same role as story-context / module-context).
+
+## Invariants
+
+- {{INVARIANT}}
+
+## Notes
+
+- {{THINKING_OR_INTERACTION_NOTE}}

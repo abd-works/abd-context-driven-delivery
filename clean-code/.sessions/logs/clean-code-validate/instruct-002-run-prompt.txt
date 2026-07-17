@@ -1,3 +1,0 @@
-Write me a minimal Python Cart module that holds line items and computes a subtotal. Use the CleanCode generator with format python.
-
-IMPORTANT: Invoke python -m tools run via shell. Return the complete fenced YAML stdout from the CLI. Do not summarize.

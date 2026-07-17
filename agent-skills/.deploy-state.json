@@ -1,0 +1,18 @@
+{
+  "ide": "cursor",
+  "name_filter": "",
+  "deployed": [
+    "action",
+    "agent-skills",
+    "agent-bdd",
+    "bdd",
+    "clean-engineering",
+    "diagnose",
+    "echo",
+    "generator",
+    "grill-context",
+    "sketch",
+    "stories"
+  ],
+  "deployed_commands": []
+}

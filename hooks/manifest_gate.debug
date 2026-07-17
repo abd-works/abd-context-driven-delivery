@@ -1,0 +1,120 @@
+2026-07-14T04:38:54Z [pre] tool='str_replace_editor' input_keys=['path']
+2026-07-14T04:42:59Z [post] tool='read_file' input_keys=['path']
+2026-07-14T04:43:54Z [post] ENTRY raw_len=1757
+2026-07-14T04:43:54Z [post] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0f35a6a2-e1f6-4729-b9c4-53d29143505d","generation_id":"50a352c3-c67e-41b6-bb91-c99b9f87e2c2","model":"claude-sonnet-4-6","file_path":"c:\\\\dev\\\\abd-context-driven-delivery\\\\ho'
+2026-07-14T04:43:54Z [post] ENTRY raw_len=8996
+2026-07-14T04:43:54Z [post] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0f35a6a2-e1f6-4729-b9c4-53d29143505d","generation_id":"50a352c3-c67e-41b6-bb91-c99b9f87e2c2","model":"claude-sonnet-4-6","tool_name":"Write","tool_input":{"file_path":"c:\\\\de'
+2026-07-14T04:44:01Z [pre] ENTRY raw_len=4996
+2026-07-14T04:44:01Z [pre] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0f35a6a2-e1f6-4729-b9c4-53d29143505d","generation_id":"50a352c3-c67e-41b6-bb91-c99b9f87e2c2","model":"claude-sonnet-4-6","tool_name":"Write","tool_input":{"file_path":"c:\\\\de'
+2026-07-14T04:44:02Z [post] ENTRY raw_len=697
+2026-07-14T04:44:02Z [post] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0f35a6a2-e1f6-4729-b9c4-53d29143505d","generation_id":"50a352c3-c67e-41b6-bb91-c99b9f87e2c2","model":"claude-sonnet-4-6","file_path":"c:\\\\dev\\\\abd-context-driven-delivery\\\\oo'
+2026-07-14T04:44:02Z [post] ENTRY raw_len=5128
+2026-07-14T04:44:02Z [post] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0f35a6a2-e1f6-4729-b9c4-53d29143505d","generation_id":"50a352c3-c67e-41b6-bb91-c99b9f87e2c2","model":"claude-sonnet-4-6","tool_name":"Write","tool_input":{"file_path":"c:\\\\de'
+2026-07-14T04:44:15Z [pre] ENTRY raw_len=716
+2026-07-14T04:44:15Z [pre] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0f35a6a2-e1f6-4729-b9c4-53d29143505d","generation_id":"50a352c3-c67e-41b6-bb91-c99b9f87e2c2","model":"claude-sonnet-4-6","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev'
+2026-07-14T04:44:15Z [read] ENTRY raw_len=3443
+2026-07-14T04:44:15Z [read] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0f35a6a2-e1f6-4729-b9c4-53d29143505d","generation_id":"50a352c3-c67e-41b6-bb91-c99b9f87e2c2","model":"claude-sonnet-4-6","content":"2026-07-14T04:38:54Z [pre] tool=\'str_repla'
+2026-07-14T04:44:16Z [post] ENTRY raw_len=868
+2026-07-14T04:44:16Z [post] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0f35a6a2-e1f6-4729-b9c4-53d29143505d","generation_id":"50a352c3-c67e-41b6-bb91-c99b9f87e2c2","model":"claude-sonnet-4-6","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev'
+2026-07-14T04:44:17Z [pre] ENTRY raw_len=759
+2026-07-14T04:44:17Z [pre] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"970639c8-531b-445d-9509-9c8b821b8681","generation_id":"03de9462-d178-4862-bbb5-98d9b2134675","model":"claude-sonnet-4-6","tool_name":"Grep","tool_input":{"pattern":"","file_p'
+2026-07-14T04:44:18Z [post] ENTRY raw_len=830
+2026-07-14T04:44:18Z [post] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"970639c8-531b-445d-9509-9c8b821b8681","generation_id":"03de9462-d178-4862-bbb5-98d9b2134675","model":"claude-sonnet-4-6","tool_name":"Grep","tool_input":{"pattern":"","file_p'
+2026-07-14T04:44:31Z [pre] ENTRY raw_len=715
+2026-07-14T04:44:31Z [pre] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"970639c8-531b-445d-9509-9c8b821b8681","generation_id":"03de9462-d178-4862-bbb5-98d9b2134675","model":"claude-sonnet-4-6","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev'
+2026-07-14T04:44:32Z [read] ENTRY raw_len=1119
+2026-07-14T04:44:32Z [read] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"970639c8-531b-445d-9509-9c8b821b8681","generation_id":"03de9462-d178-4862-bbb5-98d9b2134675","model":"claude-sonnet-4-6","content":"{\\n  \\"hooks\\": {\\n    \\"PostToolUse\\": [\\'
+2026-07-14T04:44:32Z [post] ENTRY raw_len=864
+2026-07-14T04:44:32Z [post] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"970639c8-531b-445d-9509-9c8b821b8681","generation_id":"03de9462-d178-4862-bbb5-98d9b2134675","model":"claude-sonnet-4-6","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev'
+2026-07-14T04:44:55Z [pre] ENTRY raw_len=9111
+2026-07-14T04:44:55Z [pre] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0f35a6a2-e1f6-4729-b9c4-53d29143505d","generation_id":"50a352c3-c67e-41b6-bb91-c99b9f87e2c2","model":"claude-sonnet-4-6","tool_name":"Write","tool_input":{"file_path":"c:\\\\de'
+2026-07-14T04:44:55Z [post] ENTRY raw_len=1284
+2026-07-14T04:44:55Z [post] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0f35a6a2-e1f6-4729-b9c4-53d29143505d","generation_id":"50a352c3-c67e-41b6-bb91-c99b9f87e2c2","model":"claude-sonnet-4-6","file_path":"c:\\\\dev\\\\abd-context-driven-delivery\\\\ho'
+2026-07-14T04:44:56Z [post] ENTRY raw_len=9253
+2026-07-14T04:44:56Z [post] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0f35a6a2-e1f6-4729-b9c4-53d29143505d","generation_id":"50a352c3-c67e-41b6-bb91-c99b9f87e2c2","model":"claude-sonnet-4-6","tool_name":"Write","tool_input":{"file_path":"c:\\\\de'
+2026-07-14T04:45:04Z [pre] ENTRY raw_len=9314
+2026-07-14T04:45:04Z [pre] JSON_ERROR JSONDecodeError('Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)') raw=b'\xef\xbb\xbf\xef\xbb\xbf{"conversation_id":"0f35a6a2-e1f6-4729-b9c4-53d29143505d","generation_id":"50a352c3-c67e-41b6-bb91-c99b9f87e2c2","model":"claude-sonnet-4-6","tool_name":"Write","tool_input":{"file_path":"c:\\\\de'
+2026-07-14T04:45:04Z [post] ENTRY raw_len=986
+2026-07-14T04:45:04Z [post] tool='?' input_keys=[]
+2026-07-14T04:45:05Z [post] ENTRY raw_len=9455
+2026-07-14T04:45:05Z [post] tool='Write' input_keys=['file_path', 'content']
+2026-07-14T04:45:10Z [pre] ENTRY raw_len=4996
+2026-07-14T04:45:10Z [pre] tool='Write' input_keys=['file_path', 'content']
+2026-07-14T04:45:11Z [post] ENTRY raw_len=697
+2026-07-14T04:45:11Z [post] tool='?' input_keys=[]
+2026-07-14T04:45:12Z [post] ENTRY raw_len=5128
+2026-07-14T04:45:12Z [post] tool='Write' input_keys=['file_path', 'content']
+2026-07-14T04:45:18Z [pre] ENTRY raw_len=730
+2026-07-14T04:45:18Z [pre] tool='Grep' input_keys=['pattern', 'file_path', 'glob']
+2026-07-14T04:45:19Z [pre] ENTRY raw_len=734
+2026-07-14T04:45:19Z [pre] tool='Grep' input_keys=['pattern', 'file_path', 'glob']
+2026-07-14T04:45:19Z [post] ENTRY raw_len=815
+2026-07-14T04:45:19Z [post] tool='Grep' input_keys=['pattern', 'file_path', 'glob']
+2026-07-14T04:45:19Z [post] ENTRY raw_len=823
+2026-07-14T04:45:19Z [post] tool='Grep' input_keys=['pattern', 'file_path', 'glob']
+2026-07-14T04:45:23Z [pre] ENTRY raw_len=727
+2026-07-14T04:45:23Z [pre] tool='Grep' input_keys=['pattern', 'file_path', 'glob']
+2026-07-14T04:45:23Z [post] ENTRY raw_len=807
+2026-07-14T04:45:23Z [post] tool='Grep' input_keys=['pattern', 'file_path', 'glob']
+2026-07-14T04:45:29Z [pre] ENTRY raw_len=716
+2026-07-14T04:45:29Z [pre] tool='Read' input_keys=['file_path']
+2026-07-14T04:45:30Z [read] ENTRY raw_len=9720
+2026-07-14T04:45:30Z [read] tool='?' input_keys=[]
+2026-07-14T04:45:30Z [post] ENTRY raw_len=865
+2026-07-14T04:45:30Z [post] tool='Read' input_keys=['file_path']
+2026-07-14T04:45:39Z [pre] ENTRY raw_len=788
+2026-07-14T04:45:39Z [pre] tool='Shell' input_keys=['command', 'cwd', 'timeout']
+2026-07-14T04:45:43Z [pre] ENTRY raw_len=786
+2026-07-14T04:45:43Z [pre] tool='Shell' input_keys=['command', 'cwd', 'timeout']
+2026-07-14T04:45:49Z [post] ENTRY raw_len=3022
+2026-07-14T04:45:49Z [post] tool='Shell' input_keys=['command', 'cwd', 'timeout']
+2026-07-14T04:45:53Z [pre] ENTRY raw_len=4972
+2026-07-14T04:45:53Z [pre] tool='Write' input_keys=['file_path', 'content']
+2026-07-14T04:45:54Z [post] ENTRY raw_len=691
+2026-07-14T04:45:54Z [post] tool='?' input_keys=[]
+2026-07-14T04:45:54Z [pre] ENTRY raw_len=7089
+2026-07-14T04:45:54Z [pre] tool='Write' input_keys=['file_path', 'content']
+2026-07-14T04:45:55Z [post] ENTRY raw_len=5104
+2026-07-14T04:45:55Z [post] tool='Write' input_keys=['file_path', 'content']
+2026-07-14T04:45:55Z [post] ENTRY raw_len=759
+2026-07-14T04:45:55Z [post] tool='?' input_keys=[]
+2026-07-14T04:45:56Z [post] ENTRY raw_len=7231
+2026-07-14T04:45:56Z [post] tool='Write' input_keys=['file_path', 'content']
+2026-07-14T04:46:00Z [pre] ENTRY raw_len=7065
+2026-07-14T04:46:00Z [pre] tool='Write' input_keys=['file_path', 'content']
+2026-07-14T04:46:01Z [post] ENTRY raw_len=701
+2026-07-14T04:46:01Z [post] tool='?' input_keys=[]
+2026-07-14T04:46:01Z [post] ENTRY raw_len=7207
+2026-07-14T04:46:01Z [post] tool='Write' input_keys=['file_path', 'content']
+2026-07-14T04:46:09Z [pre] ENTRY raw_len=4956
+2026-07-14T04:46:09Z [pre] tool='Write' input_keys=['file_path', 'content']
+2026-07-14T04:46:10Z [post] ENTRY raw_len=683
+2026-07-14T04:46:10Z [post] tool='?' input_keys=[]
+2026-07-14T04:46:10Z [post] ENTRY raw_len=5087
+2026-07-14T04:46:10Z [post] tool='Write' input_keys=['file_path', 'content']
+2026-07-14T04:46:13Z [pre] ENTRY raw_len=765
+2026-07-14T04:46:13Z [pre] tool='Grep' input_keys=['pattern', 'file_path', 'glob', 'output_mode']
+2026-07-14T04:46:13Z [pre] ENTRY raw_len=765
+2026-07-14T04:46:13Z [pre] tool='Grep' input_keys=['pattern', 'file_path', 'glob', 'output_mode']
+2026-07-14T04:46:13Z [post] ENTRY raw_len=836
+2026-07-14T04:46:13Z [post] tool='Grep' input_keys=['pattern', 'file_path', 'glob', 'output_mode']
+2026-07-14T04:46:13Z [pre] ENTRY raw_len=758
+2026-07-14T04:46:13Z [pre] tool='Grep' input_keys=['pattern', 'file_path', 'glob', 'output_mode']
+2026-07-14T04:46:14Z [post] ENTRY raw_len=837
+2026-07-14T04:46:14Z [post] tool='Grep' input_keys=['pattern', 'file_path', 'glob', 'output_mode']
+2026-07-14T04:46:14Z [post] ENTRY raw_len=829
+2026-07-14T04:46:14Z [post] tool='Grep' input_keys=['pattern', 'file_path', 'glob', 'output_mode']
+2026-07-14T04:46:17Z [pre] ENTRY raw_len=721
+2026-07-14T04:46:17Z [pre] ENTRY raw_len=707
+2026-07-14T04:46:17Z [pre] tool='Read' input_keys=['file_path']
+2026-07-14T04:46:17Z [pre] tool='Read' input_keys=['file_path']
+2026-07-14T04:46:18Z [read] ENTRY raw_len=5859
+2026-07-14T04:46:18Z [read] tool='?' input_keys=[]
+2026-07-14T04:46:18Z [read] ENTRY raw_len=5320
+2026-07-14T04:46:18Z [read] tool='?' input_keys=[]
+2026-07-14T04:46:18Z [post] ENTRY raw_len=877
+2026-07-14T04:46:18Z [post] ENTRY raw_len=848
+2026-07-14T04:46:18Z [post] tool='Read' input_keys=['file_path']
+2026-07-14T04:46:18Z [post] tool='Read' input_keys=['file_path']
+2026-07-14T04:46:29Z [pre] ENTRY raw_len=7945
+2026-07-14T04:46:29Z [pre] tool='Write' input_keys=['file_path', 'content']

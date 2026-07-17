@@ -7,11 +7,11 @@
 from __future__ import annotations
 
 from agents.action import action
-from generator import generator_class_annotation  # noqa: F401
+from generator import generator  # noqa: F401
 from tools.tool import tool
 
 
-@generator_class_annotation
+@generator
 class ChronicleWithOutput:
     """§ Instructions"""
 
@@ -20,7 +20,7 @@ class ChronicleWithOutput:
 
     @property
     def toolset_name(self) -> str:
-        return "car-chronicle"
+        return "car_chronicle"
 
     @action
     def generate_output(self) -> str:

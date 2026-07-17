@@ -504,12 +504,26 @@ class Action:
 
     @property
     def signature_entry(self) -> dict[str, Any]:
+        from action.action import _action_wrapper_specs
+
         reader = SignatureReader.instance()
         body = ActionExpander.instance().parse_body(self.callable)
         entry: dict[str, Any] = {
             "kind": "action",
             "tools": list(dict.fromkeys(body.tool_steps)),
         }
+        specs = list(_action_wrapper_specs(self.callable))
+        if specs:
+            chain: list = []
+            for spec in specs:
+                if spec.static_kwargs:
+                    chain.append({"name": spec.name, **spec.static_kwargs})
+                else:
+                    chain.append(spec.name)
+            entry["chain"] = chain
+        focus_entries: list[tuple[str, str]] = getattr(self.callable, "_focus_entries", [])
+        if focus_entries:
+            entry["focus"] = [{"group": g, "filter_key": k} for g, k in focus_entries]
         if self.instructions:
             entry["instructions"] = self.instructions
         parameters = reader.simple_parameters(self.callable)

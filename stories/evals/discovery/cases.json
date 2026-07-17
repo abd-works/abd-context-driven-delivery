@@ -1,0 +1,31 @@
+{
+  "skill": "stories",
+  "fidelity": "discovery",
+  "version": 1,
+  "notes": "Minimal discovery fixture registry. Pass fixture shows verb–noun epic/sub-epic/story names with actor before `-->`. Fail fixture isolates actor-in-story-name so verb-noun-format can target it.",
+  "rules": [
+    "verb-noun-format"
+  ],
+  "cases": [
+    {
+      "id": "pass/verb-noun-map",
+      "kind": "pass",
+      "path": "pass/verb-noun-map",
+      "primary_artifact": "story-map.md",
+      "description": "Canonical passing discovery map: epic, sub-epic, and story names are verb–noun; actors sit before `-->`, never inside the story name.",
+      "expect": {
+        "verb-noun-format": "clean"
+      }
+    },
+    {
+      "id": "fail/actor-in-story-name",
+      "kind": "fail",
+      "path": "fail/actor-in-story-name",
+      "primary_artifact": "story-map.md",
+      "description": "Primary target: verb-noun-format. Story names start with an actor noun (Customer …) even though the actor is also declared before `-->`.",
+      "expect": {
+        "verb-noun-format": "violate"
+      }
+    }
+  ]
+}

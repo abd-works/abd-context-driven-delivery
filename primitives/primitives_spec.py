@@ -174,13 +174,13 @@ with description("DeclaredProperty"):
             keys = self.property.discover_keys(self.host)
             expect(keys).to(equal(self.expected_names))
 
-    with context("template declared property with activeKey set"):
+    with context("templates declared property with activeKey set"):
         with before.each:
-            self.property = DeclaredProperty("template", active_key="format")
+            self.property = DeclaredProperty("templates", active_key="format")
             self.host = _FormatHost("python")
             self.direct = load_python_template(_CLEAN_CODE_DIR)
 
-        with it("should yield an instruction whose expand equals the template file load"):
+        with it("should yield an instruction whose expand equals the templates file load"):
             instruction = self.property.route(self.host)
             expect(instruction.expand()).to(equal(self.direct))
 

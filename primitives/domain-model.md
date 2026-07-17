@@ -1,6 +1,6 @@
 # Module: Primitives
 
-Scope: shared types for **Instruction** expansion and **declaration** routing. Used by `@instruction` slots, `ActionExpander`, and `@generator_class_annotation` toolsets.
+Scope: shared types for **Instruction** expansion and **declaration** routing. Used by `@instruction` slots, `ActionExpander`, and `@generator` toolsets.
 
 **Key Abstractions**:
 - **Instruction**: Instruction

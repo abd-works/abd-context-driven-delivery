@@ -45,11 +45,15 @@ def merge_folder(folder_path: Path) -> str:
     if not folder_path.is_dir():
         return ""
     parts: list[str] = []
-    for md_file in sorted(folder_path.glob("*.md")):
-        parts.append(f"## {md_file.stem}\n\n{md_file.read_text(encoding='utf-8')}")
-    if not parts:
-        for child in sorted(path for path in folder_path.iterdir() if path.is_dir()):
-            parts.append(child.name)
+    for path in sorted(folder_path.iterdir()):
+        if path.name.startswith(".") or path.name == "__pycache__":
+            continue
+        if path.is_file():
+            parts.append(f"## {path.stem}\n\n{path.read_text(encoding='utf-8')}")
+        elif path.is_dir():
+            nested = merge_folder(path)
+            if nested:
+                parts.append(nested)
     return "\n\n".join(parts)
 
 
@@ -100,11 +104,15 @@ def extract_collection(location: AssetLocation) -> dict[str, str]:
     if location.kind == "folder" and location.folder is not None:
         if not location.folder.is_dir():
             return {}
-        return {
-            path.name: read_file(path)
-            for path in sorted(location.folder.iterdir())
-            if path.is_file()
-        }
+        items: dict[str, str] = {}
+        for path in sorted(location.folder.rglob("*")):
+            if not path.is_file():
+                continue
+            if path.name.startswith(".") or "__pycache__" in path.parts:
+                continue
+            rel = path.relative_to(location.folder).as_posix()
+            items[rel] = read_file(path)
+        return items
     if location.kind == "file" and location.path is not None:
         if not location.path.is_file():
             return {}

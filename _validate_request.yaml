@@ -1,0 +1,7 @@
+toolset: clean_engineering.clean_engineering:CleanEngineering
+action: validate
+new:
+  fidelity: language
+  format: markdown
+arguments:
+  asset: clean_engineering/examples/shopping-cart.md

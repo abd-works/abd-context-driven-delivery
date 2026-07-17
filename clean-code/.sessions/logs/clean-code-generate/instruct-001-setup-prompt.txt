@@ -1,1 +1,0 @@
-Read clean-code/clean-code.py from the workspace.

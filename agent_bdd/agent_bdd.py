@@ -12,10 +12,10 @@ import agent_bdd.conf  # noqa: F401 — repo root on sys.path
 import generator  # noqa: F401 — Bdd merges with Generator at import
 from agents.action import action  # noqa: F401
 from bdd.bdd import Bdd
-from generator import generator_class_annotation  # noqa: F401
+from generator import generator  # noqa: F401
 
 
-@generator_class_annotation
+@generator
 class AgentBdd:
     """§ Instructions"""
 
@@ -41,7 +41,7 @@ class AgentBdd:
     @action
     def satisfy(self) -> str:
         self.concepts
-        self.template
+        self.templates
         self._bdd().satisfy()
         return "When done, run validate."
 
@@ -50,7 +50,7 @@ class AgentBdd:
         self.scan()
         self.concepts
         self.examples
-        self.template
+        self.templates
         self._bdd().satisfy()
         self.validate()
         return "Repair {asset} until validate passes."

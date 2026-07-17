@@ -19,9 +19,10 @@ def instruction(
     group: str | None = None,
     filter_key: str | None = None,
     override: bool = False,
+    label: str | None = None,
 ) -> F | Callable[[F], F]:
     def decorate(target: F) -> F:
-        label = target.__name__
+        resolved_label = label or target.__name__
 
         if override:
             wrapped = target
@@ -30,15 +31,17 @@ def instruction(
             def wrapped(instance: Any) -> Any:
                 from .instruction import Instruction
 
+                # Read attrs at call time so @focus (applied outside) can set them.
                 return Instruction.ref(
                     instance,
-                    label,
-                    collection=collection,
-                    group=group,
-                    filter_key=filter_key,
+                    getattr(wrapped, "_instruction_label", resolved_label),
+                    collection=getattr(wrapped, "_instruction_collection", collection),
+                    group=getattr(wrapped, "_instruction_group", group),
+                    filter_key=getattr(wrapped, "_instruction_filter_key", filter_key),
                 )
 
         wrapped._is_instruction_slot = True  # type: ignore[attr-defined]
+        wrapped._instruction_label = resolved_label  # type: ignore[attr-defined]
         wrapped._instruction_collection = collection  # type: ignore[attr-defined]
         wrapped._instruction_group = group  # type: ignore[attr-defined]
         wrapped._instruction_filter_key = filter_key  # type: ignore[attr-defined]
@@ -156,4 +159,6 @@ def inline(instance: Any, member: str) -> str:
         return result.expand()
     if isinstance(result, str):
         return result
+    if result is None:
+        return ""
     return str(result)

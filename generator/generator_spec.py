@@ -77,15 +77,15 @@ def _load_base_generator() -> Toolset:
 
 
 def _load_car_concepts() -> str:
-    return Instruction("§ Concepts", _CAR_CHRONICLE_DIR, domain_slug="car-chronicle").expand()
+    return Instruction("§ Concepts", _CAR_CHRONICLE_DIR, domain_slug="car_chronicle").expand()
 
 
 def _load_car_examples() -> str:
-    return Instruction("examples", _CAR_CHRONICLE_DIR, domain_slug="car-chronicle").expand()
+    return Instruction("examples", _CAR_CHRONICLE_DIR, domain_slug="car_chronicle").expand()
 
 
 def _load_car_template() -> str:
-    return Instruction("car-chronicle-template", _CAR_CHRONICLE_DIR, domain_slug="car-chronicle").expand()
+    return Instruction("car_chronicle-templates", _CAR_CHRONICLE_DIR, domain_slug="car_chronicle").expand()
 
 
 def _assert_text_inlined(instructions: str, source: str) -> None:
@@ -131,13 +131,13 @@ with description("Action expansion"):
             with it("should name no tools on generate"):
                 expect(self.response["tools"]).to(equal([]))
 
-            with it("should inline the full Concepts section from car-chronicle.md"):
+            with it("should inline the full Concepts section from car_chronicle.md"):
                 _assert_concepts_inlined(self.response["instructions"], self.concepts)
 
             with it("should inline the full examples.md file"):
                 _assert_text_inlined(self.response["instructions"], self.examples)
 
-            with it("should inline the full car-chronicle template file"):
+            with it("should inline the full car_chronicle templates file"):
                 _assert_text_inlined(self.response["instructions"], self.template)
 
             with it("should inline generate.md from the generator module"):
@@ -186,7 +186,7 @@ with description("Action expansion"):
             with it("should inline the full Concepts section"):
                 _assert_concepts_inlined(self.response["instructions"], self.concepts)
 
-            with it("should inline the full car-chronicle template file"):
+            with it("should inline the full car_chronicle templates file"):
                 _assert_text_inlined(self.response["instructions"], self.template)
 
             with it("should inline satisfy.md from the generator module"):
@@ -256,7 +256,7 @@ with description("Action expansion"):
 
             with it("should inline all files from generator/templates/"):
                 _assert_text_inlined(self.response["instructions"], self.template)
-                expect("@generator_class_annotation" in self.response["instructions"]).to(be_true)
+                expect("@generator" in self.response["instructions"]).to(be_true)
                 expect("# Instructions" in self.response["instructions"]).to(be_true)
                 expect("# Worked examples" in self.response["instructions"]).to(be_true)
 

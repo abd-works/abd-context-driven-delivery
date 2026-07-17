@@ -5,7 +5,7 @@ from typing import Any
 
 from .declared_member import DeclaredMember
 from .instruction import Instruction
-from .instruction_routing import active_resource, format_keys, path_for_name, path_for_template
+from .instruction_routing import active_resource, format_keys, path_for_name, path_for_templates
 
 
 class DeclaredProperty(DeclaredMember):
@@ -29,15 +29,15 @@ class DeclaredProperty(DeclaredMember):
 
     def route(self, instance: Any) -> Instruction:
         module_dir = Path(getattr(instance, "module_dir", Path(".")))
-        domain_slug = getattr(instance, "toolset_name", getattr(instance, "domain_slug", module_dir.name))
+        domain_slug = getattr(instance, "domain_slug", getattr(instance, "toolset_name", module_dir.name))
         if self.target:
             target_value = getattr(instance, self.target, None)
             if callable(target_value):
                 target_value = target_value()
             if isinstance(target_value, str) and target_value.strip():
                 return Instruction(target_value.strip(), module_dir, domain_slug=domain_slug)
-        if self.name == "template":
-            path_text = path_for_template(
+        if self.name == "templates":
+            path_text = path_for_templates(
                 module_dir,
                 domain_slug,
                 active_resource(instance, self.active_key),

@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "command": "python hooks/manifest_gate.py post",
+        "matcher": "Read",
+        "timeout": 35,
+        "failClosed": false
+      }
+    ],
+    "PreToolUse": [
+      {
+        "command": "python hooks/manifest_gate.py pre",
+        "matcher": "Write|StrReplace|EditNotebook",
+        "timeout": 35,
+        "failClosed": false
+      }
+    ]
+  }
+}

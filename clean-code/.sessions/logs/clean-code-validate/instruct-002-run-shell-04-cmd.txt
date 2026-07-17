@@ -1,9 +1,0 @@
-cd C:\dev\abd-context-driven-delivery && python -m tools run - <<'EOF'
-toolset: clean_code.clean_code:CleanCode
-context:
-  format: python
-action: scan
-args:
-  paths:
-    - packages/cart.py
-EOF

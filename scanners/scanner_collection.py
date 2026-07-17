@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import re
 import sys
 from dataclasses import dataclass, field
@@ -25,9 +26,34 @@ class ScannerReport:
 
 
 class ScannerCollection:
-    def __init__(self, module_dir: Path, root_path: Path) -> None:
+    def __init__(
+        self,
+        module_dir: Path | None = None,
+        root_path: Path | None = None,
+    ) -> None:
+        if module_dir is None:
+            module_dir = self._default_module_dir()
         self.module_dir = Path(module_dir)
-        self.root_path = Path(root_path)
+        self.root_path = (
+            Path(root_path) if root_path is not None else self.module_dir / "scanners"
+        )
+
+    @staticmethod
+    def _default_module_dir() -> Path:
+        """Prefer caller's ``self.module_dir`` (Generator); else cwd."""
+        frame = inspect.currentframe()
+        try:
+            caller = frame.f_back.f_back if frame and frame.f_back else None
+            while caller is not None:
+                owner = caller.f_locals.get("self")
+                if owner is not None:
+                    directory = getattr(owner, "module_dir", None)
+                    if directory is not None:
+                        return Path(directory)
+                caller = caller.f_back
+        finally:
+            del frame
+        return Path.cwd()
 
     def discover(self) -> dict[str, type[Scanner]]:
         discovered: dict[str, type[Scanner]] = {}

@@ -5,8 +5,9 @@ from typing import Any
 
 from .asset import Asset
 from .asset_collection import AssetCollection
-from .asset_location import AssetLocator
-from .markdown_extractor import merge_folder, read_file, read_section
+from .asset_location import AssetLocation, AssetLocator
+from .markdown_extractor import read_file, read_section
+from .instruction_routing import _slug_variants
 
 
 class Instruction:
@@ -31,7 +32,7 @@ class Instruction:
         filter_key: str | None = None,
     ) -> Instruction:
         module_dir = Path(getattr(host, "module_dir", Path(".")))
-        domain_slug = getattr(host, "toolset_name", getattr(host, "domain_slug", module_dir.name))
+        domain_slug = getattr(host, "domain_slug", getattr(host, "toolset_name", module_dir.name))
         instruction = cls("", module_dir, domain_slug=domain_slug)
         instruction._host = host
         instruction._label = label
@@ -52,7 +53,10 @@ class Instruction:
             return read_section(path, section) if section else read_file(path)
         resolved = self._resolve_path(path_part)
         if resolved.is_dir():
-            return merge_folder(resolved)
+            location = AssetLocation(
+                "folder", self.module_dir, self.domain_slug, folder=resolved.resolve()
+            )
+            return AssetCollection(location).merged()
         if resolved.is_file():
             return read_section(resolved, section) if section else read_file(resolved)
         candidate = Path(f"{resolved}.md")
@@ -80,7 +84,8 @@ class Instruction:
             group=self._group,
             filter_key=self._filter_key,
         ).locate()
-        if self._collection:
+        # Folders always merge as a collection (includes .py scaffolds, not only .md).
+        if self._collection or location.kind == "folder":
             return AssetCollection(location).merged()
         return Asset(location).collect()
 
@@ -91,6 +96,10 @@ class Instruction:
         return self.text, ""
 
     def _canonical_markdown(self) -> Path:
+        for slug in _slug_variants(self.domain_slug):
+            candidate = self.module_dir / f"{slug}.md"
+            if candidate.is_file():
+                return candidate
         return self.module_dir / f"{self.domain_slug}.md"
 
     def _resolve_path(self, path_part: str) -> Path:

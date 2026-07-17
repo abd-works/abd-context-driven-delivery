@@ -1,0 +1,1 @@
+General Lee must reach the Hazzard County courthouse. Use python -m tools run via shell: call start, then speak once in character. Summarize the muddy-road adventure with Rosco in pursuit.

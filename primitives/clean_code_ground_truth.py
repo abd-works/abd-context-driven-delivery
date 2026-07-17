@@ -20,7 +20,7 @@ def load_examples(clean_code_dir: Path) -> str:
 
 
 def load_python_template(clean_code_dir: Path) -> str:
-    return Instruction("formats/python/clean-code-template.py", clean_code_dir).expand()
+    return Instruction("formats/python/clean-code-templates.py", clean_code_dir).expand()
 
 
 def concept_rule_slugs(concepts_text: str) -> list[str]:

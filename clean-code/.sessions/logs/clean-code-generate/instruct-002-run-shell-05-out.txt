@@ -1,6 +1,0 @@
-At C:\Users\thoma\AppData\Local\Temp\ps-script-f06c2679-f7e1-4709-a34e-2cb03139f3fd.ps1:7 char:39
-+ cd C:\dev\abd-context-driven-delivery && python -c "
-+                                       ~~
-The token '&&' is not a valid statement separator in this version.
-    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
-    + FullyQualifiedErrorId : InvalidEndOfLine

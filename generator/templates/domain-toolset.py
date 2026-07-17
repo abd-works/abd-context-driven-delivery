@@ -6,10 +6,10 @@
 from __future__ import annotations
 
 from agents.action import action  # noqa: F401
-from generator import generator_class_annotation  # noqa: F401
+from generator import generator  # noqa: F401
 
 
-@generator_class_annotation
+@generator
 class {ClassName}:
     """§ Instructions"""
 

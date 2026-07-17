@@ -1,8 +1,8 @@
 # Instructions
 
-Build or patch a **Generator domain** — a `@generator_class_annotation` toolset beside `generator/`, not inside it.
+Build or patch a **Generator domain** — a `@generator` toolset beside `generator/`, not inside it.
 
-Scaffold from **`generator/templates/`** (all files, no format filter). Match **`generator/examples/car_chronicle/`** (minimal extension demo), **`clean-code/`**, and **`agent_bdd/`** as reference domains.
+Scaffold from **`generator/templates/`** (all files, no format filter). Match **`generator/examples/car_chronicle/`** (minimal extension demo), **`clean_code/`**, and **`agent_bdd/`** as reference domains.
 
 Every domain action ends with **validate**.
 
@@ -15,7 +15,7 @@ Every domain action ends with **validate**.
 
 ## Minimal Python module
 
-- **`minimal-python-module`** — Domain `.py` is thin: `@generator_class_annotation`, `"""§ Instructions"""`, `__init__(format=...)`, and optional `@action` body overrides. **No** duplicated `@instruction(override=True)` for `rules`, `concepts`, `template`, or framework action docstrings (`"""generate"""`, `"""repair"""`, …). Empty docstring on an overridden action is fine — framework prose resolves from the action name.
+- **`minimal-python-module`** — Domain `.py` is thin: `@generator`, `"""§ Instructions"""`, `__init__(format=...)`, and optional `@action` body overrides. **No** duplicated `@instruction(override=True)` for `rules`, `concepts`, `template`, or framework action docstrings (`"""generate"""`, `"""repair"""`, …). Empty docstring on an overridden action is fine — framework prose resolves from the action name.
 
 ## Canonical markdown only
 
@@ -27,7 +27,7 @@ Every domain action ends with **validate**.
 
 ## Hyphen folders and imports
 
-- **`hyphen-folder-imports`** — Domain folders use hyphens (`clean-code/`, `agent-bdd/`). Python import path uses underscores (`clean_code.clean_code`). Register once in domain `conf.py` via `ensure_hyphenated_import` if needed — not at every call site.
+- **`underscore-folder-imports`** — Domain folders use underscores (`clean_code/`, `agent_bdd/`) matching the Python import path. Hyphens in folder names break `__import__` and require fallback loader workarounds — avoid them.
 
 ## Domain folder layout
 
@@ -43,7 +43,7 @@ Every domain action ends with **validate**.
 
 ## Generator class module
 
-- **`generator-class-module`** — Line 1: `# @toolset-manifest python -m tools manifest <module>:<Class>`. Class docstring: `"""§ Instructions"""`. Re-export `action` and `generator_class_annotation` only when needed. **Do not** subclass `Generator` in source — the decorator merges it.
+- **`generator-class-module`** — Line 1: `# @toolset-manifest python -m tools manifest <module>:<Class>`. Class docstring: `"""§ Instructions"""`. Re-export `action` and `generator` only when needed. **Do not** subclass `Generator` in source — the decorator merges it.
 
 ## Format templates vs scaffold templates
 
@@ -51,7 +51,7 @@ Every domain action ends with **validate**.
 
 ## Reference extension example
 
-- **`reference-extension-example`** — **`generator/examples/car_chronicle/`** shows a complete generator extension: `car_chronicle.py` beside `car-chronicle.md`, `{domain-slug}-template.md`, `examples/examples.md`, repair fixtures, and **`output/`** with sample generated artifact (`output/driving-log.md`). No `module_dir` override — the class module and markdown share one folder.
+- **`reference-extension-example`** — **`generator/examples/car_chronicle/`** shows a complete generator extension: `car_chronicle.py` beside `car_chronicle.md`, `{domain-slug}-templates.md`, `examples/examples.md`, repair fixtures, and **`output/`** with sample generated artifact (`output/driving-log.md`). No `module_dir` override — the class module and markdown share one folder.
 
 ## Examples and repair fixtures
 

@@ -50,7 +50,7 @@ with description("AgentBdd action expansion"):
     with context("an AgentBdd generator with format python"):
         with before.all:
             self.bdd = _load_agent_bdd()
-            self.concepts = Instruction("§ Concepts", _AGENT_BDD_DIR, domain_slug="agent-bdd").expand()
+            self.concepts = Instruction("§ Concepts", _AGENT_BDD_DIR, domain_slug="agent_bdd").expand()
             self.bdd_concepts = load_concepts_section(_BDD_DIR)
 
         with context("the generate action is expanded"):
@@ -65,12 +65,12 @@ with description("AgentBdd action expansion"):
             with it("should set action to generate"):
                 expect(self.response["action"]).to(equal("generate"))
 
-            with it("should inline agent-BDD concepts from agent-bdd.md"):
+            with it("should inline agent-BDD concepts from agent_bdd.md"):
                 _assert_text_inlined(self.response["instructions"], self.concepts)
 
-            with it("should inline agent-bdd.md § Generate from domain_generate slot"):
+            with it("should inline agent_bdd.md § Generate from generate_instructions slot"):
                 generate_prose = Instruction(
-                    "§ Generate", _AGENT_BDD_DIR, domain_slug="agent-bdd"
+                    "§ Generate", _AGENT_BDD_DIR, domain_slug="agent_bdd"
                 ).expand()
                 _assert_text_inlined(self.response["instructions"], generate_prose)
 
@@ -81,9 +81,9 @@ with description("AgentBdd action expansion"):
                 shared = Instruction("base-generator/generate", _GENERATOR_DIR).expand()
                 _assert_text_inlined(self.response["instructions"], shared)
 
-            with it("should inline formats/python/agent-bdd-template.py from format resource"):
+            with it("should inline formats/python/agent_bdd-templates.py from format resource"):
                 template = Instruction(
-                    "formats/python/agent-bdd-template.py", _AGENT_BDD_DIR
+                    "formats/python/agent_bdd-templates.py", _AGENT_BDD_DIR
                 ).expand()
                 _assert_text_inlined(self.response["instructions"], template)
 

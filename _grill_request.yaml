@@ -1,0 +1,4 @@
+toolset: grill_context.grill_context:GrillContext
+tool: read_context_file
+arguments:
+  path: clean_engineering/.context/grill-answers.md
