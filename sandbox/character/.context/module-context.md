@@ -14,6 +14,12 @@ Constraint: do not buy/reduce through dedicated spend ops — mutate ranks (and 
 
 Callers hold the sheet: abilities, defenses, point totals, and initiative (from Agility). Team checks and ability checks use abilities/defenses as traits.
 
+## Public API (specification)
+
+Seam contracts are `ICharacter`, `IAbility` / `IAbilities`, `IDefense` / `IDefenses`, `IPoint` / `IPointTotals`. Production classes implement those contracts in the same files (`Ability` / `Defense` extend `Trait`).
+
+Stories factories live in sibling files (`character_example_factory.js`, `ability_example_factory.js`) — not in the production family files. Factories build `ICharacter` / `IAbility` in **fake** / **isolated** / **production** modes (`examples[{example_key}]` bundles).
+
 ### Abilities / Defenses
 
 Named + iterable collections of the fixed handbook sets. Containers contribute a `Point` into `PointTotals`.

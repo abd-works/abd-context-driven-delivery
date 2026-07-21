@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>UX Story Demo — Place New Order</title>
+  <style>
+    :root { --ink: #222; --line: #666; --wash: #f0f0f0; --sel: #dbeafe; --emph: #2563eb; --tint: #fecaca; }
+    body { margin: 0; font-family: ui-monospace, Consolas, monospace; color: var(--ink);
+           min-height: 100vh; background: #fafafa; }
+    header.shell-bar { display: flex; gap: 0.75rem; align-items: center; padding: 0.75rem 1rem;
+                       border-bottom: 1px solid #ccc; background: #fff; }
+    header.shell-bar h1 { font-size: 1rem; margin: 0; flex: 1; }
+    header.shell-bar button { font: inherit; padding: 0.25rem 0.6rem; cursor: pointer; }
+    header.shell-bar button.active { background: var(--sel); outline: 1px solid #6c8ebf; }
+    #shell { display: grid; grid-template-columns: 2fr 1fr; min-height: calc(100vh - 3rem); }
+    #story-demo-frame { padding: 1rem; overflow: auto; border-right: 1px solid #ccc; }
+    #explorer-frame { padding: 0.35rem 0.5rem; overflow: auto; }
+    .screen { border: 1px dashed var(--line); margin-bottom: 1rem; padding: 0.75rem;
+               background: #fff; max-width: 52rem; }
+    .screen[hidden] { display: none; }
+    .region { margin: 0.5rem 0; padding: 0.5rem; border: 1px solid #ddd; background: var(--wash); }
+    .region h3 { margin: 0 0 0.5rem; font-size: 0.9rem; }
+    .control.button { display: inline-block; margin: 0.35rem 0.35rem 0 0; padding: 0.25rem 0.6rem;
+                       border: 1px solid var(--ink); background: #eee; cursor: pointer; font: inherit; }
+    .control.emphasized { outline: 2px solid var(--emph); background: #eff6ff; }
+    .control.tinted { background: var(--tint); }
+    .control.selected, .tree-node.selected { background: var(--sel); outline: 1px solid #6c8ebf; }
+    .field { margin: 0.25rem 0; }
+    .field.dimmed { opacity: 0.55; }
+    .panel { border: 1px dashed var(--line); background: #fff; padding: 0.5rem; }
+    #explorer-frame .panel { padding: 0.4rem 0.5rem; }
+    .explorer-head {
+      display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.35rem;
+    }
+    .explorer-head h2 { margin: 0; font-size: 0.8rem; flex: 1; font-weight: 600; }
+    .explorer-head button { font: inherit; font-size: 0.8rem; padding: 0.15rem 0.45rem; cursor: pointer; }
+    #explorer-tree, #story-list {
+      margin: 0.15rem 0 0; padding: 0; list-style: none; font-size: 0.8rem;
+    }
+    #explorer-tree li, #story-list li { margin: 0; padding: 0.05rem 0; }
+    #explorer-tree .scenario-name { font-style: italic; cursor: pointer; list-style: none; }
+    #explorer-tree .step { list-style: none; padding-left: 0; }
+    #explorer-tree .current, #story-list .current { background: var(--sel); font-weight: 600; }
+    #story-list li { cursor: pointer; }
+    .section-toggle {
+      font: inherit; font-size: 0.8rem; padding: 0 0.3rem; cursor: pointer;
+      border: 1px solid #ccc; background: #eee; line-height: 1.2;
+    }
+    .section-head { display: flex; align-items: center; gap: 0.35rem; margin: 0.45rem 0 0.15rem; }
+    .section-head h3 { margin: 0; font-size: 0.8rem; flex: 1; font-weight: 600; }
+    .message { color: #a00; margin-top: 0.35rem; min-height: 0; font-size: 0.8rem; }
+    .chrome { margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .chrome button { font: inherit; font-size: 0.8rem; padding: 0.15rem 0.45rem; cursor: pointer; }
+    .key { font-size: 0.8rem; color: #555; margin-top: 0.25rem; }
+    .nav-strip { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem; }
+    .nav-strip button { font: inherit; padding: 0.2rem 0.5rem; cursor: pointer; }
+  </style>
+</head>
+<body data-story-demo-shell>
+  <header class="shell-bar">
+    <h1>Place New Order · <span data-story-demo-mode>Play</span></h1>
+    <button type="button" data-set-mode="Play" class="active">Play</button>
+    <button type="button" data-set-mode="Interactive">Interactive</button>
+  </header>
+
+  <div id="shell" data-layout="split-screen">
+    <section id="story-demo-frame" aria-label="Product mockup">
+      <main id="mockup">
+        <nav class="nav-strip" aria-label="Screen jump">
+          <button type="button" data-goto="product catalog">catalog</button>
+          <button type="button" data-goto="product detail">detail</button>
+          <button type="button" data-goto="shopping cart">cart</button>
+          <button type="button" data-goto="checkout">checkout</button>
+        </nav>
+
+        <!-- Composed from story-folder fragments (page hierarchy ≈ story hierarchy) -->
+        <div data-include="./select-product/select-product.fragment.html"></div>
+        <div data-include="./add-item-to-cart/add-item-to-cart.fragment.html"></div>
+
+        <article class="screen" data-slug="shopping-cart" data-layout="stack" hidden
+                 data-for-story="Add Item To Cart,Remove Item From Cart">
+          <h2>shopping cart</h2>
+          <div data-include="./remove-item-from-cart/remove-item-from-cart.fragment.html"></div>
+          <p class="screen-stories">Stories: Add Item To Cart · Remove Item From Cart</p>
+        </article>
+
+        <div data-include="./submit-order/submit-order.fragment.html"></div>
+
+        <p class="key">LEFT: fragments from story folders · pick a story on the right · Play next</p>
+      </main>
+    </section>
+
+    <section id="explorer-frame" aria-label="Story explorer">
+      <div class="panel">
+        <div class="explorer-head">
+          <h2>explorer</h2>
+          <button type="button" data-reset>Reset</button>
+        </div>
+
+        <div class="section-head">
+          <button type="button" class="section-toggle" data-toggle-story-map aria-expanded="true">▼</button>
+          <h3>story map</h3>
+        </div>
+        <ul id="story-list" data-story-map></ul>
+
+        <div class="section-head">
+          <h3>scenario</h3>
+        </div>
+        <ul id="explorer-tree" data-explorer-tree></ul>
+
+        <div class="chrome"><button type="button" data-play-next>▶▶ Play next</button></div>
+        <p class="message" data-explorer-message hidden></p>
+      </div>
+    </section>
+  </div>
+
+  <script type="module"
+          src="/contexts/ux/examples/manage-customer-orders/place-new-order/select-product/select_product_story.js"
+          data-ux-story-ref></script>
+  <script type="module"
+          src="/contexts/ux/examples/manage-customer-orders/place-new-order/add-item-to-cart/add_item_to_cart_story.js"
+          data-ux-story-ref></script>
+  <script type="module"
+          src="/contexts/ux/examples/manage-customer-orders/place-new-order/remove-item-from-cart/remove_item_from_cart_story.js"
+          data-ux-story-ref></script>
+  <script type="module"
+          src="/contexts/ux/examples/manage-customer-orders/place-new-order/submit-order/submit_order_story.js"
+          data-ux-story-ref></script>
+  <script type="module" src="./compose-fragments.js"></script>
+  <script type="module" src="/contexts/ux/story-demo/mount-generated-mockup.js"></script>
+</body>
+</html>

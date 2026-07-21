@@ -1,0 +1,18 @@
+<article class="screen" data-slug="product-catalog" data-layout="stack"
+         data-for-story="Select Product">
+  <h2>product catalog</h2>
+  <section class="region" data-region="catalog">
+    <h3>Hardware</h3>
+    <!-- Generic bound-list host (not a template special-case for "catalog") -->
+    <div data-bound-list
+         data-bound-field="catalog.products"
+         data-goto="product detail"
+         data-set-input="product"
+         data-item-value="name"
+         data-item-label="{name} · {unitPrice} USD · {category}"
+         data-item-story-steps='[{"kind":"when","label":"the Customer selects a Product from the Product Catalog"}]'>
+      <div class="field dimmed">(list loads with story)</div>
+    </div>
+  </section>
+  <p class="screen-stories">Story: Select Product</p>
+</article>

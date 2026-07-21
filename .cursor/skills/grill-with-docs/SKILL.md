@@ -63,7 +63,7 @@ When the user uses vague or overloaded terms, propose a precise canonical term. 
 
 ### Discuss concrete scenarios
 
-When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force the user to be precise about the boundaries between concepts.
+When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force the user to be precise about the boundaries between contexts.
 
 ### Cross-reference with code
 

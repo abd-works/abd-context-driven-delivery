@@ -1,0 +1,61 @@
+"""Python tier scaffolder — `*_spec.py` (isolated) and `*_spec.{tier}.py`."""
+
+from __future__ import annotations
+
+from typing import Dict, Sequence
+
+from contexts.stories.code.code_story_map import to_kebab, to_snake
+from contexts.stories.code.python.story_file import render_tier_spec_file
+from contexts.stories.story_model.nodes import Epic, Story, SubEpic
+from contexts.stories.story_model.story_map import StoryMap
+
+
+def scaffold_py_tier_tree(
+    story_map: StoryMap,
+    tiers: Sequence[str],
+    *,
+    tests_root: str = "tests",
+    existing_tree: Dict[str, str] | None = None,
+) -> Dict[str, str]:
+    existing = existing_tree or {}
+    tree: Dict[str, str] = {}
+    root = tests_root.strip("/") or "tests"
+
+    for epic in getattr(story_map, "epics", []) or []:
+        _scaffold_epic(epic, tiers=tiers, root=root, tree=tree)
+
+    return {path: body for path, body in tree.items() if path not in existing}
+
+
+def _scaffold_epic(
+    epic: Epic, *, tiers: Sequence[str], root: str, tree: Dict[str, str]
+) -> None:
+    for sub in getattr(epic, "sub_epics", []) or []:
+        _scaffold_sub_epic(
+            sub, tiers=tiers, parent=f"{root}/{to_kebab(epic.name)}", tree=tree
+        )
+
+
+def _scaffold_sub_epic(
+    sub: SubEpic, *, tiers: Sequence[str], parent: str, tree: Dict[str, str]
+) -> None:
+    folder = f"{parent}/{to_kebab(sub.name)}"
+    for nested in getattr(sub, "sub_epics", []) or []:
+        _scaffold_sub_epic(nested, tiers=tiers, parent=folder, tree=tree)
+    for story in getattr(sub, "stories", []) or []:
+        _scaffold_story(story, tiers=tiers, parent=folder, tree=tree)
+
+
+def _scaffold_story(
+    story: Story, *, tiers: Sequence[str], parent: str, tree: Dict[str, str]
+) -> None:
+    if not getattr(story, "scenarios", None):
+        return
+    story_folder = f"{parent}/{to_kebab(story.name)}"
+    story_snake = to_snake(story.name)
+    for tier in tiers:
+        if tier == "isolated":
+            path = f"{story_folder}/{story_snake}_spec.py"
+        else:
+            path = f"{story_folder}/{story_snake}_spec.{tier}.py"
+        tree[path] = render_tier_spec_file(story, tier=tier)

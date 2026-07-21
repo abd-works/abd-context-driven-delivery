@@ -1,0 +1,52 @@
+# @toolset-manifest python -m tools manifest contexts.bdd.bdd:Bdd
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
+# invoke-new: action generate | context.fidelity behavior
+# invoke-edit: action satisfy | toolset: contexts.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: contexts.bdd.bdd:Bdd
+"""BDD generator — multi-fidelity behavior skeletons and development."""
+
+from __future__ import annotations
+
+from primitives.actions.action import action
+from contexts import context
+from grill_context import grill_with_context
+from sketch import sketch
+from tools.tool import tool  # noqa: F401
+
+_FIDELITY_FORMAT_DEFAULTS = {
+    "behavior": "python",
+    "development": "python",
+}
+_SUPPORTED_FORMATS = frozenset({"markdown", "python", "typescript", "java"})
+
+
+@context
+class Bdd:
+    """§ Instructions"""
+
+    def __init__(self, fidelity: str = "behavior", format: str | None = None) -> None:
+        if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
+            raise ValueError(
+                f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
+            )
+        resolved_format = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
+        if resolved_format not in _SUPPORTED_FORMATS:
+            raise ValueError(
+                f"Unsupported format {resolved_format!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
+            )
+        super().__init__(format=resolved_format)
+        self.fidelity = fidelity
+
+    @grill_with_context
+    @sketch
+    @action
+    def generate(self) -> str: ...
+
+    @tool
+    def transform(self, source_format: str, target_format: str, content: str) -> dict:
+        """Sideways format conversion at the same fidelity.
+        Delegates to clean_engineering.transform until BDD has its own channel model."""
+        from contexts.clean_engineering.clean_engineering import CleanEngineering
+
+        return CleanEngineering().transform(source_format, target_format, content)

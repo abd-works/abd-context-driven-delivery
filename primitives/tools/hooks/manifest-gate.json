@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "command": "python primitives/tools/hooks/manifest_gate.py post",
+        "timeout": 35,
+        "failClosed": false
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "python primitives/tools/hooks/manifest_gate.py pre",
+        "timeout": 35,
+        "failClosed": false
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "python primitives/tools/hooks/manifest_gate.py post",
+        "timeout": 35,
+        "failClosed": false
+      }
+    ],
+    "beforeReadFile": [
+      {
+        "command": "python primitives/tools/hooks/manifest_gate.py read",
+        "timeout": 35,
+        "failClosed": false
+      }
+    ]
+  }
+}

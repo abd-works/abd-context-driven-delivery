@@ -1,0 +1,22 @@
+<section class="region" data-region="lines">
+  <h3>cart lines</h3>
+  <!-- Select list: row sets input; Remove button runs When -->
+  <div data-bound-list
+       data-bound-field="cart.items"
+       data-set-input="product"
+       data-item-value="product"
+       data-item-label="{product} × {quantity} @ {unitPrice}">
+    <div class="field dimmed">(list loads with story)</div>
+  </div>
+  <button type="button" class="control button"
+          data-name="Remove"
+          data-story-steps='[{"kind":"when","label":"the Customer removes a Product from the Cart"}]'>
+    Remove
+  </button>
+</section>
+<section class="region" data-region="totals">
+  <h3>totals</h3>
+  <div class="field" data-bound-field="itemCount" data-bound-label="items">items: —</div>
+  <div class="field" data-bound-field="total" data-bound-label="total">total: —</div>
+  <button type="button" class="control button" data-goto="checkout">Go to checkout</button>
+</section>

@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from action.action import action
+from primitives.actions.action import action
 from tools.tool import tool, toolset
 
 

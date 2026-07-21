@@ -1,0 +1,26 @@
+<article class="screen" data-slug="checkout" data-layout="stack" hidden
+         data-for-story="Submit Order">
+  <h2>checkout</h2>
+  <section class="region" data-region="cart summary">
+    <h3>cart summary</h3>
+    <div data-bound-list
+         data-bound-field="cart.items"
+         data-item-value="product"
+         data-item-label="{product} × {quantity} @ {unitPrice}">
+      <div class="field dimmed">(list loads with story)</div>
+    </div>
+    <div class="field" data-bound-field="itemCount" data-bound-label="items">items: —</div>
+    <div class="field" data-bound-field="total" data-bound-label="total">total: —</div>
+    <div class="field">payment: Visa ending 4242</div>
+  </section>
+  <section class="region" data-region="actions">
+    <h3>actions</h3>
+    <button type="button" class="control button"
+            data-name="Submit Order"
+            data-story-steps='[{"kind":"when","label":"the Customer confirms and submits the Order"}]'>
+      Submit Order
+    </button>
+    <div class="field" data-bound-field="orderNumber" data-bound-label="order">order: —</div>
+  </section>
+  <p class="screen-stories">Story: Submit Order</p>
+</article>

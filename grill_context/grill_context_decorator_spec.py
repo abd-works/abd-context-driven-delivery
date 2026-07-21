@@ -11,7 +11,7 @@ sys.modules.pop("grill_context", None)
 from expects import be_true, contain, equal, expect, raise_error
 from mamba import context, description, it
 
-from action.action import ActionExpander, action, action_wrapper_names
+from primitives.actions.action import _ActionExpander as ActionExpander, action, _action_wrapper_names as action_wrapper_names
 from grill_context import grill_with_context
 from grill_context.examples.demo import DemoGrill, DemoStack
 

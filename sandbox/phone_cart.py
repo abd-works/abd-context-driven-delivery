@@ -1,5 +1,5 @@
 """
-# @toolset-manifest python -m tools manifest clean_code.clean_code:CleanCode
+# @toolset-manifest python -m tools manifest contexts.clean_engineering.clean_engineering:CleanEngineering
 """
 # ============================================================================
 # phone_cart.py

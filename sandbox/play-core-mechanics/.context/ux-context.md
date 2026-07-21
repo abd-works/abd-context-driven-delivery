@@ -10,6 +10,4 @@ Optional notes not shown on screens.
 
 - Fidelity: **mockup** — greybox HTML+JS in `play-core-mechanics.html`.
 - Increment 1 spine: Create Character → Update Rank → Resolve Ability Check.
-- Stubbed (honest): create character / rank bump / check roll — no domain object JS yet.
-- Opposed / routine / team assist out of slice.
-- Story JS beside Python dicts; bound on `ux-map.json` and imported by the mockup.
+- Story-demo shell sketches live under `contexts/ux/.context/`.

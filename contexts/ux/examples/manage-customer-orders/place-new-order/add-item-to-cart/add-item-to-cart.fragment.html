@@ -1,0 +1,21 @@
+<article class="screen" data-slug="product-detail" data-layout="stack" hidden
+         data-for-story="Add Item To Cart">
+  <h2>product detail</h2>
+  <section class="region" data-region="detail">
+    <h3>product</h3>
+    <div class="field" data-bound-field="product.name" data-bound-label="product">product: —</div>
+    <div class="field" data-bound-field="product.unitPrice" data-bound-label="price">price: —</div>
+    <div class="field" data-bound-field="product.category" data-bound-label="category">category: —</div>
+    <label class="control" data-name="Quantity">
+      quantity
+      <input type="number" min="1" step="1" value="2" data-input-field="quantity" />
+    </label>
+    <button type="button" class="control button"
+            data-name="Add to Cart"
+            data-story-steps='[{"kind":"when","label":"the Customer adds Product \"Widget\" with Quantity 2 to the Cart"}]'
+            data-goto="shopping cart">
+      Add to Cart
+    </button>
+  </section>
+  <p class="screen-stories">Story: Add Item To Cart</p>
+</article>

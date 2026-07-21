@@ -24,6 +24,12 @@ Callers `add_helper` external helpers, then `assist` to get a circumstance `Modi
 
 Supporting types: `Trait`, `Modifier`, `DifficultyClass`, `CheckResult`.
 
+## Public API (specification)
+
+Seam contracts are `ICheck`, `IOpposedCheck`, `ITeamCheck`, `ITrait`, `IModifier`, `IDifficultyClass`, `ICheckResult`. Production classes implement those contracts in the same files. `Check.resolve` is filled; `OpposedCheck.resolve` and full `TeamCheck.assist` orchestration remain to be completed at code fidelity.
+
+Stories factories live in sibling `*_example_factory.js` files (e.g. `check_example_factory.js`) — not in production family files. Factories build `I*` seams in **fake** / **isolated** / **production** modes.
+
 ## Dependencies
 
 Depends on `measurement` for `Rank` (on `Trait`). Expects external helpers (later Character) to expose `trait` for team checks. Later combat modules may use `Check` but attack-specific rules are not owned here. Does not depend on character sheets, powers catalog, or session/scenes.

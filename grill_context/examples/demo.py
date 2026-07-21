@@ -7,7 +7,7 @@ taking a dependency on @sketch.
 """
 from __future__ import annotations
 
-from action.action import action, add_action_wrapper, require_action
+from primitives.actions.action import action, add_action_wrapper, require_action
 from grill_context import grill_with_context
 from tools.tool import tool, toolset
 

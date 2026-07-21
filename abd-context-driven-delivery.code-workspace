@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "abd-context-driven-delivery",
+			"path": "."
+		},
+		{
+			"name": "abd-skills",
+			"path": "../abd-skills"
+		}
+	],
+	"settings": {}
+}

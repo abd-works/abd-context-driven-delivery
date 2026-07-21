@@ -3,6 +3,9 @@
 Fidelity: `mockup`
 Stories: Create Character · Update Ability Rank · Resolve Ability Check.
 
+Product IA for this epic. Story-demo shell (Play / explorer) lives under
+`contexts/ux/.context/ux-sketch.md`.
+
 ```
 ═══════════════════════════════════════════════════════════
   SITE MAP

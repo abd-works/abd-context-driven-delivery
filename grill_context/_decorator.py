@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from action.action import add_action_wrapper, require_action
+from primitives.actions.action import add_action_wrapper, require_action
 
 
 def grill_with_context(func: Callable[..., Any]) -> Callable[..., Any]:
