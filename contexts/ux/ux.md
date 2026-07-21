@@ -41,7 +41,7 @@ Do **not** bake product words (catalog, cart) into the template — those are bo
 
 **Layouts:** catalog in `ux_model/layouts.py` (layout id → named slots). Use `Screen.apply_layout` to set layout and seed empty regions.
 
-**Channels:** drawio, html, markdown, json — peer parse/render; `transform` moves sideways at the same fidelity. One `html` channel deepens by fidelity (js interactions → +css/brand).
+**Channels:** drawio, html, markdown, json — peer parse/render; `transform` moves sideways at the same fidelity. One `html` channel deepens by fidelity (js interactions → +css/brand → real frontend at **code**; host FE stacks welcome at **code**).
 
 ---
 

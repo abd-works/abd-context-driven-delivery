@@ -8396,3 +8396,24 @@ x\story-demo
 2026-07-21T03:09:48Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools
 2026-07-21T03:09:49Z [read] FIRED  c:\dev\abd-context-driven-delivery\contexts\base\context.py  — 1 manifest line(s)
 2026-07-21T03:09:50Z [post] FIRED  c:\dev\abd-context-driven-delivery\contexts\base\context.py  — 1 manifest line(s)
+2026-07-21T03:09:55Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\contexts\ux\ux.py  — 4 manifest line(s)
+2026-07-21T03:09:56Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\contexts\clean_engineering\clean_engineering.py  — 5 manifest line(s)
+2026-07-21T03:09:56Z [post] skip  c:\dev\abd-context-driven-delivery\contexts\ux
+2026-07-21T03:09:57Z [read] FIRED  c:\dev\abd-context-driven-delivery\contexts\ux\ux.py  — 4 manifest line(s)
+2026-07-21T03:09:57Z [post] FIRED  c:\dev\abd-context-driven-delivery\contexts\ux\ux.py  — 4 manifest line(s)
+2026-07-21T03:09:58Z [post] FIRED  c:\dev\abd-context-driven-delivery\contexts\clean_engineering\clean_engineering.py  — 5 manifest line(s)
+2026-07-21T03:09:58Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\contexts\ux\ux.py  — 4 manifest line(s)
+2026-07-21T03:09:59Z [post] FIRED  c:\dev\abd-context-driven-delivery\contexts\ux\ux.py  — 4 manifest line(s)
+2026-07-21T03:10:00Z [post] FIRED  c:\dev\abd-context-driven-delivery\contexts\ux\ux.py  — 4 manifest line(s)
+2026-07-21T03:10:04Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\contexts\clean_engineering\clean_engineering.py  — 5 manifest line(s)
+2026-07-21T03:10:04Z [pre ] skip  c:\dev\abd-context-driven-delivery\contexts\ux\ux.md
+2026-07-21T03:10:05Z [post] skip  c:\dev\abd-context-driven-delivery\contexts\ux\ux.md
+2026-07-21T03:10:05Z [read] FIRED  c:\dev\abd-context-driven-delivery\contexts\clean_engineering\clean_engineering.py  — 5 manifest line(s)
+2026-07-21T03:10:06Z [post] skip  c:\dev\abd-context-driven-delivery\contexts\ux\ux.md
+2026-07-21T03:10:07Z [post] FIRED  c:\dev\abd-context-driven-delivery\contexts\clean_engineering\clean_engineering.py  — 5 manifest line(s)
+2026-07-21T03:10:13Z [pre ] skip  c:\dev\abd-context-driven-delivery\contexts\ux\.context\grill-answers.md
+2026-07-21T03:10:14Z [read] skip  c:\dev\abd-context-driven-delivery\contexts\ux\.context\grill-answers.md
+2026-07-21T03:10:15Z [post] skip  c:\dev\abd-context-driven-delivery\contexts\ux\.context\grill-answers.md
+2026-07-21T03:10:15Z [pre ] skip  c:\dev\abd-context-driven-delivery\contexts\ux\.context\grill-answers.md
+2026-07-21T03:10:16Z [post] skip  c:\dev\abd-context-driven-delivery\contexts\ux\.context\grill-answers.md
+2026-07-21T03:10:17Z [post] skip  c:\dev\abd-context-driven-delivery\contexts\ux\.context\grill-answers.md

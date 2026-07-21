@@ -4,7 +4,7 @@
 # invoke-new: action generate | context.fidelity ia
 # invoke-edit: action satisfy | toolset: contexts.ux.ux:Ux
 # invoke-check: action validate | toolset: contexts.ux.ux:Ux
-"""UX generator — multi-fidelity IA, mockups, and clickable specs."""
+"""UX generator — multi-fidelity IA, mockups, specs, and production frontend (code)."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ _FIDELITY_FORMAT_DEFAULTS = {
     "ia": "drawio",
     "mockup": "html",
     "specification": "html",
+    "code": "html",
 }
 
 # Peer channels — same CLI surface; transform moves sideways at one fidelity.
