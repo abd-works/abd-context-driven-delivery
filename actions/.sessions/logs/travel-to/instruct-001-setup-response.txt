@@ -1,12 +1,13 @@
-Here is `agents/example/car.py`:
+Here is `action/examples/car.py`:
 
-```1:105:agents/example/car.py
-# @toolset-manifest python -m tools manifest agents.example.car:Car
-# Mandatory: run manifest before invoke. Invoke: python -m tools run <request.yaml|->
+```1:106:action/examples/car.py
+# @toolset-manifest python -m tools manifest action.examples.car:Car
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
 """Example @toolset with @action — orchestrates Car tools via travelTo."""
 from __future__ import annotations
 
-from agents.action import action
+from action.action import action
 from tools.tool import resource, tool, toolset
 
 
@@ -113,15 +114,16 @@ This is an example `@toolset` for a `Car` with:
 - **Tools** (`@tool`): `start`, `stop`, `drive`, `accelerate`, `decelerate`, `speak`
 - **Action** (`@action`): `travelTo` — orchestrates the tools into a story about reaching a destination
 
-The file header notes that you should run `python -m tools manifest agents.example.car:Car` before invoking it with `python -m tools run <request.yaml|->`.Here is `agents/example/car.py`:
+The file header says to run `python -m tools manifest action.examples.car:Car`, then `python -m tools run -`, and follow `response.instructions` only — not to author behavior from the Python source directly.Here is `action/examples/car.py`:
 
-```1:105:agents/example/car.py
-# @toolset-manifest python -m tools manifest agents.example.car:Car
-# Mandatory: run manifest before invoke. Invoke: python -m tools run <request.yaml|->
+```1:106:action/examples/car.py
+# @toolset-manifest python -m tools manifest action.examples.car:Car
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
 """Example @toolset with @action — orchestrates Car tools via travelTo."""
 from __future__ import annotations
 
-from agents.action import action
+from action.action import action
 from tools.tool import resource, tool, toolset
 
 
@@ -228,15 +230,16 @@ This is an example `@toolset` for a `Car` with:
 - **Tools** (`@tool`): `start`, `stop`, `drive`, `accelerate`, `decelerate`, `speak`
 - **Action** (`@action`): `travelTo` — orchestrates the tools into a story about reaching a destination
 
-The file header notes that you should run `python -m tools manifest agents.example.car:Car` before invoking it with `python -m tools run <request.yaml|->`.Here is `agents/example/car.py`:
+The file header says to run `python -m tools manifest action.examples.car:Car`, then `python -m tools run -`, and follow `response.instructions` only — not to author behavior from the Python source directly.Here is `action/examples/car.py`:
 
-```1:105:agents/example/car.py
-# @toolset-manifest python -m tools manifest agents.example.car:Car
-# Mandatory: run manifest before invoke. Invoke: python -m tools run <request.yaml|->
+```1:106:action/examples/car.py
+# @toolset-manifest python -m tools manifest action.examples.car:Car
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
 """Example @toolset with @action — orchestrates Car tools via travelTo."""
 from __future__ import annotations
 
-from agents.action import action
+from action.action import action
 from tools.tool import resource, tool, toolset
 
 
@@ -343,4 +346,4 @@ This is an example `@toolset` for a `Car` with:
 - **Tools** (`@tool`): `start`, `stop`, `drive`, `accelerate`, `decelerate`, `speak`
 - **Action** (`@action`): `travelTo` — orchestrates the tools into a story about reaching a destination
 
-The file header notes that you should run `python -m tools manifest agents.example.car:Car` before invoking it with `python -m tools run <request.yaml|->`.
+The file header says to run `python -m tools manifest action.examples.car:Car`, then `python -m tools run -`, and follow `response.instructions` only — not to author behavior from the Python source directly.

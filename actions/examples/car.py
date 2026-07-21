@@ -1,10 +1,10 @@
-# @toolset-manifest python -m tools manifest agents.examples.car:Car
+# @toolset-manifest python -m tools manifest actions.examples.car:Car
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
 """Example @toolset with @action — orchestrates Car tools via travelTo."""
 from __future__ import annotations
 
-from agents.action import action
+from actions.action import action
 from tools.tool import resource, tool, toolset
 
 

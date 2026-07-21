@@ -1,8 +1,8 @@
-# @agent-spec-manifest python -m tools agent-spec agents/agents_agent_spec.py
+# @agent-spec-manifest python -m tools agent-spec actions/actions_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
-# session: agents/.sessions/travel-to.json
-"""BDD agent spec for agents-behavior.md — agent invokes @action via tools CLI."""
+# session: actions/.sessions/travel-to.json
+"""BDD agent spec for action.py — agent invokes @action via tools CLI."""
 
 from pathlib import Path
 
@@ -14,7 +14,7 @@ from agent_bdd.agent_cli_bdd import looks_like_tools_run_output
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _SESSIONS = Path(__file__).resolve().parent / ".sessions"
-_CAR_TOOLSET = "agents.examples.car:Car"
+_CAR_TOOLSET = "actions.examples.car:Car"
 
 
 with description("a class"):
@@ -23,7 +23,7 @@ with description("a class"):
             with before.all:
                 self._travel_agent = agent(_REPO_ROOT, _SESSIONS / "travel-to.json")
                 self.travel_session = self._travel_agent.__enter__()
-                self.travel_session.instruct("Read agents/examples/car.py from the workspace.")
+                self.travel_session.instruct("Read actions/examples/car.py from the workspace.")
                 self.general_lee = self.travel_session.instruct_run(
                     "Create a car based on the general lee from the Dukes of Hazzard."
                 )
