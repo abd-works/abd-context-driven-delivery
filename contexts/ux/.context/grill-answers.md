@@ -41,7 +41,7 @@
 - Interactions live on `Control` (trigger / effect / destination) — deepened at mockup with JS.
 
 ## Web channel
-- **One `html` channel** — deepens by fidelity (mockup: html+js greybox interactions; specification: adds css/brand). Not two transform targets.
+- **One `html` channel** — deepens by fidelity (mockup: html+js greybox; specification: css/brand; code: real frontend / host stack). Not two transform targets.
 - Update sketch: collapse `HtmlJsUxChannel` / `HtmlJsCssUxChannel` → `HtmlUxChannel`.
 
 ## Stories + domain in the HTML surface
