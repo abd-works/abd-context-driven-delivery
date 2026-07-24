@@ -50,7 +50,7 @@ class AssetLocator:
             located = _locate_templates(module_dir, domain_slug, active_format)
             if located.path is not None and located.path.is_file():
                 return located
-            # Meta scaffold pack (e.g. contexts/base/templates/) when no format artifact exists.
+            # Meta scaffold pack (e.g. context_tools/base/templates/) when no format artifact exists.
             meta = module_dir / "templates"
             if meta.is_dir():
                 return AssetLocation("folder", module_dir, domain_slug, folder=meta.resolve())
@@ -104,7 +104,7 @@ def _locate_under(search_root: Path, module_dir: Path, domain_slug: str, label: 
         candidate = search_root / name
         if candidate.is_file():
             return AssetLocation("file", module_dir, domain_slug, path=candidate.resolve())
-    # Any extension: contexts.md, examples.py, examples.ts, …
+    # Any extension: context_tools.md, examples.py, examples.ts, …
     matches = sorted(
         p for p in search_root.glob(f"{label}.*") if p.is_file()
     ) if search_root.is_dir() else []

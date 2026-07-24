@@ -13,7 +13,7 @@ Hierarchy rules and fidelities live in `bdd.md` § Contexts; the plain-English h
 From the repo root, set `$env:PYTHONPATH = "$PWD;$PWD\primitives;$PWD\utilities;$PWD\concepts"`, then:
 
 ```
-python -m tools manifest contexts.bdd.bdd:Bdd
+python -m tools manifest context_tools.bdd.bdd:Bdd
 ```
 
 Invoke with `context.fidelity behavior` (python format by default — empty test skeletons).

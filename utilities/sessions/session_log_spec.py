@@ -7,7 +7,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "contexts"):
+for _cat in ("primitives", "utilities", "context_tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -28,8 +28,8 @@ with description("an action that is annotated with log"):
 
     with context("that is overriding a base action that is annotated with log"):
         with it("should still be recognized as logged"):
-            from contexts.base.context import Context
-            from contexts.bdd.bdd import Bdd
+            from context_tools.base.context import Context
+            from context_tools.bdd.bdd import Bdd
 
             expect(is_logged(Context.generate)).to(be_true)
             expect(member_is_logged(Bdd, "generate")).to(be_true)

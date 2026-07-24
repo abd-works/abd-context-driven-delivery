@@ -26,7 +26,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 _LOG_FILE = Path(__file__).resolve().parent / "manifest_gate.log"
 _MANIFEST_PREFIXES = ("# @toolset-manifest", "# invoke-")
 _SCAN_LINES = 15
-_CATEGORY_DIRS = ("primitives", "utilities", "contexts")
+_CATEGORY_DIRS = ("primitives", "utilities", "context_tools")
 
 
 def _pythonpath_env() -> dict[str, str]:

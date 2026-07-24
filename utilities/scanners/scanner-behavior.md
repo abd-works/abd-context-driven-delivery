@@ -2,7 +2,7 @@
 
 <!--
 Spec: scanners/scanner_spec.py
-Per-scanner repair fixtures: contexts/clean_engineering/evals/engineering/<rule>/faultyAsset and repairedAsset (scanners_spec.py)
+Per-scanner repair fixtures: context_tools/clean_engineering/evals/engineering/<rule>/faultyAsset and repairedAsset (scanners_spec.py)
 -->
 
 Scanner
@@ -28,6 +28,6 @@ Clean Code python scanners
   scanners_spec.py — one example test per scanner class
 
   each scanner class
-    it should define faultyAsset and repairedAsset under contexts/clean_engineering/evals/engineering/<rule>/
+    it should define faultyAsset and repairedAsset under context_tools/clean_engineering/evals/engineering/<rule>/
     scanning repairedAsset should produce zero violations
     scanning faultyAsset should produce at least one violation for that rule

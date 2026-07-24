@@ -2,9 +2,9 @@
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
 # invoke-new: action generate | context.format python
-# @toolset-manifest python -m tools manifest contexts.bdd.bdd:Bdd
-# invoke-edit: action satisfy | toolset: contexts.bdd.bdd:Bdd
-# invoke-check: action validate | toolset: contexts.bdd.bdd:Bdd
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """Action expansion — orchestration recipes that never execute, only instruct."""
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ _PARAM_PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 _SELF_PLACEHOLDER = re.compile(r"\{\{self\.(\w+)\}\}")
 
 # Sentinel for wrapper static_kwargs: resolve to the concrete toolset owner's module dir
-# at manifest time (e.g. @sketch on Context.sketch → contexts/bdd when owner is Bdd).
+# at manifest time (e.g. @sketch on Context.sketch → context_tools/bdd when owner is Bdd).
 OWNER_MODULE_DIR = "@owner"
 
 from tools.types import (

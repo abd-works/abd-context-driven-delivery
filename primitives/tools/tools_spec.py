@@ -7,7 +7,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "contexts"):
+for _cat in ("primitives", "utilities", "context_tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -21,7 +21,7 @@ from tools.examples.car import Car
 from agent_bdd.yaml_fence import load_fenced
 from tools.toolset_header import read_toolset_header
 
-_CLEAN_CODE_PY = _REPO_ROOT / "contexts" / "clean_engineering" / "clean_engineering.py"
+_CLEAN_CODE_PY = _REPO_ROOT / "context_tools" / "clean_engineering" / "clean_engineering.py"
 _CAR_PY = _REPO_ROOT / "primitives" / "tools" / "examples" / "car.py"
 
 
@@ -178,7 +178,7 @@ with description("a toolset file"):
         with it("should declare CleanEngineering toolset path in the manifest command"):
             header = read_toolset_header(_CLEAN_CODE_PY)
             expect(
-                "contexts.clean_engineering.clean_engineering:CleanEngineering"
+                "context_tools.clean_engineering.clean_engineering:CleanEngineering"
                 in (header.manifest_command or "")
             ).to(be_true)
             expect("generate" in (header.invoke_new or "")).to(be_true)

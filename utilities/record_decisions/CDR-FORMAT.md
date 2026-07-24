@@ -39,7 +39,7 @@ If a decision is easy to reverse, skip it — you'll just reverse it. If it's no
 ### What qualifies
 
 - **Structural shape.** Module boundaries, fidelity choices, generator partitioning.
-- **Integration patterns between contexts.** How concepts compose or hand off.
+- **Integration patterns between context_tools.** How concepts compose or hand off.
 - **Technology choices that carry lock-in.** Not every library — just the ones that would take meaningful effort to swap out.
 - **Boundary and scope decisions.** What is in vs out of a context; the explicit no-s are as valuable as the yes-s.
 - **Deliberate deviations from the obvious path.** Anything where a reasonable reader would assume the opposite.

@@ -2,17 +2,17 @@
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
 # invoke-new: action generate | context.format python
-# @toolset-manifest python -m tools manifest contexts.bdd.bdd:Bdd
-# invoke-edit: action satisfy | toolset: contexts.bdd.bdd:Bdd
-# invoke-check: action validate | toolset: contexts.bdd.bdd:Bdd
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """AgentWithActions generator — scaffold @toolset classes with @action recipes, bdd spec, and agent bdd spec."""
 
 from __future__ import annotations
 
-import contexts  # noqa: F401 — Bdd and AgentBdd merge with Context at import
+import context_tools  # noqa: F401 — Bdd and AgentBdd merge with Context at import
 from agent_bdd.agent_bdd import AgentBdd
-from contexts import context  # noqa: F401
-from contexts.bdd.bdd import Bdd
+from context_tools import context  # noqa: F401
+from context_tools.bdd.bdd import Bdd
 
 from .action import action  # noqa: F401
 

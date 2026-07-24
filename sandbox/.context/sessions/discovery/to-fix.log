@@ -1,0 +1,132 @@
+# to-fix.log — Stories discovery bout
+# Log omissions/errors here. Each entry:
+#   when, artifact, rule, wrong (one line), original, improved
+# User phrase "to fix" = failed to do it right; fix immediately and append an entry.
+
+---
+when: 2026-07-24
+artifact: sandbox/.context/story-map.md (Use Movement Powers)
+rule: branch-on-mechanical-uniqueness (contexts/stories discovery shared rules)
+wrong: Listed one Use story per handbook effect heading instead of collapsing same free-activate + move-action speed-rank shapes.
+original: |
+  (E) Use Movement Powers
+      (S) Player --> Use Burrowing
+      (S) Player --> Use Flight
+      (S) Player --> Use Leaping
+      (S) Player --> Use Movement
+      (S) Player --> Use Speed
+      (S) Player --> Use Swimming
+      (S) Player --> Use Teleport
+improved: |
+  (E) Use Movement Powers
+      (S) Player --> Use Speed Movement
+      (S) Player --> Use Leaping
+      (S) Player --> Use Teleport
+      (S) Player --> Use Dimension Travel
+      (S) Player --> Use Movement Mode
+status: fixed (option B rewrite)
+---
+when: 2026-07-24
+artifact: sandbox/.context/story-map.md (Sources / context placement)
+rule: (process) sources-scoped-to-generated-context — keep Sources on the epic/sub-epic/feature they ground; not a map-wide dump
+wrong: One mega Sources line at map root listed every module touched so far, unbound from the nodes those files actually justify.
+original: |
+  **Sources / context:** `sandbox/modules/checks/...`, `sandbox/modules/character/...`, `sandbox/modules/skills/...`, `sandbox/modules/advantages/...`, … (entire cumulative path list at map root)
+improved: |
+  Map root: play-core name reconciliation only.
+  Each epic/sub-epic carries its own **Sources / context:** next to the generated nodes (e.g. Build Character → character + checks; Use Skills → skills; Use Attack Powers → attack; …).
+status: fixed (full map rewrite)
+---
+when: 2026-07-24
+artifact: sandbox/.context/story-map.md (common parents / theme attachment)
+rule: (process) common-parents-for-tied-themes — nest purchase/use and related conflict steps under shared parents when they are one theme; not a named scanner rule
+wrong: Kept Purchase Skills / Purchase Advantages / Resolve Check as sibling top-level epics instead of attaching them under Use Skills / Use Advantages / Build Character (and conflict peers under Resolve Conflict).
+original: |
+  (E) Resolve Check
+      (E) Resolve Checks
+          …
+  (E) Build Character
+      (E) Build Character Sheet
+          …
+  (E) Purchase Skills
+      …
+  (E) Use Skills
+      …
+  (E) Purchase Advantages
+      …
+  (E) Use Advantages
+      …
+  (E) Resolve Conditions / Resolve Actions / Resolve Turns   # sibling tops
+improved: |
+  (E) Build Character
+      **Sources…** character + checks
+      (E) Build Character Sheet → …
+      (E) Resolve Checks → …
+  (E) Use Skills
+      **Sources…** skills
+      (E) Purchase Skills → …
+      (E) Resolve Skill Uses / Interact Socially / Apply Craft Skills → …
+  (E) Use Advantages
+      **Sources…** advantages
+      (E) Purchase Advantages → …
+      (E) Apply Advantage Benefits → …
+  (E) Resolve Conflict
+      (E) Resolve Conditions / Resolve Actions / Resolve Turns (each with local Sources)
+  (E) Powers — unchanged master; Sources on Powers + each child sub-epic
+status: fixed (full map rewrite)
+---
+
+---
+when: 2026-07-24
+artifact: sandbox/.context/story-map.md (Use Powers with Modifiers)
+rule: branch-on-mechanical-uniqueness (contexts/stories discovery shared rules)
+wrong: First modifiers pass collapsed ~38 extras + ~20 flaws into 7 mega-stories (Modify Effect Delivery / Constrain Effect Use), burying distinct resolution shapes from the extras/flaws cost tables and full bodies.
+original: |
+  (E) Apply Modifiers
+      Apply Extra, Apply Flaw
+  (E) Resolve Modified Effects
+      Switch Alternate Effect, Resolve Area Effect, Resolve Multiattack,
+      Link Effects, Modify Effect Delivery, Modify Resistance Path, Constrain Effect Use
+improved: |
+  Eleven mechanic sub-epics under Use Powers with Modifiers covering
+  Apply (Extra/Flaw/Feature/Quirk/Sleep), Arrays (switch + Dynamic),
+  Area (standard / lingering Cloud / Perception), Attack Delivery
+  (Accurate/Homing/Indirect/Ricochet/Split/Reach/Precise), Who Is Affected
+  (Corporeal/Insubstantial/Objects/Others/Attack/Selective), Resistance Path
+  (Impervious/Penetrating/Alternate Resistance/Incurable/Contagious/Secondary/Reversible),
+  Timing and Scale (Duration/Range/Extended/Mass/Reaction/Sustained/Triggered/Variable Descriptor/Dimensional),
+  Link + Multiattack, Conceal (Subtle/Insidious/Innate), Constrain Effect Use
+  (Activation/Check Required/Concentration/Diminished Range/Distracting/Fades/Feedback/
+  Grab-Based/Increased Action/Limited/Noticeable/Permanent/Removable/Resistible/
+  Sense-Dependent/Side Effect/Tiring/Uncontrolled/Unreliable).
+  OCR-stub modifiers still included from cost/summary tables pending segment repair.
+status: fixed (second deeper pass rewrite)
+---
+
+---
+when: 2026-07-24
+artifact: sandbox/modules/powers/extras|flaws/.context/*-segment.md + partition/segment flow
+rule: (process) partition-chunk-second-pass-verify — after segment, verify (1) span text length AND (2) named-entry completeness against cost tables / expected headers; length alone is insufficient when OCR truncates bodies inside the span
+wrong: Trusted extras/flaws chunks after span-length match (~1.0 ratio) without a named-entry completeness pass; OCR dropped most modifier bodies inside L9163-L9526 while keeping table stubs.
+original: |
+  Partition/segment copied HeroesHandbook L9163-L9383 (extras) and L9384-L9526 (flaws).
+  Agent treated segments as prove-read complete because chunk length ~= span length.
+  No second-pass check that each cost-table Extra/Flaw had a header+body in the chunk.
+improved: |
+  Instance: PDF column re-extract restored extras/flaws bodies (59/59 PASS).
+  ROOT: tool verify_segment_completeness; segment/partition actions tell agent to call
+  it when done segmenting. Length-only is false PASS; FAIL blocks story inventory.
+  extras/flaws segments declare <!-- expected-entries -->.
+status: fixed (data + tool + action instructions)
+---
+when: 2026-07-24
+artifact: sandbox/.context/story-map.md (Use Powers with Modifiers inventory)
+rule: branch-on-mechanical-uniqueness + read-all-source-context-in-full (prove-read) — mechanical uniqueness may only lock against OK segment bodies; table-only / missing-header names are not prove-read
+wrong: Expanded modifier story list from cost-table names without mechanical prove-read against full modifier bodies; no gate that blocked inventory when completeness verify failed.
+original: |
+  Use Powers with Modifiers stories named for Contagious, Indirect, Feedback, Grab-Based,
+  Uncontrolled, etc. from tables / memory while segment verify shows MISSING_HEADER.
+improved: |
+  Chunk bodies restored; after segment call verify_segment_completeness before inventory.
+status: fixed
+---

@@ -10,7 +10,7 @@ from unittest.mock import patch
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "contexts"):
+for _cat in ("primitives", "utilities", "context_tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -24,7 +24,7 @@ import tools.hooks.manifest_gate as gate
 _MANIFEST_FILE = """\
 # @toolset-manifest python -m tools manifest ooad.ooad:Ooad
 # Agent reading this file: run line 1 manifest, then follow instructions.
-# invoke-edit: action satisfy | toolset: contexts.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 \"\"\"Some module docstring.\"\"\"
 class Foo:
     pass

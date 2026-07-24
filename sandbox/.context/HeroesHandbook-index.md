@@ -7,7 +7,7 @@ Existing ground: `sandbox/checks`.
 Index file: `.context/HeroesHandbook-index.md`.  
 Chunks: `{module}/.context/{leaf}-segment.md` — **verbatim source**; Stories pass is **additive** (no re-chunk).
 
-Lens applied: `stories.md` § Contexts + `contexts/stories/partition.md` (additive multi-pass).
+Lens applied: `stories.md` § Contexts + `context_tools/stories/partition.md` (additive multi-pass).
 
 
 | Module path                   | Role            | Chunk                                                                                                           | Epic            | Suggested Mid-epic /                                                     | Evidence (source spans)                                                                                                  | Rough seam / API                                                | Thin deps                                          |

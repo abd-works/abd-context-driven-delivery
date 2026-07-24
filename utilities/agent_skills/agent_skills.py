@@ -185,7 +185,7 @@ def _is_self_manifest(py_file: Path, manifest_command: str) -> bool:
         module_path = module_class.split(":")[0]
         parts = module_path.split(".")
         search_roots = [_REPO_ROOT] + [
-            _REPO_ROOT / name for name in ("primitives", "utilities", "contexts")
+            _REPO_ROOT / name for name in ("primitives", "utilities", "context_tools")
         ]
         for root in search_roots:
             search = root

@@ -268,7 +268,7 @@ def _is_framework_action(action_name: str) -> bool:
 
 
 def _generator_module_dir() -> Path:
-    import contexts.base.context as generator_module
+    import context_tools.base.context as generator_module
 
     return Path(inspect.getfile(generator_module)).resolve().parent
 

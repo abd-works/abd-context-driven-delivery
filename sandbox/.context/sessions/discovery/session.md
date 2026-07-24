@@ -10,6 +10,6 @@
 
 ## End
 
-- **ended:** 2026-07-23
+- **ended:** 2026-07-24
 - **outcome:** handoff written
-- **handoff:** handoffs/handoff-2026-07-23-stories-discovery-iterate.md
+- **handoff:** handoffs/handoff-2026-07-24-thin-slice.md

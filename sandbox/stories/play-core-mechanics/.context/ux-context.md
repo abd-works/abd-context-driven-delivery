@@ -10,4 +10,4 @@ Optional notes not shown on screens.
 
 - Fidelity: **mockup** — greybox HTML+JS in `play-core-mechanics.html`.
 - Increment 1 spine: Create Character → Update Rank → Resolve Ability Check.
-- Story-demo shell sketches live under `contexts/ux/.context/`.
+- Story-demo shell sketches live under `context_tools/ux/.context/`.

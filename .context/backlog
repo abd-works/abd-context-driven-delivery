@@ -13,7 +13,8 @@ stories
 UX
 document
 partition
-concept = context (done: contexts/, Context, @context)
+context-tool
+simple log_fix 
 -----
 
 reviewing
@@ -21,17 +22,6 @@ reviewing
 session
 
 
-____
-
-
-
-templating
-ddd
-repair
-eplore 
-log
-cdd
-decision record 
 ---------
 
 developing
@@ -42,6 +32,9 @@ developing
 
 backlog
 -----------------
+
+
+
 session plan
 fidelity as a distinct concept
 context defailt folder eg --> modules; stories; ux; 
@@ -49,7 +42,7 @@ context defailt folder eg --> modules; stories; ux;
 module dependency graph, public to private surface
 patterns and frameworks
 checklist
-
+move tools into own packages and combine, generate, partition, etc
 
 know extension points for solutions- ai automatically flexes along these points
 
@@ -63,5 +56,37 @@ folder location ????
 visual editor format
 
 
+GRILL EXPANSION
+----
+grill and iterate when partitioning  -> show int
+better questions for grill --> grill expolore guifanvce
+stories / ce as well?
+-->  difference in mechanics; data structure; steps, rules;
+--> tech; source; target; protocol;
+--> different users
 
 
+be able to emphasiss focus of the grill; what to ignore and what matters bespoke ordefaul
+
+
+
+RELEASE
+_______
+sketch -> with catalog of sketches
+context tools --> very simple calls md files for rules
+tools -> inversion of control, need a good example from real work 
+agentic actions ->
+iterate -> 
+
+
+
+
+deferred
+---
+templating
+ddd
+repair
+explore 
+log
+cdd
+decision record 

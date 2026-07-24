@@ -9,6 +9,6 @@ export {
   scenario,
   setTestBackend,
   story,
-} from "../../contexts/ux/story-demo/play-dual-runner/story-test-core.js";
+} from "../../context_tools/ux/story-demo/play-dual-runner/story-test-core.js";
 
-export { assert } from "../../contexts/ux/story-demo/play-dual-runner/soft-assert.js";
+export { assert } from "../../context_tools/ux/story-demo/play-dual-runner/soft-assert.js";

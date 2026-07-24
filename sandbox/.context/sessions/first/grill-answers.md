@@ -18,7 +18,7 @@ User proposed resolver as the interaction host. Still open whether the public cl
 
 ### One module per sketch file
 
-Sketches split to one module per file under sandbox/.context/: mm3e-resolution-sketch.md and mm3e-measurement-sketch.md. Combined mm3e-core-mechanics-sketch.md removed. contexts/clean_engineering/sketch-template.md left unchanged.
+Sketches split to one module per file under sandbox/.context/: mm3e-resolution-sketch.md and mm3e-measurement-sketch.md. Combined mm3e-core-mechanics-sketch.md removed. context_tools/clean_engineering/sketch-template.md left unchanged.
 
 ### Modifier is amount only ? no trait/source noise
 
@@ -70,7 +70,7 @@ Opposed non-comparison path is settled (opposing roll ? override DC ? super.reso
 
 ### Interactions name real collaborator operations
 
-OpposedCheck uses -> opposingTrait.resolve then super.resolve; no underscore placeholder rolls. contexts/clean_engineering/sketch-template.md updated ? prefer collaborator.operation / super.operation; underscore privates only when no real call exists; bare -> ClassName is not an interaction.
+OpposedCheck uses -> opposingTrait.resolve then super.resolve; no underscore placeholder rolls. context_tools/clean_engineering/sketch-template.md updated ? prefer collaborator.operation / super.operation; underscore privates only when no real call exists; bare -> ClassName is not an interaction.
 
 ### comparison=true skips roll and super ? rank vs rank
 
@@ -210,7 +210,7 @@ Generated sandbox/character/ from character-sketch.md: module-context.md plus st
 
 ### cohesive-file standard ? class family in one file
 
-Merged Ability+Abilities into abilities.py, Defense+Defenses into defenses.py, Point+PointTotals into point_totals.py. Clean Engineering now requires cohesive-file (class family per file, not one class per file) in clean_engineering.md, contexts.md, modules/code fidelities, Python template, and sketch-template.
+Merged Ability+Abilities into abilities.py, Defense+Defenses into defenses.py, Point+PointTotals into point_totals.py. Clean Engineering now requires cohesive-file (class family per file, not one class per file) in clean_engineering.md, context_tools.md, modules/code fidelities, Python template, and sketch-template.
 
 ### One stories map spanning checks and character
 

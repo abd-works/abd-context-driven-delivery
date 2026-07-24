@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!--
+  AI mockup template (Story Demo shell).
+  Prefer filling the model + HtmlUxMap.render (uses mockup_shell.html).
+  When authoring HTML directly, keep this split: product LEFT + explorer RIGHT.
+
+  Controls that participate in a story step MUST be StoryDemoControl in the model, which emits:
+    data-bound-field="…"
+    data-story-steps='[{"kind":"when","label":"…"}]'
+  Serve from repo root. mount-generated-mockup.js collects create{Story}Story exports.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>UX — {{SCOPE}}</title>
+  <style>
+    body { margin: 0; font-family: ui-monospace, Consolas, monospace; }
+    #shell { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
+    #story-demo-frame { border-right: 1px solid #ccc; padding: 1rem; }
+    #explorer-frame { padding: 1rem; }
+    .control.emphasized { outline: 2px solid #2563eb; }
+    .control.tinted { background: #fecaca; }
+  </style>
+</head>
+<body data-story-demo-shell>
+  <header>
+    <span data-story-demo-mode>Play</span>
+    <button type="button" data-set-mode="Play">Play</button>
+    <button type="button" data-set-mode="Interactive">Interactive</button>
+  </header>
+  <div id="shell">
+    <section id="story-demo-frame">
+      <main id="mockup">
+        <!-- screens / regions / controls — emit data-story-steps on StoryDemoControls -->
+      </main>
+    </section>
+    <section id="explorer-frame">
+      <button type="button" data-reset>Reset</button>
+      <ul data-explorer-tree></ul>
+      <button type="button" data-play-next>Play next</button>
+      <p data-explorer-message hidden></p>
+      <p data-story-demo-status></p>
+      <footer id="stories"><ul><!-- story names --></ul></footer>
+    </section>
+  </div>
+  <script type="module" src="{{STORY_MODULE}}" data-ux-story-ref></script>
+  <script type="module" src="{{DOMAIN_MODULE}}" data-ux-object-ref></script>
+  <script type="module" src="/context_tools/ux/story-demo/mount-generated-mockup.js"></script>
+</body>
+</html>

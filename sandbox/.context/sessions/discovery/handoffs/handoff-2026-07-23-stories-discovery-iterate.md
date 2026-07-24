@@ -12,7 +12,7 @@ Stories discovery iterate (markdown): continue grilling one slice at a time; nex
 
 ## 3. Generator state
 
-- Toolset: `contexts.stories.stories:Stories`
+- Toolset: `context_tools.stories.stories:Stories`
 - Fidelity / format: discovery / markdown
 - Durable map: `sandbox/.context/story-map.md` (no thin-slice yet; no sketches in bout)
 - Bout: `sandbox/.context/sessions/discovery/`

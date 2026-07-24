@@ -184,3 +184,171 @@ story-map.md updated with master epic Powers and sub-epic Effect (8 stories). Ne
 
 Next Powers tick is sub-epic Attack under master epic Powers — derive stories from powers/attack segment + module-context (not index stubs). Damage/Affliction activate and resist deepen here. Still one submodule per tick; no thin-slice.
 
+### Powers/Attack ? Use Attack Powers sub-epic
+
+Accepted outcome-mechanic Attack stories (Inflict Damage, Impose Affliction, Nullify Power, Weaken Trait, Resist Damage, Shake Off Affliction) as use-side only ? not Effect acquire. They live under Powers sub-epic Use Attack Powers (link/use seam); no blank Activate Attack wrapper; Nullify Power stays distinct from Effect Counter Effect. Attack check is inside each inflict/impose/nullify/weaken activate story. Still no thin-slice; purchase/compose remains Effect.
+
+### Use Attack Powers stories this tick ? locked
+
+Lock inventory (option B) under Powers sub-epic Use Attack Powers: Inflict Damage, Impose Affliction, Nullify Power, Weaken Trait, Resist Damage, Shake Off Affliction, Resist Weaken. No blank Activate Attack; Nullify Power distinct from Effect Counter Effect; acquire stays Effect. Damage recovery not duplicated here (Recover From Harm). No thin-slice this tick.
+
+### Use Attack Powers tick written
+
+story-map.md updated with Powers sub-epic Use Attack Powers (7 stories: Inflict Damage, Impose Affliction, Nullify Power, Weaken Trait, Resist Damage, Shake Off Affliction, Resist Weaken). No thin-slice. Scan four-to-nine on Powers (2 sub-epics) and missing estimate lines deferred per prior bout; Use Attack Powers itself is 7 stories (in band).
+
+### Next unlock ? conflicts/turns
+
+Next map tick unlocks the conflicts/turns module seam ? derive candidate stories from turns module context/segment (not index mid-epic stubs). Still no thin-slice this tick. Build-order spine continues after powers/attack (#9).
+
+### Turns ? one epic Resolve Turns
+
+Turns land as one epic Resolve Turns (option A). Stories cover initiative order and turn/round lifecycle plus condition-limited allotment from turns-segment.md. Action performance stays Resolve Actions; condition definitions stay Resolve Conditions (turns only reads allotment). No Run Conflict umbrella this tick. No thin-slice until stories lock.
+
+### Resolve Turns stories ? locked
+
+Resolve Turns stories this tick: Roll Initiative, Resolve Surprise, Start Turn, Allot Turn Actions, End Turn. Ties/minion/late-join under Roll Initiative; dazed/compelled/controlled under Allot Turn Actions. No duplicate of Resolve Actions performances or Read Initiative. No thin-slice.
+
+### Resolve Turns tick written
+
+story-map.md updated with Resolve Turns (5 stories under Resolve Turn Cycle). No thin-slice. Action performances and Read Initiative remain outside this epic. Scan four-to-nine / estimate-line noise deferred per prior bout.
+
+### Next unlock ? powers/control
+
+Next map tick unlocks the powers/control module seam ? derive candidate stories from control module context/segment (not index mid-epic stubs). Still no thin-slice this tick. Build-order spine continues after conflicts/turns (#10).
+
+### Thin-slice deferred until map done
+
+Do not offer thin-slice as a next-unlock option during story-map discovery. Thin-slice only after the discovery map is complete. Continue grilling module/epic slices until then.
+
+### Powers/Control ? Use Control Powers sub-epic
+
+Accepted Use Control Powers as Powers sub-epic (option A), parallel to Use Attack Powers. Stories branch on distinct outcome mechanics from control-segment.md; no blank Activate Control wrapper; acquire stays Effect. Sample-power/OCR bleed in the segment is not inventory.
+
+### Powers ? Use sub-epic per submodule
+
+Standing rule for remaining powers children (control, defense, movement, general, extras, flaws, sensory): each submodule gets its own Use ? Powers sub-epic under master epic Powers, parallel to Use Attack Powers / Use Control Powers. Still one submodule tick at a time; stories from that submodule segment (not index stubs); acquire stays Effect. Naming Use {Type} Powers unless a tick renames.
+
+### Use Control Powers stories this tick ? locked
+
+Lock inventory (option A) under Powers sub-epic Use Control Powers: Create Object, Alter Environment, Project Illusion, Disbelieve Illusion, Control Luck, Move Object, Summon Minion, Transform Object. Trap-with-object and Environment subtypes are scenarios. No blank Activate Control; acquire stays Effect.
+
+### Use Control Powers tick written
+
+story-map.md updated with Powers sub-epic Use Control Powers (8 stories). Standing rule remains: remaining power children each get a Use ? Powers sub-epic on their tick. Scan four-to-nine / estimate noise deferred per prior bout.
+
+### Next unlock ? powers/defense
+
+Next map tick unlocks powers/defense ? Use Defense Powers sub-epic per standing Powers rule. Derive stories from defense module context/segment (not index stubs). Build-order #11.
+
+### Power use stories ? Prefer Use/Activate XXXX
+
+Prefer verb Use or Activate plus the effect/trait name for power use-side stories going forward (e.g. Use Immortality, not Return From Death). Apply from Use Defense Powers onward; prior Attack/Control names stay unless a later rename tick. Acquire still stays under Effect.
+
+### Use Defense Powers stories this tick ? locked
+
+Lock inventory (option A) under Powers sub-epic Use Defense Powers: Use Deflect, Use Immortality, Use Immunity, Activate Insubstantial, Use Protection, Use Regeneration, Use Healing. Reflect/Redirect scenarios under Use Deflect. Resist Damage stays under Use Attack Powers. Acquire stays Effect.
+
+### Use Defense Powers tick written
+
+story-map.md updated with Powers sub-epic Use Defense Powers (7 Use/Activate stories). Scan four-to-nine / estimate noise deferred per prior bout.
+
+### Next unlock ? powers/movement
+
+Next map tick unlocks powers/movement ? Use Movement Powers sub-epic per standing Powers rule. Derive stories from movement module context/segment (not index stubs). Use/Activate XXXX naming. Build-order #12. User said proceed ? lock recommended inventory after prove-read unless segment forces a fork.
+
+### Use Movement Powers stories this tick ? locked
+
+Proceeded with recommended inventory under Use Movement Powers from movement-segment.md: Use Burrowing, Use Flight, Use Leaping, Use Movement (Dimension Travel / Environmental Adaptation / Permeate / Trackless / Wall-Crawling / Water-Walking as scenarios), Use Speed, Use Swimming, Use Teleport. Free-action activate + move action to travel per Movement type primer. Acquire stays Effect. Blast OCR bleed ignored.
+
+### Use Movement Powers tick written
+
+story-map.md updated with Powers sub-epic Use Movement Powers (7 stories). Use Movement covers special modes as scenarios. Scan noise deferred.
+
+### Movement inventory ? over-listed by effect name
+
+User challenge: Use Movement Powers looked repetitive. Agree ? prior lock listed one Use per handbook effect heading instead of branching on mechanical uniqueness from movement-segment.md + Movement type primer. Free-activate + move-action speed-rank modes (Flight/Speed/Swimming/Burrowing) share one shape and should collapse to scenarios under one story. Distinct shapes stay separate (Leaping instant jump distance; Teleport relocate; special Movement modes that are not speed-rank travel). Will propose a tightened list before rewriting the map slice.
+
+### Use Movement Powers ? tightened (option B)
+
+Rewrite Use Movement Powers to five outcome-mechanic stories: Use Speed Movement (Flight/Speed/Swimming/Burrowing scenarios), Use Leaping, Use Teleport, Use Dimension Travel, Use Movement Mode (Permeate / Wall-Crawling / Water-Walking / Trackless / Environmental Adaptation scenarios). Supersedes seven-name effect-heading list. Standing reminder: branch on mechanical uniqueness for remaining power children ? not one story per handbook effect title.
+
+### Use Movement Powers tick rewritten
+
+story-map.md Use Movement Powers rewritten to 5 stories (option B). Remaining power ticks must prove mechanical uniqueness before naming Use/Activate stories.
+
+### to-fix.log process
+
+Future omissions/errors in this bout go to sandbox/.context/sessions/discovery/to-fix.log. Each entry captures original output, improved output, exact failed rule, and a one-liner on what was done wrong. User saying to fix means the agent failed and must correct immediately (and log the entry).
+
+### Next unlock ? powers/general
+
+Proceed to powers/general ? Use General Powers sub-epic. Stories must branch on mechanical uniqueness from general-segment.md (not one Use per effect heading). Use/Activate XXXX naming. Build-order #13.
+
+### Story-map structure ? scoped Sources + common parents
+
+to-fix: (1) Sources/context hang on the epic or sub-epic they ground ? no map-wide cumulative dump; (2) common parents attach tied themes ? Resolve Checks under Build Character; Purchase under Use Skills / Use Advantages; Conditions/Actions/Turns under Resolve Conflict; Powers children keep local Sources. story-map.md rewritten accordingly.
+
+### Use General Powers stories this tick ? locked
+
+Proceeded with option A under Powers sub-epic Use General Powers: Activate Size Change (Growth/Shrinking scenarios), Use Enhanced Trait, Use Extra Limbs, Use Feature, Use Elongation, Use Morph, Use Quickness, Use Variable. Branched on mechanical uniqueness from general-segment.md; OCR bleed ignored. Local Sources on the sub-epic.
+
+### Use General Powers tick written
+
+story-map.md updated with Powers sub-epic Use General Powers (8 stories, local Sources). Growth/Shrinking collapsed under Activate Size Change.
+
+### Scaffold remaining epics/sub-epics
+
+Scaffold only (no invented story inventory): Powers adds Use Extras Powers, Use Flaws Powers, Use Sensory Powers with local Sources; new Use Gear epic with Use Equipment / Use Vehicles / Use Headquarters sub-epics and local Sources. measurement stays folded into checks (build-order). Stories under scaffolds marked TBD until grilled with branch-on-mechanical-uniqueness.
+
+### Powers modifiers ? Use Powers with Modifiers epic
+
+Replace separate Use Extras Powers / Use Flaws Powers scaffolds with epic Use Powers with Modifiers. Story inventory from deep prove-read of extras-segment.md + flaws-segment.md branched on mechanical uniqueness; reconcile with Effect Apply Extra / Apply Flaw (those stay shared apply protocol or get superseded ? decide after dive).
+
+### Use Powers with Modifiers ? inventory from mechanics dive
+
+Deep-read extras-segment.md + flaws-segment.md. Not one story per named Extra/Flaw. Distinct shapes: (compose) Apply Extra / Apply Flaw; (runtime) Switch Alternate Effect (Dynamic scenario); Resolve Area Effect; Resolve Multiattack; Link Effects; Modify Effect Delivery (targeting/range/duration/action/affects-X/selective/triggered/variable descriptor scenarios); Modify Resistance Path (Impervious/Penetrating/Alternate Resistance/Incurable/Contagious/Secondary); Constrain Effect Use (Activation/Check Required/Grab-Based/Concentration/Distracting/Tiring/Fades/Limited/Unreliable/Sense-Dependent/Resistible/Side Effect/Removable/Permanent/Noticeable/Quirk scenarios). Replaces Use Extras Powers / Use Flaws Powers scaffolds. Effect loses Apply Extra/Apply Flaw ? those live under this epic.
+
+### Use Powers with Modifiers tick written
+
+story-map.md: Use Extras/Flaws scaffolds replaced by Use Powers with Modifiers (Apply Modifiers + Resolve Modified Effects). Effect no longer lists Apply Extra/Apply Flaw. Sensory and Gear scaffolds unchanged.
+
+### Use Powers with Modifiers ? second deeper pass
+
+to-fix: first modifiers inventory over-collapsed. Second pass re-read extras/flaws segments + HeroesHandbook cost tables; expanded Use Powers with Modifiers to eleven mechanic sub-epics and per-shape stories (arrays, area variants, attack delivery, who-affected, resistance path, timing/scale, link/multiattack, conceal, constrain). OCR-missing bodies (Feedback, Grab-Based, Increased Action, Uncontrolled, Contagious, ?) still named from tables pending segment repair. Four-to-nine deferred.
+
+### Partition verify + mechanical gate
+
+to-fix: (1) OCR-truncated extras/flaws chunks need a second-pass verify after partition ? span text length AND named-entry completeness vs cost table; length-only is a false PASS. Report: segment-verify-extras-flaws.md (34/58 incomplete). (2) Mechanical uniqueness / prove-read must fail closed when completeness FAIL ? do not lock stories on table-only names. Use Powers with Modifiers marked provisional until chunk repair.
+
+### Use Gear ? deep dive before inventory lock
+
+Prove-read equipment/vehicles/headquarters segments + module-context_tools. Ran segment-verify-gear.md (span length PASS; weapon/armor tables + some HQ feature bodies OCR-partial). Mechanics listed and story proposal prepared for user confirm grill ? map not written until inventory locked. Operate Vehicle stays under Use Skills.
+
+### Use Gear stories this tick ? locked
+
+Confirmed option A. Use Equipment (14), Use Vehicles (5), Use Headquarters (10) as proposed after segment-verify-gear.md. Operate Vehicle stays under Use Skills. Weapon/armor tables and sample-only HQ features remain scenarios. Local Sources + verify link on Use Gear.
+
+### Use Gear tick written
+
+story-map.md Use Gear filled: Use Equipment (14), Use Vehicles (5), Use Headquarters (10). Verify link on epic. Remaining TBD scaffold: Use Sensory Powers only.
+
+### Use Sensory Powers ? deep dive before inventory lock
+
+Prove-read sensory-segment.md + module-context. segment-verify-sensory.md: span PASS; Senses options partially OCR-missing (Accurate/Detect/Precognition/?). Mechanics and story proposal ready for confirm grill ? map not written until lock. Shapeshift bleed ignored. Disbelieve Illusion stays under Use Control.
+
+### Use Sensory Powers stories this tick ? locked
+
+Lock B+C: Communicate Remotely, Use Comprehend, Activate Concealment (Impose Concealment / Attack-Area as scenarios under Activate or modifiers ? no separate story), Read Mind, Use Remote Sensing, Sense Danger (Danger Sense split), Use Senses (remaining OK sense options; OCR-missing provisional). Disbelieve Illusion stays under Use Control. segment-verify-sensory.md.
+
+### Use Sensory Powers tick written
+
+story-map.md Use Sensory Powers: Communicate Remotely, Use Comprehend, Activate Concealment, Read Mind, Use Remote Sensing, Sense Danger, Use Senses. No remaining TBD story scaffolds on the discovery map (Use Powers with Modifiers still provisional pending extras/flaws chunk repair).
+
+### Extras/flaws OCR chunk repair
+
+Repaired HeroesHandbook.md Extras/Flaws spans and extras-segment.md / flaws-segment.md via PyMuPDF left-then-right column extract from HeroesHandbook.pdf pages 189-204 (not re-OCR). Completeness 59/59 PASS (was 24/58). Report: segment-verify-extras-flaws.md. Dropped provisional flag on Use Powers with Modifiers verify line.
+
+### Discovery story-map declared done
+
+Named discovery scaffolds complete across Build Character, Use Skills, Use Advantages, Resolve Conflict, Powers (Effect + typed Use ? + Use Powers with Modifiers + Use Sensory Powers), and Use Gear. Extras/flaws chunk repair completeness PASS (59/59). Thin-slice unlocked. Next focus: thin-slice from module-build-order (checks/character spine first).
+

@@ -40,4 +40,4 @@ Tests may pass `SessionLog(sessions_root=tmpdir)` so `log_dir = tmpdir / name`.
 ## Dependencies
 
 - stdlib only for core model/log (`pathlib`, `dataclasses`, `abc`, `json`; optional `yaml` for payload dump with JSON fallback)
-- Consumed by `primitives.tools`, `primitives.actions`, `contexts.base.context`
+- Consumed by `primitives.tools`, `primitives.actions`, `context_tools.base.context`

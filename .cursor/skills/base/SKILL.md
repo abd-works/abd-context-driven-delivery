@@ -9,7 +9,7 @@ disable-model-invocation: true
 Run the manifest to load tools, actions, and instructions:
 
 ```
-python -m tools manifest contexts.base.context:Context
+python -m tools manifest context_tools.base.context:Context
 ```
 
 Follow `response.instructions` before doing anything else. Invoke tools via:

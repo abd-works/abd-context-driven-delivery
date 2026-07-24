@@ -1,8 +1,8 @@
 /**
- * # @toolset-manifest python -m tools manifest contexts.stories.stories:Stories
+ * # @toolset-manifest python -m tools manifest context_tools.stories.stories:Stories
  * # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
- * # invoke-edit: action satisfy | toolset: contexts.stories.stories:Stories
- * # invoke-check: action validate | toolset: contexts.stories.stories:Stories
+ * # invoke-edit: action satisfy | toolset: context_tools.stories.stories:Stories
+ * # invoke-check: action validate | toolset: context_tools.stories.stories:Stories
  *
  * Story: Update Ability Rank (tier-neutral) — browser-safe export for Story Demo Play.
  *
@@ -10,8 +10,8 @@
  */
 
 import { ManageCharacterSheetHelper } from "../manage-character-sheet-helper.js";
-import { assert } from "../../../../contexts/ux/story-demo/play-dual-runner/soft-assert.js";
-import { scenario, story } from "../../../../contexts/ux/story-demo/play-dual-runner/story-test-core.js";
+import { assert } from "../../../../context_tools/ux/story-demo/play-dual-runner/soft-assert.js";
+import { scenario, story } from "../../../../context_tools/ux/story-demo/play-dual-runner/story-test-core.js";
 
 const helper = new ManageCharacterSheetHelper();
 
@@ -108,7 +108,7 @@ if (typeof process !== "undefined" && process.versions?.node) {
     import("node:url"),
     import("node:path"),
   ]);
-  await import("../../../../contexts/ux/story-demo/play-dual-runner/story-test-node.js");
+  await import("../../../../context_tools/ux/story-demo/play-dual-runner/story-test-node.js");
   const thisFile = fileURLToPath(import.meta.url);
   const entry = process.argv[1] && path.resolve(process.argv[1]);
   if (entry && path.resolve(thisFile) === entry) {

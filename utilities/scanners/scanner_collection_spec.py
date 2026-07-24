@@ -9,7 +9,7 @@ from mamba import before, context, description, it
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "contexts"):
+for _cat in ("primitives", "utilities", "context_tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -17,12 +17,12 @@ for _cat in ("primitives", "utilities", "contexts"):
 from scanners import ScannerCollection
 
 
-_CLEAN_CODE_DIR = _REPO_ROOT / "contexts" / "clean_engineering"
+_CLEAN_CODE_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"
 _PYTHON_SCANNERS = _CLEAN_CODE_DIR / "scanners"
 
 
 with description("ScannerCollection"):
-    with context("a scanner collection rooted at contexts/clean_engineering/scanners/"):
+    with context("a scanner collection rooted at context_tools/clean_engineering/scanners/"):
         with before.each:
             self.collection = ScannerCollection(_CLEAN_CODE_DIR, _PYTHON_SCANNERS)
             self.discovered = self.collection.discover()

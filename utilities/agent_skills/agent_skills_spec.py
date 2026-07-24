@@ -10,7 +10,7 @@ _AGENT_SKILLS_DIR = Path(__file__).resolve().parent
 for p in (str(_REPO_ROOT), str(_AGENT_SKILLS_DIR)):
     if p not in sys.path:
         sys.path.insert(0, p)
-for _cat in ("primitives", "utilities", "contexts"):
+for _cat in ("primitives", "utilities", "context_tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -52,17 +52,17 @@ with description("_command_name"):
 
 with description("_parse_focus_actions on clean_engineering"):
     with it("finds no active @focus actions while fidelities focus is commented out"):
-        py_file = _REPO_ROOT / "contexts" / "clean_engineering" / "clean_engineering.py"
+        py_file = _REPO_ROOT / "context_tools" / "clean_engineering" / "clean_engineering.py"
         actions = _parse_focus_actions(py_file)
         expect(len(actions)).to(equal(0))
 
 
 with description("_enrich_toolset_entry"):
     with it("reports skill slug; focus shortcuts empty when @focus is inactive"):
-        py_file = _REPO_ROOT / "contexts" / "clean_engineering" / "clean_engineering.py"
+        py_file = _REPO_ROOT / "context_tools" / "clean_engineering" / "clean_engineering.py"
         entry = _enrich_toolset_entry({
             "module_dir": "clean_engineering",
-            "manifest_command": "python -m tools manifest contexts.clean_engineering.clean_engineering:CleanEngineering",
+            "manifest_command": "python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering",
             "class_name": "CleanEngineering",
             "description": "Clean Engineering generator",
             "file_path": str(py_file),
@@ -129,8 +129,8 @@ with description("write_focus_shortcut tool"):
         with it("writes a command file with spaces in the name"):
             path = self.skills.write_focus_shortcut(
                 command_name="clean code generate",
-                manifest_command="python -m tools manifest contexts.clean_engineering.clean_engineering:CleanEngineering",
-                toolset_ref="contexts.clean_engineering.clean_engineering:CleanEngineering",
+                manifest_command="python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                toolset_ref="context_tools.clean_engineering.clean_engineering:CleanEngineering",
                 class_name="CleanEngineering",
                 action="generate",
                 filter_key="fidelity",
@@ -148,8 +148,8 @@ with description("write_focus_shortcut tool"):
         with it("writes a prompt file with frontmatter name"):
             self.skills.write_focus_shortcut(
                 command_name="clean code generate",
-                manifest_command="python -m tools manifest contexts.clean_engineering.clean_engineering:CleanEngineering",
-                toolset_ref="contexts.clean_engineering.clean_engineering:CleanEngineering",
+                manifest_command="python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                toolset_ref="context_tools.clean_engineering.clean_engineering:CleanEngineering",
                 class_name="CleanEngineering",
                 action="generate",
                 filter_key="fidelity",

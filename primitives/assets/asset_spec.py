@@ -9,13 +9,13 @@ from mamba import before, context, description, it
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "contexts"):
+for _cat in ("primitives", "utilities", "context_tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-_CLEAN_ENGINEERING_DIR = _REPO_ROOT / "contexts" / "clean_engineering"
-_BDD_DIR = _REPO_ROOT / "contexts" / "bdd"
+_CLEAN_ENGINEERING_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"
+_BDD_DIR = _REPO_ROOT / "context_tools" / "bdd"
 
 
 with description("AssetLocator"):
@@ -33,7 +33,7 @@ with description("AssetLocator"):
         with it("should resolve to kind folder"):
             expect(self.location.kind).to(equal("folder"))
 
-        with it("should resolve to contexts/clean_engineering/examples"):
+        with it("should resolve to context_tools/clean_engineering/examples"):
             expect(self.location.folder).to(equal((_CLEAN_ENGINEERING_DIR / "examples").resolve()))
 
     with context("locating contexts on a clean-engineering host"):

@@ -8,13 +8,13 @@ from mamba import before, context, description, it
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "contexts"):
+for _cat in ("primitives", "utilities", "context_tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-_CLEAN_ENGINEERING_DIR = _REPO_ROOT / "contexts" / "clean_engineering"
-_GENERATOR_DIR = _REPO_ROOT / "contexts" / "base"
+_CLEAN_ENGINEERING_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"
+_GENERATOR_DIR = _REPO_ROOT / "context_tools" / "base"
 
 from primitives.instructions import Instruction
 from primitives.instructions import _active_resource, _format_keys, _path_for_name, _path_for_templates
@@ -180,7 +180,7 @@ with description("_expand_docstring"):
 
     with context("a single-word framework action name on a generator subclass"):
         with it("should equal the direct load of base-context/generate.md"):
-            from contexts.base.context import Context
+            from context_tools.base.context import Context
             expanded = _expand_docstring(
                 "generate", Context.generate, instance=Context()
             )
@@ -189,14 +189,14 @@ with description("_expand_docstring"):
 
     with context("a path-ref action docstring on the generator module"):
         with it("should equal the direct load of base-context/generate.md"):
-            from contexts.base.context import Context
+            from context_tools.base.context import Context
             expanded = _expand_docstring("base-context/generate", Context.generate)
             direct = Instruction("base-context/generate", _GENERATOR_DIR).expand()
             expect(expanded).to(equal(direct))
 
     with context("a path-ref action docstring that resolves to base-context/repair.md"):
         with it("should equal the direct load of base-context/repair.md"):
-            from contexts.base.context import Context
+            from context_tools.base.context import Context
             expanded = _expand_docstring("base-context/repair", Context.repair)
             direct = Instruction("base-context/repair", _GENERATOR_DIR).expand()
             expect(expanded).to(equal(direct))

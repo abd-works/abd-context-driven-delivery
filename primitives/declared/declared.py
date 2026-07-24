@@ -1,7 +1,7 @@
-# @toolset-manifest python -m tools manifest contexts.bdd.bdd:Bdd
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
-# invoke-edit: action satisfy | toolset: contexts.bdd.bdd:Bdd
-# invoke-check: action validate | toolset: contexts.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """Declaration descriptors for instruction slots and operations."""
 from __future__ import annotations
 

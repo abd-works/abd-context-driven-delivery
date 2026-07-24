@@ -11907,3 +11907,587 @@ context.md
 2026-07-24T14:17:35Z [pre ] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\b083f4db-990c-4676-a076-670a4418a131.txt
 2026-07-24T14:17:36Z [read] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\b083f4db-990c-4676-a076-670a4418a131.txt
 2026-07-24T14:17:36Z [post] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\b083f4db-990c-4676-a076-670a4418a131.txt
+2026-07-24T15:01:40Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  — manifest ran but produced no output
+2026-07-24T15:01:40Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  — manifest ran but produced no output
+2026-07-24T15:01:41Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  — manifest ran but produced no output
+2026-07-24T15:01:43Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  — manifest ran but produced no output
+2026-07-24T15:01:44Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  — manifest ran but produced no output
+2026-07-24T15:01:44Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  — manifest ran but produced no output
+2026-07-24T15:01:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  — manifest ran but produced no output
+2026-07-24T15:01:55Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  — manifest ran but produced no output
+2026-07-24T15:01:55Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  — manifest ran but produced no output
+2026-07-24T15:01:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\.deploy-state.json
+2026-07-24T15:01:58Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\.deploy-state.json
+2026-07-24T15:01:59Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\.deploy-state.json
+2026-07-24T15:02:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\__main__.py
+2026-07-24T15:02:08Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\__main__.py
+2026-07-24T15:02:08Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\__main__.py
+2026-07-24T15:06:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T15:06:58Z [read] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T15:06:58Z [post] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T15:07:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\grill-answers.md
+2026-07-24T15:07:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:07:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\session.md
+2026-07-24T15:07:02Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\grill-answers.md
+2026-07-24T15:07:02Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:07:02Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\session.md
+2026-07-24T15:07:03Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\grill-answers.md
+2026-07-24T15:07:03Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:07:03Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\session.md
+2026-07-24T15:07:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\grill-me\SKILL.md
+2026-07-24T15:07:07Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\grill-me\SKILL.md
+2026-07-24T15:07:07Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\grill-me\SKILL.md
+2026-07-24T15:07:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\stories\SKILL.md
+2026-07-24T15:07:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\iterate\SKILL.md
+2026-07-24T15:07:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\.context\module-context.md
+2026-07-24T15:07:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\attack\.context\module-context.md
+2026-07-24T15:07:45Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\utilities\iterate\iterate.py  — 1 manifest line(s)
+2026-07-24T15:07:45Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\stories\SKILL.md
+2026-07-24T15:07:45Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\iterate\SKILL.md
+2026-07-24T15:07:46Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\.context\module-context.md
+2026-07-24T15:07:46Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\attack\.context\module-context.md
+2026-07-24T15:07:46Z [read] FIRED  c:\dev\abd-context-driven-delivery\utilities\iterate\iterate.py  — 1 manifest line(s)
+2026-07-24T15:07:46Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\stories\SKILL.md
+2026-07-24T15:07:46Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\iterate\SKILL.md
+2026-07-24T15:07:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\.context\module-context.md
+2026-07-24T15:07:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\attack\.context\module-context.md
+2026-07-24T15:07:47Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\iterate\iterate.py  — 1 manifest line(s)
+2026-07-24T15:07:49Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\grill-context\SKILL.md
+2026-07-24T15:07:49Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\grill-context\SKILL.md
+2026-07-24T15:07:50Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\grill-context\SKILL.md
+2026-07-24T15:08:18Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\attack\.context\attack-segment.md
+2026-07-24T15:08:18Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\attack\.context\attack-segment.md
+2026-07-24T15:08:18Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\attack\.context\attack-segment.md
+2026-07-24T15:08:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\attack\.context\attack-segment.md
+2026-07-24T15:08:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\effect\.context\effect-segment.md
+2026-07-24T15:08:37Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\attack\.context\attack-segment.md
+2026-07-24T15:08:37Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\effect\.context\effect-segment.md
+2026-07-24T15:08:37Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\attack\.context\attack-segment.md
+2026-07-24T15:08:37Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\effect\.context\effect-segment.md
+2026-07-24T15:09:09Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\.context\module-build-order.md
+2026-07-24T15:09:10Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\.context\module-build-order.md
+2026-07-24T15:09:10Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\.context\module-build-order.md
+2026-07-24T15:29:16Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:29:16Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:29:17Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:29:17Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:29:18Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:29:18Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:29:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:29:21Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:29:22Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:30:08Z [pre ] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\488791ca-f242-4882-9c6d-744d585e8185.txt
+2026-07-24T15:30:08Z [pre ] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\488791ca-f242-4882-9c6d-744d585e8185.txt
+2026-07-24T15:30:09Z [read] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\488791ca-f242-4882-9c6d-744d585e8185.txt
+2026-07-24T15:30:09Z [post] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\488791ca-f242-4882-9c6d-744d585e8185.txt
+2026-07-24T15:30:51Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:30:52Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:30:52Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T15:53:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\conflicts\turns\.context\module-context.md
+2026-07-24T15:53:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\conflicts\turns\.context\turns-segment.md
+2026-07-24T15:53:14Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\conflicts\turns\.context\module-context.md
+2026-07-24T15:53:15Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\conflicts\turns\.context\module-context.md
+2026-07-24T15:53:15Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\conflicts\turns\.context\turns-segment.md
+2026-07-24T16:02:41Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:02:41Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:02:42Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:02:42Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:02:43Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:02:43Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:02:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:02:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:15:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\control\.context\module-context.md
+2026-07-24T16:15:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\control\.context\control-segment.md
+2026-07-24T16:15:03Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\control\.context\module-context.md
+2026-07-24T16:15:03Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\control\.context\control-segment.md
+2026-07-24T16:15:04Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\control\.context\module-context.md
+
+2026-07-24T16:17:29Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:17:29Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:17:29Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:17:32Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:17:33Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:17:33Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:19:23Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\defense\.context\module-context.md
+2026-07-24T16:19:23Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\defense\.context\defense-segment.md
+2026-07-24T16:19:24Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\defense\.context\module-context.md
+2026-07-24T16:19:24Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\defense\.context\defense-segment.md
+2026-07-24T16:19:24Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\defense\.context\module-context.md
+2026-07-24T16:19:24Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\defense\.context\defense-segment.md
+2026-07-24T16:21:40Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:21:41Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:21:41Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:21:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:21:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:21:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:22:12Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\movement\.context\module-context.md
+2026-07-24T16:22:12Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\movement\.context\movement-segment.md
+2026-07-24T16:22:13Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\movement\.context\module-context.md
+2026-07-24T16:22:13Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\movement\.context\movement-segment.md
+2026-07-24T16:22:13Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\movement\.context\module-context.md
+2026-07-24T16:22:13Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\movement\.context\movement-segment.md
+2026-07-24T16:22:28Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:22:29Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:22:29Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:22:34Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:22:34Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:22:35Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:24:15Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:24:16Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:24:16Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:24:24Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:24:25Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:24:26Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:31:18Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\logs\events.log
+2026-07-24T16:31:19Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\logs\events.log
+2026-07-24T16:31:19Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\logs\events.log
+2026-07-24T16:31:32Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T16:31:32Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T16:32:13Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\general\.context\module-context.md
+2026-07-24T16:32:13Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\general\.context\general-segment.md
+2026-07-24T16:32:14Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\general\.context\module-context.md
+2026-07-24T16:32:14Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\general\.context\general-segment.md
+2026-07-24T16:32:14Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\general\.context\module-context.md
+2026-07-24T16:32:14Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\general\.context\general-segment.md
+2026-07-24T16:54:42Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:54:43Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:54:43Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:54:48Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T16:54:48Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T16:54:49Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T16:55:40Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:55:40Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:55:40Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:56:30Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\module-context.md
+2026-07-24T16:56:30Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\module-context.md
+2026-07-24T16:56:30Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\module-context.md
+2026-07-24T16:56:30Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\module-context.md
+2026-07-24T16:56:30Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\module-context.md
+2026-07-24T16:56:30Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\module-context.md
+2026-07-24T16:56:30Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\module-context.md
+2026-07-24T16:56:31Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\module-context.md
+2026-07-24T16:56:31Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\module-context.md
+2026-07-24T16:56:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\module-context.md
+2026-07-24T16:56:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\vehicles\.context\module-context.md
+2026-07-24T16:56:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\headquarters\.context\module-context.md
+2026-07-24T16:56:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\measurement\.context\module-context.md
+2026-07-24T16:56:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\effect\.context\module-context.md
+2026-07-24T16:56:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\module-context.md
+2026-07-24T16:56:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\headquarters\.context\module-context.md
+2026-07-24T16:56:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\vehicles\.context\module-context.md
+2026-07-24T16:56:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\measurement\.context\module-context.md
+2026-07-24T16:56:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\effect\.context\module-context.md
+2026-07-24T16:56:45Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\module-context.md
+2026-07-24T16:56:45Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\vehicles\.context\module-context.md
+2026-07-24T16:56:45Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\headquarters\.context\module-context.md
+2026-07-24T16:56:45Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\measurement\.context\module-context.md
+2026-07-24T16:56:45Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\effect\.context\module-context.md
+2026-07-24T16:56:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:56:59Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:56:59Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:57:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T16:57:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T16:57:55Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T16:57:55Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T16:57:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T16:57:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T16:58:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T16:58:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T16:58:08Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T16:58:08Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T16:58:08Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T16:58:08Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T16:58:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:58:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:58:47Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:58:49Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:58:49Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:58:50Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:58:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:58:52Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:58:53Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T16:59:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T16:59:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T16:59:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\effect\.context\effect-segment.md
+2026-07-24T16:59:56Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T16:59:56Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T16:59:56Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T16:59:56Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T17:01:42Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T17:01:42Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T17:01:43Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T17:02:11Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T17:02:11Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T17:02:11Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T17:04:28Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T17:04:28Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T17:04:29Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T17:05:09Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\module-context.md
+2026-07-24T17:05:09Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\vehicles\.context\module-context.md
+2026-07-24T17:05:10Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\headquarters\.context\module-context.md
+2026-07-24T17:05:10Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\module-context.md
+2026-07-24T17:05:10Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\vehicles\.context\module-context.md
+2026-07-24T17:05:10Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\headquarters\.context\module-context.md
+2026-07-24T17:05:10Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\module-context.md
+2026-07-24T17:05:10Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\vehicles\.context\module-context.md
+2026-07-24T17:05:10Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\headquarters\.context\module-context.md
+2026-07-24T17:05:22Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\equipment-segment.md
+2026-07-24T17:05:22Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\equipment-segment.md
+2026-07-24T17:05:22Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\vehicles\.context\vehicles-segment.md
+2026-07-24T17:05:22Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\headquarters\.context\headquarters-segment.md
+2026-07-24T17:05:22Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\equipment-segment.md
+2026-07-24T17:05:22Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\equipment-segment.md
+2026-07-24T17:05:22Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\headquarters\.context\headquarters-segment.md
+2026-07-24T17:05:22Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\vehicles\.context\vehicles-segment.md
+2026-07-24T17:05:23Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\equipment-segment.md
+2026-07-24T17:05:23Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\equipment-segment.md
+2026-07-24T17:05:23Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\headquarters\.context\headquarters-segment.md
+2026-07-24T17:05:23Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\vehicles\.context\vehicles-segment.md
+2026-07-24T17:05:31Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\equipment-segment.md
+2026-07-24T17:05:31Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\equipment-segment.md
+2026-07-24T17:05:31Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\gear\equipment\.context\equipment-segment.md
+2026-07-24T19:31:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:31:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:31:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:31:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:31:59Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:32:00Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:32:35Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T19:32:36Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T19:32:36Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T19:32:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T19:32:48Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T19:32:48Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T19:33:25Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-sensory.md
+2026-07-24T19:33:25Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-sensory.md
+2026-07-24T19:34:41Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:34:42Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:34:42Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:34:43Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:34:44Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:34:44Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:35:04Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:35:04Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\grill-answers.md
+2026-07-24T19:38:08Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-extras-flaws.md
+2026-07-24T19:38:10Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-extras-flaws.md
+2026-07-24T19:38:10Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-extras-flaws.md
+2026-07-24T19:38:41Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T19:38:41Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T19:38:42Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T19:38:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\HeroesHandbook.md
+2026-07-24T19:38:47Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\HeroesHandbook.md
+2026-07-24T19:38:48Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\HeroesHandbook.md
+2026-07-24T19:38:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\HeroesHandbook.md
+2026-07-24T19:38:53Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\HeroesHandbook.md
+2026-07-24T19:38:53Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\HeroesHandbook.md
+2026-07-24T19:39:31Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_scan_modifiers.py
+2026-07-24T19:39:31Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_scan_modifiers.py
+2026-07-24T19:39:55Z [pre ] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\47e041ac-8133-4b06-bf2d-0ff3826179ac.txt
+2026-07-24T19:39:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\HeroesHandbook.md
+2026-07-24T19:39:55Z [read] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\47e041ac-8133-4b06-bf2d-0ff3826179ac.txt
+2026-07-24T19:39:55Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\HeroesHandbook.md
+2026-07-24T19:39:55Z [post] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\47e041ac-8133-4b06-bf2d-0ff3826179ac.txt
+2026-07-24T19:39:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\HeroesHandbook.md
+2026-07-24T19:40:14Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_find_modifier_bodies.py
+2026-07-24T19:40:14Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_find_modifier_bodies.py
+2026-07-24T19:41:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_extract_pdf_columns.py
+2026-07-24T19:41:47Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_extract_pdf_columns.py
+2026-07-24T19:42:26Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_verify_pdf_extract.py
+2026-07-24T19:42:27Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_verify_pdf_extract.py
+2026-07-24T19:42:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T19:42:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T19:42:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T19:42:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T19:42:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T19:42:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T19:42:45Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T19:42:45Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T19:42:45Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T19:44:04Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_rebuild_extras_flaws.py
+2026-07-24T19:44:05Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_rebuild_extras_flaws.py
+2026-07-24T19:44:09Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_rebuild_extras_flaws.py
+2026-07-24T19:44:09Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_rebuild_extras_flaws.py
+2026-07-24T19:44:09Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_rebuild_extras_flaws.py
+2026-07-24T19:44:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-extras-flaws.md
+2026-07-24T19:44:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T19:44:21Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-extras-flaws.md
+2026-07-24T19:44:22Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T19:44:22Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-extras-flaws.md
+2026-07-24T19:44:22Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T19:44:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:44:28Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:44:28Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:44:32Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:44:32Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:44:33Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T19:45:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_scan_modifiers.py
+2026-07-24T19:45:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_find_modifier_bodies.py
+2026-07-24T19:45:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_verify_pdf_extract.py
+2026-07-24T19:45:27Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_scan_modifiers.py
+2026-07-24T19:45:27Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_find_modifier_bodies.py
+2026-07-24T19:45:27Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_verify_pdf_extract.py
+2026-07-24T20:38:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\session.md
+2026-07-24T20:38:28Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\session.md
+2026-07-24T20:38:28Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\session.md
+2026-07-24T20:38:48Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T20:38:49Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T20:38:49Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T20:39:08Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\.context\module-build-order.md
+2026-07-24T20:39:09Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\.context\module-build-order.md
+2026-07-24T20:39:09Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\.context\module-build-order.md
+2026-07-24T20:46:37Z [pre ] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T20:46:38Z [read] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T20:46:38Z [post] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T20:46:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\contexts\__init__.py
+2026-07-24T20:46:47Z [read] skip  c:\dev\abd-context-driven-delivery\contexts\__init__.py
+2026-07-24T20:46:47Z [post] skip  c:\dev\abd-context-driven-delivery\contexts\__init__.py
+2026-07-24T20:47:22Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\_context\context.md
+2026-07-24T20:47:22Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-24T20:47:22Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-24T20:47:22Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\_context\context.md
+2026-07-24T20:47:23Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-24T20:47:23Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\_context\context.md
+2026-07-24T20:48:16Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-rename-contexts.py
+2026-07-24T20:48:17Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-rename-contexts.py
+2026-07-24T20:48:18Z [pre ] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T20:48:18Z [read] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T20:48:19Z [post] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T20:48:24Z [pre ] skip  c:\dev\abd-context-driven-delivery\.tmp-rename-contexts.py
+2026-07-24T20:48:24Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-rename-contexts.py
+2026-07-24T20:48:25Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-rename-contexts.py
+2026-07-24T20:48:42Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\contexts\SKILL.md
+2026-07-24T20:48:43Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\contexts\SKILL.md
+2026-07-24T20:48:43Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\contexts\SKILL.md
+2026-07-24T20:48:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-24T20:48:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-24T20:48:54Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:48:54Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-24T20:48:55Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-24T20:48:55Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-24T20:48:55Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:48:55Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-24T20:48:55Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-24T20:48:55Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-24T20:48:56Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:48:56Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-24T20:49:08Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\declared\declared_spec.py
+2026-07-24T20:49:09Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\declared\declared_spec.py
+2026-07-24T20:49:09Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\declared\declared_spec.py
+2026-07-24T20:49:09Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:49:09Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:49:10Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:49:10Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\declared\declared_spec.py
+2026-07-24T20:49:11Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:49:11Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\declared\declared_spec.py
+2026-07-24T20:49:11Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\declared\declared_spec.py
+2026-07-24T20:49:41Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\run.mjs
+2026-07-24T20:49:41Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\context-tools\SKILL.md
+2026-07-24T20:49:41Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\run.mjs
+2026-07-24T20:49:41Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\context-tools\SKILL.md
+2026-07-24T20:49:42Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\run.mjs
+2026-07-24T20:49:42Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\context-tools\SKILL.md
+2026-07-24T20:49:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\run.mjs
+2026-07-24T20:49:53Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\run.mjs
+2026-07-24T20:49:53Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\run.mjs
+2026-07-24T20:49:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\context-tools\SKILL.md
+2026-07-24T20:49:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\run.mjs
+2026-07-24T20:49:54Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\context-tools\SKILL.md
+2026-07-24T20:49:54Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\run.mjs
+2026-07-24T20:49:55Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\context-tools\SKILL.md
+2026-07-24T20:49:55Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\run.mjs
+2026-07-24T20:49:56Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\context-tools\SKILL.md
+2026-07-24T20:49:56Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\context-tools\SKILL.md
+2026-07-24T20:49:57Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\context-tools\SKILL.md
+2026-07-24T20:50:45Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:50:45Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:50:46Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:51:00Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-24T20:51:00Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:51:01Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-24T20:51:01Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:51:01Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-24T20:51:01Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:51:19Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\utilities\record_decisions\record_decisions.py  — 1 manifest line(s)
+2026-07-24T20:51:20Z [read] FIRED  c:\dev\abd-context-driven-delivery\utilities\record_decisions\record_decisions.py  — 1 manifest line(s)
+2026-07-24T20:51:21Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\record_decisions\record_decisions.py  — 1 manifest line(s)
+2026-07-24T20:52:20Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\repair.md
+2026-07-24T20:52:20Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\repair.md
+2026-07-24T20:52:20Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-24T20:52:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\repair.md
+2026-07-24T20:52:21Z [read] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-24T20:52:22Z [post] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-24T20:52:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T20:52:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-24T20:52:55Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T20:52:55Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-24T20:52:55Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T20:52:55Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-24T20:53:19Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-24T20:53:20Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-24T20:53:30Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:53:30Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:53:31Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:53:31Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:53:32Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:53:33Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:53:37Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:53:37Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:53:38Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:53:49Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:53:50Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:53:51Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:53:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-24T20:53:53Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-24T20:53:53Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-24T20:53:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-24T20:53:54Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-24T20:53:55Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-24T20:54:13Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T20:54:14Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T20:54:14Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T20:56:44Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:56:46Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:56:47Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:56:48Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:56:49Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:56:49Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T20:59:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T20:59:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-extras-flaws.md
+2026-07-24T20:59:26Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-extras-flaws.md
+2026-07-24T20:59:27Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-extras-flaws.md
+2026-07-24T21:00:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-gear.md
+2026-07-24T21:00:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:00:55Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-gear.md
+2026-07-24T21:00:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:00:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-gear.md
+2026-07-24T21:00:56Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:01:37Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T21:01:37Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T21:01:37Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T21:02:48Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-gear.md
+2026-07-24T21:02:49Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-gear.md
+2026-07-24T21:02:49Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-gear.md
+2026-07-24T21:03:04Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:03:05Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:03:05Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:03:06Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:03:06Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:03:07Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:04:18Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-24T21:04:18Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-24T21:04:19Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-24T21:04:19Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-24T21:04:19Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-24T21:04:19Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-24T21:04:31Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T21:04:31Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T21:04:32Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T21:04:50Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scanner.py
+2026-07-24T21:04:50Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scanner_collection.py
+2026-07-24T21:04:50Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scanner.py
+2026-07-24T21:04:50Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scanner_collection.py
+2026-07-24T21:04:50Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scanner.py
+2026-07-24T21:04:51Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scanner_collection.py
+2026-07-24T21:04:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\violation.py
+2026-07-24T21:04:58Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\violation.py
+2026-07-24T21:04:59Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\violation.py
+2026-07-24T21:05:20Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness.py
+2026-07-24T21:05:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness.py
+2026-07-24T21:05:25Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness_scanner.py
+2026-07-24T21:05:26Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness_scanner.py
+2026-07-24T21:05:30Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness.py
+2026-07-24T21:05:31Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness.py
+2026-07-24T21:05:31Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness.py
+2026-07-24T21:05:32Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scanner_collection.py
+2026-07-24T21:05:32Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness_scanner.py
+2026-07-24T21:05:32Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scanner_collection.py
+2026-07-24T21:05:32Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness_scanner.py
+2026-07-24T21:05:33Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scanner_collection.py
+2026-07-24T21:05:33Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness_scanner.py
+2026-07-24T21:05:37Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\scanners\duplication_scanner.py
+2026-07-24T21:05:37Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness_scanner.py
+2026-07-24T21:05:37Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\scanners\duplication_scanner.py
+2026-07-24T21:05:38Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness_scanner.py
+2026-07-24T21:05:38Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\scanners\duplication_scanner.py
+2026-07-24T21:05:38Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness_scanner.py
+2026-07-24T21:05:40Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:05:40Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:05:41Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:05:45Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:05:46Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:05:46Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:05:52Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:05:53Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:05:53Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:05:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-24T21:05:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-24T21:05:55Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-24T21:05:56Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-24T21:05:56Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-24T21:05:56Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T21:05:56Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T21:05:56Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-24T21:05:57Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T21:05:57Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T21:05:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-24T21:05:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-24T21:05:57Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T21:05:57Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T21:05:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-24T21:05:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-24T21:05:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-24T21:05:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-24T21:06:05Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T21:06:06Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T21:06:06Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T21:06:06Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T21:06:06Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T21:06:07Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T21:06:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T21:06:08Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T21:06:08Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T21:06:08Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T21:06:08Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\extras\.context\extras-segment.md
+2026-07-24T21:06:09Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\flaws\.context\flaws-segment.md
+2026-07-24T21:06:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:06:15Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:06:15Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:06:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T21:06:27Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T21:06:28Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T21:06:28Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T21:06:29Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T21:06:29Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T21:23:56Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness_scanner.py
+2026-07-24T21:23:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness_scanner.py
+2026-07-24T21:24:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness.py
+2026-07-24T21:24:02Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness.py
+2026-07-24T21:24:02Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness.py
+2026-07-24T21:24:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness.py
+2026-07-24T21:24:28Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scanners\segment_named_entry_completeness.py
+2026-07-24T21:24:29Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\segment_named_entry_completeness.py
+2026-07-24T21:24:29Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\segment_named_entry_completeness.py
+2026-07-24T21:24:30Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:24:31Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:24:31Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:24:34Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:24:35Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:24:35Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:24:37Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-24T21:24:38Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-24T21:24:38Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-24T21:24:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-24T21:24:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T21:24:39Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-24T21:24:40Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-24T21:24:40Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T21:24:41Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-24T21:24:42Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:24:43Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:24:43Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\to-fix.log
+2026-07-24T21:26:40Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T21:26:40Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T21:26:41Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T21:27:28Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T21:27:29Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T21:27:29Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
