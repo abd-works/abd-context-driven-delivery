@@ -9,6 +9,8 @@ section: body
 
 - *`<Concept>`* — `<plain-language gloss>`
 
+> In steps: bold domain concepts (`**<Concept>**`); italic concrete values (`*<value>*`).
+
 ## Behaviors
 
 ### Scenario Outline: `<main-flow outcome name>`

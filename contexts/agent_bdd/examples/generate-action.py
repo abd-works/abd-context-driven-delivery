@@ -4,7 +4,7 @@
 # @agent-spec-manifest python -m tools agent-spec contexts/agent_bdd/examples/generate-action.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
-# session: contexts/agent_bdd/.sessions/generate-action-example.json
+# session: contexts/agent_bdd/.agent_bdd_sessions/generate-action-example.json
 """Example — act → assert → act → assert inline; no self.* accumulation."""
 from pathlib import Path
 
@@ -14,7 +14,7 @@ from mamba import context, description, it
 from agent_bdd import agent, ai_judge, instruct, instruct_use_tool
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_SESSIONS = Path(__file__).resolve().parents[1] / ".sessions"
+_SESSIONS = Path(__file__).resolve().parents[1] / ".agent_bdd_sessions"
 
 _GENERATE_YAML = """\
 toolset: contexts.base.examples.car_chronicle.car_chronicle:CarChronicle

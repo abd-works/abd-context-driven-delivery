@@ -1,0 +1,463 @@
+Manifest output from:
+
+```bash
+python -m tools manifest contexts.clean_engineering.clean_engineering:CleanEngineering
+```
+
+```yaml
+---
+type: cleanengineering
+capabilities:
+- tool
+- agent
+signature:
+  instructions: § Instructions
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest contexts.clean_engineering.clean_engineering:CleanEngineering
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      fidelity: str
+      format: str | None
+      path: str | None
+      session: str | None
+  close_session:
+    kind: tool
+    instructions: "Write the End section on session.md (ended, outcome, handoff link).\n\
+      \        Call after handoff is written per the handoff skill. Returns session.md\
+      \ path."
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    instructions: "Create ``{session.path}/.context/sessions/{name}/session.md`` (Start\
+      \ section).\n        Confirm working path and slug with the user first. AI may\
+      \ suggest the slug from\n        goal/context; user confirms. Returns the session.md\
+      \ path."
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+    returns: str
+  scan:
+    kind: tool
+    instructions: base-context/scan
+    parameters:
+      paths: list[str]
+    returns: str
+  transform:
+    kind: tool
+    instructions: "Parse content from source_format into the canonical model, then\
+      \ render into target_format.\n        Supported transform channels: markdown,\
+      \ json, python, typescript, java, javascript, drawio.\n        drawio auto-selects\
+      \ modules view (system-context style) vs UML class view from model content.\n\
+      \        Generate AI surfaces: markdown / python / javascript templates under\
+      \ templates/;\n        modules.drawio for modules-fidelity diagrams (seam bullets\
+      \ + dependency arrows).\n        Moves content sideways between formats at the\
+      \ same fidelity — no analytical upgrade."
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: dict
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing — before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - scan
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: base-context/document
+    parameters:
+      paths: list[str]
+    returns: str
+  generate:
+    kind: action
+    tools: []
+    chain:
+    - record_decisions
+    - grill_with_context
+    - name: sketch
+      agent_dir: C:\dev\abd-context-driven-delivery\contexts\clean_engineering
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  index:
+    kind: action
+    tools: []
+    instructions: base-context/index
+    parameters:
+      context: str
+      out_root: str | None
+    returns: str
+  partition:
+    kind: action
+    tools:
+    - index
+    - segment
+    instructions: base-context/partition
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools:
+    - scan
+    - validate
+    instructions: base-context/repair
+    parameters:
+      asset: str
+      violation: str
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    chain:
+    - record_decisions
+    instructions: base-context/satisfy
+    returns: str
+  segment:
+    kind: action
+    tools: []
+    instructions: base-context/segment
+    parameters:
+      out_root: str | None
+    returns: str
+  validate:
+    kind: action
+    tools:
+    - scan
+    instructions: base-context/validate
+    returns: str
+---
+```
+
+Compared to the `practices` variant, this contexts toolset adds session tools (`create_session`, `close_session`), context actions (`index`, `partition`, `segment`), and extra constructor params (`path`, `session`). The `generate` and `satisfy` chains include `record_decisions`.Manifest output from:
+
+```bash
+python -m tools manifest contexts.clean_engineering.clean_engineering:CleanEngineering
+```
+
+```yaml
+---
+type: cleanengineering
+capabilities:
+- tool
+- agent
+signature:
+  instructions: § Instructions
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest contexts.clean_engineering.clean_engineering:CleanEngineering
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      fidelity: str
+      format: str | None
+      path: str | None
+      session: str | None
+  close_session:
+    kind: tool
+    instructions: "Write the End section on session.md (ended, outcome, handoff link).\n\
+      \        Call after handoff is written per the handoff skill. Returns session.md\
+      \ path."
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    instructions: "Create ``{session.path}/.context/sessions/{name}/session.md`` (Start\
+      \ section).\n        Confirm working path and slug with the user first. AI may\
+      \ suggest the slug from\n        goal/context; user confirms. Returns the session.md\
+      \ path."
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+    returns: str
+  scan:
+    kind: tool
+    instructions: base-context/scan
+    parameters:
+      paths: list[str]
+    returns: str
+  transform:
+    kind: tool
+    instructions: "Parse content from source_format into the canonical model, then\
+      \ render into target_format.\n        Supported transform channels: markdown,\
+      \ json, python, typescript, java, javascript, drawio.\n        drawio auto-selects\
+      \ modules view (system-context style) vs UML class view from model content.\n\
+      \        Generate AI surfaces: markdown / python / javascript templates under\
+      \ templates/;\n        modules.drawio for modules-fidelity diagrams (seam bullets\
+      \ + dependency arrows).\n        Moves content sideways between formats at the\
+      \ same fidelity — no analytical upgrade."
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: dict
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing — before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - scan
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: base-context/document
+    parameters:
+      paths: list[str]
+    returns: str
+  generate:
+    kind: action
+    tools: []
+    chain:
+    - record_decisions
+    - grill_with_context
+    - name: sketch
+      agent_dir: C:\dev\abd-context-driven-delivery\contexts\clean_engineering
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  index:
+    kind: action
+    tools: []
+    instructions: base-context/index
+    parameters:
+      context: str
+      out_root: str | None
+    returns: str
+  partition:
+    kind: action
+    tools:
+    - index
+    - segment
+    instructions: base-context/partition
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools:
+    - scan
+    - validate
+    instructions: base-context/repair
+    parameters:
+      asset: str
+      violation: str
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    chain:
+    - record_decisions
+    instructions: base-context/satisfy
+    returns: str
+  segment:
+    kind: action
+    tools: []
+    instructions: base-context/segment
+    parameters:
+      out_root: str | None
+    returns: str
+  validate:
+    kind: action
+    tools:
+    - scan
+    instructions: base-context/validate
+    returns: str
+---
+```
+
+Compared to the `practices` variant, this contexts toolset adds session tools (`create_session`, `close_session`), context actions (`index`, `partition`, `segment`), and extra constructor params (`path`, `session`). The `generate` and `satisfy` chains include `record_decisions`.Manifest output from:
+
+```bash
+python -m tools manifest contexts.clean_engineering.clean_engineering:CleanEngineering
+```
+
+```yaml
+---
+type: cleanengineering
+capabilities:
+- tool
+- agent
+signature:
+  instructions: § Instructions
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest contexts.clean_engineering.clean_engineering:CleanEngineering
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      fidelity: str
+      format: str | None
+      path: str | None
+      session: str | None
+  close_session:
+    kind: tool
+    instructions: "Write the End section on session.md (ended, outcome, handoff link).\n\
+      \        Call after handoff is written per the handoff skill. Returns session.md\
+      \ path."
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    instructions: "Create ``{session.path}/.context/sessions/{name}/session.md`` (Start\
+      \ section).\n        Confirm working path and slug with the user first. AI may\
+      \ suggest the slug from\n        goal/context; user confirms. Returns the session.md\
+      \ path."
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+    returns: str
+  scan:
+    kind: tool
+    instructions: base-context/scan
+    parameters:
+      paths: list[str]
+    returns: str
+  transform:
+    kind: tool
+    instructions: "Parse content from source_format into the canonical model, then\
+      \ render into target_format.\n        Supported transform channels: markdown,\
+      \ json, python, typescript, java, javascript, drawio.\n        drawio auto-selects\
+      \ modules view (system-context style) vs UML class view from model content.\n\
+      \        Generate AI surfaces: markdown / python / javascript templates under\
+      \ templates/;\n        modules.drawio for modules-fidelity diagrams (seam bullets\
+      \ + dependency arrows).\n        Moves content sideways between formats at the\
+      \ same fidelity — no analytical upgrade."
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: dict
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing — before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - scan
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: base-context/document
+    parameters:
+      paths: list[str]
+    returns: str
+  generate:
+    kind: action
+    tools: []
+    chain:
+    - record_decisions
+    - grill_with_context
+    - name: sketch
+      agent_dir: C:\dev\abd-context-driven-delivery\contexts\clean_engineering
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  index:
+    kind: action
+    tools: []
+    instructions: base-context/index
+    parameters:
+      context: str
+      out_root: str | None
+    returns: str
+  partition:
+    kind: action
+    tools:
+    - index
+    - segment
+    instructions: base-context/partition
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools:
+    - scan
+    - validate
+    instructions: base-context/repair
+    parameters:
+      asset: str
+      violation: str
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    chain:
+    - record_decisions
+    instructions: base-context/satisfy
+    returns: str
+  segment:
+    kind: action
+    tools: []
+    instructions: base-context/segment
+    parameters:
+      out_root: str | None
+    returns: str
+  validate:
+    kind: action
+    tools:
+    - scan
+    instructions: base-context/validate
+    returns: str
+---
+```
+
+Compared to the `practices` variant, this contexts toolset adds session tools (`create_session`, `close_session`), context actions (`index`, `partition`, `segment`), and extra constructor params (`path`, `session`). The `generate` and `satisfy` chains include `record_decisions`.

@@ -92,6 +92,6 @@ No CE-special segment names. Use the same convention as every concept ? files na
 
 Wrote Pass 1?index and Pass 2?per-module segment guidance into contexts/clean_engineering/partition.md. Sketch closed.
 
-### I{Class} public seam — modules / specification / code
+### I{Class} public seam — model / specification / code
 
-modules creates I{Class} only (empty public props/ops as interfaces). specification adds Class(IClass) in the same file: public members filled, private members empty interfaces on Class only, invariants as comments, interactions as @interaction abstracts on Class. code fills remaining empties on Class, drops interactions, keeps invariant comments, leaves I{Class} for the seam and hand-written fakes. Java uses interface for I{Class}. Empty vs filled inferred from body — no abstract flag on the model. Enforce in class_model renderers + docs/templates.
+model creates I{Class} only (empty public props/ops as interfaces). specification adds Class(IClass) in the same file: public members filled, private members empty interfaces on Class only, invariants as comments, interactions as @interaction abstracts on Class. code fills remaining empties on Class, drops interactions, keeps invariant comments, leaves I{Class} for the seam and hand-written fakes. Java uses interface for I{Class}. Empty vs filled inferred from body — no abstract flag on the model. Enforce in class_model renderers + docs/templates.

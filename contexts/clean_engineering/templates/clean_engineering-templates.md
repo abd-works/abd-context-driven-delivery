@@ -2,8 +2,9 @@
   clean_engineering markdown template — unified across all fidelities.
 
   Fidelity tags on every element (as HTML comments at end of line or block):
-    L  = language       (prose description; no types, signatures, or relationship kinds)
-    Mo = modules        (I{ClassName} only — empty public props/ops)
+    L  = language companion (prose identity; refined at every stage — not a fidelity)
+    Mu = modules        (thin terms, one-way deps, build order; no I{Class} yet)
+    Md = model          (I{ClassName} only — empty public props/ops)
     S  = specification  ({ClassName} extends I{ClassName}; public filled; privates empty)
     C  = code           (fill {ClassName}; drop interactions; keep invariant comments)
 
@@ -21,7 +22,7 @@
 
 ---
 
-## Language fidelity                                              <!-- L -->
+## Language companion                                             <!-- L -->
 
 *{ClassName}* is {intent — what role it plays, what it holds, what it does.
 This paragraph IS the class definition. Identity only.}           <!-- L -->
@@ -38,24 +39,41 @@ This paragraph IS the class definition. Identity only.}           <!-- L -->
 
 ---
 
-## Modules fidelity                                               <!-- Mo -->
+## Modules fidelity                                               <!-- Mu -->
 
-### **I{ClassName}**                                              <!-- Mo -->
+### Module `{module_path}`                                        <!-- Mu -->
 
-I{ClassName}({param}: {Type})                                     <!-- Mo -->
+- **Purpose:** {one paragraph}                                    <!-- Mu -->
+- **Seam (terms):** {ClassName}, {ChildClass}, …                  <!-- Mu -->
+- **Dependencies (one-way):** {other_module}, …                   <!-- Mu -->
+- **Build order:** see `{session}/.context/module-build-order.md` <!-- Mu -->
+
+Diagram (optional): fill `templates/modules.drawio` — one blue box per module;
+bullets = Seam terms; arrows = one-way Dependencies (toward the depended-on module).
+Path nesting = containment (child boxes inside the parent). Shared base terms live on
+the parent module, not a `parent/base` submodule. No stack/tech callouts.
+Transform: `markdown` ↔ `drawio` at modules fidelity.
+
+---
+
+## Model fidelity                                                 <!-- Md -->
+
+### **I{ClassName}**                                              <!-- Md -->
+
+I{ClassName}({param}: {Type})                                     <!-- Md -->
 ------
-{owned_property}: {Type}                                          <!-- Mo -->
-{plain_property}: {Type}                                          <!-- Mo -->
+{owned_property}: {Type}                                          <!-- Md -->
+{plain_property}: {Type}                                          <!-- Md -->
 ----
-{operation_name}({param}: {Type}): {ReturnType}                   <!-- Mo -->
-{another_operation}(): {ReturnType}                               <!-- Mo -->
+{operation_name}({param}: {Type}): {ReturnType}                   <!-- Md -->
+{another_operation}(): {ReturnType}                               <!-- Md -->
 
-### **I{ChildClass}**                                             <!-- Mo -->
+### **I{ChildClass}**                                             <!-- Md -->
 
-I{ChildClass}({param}: {Type})                                    <!-- Mo -->
+I{ChildClass}({param}: {Type})                                    <!-- Md -->
 ------
 ----
-{delta_operation}({param}: {Type}): {ReturnType}                  <!-- Mo -->
+{delta_operation}({param}: {Type}): {ReturnType}                  <!-- Md -->
 
 ---
 
@@ -87,14 +105,14 @@ I{ChildClass}({param}: {Type})                                    <!-- Mo -->
 ----
 + {delta_operation}({param}: {Type}): {ReturnType}                <!-- S -->
 
-### **Example factory (when Stories-bound) — separate file**      <!-- Mo/S -->
+### **Example factory (when Stories-bound) — separate file**      <!-- Md/S -->
 
 Write factories in `{type_slug}_example_factory.md` (or code sibling), **not** in the production family file.
 Do not sketch Fake{ClassName} / Isolated{ClassName} / Production{ClassName} types.
 
-### **I{ClassName}ExampleFactory**                                <!-- Mo -->
+### **I{ClassName}ExampleFactory**                                <!-- Md -->
 
-+ load_{example_key}(mode): I{ClassName}                          <!-- Mo -->
++ load_{example_key}(mode): I{ClassName}                          <!-- Md -->
 
 ### **{ClassName}ExampleFactory : I{ClassName}ExampleFactory**    <!-- S -->
 

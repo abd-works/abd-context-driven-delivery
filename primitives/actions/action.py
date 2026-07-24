@@ -19,6 +19,10 @@ from typing import Any, Callable, TypeAlias
 _PARAM_PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 _SELF_PLACEHOLDER = re.compile(r"\{\{self\.(\w+)\}\}")
 
+# Sentinel for wrapper static_kwargs: resolve to the concrete toolset owner's module dir
+# at manifest time (e.g. @sketch on Context.sketch → contexts/bdd when owner is Bdd).
+OWNER_MODULE_DIR = "@owner"
+
 from tools.types import (
     ManifestDocument,
     RunRequestDocument,
@@ -231,6 +235,47 @@ def add_action_wrapper(
     func._action_wrappers = [s.name for s in specs]  # type: ignore[attr-defined]
 
 
+def _resolve_wrapper_static_kwargs(
+    static_kwargs: dict,
+    owner: type | None,
+) -> dict:
+    """Resolve sentinel values in wrapper static_kwargs for manifest chain exposure."""
+    if not static_kwargs:
+        return {}
+    resolved = dict(static_kwargs)
+    if resolved.get("agent_dir") == OWNER_MODULE_DIR:
+        if owner is None:
+            resolved.pop("agent_dir", None)
+        else:
+            try:
+                resolved["agent_dir"] = str(Path(inspect.getfile(owner)).resolve().parent)
+            except (TypeError, OSError):
+                resolved.pop("agent_dir", None)
+    return resolved
+
+
+def _instance_for_action(action_func: Callable[..., Any]) -> Any | None:
+    """Best-effort construct the toolset that owns ``action_func`` for nested expansion.
+
+    Used when expanding a chained wrapper action so in-method calls
+    (e.g. ``self._grill_context().grill_with_context(...)``) resolve.
+    """
+    qualname = getattr(action_func, "__qualname__", "") or ""
+    if "." not in qualname:
+        return None
+    class_name = qualname.rsplit(".", 1)[0].split(".")[-1]
+    module = inspect.getmodule(action_func)
+    if module is None:
+        return None
+    owner = getattr(module, class_name, None)
+    if owner is None or not isinstance(owner, type):
+        return None
+    try:
+        return owner()
+    except TypeError:
+        return None
+
+
 def _self_member_name(node: ast.AST) -> str | None:
     if isinstance(node, ast.Call):
         func = node.func
@@ -391,7 +436,7 @@ class _ActionValidator:
                 continue
             if member_name not in allowed_names and member_name not in cross_providers:
                 raise ActionValidationError(
-                    f"self.{member_name} is not a @tool, @instruction, or @action",
+                    f"self.{member_name} is not a @tool, @instruction, @action, or @resource",
                     class_name=class_name,
                     action_name=action_name,
                     lineno=base_line + node.lineno - 1,
@@ -402,6 +447,7 @@ class _ActionValidator:
             self._tool_names(toolset_cls)
             | set(instruction_slot_names(toolset_cls))
             | set(_action_slot_names(toolset_cls))
+            | self._resource_names(toolset_cls)
         )
 
     def _tool_names(self, toolset_cls: type) -> set[str]:
@@ -409,6 +455,18 @@ class _ActionValidator:
         for name, member in inspect.getmembers(toolset_cls, predicate=inspect.isfunction):
             if getattr(member, "_is_tool", False):
                 names.add(name)
+        return names
+
+    def _resource_names(self, toolset_cls: type) -> set[str]:
+        """Allow @resource properties (incl. bases) in action bodies."""
+        names: set[str] = set()
+        for cls in toolset_cls.__mro__:
+            if cls is object:
+                continue
+            for name, member in cls.__dict__.items():
+                if isinstance(member, property) and member.fget is not None:
+                    if getattr(member.fget, "_is_resource", False):
+                        names.add(name)
         return names
 
     def _parse_source(self, action_func: Callable[..., Any]) -> ast.Module:
@@ -547,7 +605,13 @@ class _ActionExpander:
         for index, spec in enumerate(specs):
             next_name = specs[index + 1].name if index + 1 < len(specs) else action_func.__name__
             prev_name = specs[index - 1].name if index > 0 else ""
-            wrapper_body = self._parse_body_static(spec.chained_action)
+            wrapper_instance = _instance_for_action(spec.chained_action)
+            if wrapper_instance is not None:
+                wrapper_body = self._parse_body_resolved(
+                    spec.chained_action, wrapper_instance
+                )
+            else:
+                wrapper_body = self._parse_body_static(spec.chained_action)
             for part in wrapper_body.prose_parts:
                 resolved = _resolve_chain_placeholders(part, next_name, prev_name)
                 if resolved and resolved not in prose and resolved not in wrapper_prose:
@@ -633,6 +697,7 @@ class _ActionExpander:
         instruction_slots = instruction_slot_names(toolset_cls)
         action_slots = _action_slot_names(toolset_cls)
         tool_names = self._validator._tool_names(toolset_cls)
+        resource_names = self._validator._resource_names(toolset_cls)
 
         prose: list[str] = []
         tool_steps: list[str] = []
@@ -716,6 +781,12 @@ class _ActionExpander:
                         seen_prose.add(text)
                 elif member in tool_names:
                     tool_steps.append(member)
+                elif member in resource_names:
+                    value = getattr(instance, member)
+                    text = f"Resource `{member}` = {value!r}. Use session.path for durable artifacts and session.folder for process bout docs."
+                    if text not in seen_prose:
+                        prose.append(text)
+                        seen_prose.add(text)
                 continue
             super_method = _super_call_name(expr_node)
             if super_method is not None:
@@ -796,7 +867,7 @@ class _ActionExpander:
         request: _ActionExpandRequest,
         tool_steps: tuple[str, ...],
     ) -> None:
-        from session_logging import SessionLogHub, is_logged, member_is_logged, summarize_mapping
+        from sessions import SessionLog, is_logged, member_is_logged, summarize_mapping
 
         action_name = request.action_func.__name__
         if request.instance is not None:
@@ -804,8 +875,8 @@ class _ActionExpander:
                 return
         elif not is_logged(request.action_func):
             return
-        hub = SessionLogHub.instance()
-        hub.append(
+        slog = SessionLog.instance()
+        slog.append(
             kind="expansion",
             toolset=request.toolset_path,
             name=action_name,
@@ -966,8 +1037,9 @@ class Action:
         if specs:
             chain: list = []
             for spec in specs:
-                if spec.static_kwargs:
-                    chain.append({"name": spec.name, **spec.static_kwargs})
+                kwargs = _resolve_wrapper_static_kwargs(spec.static_kwargs, self.owner)
+                if kwargs:
+                    chain.append({"name": spec.name, **kwargs})
                 else:
                     chain.append(spec.name)
             entry["chain"] = chain

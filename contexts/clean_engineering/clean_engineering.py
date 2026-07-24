@@ -1,18 +1,15 @@
 # @toolset-manifest python -m tools manifest contexts.clean_engineering.clean_engineering:CleanEngineering
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-# invoke-new: action generate | context.fidelity language
-# @toolset-manifest python -m tools manifest contexts.bdd.bdd:Bdd
-# invoke-edit: action satisfy | toolset: contexts.bdd.bdd:Bdd
-# invoke-check: action validate | toolset: contexts.bdd.bdd:Bdd
+# invoke-new: action generate | context.fidelity modules
+# invoke-edit: action satisfy | toolset: contexts.clean_engineering.clean_engineering:CleanEngineering
+# invoke-check: action validate | toolset: contexts.clean_engineering.clean_engineering:CleanEngineering
 """Clean Engineering generator — multi-fidelity OO design and implementation."""
 
 from __future__ import annotations
 
-from primitives.actions.action import action
 from focus import focus
 from contexts import context
-from grill_context import grill_with_context
 from contexts.clean_engineering.class_model.drawio_class_model import DrawIOCleanEngineeringModel
 from contexts.clean_engineering.class_model.java_class_model import JavaCleanEngineeringModel
 from contexts.clean_engineering.class_model.javascript_class_model import JavaScriptCleanEngineeringModel
@@ -22,13 +19,12 @@ from contexts.clean_engineering.class_model.python_class_model import PythonClea
 from contexts.clean_engineering.class_model.typescript_class_model import TypeScriptCleanEngineeringModel
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from sketch import sketch
 from echo import echo
 from tools.tool import resource, tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
-    "language": "markdown",
-    "modules": "python",
+    "modules": "markdown",
+    "model": "python",
     "specification": "python",
     "code": "python",
 }
@@ -51,27 +47,37 @@ _SUPPORTED_FORMATS = frozenset(_CHANNELS)
 class CleanEngineering:
     """§ Instructions"""
 
-    def __init__(self, fidelity: str = "language", format: str | None = None) -> None:
-        
+    def __init__(
+        self,
+        fidelity: str = "modules",
+        format: str | None = None,
+        path: str | None = None, session: str | None = None,
+    ) -> None:
+        if fidelity == "language":
+            raise ValueError(
+                "language is not a fidelity — it is a companion prose layer refined at "
+                "every stage. Use fidelity 'modules' (after partition), then 'model', "
+                f"'specification', or 'code'. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
+            )
+        if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
+            raise ValueError(
+                f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
+            )
         resolved_format = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
-        super().__init__(format=resolved_format)
+        super().__init__(format=resolved_format, path=path, session=session)
         self.fidelity = fidelity
 
-    # Test: consolidated contexts.md instead of fidelities/{fidelity}/contexts.md
-    # @focus(focus="fidelities")
+    # Resolves to § Contexts in clean_engineering.md (fidelities + design vocabulary).
     @instruction
     def contexts(self) -> Instruction: ...
-
-    @grill_with_context
-    @sketch
-    @action
-    def generate(self) -> str: ...
 
     @tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:
         """Parse content from source_format into the canonical model, then render into target_format.
         Supported transform channels: markdown, json, python, typescript, java, javascript, drawio.
-        Generate AI surfaces: markdown / python / javascript templates under templates/.
+        drawio auto-selects modules view (system-context style) vs UML class view from model content.
+        Generate AI surfaces: markdown / python / javascript templates under templates/;
+        modules.drawio for modules-fidelity diagrams (seam bullets + dependency arrows).
         Moves content sideways between formats at the same fidelity — no analytical upgrade."""
         if source_format not in _CHANNELS:
             raise ValueError(

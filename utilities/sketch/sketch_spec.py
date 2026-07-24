@@ -26,12 +26,12 @@ with description("@sketch decorator"):
         with it("marks the function with _sketch_wrapped"):
             expect(getattr(Demo.generate, "_sketch_wrapped", False)).to(be_true)
 
-        with it("registers 'sketch' as the wrapper name for manifest chain exposure"):
+        with it("registers sketch in the wrapper chain (grill lives on sketch_session)"):
             from primitives.actions.action import _action_wrapper_names
             names = _action_wrapper_names(Demo.generate)
             expect(list(names)).to(equal(["sketch"]))
 
-        with it("captures the module directory as agent_dir and surfaces it in the manifest chain entry"):
+        with it("resolves agent_dir to the concrete toolset owner module in the manifest chain"):
             entry = Demo.manifest.signature["generate"]
             chain = entry["chain"]
             sketch_entry = next((c for c in chain if isinstance(c, dict) and c.get("name") == "sketch"), None)
@@ -49,12 +49,13 @@ with description("@sketch decorator"):
 
 with description("_ActionExpander integration"):
     with context("when expanding a @sketch-wrapped @action"):
-        with it("prepends sketch_session's real instructions before the base action"):
+        with it("expands sketch_session (with in-method grill) before the base action"):
             demo = Demo()
             body = _ActionExpander.instance().parse_body(Demo.generate, demo)
             joined = "\n".join(body.prose_parts)
-            expect(joined).to(contain("sketch"))
-            sketch_pos = joined.find("sketch")
+            expect(joined).to(contain("(Recommended)"))
+            expect(joined).to(contain("save_sketch"))
+            sketch_pos = joined.find("save_sketch")
             base_pos = joined.find("Base generate action body")
             expect(sketch_pos < base_pos).to(be_true)
 
@@ -78,10 +79,11 @@ with description("Sketcher toolset"):
             expect(sig["save_sketch"]["kind"]).to(equal("tool"))
             expect(sig["list_sketches"]["kind"]).to(equal("tool"))
 
-        with it("exposes sketch_session as an action referencing its inner tools"):
+        with it("exposes sketch_session as an action with find_template and save_sketch"):
             entry = Sketcher.manifest.signature["sketch_session"]
             expect(entry["kind"]).to(equal("action"))
             expect(entry["tools"]).to(equal(["find_template", "save_sketch"]))
+            expect(entry.get("chain")).to(equal(None))
 
     with context("find_template tool"):
         with it("falls back to the default template when no agent_dir template exists"):
@@ -206,10 +208,13 @@ with description("Sketcher toolset"):
             expect("find_template" in self.body.tool_steps).to(be_true)
             expect("save_sketch" in self.body.tool_steps).to(be_true)
 
-        with it("expands prose that describes the interactive grill loop"):
-            joined = "\n".join(self.body.prose_parts)
-            expect(joined).to(contain("grill"))
-
         with it("expands prose that instructs the sketcher to persist drafts via save_sketch"):
             joined = "\n".join(self.body.prose_parts)
             expect(joined).to(contain("save_sketch"))
+
+        with it("calls grill_with_context in-method then owns sketch show/persist cadence"):
+            joined = "\n".join(self.body.prose_parts)
+            expect(joined).to(contain("(Recommended)"))
+            expect(joined).to(contain("2–3 grill answers"))
+            expect(joined).to(contain("save_sketch"))
+            expect(joined).to(contain("Grill the sketch plan"))

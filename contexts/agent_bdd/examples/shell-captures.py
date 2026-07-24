@@ -4,7 +4,7 @@
 # @agent-spec-manifest python -m tools agent-spec contexts/agent_bdd/examples/shell-captures.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
-# session: contexts/agent_bdd/.sessions/shell-captures-example.json
+# session: contexts/agent_bdd/.agent_bdd_sessions/shell-captures-example.json
 """Example — session_shell_captures; assert tool invocations appeared then judge the story."""
 from pathlib import Path
 
@@ -15,7 +15,7 @@ from agent_bdd import agent, ai_judge, instruct, instruct_use_tool
 from agent_bdd.agent_bdd_common import looks_like_tools_run_output
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_SESSIONS = Path(__file__).resolve().parents[1] / ".sessions"
+_SESSIONS = Path(__file__).resolve().parents[1] / ".agent_bdd_sessions"
 
 _TRAVEL_YAML = """\
 toolset: primitives.actions.examples.car:Car

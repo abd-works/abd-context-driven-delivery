@@ -8,10 +8,7 @@
 
 from __future__ import annotations
 
-from primitives.actions.action import action
 from contexts import context
-from grill_context import grill_with_context
-from sketch import sketch
 from tools.tool import tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -25,7 +22,12 @@ _SUPPORTED_FORMATS = frozenset({"markdown", "python", "typescript", "java"})
 class Bdd:
     """§ Instructions"""
 
-    def __init__(self, fidelity: str = "behavior", format: str | None = None) -> None:
+    def __init__(
+        self,
+        fidelity: str = "behavior",
+        format: str | None = None,
+        path: str | None = None, session: str | None = None,
+    ) -> None:
         if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
             raise ValueError(
                 f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
@@ -35,13 +37,8 @@ class Bdd:
             raise ValueError(
                 f"Unsupported format {resolved_format!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
             )
-        super().__init__(format=resolved_format)
+        super().__init__(format=resolved_format, path=path, session=session)
         self.fidelity = fidelity
-
-    @grill_with_context
-    @sketch
-    @action
-    def generate(self) -> str: ...
 
     @tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:

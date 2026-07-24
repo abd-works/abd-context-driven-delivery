@@ -1,7 +1,7 @@
 # @agent-spec-manifest python -m tools agent-spec contexts/clean_engineering/clean_engineering_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
-# session: contexts/clean_engineering/.sessions/clean-code-manifest.json
+# session: contexts/clean_engineering/.agent_bdd_sessions/clean-code-manifest.json
 """BDD agent spec for clean_engineering — agent runs manifest and invokes CleanEngineering."""
 
 from pathlib import Path
@@ -13,7 +13,7 @@ from agent_bdd import agent
 from agent_bdd.agent_cli_bdd import looks_like_tools_run_output
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_SESSIONS = Path(__file__).resolve().parent / ".sessions"
+_SESSIONS = Path(__file__).resolve().parent / ".agent_bdd_sessions"
 _CLEAN_CODE_PY = "contexts/clean_engineering/clean_engineering.py"
 _GENERATE_YAML = """\
 toolset: contexts.clean_engineering.clean_engineering:CleanEngineering

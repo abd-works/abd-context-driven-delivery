@@ -43,17 +43,19 @@ with description("Instruction"):
             result = self.instruction.expand()
             expect("high-cohesion" in result).to(be_true)
 
-    with context("constructed with a relative file path"):
+    with context("constructed with § Contexts on the domain markdown"):
         with before.each:
             self.instruction = Instruction(
-                "contexts.md", _CLEAN_ENGINEERING_DIR
+                "§ Contexts", _CLEAN_ENGINEERING_DIR, domain_slug="clean_engineering"
             )
 
         with it("should return True from matches_file_or_folder"):
             expect(self.instruction.matches_file_or_folder()).to(be_true)
 
-        with it("should expand to non-empty content"):
-            expect(len(self.instruction.expand()) > 0).to(be_true)
+        with it("should expand to non-empty content including modules fidelity"):
+            result = self.instruction.expand()
+            expect(len(result) > 0).to(be_true)
+            expect("## modules" in result.lower() or "modules" in result).to(be_true)
 
     with context("Instruction.ref built from a host"):
         with before.each:

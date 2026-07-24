@@ -3,6 +3,7 @@
 import json
 import sys
 import tempfile
+from datetime import date
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -19,10 +20,12 @@ from mamba import before, context, description, it
 
 from handoff.handoff import (
     Handoff,
+    _archive_slug,
     _collect_state,
     _context_dir,
     _grill_headings,
     _handoff_path,
+    _resolve_archive_slug,
     _summarize_cdd_sketch,
 )
 
@@ -55,9 +58,30 @@ with description("handoff path helpers"):
     with it("resolves .context under destination"):
         expect(str(_context_dir("sandbox/play"))).to(equal(str(Path("sandbox/play") / ".context")))
 
-    with it("resolves handoff.md under .context"):
-        expect(str(_handoff_path("sandbox/play"))).to(
-            equal(str(Path("sandbox/play") / ".context" / "handoff.md"))
+    with it("resolves dated archive under .context/handoffs"):
+        expect(str(_handoff_path("sandbox/play", "handoff-2026-07-22-modules"))).to(
+            equal(
+                str(
+                    Path("sandbox/play")
+                    / ".context"
+                    / "handoffs"
+                    / "handoff-2026-07-22-modules.md"
+                )
+            )
+        )
+
+    with it("builds archive slug from date and focus"):
+        expect(_archive_slug("model fidelity", today=date(2026, 7, 22))).to(
+            equal("handoff-2026-07-22-model-fidelity")
+        )
+        expect(_archive_slug("", today=date(2026, 7, 22))).to(equal("handoff-2026-07-22"))
+
+    with it("resolves reserved slug handoff into dated archive"):
+        expect(_resolve_archive_slug(slug="handoff", today=date(2026, 7, 22))).to(
+            equal("handoff-2026-07-22")
+        )
+        expect(_resolve_archive_slug(focus="modules", today=date(2026, 7, 22))).to(
+            equal("handoff-2026-07-22-modules")
         )
 
 
@@ -117,17 +141,33 @@ with description("Handoff toolset"):
             expect(state["cdd"]["fidelity"]).to(equal("explore"))
             expect(any(p.endswith("ux-sketch.md") for p in state["sketches"])).to(equal(True))
 
-        with it("write_handoff persists primary and handoff-latest"):
+        with it("write_handoff persists dated archive under handoffs/ and handoff-latest"):
             path = Path(
                 self.toolset.write_handoff(
                     self.destination,
                     "# Handoff\n\nResume here.\n",
+                    focus="modules",
                 )
             )
             expect(path.is_file()).to(equal(True))
+            expect(path.parent.name).to(equal("handoffs"))
+            expect(path.name.startswith("handoff-")).to(equal(True))
+            expect(path.name).to(contain("modules"))
+            expect(path.name).not_to(equal("handoff.md"))
             latest = Path(self.destination) / ".context" / "handoff-latest.md"
             expect(latest.is_file()).to(equal(True))
+            expect(latest.parent.name).not_to(equal("handoffs"))
             expect(latest.read_text(encoding="utf-8")).to(contain("Resume here"))
+
+        with it("write_handoff without focus still uses dated archive not handoff.md"):
+            path = Path(
+                self.toolset.write_handoff(
+                    self.destination,
+                    "# Handoff\n\nDated only.\n",
+                )
+            )
+            expect(path.parent.name).to(equal("handoffs"))
+            expect(path.name).to(equal(f"handoff-{date.today().isoformat()}.md"))
 
         with it("_collect_state returns None cdd when sketch missing"):
             state = _collect_state(self.destination)

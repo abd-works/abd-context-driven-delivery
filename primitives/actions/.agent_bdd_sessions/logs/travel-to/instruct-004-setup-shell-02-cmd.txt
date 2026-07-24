@@ -1,0 +1,11 @@
+@'
+toolset: agents.example.car:Car
+context:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee
+tool: speak
+arguments:
+  line: Yee-haw! Hold on tight, boys — Rosco's got mud in his eyes and we got a courthouse to reach!
+'@ | python -m tools run -

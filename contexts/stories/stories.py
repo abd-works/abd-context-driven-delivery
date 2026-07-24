@@ -12,12 +12,9 @@ import importlib
 import json
 from typing import Any
 
-from primitives.actions.action import action
 from contexts import context
-from grill_context import grill_with_context
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from sketch import sketch
 from tools.tool import tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -68,7 +65,12 @@ def _normalize_input(format_name: str, content: Any) -> Any:
 class Stories:
     """§ Instructions"""
 
-    def __init__(self, fidelity: str = "discovery", format: str | None = None) -> None:
+    def __init__(
+        self,
+        fidelity: str = "discovery",
+        format: str | None = None,
+        path: str | None = None, session: str | None = None,
+    ) -> None:
         if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
             raise ValueError(
                 f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
@@ -78,16 +80,11 @@ class Stories:
             raise ValueError(
                 f"Unsupported format {resolved_format!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
             )
-        super().__init__(format=resolved_format)
+        super().__init__(format=resolved_format, path=path, session=session)
         self.fidelity = fidelity
 
     @instruction
     def contexts(self) -> Instruction: ...
-
-    @grill_with_context
-    @sketch
-    @action
-    def generate(self) -> str: ...
 
     @tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:

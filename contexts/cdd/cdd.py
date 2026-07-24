@@ -18,10 +18,9 @@ from contexts.clean_engineering.clean_engineering import CleanEngineering
 from contexts.ddd.ddd import Ddd
 from contexts.stories.stories import Stories
 from contexts.ux.ux import Ux
-from grill_context import grill_with_context
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from sketch import Sketcher, sketch
+from sketch import Sketcher
 from tools.tool import tool  # noqa: F401
 
 _FORMAT = {
@@ -37,13 +36,13 @@ _STAGES: dict[str, list[tuple[type, str]]] = {
         (Stories, "discovery"),
         (Ddd, "bounded_context"),
         (Ux, "ia"),
-        (CleanEngineering, "language"),
+        (CleanEngineering, "modules"),
     ],
     "explore": [
         (Ddd, "building_blocks"),
         (Stories, "exploration"),
         (Ux, "mockup"),
-        (CleanEngineering, "modules"),
+        (CleanEngineering, "model"),
         (Bdd, "behavior"),
     ],
     "spec": [
@@ -66,19 +65,22 @@ _STAGES: dict[str, list[tuple[type, str]]] = {
 class Cdd:
     """§ Instructions"""
 
-    def __init__(self, fidelity: str = "discovery", format: str | None = None) -> None:
+    def __init__(
+        self,
+        fidelity: str = "discovery",
+        format: str | None = None,
+        path: str | None = None, session: str | None = None,
+    ) -> None:
         if fidelity not in _STAGES:
             raise ValueError(
                 f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_STAGES)}"
             )
-        super().__init__(format=format or _FORMAT[fidelity])
+        super().__init__(format=format or _FORMAT[fidelity], path=path, session=session)
         self.fidelity = fidelity
 
     @instruction
     def contexts(self) -> Instruction: ...
 
-    @grill_with_context
-    @sketch
     @action
     def generate(self) -> str:
         """"""

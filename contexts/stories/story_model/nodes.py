@@ -123,15 +123,22 @@ class SubEpic(StoryNode):
 
     def layout_column_count(self) -> int:
         """Story grid columns — named stories only (estimates are not story cells)."""
+        nested = sum(s.layout_column_count() for s in self.sub_epics)
+        own = len(self.stories)
         if self.sub_epics:
-            return sum(s.layout_column_count() for s in self.sub_epics)
-        return len(self.stories)
+            return max(nested + own, 1)
+        return own
 
     def diagram_span_columns(self) -> int:
-        """DrawIO sub-epic bar width in story-pitch columns (stories + estimate text)."""
-        if self.sub_epics:
-            return sum(s.diagram_span_columns() for s in self.sub_epics)
+        """DrawIO sub-epic bar width in story-pitch columns (stories + estimate text).
+
+        Own stories and nested sub-epics both consume columns (own stories first,
+        then nested children left-to-right). Estimates only widen leaf bars.
+        """
+        nested = sum(s.diagram_span_columns() for s in self.sub_epics)
         story_cols = len(self.stories)
+        if self.sub_epics:
+            return max(nested + story_cols, 1)
         estimate = self.estimate.strip()
         if not estimate:
             return max(story_cols, 1)

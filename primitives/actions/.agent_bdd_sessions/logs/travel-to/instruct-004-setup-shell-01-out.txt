@@ -1,0 +1,12 @@
+```yaml
+ok: true
+toolset: agents.example.car:Car
+tool: start
+result: null
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee
+  running: true
+```

@@ -340,13 +340,13 @@ class _ToolsetRunner:
         cls._instance = runner
 
     def run_request(self, request: RunRequestDocument) -> RunResponseDocument:
-        from session_logging import SessionLogHub, member_is_logged, summarize_mapping
+        from sessions import SessionLog, member_is_logged, summarize_mapping
 
         parsed = self._parse_run_request(request)
-        hub = SessionLogHub.instance()
-        hub.set_session(parsed.session)
+        slog = SessionLog.instance()
+        slog.set_session(parsed.session)
         if parsed.log_control is not None:
-            hub.apply_log_control(parsed.log_control)
+            slog.apply_log_control(parsed.log_control)
         toolset_cls = self._loader.load(str(parsed.toolset_path))
         instance = self._build_instance(toolset_cls, parsed.context)
         member_name = str(parsed.action_name or parsed.tool_name)
@@ -358,7 +358,7 @@ class _ToolsetRunner:
                 response = self._run_tool(request, parsed, instance)
         except RunError as exc:
             if should_log:
-                hub.append(
+                slog.append(
                     kind="action" if parsed.action_name else "tool",
                     toolset=str(parsed.toolset_path),
                     name=member_name,
@@ -376,7 +376,7 @@ class _ToolsetRunner:
                 )
             raise
         if should_log:
-            hub.append(
+            slog.append(
                 kind="action" if parsed.action_name else "tool",
                 toolset=str(parsed.toolset_path),
                 name=member_name,
@@ -708,8 +708,8 @@ def resource(func: Callable[..., Any]) -> Callable[..., Any]:
     return func
 
 
-# Re-export — authors mark tools/actions with @log from tools.tool or session_logging
-from session_logging import log as log  # noqa: E402
+# Re-export — authors mark tools/actions with @log from tools.tool or sessions
+from sessions import log as log  # noqa: E402
 
 
 def _discover_tools(instance: Toolset) -> dict[str, _Tool]:
@@ -754,7 +754,7 @@ def toolset(cls: type) -> type:
     merged.__module__ = cls.__module__
     merged.__qualname__ = cls.__qualname__
     merged._is_toolset = True  # type: ignore[attr-defined]
-    from session_logging import inherit_annotations_from_bases
+    from sessions import inherit_annotations_from_bases
     from tools.extensions import ToolsetExtensions
 
     inherit_annotations_from_bases(merged)

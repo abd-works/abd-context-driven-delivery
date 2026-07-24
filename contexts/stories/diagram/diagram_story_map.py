@@ -72,10 +72,8 @@ class DiagramStoryMap:
         return sum(self.sub_epic_width(s) for s in epic.sub_epics)
 
     def sub_epic_width(self, sub_epic: SubEpic) -> int:
-        if not sub_epic.sub_epics:
-            cols = sub_epic.diagram_span_columns()
-            return BASE_WIDTH * max(cols, 1)
-        return sum(self.sub_epic_width(s) for s in sub_epic.sub_epics)
+        # diagram_span_columns already counts own stories + nested children
+        return BASE_WIDTH * max(sub_epic.diagram_span_columns(), 1)
 
     def epic_x(self, epic: Epic) -> int:
         offset = 0

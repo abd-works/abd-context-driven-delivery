@@ -11,7 +11,7 @@ from expects import equal, expect
 from mamba import context, description, it
 
 _UTILITIES_ROOT = Path(__file__).resolve().parent
-_SKIP_DIR_NAMES = frozenset({"__pycache__", ".sessions", "_retired"})
+_SKIP_DIR_NAMES = frozenset({"__pycache__", ".sessions", ".agent_bdd_sessions", "_retired"})
 
 
 def _utility_names() -> frozenset[str]:

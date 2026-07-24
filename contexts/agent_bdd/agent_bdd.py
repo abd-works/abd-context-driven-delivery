@@ -19,11 +19,11 @@ from contexts import context  # noqa: F401
 class AgentBdd:
     """§ Instructions"""
 
-    def __init__(self, format: str = "python") -> None:
-        super().__init__(format=format)
+    def __init__(self, format: str = "python", path: str | None = None, session: str | None = None) -> None:
+        super().__init__(format=format, path=path, session=session)
 
     def _bdd(self) -> Bdd:
-        return Bdd(format=self.format)
+        return Bdd(format=self.format, session=self.session)
 
     @action
     def generate_output(self) -> str:

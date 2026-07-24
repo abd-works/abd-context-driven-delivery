@@ -1,183 +1,149 @@
 # Contexts
 
-Stories look at the product through human and system interactions — behaviours required to produce a solution — mapped hierarchically at increasing fidelity.
+Map stakeholder and system interactions as behaviours that deliver a solution. Deepen fidelity; never invent detail from a deeper level.
 
-**Canonical model** (reuse, do not reinvent): `StoryMap` → `Epic` → `SubEpic` (nested sub-epics allowed) → `Story` → `Scenario`, plus `Increment` on the map. Scenarios carry `background`, `given`, `interactions`. Stories may have an actor (`users`). Concrete example values live in Clean Engineering `{Type}ExampleFactory` — not as invented rows inside story files.
+Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic` → `Story`. Each story is `Scenario`s with discrete steps; backgrounds and scenarios carry examples (from CE `{Type}ExampleFactory` when available — never invent rows in story files).
 
-**Layout (code):** Epic = folder; nested SubEpic = folder; Story = folder; optional `.md` context per folder.
-
-**Hybrid file kinds (code):**
-1. **Story file** (`*_story.{ext}`) — explore / specification. Runnable Given / When / Then against **fake** `I{Type}` via helpers → `{Type}ExampleFactory`. Assert the **public interface** only.
-2. **Isolated spec** (`*_spec.{ext}`) — engineering default; factory mode `isolated` (real `{Type}` + injected mocks).
-3. **Tier spec** (`*_spec.{tier}.{ext}`) — engineering; other tiers (`production`, …). Same scenarios; calls the shared story function with that mode.
-
-**Stories vs BDD:** Stories = acceptance tests at e2e or tier/layer. BDD = object-level tests.
-
----
-
-This skill operates at **multiple levels of fidelity**. Start from grill + sketch and deepen. Each level **adds** artifacts — do not invent detail from a deeper fidelity.
-
-| Fidelity | Default format | Output |
+| Fidelity | Default Format | Produce |
 |---|---|---|
-| **discovery** | markdown | Story map + thin-slice increments |
-| **exploration** | python | Runnable story — one main-flow scenario per story (fake + public interface) |
-| **specification** | python | Same story files deepened — variations; still fake + public interface |
-| **engineering** | python | Isolated spec (`*_spec`) + tier specs (`*_spec.{tier}`) |
+| **discovery** | markdown | Story map + thin-slice |
+| **exploration** | python | One main-flow scenario per story (fake + public seam) |
+| **specification** | python | Same `*_story` files + variations (still fake) |
+| **engineering** | python | `*_spec` + `*_spec.{tier}` |
 
-**Templates (AI generate):** `templates/md/` (full stories/scenarios/domain terms/examples tables), `templates/py/`, `templates/js/` (and ts/java via channels). Code emitters and templates share one shape: runnable `*_story` + `*_spec` / `*_spec.{tier}`. Markdown↔code: md keeps documentation tables; code emits structure/stubs for AI to fill.
-
-**Cross-language scanners:** channels parse into the canonical model; scanners read model fields only — never language syntax.
+**Templates** live under `templates/` per format. **Scanners** read the canonical model only — never language syntax.
 
 ---
 
 ## Shared rules
 
-- **`verb-noun-format`** — Epic / SubEpic / Story names are verb–noun; actor is metadata, never in the name; base verb form.
-- **`four-to-nine-children`** — Every parent has 4–9 direct children (warning at 3/10; error at ≤2 or ≥11).
-- **`behavioral-observable-outcomes`** — Names and Then steps state what a stakeholder can observe in domain terms; never internals.
-- **`vocabulary-traces-to-domain-source`** — Domain terms trace to domain language / model sources when those exist.
-- **`emphasise-domain-significant-terms`** — Bold domain concepts in scenario steps; keep vocabulary aligned.
-- **`artifacts-mirror-story-hierarchy`** — Folders/files mirror Epic → SubEpic → Story structure.
-- **`right-size-story-nodes`** — A story is one demonstrable interaction, not a bundle.
+- **`verb-noun-format`** — Name Epic / SubEpic / Story verb–noun; actor is metadata; base verb form.
+- **`four-to-nine-children`** — 4–9 direct children (warn at 3/10; error ≤2 or ≥11).
+- **`behavioral-observable-outcomes`** — Name and Then in domain-observable terms; never internals.
+- **`branch-on-mechanical-uniqueness`** — Explore context relentlessly for distinct mechanics. Branch on mechanical uniqueness, dstinct mechanics in requirements require *distinct stories* for each mechanic. Different requirement entries with same mechanic is *one story only with different examples or scenarios*. Collapsing real mechanical variation, as well as mindlessly turning requirements into long lists of stories are **defect**
+- **`vocabulary-traces-to-domain-source`** — Trace terms to domain language / model when present.
+- **`artifacts-mirror-story-hierarchy`** — Mirror Epic → SubEpic → Story on disk.
+- **`right-size-story-nodes`** — One demonstrable interaction per story.
+- **`read-all-source-context-in-full`** — Before locking hierarchy **and before any grill/iterate question about a seam**, prove-read **every relevant referenced context** for that decision: owning `*-segment.md`, `module-context.md`, session sketches / grill-answers / handoff, peer story-context, build-order, and any path the plan or prior answers cite. Index / mid-epic stub columns are structure hints only — **not** story inventory. Grep or primer-only skims do not count; cite concrete terms from the files read in the question turn. Also re-read these rules. Do not thin from titles or memory!
 
 ---
 
 ## discovery
 
-**Default format:** markdown
+**Format:** markdown · **Produce:** named stories under activities + thin-slice order.
 
-**Goal:** Named stories under activities, plus a thin-slice delivery order.
+**Do:**
+1. Build the map: verb–noun stories under each activity; assign actors.
+2. Slice vertically — increments named for stakeholder-visible capability; copy story names **verbatim** from the map.
+3. Mark spine vs optional; never slice horizontally (“finish epic A then B”).
+4. Fill `templates/md/story-map.md` and `templates/md/thin-slice.md` (optional `.context/story-context.md` per activity folder).
+5. Keep unmapped work in the **sketch** as `* approx N–M …`; drop approx as stories get named.
 
-- Story map has verb–noun stories under each activity with an actor assigned.
-- Thin slice: vertical increments named for stakeholder-visible capability; story names copied verbatim from the map.
-- Spine vs optional marked; no horizontal “finish epic A then B” slicing.
-- Fill `templates/md/story-map.md` and `templates/md/thin-slice.md`. Optional `templates/md/story-context.md` per folder.
-- Unmapped remainder stays in the **sketch** as `* approx N–M …` — not a separate outline map. Drop approx lines as stories get named.
-
-### Rules
-
-- **`story-map-shape`** / **`story-map-discipline`** — Hierarchy is Epic → SubEpic → Story; named stories under each activity (approx gaps belong in sketch, not the discovery map).
-- **`thin-slice-shape`** / **`thin-slice-increment-shape`** / **`thin-slice-ordering`** — Increments are vertical, ordered, story names exact-match the map.
-- **`story-name-exact-match`** — Thin-slice story strings match map names character-for-character.
+**Rules:** `story-map-shape` / `story-map-discipline` · `thin-slice-shape` / `thin-slice-increment-shape` / `thin-slice-ordering` · `story-name-exact-match` · apply `branch-on-mechanical-uniqueness` and `read-all-source-context-in-full` while grilling and sketching.
 
 ---
 
 ## exploration
 
-**Default format:** python
+**Format:** python · **Produce:** one runnable main-flow scenario per story — fake + public seam. No tier specs yet.
 
-**Goal:** One runnable main-flow scenario per story — wired to **fakes**, asserting the **public interface** of domain objects. Not tier implementations yet.
+**Stories vs BDD:** Stories = acceptance (e2e / tier). BDD = object-level tests.
 
-### Shape (code)
+**Layout:** Epic / nested SubEpic / Story = folders; optional `.context/story-context.md` per folder.
 
 ```
 {epic}/
-  {epic}-helper.{ext}          # → {Type}ExampleFactory
+  {epic}-helper.{ext}       # → {Type}ExampleFactory
   {story}/
-    {story}_story.{ext}        # GWT; mode "fake" when this file is the entry
+    {story}_story.{ext}     # GWT; mode "fake" when entry
 ```
 
-- Export a story function `create{Story}Story(mode)` (or language equivalent) that registers `story` / `scenario` / `given` / `when` / `then`.
-- Story file runs with **`mode: "fake"`** when it is the test entry (not when a tier imports it).
-- Steps call epic helpers → `{Type}ExampleFactory.load…({ mode })`.
-- **Then** asserts only through the public seam of `I{Type}` (getters / operations callers use) — not private fields, not invented Fake subclasses.
-- Concrete values come from factory `examples[{example_key}]` — **do not** invent story-local example tables or copy ranks/names into the story file.
-- No specs yet (`*_spec` / `*_spec.{tier}` appear at engineering).
-- Fill: `templates/py/…/{story}_story.py` or `templates/js/…/{story}_story.js`; md walk-throughs under `templates/md/scenario-main-flow.md` when documenting only.
+| File | Role |
+|---|---|
+| `*_story.{ext}` | Runnable GWT; **fake** `I{Type}` via helpers → factory; assert **public interface** only |
 
-### Rules
+**Do:**
+1. Export `create{Story}Story(mode)` registering `story` / `scenario` / `given` / `when` / `then`.
+2. Run the story entry with `mode: "fake"`.
+3. Route steps: helper → `{Type}ExampleFactory.load…({ mode })`.
+4. Assert **Then** only on the public seam of `I{Type}` — no private fields, no hand-rolled Fakes.
+5. Pull values from `examples[{example_key}]` — no story-local example tables.
+6. Fill `templates/py|js/…/{story}_story.*` (md walk-through: `templates/md/scenario-main-flow.md` if documenting only).
 
-Follow the scenario rules under **specification** (shape, step quality, factory-backed values). At exploration, apply them to the **main-flow scenario only** — no variation scenarios yet.
+**Rules:** Use **specification** scenario rules on the **main-flow scenario only**.
 
 ---
 
 ## specification
 
-**Default format:** python
+**Format:** python · **Produce:** deepen the same `*_story` files with variations — still fake + public seam.
 
-**Goal:** Deepen the same runnable story files — variations (errors, boundaries), shared setup — still **fake** + **public interface**.
+**Do:**
+1. Add variation scenarios (errors, boundaries) in the same `*_story.{ext}`.
+2. Keep expected values in ExampleFactory (or peers in the same bundle).
+3. Share backgrounds / givens across scenarios when setup repeats.
+4. Deepen helper → factory links; name objects returned from helpers in steps.
+5. Do **not** invent a parallel `*_stories` data file — the story file *is* the spec.
 
-- Add scenarios for important variations inside the same `*_story.{ext}`.
-- Expected values still come from ExampleFactory methods (or peers in the same factory bundle) — not invented inline tables.
-- Backgrounds / shared givens where the same setup applies across scenarios.
-- Deepen helper factory links: epic helper imports factories; scenario steps name objects returned from helpers.
-- Do **not** invent a parallel pure-data `*_stories` file. The story file *is* the specification at this fidelity.
-
-### Rules
-
-- **`scenarios-shape`** / **`scenario-step-quality`** — Given / When / Then present; steps are domain-observable.
-- **`factory-backed-examples`** — Concrete values live in `{Type}ExampleFactory.examples` / `load*` methods. Story files do not invent parallel example tables. Steps may name the factory method or the domain object it returns.
-- **`assert-public-interface`** — Then steps read only the public seam of `I{Type}` (and peers returned with the bundle). No reaching into private implementation.
-- **`scenario-coverage`** — Important variations covered; not only happy path.
+**Rules:**
+- **`scenarios-shape`** / **`scenario-step-quality`** — Given / When / Then; domain-observable steps.
+- **`factory-backed-examples`** — Values in `{Type}ExampleFactory`; steps may name the method or returned object.
+- **`assert-public-interface`** — Then reads only the public seam of `I{Type}` (+ peers).
+- **`scenario-coverage`** — Cover important variations, not only happy path.
 - **`real-data-over-invented-values`** — Factory examples trace to domain / evidence.
-- **`atomic-deltas-over-repetition`** — Variations state the delta, not copy-paste walls.
-- **`alternate-actor-emphasis`** — Alternate actors called out when the path changes.
-- **`factory-objects-in-scenarios`** — When CE factories exist, scenario givens/outcomes obtain objects via helpers → `{Type}ExampleFactory.{example_method}` (**fake** mode at explore/spec).
+- **`atomic-deltas-over-repetition`** — State the delta; do not copy-paste walls.
+- **`alternate-actor-emphasis`** — Call out alternate actors when the path changes.
+- **`factory-objects-in-scenarios`** — Obtain objects via helpers → `{Type}ExampleFactory.{method}` (**fake** at explore/spec).
 
 ---
 
 ## engineering
 
-**Default format:** python
-
-**Goal:** Add write-once **tier specs** that re-run the same scenarios against production types. Tests should fail (RED) unless reverse-engineering existing behaviour. Drive to green with minimum production code.
-
-1. Confirm language/framework (default pytest for python; `node --test` for JS).
-2. Scaffold `*_spec.{ext}` (isolated) and/or `*_spec.{tier}.{ext}` if missing — never overwrite existing bodies. Each calls the shared story function with the matching mode.
-3. Factory mode: **isolated** (`{Type}` + ctor-injected mocks/stubs) via `*_spec`; other tiers via `*_spec.{tier}` (e.g. **production**). Fake stays in the story file only.
-4. RED → GREEN → REFACTOR one scenario at a time.
-5. If a test fails after **2 consecutive fix attempts** — stop. Read `diagnose.md` immediately.
-6. Run **validate**.
-
-### Rules
-
-- **`tests-shape`** — Story folder holds `*_story` + `*_spec` (+ `*_spec.{tier}` as needed); hierarchy mirrored on disk.
-- **`tests-implement-specification`** — Every story scenario is exercised by each declared spec.
-- **`tier-bodies-implemented`** — No TODO / not-implemented placeholders left when claiming done.
-- **`assertions-against-real-behavior`** — Assert observable outcomes through the public interface at that tier.
-- **`scenarios-tied-to-runtime`** — Steps resolve to real runtime behaviour, not fiction.
-- **`bug-fix-test-first`** — Bug fixes start with a failing acceptance test.
-- **`tier-factory-kind`** — Specs call the story with **isolated** (`*_spec`) or a named tier (`*_spec.{tier}`) — never invent Fake subclasses in tier bodies.
-
-### Naming
+**Format:** python · **Produce:** write-once tier specs that re-run the same scenarios. Prefer RED until behaviour exists; drive green with minimum production code.
 
 | File | Role |
 |---|---|
-| `{story}_story.py` / `.js` | Tier-neutral GWT; entry runs **fake** |
-| `{story}_spec.py` / `.js` | Isolated objects — `create{Story}Story("isolated")` |
-| `{story}_spec.{tier}.py` / `.js` | Tier-specific — e.g. `…_spec.production.js` |
+| `{story}_story.*` | Tier-neutral GWT; entry runs **fake** (owned at explore/spec) |
+| `{story}_spec.*` | Isolated — real `{Type}` + injected mocks; `create{Story}Story("isolated")` |
+| `{story}_spec.{tier}.*` | Same scenarios; named tier (e.g. `…_spec.production.js`) |
+
+**Do:**
+1. Confirm language/framework (default pytest / `node --test`).
+2. Scaffold `*_spec` (isolated) and/or `*_spec.{tier}` if missing — never overwrite existing bodies; each calls the shared story fn with matching mode.
+3. Keep fake in the story file only; isolated = `{Type}` + injected mocks; other tiers via `*_spec.{tier}`.
+4. RED → GREEN → REFACTOR one scenario at a time.
+5. After **2 consecutive fix failures** — stop; read `diagnose.md`.
+6. Run **validate**.
+
+**Rules:** `tests-shape` · `tests-implement-specification` · `tier-bodies-implemented` · `assertions-against-real-behavior` · `scenarios-tied-to-runtime` · `bug-fix-test-first` · `tier-factory-kind` (call story with `isolated` or named tier — never invent Fake subclasses in tier bodies).
 
 ---
 
-## Example factories (link to Clean Engineering)
+## Example factories (Clean Engineering)
 
-When Stories consume CE types, generation emits **links to factories** and **uses factory objects in scenarios** — it does not invent Fake subclasses or story-local example tables.
+Link to CE factories; do not invent Fakes or story-local example tables.
 
-| Artifact | Generate |
+| Artifact | Emit |
 |---|---|
-| Epic helper | Import `{Type}ExampleFactory`; expose `given*` methods that call `load*({ mode })` |
-| Story file (explore/spec) | Runnable GWT; `mode: "fake"`; assert public `I{Type}` |
-| Tier spec (engineering) | Same story function; `mode: "isolated"` \| `"production"` |
+| Epic helper | Import `{Type}ExampleFactory`; `given*` → `load*({ mode })` |
+| Story (explore/spec) | GWT; `mode: "fake"`; assert public `I{Type}` |
+| Tier spec | Same story fn; `mode: "isolated"` \| `"production"` |
 
-Declare factories on the model: `Epic.example_factories` / `SubEpic.example_factories` (names like `CartExampleFactory`). Collect/normalize via `code/example_factories.py`; each converter emits imports and accessors.
+**Chain:** steps → helper → `load…({ mode })` → `I{Type}` (+ peers) → assert public seam.
 
-**Chain (explore/spec):** steps → helper → `{Type}ExampleFactory.load…({ mode: "fake" })` → fake `I{Type}` (+ peers from the bundle) → assert public interface.
+**Modes:** `fake` = mock/stub + `examples[{key}]` · `isolated` = `new {Type}(...mocks)` · `production` = `new {Type}(...real)`.
 
-**Modes (not subclasses):** fake = mock/stub framework + `examples[{example_key}]`; isolated = `new {Type}(...injected mocks…)`; production = `new {Type}(...real collaborators…)`.
+Declare on the model: `Epic.example_factories` / `SubEpic.example_factories`. Normalize via `code/example_factories.py`.
 
-### Rules
-
-- **`helpers-import-factories`** — Helpers import CE `{Type}ExampleFactory` from the sibling `{type}_example_factory` file (not from the production family file); they do not hand-roll Fake subclasses or invent domain objects.
-- **`examples-multi-type-bundle`** — Align with CE: `examples[{example_key}]` holds all types a method needs.
-- **`stories-do-not-own-ce-types`** — `I{Type}` / `{Type}` (production file) and `{Type}ExampleFactory` (factory file) live in `clean_engineering` generation; Stories only links and uses them.
-- **`no-story-local-example-tables`** — Do not put `examples: [{ rank: '0', … }]` (or equivalent) in story files when a factory already owns that data.
+**Rules:** `helpers-import-factories` · `examples-multi-type-bundle` · `stories-do-not-own-ce-types` · `no-story-local-example-tables`.
 
 ---
 
 # Generate
 
-1. Confirm fidelity (`discovery` → `engineering`) and format (defaults above). All formatters available via the same CLI.
-2. Read § Contexts — shared rules and the active fidelity (including its Rules).
-3. Grill and sketch when useful (`@grill_with_context`, `sketch-template.md`).
-4. Fill templates for the active fidelity (runnable story through specification; tier specs at engineering only).
-5. Run **validate**.
+1. Confirm fidelity and format (defaults above).
+2. Read this file — shared rules + active fidelity.
+3. **MUST** follow base `generate` step 2: before any grill/iterate question, prove-read every relevant referenced context for that decision (segments, module-context, grill-answers, story-context, build-order, cited paths, …). Index mid-epic stubs are not inventory. Apply `read-all-source-context-in-full`.
+4. Use peer actions when useful (`grill`, `sketch`, `iterate`; `sketch-template.md`).
+5. Fill templates for the active fidelity.
+6. Run **validate**.

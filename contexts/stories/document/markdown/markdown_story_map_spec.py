@@ -247,6 +247,24 @@ _Scope: mixed markdown content should be tolerated._
             expect(sign_in.stories[0].name).to(equal("View Sign-In Form"))
             expect(sign_in.stories[1].name).to(equal("Submit Sign-In Credentials"))
 
+    with context("that hangs outline stories directly under an Epic"):
+        with before.each:
+            self.document = """# Story Map
+
+(E) Resolve Check
+    (S) Player --> Make Trait Check
+    (S) Player --> Oppose Check
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should synthesize a SubEpic so stories are not dropped"):
+            epic = self.reconstructed.epics[0]
+            expect(epic.name).to(equal("Resolve Check"))
+            expect(epic.sub_epics).to(have_len(1))
+            expect(epic.sub_epics[0].stories).to(have_len(2))
+            expect(epic.sub_epics[0].stories[0].name).to(equal("Make Trait Check"))
+            expect(epic.sub_epics[0].stories[1].name).to(equal("Oppose Check"))
+
     with context("that uses outline estimate lines"):
         with before.each:
             self.document = """# Story Map — Treasury

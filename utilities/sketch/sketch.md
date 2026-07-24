@@ -17,18 +17,17 @@ Rough, informal artifacts produced through an interactive grill loop, kept along
 ## What sketching is not
 
 - Not a replacement for formal generation. A sketch always precedes or accompanies a formal artifact; it does not replace it.
-- Not a file dumped into chat — always presented and refined interactively before persisting.
+- Not chat-only — always presented interactively **and** persisted via `save_sketch` on the first draft and every refinement.
 - **Not a margin-annotation exercise.** Do not tag sketch lines with fidelity markers (`<-i`, `<-m`, `<-s`, or similar). If fidelity matters, declare it once at the top of the sketch. The body is the shape — not a legend of which line belongs to which fidelity.
 
 ## Loop
 
 1. **Locate a template** — tiered discovery (see below).
-2. **Draft** — rough shape inspired by the template. In chat only.
-3. **Present** — show the sketch to the user with a short explanation of the reasoning behind the shape. No files yet.
+2. **Draft** — rough shape inspired by the template.
+3. **Present and persist** — show the sketch in chat with a short explanation, then **immediately** `save_sketch` to `{destination}/.context/{slug}-sketch.md`. A sketch that exists only in chat is a defect; the file is the working record.
 4. **Extend the next branch** — pick the next unresolved branch of the design tree, sketch your recommended shape for it into the artifact, and explain why in one or two lines. One branch at a time. Wait for feedback.
-5. **Refine** — regenerate the sketch showing what changed, integrating the branch just extended (or the correction the user gave).
+5. **Refine and overwrite** — regenerate the sketch showing what changed, then **immediately** `save_sketch` again (same path). Do not batch saves; do not wait until the session ends.
 6. **Repeat** 4–5 until either the user says done, or every branch of the design tree has been sketched and reasoned out. Ask a question only when a branch genuinely cannot be resolved by sketching a recommendation.
-7. **Persist** — save to `{destination}/.context/{slug}-sketch.md` where destination is the folder of the thing being sketched.
 
 ## When asking a question (grill inside sketch)
 
@@ -40,7 +39,7 @@ For every question:
 2. **Options with rationale** — 3–5 choices; recommended first; each option gets one short concept-tied rationale (what it does to the seam, ownership, or coupling). End with "Other / I'll specify."
 3. **One question** — wait for the answer, then regenerate the sketch showing exactly what changed.
 
-When `@grill_with_context` is also in the chain, follow that action's Step 3a–3b for the question shape; this section is the sketch-side contract for the same standard.
+Question shape (frame + options) comes from `grill_with_context`, which `@sketch` pulls in explicitly. This section owns sketch show/persist cadence only.
 
 ## Template discovery (tiered)
 
@@ -52,20 +51,24 @@ If none of the above yield a template, the sketcher invents a shape for the doma
 
 ## Persistence lifecycle
 
-- Sketches live at `{destination}/.context/{slug}-sketch.md` where destination is the folder of the thing being sketched (e.g. `ooad/.context/ooad-sketch.md`).
+- **Session-rooted paths:** when chained from a Context generator, read the host **`session`** resource.
+  - Engagement docs/diagrams → `destination = session` → `{session}/.context/{slug}-sketch.md`
+  - Module sketch → `destination = {session}/{module}` → `{session}/{module}/.context/{slug}-sketch.md`
+  - Generated code for that module → `{session}/{module}/` (not under `.context/`)
+- Sketches live at `{destination}/.context/{slug}-sketch.md`.
 - `.context/` is created inside the destination if it does not already exist.
+- **Hard rule:** call `save_sketch` as soon as the first interim draft exists; overwrite on every regeneration. Never defer persistence to the end of the grill.
 - They persist until a formal artifact absorbs their content.
 - Retirement is manual for now — remove the sketch when the formal artifact fully captures its intent.
 
 ## Composition — how sketch chains with other actions
 
-The `@sketch` decorator marks an `@action` method so the sketch loop fires before the base action's body is expanded. Decorators fire in **declaration order** (top-down):
+`@sketch` **explicitly calls** `grill_with_context`, then chains `sketch_session`. Expansion order:
 
 ```
-@sketch          ← fires 1st
-@grill_context   ← fires 2nd
-@action
-def generate(self, ...): ...   ← base action runs last
+grill_with_context  ← pure Q-loop (no sketch advice)
+sketch_session      ← template + save_sketch cadence
+base action body    ← e.g. Context.sketch → self.generate()
 ```
 
-See `ooad/.context/rethinking-fidelity-and-process.md` for the full design record and the deferred implementation slice that wires this decorator marker into the ActionExpander.
+Base `Context` exposes peer entry points: `generate` (plain), `grill`, `sketch`, `iterate`. Domains inherit them; do not re-decorate domain `generate` with `@sketch` / `@grill_with_context`.

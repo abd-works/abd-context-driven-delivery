@@ -1,7 +1,7 @@
 # @agent-spec-manifest python -m tools agent-spec actions/actions_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
-# session: actions/.sessions/travel-to.json
+# session: actions/.agent_bdd_sessions/travel-to.json
 """BDD agent spec for action.py — agent invokes @action via tools CLI."""
 
 from pathlib import Path
@@ -13,7 +13,7 @@ from agent_bdd import agent
 from agent_bdd.agent_cli_bdd import looks_like_tools_run_output
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_SESSIONS = Path(__file__).resolve().parent / ".sessions"
+_SESSIONS = Path(__file__).resolve().parent / ".agent_bdd_sessions"
 _CAR_TOOLSET = "primitives.actions.examples.car:Car"
 
 

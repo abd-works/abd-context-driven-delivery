@@ -45,7 +45,7 @@ an action that is not annotated
 **Fail:**
 ```
 @log marker                          ← mechanism / symbol, not a subject
-SessionLogHub                        ← manager / internal
+ToolsetRunner                        ← manager / internal
 a logged tool                        ← splits the same subject; use one action story
 when no session name is given        ← never "when" for state — use "with …"
 ```
@@ -55,7 +55,7 @@ when no session name is given        ← never "when" for state — use "with �
 - **`observable-behavior`** — Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals.
 - **`domain-practice-alignment`** — Describe names must match domain language / model exactly.
 - **`usage-order-behaviors`** — Order describes, contexts, and examples as a **usage story** or operational sequence (what happens first → next). Do not order by implementation layer, package, or internal type.
-- **`describe-is-subject-not-internal`** — A `describe` is a domain subject, state, or observable condition — never a manager, hub, runner, service, or other internal (`SessionLogHub`, `ToolsetRunner`, …).
+- **`describe-is-subject-not-internal`** — A `describe` is a domain subject, state, or observable condition — never a manager, hub, runner, service, or other internal (`SessionLog`, `ToolsetRunner`, …).
 - **`describe-is-plain-english`** — Full English phrases (e.g. "an action that is annotated with log", "an action that is not annotated"). Never symbol/mechanism names (`"@log marker"`) as the subject.
 - **`state-not-when`** — Never name a nested state with `when`. Use `that …` for events/conditions on the subject and `with …` for standing conditions. Ask: what event or condition must already be true for this observation?
 - **`nest-by-enabling-events`** — Each nested `that` / `with` must be a real precondition or event required for the nested `it should` — not a test-file grouping convenience.
@@ -161,6 +161,6 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 
 1. Confirm fidelity (`behavior` → `development`) and format (defaults: both → python).
 2. Read § Contexts — shared rules and the active fidelity (including its Rules).
-3. Grill and sketch when useful (`@grill_with_context`, `sketch-template.md`): follow **Hierarchy shape** — usage-order subjects → `that`/`with` enabling events → `it should` → public call surface → novel internals only at development. Declare fidelity once at the top of the sketch; **do not** annotate lines with `# b` / `# d`. No manager/hub/`when`/mechanism describes.
+3. Use peer actions when useful (`grill`, `sketch`, `iterate` on the Context; `sketch-template.md`): follow **Hierarchy shape** — usage-order subjects → `that`/`with` enabling events → `it should` → public call surface → novel internals only at development. Declare fidelity once at the top of the sketch; **do not** annotate lines with `# b` / `# d`. No manager/hub/`when`/mechanism describes.
 4. Fill `formats/{format}/bdd-template.*` for the active fidelity.
 5. Run **validate**.

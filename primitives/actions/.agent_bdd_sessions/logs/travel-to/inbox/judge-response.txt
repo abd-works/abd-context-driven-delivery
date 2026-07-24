@@ -1,0 +1,1 @@
+{"verdict":"PASS","reason":"The output shows General Lee traveling through Hazzard County with vivid action, personality, and dialogue from the Dodge Charger."}

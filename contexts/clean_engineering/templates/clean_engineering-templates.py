@@ -20,9 +20,9 @@ Layout (physical-folder): write each file under the **module** folder
 Naming:
     File (production)  {family_slug}.py
     File (factory)     {type_slug}_example_factory.py
-    Interface          I{Class}                (public seam; modules fidelity)
+    Interface          I{Class}                (public seam; model fidelity)
     Class              {Class}(I{Class})       (production; specification+)
-    ExampleFactory     {Class}ExampleFactory   (plain class; no Loader base; Mo+/S+)
+    ExampleFactory     {Class}ExampleFactory   (plain class; no Loader base; Md+/S+)
     Modes              Fake | Isolated | Production  (factory behavior — not subclasses)
     Property           {owned_property}, …     (snake_case slots)
     Operation          {operation_name}, …     (snake_case slots)
@@ -32,8 +32,9 @@ Naming:
     Interaction        abstract method at S    (on Class only; dropped at code)
 
 Fidelity tags:
-    L  = language
-    Mo = modules       (I{Class} only — empty public props/ops; optional I{Class}ExampleFactory in factory file)
+    L  = language companion (prose; refined every stage — not a fidelity)
+    Mu = modules       (thin terms, one-way deps, build order — markdown / module-context)
+    Md = model         (I{Class} only — empty public props/ops; optional I{Class}ExampleFactory in factory file)
     S  = specification (Class extends I{Class}; public filled; privates empty on Class;
                        {Class}ExampleFactory modes in sibling factory file when Stories-bound)
     C  = code          (fill remaining empties on Class; drop interactions)
@@ -48,30 +49,30 @@ from abc import ABC, abstractmethod
 # =============================================================================
 
 
-class I{ClassName}(ABC):                                                # Mo
+class I{ClassName}(ABC):                                                # Md
     """*{ClassName}* is — one sentence: what it is, its unique role.
     Identity only. No relationship or behavior sentences here."""     # L
 
     # -- Public properties (empty interfaces) --------------------------------
 
-    @property                                                           # Mo
-    @abstractmethod                                                     # Mo
-    def {owned_property}(self) -> {Type}: ...                           # Mo
+    @property                                                           # Md
+    @abstractmethod                                                     # Md
+    def {owned_property}(self) -> {Type}: ...                           # Md
 
-    @property                                                           # Mo
-    @abstractmethod                                                     # Mo
-    def {plain_property}(self) -> {Type}: ...                           # Mo
+    @property                                                           # Md
+    @abstractmethod                                                     # Md
+    def {plain_property}(self) -> {Type}: ...                           # Md
 
     # -- Public operations (empty interfaces) --------------------------------
 
-    @abstractmethod                                                     # Mo
-    def __init__(self, {param}: {Type}) -> None: ...                    # Mo
+    @abstractmethod                                                     # Md
+    def __init__(self, {param}: {Type}) -> None: ...                    # Md
 
-    @abstractmethod                                                     # Mo
-    def {operation_name}(self, {param}: {Type}) -> {ReturnType}: ...    # Mo
+    @abstractmethod                                                     # Md
+    def {operation_name}(self, {param}: {Type}) -> {ReturnType}: ...    # Md
 
-    @abstractmethod                                                     # Mo
-    def {another_operation}(self) -> {ReturnType}: ...                  # Mo
+    @abstractmethod                                                     # Md
+    def {another_operation}(self) -> {ReturnType}: ...                  # Md
 
 
 class {ClassName}(I{ClassName}):                                        # S
@@ -123,12 +124,12 @@ class {ClassName}(I{ClassName}):                                        # S
         ...
 
 
-# Subtype — delta only; parent members are inherited, not repeated     # Mo/S
-class I{ChildClass}(ABC):                                               # Mo
+# Subtype — delta only; parent members are inherited, not repeated     # Md/S
+class I{ChildClass}(ABC):                                               # Md
     """{delta — what {ChildClass} adds}"""                              # L
 
-    @abstractmethod                                                     # Mo
-    def {delta_operation}(self, {param}: {Type}) -> {ReturnType}: ...   # Mo
+    @abstractmethod                                                     # Md
+    def {delta_operation}(self, {param}: {Type}) -> {ReturnType}: ...   # Md
 
 
 class {ChildClass}({ClassName}, I{ChildClass}):                         # S
@@ -147,11 +148,11 @@ class {ChildClass}({ClassName}, I{ChildClass}):                         # S
 # =============================================================================
 
 
-class I{ClassName}ExampleFactory(ABC):                                  # Mo
+class I{ClassName}ExampleFactory(ABC):                                  # Md
     """Loads examples[{example_key}] as Fake | Isolated | Production modes."""  # L
 
-    @abstractmethod                                                     # Mo
-    def load_{example_key}(self, *, mode: str = "fake") -> I{ClassName}: ...  # Mo
+    @abstractmethod                                                     # Md
+    def load_{example_key}(self, *, mode: str = "fake") -> I{ClassName}: ...  # Md
 
 
 class {ClassName}ExampleFactory(I{ClassName}ExampleFactory):            # S
@@ -161,3 +162,4 @@ class {ClassName}ExampleFactory(I{ClassName}ExampleFactory):            # S
     def load_{example_key}(self, *, mode: str = "fake") -> I{ClassName}:  # S
         # examples[{example_key}] -> I{ClassName} (+ peer types if needed)  # S
         ...                                                             # S/C
+

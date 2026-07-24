@@ -20,7 +20,7 @@
  *   Members         {ownedProperty}, {operationName}, {param}, {dep}  (camelCase)
  *   Factory method  load{ExampleKey}  — loads examples[{example_key}] multi-type bundle
  *
- * Fidelity tags: L = language · Mo = modules · S = specification · C = code
+ * Fidelity tags: L = language companion · Mu = modules · Md = model · S = specification · C = code
  * JS has no interface keyword — I{ClassName} is an empty class shell + // interface comment.
  * Do NOT generate Fake{ClassName} / Isolated{ClassName} / Production{ClassName} classes.
  * Do NOT put factories or fake-mode wiring in the production family file.
@@ -30,14 +30,14 @@
 // FILE: {family_slug}.js — production family only (cohesive-file)
 // =============================================================================
 
-// interface I{ClassName}                                              // Mo
+// interface I{ClassName}                                              // Md
 class I{ClassName} {
   /** *{ClassName}* is — one sentence: what it is, its unique role. */  // L
-  constructor({param}) { }                                             // Mo
-  get {ownedProperty}() { }                                            // Mo
-  get {plainProperty}() { }                                            // Mo
-  {operationName}({param}) { }                                         // Mo
-  {anotherOperation}() { }                                             // Mo
+  constructor({param}) { }                                             // Md
+  get {ownedProperty}() { }                                            // Md
+  get {plainProperty}() { }                                            // Md
+  {operationName}({param}) { }                                         // Md
+  {anotherOperation}() { }                                             // Md
 }
 
 // implements I{ClassName}                                             // S
@@ -53,9 +53,9 @@ class {ClassName} {
   #{privateHelper}({param}) { }                                        // S / C
 }
 
-// interface I{ChildClass} — delta only                                // Mo
+// interface I{ChildClass} — delta only                                // Md
 class I{ChildClass} {
-  {deltaOperation}({param}) { }                                        // Mo
+  {deltaOperation}({param}) { }                                        // Md
 }
 
 // implements I{ChildClass}                                            // S
@@ -79,10 +79,10 @@ const examples = {
   },
 };
 
-// interface I{ClassName}ExampleFactory                                // Mo
+// interface I{ClassName}ExampleFactory                                // Md
 class I{ClassName}ExampleFactory {
   /** Loads examples[{example_key}] as Fake | Isolated | Production. */  // L
-  load{ExampleKey}() { }                                               // Mo
+  load{ExampleKey}() { }                                               // Md
 }
 
 // implements I{ClassName}ExampleFactory                               // S

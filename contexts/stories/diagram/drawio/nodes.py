@@ -40,6 +40,7 @@ EPIC_ESTIMATE_HEIGHT = 40
 SUBEPIC_ROW_Y = 195
 SHAPING_SUBEPIC_ROW_Y = 200
 SUBEPIC_HEIGHT = 60
+SUBEPIC_DEPTH_GAP = 8  # vertical gap between nested sub-epic rows
 STORY_ROW_Y = 345
 SHAPING_DETAIL_ROW_Y = 275
 STORY_SIZE = 50
@@ -49,6 +50,7 @@ FIRST_STORY_INSET = 10
 SUBEPIC_TIGHTEN = 5
 EPIC_TIGHTEN = 5
 EPIC_GAP = 10
+DETAIL_BELOW_SUBEPIC_PAD = 16  # pad under deepest sub-epic before actor/story row
 
 _STYLE_EPIC = (
     "epic;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;"
@@ -127,11 +129,46 @@ def _map_has_outline_estimates(story_map: StoryMap) -> bool:
     return any(sub.estimate.strip() for sub in story_map.all_sub_epics())
 
 
+def _max_sub_epic_depth(story_map: StoryMap) -> int:
+    """Deepest nested SubEpic depth (0 = direct child of Epic)."""
+
+    def _depth(sub: SubEpic, current: int) -> int:
+        if not sub.sub_epics:
+            return current
+        return max(_depth(child, current + 1) for child in sub.sub_epics)
+
+    deepest = 0
+    for epic in story_map.epics:
+        for sub in epic.sub_epics:
+            deepest = max(deepest, _depth(sub, 0))
+    return deepest
+
+
+def _subepic_y_for_depth(base_y: int, depth: int) -> int:
+    """Parent sub-epics above children: depth 0 at base_y, depth 1 below, …"""
+    return base_y + depth * (SUBEPIC_HEIGHT + SUBEPIC_DEPTH_GAP)
+
+
 def _layout_rows(story_map: StoryMap) -> tuple[int, int]:
-    """Return (subepic_row_y, detail_row_y) for story-map layout."""
+    """Return (subepic_row_y_base, detail_row_y) for story-map layout.
+
+    Nested sub-epics stack downward by depth; stories sit below the deepest row
+    (with room for actor labels when not in shaping/estimate mode).
+    """
+    max_depth = _max_sub_epic_depth(story_map)
     if _map_has_outline_estimates(story_map):
-        return SHAPING_SUBEPIC_ROW_Y, SHAPING_DETAIL_ROW_Y
-    return SUBEPIC_ROW_Y, STORY_ROW_Y
+        base = SHAPING_SUBEPIC_ROW_Y
+        deepest_bottom = _subepic_y_for_depth(base, max_depth) + SUBEPIC_HEIGHT
+        # Shaping outline: keep stories closer; still clear nested bars
+        detail = max(SHAPING_DETAIL_ROW_Y, deepest_bottom + DETAIL_BELOW_SUBEPIC_PAD)
+        return base, detail
+    base = SUBEPIC_ROW_Y
+    deepest_bottom = _subepic_y_for_depth(base, max_depth) + SUBEPIC_HEIGHT
+    detail = max(
+        STORY_ROW_Y,
+        deepest_bottom + ACTOR_LABEL_HEIGHT + ACTOR_LABEL_GAP + DETAIL_BELOW_SUBEPIC_PAD,
+    )
+    return base, detail
 
 
 # ── Leaf node types ───────────────────────────────────────────────────────────
@@ -470,30 +507,24 @@ class DrawIOStoryMap(StoryMap):
         detail_y: int = STORY_ROW_Y,
     ) -> None:
         sub_slug = f"{parent_slug}/{_slugify(sub_epic.name)}"
+        row_y = _subepic_y_for_depth(subepic_y, depth)
         self._add_cell(
             graph_root, sub_slug, sub_epic.name,
-            sub_x, subepic_y, width, SUBEPIC_HEIGHT,
+            sub_x, row_y, width, SUBEPIC_HEIGHT,
             style=_subepic_style(depth),
         )
-        col_cursor = first_story_col
-        for nested in sub_epic.sub_epics:
-            span = _layout_columns(nested)
-            nested_width = span * STORY_PITCH_X - SUBEPIC_TIGHTEN * 2
-            self._emit_sub_epic(
-                graph_root, nested, sub_slug, depth=depth + 1,
-                sub_x=sub_x + (col_cursor - first_story_col) * STORY_PITCH_X,
-                width=nested_width, first_story_col=col_cursor,
-                subepic_y=subepic_y, detail_y=detail_y,
-            )
-            col_cursor += span
+        # Own stories first (left columns) so parse stack attaches them to this
+        # sub-epic before nested children push the stack deeper.
         current_actor: str = ""
         for i, story in enumerate(sub_epic.stories):
             story_x = sub_x + SUBEPIC_TIGHTEN + i * STORY_PITCH_X
             actor = story.users[0] if story.users else ""
-            # Emit actor label above the first story in this sub-epic and
-            # whenever the actor changes.  Only when there is enough vertical
-            # room (non-shaping fidelity where detail_y == STORY_ROW_Y).
-            if detail_y == STORY_ROW_Y and actor and (i == 0 or actor != current_actor):
+            # Actor labels when there is room above the story row.
+            if (
+                detail_y >= row_y + SUBEPIC_HEIGHT + ACTOR_LABEL_HEIGHT + ACTOR_LABEL_GAP
+                and actor
+                and (i == 0 or actor != current_actor)
+            ):
                 actor_y = detail_y - ACTOR_LABEL_HEIGHT - ACTOR_LABEL_GAP
                 self._add_cell(
                     graph_root,
@@ -508,6 +539,20 @@ class DrawIOStoryMap(StoryMap):
                 story_x, detail_y, STORY_SIZE, STORY_SIZE,
                 style=_STYLE_STORY_TMPL.format(role=story.story_type.value),
             )
+        own_cols = len(sub_epic.stories)
+        col_cursor = first_story_col + own_cols
+        nested_origin_x = sub_x + own_cols * STORY_PITCH_X
+        for nested in sub_epic.sub_epics:
+            span = _layout_columns(nested)
+            nested_width = span * STORY_PITCH_X - SUBEPIC_TIGHTEN * 2
+            nested_x = nested_origin_x + (col_cursor - first_story_col - own_cols) * STORY_PITCH_X
+            self._emit_sub_epic(
+                graph_root, nested, sub_slug, depth=depth + 1,
+                sub_x=nested_x,
+                width=nested_width, first_story_col=col_cursor,
+                subepic_y=subepic_y, detail_y=detail_y,
+            )
+            col_cursor += span
         estimate = (sub_epic.estimate or "").strip()
         if estimate:
             if sub_epic.stories:

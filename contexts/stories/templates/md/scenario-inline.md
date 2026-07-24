@@ -7,6 +7,8 @@ section: body
 
 ## Behaviors
 
+> In steps: bold domain concepts (`**<Concept>**`); italic concrete values (`*<value>*`).
+
 ### Scenario 1: `<outcome-oriented scenario name>`
 
 *Given* a **`<ConceptA>`** *`<value>`*  

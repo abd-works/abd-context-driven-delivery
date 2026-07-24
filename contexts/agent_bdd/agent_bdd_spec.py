@@ -22,7 +22,7 @@ with description("an agent spec file"):
         with it("should declare in_chat harness and session path"):
             manifest = read_manifest(_TOOLS_SPEC)
             expect(manifest.in_chat).to(be_true)
-            expect(manifest.session).to(equal("tools/.sessions/general-lee.json"))
+            expect(manifest.session).to(equal("tools/.agent_bdd_sessions/general-lee.json"))
             expect("agent-spec" in manifest.command).to(be_true)
 
         with it("should build a runbook with instruct steps from tools_agent_spec"):
@@ -44,7 +44,7 @@ with description("an agent spec file"):
         with it("should build a generator runbook from concept_agent_spec"):
             manifest = read_manifest(_REPO_ROOT / "contexts" / "base" / "context_agent_spec.py")
             expect(manifest.in_chat).to(be_true)
-            expect(manifest.session).to(equal("contexts/.sessions/car-chronicle.json"))
+            expect(manifest.session).to(equal("contexts/.agent_bdd_sessions/car-chronicle.json"))
             runbook = build_runbook(_REPO_ROOT / "contexts" / "base" / "context_agent_spec.py")
             setup = [step for scenario in runbook.scenarios for step in scenario.setup]
             prompts = " ".join(step.prompt or "" for step in setup)
@@ -58,7 +58,7 @@ with description("an agent spec file"):
 
     with context("with agent context manager"):
         with it("should enter and exit via __enter__ for in-chat harness"):
-            session_file = _REPO_ROOT / "contexts" / "agent_bdd" / ".sessions" / "context-manager-spec.json"
+            session_file = _REPO_ROOT / "contexts" / "agent_bdd" / ".agent_bdd_sessions" / "context-manager-spec.json"
             cm = agent(_REPO_ROOT, session_file, in_chat=True)
             block = cm.__enter__()
             try:

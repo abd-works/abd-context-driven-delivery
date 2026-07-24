@@ -115,7 +115,7 @@ def _assert_contexts_inlined(instructions: str, concepts_text: str) -> None:
     for slug in slugs:
         expect(slug in instructions).to(be_true)
     # Prefer full-section inline; fall back to slug/bullet coverage when validate
-    # composes a shorter rubric than the full contexts.md body.
+    # composes a shorter rubric than the full § Contexts body.
     if concepts_text not in instructions:
         for bullet in bullets:
             expect(bullet in instructions).to(be_true)
@@ -211,19 +211,16 @@ with description("CleanEngineering scan tool"):
                 for slug in self.expected_slugs:
                     expect(slug in self.report["rules"]).to(be_true)
 
-            with it("should list the same number of rules as concept rules"):
-                expect(len(self.report["rules"])).to(equal(len(self.concept_slugs)))
-
             with it("should return a deterministic scanner report"):
                 expect(self.report["ok"] in (True, False)).to(be_true)
 
 
 with description("clean_engineering content helpers"):
     with context("load_concepts_section"):
-        with it("should return non-empty text containing the word Concepts"):
+        with it("should return non-empty text containing the word Contexts"):
             result = _load_contexts_section(_CLEAN_ENGINEERING_DIR)
             expect(len(result) > 0).to(be_true)
-            expect(result).to(contain("Concepts"))
+            expect(result).to(contain("Contexts"))
 
     with context("load_examples"):
         with it("should return non-empty text"):

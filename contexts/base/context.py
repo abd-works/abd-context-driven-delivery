@@ -11,26 +11,90 @@ from typing import TypeVar
 from primitives.actions.action import _ActionRunner, action
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
+from grill_context import grill_with_context
+from iterate import iterate
 from record_decisions import record_decisions
 from scanners import ScannerCollection
-from tools.tool import Toolset, tool
-from session_logging import log
+from sketch import sketch
+from tools.tool import Toolset, resource, tool
+from sessions import Session, SessionLog, log
 
 T = TypeVar("T", bound=type)
 
-_DEFAULT_PARTITION_GUIDANCE = (
-    "Determine top-level structure based on user suggestion, available context, "
-    "skill-provided material, and what is evident in the source. "
-    "Keep it thin — only enough to ground partitions; TODOs are fine."
-)
 
+def _bind_session_log(session: Session) -> None:
+    """Point SessionLog at this bout so events land under session.log."""
+    if session.name:
+        SessionLog.instance().bind(session)
 
 class Context(Toolset):
     """§ Instructions"""
 
-    def __init__(self, format: str | None = None) -> None:
+    def __init__(
+        self,
+        format: str | None = None,
+        path: str | None = None,
+        session: str | None = None,
+    ) -> None:
         super().__init__()
         self.format = format
+        working = path if path is not None else "."
+        if session:
+            self._session = Session.load(working, session)
+        else:
+            self._session = Session(path=working)
+        _bind_session_log(self._session)
+
+    @property
+    @resource
+    def session(self) -> Session:
+        """Current work bout (object).
+
+        - ``session.path`` — working area for durable artifacts
+          (partition index → ``{path}/.context/``;
+          partitioned chunks + module-local docs → ``{path}/{module}/.context/``;
+          generated modules → ``{path}/{module}/``)
+        - ``session.name`` / ``session.folder`` — named bout under
+          ``{path}/.context/sessions/{name}/`` for process artifacts
+          (session.md, grill-answers, engagement sketches, handoff)
+
+        Constructor: ``context.path`` (working area, default ``"."``) and
+        ``context.session`` (bout slug). When grill/sketch/handoff needs a bout
+        and none is set: confirm ``path`` with the user, suggest a kebab slug
+        from goal/context, user confirms, then ``create_session``.
+        """
+        return self._session
+
+    @tool
+    def create_session(
+        self,
+        name: str,
+        goal: str = "",
+        fidelities: str = "",
+        contexts: str = "",
+    ) -> str:
+        """Create ``{session.path}/.context/sessions/{name}/session.md`` (Start section).
+        Confirm working path and slug with the user first. AI may suggest the slug from
+        goal/context; user confirms. Returns the session.md path."""
+        self._session = Session(
+            path=self._session.path,
+            name=name,
+            goal=goal,
+            fidelities=fidelities,
+            contexts=contexts,
+        )
+        md = self._session.ensure_started(
+            goal=goal, fidelities=fidelities, contexts=contexts
+        )
+        _bind_session_log(self._session)
+        return str(md.resolve())
+
+    @tool
+    def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:
+        """Write the End section on session.md (ended, outcome, handoff link).
+        Call after handoff is written per the handoff skill. Returns session.md path."""
+        md = self._session.close(outcome=outcome, handoff=handoff)
+        return str(md.resolve())
 
     @property
     def module_dir(self) -> Path:
@@ -57,7 +121,11 @@ class Context(Toolset):
         path = self.module_dir / "partition.md"
         if path.is_file():
             return Instruction.ref(self, "partition").expand()
-        return _DEFAULT_PARTITION_GUIDANCE
+        return (
+            "Determine top-level structure based on user suggestion, available context, "
+            "skill-provided material, and what is evident in the source. "
+            "Keep it thin — only enough to ground partitions; TODOs are fine."
+        )
 
     @action
     def add_generate_header_to_generated(self) -> str:
@@ -86,6 +154,7 @@ class Context(Toolset):
     @action
     def generate(self) -> str:
         """base-context/generate"""
+        self.session
         self.contexts
         self.generate_instructions
         self.examples
@@ -94,55 +163,91 @@ class Context(Toolset):
         self.add_generate_header_to_generated()
         return "When done, run validate."
 
+    @record_decisions
+    @grill_with_context
+    @action
+    def grill(self) -> str:
+        """Grill then generate — pure grill loop, then the host generate body."""
+        self.generate()
+        return "Grill complete; generate instructions applied."
+
+    @record_decisions
+    @sketch
+    @action
+    def sketch(self) -> str:
+        """Sketch then generate — grill + sketch cadence, then the host generate body."""
+        self.generate()
+        return "Sketch complete; generate instructions applied."
+
+    @record_decisions
+    @iterate
+    @action
+    def iterate(self) -> str:
+        """Iterate then generate — grill + formal generate/validate/one-fix ticks."""
+        self.generate()
+        return "Iterate complete; generate instructions applied."
+
     @action
     def validate(self) -> str:
         """base-context/validate"""
+        self.session
         self.contexts
         self.scan()
-        return "Validation report."
+        return "Validation report for artifacts under {session.path}/."
 
     @action
     def document(self, paths: list[str]) -> str:
         """base-context/document"""
+        self.session
         self.contexts
         self.document_instructions
         self.templates
         self.scan(paths)
         self.generate_output()
         self.add_generate_header_to_generated()
-        return "Document existing state — violations flagged, none corrected."
+        return "Document existing state under {session.path}/ — violations flagged, none corrected."
 
     @record_decisions
     @action
     def satisfy(self) -> str:
         """base-context/satisfy"""
+        self.session
         self.contexts
         self.templates
-        return "When done, run validate."
+        return "When done, run validate on artifacts under {session.path}/."
 
     @action
     def repair(self, asset: str, violation: str) -> str:
         """base-context/repair"""
+        self.session
         self.scan()
         self.contexts
         self.examples
         self.templates
         self.validate()
-        return "Repair {{asset}} until validate passes."
+        return "Repair {{asset}} under {session.path}/ until validate passes."
 
     @action
     def index(self, context: str, out_root: str | None = None) -> str:
         """base-context/index"""
+        self.session
         self.contexts
         self.partition_guidance
-        return "Index written for {{context}}."
+        return (
+            "Index written for {{context}} under {session.path}/.context/ "
+            "(out_root overrides session.path when set)."
+        )
 
     @action
     def segment(self, out_root: str | None = None) -> str:
         """base-context/segment"""
+        self.session
         self.contexts
         self.partition_guidance
-        return "Segments written from {{self.toolset_name}}-index.md."
+        return (
+            "Verbatim source chunks written under {session.path}/{module}/.context/ "
+            "from {subject}-index.md (same tree as generated modules)."
+        )
 
     @action
     def partition(
@@ -152,11 +257,15 @@ class Context(Toolset):
         out_root: str | None = None,
     ) -> str:
         """base-context/partition"""
+        self.session
         self.contexts
         self.partition_guidance
         self.index(context, out_root)
         self.segment(out_root)
-        return "Partition of {{context}} finished (mode {{mode}})."
+        return (
+            "Partition of {{context}} finished (mode {{mode}}); "
+            "docs under {session.path}/.context/."
+        )
 
     @tool
     def scan(self, paths: list[str]) -> str:

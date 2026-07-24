@@ -7,6 +7,9 @@
 		{
 			"name": "abd-skills",
 			"path": "../abd-skills"
+		},
+		{
+			"path": "../you-tube-scraper"
 		}
 	],
 	"settings": {}

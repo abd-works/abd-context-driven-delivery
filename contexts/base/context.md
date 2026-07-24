@@ -11,11 +11,21 @@ Every domain action ends with **validate**.
 
 ## Favour defaults
 
-- **`favour-defaults`** — The framework (`Context`, `@instruction` slots, action docstrings → `contexts/base/*.md` / domain md) already wires contexts, domain § Generate, examples, format template, and action prose. **Do not override** instruction slots or action docstrings. **Do not override `module_dir`** — put the `.py` file inside the domain folder; default resolution is enough (`contexts/agent_bdd/agent_bdd.py` is the model). Override **action bodies** only to add steps (e.g. compose another toolset). Shared surface also includes **`partition` / `index` / `segment`** (thin corpus partitioning) and optional domain **`partition.md`** (top-level artifacts only; base default if missing).
+- **`favour-defaults`** — The framework (`Context`, `@instruction` slots, action docstrings → `contexts/base/*.md` / domain md) already wires contexts, domain § Generate, examples, format template, and action prose. **Do not override** instruction slots or action docstrings. **Do not override `module_dir`** — put the `.py` file inside the domain folder; default resolution is enough (`contexts/agent_bdd/agent_bdd.py` is the model). Override **action bodies** only to add steps (e.g. compose another toolset). Shared surface also includes **`partition` / `index` / `segment`** (thin corpus partitioning) and optional domain **`partition.md`** (top-level artifacts only; base default if missing). Partition is a **hard fail** if domain `partition.md` / `{domain}.md` § Contexts are ignored or the index mirrors corpus TOC/chapters. **Multi-pass is additive:** later lenses (Stories / UX / BDD / CE) **add columns** mapped to existing `{module}/.context/*-segment.md` chunks — they must not wipe the shared `{subject}-index.md` or re-chunk the corpus (see `base-context/partition.md`).
+
+## Session path
+
+- **`session-path`** - Every generator exposes a **`session`** resource (a `Session` object). Constructor kwargs: `path` (working area, default `"."`) and `session` (bout slug). On `tools run`, pass `context.path` / `context.session`. **Hard layout:**
+  - **`session.path`** - durable working area:
+    - Partition index / durable diagrams -> `{session.path}/.context/`
+    - Partitioned chunks + module-local docs -> `{session.path}/{module}/.context/` (e.g. `{session.path}/checks/.context/checks-segment.md`)
+    - Generated code and module folders -> `{session.path}/` (e.g. `{session.path}/checks/`)
+  - **`session.folder`** - named process bout under `{session.path}/.context/sessions/{name}/` (session.md, grill-answers, engagement sketches, handoff). Create via `create_session` after confirming path and slug with the user.
+- Sketch / grill / iterate / handoff for engagement process work **default to `session.folder`**. Partition `out_root` and durable corpus docs default toward **`session.path`**. Do not invent a divergent working folder.
 
 ## Minimal Python module
 
-- **`minimal-python-module`** — Domain `.py` is thin: `@context`, `"""§ Instructions"""`, `__init__(format=...)`, and optional `@action` body overrides. **No** duplicated `@instruction(override=True)` for `contexts`, `template`, or framework action docstrings (`"""generate"""`, `"""repair"""`, …). Empty docstring on an overridden action is fine — framework prose resolves from the action name.
+- **`minimal-python-module`** - Domain `.py` is thin: `@context`, `"""Instructions section"""` (framework Instructions marker), `__init__(format=..., path=..., session=...)`, and optional `@action` body overrides. **No** duplicated `@instruction(override=True)` for `contexts`, `template`, or framework action docstrings (`"""generate"""`, `"""repair"""`, ...). Empty docstring on an overridden action is fine - framework prose resolves from the action name. Pass `path` and `session` through to `super().__init__(..., path=path, session=session)`. Inherit peer entry points from base Context: **`generate`** (plain), **`grill`**, **`sketch`**, **`iterate`** — do not re-decorate domain `generate` with `@grill_with_context` / `@sketch` / `@iterate`.
 
 ## Canonical markdown only
 

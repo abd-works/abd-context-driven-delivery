@@ -4,7 +4,7 @@
 # invoke-edit: action satisfy | toolset: contexts.clean_engineering.clean_engineering:CleanEngineering
 # invoke-check: action validate | toolset: contexts.clean_engineering.clean_engineering:CleanEngineering
 """
-"""Example factory seams at modules fidelity — I{Class} only.
+"""Example factory seams at model fidelity — I{Class} only.
 
 PATTERN: I{Type} / {Type} (production) / {Type}ExampleFactory.
 Modes (not subclasses):

@@ -274,18 +274,34 @@ class Module(OoadNode):
         description: str = "",
         seam: str = "",
         constraint: str = "",
+        seam_terms: List[str] | None = None,
+        dependencies: List[str] | None = None,
     ) -> None:
         super().__init__(name, sequential_order)
         self.description = description
         self.seam = seam
         self.constraint = constraint
+        self.seam_terms: List[str] = list(seam_terms) if seam_terms is not None else []
+        self.dependencies: List[str] = list(dependencies) if dependencies is not None else []
         self.classes: List[OoadClass] = []
+
+    def public_terms(self) -> List[str]:
+        """Seam bullets for modules fidelity: explicit terms, else thin class names, else seam string."""
+        if self.seam_terms:
+            return list(self.seam_terms)
+        if self.classes:
+            return [c.name for c in self.classes]
+        if self.seam:
+            return [t.strip() for t in self.seam.replace(";", ",").split(",") if t.strip()]
+        return []
 
     def update_self(self, source: "OoadNode") -> None:
         assert isinstance(source, Module)
         self.description = source.description
         self.seam = source.seam
         self.constraint = source.constraint
+        self.seam_terms = list(source.seam_terms)
+        self.dependencies = list(source.dependencies)
 
     def create_child_class(self, source: OoadClass) -> OoadClass:
         return OoadClass(name=source.name, sequential_order=source.sequential_order)

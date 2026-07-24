@@ -6,16 +6,17 @@
 <!--
   clean_engineering markdown examples — ShoppingCart domain — unified across all fidelities.
   Fidelity tags:
-    L = language      (prose only)
-    M = model         (typed compact block)
-    S = specification (relationship kinds, invariant sentences, interactions)
+    L  = language companion (prose only; refined every stage — not a fidelity)
+    Mu = modules        (thin terms, one-way deps, build order)
+    Md = model          (typed compact block / I{Class})
+    S  = specification (relationship kinds, invariant sentences, interactions)
 -->
 
 # ShoppingCart                                                    <!-- L -->
 
 ---
 
-## Language fidelity                                              <!-- L -->
+## Language companion                                             <!-- L -->
 
 *ShoppingCart* is a running tally of what a customer intends to buy in a single shopping session. <!-- L -->
 
@@ -32,54 +33,75 @@
 
 ---
 
-## Model fidelity                                                 <!-- M -->
+## Modules fidelity                                               <!-- Mu -->
 
-### **ShoppingCart**                                              <!-- M -->
+### Module `cart`                                                  <!-- Mu -->
 
-ShoppingCart(customer: Customer)                                   <!-- M -->
+- **Purpose:** Owns the shopping-session tally and checkout gate. <!-- Mu -->
+- **Seam (terms):** ShoppingCart, CartItem, Discount              <!-- Mu -->
+- **Dependencies (one-way):** inventory                           <!-- Mu -->
+
+### Module `inventory`                                             <!-- Mu -->
+
+- **Purpose:** Asserts stock availability at checkout.            <!-- Mu -->
+- **Seam (terms):** Inventory                                     <!-- Mu -->
+- **Dependencies (one-way):** *(none)*                            <!-- Mu -->
+
+### Build order                                                    <!-- Mu -->
+
+1. `inventory`                                                     <!-- Mu -->
+2. `cart`                                                          <!-- Mu -->
+
+---
+
+## Model fidelity                                                 <!-- Md -->
+
+### **IShoppingCart**                                              <!-- Md -->
+
+IShoppingCart(customer: Customer)                                  <!-- Md -->
 ------
-customer: Customer                                                 <!-- M -->
-items: list[CartItem]                                              <!-- M -->
-discount: Discount | None                                         <!-- M -->
-checked_out: bool                                                  <!-- M -->
-	Invariant: Once true, never reverts to false.                  <!-- M -->
+customer: Customer                                                 <!-- Md -->
+items: list[CartItem]                                              <!-- Md -->
+discount: Discount | None                                         <!-- Md -->
+checked_out: bool                                                  <!-- Md -->
+	Invariant: Once true, never reverts to false.                  <!-- Md -->
 ----
-add_item(product: str, quantity: int, unit_price: Decimal): None  <!-- M -->
-	Invariant: Cart may not be modified after checkout.           <!-- M -->
-	Invariant: Quantity must be at least 1.                       <!-- M -->
-remove_item(product: str): None                                    <!-- M -->
-	Invariant: Cart may not be modified after checkout.           <!-- M -->
-apply_discount(discount: Discount): None                           <!-- M -->
-	Invariant: Cart may not be modified after checkout.           <!-- M -->
-compute_total(): Decimal                                           <!-- M -->
-checkout(inventory: Inventory): None                               <!-- M -->
-	Invariant: May not be called when already checked out.        <!-- M -->
-- _find_item(product: str): CartItem | None                       <!-- M -->
+add_item(product: str, quantity: int, unit_price: Decimal): None  <!-- Md -->
+	Invariant: Cart may not be modified after checkout.           <!-- Md -->
+	Invariant: Quantity must be at least 1.                       <!-- Md -->
+remove_item(product: str): None                                    <!-- Md -->
+	Invariant: Cart may not be modified after checkout.           <!-- Md -->
+apply_discount(discount: Discount): None                           <!-- Md -->
+	Invariant: Cart may not be modified after checkout.           <!-- Md -->
+compute_total(): Decimal                                           <!-- Md -->
+checkout(inventory: Inventory): None                               <!-- Md -->
+	Invariant: May not be called when already checked out.        <!-- Md -->
+- _find_item(product: str): CartItem | None                       <!-- Md -->
 
-### **CartItem**                                                  <!-- M -->
+### **CartItem**                                                  <!-- Md -->
 
-CartItem(product: str, quantity: int, unit_price: Decimal)        <!-- M -->
+CartItem(product: str, quantity: int, unit_price: Decimal)        <!-- Md -->
 ------
-product: str                                                       <!-- M -->
-quantity: int                                                      <!-- M -->
-	Invariant: quantity >= 1.                                      <!-- M -->
-unit_price: Decimal                                                <!-- M -->
-	Invariant: unit_price >= 0.                                   <!-- M -->
+product: str                                                       <!-- Md -->
+quantity: int                                                      <!-- Md -->
+	Invariant: quantity >= 1.                                      <!-- Md -->
+unit_price: Decimal                                                <!-- Md -->
+	Invariant: unit_price >= 0.                                   <!-- Md -->
 ----
-line_total(): Decimal                                              <!-- M -->
-update_quantity(quantity: int): None                               <!-- M -->
+line_total(): Decimal                                              <!-- Md -->
+update_quantity(quantity: int): None                               <!-- Md -->
 
-### **Discount**                                                  <!-- M -->
+### **Discount**                                                  <!-- Md -->
 
-Discount(code: str, reduction: Decimal)                            <!-- M -->
+Discount(code: str, reduction: Decimal)                            <!-- Md -->
 ------
-code: str                                                          <!-- M -->
-reduction: Decimal                                                 <!-- M -->
-	Invariant: reduction > 0.                                      <!-- M -->
+code: str                                                          <!-- Md -->
+reduction: Decimal                                                 <!-- Md -->
+	Invariant: reduction > 0.                                      <!-- Md -->
 ----
-is_valid(cart: ShoppingCart): bool                                 <!-- M -->
-compute_reduction(subtotal: Decimal): Decimal                      <!-- M -->
-	Invariant: Total may not be reduced below zero.               <!-- M -->
+is_valid(cart: ShoppingCart): bool                                 <!-- Md -->
+compute_reduction(subtotal: Decimal): Decimal                      <!-- Md -->
+	Invariant: Total may not be reduced below zero.               <!-- Md -->
 
 ---
 

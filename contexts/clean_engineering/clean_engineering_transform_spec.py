@@ -21,7 +21,7 @@ from tools.tool import _ToolsetLoader
 _OOAD_TOOLSET = "contexts.clean_engineering.clean_engineering:CleanEngineering"
 
 
-def _load_clean_engineering(*, fidelity: str = "language", format: str = "markdown"):
+def _load_clean_engineering(*, fidelity: str = "modules", format: str = "markdown"):
     toolset_cls = _ToolsetLoader.instance().load(_OOAD_TOOLSET)
     return toolset_cls(fidelity=fidelity, format=format)
 
@@ -90,6 +90,24 @@ class Cart {
 }
 """
 
+_SAMPLE_MODULES_MARKDOWN = """\
+# checks
+
+Resolve d20 checks.
+
+- **Purpose:** Resolve d20 + trait against difficulty.
+- **Seam (terms):** Trait, Check, CheckResult
+- **Dependencies (one-way):** *(none)*
+
+# character
+
+Character sheet ownership.
+
+- **Purpose:** Owns the hero sheet and ISource.
+- **Seam (terms):** Character, Ability, ISource
+- **Dependencies (one-way):** checks
+"""
+
 
 with description("OoadAnalysis transform tool"):
     with context("transform called with unrecognised source_format"):
@@ -114,7 +132,7 @@ with description("OoadAnalysis transform tool"):
 
     with context("transform from markdown to python"):
         with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="language", format="markdown")
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
             self.result = _invoke_transform(
                 self.CleanEngineering, "markdown", "python", _SAMPLE_MARKDOWN
             )
@@ -133,7 +151,7 @@ with description("OoadAnalysis transform tool"):
 
     with context("transform from python to markdown"):
         with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="language", format="python")
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="python")
             self.result = _invoke_transform(
                 self.CleanEngineering, "python", "markdown", _SAMPLE_PYTHON
             )
@@ -146,7 +164,7 @@ with description("OoadAnalysis transform tool"):
 
     with context("transform from markdown to typescript"):
         with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="language", format="markdown")
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
             self.result = _invoke_transform(
                 self.CleanEngineering, "markdown", "typescript", _SAMPLE_MARKDOWN
             )
@@ -159,7 +177,7 @@ with description("OoadAnalysis transform tool"):
 
     with context("transform from typescript to markdown"):
         with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="language", format="markdown")
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
             self.result = _invoke_transform(
                 self.CleanEngineering, "typescript", "markdown", _SAMPLE_TYPESCRIPT
             )
@@ -172,7 +190,7 @@ with description("OoadAnalysis transform tool"):
 
     with context("transform from markdown to java"):
         with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="language", format="markdown")
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
             self.result = _invoke_transform(
                 self.CleanEngineering, "markdown", "java", _SAMPLE_MARKDOWN
             )
@@ -185,7 +203,7 @@ with description("OoadAnalysis transform tool"):
 
     with context("transform from java to markdown"):
         with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="language", format="markdown")
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
             self.result = _invoke_transform(
                 self.CleanEngineering, "java", "markdown", _SAMPLE_JAVA
             )
@@ -198,7 +216,7 @@ with description("OoadAnalysis transform tool"):
 
     with context("transform from markdown to json"):
         with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="language", format="markdown")
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
             self.result = _invoke_transform(
                 self.CleanEngineering, "markdown", "json", _SAMPLE_MARKDOWN
             )
@@ -211,7 +229,7 @@ with description("OoadAnalysis transform tool"):
 
     with context("transform from json to markdown"):
         with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="language", format="markdown")
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
             self.result = _invoke_transform(
                 self.CleanEngineering, "json", "markdown", _SAMPLE_JSON
             )
@@ -224,7 +242,7 @@ with description("OoadAnalysis transform tool"):
 
     with context("transform from markdown to javascript"):
         with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="language", format="markdown")
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
             self.result = _invoke_transform(
                 self.CleanEngineering, "markdown", "javascript", _SAMPLE_MARKDOWN
             )
@@ -237,7 +255,7 @@ with description("OoadAnalysis transform tool"):
 
     with context("transform from javascript to markdown"):
         with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="language", format="markdown")
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
             self.result = _invoke_transform(
                 self.CleanEngineering, "javascript", "markdown", _SAMPLE_JAVASCRIPT
             )
@@ -250,7 +268,7 @@ with description("OoadAnalysis transform tool"):
 
     with context("transform from markdown to drawio"):
         with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="language", format="markdown")
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
             self.result = _invoke_transform(
                 self.CleanEngineering, "markdown", "drawio", _SAMPLE_MARKDOWN
             )
@@ -258,8 +276,59 @@ with description("OoadAnalysis transform tool"):
         with it("should preserve the class name Cart in the output"):
             expect(self.result["content"]).to(contain("Cart"))
 
+        with it("should render UML class diagram for typed classes"):
+            expect(self.result["content"]).to(contain('id="CleanEngineering-model"'))
+
         with it("should include format in the result"):
             expect(self.result["format"]).to(equal("drawio"))
+
+    with context("transform modules markdown to drawio modules view"):
+        with before.each:
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
+            self.result = _invoke_transform(
+                self.CleanEngineering, "markdown", "drawio", _SAMPLE_MODULES_MARKDOWN
+            )
+
+        with it("should include format in the result"):
+            expect(self.result["format"]).to(equal("drawio"))
+
+        with it("should render Modules Context diagram"):
+            expect(self.result["content"]).to(contain('id="modules-context"'))
+
+        with it("should render seam-term bullets"):
+            expect(self.result["content"]).to(contain("• Trait"))
+            expect(self.result["content"]).to(contain("• ISource"))
+
+        with it("should not include stack/tech callouts"):
+            expect("stack / tech" in self.result["content"]).to(equal(False))
+
+        with it("should draw character → checks dependency"):
+            expect(self.result["content"]).to(contain('source="character"'))
+            expect(self.result["content"]).to(contain('target="checks"'))
+
+    with context("transform modules drawio back to markdown"):
+        with before.each:
+            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
+            drawio = _invoke_transform(
+                self.CleanEngineering, "markdown", "drawio", _SAMPLE_MODULES_MARKDOWN
+            )["content"]
+            self.result = _invoke_transform(
+                self.CleanEngineering, "drawio", "markdown", drawio
+            )
+
+        with it("should include format in the result"):
+            expect(self.result["format"]).to(equal("markdown"))
+
+        with it("should recover module headings"):
+            expect(self.result["content"]).to(contain("# checks"))
+            expect(self.result["content"]).to(contain("# character"))
+
+        with it("should recover seam terms"):
+            expect(self.result["content"]).to(contain("Trait"))
+            expect(self.result["content"]).to(contain("ISource"))
+
+        with it("should recover one-way dependencies"):
+            expect(self.result["content"]).to(contain("checks"))
 
     with context("transform raises ValueError for unrecognised new formats"):
         with before.each:

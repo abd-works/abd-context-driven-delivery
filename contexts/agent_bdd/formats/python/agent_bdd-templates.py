@@ -5,7 +5,7 @@
 #
 #   {ToolsetPath}     e.g. contexts.base.examples.car_chronicle.car_chronicle:CarChronicle
 #   {ActionName}      generate | validate | satisfy | repair | <custom>
-#   {SessionName}     stem for .sessions/<name>.json
+#   {SessionName}     stem for .agent_bdd_sessions/<name>.json
 #   {Description}     top-level describe label (e.g. "a CarChronicle generator")
 #   {ScenarioLabel}   context label (e.g. "with agent and generate action")
 #   {SetupPrompt}     natural-language instruct to prime state
@@ -21,7 +21,7 @@ from mamba import context, description, it
 from agent_bdd import agent, ai_judge, instruct, instruct_use_tool
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
-_SESSIONS = Path(__file__).resolve().parents[2] / ".sessions"
+_SESSIONS = Path(__file__).resolve().parents[2] / ".agent_bdd_sessions"
 
 _RUN_YAML = """\
 toolset: {ToolsetPath}

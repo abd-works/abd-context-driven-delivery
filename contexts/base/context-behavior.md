@@ -32,7 +32,7 @@ Action expansion
     the generate action is expanded
       action should be generate
       tools should name no tools
-      instructions should inline Concepts from clean_engineering (contexts.md / § Contexts)
+      instructions should inline Concepts from clean_engineering (§ Contexts in clean_engineering.md)
       instructions should inline full examples.md
       instructions should inline templates under contexts/clean_engineering/templates/
 
@@ -117,7 +117,7 @@ Generate a Knowledge Artifact
   a domain Context with partition.md
     the index action is expanded
       instructions should inline that context's partition.md guidance
-      instructions should name the index file as {toolset_name}-index.md
+      instructions should name the index file as {subject}-index.md (corpus basename, not toolset)
 
   a domain Context without partition.md
     the index action is expanded

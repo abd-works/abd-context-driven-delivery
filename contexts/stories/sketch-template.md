@@ -1,6 +1,8 @@
 # Stories sketch — match active fidelity
 
-Sketch the story hierarchy first, then deepen only as far as the active fidelity needs. Confirm epics and sub-epics (the e2e journey), then drill into exact stories by risk or uncertainty — unique flows first, then scaffold patterns already encountered.
+**MUST:** Read all source context in full before drafting or refining. **MUST:** Branch on **mechanical uniqueness** only — split distinct mechanics; do not mint one story per TOC / catalog / requirements row. See `stories.md`: `read-all-source-context-in-full`, `branch-on-mechanical-uniqueness`.
+
+Sketch the story hierarchy first, then deepen only as far as the active fidelity needs. Confirm epics and sub-epics (the e2e journey), then drill into exact stories by risk or uncertainty — unique **mechanical** flows first, then scaffold patterns already encountered.
 
 Sketch increments next if there will be more than one.
 

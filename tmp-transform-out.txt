@@ -1,0 +1,26 @@
+﻿```yaml
+ok: true
+toolset: contexts.stories.stories:Stories
+tool: transform
+result:
+  format: drawio
+  content: '<?xml version=''1.0'' encoding=''utf-8''?>
+
+    <mxfile host="app.diagrams.net"><diagram name="Story Map" id="story-map"><mxGraphModel><root><mxCell
+    id="0" /><mxCell id="1" parent="0" /><mxCell id="create-hero" value="Create Hero"
+    style="epic;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;fontSize=11;"
+    vertex="1" parent="1"><mxGeometry x="20" y="120" width="7140" height="60" as="geometry"
+    /></mxCell><mxCell id="create-hero/establish-hero-concept" value="Establish Hero
+    Concept" style="subepic:0;rounded=1;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;"
+    vertex="1" parent="1"><mxGeometry x="30" y="195" width="110" height="60" as="geometry"
+    /></mxCell><mxCell id="create-hero/establish-hero-concept/define-hero-concept/actor"
+    value="Player" style="actor;whiteSpace=wrap;html=1;overflow=hidden;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;fontSize=7;"
+    vertex="1" parent="1"><mxGeometry x="35" y="291" width="50" height="50" as="geometry"
+    /></mxCell><mxCell id="create-hero/establish-hero-concept/define-hero-concept"
+    value="Define Hero Concept" style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;"
+    vertex="1" parent="1"><mxGeometry x="35" y="345" width="50" height="50" as="geometry"
+    /></mxCell><mxCell id="create-hero/establish-hero-concept/name-hero" value="Name
+    Hero" style="story:user;whiteSpace=wrap;html=1;overflow=hidden;aspect=fixed;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;fontSize=8;"
+    vertex="1" parent="1"><mxGeometry x="95" y="345" width="50" height="50" as="geometry"
+    /></mxCell><mxCell id="create-hero/apply-series-guidelines" value="Apply Series
+    Guidelines" style="subepi

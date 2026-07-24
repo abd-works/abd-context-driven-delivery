@@ -334,8 +334,10 @@ with description("Action expansion"):
             with it("should inline default partition guidance when domain has no partition.md"):
                 expect(_DEFAULT_PARTITION_SNIPPET in self.response["instructions"]).to(be_true)
 
-            with it("should name the index file after the context slug"):
-                expect("car_chronicle-index.md" in self.response["instructions"]).to(be_true)
+            with it("should name the index file after the corpus subject"):
+                expect("{subject}-index.md" in self.response["instructions"]).to(be_true)
+                expect("corpus basename" in self.response["instructions"]).to(be_true)
+                expect("car_chronicle-index.md" in self.response["instructions"]).to(be_false)
 
         with context("the index action is expanded on Stories"):
             with before.each:
@@ -349,5 +351,7 @@ with description("Action expansion"):
             with it("should inline stories partition.md guidance"):
                 expect(_STORIES_PARTITION_SNIPPET in self.response["instructions"]).to(be_true)
 
-            with it("should name stories-index.md"):
-                expect("stories-index.md" in self.response["instructions"]).to(be_true)
+            with it("should name the index after the corpus subject not the skill"):
+                expect("{subject}-index.md" in self.response["instructions"]).to(be_true)
+                expect("corpus basename" in self.response["instructions"]).to(be_true)
+                expect("stories-index.md" in self.response["instructions"]).to(be_false)

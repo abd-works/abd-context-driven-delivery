@@ -13,7 +13,9 @@
     "agent-skills",
     "diagnose",
     "echo",
+    "grill-context",
     "handoff",
+    "iterate",
     "record-decisions",
     "sketch"
   ],

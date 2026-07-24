@@ -156,6 +156,83 @@ with description("OoadClass"):
             expect(self.cls.properties).to(have_len(1))
 
 
+with description("Module"):
+    with context("constructed with modules-fidelity fields"):
+        with before.each:
+            self.module = Module(
+                name="character",
+                sequential_order=1,
+                description="Sheet ownership.",
+                seam_terms=["Character", "ISource"],
+                dependencies=["checks"],
+            )
+
+        with it("should store name"):
+            expect(self.module.name).to(equal("character"))
+
+        with it("should store description"):
+            expect(self.module.description).to(equal("Sheet ownership."))
+
+        with it("should store seam_terms"):
+            expect(self.module.seam_terms).to(equal(["Character", "ISource"]))
+
+        with it("should store dependencies"):
+            expect(self.module.dependencies).to(equal(["checks"]))
+
+        with it("should default classes to empty list"):
+            expect(self.module.classes).to(equal([]))
+
+    with context("public_terms"):
+        with it("should prefer explicit seam_terms"):
+            module = Module(
+                name="checks",
+                sequential_order=1,
+                seam_terms=["Trait", "Check"],
+            )
+            module.classes.append(OoadClass(name="Ignored", sequential_order=1))
+            expect(module.public_terms()).to(equal(["Trait", "Check"]))
+
+        with it("should fall back to thin class names"):
+            module = Module(name="checks", sequential_order=1)
+            module.classes.append(OoadClass(name="Trait", sequential_order=1))
+            module.classes.append(OoadClass(name="Check", sequential_order=2))
+            expect(module.public_terms()).to(equal(["Trait", "Check"]))
+
+        with it("should fall back to comma-separated seam string"):
+            module = Module(
+                name="checks",
+                sequential_order=1,
+                seam="Trait, Check, CheckResult",
+            )
+            expect(module.public_terms()).to(equal(["Trait", "Check", "CheckResult"]))
+
+    with context("update_self copies modules-fidelity fields"):
+        with before.each:
+            self.module = Module(name="character", sequential_order=1)
+            source = Module(
+                name="character",
+                sequential_order=1,
+                description="Updated purpose.",
+                seam="Character",
+                seam_terms=["Character", "ISource"],
+                dependencies=["checks"],
+                constraint="Callers use ISource only.",
+            )
+            self.module.update_self(source)
+
+        with it("should copy description"):
+            expect(self.module.description).to(equal("Updated purpose."))
+
+        with it("should copy seam_terms"):
+            expect(self.module.seam_terms).to(equal(["Character", "ISource"]))
+
+        with it("should copy dependencies"):
+            expect(self.module.dependencies).to(equal(["checks"]))
+
+        with it("should copy constraint"):
+            expect(self.module.constraint).to(equal("Callers use ISource only."))
+
+
 with description("CleanEngineeringModel"):
     with context("constructed with name only"):
         with before.each:

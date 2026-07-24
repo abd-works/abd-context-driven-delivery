@@ -9,6 +9,8 @@ Schema (module-first):
       "sequentialOrder": 1,
       "description": "...",
       "seam": "...",
+      "seamTerms": ["TermA", "TermB"],
+      "dependencies": ["other_module"],
       "constraint": "...",
       "classes": [
         {
@@ -82,12 +84,20 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
 
         if "modules" in data:
             for i, md in enumerate(data["modules"], 1):
+                seam_terms = md.get("seamTerms") or md.get("seam_terms") or []
+                dependencies = md.get("dependencies") or []
+                if isinstance(seam_terms, str):
+                    seam_terms = [t.strip() for t in seam_terms.split(",") if t.strip()]
+                if isinstance(dependencies, str):
+                    dependencies = [t.strip() for t in dependencies.split(",") if t.strip()]
                 module = JsonModule(
                     name=md.get("name", ""),
                     sequential_order=md.get("sequentialOrder", i),
                     description=md.get("description", ""),
                     seam=md.get("seam", ""),
                     constraint=md.get("constraint", ""),
+                    seam_terms=list(seam_terms),
+                    dependencies=list(dependencies),
                 )
                 for j, cd in enumerate(md.get("classes", []), 1):
                     module.classes.append(cls._class_from_dict(cd, sequential_order=j))
@@ -143,11 +153,30 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
 
     @classmethod
     def render(cls, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
-        data = {
-            "name": canonical.name,
-            "classes": [cls._class_to_dict(c) for c in canonical.classes],
-        }
+        if canonical.modules:
+            data = {
+                "name": canonical.name,
+                "modules": [cls._module_to_dict(m) for m in canonical.modules],
+            }
+        else:
+            data = {
+                "name": canonical.name,
+                "classes": [cls._class_to_dict(c) for c in canonical.classes],
+            }
         return json.dumps(data, indent=2)
+
+    @classmethod
+    def _module_to_dict(cls, module: Module) -> dict:
+        return {
+            "name": module.name,
+            "sequentialOrder": module.sequential_order,
+            "description": module.description,
+            "seam": module.seam,
+            "seamTerms": list(module.seam_terms),
+            "dependencies": list(module.dependencies),
+            "constraint": module.constraint,
+            "classes": [cls._class_to_dict(c) for c in module.classes],
+        }
 
     @classmethod
     def _class_to_dict(cls, oclass: OoadClass) -> dict:

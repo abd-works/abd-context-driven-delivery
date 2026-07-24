@@ -746,7 +746,12 @@ class MarkdownStoryMap(StoryMap):
                     stack.append(sub)
                 continue
             m = _OUTLINE_STORY_PATTERN.match(raw)
-            if m and stack:
+            if m and current_epic is not None:
+                # Stories require a SubEpic parent (Epic → SubEpic → Story).
+                # When authors hang (S) lines directly under (E), mirror the
+                # heading parser: synthesize a sub-epic instead of dropping them.
+                if not stack:
+                    self._ensure_sub_epic(story_map, current_epic, stack)
                 actor, story_name = _split_outline_story(m.group(2))
                 story = MarkdownStory(story_name, len(stack[-1].stories) + 1, StoryType.USER)
                 if actor:

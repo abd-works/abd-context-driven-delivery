@@ -1,17 +1,17 @@
 # tool-action-logging sketch
 # fidelity: development (implemented)
-# owner: utilities/session_logging (Tools/Actions consult)
+# owner: utilities/sessions (Tools/Actions consult)
 
 @log                          # marker on @tool or @action — not an instruction-chain wrapper
   sets flag on callable
   ToolsetRunner / _ActionExpander consult before append
   stacks with @tool / @action; does not change expansion prose
-  # implemented: session_logging.log (re-exported from tools.tool)
+  # implemented: sessions.log (re-exported from tools.tool)
 
 ----
-sessionLogHub                 # owned by utilities — session_logging.SessionLogHub
+sessionLog                    # owned by utilities — sessions.SessionLog
   resolve session from runRequest.session or "default"
-  logDir  utilities/session_logging/.sessions/logs/{session}
+  logDir  {session.path}/.context/sessions/{session.name}/logs  # session.log
   verbose?  default off
   lastPayload   # kept even when verbose off — for retro log_full
   append event

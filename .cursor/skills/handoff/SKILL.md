@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: "Handoff — compact the current session so a fresh agent can continue."
+description: "Handoff - compact the current session so a fresh agent can continue."
 disable-model-invocation: true
 ---
 

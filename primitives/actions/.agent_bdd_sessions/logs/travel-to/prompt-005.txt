@@ -1,0 +1,142 @@
+You are an AI judge. Evaluate the output below against the rubric and reply
+with a single JSON object on one line — no code fences, no commentary:
+
+{"verdict": "PASS" | "FAIL", "reason": "<one sentence>"}
+
+--- RUBRIC ---
+The story should feature General Lee traveling to Hazzard County with personality, action, and at least one line of dialogue.
+
+--- OUTPUT ---
+Starting General Lee, then having him speak in character before summarizing the adventure.
+Starting General Lee, then having him speak in character before summarizing the adventure.
+**Adventure summary**
+
+General Lee fired up on the back roads outside Hazzard, orange paint flashing through sheets of mud as Bo and Luke pointed him toward the county courthouse. Sheriff Rosco P. Coltrane was right on their tail — siren wailing, cruiser sliding in the ruts — but the Charger ate the muddy curves like they were paved.
+
+Through creek beds and pine-lined bends, General Lee kept his wheels spinning and his horn blaring. Rosco took a bad line in a deep patch and spun sideways, throwing up a wall of brown spray while the Dukes shot past laughing. One final leap over a rain-swollen ditch, a four-wheel drift onto Main Street, and General Lee rolled up to the courthouse steps with mud on his fenders and victory in his engine.
+
+**In character:**
+
+> "Yee-haw! Hold on tight, boys — Rosco's barkin' up the wrong creek and this orange Charger ain't stoppin' till we hit that courthouse!"
+
+**CLI responses:**
+
+```yaml
+ok: true
+toolset: agents.example.car:Car
+tool: start
+result: null
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee — a rebellious, high-spirited orange 1969 Dodge Charger
+    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
+    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
+    every Hazzard adventure.
+  running: true
+```
+
+```yaml
+ok: true
+toolset: agents.example.car:Car
+tool: speak
+result: 'Dodge Charger says: "Yee-haw! Hold on tight, boys — Rosco''s barkin'' up
+  the wrong creek and this orange Charger ain''t stoppin'' till we hit that courthouse!"'
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee — a rebellious, high-spirited orange 1969 Dodge Charger
+    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
+    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
+    every Hazzard adventure.
+  running: false
+```**Adventure summary**
+
+General Lee fired up on the back roads outside Hazzard, orange paint flashing through sheets of mud as Bo and Luke pointed him toward the county courthouse. Sheriff Rosco P. Coltrane was right on their tail — siren wailing, cruiser sliding in the ruts — but the Charger ate the muddy curves like they were paved.
+
+Through creek beds and pine-lined bends, General Lee kept his wheels spinning and his horn blaring. Rosco took a bad line in a deep patch and spun sideways, throwing up a wall of brown spray while the Dukes shot past laughing. One final leap over a rain-swollen ditch, a four-wheel drift onto Main Street, and General Lee rolled up to the courthouse steps with mud on his fenders and victory in his engine.
+
+**In character:**
+
+> "Yee-haw! Hold on tight, boys — Rosco's barkin' up the wrong creek and this orange Charger ain't stoppin' till we hit that courthouse!"
+
+**CLI responses:**
+
+```yaml
+ok: true
+toolset: agents.example.car:Car
+tool: start
+result: null
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee — a rebellious, high-spirited orange 1969 Dodge Charger
+    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
+    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
+    every Hazzard adventure.
+  running: true
+```
+
+```yaml
+ok: true
+toolset: agents.example.car:Car
+tool: speak
+result: 'Dodge Charger says: "Yee-haw! Hold on tight, boys — Rosco''s barkin'' up
+  the wrong creek and this orange Charger ain''t stoppin'' till we hit that courthouse!"'
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee — a rebellious, high-spirited orange 1969 Dodge Charger
+    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
+    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
+    every Hazzard adventure.
+  running: false
+```Starting General Lee, then having him speak in character before summarizing the adventure.
+**Adventure summary**
+
+General Lee fired up on the back roads outside Hazzard, orange paint flashing through sheets of mud as Bo and Luke pointed him toward the county courthouse. Sheriff Rosco P. Coltrane was right on their tail — siren wailing, cruiser sliding in the ruts — but the Charger ate the muddy curves like they were paved.
+
+Through creek beds and pine-lined bends, General Lee kept his wheels spinning and his horn blaring. Rosco took a bad line in a deep patch and spun sideways, throwing up a wall of brown spray while the Dukes shot past laughing. One final leap over a rain-swollen ditch, a four-wheel drift onto Main Street, and General Lee rolled up to the courthouse steps with mud on his fenders and victory in his engine.
+
+**In character:**
+
+> "Yee-haw! Hold on tight, boys — Rosco's barkin' up the wrong creek and this orange Charger ain't stoppin' till we hit that courthouse!"
+
+**CLI responses:**
+
+```yaml
+ok: true
+toolset: agents.example.car:Car
+tool: start
+result: null
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee — a rebellious, high-spirited orange 1969 Dodge Charger
+    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
+    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
+    every Hazzard adventure.
+  running: true
+```
+
+```yaml
+ok: true
+toolset: agents.example.car:Car
+tool: speak
+result: 'Dodge Charger says: "Yee-haw! Hold on tight, boys — Rosco''s barkin'' up
+  the wrong creek and this orange Charger ain''t stoppin'' till we hit that courthouse!"'
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee — a rebellious, high-spirited orange 1969 Dodge Charger
+    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
+    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
+    every Hazzard adventure.
+  running: false
+```

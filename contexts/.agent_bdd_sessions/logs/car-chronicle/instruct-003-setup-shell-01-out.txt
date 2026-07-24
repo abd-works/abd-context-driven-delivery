@@ -1,0 +1,7 @@
+```yaml
+ok: true
+toolset: generator.example.car_chronicle:CarChronicle
+tool: scan
+result: '{''ok'': True, ''rules'': [], ''violations'': []}'
+resources: {}
+```

@@ -1,0 +1,1 @@
+The chronicle should be a first-person driving log entry with a named route, mileage or odometer numbers, and the car's personality.

@@ -25,7 +25,7 @@ with description("AssetLocator"):
 
             class _Host:
                 module_dir = _CLEAN_ENGINEERING_DIR
-                fidelity = "language"
+                fidelity = "modules"
                 format = "python"
 
             self.location = AssetLocator(_Host(), "examples").locate()
@@ -47,11 +47,12 @@ with description("AssetLocator"):
 
             self.location = AssetLocator(_Host(), "contexts").locate()
 
-        with it("should resolve to kind file when contexts.md exists"):
-            expect(self.location.kind).to(equal("file"))
-
-        with it("should point at contexts/clean_engineering/contexts.md"):
-            expect(self.location.path).to(equal((_CLEAN_ENGINEERING_DIR / "contexts.md").resolve()))
+        with it("should resolve to § Contexts in clean_engineering.md"):
+            expect(self.location.kind).to(equal("section"))
+            expect(self.location.section_heading).to(equal("Contexts"))
+            expect(self.location.section_file).to(
+                equal((_CLEAN_ENGINEERING_DIR / "clean_engineering.md").resolve())
+            )
 
     with context("locating shared templates on a clean-engineering host"):
         with before.each:

@@ -12,12 +12,19 @@ fidelity bundled
 stories 
 UX
 document
-
+partition
+concept = context (done: contexts/, Context, @context)
 -----
 
 reviewing
-
 ------------
+session
+
+
+____
+
+
+
 templating
 ddd
 repair
@@ -31,14 +38,13 @@ developing
 
 ----------
 
-concept = context (done: contexts/, Context, @context)
+
 
 backlog
 -----------------
-
-
-
-
+session plan
+fidelity as a distinct concept
+context defailt folder eg --> modules; stories; ux; 
 
 module dependency graph, public to private surface
 patterns and frameworks

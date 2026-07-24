@@ -2,6 +2,38 @@
 
 Rough shape for sketching an clean_engineering analysis before generating the formal artifact. Use clean_engineering vocabulary directly (class, property, operation, subtype, composition, aggregation, association) rather than the generic `thing` fallback.
 
+## Module nest (before class detail)
+
+Sketch **nested modules** when children share a base seam. Paths are domain nouns (`powers/attack`).
+
+```
+powers/                              <-- parent sub-system (has shared seam)
+  effect                             <-- parent-owned shared base module
+  attack -> effect                   <-- child; depends on base, not on siblings
+  control -> effect
+  defense -> effect
+  movement -> effect
+  sensory -> effect
+  general -> effect
+  extras -> effect                   <-- modifiers nest with powers when they only apply to effects
+  flaws -> effect
+
+conflicts/
+  turns                              <-- sequence; stub actions
+  actions                            <-- maneuvers; stub turns
+  conditions                         <-- damage/recovery; uses checks
+
+gear/
+  equipment
+  headquarters
+  vehicles
+
+checks/                              <-- flat top-level OK when no shared parent seam
+abilities/
+```
+
+**Hard rules:** nest only when there is a **shared base** or clear sub-system; children implement independently with siblings stubbed; shared mechanics live once under the parent (e.g. `powers/effect`), not copy-pasted.
+
 ## Notation
 
 ```
@@ -102,8 +134,9 @@ CartExampleFactory
 
 ## Fidelity progression
 
-- **Language fidelity** — everything is a name; parameters are prose; relationship kind (composition / aggregation / association) is not yet committed.
-- **Model fidelity** — add types to properties and operation signatures. Relationship kind is decided per pair.
+- **Language companion** — prose identity refined at every stage (not a fidelity). Names and plain-English bullets only.
+- **Modules fidelity** — independent modules, thin terms, **one-way deps**, **build order** (after partition). No types / relationship kinds.
+- **Model fidelity** — `I{Class}`, typed properties and operation signatures; relationship kind decided per pair.
 - **Specification fidelity** — full typed contracts, invariants, cardinality. The sketch is superseded once the formal artifact captures all of this.
 
 ## Rules

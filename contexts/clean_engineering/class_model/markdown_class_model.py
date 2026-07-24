@@ -1,6 +1,6 @@
 """Markdown channel for the CleanEngineering model.
 
-Format (language fidelity, module-first):
+Format (language companion + modules/model markdown, module-first):
 
     # ModuleName
 
@@ -91,9 +91,19 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             classes_text = h2_split[1] if len(h2_split) > 1 else ""
 
             if pre_h2:
-                module.description = pre_h2
+                purpose, seam_terms, deps, leftover = _parse_module_meta(pre_h2)
+                if purpose:
+                    module.description = purpose
+                elif leftover:
+                    module.description = leftover
+                else:
+                    module.description = pre_h2
+                module.seam_terms = seam_terms
+                module.dependencies = deps
+                if seam_terms and not module.seam:
+                    module.seam = ", ".join(seam_terms)
 
-            # Parse classes from `##` sub-sections
+            # Parse classes from `##` sub-sections (skip modules-fidelity meta headings)
             class_order = 1
             for class_block in re.split(r"(?m)^(?=##\s)", classes_text):
                 class_block = class_block.strip()
@@ -103,6 +113,9 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 if not cm:
                     continue
                 class_name = cm.group(1).strip()
+                if class_name.lower() in _MODULE_META_HEADINGS:
+                    _apply_module_section(module, class_name, class_block[cm.end():])
+                    continue
                 # "## FakeCart : ICart" / "## Cart : ICart" → class name only
                 if " : " in class_name:
                     class_name = class_name.split(" : ", 1)[0].strip()
@@ -143,10 +156,136 @@ def _render_module(module: Module) -> str:
     if module.description:
         lines.append(module.description)
         lines.append("")
+    terms = module.public_terms()
+    # Modules-fidelity structured fields when present (and no typed class bodies yet)
+    modules_only = bool(module.dependencies or module.seam_terms) and not any(
+        c.properties or c.operations for c in module.classes
+    )
+    if modules_only or (terms and not module.classes):
+        if module.description:
+            lines.append(f"- **Purpose:** {module.description.splitlines()[0].strip()}")
+        if terms:
+            lines.append(f"- **Seam (terms):** {', '.join(terms)}")
+        if module.dependencies:
+            lines.append(
+                f"- **Dependencies (one-way):** {', '.join(module.dependencies)}"
+            )
+        elif modules_only:
+            lines.append("- **Dependencies (one-way):** *(none)*")
+        lines.append("")
     known = [c.name for c in module.classes]
     for oclass in module.classes:
         lines.append(_render_class(oclass, known_names=known))
     return "\n".join(lines)
+
+
+_MODULE_META_HEADINGS = frozenset({
+    "seam",
+    "dependencies",
+    "modules fidelity",
+    "purpose",
+})
+
+
+def _parse_term_list(raw: str) -> List[str]:
+    text = raw.strip()
+    text = re.sub(r"^\*\(?none\)?\*$", "", text, flags=re.IGNORECASE).strip()
+    if not text or text.lower() in {"*(none)*", "(none)", "none", "—", "-"}:
+        return []
+    # Strip surrounding backticks per token
+    parts = re.split(r"[,;]", text)
+    out: List[str] = []
+    for p in parts:
+        term = p.strip().strip("`").strip()
+        term = re.sub(r"^\*\*?|\*\*?$", "", term).strip()
+        if term:
+            out.append(term)
+    return out
+
+
+def _parse_module_meta(text: str) -> tuple[str, List[str], List[str], str]:
+    """Parse Purpose / Seam / Dependencies bullets from a modules-fidelity block.
+
+    Returns (purpose, seam_terms, dependencies, leftover_prose).
+    """
+    purpose = ""
+    seam_terms: List[str] = []
+    deps: List[str] = []
+    leftover_lines: List[str] = []
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        m_purpose = re.match(r"^-?\s*\*\*Purpose:\*\*\s*(.+)$", stripped, re.IGNORECASE)
+        m_seam = re.match(
+            r"^-?\s*\*\*Seam(?:\s*\(terms\))?:\*\*\s*(.+)$", stripped, re.IGNORECASE
+        )
+        m_deps = re.match(
+            r"^-?\s*\*\*Dependencies(?:\s*\(one-way\))?:\*\*\s*(.+)$",
+            stripped,
+            re.IGNORECASE,
+        )
+        m_build = re.match(r"^-?\s*\*\*Build order:\*\*", stripped, re.IGNORECASE)
+        if m_purpose:
+            purpose = m_purpose.group(1).strip()
+        elif m_seam:
+            seam_terms = _parse_term_list(m_seam.group(1))
+        elif m_deps:
+            deps = _parse_term_list(m_deps.group(1))
+        elif m_build:
+            continue
+        elif re.match(r"^###\s+Module\s+", stripped, re.IGNORECASE):
+            continue
+        elif re.match(r"^##\s+Modules fidelity", stripped, re.IGNORECASE):
+            continue
+        else:
+            leftover_lines.append(line)
+
+    leftover = "\n".join(leftover_lines).strip()
+    # Nested "### Module `path`" blocks often put purpose only in the bullet
+    if not purpose and leftover:
+        # Keep leftover as description when it is prose (not only bullets we already ate)
+        prose = "\n".join(
+            ln for ln in leftover.splitlines()
+            if ln.strip() and not ln.strip().startswith("- **")
+        ).strip()
+        if prose:
+            purpose = prose.splitlines()[0].strip() if not purpose else purpose
+    return purpose, seam_terms, deps, leftover
+
+
+def _apply_module_section(module: Module, heading: str, body: str) -> None:
+    key = heading.lower().strip()
+    if key == "modules fidelity":
+        purpose, seam_terms, deps, _leftover = _parse_module_meta(body)
+        if purpose and not module.description:
+            module.description = purpose
+        if seam_terms:
+            module.seam_terms = seam_terms
+            if not module.seam:
+                module.seam = ", ".join(seam_terms)
+        if deps:
+            module.dependencies = deps
+        return
+    if key == "seam":
+        # Narrative seam section — keep as seam prose; pull backticked names as terms
+        module.seam = body.strip()
+        if not module.seam_terms:
+            module.seam_terms = [
+                t for t in re.findall(r"`([^`]+)`", body)
+                if t.strip() and "." not in t  # skip Check.resolve style
+            ]
+    elif key == "dependencies":
+        # Prefer a "**Formal (modules):** a, b" line; else comma list on first line
+        formal = re.search(
+            r"\*\*Formal\s*\(modules\):\*\*\s*(.+)", body, re.IGNORECASE
+        )
+        if formal:
+            module.dependencies = _parse_term_list(formal.group(1))
+        else:
+            first = next((ln.strip() for ln in body.splitlines() if ln.strip()), "")
+            module.dependencies = _parse_term_list(first)
+    elif key == "purpose":
+        module.description = body.strip()
 
 
 def _render_class(oclass: OoadClass, known_names: List[str] | None = None) -> str:

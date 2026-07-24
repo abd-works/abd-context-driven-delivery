@@ -1,0 +1,85 @@
+Here is `contexts/examples/car_chronicle/car_chronicle.py`:
+
+```1:18:contexts/examples/car_chronicle/car_chronicle.py
+# @toolset-manifest python -m tools manifest contexts.examples.car_chronicle.car_chronicle:CarChronicle
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
+# invoke-new: action generate
+"""Minimal @context example for generator specs."""
+
+from __future__ import annotations
+
+from contexts import context  # noqa: F401
+
+
+@context
+class CarChronicle:
+    """§ Instructions"""
+
+    def __init__(self) -> None:
+        super().__init__()
+```
+
+Per the file header, I also ran the manifest. It defines a `carchronicle` context toolset with:
+
+- **Tools:** `scan`
+- **Actions:** `generate`, `document`, `repair`, `validate`, `satisfy`, etc.
+- **Instructions** from `base-context/*` (e.g. `base-context/generate`, `base-context/document`)
+
+Notable difference from the generator version: this uses the `@context` decorator (not `@generator_class_annotation`), and adds a `document` action that takes `paths: list[str]`. The Python class is still a minimal shell — behavior comes from the manifest and CLI responses. Entry point: `invoke-new: action generate`.Here is `contexts/examples/car_chronicle/car_chronicle.py`:
+
+```1:18:contexts/examples/car_chronicle/car_chronicle.py
+# @toolset-manifest python -m tools manifest contexts.examples.car_chronicle.car_chronicle:CarChronicle
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
+# invoke-new: action generate
+"""Minimal @context example for generator specs."""
+
+from __future__ import annotations
+
+from contexts import context  # noqa: F401
+
+
+@context
+class CarChronicle:
+    """§ Instructions"""
+
+    def __init__(self) -> None:
+        super().__init__()
+```
+
+Per the file header, I also ran the manifest. It defines a `carchronicle` context toolset with:
+
+- **Tools:** `scan`
+- **Actions:** `generate`, `document`, `repair`, `validate`, `satisfy`, etc.
+- **Instructions** from `base-context/*` (e.g. `base-context/generate`, `base-context/document`)
+
+Notable difference from the generator version: this uses the `@context` decorator (not `@generator_class_annotation`), and adds a `document` action that takes `paths: list[str]`. The Python class is still a minimal shell — behavior comes from the manifest and CLI responses. Entry point: `invoke-new: action generate`.Here is `contexts/examples/car_chronicle/car_chronicle.py`:
+
+```1:18:contexts/examples/car_chronicle/car_chronicle.py
+# @toolset-manifest python -m tools manifest contexts.examples.car_chronicle.car_chronicle:CarChronicle
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
+# invoke-new: action generate
+"""Minimal @context example for generator specs."""
+
+from __future__ import annotations
+
+from contexts import context  # noqa: F401
+
+
+@context
+class CarChronicle:
+    """§ Instructions"""
+
+    def __init__(self) -> None:
+        super().__init__()
+```
+
+Per the file header, I also ran the manifest. It defines a `carchronicle` context toolset with:
+
+- **Tools:** `scan`
+- **Actions:** `generate`, `document`, `repair`, `validate`, `satisfy`, etc.
+- **Instructions** from `base-context/*` (e.g. `base-context/generate`, `base-context/document`)
+
+Notable difference from the generator version: this uses the `@context` decorator (not `@generator_class_annotation`), and adds a `document` action that takes `paths: list[str]`. The Python class is still a minimal shell — behavior comes from the manifest and CLI responses. Entry point: `invoke-new: action generate`.

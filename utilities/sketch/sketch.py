@@ -8,32 +8,33 @@ sketch_session action directly without decorating anything.
 
 The complementary @sketch decorator (see _decorator.py, re-exported from the
 package root) marks a generator's @action so framework-level composition can
-prepend the sketch loop automatically — that integration is a deferred slice.
+prepend sketch_session (which calls grill_with_context in-method).
 """
 from __future__ import annotations
 
 from pathlib import Path
 
+from grill_context.grill_context import GrillContext
 from primitives.actions.action import action
 from tools.tool import tool, toolset
+from sessions import docs_dir
 
 
 _DEFAULT_TEMPLATE = Path(__file__).parent / "sketch-template.md"
 
 
-def _context_dir(destination: str) -> Path:
-    """Resolve the .context directory under destination (pure)."""
-    return Path(destination) / ".context"
-
-
 def _sketch_path(destination: str, slug: str) -> Path:
-    """Resolve the persistence path for a sketch inside destination/.context/ (pure)."""
-    return _context_dir(destination) / f"{slug}-sketch.md"
+    """Resolve sketch path under the destination docs dir (pure)."""
+    return docs_dir(destination) / f"{slug}-sketch.md"
 
 
 @toolset
 class Sketcher:
     """Sketch a solution interactively before generating the formal artifact."""
+
+    def _grill_context(self) -> GrillContext:
+        """GrillContext toolset for in-method composition (not a tool)."""
+        return GrillContext()
 
     @tool
     def find_template(self, agent_dir: str = "") -> str:
@@ -56,9 +57,11 @@ class Sketcher:
         slug: str,
         content: str,
     ) -> str:
-        """Persist a sketch to {destination}/.context/{slug}-sketch.md.
-        destination is the folder of the thing being sketched (e.g. ooad/, sketch/).
-        Creates .context/ inside destination if missing. Overwrites an existing file at the same path.
+        """Persist a sketch to the destination docs dir as {slug}-sketch.md.
+        Engagement sketches: destination = session.folder
+        ({path}/.context/sessions/{name}/) — files are written flat in that bout.
+        Module sketches: destination = {session.path}/{module} — files go under
+        {destination}/.context/. Creates parents if missing. Overwrites same path.
         Returns the resolved sketch path."""
         target = _sketch_path(destination, slug)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -67,10 +70,10 @@ class Sketcher:
 
     @tool
     def list_sketches(self, destination: str, slug: str = "") -> str:
-        """List sketch files under {destination}/.context/.
+        """List sketch files under the destination docs dir.
         If slug is provided, filters to sketches matching that slug prefix.
         Returns newline-separated paths; empty string if the folder is missing or empty."""
-        context_dir = _context_dir(destination)
+        context_dir = docs_dir(destination)
         if not context_dir.is_dir():
             return ""
         pattern = f"{slug}-sketch.md" if slug else "*-sketch.md"
@@ -78,14 +81,15 @@ class Sketcher:
 
     @action
     def sketch_session(self, slug: str, destination: str, agent_dir: str = "") -> str:
-        """Sketch {{slug}} interactively — produce a rough artifact through a grill loop, save as soon as the first interim draft is ready, then overwrite on every refinement."""
-        """Step 1 — locate the sketch template via find_template(agent_dir=agent_dir). The decorator supplies agent_dir pointing to the wrapped agent's module directory. If the caller supplied a template directly in context (as an attachment or prior artifact), use that instead."""
+        """Sketch {{slug}} interactively — rough artifact through an explicit grill_with_context call. MUST persist via save_sketch on the first interim draft and overwrite on every refinement. Never leave the sketch only in chat. destination defaults to session.folder (bout) for engagement sketches, or {session.path}/{module} for module sketches. Question shape (frame + options) comes from grill_with_context — do not restate bare options here."""
+        """Step 0 — Grill the sketch plan (concept-grounded questions via grill_with_context)."""
+        self._grill_context().grill_with_context(slug)
+        """Step 1 — Resolve destination: engagement → session.folder; module → {session.path}/{module}. If no session bout exists yet, confirm path with the user, suggest a kebab slug, create_session, then use session.folder. Do not invent a divergent folder."""
+        """Step 2 — locate the sketch template via find_template(agent_dir=agent_dir). agent_dir is the concrete host toolset module directory (manifest chain agent_dir / module_dir of the invoked Context). If the caller supplied a template directly in context, use that instead."""
         self.find_template(agent_dir)
-        """Step 2 — draft a rough sketch inspired by the template. Show it in chat, then immediately call save_sketch to persist the interim draft."""
+        """Step 3 — draft a rough sketch inspired by the template. Show it in chat, then IMMEDIATELY call save_sketch(destination, slug, content) before continuing the grill. A sketch that exists only in chat is a defect — the file under the destination docs dir is the working record."""
         self.save_sketch()
-        """Step 3 — grill the user with 1-3 targeted questions to refine the sketch. Ask ONE question, wait for the answer. Never present bare options."""
-        """Step 3a — Frame the decision (2–5 sentences): name the unresolved sketch branch, restate what the current sketch already agrees, and ground the choice in concepts from the wrapped agent's practice material (via agent_dir template/docs — e.g. module rules, OOAD class design). Cite concepts by name."""
-        """Step 3b — Present 3–5 options; recommended first with "(Recommended)"; each option gets one short concept-tied rationale (seam, ownership, coupling, or class boundaries). Always end with "Other / I'll specify." """
-        """Step 4 — regenerate the sketch after each answer, show it in chat, and call save_sketch again to overwrite the previous draft. Repeat Step 3–4 until the sketch is stable or the user is satisfied. Every new question must repeat Step 3a–3b with a fresh frame for the new branch."""
+        """Step 4 — After every 2–3 grill answers, regenerate the sketch showing exactly what changed, show it in chat, and IMMEDIATELY call save_sketch again (same path). Use placeholders for unresolved branches. Do not write formal generate artifacts during the sketch loop — that is iterate/generate territory."""
         self.save_sketch()
-        return "Sketch saved for {{slug}}."
+        """Step 5 — Repeat until the sketch is stable, the user is satisfied, or the user switches to iterate/generate. Every new grill question still follows grill's Step 3a–3b; this stage only owns sketch persist/show cadence."""
+        return "Sketch saved for {{slug}} under {{destination}}."

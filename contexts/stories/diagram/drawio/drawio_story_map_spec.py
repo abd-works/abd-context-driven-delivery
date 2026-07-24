@@ -29,6 +29,8 @@ from contexts.stories.diagram.drawio.nodes import (
     DrawIOParseError,
     DrawIOStoryMap,
     LEFT_MARGIN_X,
+    SUBEPIC_DEPTH_GAP,
+    SUBEPIC_HEIGHT,
 )
 
 
@@ -264,6 +266,79 @@ with description("a DrawIO Story Map") as self:
             expect("When the Treasurer submits a Transfer" in self.text).to(be_true)
             expect("Then the System returns a Confirmation" in self.text).to(be_true)
             expect("And the Transfer is marked same-day" in self.text).to(be_true)
+
+    with context("that stacks nested sub-epics by depth (parent above children)"):
+        with before.each:
+            self.source = StoryMap()
+            epic = Epic("Create Hero", 1)
+            compose = SubEpic("Compose Powers", 1)
+            attack = SubEpic("Compose Attack Power", 1)
+            attack.stories.append(Story("Compose Damage Effect", 1, StoryType.USER))
+            extras = SubEpic("Apply Power Extra", 2)
+            extras.stories.append(Story("Apply Area Extra", 1, StoryType.USER))
+            delivery = SubEpic("Apply Delivery Extra", 1)
+            delivery.stories.append(Story("Apply Accurate Extra", 1, StoryType.USER))
+            extras.sub_epics.append(delivery)
+            compose.sub_epics.extend([attack, extras])
+            epic.sub_epics.append(compose)
+            self.source.append_epic(epic)
+            self.text = self.drawio.render(self.source)
+            self.tree = ET.fromstring(self.text)
+            self.row_pitch = SUBEPIC_HEIGHT + SUBEPIC_DEPTH_GAP
+
+            self.compose_geo = None
+            self.attack_geo = None
+            self.extras_geo = None
+            self.delivery_geo = None
+            for c in self.tree.findall(".//mxCell[@vertex='1']"):
+                cid = c.attrib.get("id", "")
+                style = c.attrib.get("style", "")
+                if not style.startswith("subepic:"):
+                    continue
+                geo = c.find("mxGeometry")
+                if cid.endswith("/compose-powers") and cid.count("/") == 1:
+                    self.compose_geo = geo
+                elif cid.endswith("/compose-attack-power"):
+                    self.attack_geo = geo
+                elif cid.endswith("/apply-power-extra") and "delivery" not in cid:
+                    self.extras_geo = geo
+                elif cid.endswith("/apply-delivery-extra"):
+                    self.delivery_geo = geo
+
+        with it("should place depth-0 sub-epics above depth-1 children"):
+            expect(self.compose_geo is not None).to(be_true)
+            expect(self.attack_geo is not None).to(be_true)
+            expect(int(self.compose_geo.attrib["y"])).to(
+                equal(int(self.attack_geo.attrib["y"]) - self.row_pitch)
+            )
+
+        with it("should place depth-1 sub-epics above depth-2 children"):
+            expect(self.extras_geo is not None).to(be_true)
+            expect(self.delivery_geo is not None).to(be_true)
+            expect(int(self.extras_geo.attrib["y"])).to(
+                equal(int(self.delivery_geo.attrib["y"]) - self.row_pitch)
+            )
+
+        with it("should span parent width across own stories plus nested children"):
+            # Apply Power Extra: 1 own story + Apply Delivery Extra (1 story) = 2 cols
+            # width = 2 * 60 - 10 = 110
+            expect(int(self.extras_geo.attrib["width"])).to(equal(110))
+
+        with it("should place own stories left of nested child sub-epics"):
+            expect(int(self.extras_geo.attrib["x"])).to(
+                equal(int(self.delivery_geo.attrib["x"]) - 60)
+            )
+
+        with it("should round-trip nested hierarchy"):
+            parsed = self.drawio.parse(self.text)
+            compose = parsed.epics[0].sub_epics[0]
+            expect(compose.name).to(equal("Compose Powers"))
+            expect(compose.sub_epics).to(have_len(2))
+            extras = compose.sub_epics[1]
+            expect(extras.name).to(equal("Apply Power Extra"))
+            expect([s.name for s in extras.stories]).to(equal(["Apply Area Extra"]))
+            expect(extras.sub_epics).to(have_len(1))
+            expect(extras.sub_epics[0].name).to(equal("Apply Delivery Extra"))
 
     with context("that renders a shaping outline with estimates and no phantom stories"):
         with before.each:

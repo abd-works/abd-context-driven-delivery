@@ -5,7 +5,7 @@ Sketch the behavior outline first, then layer on test/implementation detail. Con
 **Order:** usage-sequence subjects → `that` (event/condition) → `with` (standing condition) → `it should` → public `->` / `expect` → novel internals under calls (development only).
 
 **Naming (explicit):**
-- `describe` = plain-English subject (`an action that is annotated with log`) — not `SessionLogHub`, not `@log marker`
+- `describe` = plain-English subject (`an action that is annotated with log`) — not `SessionLog`, not `@log marker`
 - `that …` = enabling event/condition (`that has been logged`, `that is invoked`) — never `when …`
 - `with …` = narrower standing condition (`with no session name given`, `with verbose off`) — never `when …`
 

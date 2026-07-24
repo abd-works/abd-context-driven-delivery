@@ -1,7 +1,7 @@
 # @agent-spec-manifest python -m tools agent-spec contexts/base/context_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
-# session: contexts/.sessions/car-chronicle.json
+# session: contexts/.agent_bdd_sessions/car-chronicle.json
 """BDD agent spec for context-behavior.md — agent discovers CarChronicle; generate and repair."""
 
 from pathlib import Path
@@ -12,7 +12,7 @@ from mamba import after, before, context, description, it
 from agent_bdd import agent
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_SESSIONS = Path(__file__).resolve().parents[1] / ".sessions"
+_SESSIONS = Path(__file__).resolve().parents[1] / ".agent_bdd_sessions"
 _OUTPUT_DIR = _REPO_ROOT / "contexts" / "base" / "examples" / "car_chronicle" / "output"
 _CAR_CHRONICLE_PY = "contexts/base/examples/car_chronicle/car_chronicle.py"
 _GENERATE_YAML = """\

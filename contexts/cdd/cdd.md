@@ -32,8 +32,8 @@ Grill and sketch work **much finer** inside that scope. Do not invent detail fro
 
 | CDD | stories | ddd | ux | clean_engineering | bdd |
 |---|---|---|---|---|---|
-| **discovery** | discovery | bounded_context | ia | language | — |
-| **explore** | exploration | building_blocks | mockup | modules | **behavior** |
+| **discovery** | discovery | bounded_context | ia | modules | — |
+| **explore** | exploration | building_blocks | mockup | model | **behavior** |
 | **spec** | specification | code | specification | specification | **development** |
 | **engineer** | engineering | code | — | code | **development** |
 

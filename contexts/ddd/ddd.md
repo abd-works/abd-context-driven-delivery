@@ -2,14 +2,14 @@
 
 Apply **DDD** — bounded contexts, aggregates, building blocks — on top of **clean_engineering**.
 
-**`clean_engineering`** owns OO structure (language → modules → specification → code). Do not restate class/module analysis here. DDD starts at **bounded_context** (no separate language fidelity): context maps, aggregates, then stereotypes and code.
+**`clean_engineering`** owns OO structure (modules → model → specification → code; language is a companion). Do not restate class/module analysis here. DDD starts at **bounded_context**: context maps, aggregates, then stereotypes and code.
 
 Each fidelity below is the whole story for that level. Call clean_engineering at the mapped fidelity. Do not fill details from a more detailed fidelity.
 
 | Fidelity | clean_engineering |
 |---|---|
 | **bounded_context** | **modules** |
-| **building_blocks** | **specification** |
+| **building_blocks** | **model** |
 | **code** | **code** |
 
 ---
@@ -104,7 +104,7 @@ Honour aggregate boundaries from bounded_context; do not redraw by relatedness. 
 
 1. Confirm fidelity (`bounded_context` → `building_blocks` → `code`) and format.
 2. Read the active fidelity section above (including its Rules). Do not re-author CE OO theory.
-3. Grill and sketch when useful (`sketch-template.md`).
+3. Use peer actions when useful (`grill`, `sketch`, `iterate`; `sketch-template.md`).
 4. Fill / deepen `bounded-context-map.md`; at **code**, resolve architecture first.
 5. Call clean_engineering at the mapped fidelity (`generate_output`).
 6. Run **validate**.

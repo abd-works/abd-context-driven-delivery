@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Story Demo — Manage Character Sheet</title>
+  <style>
+    :root { --ink: #222; --line: #666; --wash: #f0f0f0; --sel: #dbeafe; --emph: #2563eb; --tint: #fecaca; }
+    body { margin: 0; font-family: ui-monospace, Consolas, monospace; color: var(--ink);
+           min-height: 100vh; background: #fafafa; }
+    header { display: flex; gap: 0.75rem; align-items: center; padding: 0.75rem 1rem;
+             border-bottom: 1px solid #ccc; background: #fff; }
+    header h1 { font-size: 1rem; margin: 0; flex: 1; }
+    header button { font: inherit; padding: 0.25rem 0.6rem; cursor: pointer; }
+    header button.active { background: var(--sel); outline: 1px solid #6c8ebf; }
+    #shell { display: grid; grid-template-columns: 1fr 1fr; min-height: calc(100vh - 3rem); }
+    #story-demo-frame, #explorer-frame { padding: 1rem; overflow: auto; }
+    #story-demo-frame { border-right: 1px solid #ccc; }
+    .panel { border: 1px dashed var(--line); background: #fff; padding: 0.75rem; }
+    .regions { display: grid; grid-template-columns: 12rem 1fr; gap: 0.5rem; }
+    .region { margin: 0; padding: 0.5rem; border: 1px solid #ddd; background: var(--wash); }
+    .region h3 { margin: 0 0 0.5rem; font-size: 0.9rem; }
+    .control.button { display: inline-block; margin: 0.35rem 0.35rem 0 0;
+                       padding: 0.25rem 0.6rem; border: 1px solid var(--ink); background: #eee;
+                       cursor: pointer; font: inherit; }
+    .control.button.emphasized, .control.emphasized { outline: 2px solid var(--emph); background: #eff6ff; }
+    .control.button.tinted, .control.tinted { background: var(--tint); }
+    .control.dimmed { opacity: 0.5; }
+    .tree-node { padding: 0.1rem 0.25rem; }
+    .tree-node.selected { background: var(--sel); }
+    #explorer-tree ul { margin: 0.25rem 0 0.25rem 1rem; padding: 0; list-style: none; }
+    #explorer-tree .current { background: var(--sel); font-weight: 600; }
+    .message { color: #a00; margin-top: 0.75rem; min-height: 1.2rem; }
+    .chrome { margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center; }
+    .key { font-size: 0.8rem; color: #555; margin-top: 0.75rem; }
+    .status { font-size: 0.8rem; color: #555; margin-top: 0.5rem; }
+  </style>
+</head>
+<body data-story-demo-shell>
+  <header>
+    <h1>Story Demo shell · mode: <span data-story-demo-mode>Play</span></h1>
+    <button type="button" data-set-mode="Play" class="active">Play</button>
+    <button type="button" data-set-mode="Interactive">Interactive</button>
+  </header>
+
+  <div id="shell" data-layout="split-screen">
+    <section id="story-demo-frame" aria-label="Story demo frame">
+      <div class="panel">
+        <article class="screen" data-slug="character-sheet" data-layout="sidebar">
+          <h2>character sheet</h2>
+          <div class="regions">
+            <section class="region" data-character-tree data-region="character tree">
+              <h3>character tree</h3>
+              <div class="tree-node" data-role="folder">▼ All Characters</div>
+            </section>
+            <section class="region">
+              <h3>ability list</h3>
+              <div data-ability-list>
+                <div class="control dimmed">(none until create)</div>
+              </div>
+              <button type="button" class="control button"
+                      data-name="Create Character"
+                      data-bound-field="character"
+                      data-story-steps='[{"kind":"when","label":"the Player creates a Character"}]'>
+                Create Character
+              </button>
+            </section>
+          </div>
+        </article>
+        <p class="key">LEFT: real createCharacterStory via collect · Interactive uses data-story-steps</p>
+      </div>
+    </section>
+
+    <section id="explorer-frame" aria-label="Explorer frame">
+      <div class="panel">
+        <h2>explorer</h2>
+        <div class="chrome">
+          <button type="button" data-reset>Reset</button>
+        </div>
+        <ul id="explorer-tree" data-explorer-tree></ul>
+        <div class="chrome">
+          <button type="button" data-play-next>▶▶ Play next</button>
+        </div>
+        <p class="message" data-explorer-message hidden></p>
+        <p class="status" data-story-demo-status></p>
+        <p class="key">RIGHT: GWT from createCharacterStory · Play next is chrome only</p>
+      </div>
+    </section>
+  </div>
+
+  <script type="module"
+          src="/sandbox/play-core-mechanics/manage-character-sheet/create-character/create_character_story.js"
+          data-ux-story-ref></script>
+  <script type="module" src="/contexts/ux/story-demo/mount-generated-mockup.js"></script>
+  <script type="module">
+    document.querySelectorAll("[data-set-mode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-set-mode]").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
+  </script>
+</body>
+</html>

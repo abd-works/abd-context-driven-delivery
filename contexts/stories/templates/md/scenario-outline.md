@@ -10,6 +10,8 @@ section: body
 - *`<ConceptA>`* — `<plain-language gloss>`
 - *`<ConceptB>`* — `<plain-language gloss>`
 
+> In steps: bold domain concepts (`**<Concept>**`); italic concrete values (`*<value>*`).
+
 ### Evidence
 
 | Source | Note |

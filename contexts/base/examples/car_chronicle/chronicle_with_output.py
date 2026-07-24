@@ -15,8 +15,8 @@ from tools.tool import tool
 class ChronicleWithOutput:
     """§ Instructions"""
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, path: str | None = None, session: str | None = None) -> None:
+        super().__init__(path=path, session=session)
 
     @property
     def toolset_name(self) -> str:

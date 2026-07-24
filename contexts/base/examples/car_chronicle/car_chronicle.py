@@ -13,5 +13,5 @@ from contexts import context  # noqa: F401
 class CarChronicle:
     """§ Instructions"""
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, path: str | None = None, session: str | None = None) -> None:
+        super().__init__(path=path, session=session)

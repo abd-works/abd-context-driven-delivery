@@ -1,0 +1,4 @@
+Reading the judge prompt file and following its instructions.
+Reading the judge prompt file and following its instructions.
+{"verdict":"PASS","reason":"The output shows General Lee traveling to Hazzard County with vivid action, clear personality, and dialogue from the Dodge Charger."}{"verdict":"PASS","reason":"The output shows General Lee traveling to Hazzard County with vivid action, clear personality, and dialogue from the Dodge Charger."}Reading the judge prompt file and following its instructions.
+{"verdict":"PASS","reason":"The output shows General Lee traveling to Hazzard County with vivid action, clear personality, and dialogue from the Dodge Charger."}

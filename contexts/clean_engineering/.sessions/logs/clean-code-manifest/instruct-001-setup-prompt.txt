@@ -1,1 +1,0 @@
-Run the manifest command from the @toolset-manifest comment at the top of practices/clean_engineering/clean_engineering.py. Show the manifest output.
