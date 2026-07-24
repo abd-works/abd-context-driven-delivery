@@ -1,1 +1,0 @@
-generate, validate, and satisfy actions listed in CarChronicle manifest.

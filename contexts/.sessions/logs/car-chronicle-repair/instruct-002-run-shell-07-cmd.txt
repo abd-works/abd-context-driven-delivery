@@ -1,4 +1,0 @@
-Stop-Process -Id 24232 -Force -ErrorAction SilentlyContinue; @"
-toolset: generator.example.car_chronicle:CarChronicle
-action: generate
-"@ | python -m tools run -

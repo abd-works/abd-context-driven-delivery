@@ -1,7 +1,0 @@
-@"
-toolset: generator.example.car_chronicle:CarChronicle
-tool: scan
-arguments:
-  paths:
-    - generator/example/output/driving-log.md
-"@ | python -m tools run -

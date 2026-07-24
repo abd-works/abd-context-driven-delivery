@@ -1,1 +1,0 @@
-{"verdict":"PASS","reason":"The entry is written in first person from the car's perspective, names the route, includes both miles and odometer readings, and conveys a clear personality for the Charger."}
