@@ -1,4 +1,4 @@
-"""Session bout model and session-scoped logging for @log-marked tools/actions."""
+"""Session bout model, logging, and ContextTool workspace binding."""
 
 from sessions.session import ISession, Session, docs_dir
 from sessions.session_log import (
@@ -11,12 +11,14 @@ from sessions.session_log import (
     member_is_logged,
     summarize_mapping,
 )
+from sessions.workspace_session import WorkspaceSession
 
 __all__ = [
     "ISession",
     "ISessionLog",
     "Session",
     "SessionLog",
+    "WorkspaceSession",
     "docs_dir",
     "inherit_annotations",
     "inherit_annotations_from_bases",

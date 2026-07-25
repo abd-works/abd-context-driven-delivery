@@ -15,6 +15,10 @@ document
 partition
 context-tool
 simple log_fix 
+module dependency graph
+scoped source ref
+log-fix
+move tools into own packages 
 -----
 
 reviewing
@@ -31,18 +35,18 @@ developing
 
 
 backlog
------------------
+-----------------merge lifecycle and extract genrationg new context-tools, examine need for.self.session, review context.md
+grill expansionsee below 
+stroy to ce algnment, story disc tpo detailed
 
 
-
+patterns and frameworks
 session plan
 fidelity as a distinct concept
-context defailt folder eg --> modules; stories; ux; 
 
-module dependency graph, public to private surface
-patterns and frameworks
+
+
 checklist
-move tools into own packages and combine, generate, partition, etc
 
 know extension points for solutions- ai automatically flexes along these points
 
@@ -52,7 +56,6 @@ simpler invokation approach eg no manifest
 
 ----
 catalog
-folder location ????
 visual editor format
 
 

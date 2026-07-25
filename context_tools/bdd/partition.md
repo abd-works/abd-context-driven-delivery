@@ -14,7 +14,7 @@ A subject is **never** a manager, hub, runner, service, decorator symbol, packag
 
 1. **`bdd.md` § Contexts** — hierarchy shape; plain-English subjects; usage order; `state-not-when`; nest-by-enabling-events.
 2. **`sketch-template.md`** — usage-order subjects before implementation detail.
-3. **This file** + **`base-context/partition.md` Multi-pass** — shared `{corpus}-index.md`; additive columns. (`{corpus}` = corpus basename, not a BDD describe subject.)
+3. **This file** + **`utilities/partition_pipeline/partition.md` Multi-pass** — shared `{corpus}-index.md`; additive columns. (`{corpus}` = corpus basename, not a BDD describe subject.)
 
 ## Index
 

@@ -30,7 +30,7 @@ generator : toolset
 Story
 
 
-  @context
+  @context_tool
   story-map
     " a story map is a ...."
     @generate-output

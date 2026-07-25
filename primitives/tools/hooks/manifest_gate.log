@@ -12491,3 +12491,1663 @@ context.md
 2026-07-24T21:27:28Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
 2026-07-24T21:27:29Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
 2026-07-24T21:27:29Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\modules\powers\sensory\.context\sensory-segment.md
+2026-07-24T21:28:12Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:28:12Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:28:33Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:28:34Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:28:34Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:28:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:28:36Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:28:36Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:28:37Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:28:38Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:28:38Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:29:16Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:29:16Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:29:17Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:29:17Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:29:18Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:29:19Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:29:41Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:29:41Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:29:42Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:29:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:29:53Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:29:53Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\_finish_chunk_repairs.py
+2026-07-24T21:30:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\segment_named_entry_completeness.py
+2026-07-24T21:30:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\segment_named_entry_completeness.py
+2026-07-24T21:30:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\segment_named_entry_completeness.py
+2026-07-24T21:30:43Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:30:44Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:30:44Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:30:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-gear.md
+2026-07-24T21:30:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:30:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-sensory.md
+2026-07-24T21:30:47Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-gear.md
+2026-07-24T21:30:48Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-sensory.md
+2026-07-24T21:30:48Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:30:48Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-gear.md
+2026-07-24T21:30:48Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-sensory.md
+2026-07-24T21:30:48Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:30:50Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-gear.md
+2026-07-24T21:30:50Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-gear.md
+2026-07-24T21:30:50Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\segment-verify-gear.md
+2026-07-24T21:30:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:30:53Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:30:53Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:31:17Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:31:18Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:31:18Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:33:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T21:33:44Z [read] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T21:33:45Z [post] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T21:33:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\story-map.md
+2026-07-24T21:34:15Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:34:16Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:34:16Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:34:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\story_model\source_location.py
+2026-07-24T21:34:39Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\story_model\source_location.py
+2026-07-24T21:34:40Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\story_model\source_location.py
+2026-07-24T21:35:02Z [pre ] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\e4a092bf-0742-4b35-a136-931b53aa2cf6.txt
+2026-07-24T21:35:02Z [read] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\e4a092bf-0742-4b35-a136-931b53aa2cf6.txt
+2026-07-24T21:35:03Z [post] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\e4a092bf-0742-4b35-a136-931b53aa2cf6.txt
+2026-07-24T21:35:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-24T21:35:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+2026-07-24T21:35:19Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-24T21:35:19Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+2026-07-24T21:35:19Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-24T21:35:19Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+2026-07-24T21:35:47Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:35:47Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:35:48Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:36:09Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+2026-07-24T21:36:09Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-24T21:36:10Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+2026-07-24T21:36:10Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-24T21:36:10Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+2026-07-24T21:36:10Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-24T21:36:25Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-24T21:36:25Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\templates\md\components\story-header.md
+2026-07-24T21:36:25Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:36:26Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-24T21:36:26Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\templates\md\components\story-header.md
+2026-07-24T21:36:26Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:36:26Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-24T21:36:26Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\templates\md\components\story-header.md
+2026-07-24T21:36:27Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-24T21:36:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-md.md
+2026-07-24T21:36:38Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-md.md
+2026-07-24T21:36:39Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-md.md
+2026-07-24T21:39:37Z [pre ] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T21:39:39Z [read] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T21:39:40Z [post] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-24T21:39:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-24T21:39:44Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-24T21:39:45Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-24T21:41:06Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-24T21:41:07Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-24T21:41:07Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-25T00:19:33Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:19:34Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:19:35Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:20:08Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:20:09Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:20:09Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:20:34Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-md.md
+2026-07-25T00:20:34Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:20:34Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-md.md
+2026-07-25T00:20:35Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:20:35Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-md.md
+2026-07-25T00:20:35Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:20:51Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-25T00:20:51Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-25T00:20:52Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-25T00:21:18Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:21:19Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:21:20Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:21:31Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:21:31Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.py  — 4 manifest line(s)
+2026-07-25T00:21:31Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-25T00:21:31Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.py  — 4 manifest line(s)
+2026-07-25T00:21:31Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 manifest line(s)
+2026-07-25T00:21:32Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:21:32Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.py  — 4 manifest line(s)
+2026-07-25T00:21:32Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-25T00:21:32Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:21:32Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.py  — 4 manifest line(s)
+2026-07-25T00:21:32Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 manifest line(s)
+2026-07-25T00:21:33Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.py  — 4 manifest line(s)
+2026-07-25T00:21:33Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-25T00:21:33Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.py  — 4 manifest line(s)
+2026-07-25T00:21:33Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 manifest line(s)
+2026-07-25T00:21:43Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-toolset.py  — manifest ran but produced no output
+2026-07-25T00:21:44Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-toolset.py  — manifest ran but produced no output
+2026-07-25T00:21:44Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-toolset.py  — manifest ran but produced no output
+2026-07-25T00:21:51Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:21:52Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:21:52Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.py  — 4 manifest line(s)
+2026-07-25T00:21:52Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:21:53Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.py  — 4 manifest line(s)
+2026-07-25T00:21:53Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 manifest line(s)
+2026-07-25T00:21:53Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:21:53Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.py  — manifest ran but produced no output
+2026-07-25T00:21:54Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.py  — 4 manifest line(s)
+2026-07-25T00:21:54Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 manifest line(s)
+2026-07-25T00:21:54Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:21:54Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.py  — 4 manifest line(s)
+2026-07-25T00:21:54Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.py  — 4 manifest line(s)
+2026-07-25T00:21:54Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-25T00:21:54Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 manifest line(s)
+2026-07-25T00:21:55Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:21:55Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.py  — 4 manifest line(s)
+2026-07-25T00:21:55Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.py  — 4 manifest line(s)
+2026-07-25T00:21:55Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-25T00:21:55Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 manifest line(s)
+2026-07-25T00:21:56Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.py  — 4 manifest line(s)
+2026-07-25T00:21:56Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-25T00:21:56Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.py  — 4 manifest line(s)
+2026-07-25T00:21:56Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 manifest line(s)
+2026-07-25T00:21:57Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.py  — 4 manifest line(s)
+2026-07-25T00:21:57Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 manifest line(s)
+2026-07-25T00:21:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:21:57Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-25T00:21:57Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.py  — 4 manifest line(s)
+2026-07-25T00:21:57Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:21:58Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-25T00:21:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:21:58Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-25T00:21:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:21:59Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:21:59Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:22:00Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-25T00:22:00Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:22:00Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-25T00:22:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-toolset.py  — manifest ran but produced no output
+2026-07-25T00:22:01Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:22:01Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-25T00:22:01Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:22:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\.context\backlog
+2026-07-25T00:22:01Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-toolset.py  — manifest ran but produced no output
+2026-07-25T00:22:02Z [post] skip  c:\dev\abd-context-driven-delivery\.context\backlog
+2026-07-25T00:22:02Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-toolset.py  — manifest ran but produced no output
+2026-07-25T00:22:02Z [post] skip  c:\dev\abd-context-driven-delivery\.context\backlog
+2026-07-25T00:22:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-toolset.py  — manifest ran but produced no output
+2026-07-25T00:22:03Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-toolset.py  — manifest ran but produced no output
+2026-07-25T00:22:04Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-toolset.py  — manifest ran but produced no output
+2026-07-25T00:26:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-25T00:26:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-25T00:26:28Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-25T00:26:28Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-25T00:26:28Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-25T00:26:28Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-25T00:26:40Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\handoff\SKILL.md
+2026-07-25T00:26:41Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\handoff\SKILL.md
+2026-07-25T00:26:41Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:26:41Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\handoff\SKILL.md
+2026-07-25T00:26:41Z [read] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:26:42Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:27:20Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:27:20Z [read] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:27:21Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:27:48Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_index.py
+2026-07-25T00:27:48Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_index.py
+2026-07-25T00:28:08Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:28:09Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:28:09Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:28:12Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:28:13Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:28:13Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T00:28:15Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.py  — 4 manifest line(s)
+2026-07-25T00:28:16Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.py  — 4 manifest line(s)
+2026-07-25T00:28:16Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.py  — 4 manifest line(s)
+2026-07-25T00:28:18Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 manifest line(s)
+2026-07-25T00:28:19Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 manifest line(s)
+2026-07-25T00:28:19Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 manifest line(s)
+2026-07-25T00:28:21Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.py  — 4 manifest line(s)
+2026-07-25T00:28:22Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.py  — 4 manifest line(s)
+2026-07-25T00:28:22Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.py  — 4 manifest line(s)
+2026-07-25T00:28:24Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-25T00:28:24Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-25T00:28:25Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\ux\ux.py  — 4 manifest line(s)
+2026-07-25T00:28:25Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-toolset.py  — manifest ran but produced no output
+2026-07-25T00:28:26Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-toolset.py  — manifest ran but produced no output
+2026-07-25T00:28:26Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\templates\domain-toolset.py  — manifest ran but produced no output
+2026-07-25T00:28:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-25T00:28:36Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-25T00:28:36Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\generate.md
+2026-07-25T00:28:40Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:28:40Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:28:41Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:28:45Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:28:46Z [read] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:28:46Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:28:47Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:28:48Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:28:48Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:28:49Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:28:50Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:28:50Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:28:51Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\context-index.md
+2026-07-25T00:28:51Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:28:51Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\context-index.md
+2026-07-25T00:28:52Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:28:52Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\handoff\handoff.py  — 1 manifest line(s)
+2026-07-25T00:29:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:29:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:29:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context.md
+2026-07-25T00:34:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\__main__.py
+2026-07-25T00:34:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-25T00:34:07Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\__main__.py
+2026-07-25T00:34:07Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-25T00:34:08Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\__main__.py
+2026-07-25T00:34:08Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-25T00:34:20Z [pre ] skip  c:\dev\abd-context-driven-delivery\tmp-transform-out.txt
+2026-07-25T00:34:21Z [read] skip  c:\dev\abd-context-driven-delivery\tmp-transform-out.txt
+2026-07-25T00:34:21Z [post] skip  c:\dev\abd-context-driven-delivery\tmp-transform-out.txt
+2026-07-25T00:35:08Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\typescript_story_map.py
+2026-07-25T00:35:08Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\tree.py
+2026-07-25T00:35:08Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\code_story_map.py
+2026-07-25T00:35:09Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\typescript_story_map.py
+2026-07-25T00:35:09Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\tree.py
+2026-07-25T00:35:09Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\code_story_map.py
+2026-07-25T00:35:09Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\typescript_story_map.py
+2026-07-25T00:35:09Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\tree.py
+2026-07-25T00:35:09Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\code_story_map.py
+2026-07-25T00:35:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\tier_scaffold.py
+2026-07-25T00:35:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+2026-07-25T00:35:21Z [pre ] skip  c:\dev\abd-skills\practices\story-driven-delivery\skills\supporting\story-graph-ops\tests\e2e_transformations\cases\from-md\story-map\run-1\expected\target-story-map.typescript-tree.json
+2026-07-25T00:35:21Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\tier_scaffold.py
+2026-07-25T00:35:21Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+2026-07-25T00:35:22Z [read] skip  c:\dev\abd-skills\practices\story-driven-delivery\skills\supporting\story-graph-ops\tests\e2e_transformations\cases\from-md\story-map\run-1\expected\target-story-map.typescript-tree.json
+2026-07-25T00:35:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\tier_scaffold.py
+2026-07-25T00:35:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+2026-07-25T00:35:22Z [post] skip  c:\dev\abd-skills\practices\story-driven-delivery\skills\supporting\story-graph-ops\tests\e2e_transformations\cases\from-md\story-map\run-1\expected\target-story-map.typescript-tree.json
+2026-07-25T00:35:33Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tools_spec.py
+2026-07-25T00:35:33Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tools_spec.py
+2026-07-25T00:35:34Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tools_spec.py
+2026-07-25T00:35:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T00:35:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\_context\tools-behavior.md
+2026-07-25T00:35:44Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T00:35:44Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\_context\tools-behavior.md
+2026-07-25T00:35:45Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T00:35:45Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\_context\tools-behavior.md
+2026-07-25T00:35:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  — manifest ran but produced no output
+2026-07-25T00:35:56Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  — manifest ran but produced no output
+2026-07-25T00:35:56Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  — manifest ran but produced no output
+2026-07-25T00:36:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\javascript\tree.py
+2026-07-25T00:36:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\story_file.py
+2026-07-25T00:36:27Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\javascript\tree.py
+2026-07-25T00:36:27Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\story_file.py
+2026-07-25T00:36:28Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\javascript\tree.py
+2026-07-25T00:36:28Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\story_file.py
+2026-07-25T00:37:06Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\python\tree.py
+2026-07-25T00:37:07Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\python\tree.py
+2026-07-25T00:37:07Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\python\tree.py
+2026-07-25T00:37:35Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\typescript_story_map_spec.py
+2026-07-25T00:37:35Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\typescript_story_map_spec.py
+2026-07-25T00:37:36Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\code\typescript\typescript_story_map_spec.py
+2026-07-25T00:38:09Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\create-character\create_character_spec.js
+2026-07-25T00:38:09Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\manage-character-sheet-helper.js
+2026-07-25T00:38:09Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\update-ability-rank\update_ability_rank_story.js
+2026-07-25T00:38:09Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\create-character\create_character_spec.js
+2026-07-25T00:38:09Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\manage-character-sheet-helper.js
+2026-07-25T00:38:10Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\update-ability-rank\update_ability_rank_spec.js
+2026-07-25T00:38:10Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\resolve-checks\resolve-checks-helper.js
+2026-07-25T00:38:10Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\resolve-checks\resolve-ability-check\resolve_ability_check_stories.js
+2026-07-25T00:38:10Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\update-ability-rank\update_ability_rank_story.js
+2026-07-25T00:38:10Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\manage-character-sheet-helper.js
+2026-07-25T00:38:10Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\create-character\create_character_spec.js
+2026-07-25T00:38:10Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\update-ability-rank\update_ability_rank_spec.js
+2026-07-25T00:38:10Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\resolve-checks\resolve-checks-helper.js
+2026-07-25T00:38:10Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\resolve-checks\resolve-ability-check\resolve_ability_check_stories.js
+2026-07-25T00:38:10Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\update-ability-rank\update_ability_rank_story.js
+2026-07-25T00:38:11Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\update-ability-rank\update_ability_rank_spec.js
+2026-07-25T00:38:11Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\resolve-checks\resolve-checks-helper.js
+2026-07-25T00:38:11Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\resolve-checks\resolve-ability-check\resolve_ability_check_stories.js
+2026-07-25T00:38:25Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\abilities.js
+2026-07-25T00:38:25Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\defenses.js
+2026-07-25T00:38:25Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\abilities.js
+2026-07-25T00:38:25Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\point_totals.js
+2026-07-25T00:38:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\character_example_factory.js
+2026-07-25T00:38:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\ability_example_factory.js
+2026-07-25T00:38:26Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\defenses.js
+2026-07-25T00:38:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check.js
+2026-07-25T00:38:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check_result.js
+2026-07-25T00:38:26Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\abilities.js
+2026-07-25T00:38:26Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\point_totals.js
+2026-07-25T00:38:26Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\character_example_factory.js
+2026-07-25T00:38:26Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\ability_example_factory.js
+2026-07-25T00:38:26Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\defenses.js
+2026-07-25T00:38:26Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check.js
+2026-07-25T00:38:26Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check_result.js
+2026-07-25T00:38:27Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\point_totals.js
+2026-07-25T00:38:27Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\character_example_factory.js
+2026-07-25T00:38:27Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\character\ability_example_factory.js
+2026-07-25T00:38:27Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check.js
+2026-07-25T00:38:27Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check_result.js
+2026-07-25T00:38:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check.spec.js
+2026-07-25T00:38:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\play-dual-runner\story-test-node.js
+2026-07-25T00:38:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\trait.js
+2026-07-25T00:38:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\modifier.js
+2026-07-25T00:38:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\team_check.js
+2026-07-25T00:38:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\difficulty_class.js
+2026-07-25T00:38:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\measurement\rank.js
+2026-07-25T00:38:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\measurement\measure.js
+2026-07-25T00:38:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\measurement\measurements_table.js
+2026-07-25T00:38:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\measurement\rank_example_factory.js
+2026-07-25T00:38:39Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check.spec.js
+2026-07-25T00:38:39Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\play-dual-runner\story-test-node.js
+2026-07-25T00:38:39Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\trait.js
+2026-07-25T00:38:39Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\modifier.js
+2026-07-25T00:38:39Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\team_check.js
+2026-07-25T00:38:39Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\measurement\rank.js
+2026-07-25T00:38:39Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\difficulty_class.js
+2026-07-25T00:38:39Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\measurement\measure.js
+2026-07-25T00:38:39Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\measurement\measurements_table.js
+2026-07-25T00:38:39Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\measurement\rank_example_factory.js
+2026-07-25T00:38:39Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check.spec.js
+2026-07-25T00:38:40Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\play-dual-runner\story-test-node.js
+2026-07-25T00:38:40Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\trait.js
+2026-07-25T00:38:40Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\modifier.js
+2026-07-25T00:38:40Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\team_check.js
+2026-07-25T00:38:40Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\measurement\rank.js
+2026-07-25T00:38:40Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\difficulty_class.js
+2026-07-25T00:38:40Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\measurement\measure.js
+2026-07-25T00:38:40Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\measurement\measurements_table.js
+2026-07-25T00:38:40Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\measurement\rank_example_factory.js
+2026-07-25T00:38:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check_example_factory.js
+2026-07-25T00:38:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\difficulty_class_example_factory.js
+2026-07-25T00:38:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check_result_example_factory.js
+2026-07-25T00:38:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\trait_example_factory.js
+2026-07-25T00:38:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\create-character\create_character_story.js
+2026-07-25T00:38:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character-helper.ts
+2026-07-25T00:38:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\difficulty_class_example_factory.js
+2026-07-25T00:38:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check_example_factory.js
+2026-07-25T00:38:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check_result_example_factory.js
+2026-07-25T00:38:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\trait_example_factory.js
+2026-07-25T00:38:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\create-character\create_character_story.js
+2026-07-25T00:38:45Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character-helper.ts
+2026-07-25T00:38:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\difficulty_class_example_factory.js
+2026-07-25T00:38:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check_example_factory.js
+2026-07-25T00:38:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check_result_example_factory.js
+2026-07-25T00:38:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\trait_example_factory.js
+2026-07-25T00:38:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\manage-character-sheet\create-character\create_character_story.js
+2026-07-25T00:38:46Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character-helper.ts
+2026-07-25T00:39:37Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\_migrate_to_ts.py
+2026-07-25T00:39:37Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\_migrate_to_ts.py
+2026-07-25T00:39:42Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\package.json
+2026-07-25T00:39:42Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\package.json
+2026-07-25T00:39:42Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tsconfig.json
+2026-07-25T00:39:43Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tsconfig.json
+2026-07-25T00:39:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check.spec.ts
+2026-07-25T00:39:54Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check.spec.ts
+2026-07-25T00:39:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check.spec.ts
+2026-07-25T00:39:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check.spec.ts
+2026-07-25T00:39:56Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check.spec.ts
+2026-07-25T00:39:56Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\src\checks\check.spec.ts
+2026-07-25T00:40:31Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\play-dual-runner\soft-assert.js
+2026-07-25T00:40:31Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\play-dual-runner\soft-assert.js
+2026-07-25T00:40:32Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\play-dual-runner\soft-assert.js
+2026-07-25T00:40:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\story-test.ts
+2026-07-25T00:40:47Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\story-test.ts
+2026-07-25T00:40:47Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\story-test.ts
+2026-07-25T00:40:48Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\story-test.ts
+2026-07-25T00:40:48Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\story-test.ts
+2026-07-25T00:40:48Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\story-test.ts
+2026-07-25T00:41:29Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\story-test.ts
+2026-07-25T00:41:29Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\story-test.ts
+2026-07-25T00:41:30Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\story-test.ts
+2026-07-25T00:41:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\play-dual-runner\story-test-node.js
+2026-07-25T00:41:45Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\play-dual-runner\story-test-node.js
+2026-07-25T00:41:46Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\story-demo\play-dual-runner\story-test-node.js
+2026-07-25T00:41:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\story-test.ts
+2026-07-25T00:41:47Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\story-test.ts
+2026-07-25T00:41:48Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\story-test.ts
+2026-07-25T00:42:08Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\package.json
+2026-07-25T00:42:08Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\package.json
+2026-07-25T00:42:09Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\package.json
+2026-07-25T00:42:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\_migrate_to_ts.py
+2026-07-25T00:42:22Z [pre ] skip  c:\dev\abd-context-driven-delivery\.tmp-transform-req.yaml
+2026-07-25T00:42:22Z [pre ] skip  c:\dev\abd-context-driven-delivery\.tmp-transform-resp.yaml
+2026-07-25T00:42:22Z [pre ] skip  c:\dev\abd-context-driven-delivery\.gitignore
+2026-07-25T00:42:22Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\_migrate_to_ts.py
+2026-07-25T00:42:23Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-transform-req.yaml
+2026-07-25T00:42:23Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-transform-resp.yaml
+2026-07-25T00:42:23Z [read] skip  c:\dev\abd-context-driven-delivery\.gitignore
+2026-07-25T00:42:23Z [post] skip  c:\dev\abd-context-driven-delivery\.gitignore
+2026-07-25T00:42:34Z [pre ] skip  c:\dev\abd-context-driven-delivery\.gitignore
+2026-07-25T00:42:35Z [read] skip  c:\dev\abd-context-driven-delivery\.gitignore
+2026-07-25T00:42:35Z [post] skip  c:\dev\abd-context-driven-delivery\.gitignore
+2026-07-25T00:42:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\.gitignore
+2026-07-25T00:42:36Z [post] skip  c:\dev\abd-context-driven-delivery\.gitignore
+2026-07-25T00:42:36Z [post] skip  c:\dev\abd-context-driven-delivery\.gitignore
+2026-07-25T01:55:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\resolve-checks\story-context.md
+2026-07-25T01:55:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\ux-map.json
+2026-07-25T01:55:46Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\resolve-checks\story-context.md
+2026-07-25T01:55:46Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\ux-map.json
+2026-07-25T01:55:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\.context\ux-context.md
+2026-07-25T01:55:47Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\resolve-checks\story-context.md
+2026-07-25T01:55:47Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\ux-map.json
+2026-07-25T01:55:47Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\.context\ux-context.md
+2026-07-25T01:55:48Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\.context\ux-context.md
+2026-07-25T01:55:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\play-core-mechanics.html
+2026-07-25T01:55:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\story-demo\story-demo.html
+2026-07-25T01:55:59Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\play-core-mechanics.html
+2026-07-25T01:55:59Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\story-demo\story-demo.html
+2026-07-25T01:56:00Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\play-core-mechanics.html
+2026-07-25T01:56:00Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\story-demo\story-demo.html
+2026-07-25T01:56:12Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\story-demo\story-demo.html
+2026-07-25T01:56:12Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\.context\ux-sketch.md
+2026-07-25T01:56:12Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\story-demo\story-demo.html
+2026-07-25T01:56:12Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\.context\ux-sketch.md
+2026-07-25T01:56:13Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\story-demo\story-demo.html
+2026-07-25T01:56:13Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\.context\ux-sketch.md
+2026-07-25T01:56:25Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\play-core-mechanics.html
+2026-07-25T01:56:25Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\play-core-mechanics.html
+2026-07-25T01:56:25Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\play-core-mechanics.html
+2026-07-25T01:56:25Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\play-core-mechanics.html
+2026-07-25T01:56:26Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\play-core-mechanics.html
+2026-07-25T01:56:26Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\play-core-mechanics\play-core-mechanics.html
+2026-07-25T01:56:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-context.md
+2026-07-25T01:56:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\resolve-checks\story-context.md
+2026-07-25T01:56:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\ux-map.json
+2026-07-25T01:56:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character.html
+2026-07-25T01:56:52Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-context.md
+2026-07-25T01:56:52Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\resolve-checks\story-context.md
+2026-07-25T01:56:52Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\ux-map.json
+2026-07-25T01:56:52Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character.html
+2026-07-25T01:56:53Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-context.md
+2026-07-25T01:56:53Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\resolve-checks\story-context.md
+2026-07-25T01:56:53Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\ux-map.json
+2026-07-25T01:56:53Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character.html
+2026-07-25T01:56:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\.context\ux-context.md
+2026-07-25T01:56:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\.context\ux-sketch.md
+2026-07-25T01:56:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-context.md
+2026-07-25T01:56:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\resolve-checks\story-context.md
+2026-07-25T01:56:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\ux-map.json
+2026-07-25T01:56:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character.html
+2026-07-25T01:56:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-demo\story-demo.html
+2026-07-25T01:56:54Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\.context\ux-context.md
+2026-07-25T01:56:54Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-context.md
+2026-07-25T01:56:54Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\.context\ux-sketch.md
+2026-07-25T01:56:54Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\resolve-checks\story-context.md
+2026-07-25T01:56:54Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\ux-map.json
+2026-07-25T01:56:54Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character.html
+2026-07-25T01:56:55Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-demo\story-demo.html
+2026-07-25T01:56:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\.context\ux-context.md
+2026-07-25T01:56:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\.context\ux-sketch.md
+2026-07-25T01:56:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-context.md
+2026-07-25T01:56:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\resolve-checks\story-context.md
+2026-07-25T01:56:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\ux-map.json
+2026-07-25T01:56:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character.html
+2026-07-25T01:56:55Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-demo\story-demo.html
+2026-07-25T01:56:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\.context\ux-context.md
+2026-07-25T01:56:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\.context\ux-sketch.md
+2026-07-25T01:56:56Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\.context\ux-context.md
+2026-07-25T01:56:56Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-demo\story-demo.html
+2026-07-25T01:56:56Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character.html
+2026-07-25T01:56:56Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\.context\ux-sketch.md
+2026-07-25T01:56:56Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\.context\ux-context.md
+2026-07-25T01:56:56Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-demo\story-demo.html
+2026-07-25T01:56:56Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character.html
+2026-07-25T01:56:56Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\.context\ux-sketch.md
+2026-07-25T01:56:57Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-demo\story-demo.html
+2026-07-25T01:56:57Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character.html
+2026-07-25T01:56:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character.html
+2026-07-25T01:56:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-demo\story-demo.html
+2026-07-25T01:56:58Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-demo\story-demo.html
+2026-07-25T01:56:58Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character.html
+2026-07-25T01:56:59Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\story-demo\story-demo.html
+2026-07-25T01:56:59Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\build-character\build-character.html
+2026-07-25T02:10:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\.context\story-map.md
+2026-07-25T02:10:39Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\.context\story-map.md
+2026-07-25T02:10:39Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\.context\story-map.md
+2026-07-25T02:10:40Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\.context\story-map.md
+2026-07-25T02:10:41Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\.context\story-map.md
+2026-07-25T02:10:41Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\tests\.context\story-map.md
+2026-07-25T02:12:11Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_spec.py
+2026-07-25T02:12:11Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_spec.py
+2026-07-25T02:12:12Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_spec.py
+2026-07-25T02:12:30Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\__init__.py
+2026-07-25T02:12:30Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T02:12:30Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\__init__.py
+2026-07-25T02:12:31Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\__init__.py
+2026-07-25T02:12:31Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T02:12:31Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context.py  — 1 manifest line(s)
+2026-07-25T02:13:28Z [pre ] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\08b86c61-54f9-487d-875b-b0796a5df692.txt
+2026-07-25T02:13:28Z [read] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\08b86c61-54f9-487d-875b-b0796a5df692.txt
+2026-07-25T02:13:29Z [post] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\08b86c61-54f9-487d-875b-b0796a5df692.txt
+2026-07-25T02:13:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\__init__.py
+2026-07-25T02:13:40Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\__init__.py
+2026-07-25T02:13:40Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\__init__.py
+2026-07-25T02:13:41Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:13:42Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:13:42Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:14:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context-behavior.md
+2026-07-25T02:14:14Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\agent_with_actions.py  — 5 manifest line(s)
+2026-07-25T02:14:14Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context-behavior.md
+2026-07-25T02:14:15Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context-behavior.md
+2026-07-25T02:14:15Z [read] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\agent_with_actions.py  — 5 manifest line(s)
+2026-07-25T02:14:16Z [post] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\agent_with_actions.py  — 5 manifest line(s)
+2026-07-25T02:14:25Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:14:25Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:14:26Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:15:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — manifest ran but produced no output
+2026-07-25T02:15:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — manifest ran but produced no output
+2026-07-25T02:15:48Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — manifest ran but produced no output
+2026-07-25T02:15:48Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — manifest ran but produced no output
+2026-07-25T02:15:48Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — manifest ran but produced no output
+2026-07-25T02:15:59Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T02:15:59Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T02:16:00Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T02:16:00Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T02:16:00Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T02:16:00Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T02:16:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\types.py
+2026-07-25T02:16:22Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\types.py
+2026-07-25T02:16:22Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\types.py
+2026-07-25T02:16:32Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:16:33Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:16:33Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:16:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\manifest.py
+2026-07-25T02:16:53Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\manifest.py
+2026-07-25T02:16:54Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\manifest.py
+2026-07-25T02:17:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:17:03Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:17:04Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:17:09Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T02:17:10Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T02:17:10Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T02:17:11Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T02:17:12Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T02:17:13Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T02:17:28Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:17:28Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:29Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:17:29Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:29Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:29Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:17:29Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:29Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:29Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:43Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\examples\car_chronicle\car_chronicle.py  — manifest ran but produced no output
+2026-07-25T02:17:44Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\examples\car_chronicle\car_chronicle.py  — manifest ran but produced no output
+2026-07-25T02:17:44Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\examples\car_chronicle\car_chronicle.py  — manifest ran but produced no output
+2026-07-25T02:17:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T02:17:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session_log_spec.py
+2026-07-25T02:17:53Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:53Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T02:17:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:17:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:17:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\__init__.py
+2026-07-25T02:17:53Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session_log_spec.py
+2026-07-25T02:17:53Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:53Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T02:17:53Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:17:54Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\__init__.py
+2026-07-25T02:17:54Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:17:54Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session_log_spec.py
+2026-07-25T02:17:54Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:17:54Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:17:54Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\__init__.py
+2026-07-25T02:17:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:17:57Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:57Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:17:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:17:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:59Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:17:59Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T02:18:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_agent_spec.py
+2026-07-25T02:18:03Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_agent_spec.py
+2026-07-25T02:18:03Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_agent_spec.py
+2026-07-25T02:18:04Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_agent_spec.py
+2026-07-25T02:18:04Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_agent_spec.py
+2026-07-25T02:18:04Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_agent_spec.py
+2026-07-25T02:19:11Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:19:11Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:19:12Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:19:13Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:19:13Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:19:14Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:20:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:20:57Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:20:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:20:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:20:59Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:20:59Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:21:00Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:21:01Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:21:01Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:21:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:21:02Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:21:03Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:21:46Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp_slug_debug.py
+2026-07-25T02:21:47Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp_slug_debug.py
+2026-07-25T02:22:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\.tmp_slug_debug.py
+2026-07-25T02:22:04Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:22:04Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp_slug_debug.py
+2026-07-25T02:22:04Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:22:05Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T02:22:44Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp_fix_section.py
+2026-07-25T02:22:45Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp_fix_section.py
+2026-07-25T02:23:12Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\__init__.py
+2026-07-25T02:23:13Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\__init__.py
+2026-07-25T02:23:13Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\__init__.py
+2026-07-25T02:23:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\clean-engineering\SKILL.md
+2026-07-25T02:23:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\grill-me\SKILL.md
+2026-07-25T02:23:26Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\grill-me\SKILL.md
+2026-07-25T02:23:26Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\clean-engineering\SKILL.md
+2026-07-25T02:23:27Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\grill-me\SKILL.md
+2026-07-25T02:23:27Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\clean-engineering\SKILL.md
+2026-07-25T02:23:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.md
+2026-07-25T02:23:38Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.md
+2026-07-25T02:23:39Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.md
+2026-07-25T02:27:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\repair.md
+2026-07-25T02:27:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-25T02:27:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\validate.md
+2026-07-25T02:27:26Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\repair.md
+2026-07-25T02:27:26Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\utilities\grill_context\grill_context.py  — 1 manifest line(s)
+2026-07-25T02:27:26Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\utilities\sketch\sketch.py  — 1 manifest line(s)
+2026-07-25T02:27:27Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-25T02:27:27Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\validate.md
+2026-07-25T02:27:27Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\repair.md
+2026-07-25T02:27:27Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\partition.md
+2026-07-25T02:27:27Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\validate.md
+2026-07-25T02:27:27Z [read] FIRED  c:\dev\abd-context-driven-delivery\utilities\grill_context\grill_context.py  — 1 manifest line(s)
+2026-07-25T02:27:27Z [read] FIRED  c:\dev\abd-context-driven-delivery\utilities\sketch\sketch.py  — 1 manifest line(s)
+2026-07-25T02:27:28Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\sketch\sketch.py  — 1 manifest line(s)
+2026-07-25T02:27:28Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\grill_context\grill_context.py  — 1 manifest line(s)
+2026-07-25T02:27:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\document.md
+2026-07-25T02:27:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\satisfy.md
+2026-07-25T02:27:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-25T02:27:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-25T02:27:40Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\document.md
+2026-07-25T02:27:40Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\satisfy.md
+2026-07-25T02:27:40Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-25T02:27:40Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-25T02:27:40Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\document.md
+2026-07-25T02:27:40Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\satisfy.md
+2026-07-25T02:27:40Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-25T02:27:40Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\scan.md
+2026-07-25T02:27:41Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T02:27:41Z [read] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T02:27:42Z [post] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T02:28:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:28:02Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:28:02Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:28:17Z [pre ] skip  c:\dev\abd-context-driven-delivery\.tmp-ce-modules.yaml
+2026-07-25T02:28:17Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-ce-modules.yaml
+2026-07-25T02:41:34Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-25T02:41:34Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\repair.md
+2026-07-25T02:41:36Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\repair.md
+2026-07-25T02:41:36Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-25T02:41:36Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\repair.md
+2026-07-25T02:41:36Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\log_fix.md
+2026-07-25T02:43:12Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sketch\sketch-template.md
+2026-07-25T02:43:12Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sketch\sketch-template.md
+2026-07-25T02:43:13Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sketch\sketch-template.md
+2026-07-25T02:43:42Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:43:42Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:44:49Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:44:49Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:44:49Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:46:06Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:46:06Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:46:06Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:46:07Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:46:08Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:46:08Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:46:09Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:46:09Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\workspace_session\.context\module-context.md
+2026-07-25T02:46:09Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scan\.context\module-context.md
+2026-07-25T02:46:10Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\workspace_session\.context\module-context.md
+2026-07-25T02:46:10Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\scan\.context\module-context.md
+2026-07-25T02:46:10Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\.context\module-context.md
+2026-07-25T02:46:11Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\.context\module-context.md
+2026-07-25T02:46:11Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\partition_pipeline\.context\module-context.md
+2026-07-25T02:46:12Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\repair\.context\module-context.md
+2026-07-25T02:46:12Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\partition_pipeline\.context\module-context.md
+2026-07-25T02:46:12Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:46:13Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\repair\.context\module-context.md
+2026-07-25T02:46:13Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:47:28Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:47:28Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:47:29Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:47:29Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:47:29Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:47:30Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:47:30Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:47:31Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:47:31Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:47:31Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:47:31Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:47:32Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:48:31Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:48:31Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:48:31Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:48:32Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:48:32Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:48:32Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:48:32Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:48:33Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:48:33Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:48:33Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:48:33Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:48:34Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:49:37Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\utilities\grill_context\grill_context.py  — 1 manifest line(s)
+2026-07-25T02:49:37Z [read] FIRED  c:\dev\abd-context-driven-delivery\utilities\grill_context\grill_context.py  — 1 manifest line(s)
+2026-07-25T02:49:38Z [post] FIRED  c:\dev\abd-context-driven-delivery\utilities\grill_context\grill_context.py  — 1 manifest line(s)
+2026-07-25T02:49:55Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\workspace_session.py  — manifest ran but produced no output
+2026-07-25T02:49:56Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\workspace_session.py  — manifest ran but produced no output
+2026-07-25T02:49:56Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scan\scan.py  — manifest ran but produced no output
+2026-07-25T02:49:57Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scan\scan.py  — manifest ran but produced no output
+2026-07-25T02:49:59Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\artifact_lifecycle\artifact_lifecycle.py  — manifest ran but produced no output
+2026-07-25T02:50:00Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\artifact_lifecycle\artifact_lifecycle.py  — manifest ran but produced no output
+2026-07-25T02:50:01Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py  — manifest ran but produced no output
+2026-07-25T02:50:01Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py  — manifest ran but produced no output
+2026-07-25T02:50:03Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py  — manifest ran but produced no output
+2026-07-25T02:50:03Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py  — manifest ran but produced no output
+2026-07-25T02:50:15Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\workspace_session.py  — manifest ran but produced no output
+2026-07-25T02:50:15Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\workspace_session.py
+2026-07-25T02:50:15Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scan\scan.py  — manifest ran but produced no output
+2026-07-25T02:50:16Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\workspace_session.py
+2026-07-25T02:50:16Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scan\scan.py
+2026-07-25T02:50:16Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scan\scan.py
+2026-07-25T02:50:17Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\artifact_lifecycle\artifact_lifecycle.py  — manifest ran but produced no output
+2026-07-25T02:50:17Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:50:18Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:50:18Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py  — manifest ran but produced no output
+2026-07-25T02:50:19Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:50:19Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:50:20Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py  — manifest ran but produced no output
+2026-07-25T02:50:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py
+2026-07-25T02:50:21Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py
+2026-07-25T02:50:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_seam.py
+2026-07-25T02:50:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_seam.py
+2026-07-25T02:50:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\.context\module-context.md
+2026-07-25T02:50:28Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\.context\module-context.md
+2026-07-25T02:50:28Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\.context\module-context.md
+2026-07-25T02:50:29Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scan\.context\module-context.md
+2026-07-25T02:50:29Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\.context\module-context.md
+2026-07-25T02:50:29Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scan\.context\module-context.md
+2026-07-25T02:50:29Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\.context\module-context.md
+2026-07-25T02:50:29Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scan\.context\module-context.md
+2026-07-25T02:50:30Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\.context\module-context.md
+2026-07-25T02:50:30Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scan\.context\module-context.md
+2026-07-25T02:50:31Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scan\.context\module-context.md
+2026-07-25T02:50:31Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\artifact_lifecycle\.context\module-context.md
+2026-07-25T02:50:31Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scan\.context\module-context.md
+2026-07-25T02:50:31Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\artifact_lifecycle\.context\module-context.md
+2026-07-25T02:50:32Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\artifact_lifecycle\.context\module-context.md
+2026-07-25T02:50:32Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T02:50:32Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T02:50:33Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T02:50:33Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\repair\.context\module-context.md
+2026-07-25T02:50:33Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\repair\.context\module-context.md
+2026-07-25T02:50:34Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\.context\module-context.md
+2026-07-25T02:50:34Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\repair\.context\module-context.md
+2026-07-25T02:50:35Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\.context\module-context.md
+2026-07-25T02:50:35Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:50:35Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\.context\module-context.md
+2026-07-25T02:50:36Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:50:37Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:50:37Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\__init__.py
+2026-07-25T02:50:37Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scan\__init__.py
+2026-07-25T02:50:37Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\__init__.py
+2026-07-25T02:50:37Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\artifact_lifecycle\__init__.py
+2026-07-25T02:50:38Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scan\__init__.py
+2026-07-25T02:50:38Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T02:50:38Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\__init__.py
+2026-07-25T02:50:38Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\artifact_lifecycle\__init__.py
+2026-07-25T02:50:38Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T02:50:38Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\__init__.py
+2026-07-25T02:50:43Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:50:44Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:50:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:50:44Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:50:45Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:50:45Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:52:43Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\__init__.py
+2026-07-25T02:52:45Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\__init__.py
+2026-07-25T02:52:45Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\__init__.py
+2026-07-25T02:52:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\__init__.py
+2026-07-25T02:52:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\.context\module-context.md
+2026-07-25T02:52:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\__init__.py
+2026-07-25T02:52:58Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\__init__.py
+2026-07-25T02:52:58Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\.context\module-context.md
+2026-07-25T02:52:58Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\__init__.py
+2026-07-25T02:52:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\__init__.py
+2026-07-25T02:52:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\__init__.py
+2026-07-25T02:52:58Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\.context\module-context.md
+2026-07-25T02:52:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\__init__.py
+2026-07-25T02:52:59Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\__init__.py
+2026-07-25T02:52:59Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\__init__.py
+2026-07-25T02:52:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\__init__.py
+2026-07-25T02:52:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\.context\module-context.md
+2026-07-25T02:53:00Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\__init__.py
+2026-07-25T02:53:00Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\__init__.py
+2026-07-25T02:53:00Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\.context\module-context.md
+2026-07-25T02:53:00Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\__init__.py
+2026-07-25T02:53:00Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\__init__.py
+2026-07-25T02:53:00Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\.context\module-context.md
+2026-07-25T02:53:01Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\__init__.py
+2026-07-25T02:53:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\.context\module-context.md
+2026-07-25T02:53:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\.context\module-context.md
+2026-07-25T02:53:01Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\.context\module-context.md
+2026-07-25T02:53:02Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\.context\module-context.md
+2026-07-25T02:53:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:53:02Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\.context\module-context.md
+2026-07-25T02:53:02Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\.context\module-context.md
+2026-07-25T02:53:02Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:53:03Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:53:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:53:03Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:53:04Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:53:09Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:53:09Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:53:09Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:53:10Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:53:11Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:53:11Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:53:11Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:53:12Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:53:12Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:53:12Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:53:13Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:53:13Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:53:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:53:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:53:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:53:49Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\__init__.py
+2026-07-25T02:53:49Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:53:49Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\__init__.py
+2026-07-25T02:53:49Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:53:50Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\__init__.py
+2026-07-25T02:53:50Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:54:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\workspace_session.py
+2026-07-25T02:54:01Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\workspace_session.py  — manifest ran but produced no output
+2026-07-25T02:54:02Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\workspace_session.py  — manifest ran but produced no output
+2026-07-25T02:54:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:54:14Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:54:15Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:54:15Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:54:16Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:54:16Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:54:18Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:54:19Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py  — manifest ran but produced no output
+2026-07-25T02:54:19Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py  — manifest ran but produced no output
+2026-07-25T02:54:22Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py
+2026-07-25T02:54:22Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py  — manifest ran but produced no output
+2026-07-25T02:54:23Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py  — manifest ran but produced no output
+2026-07-25T02:54:25Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:54:25Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:54:26Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:54:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:54:27Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py  — manifest ran but produced no output
+2026-07-25T02:54:27Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py  — manifest ran but produced no output
+2026-07-25T02:54:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — manifest ran but produced no output
+2026-07-25T02:54:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\__init__.py
+2026-07-25T02:54:45Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — manifest ran but produced no output
+2026-07-25T02:54:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T02:54:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\repair\__init__.py
+2026-07-25T02:54:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\__init__.py
+2026-07-25T02:54:46Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_index.py
+2026-07-25T02:54:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\__init__.py
+2026-07-25T02:54:46Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — manifest ran but produced no output
+2026-07-25T02:54:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T02:54:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\__init__.py
+2026-07-25T02:54:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\__init__.py
+2026-07-25T02:54:47Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_index.py
+2026-07-25T02:54:47Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\__init__.py
+2026-07-25T02:54:47Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T02:54:47Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\__init__.py
+2026-07-25T02:54:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_seam.py
+2026-07-25T02:54:47Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\__init__.py
+2026-07-25T02:54:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\__init__.py
+2026-07-25T02:54:48Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_seam.py
+2026-07-25T02:54:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\__init__.py
+2026-07-25T02:54:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\__init__.py
+2026-07-25T02:54:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:54:54Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:54:54Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:54:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\workspace_session.py  — manifest ran but produced no output
+2026-07-25T02:54:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py  — manifest ran but produced no output
+2026-07-25T02:54:55Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\workspace_session.py
+2026-07-25T02:54:55Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:54:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py  — manifest ran but produced no output
+2026-07-25T02:54:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py  — manifest ran but produced no output
+2026-07-25T02:54:55Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\workspace_session.py
+2026-07-25T02:54:55Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:54:56Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py
+2026-07-25T02:54:56Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:54:56Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py
+2026-07-25T02:54:56Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:55:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:55:28Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:55:28Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:55:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:55:44Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:55:44Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:56:16Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:56:16Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:56:17Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:56:17Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:56:18Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:56:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:56:19Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:56:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py
+2026-07-25T02:56:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:56:20Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:56:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py
+2026-07-25T02:56:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:56:20Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:56:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py
+2026-07-25T02:56:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scan.py
+2026-07-25T02:56:23Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:56:23Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:56:24Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:56:25Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:56:25Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:56:25Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:56:26Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:56:26Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T02:56:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py
+2026-07-25T02:56:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:56:27Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py
+2026-07-25T02:56:27Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:56:28Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair.py
+2026-07-25T02:56:28Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T02:56:32Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:56:33Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:56:33Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:56:34Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:56:35Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:56:35Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T02:56:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\.context\module-context.md
+2026-07-25T02:56:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\.context\module-context.md
+2026-07-25T02:56:47Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\.context\module-context.md
+2026-07-25T02:56:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\.context\module-context.md
+2026-07-25T02:56:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\.context\module-context.md
+2026-07-25T02:56:48Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T02:56:49Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\repair\.context\module-context.md
+2026-07-25T02:56:49Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\.context\module-context.md
+2026-07-25T02:56:50Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T02:56:50Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\.context\module-context.md
+2026-07-25T02:56:50Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\.context\module-context.md
+2026-07-25T02:56:50Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T02:56:51Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:56:51Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\.context\module-context.md
+2026-07-25T02:56:51Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\.context\module-context.md
+2026-07-25T02:56:52Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:56:52Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\.context\module-context.md
+2026-07-25T02:56:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:56:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:56:53Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T02:56:53Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:56:53Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:56:54Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-build-order.md
+2026-07-25T02:56:54Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T02:56:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:56:59Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:56:59Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T02:57:22Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\handoff\SKILL.md
+2026-07-25T02:57:22Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\handoff\SKILL.md
+2026-07-25T02:57:23Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\handoff\SKILL.md
+2026-07-25T02:58:24Z [pre ] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\handoff-latest.md
+2026-07-25T02:58:24Z [read] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\handoff-latest.md
+2026-07-25T02:58:24Z [post] skip  c:\dev\abd-context-driven-delivery\sandbox\.context\sessions\discovery\handoff-latest.md
+2026-07-25T02:58:35Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\session.md
+2026-07-25T02:58:35Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-25T02:58:35Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\session.md
+2026-07-25T02:58:35Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-25T02:58:36Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\session.md
+2026-07-25T02:58:36Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-25T02:58:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:58:49Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:58:50Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:58:50Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:58:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:58:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tools_spec.py
+2026-07-25T02:59:00Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:59:00Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T02:59:24Z [pre ] skip  c:\dev\abd-context-driven-delivery\.context\context-index.md
+2026-07-25T02:59:24Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\logs\events.log
+2026-07-25T02:59:24Z [read] skip  c:\dev\abd-context-driven-delivery\.context\context-index.md
+2026-07-25T02:59:24Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\logs\events.log
+2026-07-25T02:59:24Z [post] skip  c:\dev\abd-context-driven-delivery\.context\context-index.md
+2026-07-25T02:59:25Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\logs\events.log
+2026-07-25T02:59:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\session.md
+2026-07-25T02:59:52Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\session.md
+2026-07-25T02:59:52Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\session.md
+2026-07-25T03:03:50Z [pre ] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-25T03:03:52Z [read] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-25T03:03:52Z [post] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-25T03:06:28Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\segment_named_entry_completeness.py
+2026-07-25T03:06:28Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\segment_named_entry_completeness.py
+2026-07-25T03:06:29Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T03:06:29Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T03:06:29Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T03:14:06Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T03:14:06Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T03:14:07Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T03:14:08Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T03:14:08Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T03:14:08Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T03:14:11Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T03:14:12Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T03:14:12Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T03:14:12Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T03:14:12Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T03:14:13Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T03:14:13Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T03:14:13Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T03:14:13Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T03:14:14Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T03:14:14Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T03:14:14Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T03:14:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\.context\module-context.md
+2026-07-25T03:14:15Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\.context\module-context.md
+2026-07-25T03:14:15Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\.context\module-context.md
+2026-07-25T03:14:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T03:14:46Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T03:14:46Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T03:14:53Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T03:14:53Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T03:14:54Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T03:50:37Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\handoffs\handoff-2026-07-24-post-extract-verify.md
+2026-07-25T03:50:37Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\session.md
+2026-07-25T03:50:37Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\session.md
+2026-07-25T03:50:37Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\handoffs\handoff-2026-07-24-post-extract-verify.md
+2026-07-25T03:50:38Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\session.md
+2026-07-25T03:50:38Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\handoffs\handoff-2026-07-24-post-extract-verify.md
+2026-07-25T03:50:53Z [pre ] skip  C:\Users\thoma\.cursor\skills-cursor\create-skill\SKILL.md
+2026-07-25T03:50:53Z [read] skip  C:\Users\thoma\.cursor\skills-cursor\create-skill\SKILL.md
+2026-07-25T03:50:54Z [post] skip  C:\Users\thoma\.cursor\skills-cursor\create-skill\SKILL.md
+2026-07-25T03:51:48Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T03:51:49Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T03:51:49Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\context-tool-modules-sketch.md
+2026-07-25T05:24:24Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-expand-satisfy.py
+2026-07-25T05:24:25Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-expand-satisfy.py
+2026-07-25T05:24:42Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-parse-satisfy.py
+2026-07-25T05:24:42Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-parse-satisfy.py
+2026-07-25T05:24:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scanner.py
+2026-07-25T05:24:45Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scanner.py
+2026-07-25T05:24:45Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\scanner.py
+2026-07-25T05:25:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:25:08Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:25:08Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:25:12Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:25:13Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:25:13Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:25:13Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:25:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T05:25:14Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:25:14Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T05:25:14Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:25:15Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T05:25:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:25:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:25:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:25:37Z [pre ] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\e83313e2-d0ce-4435-8b59-29a6e7e36f91.txt
+2026-07-25T05:25:37Z [pre ] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\e83313e2-d0ce-4435-8b59-29a6e7e36f91.txt
+2026-07-25T05:25:38Z [read] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\e83313e2-d0ce-4435-8b59-29a6e7e36f91.txt
+2026-07-25T05:25:38Z [read] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\e83313e2-d0ce-4435-8b59-29a6e7e36f91.txt
+2026-07-25T05:25:38Z [post] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\e83313e2-d0ce-4435-8b59-29a6e7e36f91.txt
+2026-07-25T05:25:38Z [post] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-tools\e83313e2-d0ce-4435-8b59-29a6e7e36f91.txt
+2026-07-25T05:25:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:25:58Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:25:58Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:26:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:26:02Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:26:03Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:26:04Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-scan-partition.py
+2026-07-25T05:26:04Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-scan-partition.py
+2026-07-25T05:26:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:26:37Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:26:38Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:26:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:26:39Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:26:40Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:26:40Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:26:41Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:26:41Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:27:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\violation.py
+2026-07-25T05:27:21Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\violation.py
+2026-07-25T05:27:22Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\scanners\violation.py
+2026-07-25T05:27:49Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:27:50Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:27:54Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:27:54Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:27:55Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:27:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T05:27:55Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T05:27:56Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T05:27:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:27:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:27:58Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment_named_entry_completeness.py
+2026-07-25T05:27:58Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:27:59Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:28:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:28:08Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:28:08Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:28:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:28:36Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:28:37Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:29:00Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:29:01Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:29:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:29:01Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:29:01Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:29:02Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:29:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:29:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:29:03Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:29:03Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:29:03Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:29:04Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:30:23Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_index.py
+2026-07-25T05:30:24Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_index.py
+2026-07-25T05:30:35Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:30:35Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:30:36Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:30:40Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:30:40Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:30:40Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:30:50Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_index.py
+2026-07-25T05:30:50Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_index.py
+2026-07-25T05:30:50Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_index.py
+2026-07-25T05:30:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\index.md
+2026-07-25T05:30:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:30:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-25T05:30:54Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\index.md
+2026-07-25T05:30:54Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:30:54Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-25T05:30:54Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\index.md
+2026-07-25T05:30:54Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:30:54Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-25T05:30:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\index.md
+2026-07-25T05:30:59Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\index.md
+2026-07-25T05:31:00Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\index.md
+2026-07-25T05:31:00Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\index.md
+2026-07-25T05:31:01Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\index.md
+2026-07-25T05:31:01Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\index.md
+2026-07-25T05:31:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-25T05:31:02Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-25T05:31:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T05:31:02Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-25T05:31:02Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T05:31:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-25T05:31:03Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T05:31:03Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-25T05:31:03Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base-context\segment.md
+2026-07-25T05:31:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:31:04Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:31:04Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:31:41Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:31:42Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:31:42Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:31:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_index.py
+2026-07-25T05:31:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_index.py
+2026-07-25T05:31:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_index.py
+2026-07-25T05:31:50Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:31:51Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:31:51Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T05:31:52Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:31:52Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T05:31:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:31:52Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\__init__.py
+2026-07-25T05:31:53Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:31:53Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:31:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:31:58Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:31:58Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:31:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:31:59Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:31:59Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:32:20Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:32:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:32:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:32:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:32:22Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:32:22Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.py
+2026-07-25T05:32:24Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_index.py
+2026-07-25T05:32:24Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_index.py
+2026-07-25T05:32:24Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_index.py
+2026-07-25T05:32:25Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:32:25Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:32:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:32:26Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:32:26Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:32:26Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\.context\module-context.md
+2026-07-25T05:35:00Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:35:01Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:35:01Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:35:01Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:35:01Z [read] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:35:02Z [post] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:36:00Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:36:01Z [read] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:36:02Z [post] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:36:06Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:36:06Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:36:07Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:36:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:36:08Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:36:08Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:36:18Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:36:18Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:36:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:36:19Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:36:19Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:36:19Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:36:19Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-action.py
+2026-07-25T05:36:19Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:36:19Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:36:19Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:36:20Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-action.py
+2026-07-25T05:36:26Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:36:26Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:36:27Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:36:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:36:28Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:36:28Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:36:29Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:36:30Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:36:30Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instruction_spec.py
+2026-07-25T05:36:30Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T05:36:31Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T05:36:31Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T05:36:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:36:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:36:37Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:36:37Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:36:37Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:36:37Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:36:42Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:36:43Z [read] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:36:44Z [post] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:36:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:36:57Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:36:58Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:36:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:36:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:36:58Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:36:59Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:36:59Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:36:59Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:36:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:37:00Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:37:00Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:37:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:37:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:37:01Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:37:02Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:37:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T05:37:02Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:37:02Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:37:02Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T05:37:03Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T05:37:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:37:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:37:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T05:37:03Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:37:03Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:37:04Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T05:37:04Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:37:04Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:37:04Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T05:37:18Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\bdd\partition.md
+2026-07-25T05:37:19Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\bdd\partition.md
+2026-07-25T05:37:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\partition.md
+2026-07-25T05:37:19Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\bdd\partition.md
+2026-07-25T05:37:19Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\partition.md
+2026-07-25T05:37:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\partition.md
+2026-07-25T05:37:20Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\bdd\partition.md
+2026-07-25T05:37:20Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool-behavior.md
+2026-07-25T05:37:20Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\partition.md
+2026-07-25T05:37:20Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\partition.md
+2026-07-25T05:37:20Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T05:37:20Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\bdd\partition.md
+2026-07-25T05:37:20Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool-behavior.md
+2026-07-25T05:37:20Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\partition.md
+2026-07-25T05:37:20Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\partition.md
+2026-07-25T05:37:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T05:37:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\bdd\partition.md
+2026-07-25T05:37:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool-behavior.md
+2026-07-25T05:37:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\partition.md
+2026-07-25T05:37:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\partition.md
+2026-07-25T05:37:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-25T05:37:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\ux\partition.md
+2026-07-25T05:37:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool-behavior.md
+2026-07-25T05:37:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\partition.md
+2026-07-25T05:37:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool-behavior.md
+2026-07-25T05:37:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\stories\partition.md
+2026-07-25T05:37:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool-behavior.md
+2026-07-25T05:37:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T05:37:38Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T05:37:39Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T05:37:42Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T05:37:42Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T05:37:43Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T05:37:53Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T05:37:54Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T05:37:54Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T05:37:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T05:37:55Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T05:37:56Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\grill-answers.md
+2026-07-25T05:41:25Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-diag-expand.py
+2026-07-25T05:41:26Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-diag-expand.py
+2026-07-25T05:41:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\.tmp-diag-expand.py
+2026-07-25T05:41:37Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-diag-expand.py
+2026-07-25T05:41:37Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-diag-expand.py
+2026-07-25T05:41:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-25T05:41:45Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd.py  — 4 manifest line(s)
+2026-07-25T05:41:46Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-25T05:41:46Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd.py  — 4 manifest line(s)
+2026-07-25T05:41:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-25T05:41:47Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd.py  — 4 manifest line(s)
+2026-07-25T05:42:11Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:42:11Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:42:11Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:42:13Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-agent-bdd.py
+2026-07-25T05:42:13Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-agent-bdd.py
+2026-07-25T05:42:50Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-diag2.py
+2026-07-25T05:42:50Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-diag2.py
+2026-07-25T05:43:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:43:08Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:43:08Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:43:48Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-diag3.py
+2026-07-25T05:43:48Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-diag3.py
+2026-07-25T05:44:59Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-diag4.py
+2026-07-25T05:45:00Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-diag4.py
+2026-07-25T05:45:42Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:45:42Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:45:42Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:45:43Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:45:43Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:45:43Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:45:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:45:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:45:58Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:46:31Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:46:32Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:46:33Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:46:33Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:46:34Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:46:34Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:46:34Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:46:34Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:46:34Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:46:35Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:46:36Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:46:36Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_generator_spec.py
+2026-07-25T05:47:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:47:51Z [pre ] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\d378fc8d-7ff4-4ba7-a661-3042f266af8b\d378fc8d-7ff4-4ba7-a661-3042f266af8b.jsonl
+2026-07-25T05:48:03Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-ce-diag.py
+2026-07-25T05:48:03Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-ce-diag.py
+2026-07-25T05:48:20Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:48:20Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T05:48:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:48:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T05:49:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-25T05:49:27Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-25T05:49:28Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T05:49:28Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-25T05:49:28Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T05:49:28Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T05:50:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\__init__.py
+2026-07-25T05:50:55Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\__init__.py
+2026-07-25T05:50:56Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\__init__.py
+2026-07-25T05:52:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\context_index.py
+2026-07-25T05:52:47Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\context_index.py
+2026-07-25T05:52:47Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\workspace_session\context_index.py
+2026-07-25T05:53:41Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\context_index.py
+2026-07-25T05:53:41Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\context_index.py
+2026-07-25T05:53:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\__init__.py
+2026-07-25T05:53:45Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T05:53:45Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T05:53:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T05:53:46Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\__init__.py
+2026-07-25T05:53:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_index.py
+2026-07-25T05:53:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T05:53:46Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T05:53:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\__init__.py
+2026-07-25T05:53:46Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_index.py
+2026-07-25T05:53:46Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — manifest ran but produced no output
+2026-07-25T05:53:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T05:53:47Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_index.py
+2026-07-25T05:53:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\__init__.py
+2026-07-25T05:53:47Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.py  — 1 manifest line(s)
+2026-07-25T05:53:47Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\__init__.py
+2026-07-25T05:53:47Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\__init__.py
+2026-07-25T05:53:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T05:53:55Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T05:53:55Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T05:53:56Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T05:53:56Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T05:53:56Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T05:56:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:56:58Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:56:58Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:57:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:57:03Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:57:04Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T05:57:11Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:57:11Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:57:11Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:57:18Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:57:18Z [read] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:57:19Z [post] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:57:22Z [pre ] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:57:23Z [read] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:57:24Z [post] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 manifest line(s)
+2026-07-25T05:57:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.md
+2026-07-25T05:57:47Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.md
+2026-07-25T05:57:47Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\create_session.md
+2026-07-25T05:57:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\create_session.md
+2026-07-25T05:57:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\read_context_index.md
+2026-07-25T05:57:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\close_session.md
+2026-07-25T05:57:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\record_context_root.md
+2026-07-25T05:57:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\read_context_index.md
+2026-07-25T05:57:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\close_session.md
+2026-07-25T05:57:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\record_context_root.md
+2026-07-25T05:57:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T05:57:53Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T05:57:53Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T05:58:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T05:58:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T05:58:01Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T05:58:01Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T05:58:01Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T05:58:01Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T05:58:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T05:58:03Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T05:58:04Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle.py
+2026-07-25T05:58:06Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\generate.md
+2026-07-25T05:58:07Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\generate.md
+2026-07-25T05:58:07Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\generate.md
+2026-07-25T05:58:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\generate.md
+2026-07-25T05:58:08Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\generate.md
+2026-07-25T05:58:08Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\generate.md
+2026-07-25T05:58:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:58:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T05:58:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\validate.md
+2026-07-25T05:58:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\satisfy.md
+2026-07-25T05:58:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\document.md
+2026-07-25T05:58:14Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:58:14Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T05:58:14Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\validate.md
+2026-07-25T05:58:14Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\satisfy.md
+2026-07-25T05:58:14Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\document.md
+2026-07-25T05:58:15Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:58:15Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T05:58:15Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\validate.md
+2026-07-25T05:58:15Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\satisfy.md
+2026-07-25T05:58:15Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\document.md
+2026-07-25T05:58:18Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\validate.md
+2026-07-25T05:58:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\satisfy.md
+2026-07-25T05:58:19Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\validate.md
+2026-07-25T05:58:19Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\satisfy.md
+2026-07-25T05:58:19Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\validate.md
+2026-07-25T05:58:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\document.md
+2026-07-25T05:58:20Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\satisfy.md
+2026-07-25T05:58:20Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\document.md
+2026-07-25T05:58:20Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\validate.md
+2026-07-25T05:58:20Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\document.md
+2026-07-25T05:58:20Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\satisfy.md
+2026-07-25T05:58:20Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\validate.md
+2026-07-25T05:58:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\satisfy.md
+2026-07-25T05:58:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\document.md
+2026-07-25T05:58:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\validate.md
+2026-07-25T05:58:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\satisfy.md
+2026-07-25T05:58:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\document.md
+2026-07-25T05:58:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\document.md
+2026-07-25T05:58:35Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-member-instr.py
+2026-07-25T05:58:35Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-member-instr.py
+2026-07-25T05:58:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-member-instr.py
+2026-07-25T05:58:39Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-member-instr.py
+2026-07-25T05:58:39Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-member-instr.py
+2026-07-25T05:58:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-member-instr.py
+2026-07-25T05:58:44Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-member-instr.py
+2026-07-25T05:58:45Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-member-instr.py
+2026-07-25T05:59:01Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:59:01Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:59:01Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:59:16Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-member.py
+2026-07-25T05:59:17Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-member.py
+2026-07-25T05:59:19Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:59:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:59:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:59:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:59:21Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:59:22Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:59:23Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:59:23Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:59:24Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline.py
+2026-07-25T05:59:30Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:59:31Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:59:31Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:59:32Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-resource.py
+2026-07-25T05:59:32Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-patch-resource.py
+2026-07-25T05:59:34Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:59:35Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:59:35Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:59:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:59:36Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:59:37Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-25T05:59:48Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — manifest ran but produced no output
+2026-07-25T05:59:49Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — manifest ran but produced no output
+2026-07-25T05:59:50Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — manifest ran but produced no output
+2026-07-25T05:59:53Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-action.py
+2026-07-25T05:59:54Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-action.py
+2026-07-25T05:59:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-action.py
+2026-07-25T05:59:59Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-action.py
+2026-07-25T06:00:00Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-action.py
+2026-07-25T06:00:03Z [pre ] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-action.py
+2026-07-25T06:00:04Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-action.py
+2026-07-25T06:00:04Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-action.py
+2026-07-25T06:00:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-action.py
+2026-07-25T06:00:08Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-action.py
+2026-07-25T06:00:08Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-action.py
+2026-07-25T06:00:50Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:00:50Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-discover.py
+2026-07-25T06:00:50Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:00:50Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-fix-discover.py
+2026-07-25T06:00:51Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:00:51Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:00:52Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:00:52Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:00:55Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T06:00:56Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T06:00:56Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T06:01:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T06:01:14Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T06:01:15Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T06:01:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T06:01:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T06:01:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T06:01:41Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:01:41Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:01:41Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:01:41Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:01:41Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:01:42Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:01:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:01:46Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:01:47Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:02:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition.md
+2026-07-25T06:02:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\index.md
+2026-07-25T06:02:02Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.md
+2026-07-25T06:02:02Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition.md
+2026-07-25T06:02:03Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\index.md
+2026-07-25T06:02:03Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.md
+2026-07-25T06:02:03Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition.md
+2026-07-25T06:02:03Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\index.md
+2026-07-25T06:02:03Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\segment.md
+2026-07-25T06:02:13Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:02:13Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:02:14Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:02:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:02:15Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:02:15Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:02:17Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:02:17Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:02:17Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\instructions\instructions.py
+2026-07-25T06:02:33Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\sessions.md
+2026-07-25T06:02:33Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\sessions.md
+2026-07-25T06:02:38Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T06:02:38Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T06:02:39Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T06:02:39Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:02:40Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T06:02:40Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:02:40Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T06:02:40Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:02:40Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session.py
+2026-07-25T06:02:41Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:02:41Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:02:42Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:03:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T06:03:47Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T06:03:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T06:03:47Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool.md
+2026-07-25T06:03:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T06:03:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\.context\module-context.md
+2026-07-25T06:07:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session_log_spec.py
+2026-07-25T06:07:53Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session_log_spec.py
+2026-07-25T06:07:53Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session_log_spec.py
+2026-07-25T06:08:01Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session_spec.py
+2026-07-25T06:08:01Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\workspace_session_spec.py
+2026-07-25T06:08:07Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline_spec.py
+2026-07-25T06:08:08Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline_spec.py
+2026-07-25T06:08:18Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair_spec.py
+2026-07-25T06:08:19Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair_spec.py
+2026-07-25T06:08:25Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle_spec.py
+2026-07-25T06:08:25Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle_spec.py
+2026-07-25T06:08:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:08:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T06:08:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline_spec.py
+2026-07-25T06:08:45Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:08:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle_spec.py
+2026-07-25T06:08:45Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T06:08:45Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline_spec.py
+2026-07-25T06:08:45Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_spec.py
+2026-07-25T06:08:45Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle_spec.py
+2026-07-25T06:08:46Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline_spec.py
+2026-07-25T06:08:46Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-25T06:08:46Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle_spec.py
+2026-07-25T06:08:50Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle_spec.py
+2026-07-25T06:08:51Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle_spec.py
+2026-07-25T06:08:52Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\artifact_lifecycle\artifact_lifecycle_spec.py
+2026-07-25T06:08:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_agent_spec.py
+2026-07-25T06:08:52Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_agent_spec.py
+2026-07-25T06:08:53Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\context_tool_agent_spec.py
+2026-07-25T06:09:18Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline_spec.py
+2026-07-25T06:09:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline_spec.py
+2026-07-25T06:09:20Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline_spec.py
+2026-07-25T16:26:14Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\handoff-latest.md
+2026-07-25T16:26:14Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\handoff-latest.md
+2026-07-25T16:26:14Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\sessions\context-tool-split\handoff-latest.md

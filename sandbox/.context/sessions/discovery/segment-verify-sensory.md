@@ -1,22 +1,14 @@
-# Segment verify — powers/sensory
+# Segment verify — powers/sensory (repair pass)
 
 ## Checks
-1. Span text length vs handbook L-spans
-2. Named-entry completeness for #### effects + Senses option ALLCAPS headers
+1. Re-extract #### Senses options from PDF pages 177–180 (column order)
+2. `verify_segment_completeness` with `<!-- expected-entries -->` on sensory-segment.md
 
 ## Results
-| Check | Result |
-|-------|--------|
-| Span length (7 chunks, ratio ~1.019) | PASS |
-| #### effects: Sensory, Communication, Comprehend, Concealment, Mind Reading, Remote Sensing, Senses | PASS (bodies present; Concealment extras appear before #### due to OCR reorder) |
-| Senses options with headers: Counters Illusion, Danger Sense, Darkvision, Infravision, Low-Light Vision, Radius, Ranged, Rapid, Time Sense, Tracking, Ultra-Hearing, Ultravision | PASS |
-| Senses options mentioned elsewhere but MISSING_HEADER in chunk: Accurate, Acute, Awareness, Detect, Direction Sense, Distance Sense, Extended, Penetrates Concealment (partial prose bleed), Precognition, Postcognition, Microscopic, X-Ray | FAIL completeness |
-| Shapeshift at file end | OCR bleed from general — ignore |
+- Completeness: **PASS (27/27)** (short rank entries Direction/Distance/Time Sense count OK)
+- Previously missing bodies restored: Accurate, Acute, Awareness, Detect, Precognition, Postcognition, Microscopic Vision, Penetrates Concealment, etc.
+- X-Ray Vision: no separate ALL-CAPS option header in Deluxe PDF extract (sense-types primer only)
 
 ## Gate
-- Lock stories against OK #### effects + listed OK Senses options.
-- Missing Senses options = scenarios under Use Senses only if named in sense-types primer, else provisional until re-extract.
-- Disbelieve Illusion stays under Use Control Powers; Counters Illusion = Use Senses scenario (auto-resist Illusion for a sense type).
-
-## Status
-verify: PASS length; PARTIAL Senses-option completeness — proceed with #### mechanics; incomplete sense options as scenarios/provisional.
+- Use Senses / Sense Danger inventory may lock against OK option bodies.
+- Call `verify_segment_completeness` after any future Senses chunk repair.

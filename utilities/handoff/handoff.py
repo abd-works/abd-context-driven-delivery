@@ -150,6 +150,15 @@ def _grill_headings(text: str) -> list[str]:
     ]
 
 
+def _find_context_index(start: Path) -> Path | None:
+    """Walk up from start looking for ``.context/context-index.md``."""
+    for folder in [start, *start.resolve().parents]:
+        candidate = folder / ".context" / "context-index.md"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def _collect_state(destination: str) -> dict:
     """Assemble generator / grill / CDD state under destination (pure + IO)."""
     context = docs_dir(destination)
@@ -163,12 +172,16 @@ def _collect_state(destination: str) -> dict:
     cdd_text = _read_if_exists(cdd_path)
     grill_path = context / "grill-answers.md"
     grill_text = _read_if_exists(grill_path)
+    index_path = _find_context_index(Path(destination))
+    index_text = _read_if_exists(index_path) if index_path else None
 
     return {
         "destination": str(Path(destination)),
         "working_folder": str(context),
         "sketches": sketches,
         "named_artifacts": named,
+        "context_index_path": str(index_path) if index_path else None,
+        "context_index": index_text,
         "cdd": _summarize_cdd_sketch(cdd_text) if cdd_text else None,
         "grill_answers_exists": grill_text is not None,
         "grill_answers_chars": len(grill_text) if grill_text else 0,
@@ -203,7 +216,8 @@ class Handoff:
         """Collect generator, grilling, and CDD progress state under destination.
         destination defaults to the host generator session.folder (bout) or session.path.
         Returns JSON with: working_folder, sketches, named_artifacts (grill-answers,
-        cdd-sketch, module-context), cdd summary (fidelity/scope/flow/open/done/log_tail),
+        cdd-sketch, module-context), context_index_path + context_index (workspace
+        tool roots), cdd summary (fidelity/scope/flow/open/done/log_tail),
         and grill_answers headings. Call this before drafting the handoff - do not invent state."""
         return json.dumps(_collect_state(destination), indent=2)
 
@@ -249,10 +263,10 @@ class Handoff:
         """Step 3 - Draft the handoff in chat first. Required sections:
         1. Next session focus (from next_focus, or 'not specified')
         2. Resume in three lines - (a) stage x active generator/skill x scope, (b) last work accepted or in flight, (c) exact next action / skill / generator to invoke
-        3. Generator state - active toolset(s), fidelity, sketch paths from collect_session_state
+        3. Generator state - active toolset(s), fidelity, sketch paths from collect_session_state; include context_index_path and the Current tool=root lines (where Stories/CE/Bdd/Ux put work — defaults or overrides)
         4. Grilling / skills state - grill-answers path + heading list; suggested skills the next agent should invoke
         5. CDD progress - fidelity, scope, flow status/recommend/next, open items, done, log tail (omit if no cdd-sketch)
-        6. Artifacts to read - paths only; do not duplicate PRDs, plans, ADRs, issues, commits, diffs, or full grill/sketch bodies
+        6. Artifacts to read - paths only; always list context-index.md when present; do not duplicate PRDs, plans, ADRs, issues, commits, diffs, or full grill/sketch bodies
         7. Open questions / risks - only what is not already captured in grill-answers or the sketch"""
         """Step 4 - Redact secrets (API keys, passwords, PII). Keep the document short enough that a fresh agent can act without re-reading the whole chat."""
         """Step 5 - Call write_handoff(destination, content, focus=next_focus) so the archive is

@@ -17,6 +17,7 @@ _REPO_ROOT = _AGENT_BDD_DIR.parents[1]
 _AGENT_BDD_TOOLSET = "agent_bdd.agent_bdd:AgentBdd"
 _BDD_DIR = _REPO_ROOT / "context_tools" / "bdd"
 _GENERATOR_DIR = _REPO_ROOT / "context_tools" / "base"
+_ARTIFACT_LIFECYCLE_DIR = _GENERATOR_DIR / "artifact_lifecycle"
 
 
 def _load_agent_bdd(*, format_name: str = "python") -> Toolset:
@@ -52,8 +53,10 @@ with description("AgentBdd action expansion"):
     with context("an AgentBdd generator with format python"):
         with before.all:
             self.bdd = _load_agent_bdd()
-            self.contexts = Instruction("§ Contexts", _AGENT_BDD_DIR, domain_slug="agent_bdd").expand()
-            self.bdd_contexts = Instruction("§ Contexts", _BDD_DIR).expand()
+            self.contexts = Instruction(
+                "\u00a7 Contexts", _AGENT_BDD_DIR, domain_slug="agent_bdd"
+            ).expand()
+            self.bdd_contexts = Instruction("\u00a7 Contexts", _BDD_DIR).expand()
 
         with context("the generate action is expanded"):
             with before.each:
@@ -72,15 +75,15 @@ with description("AgentBdd action expansion"):
 
             with it("should inline agent_bdd.md § Generate from generate_instructions slot"):
                 generate_prose = Instruction(
-                    "§ Generate", _AGENT_BDD_DIR, domain_slug="agent_bdd"
+                    "\u00a7 Generate", _AGENT_BDD_DIR, domain_slug="agent_bdd"
                 ).expand()
                 _assert_text_inlined(self.response["instructions"], generate_prose)
 
             with it("should inline bdd concepts via nested bdd generate"):
                 _assert_text_inlined(self.response["instructions"], self.bdd_contexts)
 
-            with it("should inline base-context/generate.md action prose"):
-                shared = Instruction("base-context/generate", _GENERATOR_DIR).expand()
+            with it("should inline artifact_lifecycle/generate.md action prose"):
+                shared = Instruction("generate", _ARTIFACT_LIFECYCLE_DIR).expand()
                 _assert_text_inlined(self.response["instructions"], shared)
 
             with it("should inline formats/python/agent_bdd-templates.py from format resource"):
@@ -105,7 +108,7 @@ with description("AgentBdd action expansion"):
                 expect(self.response["tools"]).to(equal(["scan"]))
 
             with it("should inline bdd validate prose via nested bdd validate"):
-                validate_prose = Instruction("base-context/validate", _GENERATOR_DIR).expand()
+                validate_prose = Instruction("validate", _ARTIFACT_LIFECYCLE_DIR).expand()
                 _assert_text_inlined(self.response["instructions"], validate_prose)
                 _assert_text_inlined(self.response["instructions"], self.bdd_contexts)
 
@@ -119,6 +122,6 @@ with description("AgentBdd action expansion"):
                 )
 
             with it("should inline bdd satisfy prose via nested bdd satisfy"):
-                satisfy_prose = Instruction("base-context/satisfy", _GENERATOR_DIR).expand()
+                satisfy_prose = Instruction("satisfy", _ARTIFACT_LIFECYCLE_DIR).expand()
                 _assert_text_inlined(self.response["instructions"], satisfy_prose)
                 _assert_text_inlined(self.response["instructions"], self.bdd_contexts)

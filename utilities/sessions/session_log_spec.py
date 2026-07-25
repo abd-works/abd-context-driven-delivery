@@ -28,10 +28,10 @@ with description("an action that is annotated with log"):
 
     with context("that is overriding a base action that is annotated with log"):
         with it("should still be recognized as logged"):
-            from context_tools.base.context import Context
+            from context_tools.base.context_tool import ContextTool
             from context_tools.bdd.bdd import Bdd
 
-            expect(is_logged(Context.generate)).to(be_true)
+            expect(is_logged(ContextTool.generate)).to(be_true)
             expect(member_is_logged(Bdd, "generate")).to(be_true)
 
     with context("that is invoked"):

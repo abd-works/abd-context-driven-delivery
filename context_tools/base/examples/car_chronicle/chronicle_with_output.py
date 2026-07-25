@@ -7,11 +7,11 @@
 from __future__ import annotations
 
 from primitives.actions.action import action
-from context_tools import context  # noqa: F401
+from context_tools import context_tool  # noqa: F401
 from tools.tool import tool
 
 
-@context
+@context_tool
 class ChronicleWithOutput:
     """§ Instructions"""
 

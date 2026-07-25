@@ -15,7 +15,7 @@ UxMap ground per `ux.md` — not chapters, files, bookmarks, or CE module names 
 
 1. **`ux.md` § Contexts** — canonical model; `tab-states-are-separate-screens`; `screen-names-use-domain-terms`; `screen-story-budget`.
 2. **This file** — screens + interaction/transition lists only at partition depth.
-3. **`base-context/index.md`** + **`base-context/partition.md` Multi-pass** — shared index; additive columns.
+3. **`utilities/partition_pipeline/index.md`** + **`utilities/partition_pipeline/partition.md` Multi-pass** — shared index; additive columns.
 
 ## Index
 

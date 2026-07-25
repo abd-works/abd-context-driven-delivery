@@ -9,15 +9,15 @@
 
 from __future__ import annotations
 
-import context_tools  # noqa: F401 — Bdd and AgentBdd merge with Context at import
+import context_tools  # noqa: F401 — Bdd and AgentBdd merge with ContextTool at import
 from agent_bdd.agent_bdd import AgentBdd
-from context_tools import context  # noqa: F401
+from context_tools import context_tool  # noqa: F401
 from context_tools.bdd.bdd import Bdd
 
 from .action import action  # noqa: F401
 
 
-@context
+@context_tool
 class AgentWithActions:
     """§ Instructions"""
 

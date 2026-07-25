@@ -352,3 +352,7 @@ Repaired HeroesHandbook.md Extras/Flaws spans and extras-segment.md / flaws-segm
 
 Named discovery scaffolds complete across Build Character, Use Skills, Use Advantages, Resolve Conflict, Powers (Effect + typed Use ? + Use Powers with Modifiers + Use Sensory Powers), and Use Gear. Extras/flaws chunk repair completeness PASS (59/59). Thin-slice unlocked. Next focus: thin-slice from module-build-order (checks/character spine first).
 
+### Chunk repairs finished (sensory + gear + modifiers re-prove)
+
+Senses options re-extracted PDF 177-180; verify_segment_completeness PASS 27/27. Gear weapons/vehicles/HQ re-extracted; HQ PASS 28/28. Use Powers with Modifiers inventory re-proved against OK bodies (eleven mechanic sub-epics retained). Story-map verify lines updated. Map discovery debt cleared.
+

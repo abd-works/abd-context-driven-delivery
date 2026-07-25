@@ -11,7 +11,7 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
-from context_tools import context
+from context_tools import context_tool
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from tools.tool import tool  # noqa: F401
@@ -43,15 +43,20 @@ def _load_channel_class(format_name: str) -> type:
     return getattr(importlib.import_module(module_path), attr)
 
 
-@context
+@context_tool
 class Ux:
     """§ Instructions"""
+
+    default_workspace_folder: str = "ux"
+    context_index_key: str = "ux"
 
     def __init__(
         self,
         fidelity: str = "ia",
         format: str | None = None,
-        path: str | None = None, session: str | None = None,
+        path: str | None = None,
+        session: str | None = None,
+        workspace: str | None = None,
     ) -> None:
         if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
             raise ValueError(
@@ -62,7 +67,9 @@ class Ux:
             raise ValueError(
                 f"Unsupported format {resolved_format!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
             )
-        super().__init__(format=resolved_format, path=path, session=session)
+        super().__init__(
+            format=resolved_format, path=path, session=session, workspace=workspace
+        )
         self.fidelity = fidelity
 
     @instruction

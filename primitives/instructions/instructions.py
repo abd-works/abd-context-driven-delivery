@@ -14,6 +14,11 @@ InstructionHost: TypeAlias = Any
 F = TypeVar("F", bound=Callable[..., Any])
 
 
+def _section_heading_for_name(name: str) -> str:
+    """Snake/kebab tool names → markdown section titles (``create_session`` → ``Create Session``)."""
+    return name.replace("_", " ").replace("-", " ").title()
+
+
 def _path_for_name(module_dir: Path, name: str) -> str:
     folder = module_dir / name
     if folder.is_dir():
@@ -22,7 +27,8 @@ def _path_for_name(module_dir: Path, name: str) -> str:
         return name
     if (module_dir / f"{name}.md").is_file():
         return name
-    return "\u00a7 " + name.title()
+    # No per-name file — section in kit ``{slug}.md`` (same pattern as domain § Contexts).
+    return "\u00a7 " + _section_heading_for_name(name)
 
 
 def _slug_variants(domain_slug: str) -> list[str]:
@@ -259,7 +265,18 @@ def _defining_module_dir(action_func: Any) -> Path:
 
 
 _FRAMEWORK_ACTIONS = frozenset(
-    {"generate", "validate", "satisfy", "repair", "scan", "partition", "index", "segment"}
+    {
+        "generate",
+        "validate",
+        "satisfy",
+        "repair",
+        "scan",
+        "partition",
+        "index",
+        "segment",
+        "document",
+        "log_fix",
+    }
 )
 
 
@@ -267,17 +284,64 @@ def _is_framework_action(action_name: str) -> bool:
     return action_name in _FRAMEWORK_ACTIONS
 
 
-def _generator_module_dir() -> Path:
-    import context_tools.base.context as generator_module
+def _kit_markdown(module_dir: Path) -> Path | None:
+    """``{slug}.md`` beside a kit package (``sessions.md``, ``partition_pipeline.md``, …)."""
+    for slug in _slug_variants(module_dir.name):
+        candidate = module_dir / f"{slug}.md"
+        if candidate.is_file():
+            return candidate
+    return None
 
-    return Path(inspect.getfile(generator_module)).resolve().parent
+
+def _section_in_kit(module_dir: Path, action_name: str) -> str | None:
+    """Return section body from kit slug.md when a matching ``#`` heading exists."""
+    kit_md = _kit_markdown(module_dir)
+    if kit_md is None:
+        return None
+    heading = _section_heading_for_name(action_name)
+    content = kit_md.read_text(encoding="utf-8")
+    pattern = re.compile(
+        rf"^#{{1,6}}\s+{re.escape(heading)}\s*$",
+        re.MULTILINE | re.IGNORECASE,
+    )
+    if not pattern.search(content):
+        return None
+    return Instruction(f"\u00a7 {heading}", module_dir).expand()
 
 
-def _framework_action_prose(action_name: str) -> str | None:
-    generator_dir = _generator_module_dir()
-    candidate = generator_dir / "base-context" / f"{action_name}.md"
-    if candidate.is_file():
-        return Instruction(f"base-context/{action_name}", generator_dir).expand()
+def _framework_action_prose(
+    action_name: str,
+    action_func: Any | None = None,
+    *,
+    instance: Any | None = None,
+) -> str | None:
+    """Load kit prose for an action: ``{action}.md`` or a section in kit ``{slug}.md``.
+
+    Walks the instance MRO so a domain override still resolves kit prose.
+    """
+    dirs: list[Path] = []
+    if action_func is not None:
+        dirs.append(_defining_module_dir(action_func))
+    if instance is not None:
+        for cls in type(instance).__mro__:
+            member = cls.__dict__.get(action_name)
+            if member is None:
+                continue
+            try:
+                dirs.append(Path(inspect.getfile(member)).resolve().parent)
+            except (TypeError, OSError):
+                continue
+    seen: set[Path] = set()
+    for module_dir in dirs:
+        if module_dir in seen:
+            continue
+        seen.add(module_dir)
+        candidate = module_dir / f"{action_name}.md"
+        if candidate.is_file():
+            return Instruction(action_name, module_dir).expand()
+        section_text = _section_in_kit(module_dir, action_name)
+        if section_text is not None:
+            return section_text
     return None
 
 
@@ -320,7 +384,9 @@ def _expand_docstring(docstring: str, action_func: Any, *, instance: Any | None 
         and text in _FRAMEWORK_ACTIONS
         and getattr(type(instance), "_is_context", False)
     ):
-        framework_text = _framework_action_prose(text)
+        framework_text = _framework_action_prose(
+            text, action_func, instance=instance
+        )
         if framework_text is not None:
             return framework_text
     if instance is not None and _instruction_ref_resolves(instance, text):

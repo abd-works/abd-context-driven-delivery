@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from context_tools import context
+from context_tools import context_tool
 from tools.tool import tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -18,15 +18,20 @@ _FIDELITY_FORMAT_DEFAULTS = {
 _SUPPORTED_FORMATS = frozenset({"markdown", "python", "typescript", "java"})
 
 
-@context
+@context_tool
 class Bdd:
     """§ Instructions"""
+
+    default_workspace_folder: str = "src"
+    context_index_key: str = "bdd"
 
     def __init__(
         self,
         fidelity: str = "behavior",
         format: str | None = None,
-        path: str | None = None, session: str | None = None,
+        path: str | None = None,
+        session: str | None = None,
+        workspace: str | None = None,
     ) -> None:
         if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
             raise ValueError(
@@ -37,7 +42,9 @@ class Bdd:
             raise ValueError(
                 f"Unsupported format {resolved_format!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
             )
-        super().__init__(format=resolved_format, path=path, session=session)
+        super().__init__(
+            format=resolved_format, path=path, session=session, workspace=workspace
+        )
         self.fidelity = fidelity
 
     @tool

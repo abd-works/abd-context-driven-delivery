@@ -1,0 +1,25 @@
+# to-fix.log — context-tool-split bout
+# Log omissions/errors here. Each entry:
+#   when, artifact, rule, wrong (one line), original, improved
+# User phrase "to fix" = failed to do it right; fix immediately and append an entry.
+
+---
+when: 2026-07-25
+artifact: utilities/partition_pipeline/segment.py
+rule: no-project-hardcoding
+wrong: Hardcoded Mutants & Masterminds handbook ALL-CAPS skip list and RANK/POINT short-body heuristic in the partition kit.
+original: |
+  _SKIP_CAPS = frozenset({
+      "MUTANTS & MASTERMINDS",
+      "CHAPTER 6: POWERS",
+      "DELUXE HERO'S HANDBOOK",
+      "NAME", "COST", "DESCRIPTION", ...
+  })
+  _COST_OR_RANK = re.compile(r"\bRANKS?\b|\bPOINT", re.I)
+improved: |
+  Project knobs live on the partition root index <!-- partition-config -->
+  (non-entry-headers, short-body-pattern, min-body-chars).
+  PartitionIndex -> SegmentCompletenessConfig -> Segment/SegmentEntry.
+  Kit has no project lists.
+status: fixed
+---

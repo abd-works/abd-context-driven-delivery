@@ -2,15 +2,16 @@
 
 ## Purpose
 
-Model a named work bout (`Session`) and record append-only events for `@log`-marked tools and actions (`SessionLog`).
+Named work bout (`Session`), append-only `@log` events (`SessionLog`), workspace binding for ContextTool (`WorkspaceSession`), and workspace `context-index.md` helpers.
 
 ## Primary use case
 
-A Context (or tool runner) binds a bout, then `@log` tools/actions append summary lines under `{session.folder}/logs/` — optionally with full request/response payloads when log control is `verbose`/`full`.
+- Primitives / utilities: bind a bout; `@log` tools append under `{session.folder}/logs/`.
+- ContextTool: inherit `WorkspaceSession` for `workspace` / `path` / `session`, `create_session` / `close_session`, and context-index tools.
 
 ## Rationale
 
-Keep bout identity and process-doc paths separate from the logging seam. Callers depend on small interfaces (`ISession`, `ISessionLog`). Event location is always `Session.log` when bound; tests may override with `sessions_root`.
+One package: bout model + logging + the ContextTool base that exposes them. Primitives import `Session` / `SessionLog` / `@log` without taking a second top-level package for the same concept.
 
 ## Layout
 
@@ -19,19 +20,23 @@ Keep bout identity and process-doc paths separate from the logging seam. Callers
   session.md          # Start / End
   logs/               # Session.log → events.log (+ optional payload yaml)
   …
+
+{workspace}/.context/context-index.md   # tool = ./root/* entries
 ```
 
 ## Seam
 
-- **In:** `Session` (path/name/metadata), `@log` markers, run-request `session` / `log` controls
-- **Out:** `session.md`, `logs/events.log`, optional `event-*-{request,response}.yaml`
+- **In:** `Session` (path/name/metadata), `@log` markers, run-request `session` / `log` controls; constructor `workspace` / `path` / `session`
+- **Out:** `session.md`, `logs/events.log`, optional payload yaml; `context-index.md`
 
 ## Public API
 
-- `ISession` / `Session` — `path`, `name`, `folder`, `log` (`folder/logs`), `session_md`, `load`, `ensure_started`, `close`, `to_dict`
+- `ISession` / `Session` — `path`, `name`, `folder`, `log`, `session_md`, `load`, `ensure_started`, `close`, `to_dict`
 - `docs_dir(destination)` — bout folder vs `{destination}/.context/`
-- `ISessionLog` / `SessionLog` — singleton; `bind(Session)` or `set_session(Session | str | None)`; `apply_log_control`; `append`; `log_dir`; `session`
+- `ISessionLog` / `SessionLog` — singleton; `bind` / `set_session`; `apply_log_control`; `append`; `log_dir`
 - `@log`, `is_logged`, `member_is_logged`, `summarize_mapping`, `inherit_*`
+- `WorkspaceSession` — ContextTool base: `session` resource, `session_guidance` instruction, tools `create_session` / `close_session` / `read_context_index` / `record_context_root` (prose sections in `sessions.md`)
+- `context_index` helpers — `lookup_root`, `upsert_entry`, …
 
 Run requests may set `session` and `log` (`full` | `verbose` | `off`).
 
@@ -39,5 +44,6 @@ Tests may pass `SessionLog(sessions_root=tmpdir)` so `log_dir = tmpdir / name`.
 
 ## Dependencies
 
-- stdlib only for core model/log (`pathlib`, `dataclasses`, `abc`, `json`; optional `yaml` for payload dump with JSON fallback)
-- Consumed by `primitives.tools`, `primitives.actions`, `context_tools.base.context`
+- Core model/log: stdlib (+ optional `yaml`)
+- `WorkspaceSession`: `tools.tool` (`@tool` / `@resource`)
+- Consumed by `primitives.tools`, `primitives.actions`, `context_tools.base.context_tool`

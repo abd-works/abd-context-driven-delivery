@@ -1,8 +1,8 @@
-# @agent-spec-manifest python -m tools agent-spec context_tools/base/context_agent_spec.py
+# @agent-spec-manifest python -m tools agent-spec context_tools/base/context_tool_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: context_tools/.agent_bdd_sessions/car-chronicle.json
-"""BDD agent spec for context-behavior.md — agent discovers CarChronicle; generate and repair."""
+"""BDD agent spec for context_tool-behavior.md — agent discovers CarChronicle; generate and repair."""
 
 from pathlib import Path
 
@@ -55,9 +55,10 @@ with description("a CarChronicle generator"):
             expect(self.generate_response.action).to(equal("generate"))
             expect(self.generate_response.instructions is not None).to(be_true)
 
-        with it("should name no tools on the generate action tools list"):
+        with it("should name session tools on the generate action tools list"):
             tools = self.generate_response.tools or []
-            expect(len(tools)).to(equal(0))
+            expect("read_context_index" in tools).to(be_true)
+            expect("record_context_root" in tools).to(be_true)
 
         with it("should inline driving-voice guidance in generate instructions"):
             instructions = str(self.generate_response.instructions).lower()

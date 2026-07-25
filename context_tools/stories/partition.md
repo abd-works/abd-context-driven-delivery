@@ -14,7 +14,7 @@ Not a source chapter, file, bookmark, handbook section, or CE module name used a
 
 1. **`stories.md` § Contexts** — canonical model, verb–noun names, 4–9 children, behavioral outcomes, vocabulary traces to domain language; **`branch-on-mechanical-uniqueness`** and **`read-all-source-context-in-full`** (read segments in full; branch only on mechanical uniqueness — not catalog/requirements bullets).
 2. **This file** — epic / mid-epic ground; source spans and **existing chunks** are evidence.
-3. **`base-context/index.md`** + **`base-context/partition.md` Multi-pass** — shared `{subject}-index.md`; additive columns.
+3. **`utilities/partition_pipeline/index.md`** + **`utilities/partition_pipeline/partition.md` Multi-pass** — shared `{subject}-index.md`; additive columns.
 
 ## Index
 

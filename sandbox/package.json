@@ -1,0 +1,13 @@
+{
+  "name": "heroes-handbook-sandbox",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "tsx --test src/checks/check.spec.ts tests/build-character/build-character-sheet/create-character/create_character_story.ts tests/build-character/build-character-sheet/create-character/create_character_spec.ts tests/build-character/build-character-sheet/update-ability-rank/update_ability_rank_story.ts tests/build-character/build-character-sheet/update-ability-rank/update_ability_rank_spec.ts tests/build-character/resolve-checks/resolve-ability-check/resolve_ability_check_story.ts tests/build-character/resolve-checks/resolve-ability-check/resolve_ability_check_spec.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

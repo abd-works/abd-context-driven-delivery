@@ -58,12 +58,17 @@ def _invoke_tool(instance: Toolset, tool_name: str, arguments: dict[str, Any] | 
     return getattr(instance, tool_name)(**(arguments or {}))
 
 
+_ARTIFACT_LIFECYCLE_DIR = _GENERATOR_DIR / "artifact_lifecycle"
+
+
 def _load_action_prose(action: str) -> str:
-    return Instruction(f"base-context/{action}", _GENERATOR_DIR).expand()
+    return Instruction(action, _ARTIFACT_LIFECYCLE_DIR).expand()
 
 
 def _load_contexts_section(module_dir: Path) -> str:
-    return Instruction("§ Contexts", module_dir, domain_slug="clean_engineering").expand()
+    return Instruction(
+        "\u00a7 Contexts", module_dir, domain_slug="clean_engineering"
+    ).expand()
 
 
 def _load_examples(module_dir: Path) -> str:
@@ -71,13 +76,22 @@ def _load_examples(module_dir: Path) -> str:
 
 
 def _load_python_template(module_dir: Path) -> str:
+    from primitives.instructions import _path_for_templates
+
+    relative = _path_for_templates(module_dir, "clean_engineering", "python")
     return Instruction(
-        "clean_engineering-templates", module_dir, domain_slug="clean_engineering"
+        relative, module_dir, domain_slug="clean_engineering"
     ).expand()
 
 
 def _context_rule_slugs(concepts_text: str) -> list[str]:
-    return re.findall(r"\*\*`([^`]+)`\*\*", concepts_text)
+    # One primary slug per concept bullet (lines may contain extra **`...`** markers).
+    pattern = re.compile(r"\*\*`([^`]+)`\*\*")
+    return [
+        match.group(1)
+        for line in concepts_text.splitlines()
+        if (match := pattern.search(line))
+    ]
 
 
 def _concept_bullet_lines(concepts_text: str) -> list[str]:
@@ -140,9 +154,6 @@ with description("CleanEngineering action expansion"):
 
             with it("should set action to generate"):
                 expect(self.response["action"]).to(equal("generate"))
-
-            with it("should name no tools on generate"):
-                expect(self.response["tools"]).to(equal([]))
 
             with it("should inline the full Contexts section from clean_engineering"):
                 _assert_contexts_inlined(self.response["instructions"], self.contexts)

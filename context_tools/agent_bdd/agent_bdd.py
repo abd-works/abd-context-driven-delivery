@@ -9,13 +9,13 @@
 from __future__ import annotations
 
 import agent_bdd.conf  # noqa: F401 — repo root on sys.path
-import context_tools  # noqa: F401 — Bdd merges with Context at import
+import context_tools  # noqa: F401 — Bdd merges with ContextTool at import
 from primitives.actions.action import action  # noqa: F401
 from context_tools.bdd.bdd import Bdd
-from context_tools import context  # noqa: F401
+from context_tools import context_tool  # noqa: F401
 
 
-@context
+@context_tool
 class AgentBdd:
     """§ Instructions"""
 
@@ -23,7 +23,8 @@ class AgentBdd:
         super().__init__(format=format, path=path, session=session)
 
     def _bdd(self) -> Bdd:
-        return Bdd(format=self.format, session=self.session)
+        bout = self.session.name or None
+        return Bdd(format=self.format, path=self.session.path, session=bout)
 
     @action
     def generate_output(self) -> str:

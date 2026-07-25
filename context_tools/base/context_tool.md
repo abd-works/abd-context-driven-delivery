@@ -1,6 +1,6 @@
 # Instructions
 
-Build or patch a **Context domain** — a `@context` toolset under `context_tools/` beside `context_tools/base/` (Context framework: `context.py`, `base-context/` action prose, `templates/`, `examples/`), not inside `base/`.
+Build or patch a **ContextTool domain** — a `@context_tool` toolset under `context_tools/` beside `context_tools/base/` (ContextTool framework: `context_tool.py`, kit-local action prose beside each peer kit, `templates/`, `examples/`), not inside `base/`.
 
 Scaffold from **`context_tools/base/templates/`** (all files, no format filter). Match **`context_tools/base/examples/car_chronicle/`** (minimal extension demo), **`context_tools/clean_engineering/`**, and **`context_tools/bdd/`** / **`context_tools/agent_bdd/`** as reference domains.
 
@@ -11,21 +11,11 @@ Every domain action ends with **validate**.
 
 ## Favour defaults
 
-- **`favour-defaults`** — The framework (`Context`, `@instruction` slots, action docstrings → `context_tools/base/*.md` / domain md) already wires contexts, domain § Generate, examples, format template, and action prose. **Do not override** instruction slots or action docstrings. **Do not override `module_dir`** — put the `.py` file inside the domain folder; default resolution is enough (`context_tools/agent_bdd/agent_bdd.py` is the model). Override **action bodies** only to add steps (e.g. compose another toolset). Shared surface also includes **`partition` / `index` / `segment`** (thin corpus partitioning) and optional domain **`partition.md`** (top-level artifacts only; base default if missing). Partition is a **hard fail** if domain `partition.md` / `{domain}.md` § Contexts are ignored or the index mirrors corpus TOC/chapters. **Multi-pass is additive:** later lenses (Stories / UX / BDD / CE) **add columns** mapped to existing `{module}/.context/*-segment.md` chunks — they must not wipe the shared `{subject}-index.md` or re-chunk the corpus (see `base-context/partition.md`).
-
-## Session path
-
-- **`session-path`** - Every generator exposes a **`session`** resource (a `Session` object). Constructor kwargs: `path` (working area, default `"."`) and `session` (bout slug). On `tools run`, pass `context.path` / `context.session`. **Hard layout:**
-  - **`session.path`** - durable working area:
-    - Partition index / durable diagrams -> `{session.path}/.context/`
-    - Partitioned chunks + module-local docs -> `{session.path}/{module}/.context/` (e.g. `{session.path}/checks/.context/checks-segment.md`)
-    - Generated code and module folders -> `{session.path}/` (e.g. `{session.path}/checks/`)
-  - **`session.folder`** - named process bout under `{session.path}/.context/sessions/{name}/` (session.md, grill-answers, engagement sketches, handoff). Create via `create_session` after confirming path and slug with the user.
-- Sketch / grill / iterate / handoff for engagement process work **default to `session.folder`**. Partition `out_root` and durable corpus docs default toward **`session.path`**. Do not invent a divergent working folder.
+- **`favour-defaults`** — The framework (`ContextTool`, `@instruction` slots, bare action/tool names → kit `{slug}.md` **sections** or `{name}.md` beside the defining peer kit / domain md) already wires contexts, domain § Generate, examples, format template, and action prose. **Do not override** instruction slots or action docstrings. **Do not override `module_dir`** — put the `.py` file inside the domain folder; default resolution is enough (`context_tools/agent_bdd/agent_bdd.py` is the model). Override **action bodies** only to add steps (e.g. compose another toolset). Session / workspace layout and tools live in **`utilities/sessions/sessions.md`**. Shared surface also includes **`partition` / `index` / `segment`** (prose in `utilities/partition_pipeline/partition_pipeline.md`) and optional domain **`partition.md`** (top-level artifacts only; base default if missing). Partition is a **hard fail** if domain `partition.md` / `{domain}.md` § Contexts are ignored or the index mirrors corpus TOC/chapters. **Multi-pass is additive:** later lenses (Stories / UX / BDD / CE) **add columns** mapped to existing `{module}/.context/*-segment.md` chunks — they must not wipe the shared `{subject}-index.md` or re-chunk the corpus (see **Partition** in `partition_pipeline.md`).
 
 ## Minimal Python module
 
-- **`minimal-python-module`** - Domain `.py` is thin: `@context`, `"""Instructions section"""` (framework Instructions marker), `__init__(format=..., path=..., session=...)`, and optional `@action` body overrides. **No** duplicated `@instruction(override=True)` for `contexts`, `template`, or framework action docstrings (`"""generate"""`, `"""repair"""`, ...). Empty docstring on an overridden action is fine - framework prose resolves from the action name. Pass `path` and `session` through to `super().__init__(..., path=path, session=session)`. Inherit peer entry points from base Context: **`generate`** (plain), **`grill`**, **`sketch`**, **`iterate`** — do not re-decorate domain `generate` with `@grill_with_context` / `@sketch` / `@iterate`.
+- **`minimal-python-module`** - Domain `.py` is thin: `@context_tool`, `"""Instructions section"""` (framework Instructions marker), class attrs **`default_workspace_folder`** + **`context_index_key`**, `__init__(format=..., path=..., session=..., workspace=...)`, and optional `@action` body overrides. **No** duplicated `@instruction(override=True)` for `contexts`, `template`, or framework action docstrings (`"""generate"""`, `"""repair"""`, ...). Empty docstring on an overridden action is fine - framework prose resolves from the action name. Pass `path` and `session` through to `super().__init__(..., path=path, session=session)`. Inherit peer entry points from base ContextTool: **`generate`** (plain), **`grill`**, **`sketch`**, **`iterate`** — do not re-decorate domain `generate` with `@grill_with_context` / `@sketch` / `@iterate`.
 
 ## Canonical markdown only
 
@@ -51,9 +41,9 @@ Every domain action ends with **validate**.
 
 - **`do-not-duplicate-content`** — Do not re-create markdown the framework already loads. Do not copy `context_tools/base/generate.md` into the domain. Do not add parallel prose files for slots the base class already resolves. **Patch surgically** when fixing a domain.
 
-## Context class module
+## ContextTool class module
 
-- **`context-class-module`** — Line 1: `# @toolset-manifest python -m tools manifest <module>:<Class>`. Class docstring: `"""§ Instructions"""`. Re-export `action` and `concept` only when needed. **Do not** subclass `Context` in source — `@context` merges it. Framework lives at **`context_tools/base/`** (`context_tools.base.context:Context`).
+- **`context-tool-class-module`** — Line 1: `# @toolset-manifest python -m tools manifest <module>:<Class>`. Class docstring: `"""§ Instructions"""`. Re-export `action` and `concept` only when needed. **Do not** subclass `ContextTool` in source — `@context_tool` merges it. Framework lives at **`context_tools/base/`** (`context_tools.base.context_tool:ContextTool`).
 
 ## Format templates vs scaffold templates
 

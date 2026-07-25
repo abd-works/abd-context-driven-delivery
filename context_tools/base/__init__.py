@@ -1,3 +1,3 @@
-from context_tools.base.context import Context, context
+from context_tools.base.context_tool import ContextTool, context_tool
 
-__all__ = ["Context", "context"]
+__all__ = ["ContextTool", "context_tool"]

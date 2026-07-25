@@ -366,7 +366,7 @@ def _resolve_super_func(
     """Walk the MRO to find the next parent ``@action`` for *method_name*.
 
     When *after_class* is None, skip the instance's own definition (identity check —
-    class-synthesis decorators like ``@context`` may copy the same function onto
+    class-synthesis decorators like ``@context_tool`` may copy the same function onto
     more than one MRO entry). When *after_class* is set (nested ``super()`` / empty-body
     walk), skip until after that class, then take the next ``@action``.
     Returns ``(func, defining_class)`` or ``None``.
@@ -708,7 +708,7 @@ class _ActionExpander:
         if docstring and docstring.strip():
             doc_text = docstring.strip()
         elif getattr(toolset_cls, "_is_context", False) and _is_framework_action(current_action):
-            doc_text = f"base-context/{current_action}"
+            doc_text = current_action
         else:
             doc_text = ""
         if doc_text:
@@ -783,7 +783,16 @@ class _ActionExpander:
                     tool_steps.append(member)
                 elif member in resource_names:
                     value = getattr(instance, member)
-                    text = f"Resource `{member}` = {value!r}. Use session.path for durable artifacts and session.folder for process bout docs."
+                    prop = getattr(type(instance), member, None)
+                    getter = prop.fget if isinstance(prop, property) else None
+                    doc = ""
+                    if getter is not None:
+                        doc = _expand_docstring(
+                            (getter.__doc__ or "").strip(), getter, instance=instance
+                        )
+                    text = f"Resource `{member}` = {value!r}."
+                    if doc:
+                        text = text + '\n\n' + doc
                     if text not in seen_prose:
                         prose.append(text)
                         seen_prose.add(text)

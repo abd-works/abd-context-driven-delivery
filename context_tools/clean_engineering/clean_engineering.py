@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from focus import focus
-from context_tools import context
+from context_tools import context_tool
 from context_tools.clean_engineering.class_model.drawio_class_model import DrawIOCleanEngineeringModel
 from context_tools.clean_engineering.class_model.java_class_model import JavaCleanEngineeringModel
 from context_tools.clean_engineering.class_model.javascript_class_model import JavaScriptCleanEngineeringModel
@@ -43,15 +43,20 @@ _CHANNELS: dict[str, type] = {
 _SUPPORTED_FORMATS = frozenset(_CHANNELS)
 
 
-@context
+@context_tool
 class CleanEngineering:
     """§ Instructions"""
+
+    default_workspace_folder: str = "src"
+    context_index_key: str = "clean_engineering"
 
     def __init__(
         self,
         fidelity: str = "modules",
         format: str | None = None,
-        path: str | None = None, session: str | None = None,
+        path: str | None = None,
+        session: str | None = None,
+        workspace: str | None = None,
     ) -> None:
         if fidelity == "language":
             raise ValueError(
@@ -64,7 +69,9 @@ class CleanEngineering:
                 f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
             )
         resolved_format = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
-        super().__init__(format=resolved_format, path=path, session=session)
+        super().__init__(
+            format=resolved_format, path=path, session=session, workspace=workspace
+        )
         self.fidelity = fidelity
 
     # Resolves to § Contexts in clean_engineering.md (fidelities + design vocabulary).

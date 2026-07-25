@@ -6,12 +6,23 @@
 from __future__ import annotations
 
 from primitives.actions.action import action  # noqa: F401
-from context_tools import context  # noqa: F401
+from context_tools import context_tool  # noqa: F401
 
 
-@context
+@context_tool
 class {ClassName}:
     """§ Instructions"""
 
-    def __init__(self, format: str = "python", path: str | None = None, session: str | None = None) -> None:
-        super().__init__(format=format, path=path, session=session)
+    # Override when this domain's durable root is not "." (e.g. "tests", "src", "ux").
+    default_workspace_folder: str = "."
+    # Key in ``{workspace}/.context/context-index.md`` (e.g. "stories").
+    context_index_key: str = "{domain_slug}"
+
+    def __init__(
+        self,
+        format: str = "python",
+        path: str | None = None,
+        session: str | None = None,
+        workspace: str | None = None,
+    ) -> None:
+        super().__init__(format=format, path=path, session=session, workspace=workspace)

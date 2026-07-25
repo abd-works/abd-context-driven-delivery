@@ -15,6 +15,8 @@ for _cat in ("primitives", "utilities", "context_tools"):
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"
 _GENERATOR_DIR = _REPO_ROOT / "context_tools" / "base"
+_ARTIFACT_LIFECYCLE_DIR = _GENERATOR_DIR / "artifact_lifecycle"
+_REPAIR_DIR = _REPO_ROOT / "utilities" / "repair"
 
 from primitives.instructions import Instruction
 from primitives.instructions import _active_resource, _format_keys, _path_for_name, _path_for_templates
@@ -32,9 +34,9 @@ with description("Instruction"):
         with it("should return False from matches_file_or_folder"):
             expect(self.instruction.matches_file_or_folder()).to(equal(False))
 
-    with context("constructed with a § section reference"):
+    with context("constructed with a \u00a7 section reference"):
         with before.each:
-            self.instruction = Instruction("§ Contexts", _CLEAN_ENGINEERING_DIR)
+            self.instruction = Instruction("\u00a7 Contexts", _CLEAN_ENGINEERING_DIR)
 
         with it("should return True from matches_file_or_folder"):
             expect(self.instruction.matches_file_or_folder()).to(be_true)
@@ -43,10 +45,10 @@ with description("Instruction"):
             result = self.instruction.expand()
             expect("high-cohesion" in result).to(be_true)
 
-    with context("constructed with § Contexts on the domain markdown"):
+    with context("constructed with \u00a7 Contexts on the domain markdown"):
         with before.each:
             self.instruction = Instruction(
-                "§ Contexts", _CLEAN_ENGINEERING_DIR, domain_slug="clean_engineering"
+                "\u00a7 Contexts", _CLEAN_ENGINEERING_DIR, domain_slug="clean_engineering"
             )
 
         with it("should return True from matches_file_or_folder"):
@@ -84,8 +86,8 @@ with description("_path_for_name"):
             )
 
     with context("when neither file nor folder exists"):
-        with it("should return a § section reference"):
-            expect(_path_for_name(_CLEAN_ENGINEERING_DIR, "nonexistent").startswith("§")).to(
+        with it("should return a \u00a7 section reference"):
+            expect(_path_for_name(_CLEAN_ENGINEERING_DIR, "nonexistent").startswith("\u00a7")).to(
                 equal(True)
             )
 
@@ -179,26 +181,30 @@ with description("_expand_docstring"):
             expect(_expand_docstring("", empty_action)).to(equal(""))
 
     with context("a single-word framework action name on a generator subclass"):
-        with it("should equal the direct load of base-context/generate.md"):
-            from context_tools.base.context import Context
+        with it("should equal the direct load of artifact_lifecycle/generate.md"):
+            from context_tools.base.context_tool import ContextTool
             expanded = _expand_docstring(
-                "generate", Context.generate, instance=Context()
+                "generate", ContextTool.generate, instance=ContextTool()
             )
-            direct = Instruction("base-context/generate", _GENERATOR_DIR).expand()
+            direct = Instruction("generate", _ARTIFACT_LIFECYCLE_DIR).expand()
             expect(expanded).to(equal(direct))
 
-    with context("a path-ref action docstring on the generator module"):
-        with it("should equal the direct load of base-context/generate.md"):
-            from context_tools.base.context import Context
-            expanded = _expand_docstring("base-context/generate", Context.generate)
-            direct = Instruction("base-context/generate", _GENERATOR_DIR).expand()
+    with context("a kit-local path-ref action docstring"):
+        with it("should equal the direct load of artifact_lifecycle/generate.md"):
+            from context_tools.base.context_tool import ContextTool
+            expanded = _expand_docstring(
+                "generate", ContextTool.generate, instance=ContextTool()
+            )
+            direct = Instruction("generate", _ARTIFACT_LIFECYCLE_DIR).expand()
             expect(expanded).to(equal(direct))
 
-    with context("a path-ref action docstring that resolves to base-context/repair.md"):
-        with it("should equal the direct load of base-context/repair.md"):
-            from context_tools.base.context import Context
-            expanded = _expand_docstring("base-context/repair", Context.repair)
-            direct = Instruction("base-context/repair", _GENERATOR_DIR).expand()
+    with context("a kit-local repair action docstring"):
+        with it("should equal the direct load of utilities/repair/repair.md"):
+            from context_tools.base.context_tool import ContextTool
+            expanded = _expand_docstring(
+                "repair", ContextTool.repair, instance=ContextTool()
+            )
+            direct = Instruction("repair", _REPAIR_DIR).expand()
             expect(expanded).to(equal(direct))
 
 

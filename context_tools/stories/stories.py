@@ -12,7 +12,7 @@ import importlib
 import json
 from typing import Any
 
-from context_tools import context
+from context_tools import context_tool
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from tools.tool import tool  # noqa: F401
@@ -61,15 +61,20 @@ def _normalize_input(format_name: str, content: Any) -> Any:
     return content
 
 
-@context
+@context_tool
 class Stories:
     """§ Instructions"""
+
+    default_workspace_folder: str = "tests"
+    context_index_key: str = "stories"
 
     def __init__(
         self,
         fidelity: str = "discovery",
         format: str | None = None,
-        path: str | None = None, session: str | None = None,
+        path: str | None = None,
+        session: str | None = None,
+        workspace: str | None = None,
     ) -> None:
         if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
             raise ValueError(
@@ -80,7 +85,9 @@ class Stories:
             raise ValueError(
                 f"Unsupported format {resolved_format!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
             )
-        super().__init__(format=resolved_format, path=path, session=session)
+        super().__init__(
+            format=resolved_format, path=path, session=session, workspace=workspace
+        )
         self.fidelity = fidelity
 
     @instruction

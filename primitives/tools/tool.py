@@ -75,7 +75,15 @@ class _SignatureReader:
         cls._instance = reader
 
     def member_instructions(self, func: Callable[..., Any]) -> str:
-        return (func.__doc__ or "").strip()
+        doc = (func.__doc__ or "").strip()
+        if not doc:
+            return ""
+        # Single-token docstring -> kit-local {name}.md beside the defining module.
+        if doc.isidentifier():
+            from primitives.instructions import _expand_docstring
+
+            return _expand_docstring(doc, func)
+        return doc
 
     def simple_type(self, annotation: TypeAnnotation) -> str:
         if annotation is inspect.Parameter.empty:
@@ -723,17 +731,19 @@ def _discover_tools(instance: Toolset) -> dict[str, _Tool]:
 def _discover_resources(instance: Toolset) -> dict[str, _Resource]:
     discovered: dict[str, _Resource] = {}
     toolset_name = instance.__class__.__name__
-    for name, member in instance.__class__.__dict__.items():
-        if not isinstance(member, property) or member.fget is None:
-            continue
-        if getattr(member.fget, "_is_resource", False):
-            discovered[name] = _Resource(
-                name=name,
-                getter=member.fget,
-                toolset_name=toolset_name,
-            )
+    for cls in instance.__class__.__mro__:
+        for name, member in cls.__dict__.items():
+            if name in discovered:
+                continue
+            if not isinstance(member, property) or member.fget is None:
+                continue
+            if getattr(member.fget, "_is_resource", False):
+                discovered[name] = _Resource(
+                    name=name,
+                    getter=member.fget,
+                    toolset_name=toolset_name,
+                )
     return discovered
-
 
 def toolset(cls: type) -> type:
     """Mark a class as a toolset and inject toolset behavior."""

@@ -42,10 +42,10 @@ with description("an agent spec file"):
             expect("actions/examples/car.py" in prompts or "General Lee" in prompts).to(be_true)
 
         with it("should build a generator runbook from concept_agent_spec"):
-            manifest = read_manifest(_REPO_ROOT / "context_tools" / "base" / "context_agent_spec.py")
+            manifest = read_manifest(_REPO_ROOT / "context_tools" / "base" / "context_tool_agent_spec.py")
             expect(manifest.in_chat).to(be_true)
             expect(manifest.session).to(equal("context_tools/.agent_bdd_sessions/car-chronicle.json"))
-            runbook = build_runbook(_REPO_ROOT / "context_tools" / "base" / "context_agent_spec.py")
+            runbook = build_runbook(_REPO_ROOT / "context_tools" / "base" / "context_tool_agent_spec.py")
             setup = [step for scenario in runbook.scenarios for step in scenario.setup]
             prompts = " ".join(step.prompt or "" for step in setup)
             expect("car_chronicle" in prompts.lower()).to(be_true)

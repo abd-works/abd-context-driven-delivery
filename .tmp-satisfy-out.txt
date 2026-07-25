@@ -1,0 +1,143 @@
+﻿```yaml
+ok: true
+toolset: context_tools.base.context_tool:ContextTool
+action: satisfy
+result: When done, run validate on artifacts under {session.path}/.
+instructions: "Offer and write Context Decision Records (CDRs) sparingly as decisions\
+  \ crystallise during the wrapped action ΓÇö never batch; never invent decisions.\n\
+  \nStep 1 ΓÇö Read the format once via read_cdr_format. Internalise the three-criteria\
+  \ gate and the minimal template.\n\nStep 2 ΓÇö Optionally call list_cdrs(root) so\
+  \ you do not re-record an already-captured decision.\n\nStep 3 ΓÇö During the session\
+  \ (grill, sketch, or generate), watch for decisions that meet ALL three: hard to\
+  \ reverse, surprising without context, and a real trade-off. If any criterion is\
+  \ missing, skip the CDR.\n\nStep 4 ΓÇö When a qualifying decision crystallises, offer\
+  \ a CDR briefly (title + one-line gist). If the user accepts, call write_cdr immediately\
+  \ with a kebab slug and content matching CDR-FORMAT.md. Do not batch; do not wait\
+  \ until the end.\n\nStep 5 ΓÇö Keep CDRs short. Prefer a single paragraph. Add Status\
+  \ / Considered Options / Consequences only when they add genuine value.\n\nWhen\
+  \ done, proceed to satisfy.\n\n# Satisfy\n\nFind and fix every problem in the artifact\
+  \ you wrote under the generator **`session`** root.\n\n1. Read the **`session`**\
+  \ resource. Edit only under that layout:\n   - Documents and diagrams ΓåÆ `{session.path}/.context/`\n\
+  \   - Generated code / module folders ΓåÆ `{session.path}/{module}/`\n   - Module-local\
+  \ docs ΓåÆ `{session.path}/{module}/.context/`\n2. Run **validate** against those\
+  \ session-rooted artifacts.\n3. Fix every reported violation in the artifact (same\
+  \ paths ΓÇö do not invent a divergent folder).\n4. When done, run **validate** again\
+  \ until it passes.\n\n\nsatisfy\n\nResource `session` = Session(path='context_tools/base',\
+  \ name='context-tool-split'). Use session.path for durable artifacts and session.folder\
+  \ for process bout docs.\n\n# Contexts\n\n## Favour defaults\n\n- **`favour-defaults`**\
+  \ ΓÇö The framework (`ContextTool`, `@instruction` slots, action docstrings ΓåÆ `context_tools/base/*.md`\
+  \ / domain md) already wires contexts, domain ┬º Generate, examples, format template,\
+  \ and action prose. **Do not override** instruction slots or action docstrings.\
+  \ **Do not override `module_dir`** ΓÇö put the `.py` file inside the domain folder;\
+  \ default resolution is enough (`context_tools/agent_bdd/agent_bdd.py` is the model).\
+  \ Override **action bodies** only to add steps (e.g. compose another toolset). Shared\
+  \ surface also includes **`partition` / `index` / `segment`** (thin corpus partitioning)\
+  \ and optional domain **`partition.md`** (top-level artifacts only; base default\
+  \ if missing). Partition is a **hard fail** if domain `partition.md` / `{domain}.md`\
+  \ ┬º Contexts are ignored or the index mirrors corpus TOC/chapters. **Multi-pass\
+  \ is additive:** later lenses (Stories / UX / BDD / CE) **add columns** mapped to\
+  \ existing `{module}/.context/*-segment.md` chunks ΓÇö they must not wipe the shared\
+  \ `{subject}-index.md` or re-chunk the corpus (see `base-context/partition.md`).\n\
+  \n## Session path\n\n- **`session-path`** - Every generator exposes a **`session`**\
+  \ resource (a `Session` object). Constructor kwargs: `workspace` (project/sandbox\
+  \ root, default `\".\"`), `path` (tool working area), and `session` (bout slug).\
+  \ On `tools run`, pass `context.workspace` / `context.path` / `context.session`.\
+  \ **Root resolution when `path` is omitted:** (1) `{workspace}/.context/context-index.md`\
+  \ entry for this tool's `context_index_key`, else (2) `{workspace}/{default_workspace_folder}`\
+  \ (Stories `tests`; CleanEngineering / Bdd `src`; Ux `ux`; base = workspace). Explicit\
+  \ `path` overrides and must be recorded via **`record_context_root`**. **Hard layout:**\n\
+  \  - **`context-index`** - `{workspace}/.context/context-index.md` tracks `tool\
+  \ = ./root/*` (Current + Log). Read before generate; update on confirm/override;\
+  \ cite in handoffs.\n  - **`session.path`** - tool durable working area:\n    -\
+  \ Tool docs / diagrams -> `{session.path}/.context/`\n    - Partitioned chunks +\
+  \ module-local docs -> `{session.path}/{module}/.context/` (e.g. `{session.path}/checks/.context/checks-segment.md`)\n\
+  \    - Generated code and module folders -> `{session.path}/` (e.g. `{session.path}/checks/`)\n\
+  \  - **`session.folder`** - named process bout under `{session.path}/.context/sessions/{name}/`\
+  \ (session.md, grill-answers, engagement sketches, handoff). Create via `create_session`\
+  \ after confirming path and slug with the user (also records context-index).\n-\
+  \ Sketch / grill / iterate / handoff for engagement process work **default to `session.folder`**.\
+  \ Partition `out_root` and durable corpus docs default toward **`session.path`**.\
+  \ Do not invent a divergent working folder outside the indexed/confirmed root.\n\
+  \n## Minimal Python module\n\n- **`minimal-python-module`** - Domain `.py` is thin:\
+  \ `@context_tool`, `\"\"\"Instructions section\"\"\"` (framework Instructions marker),\
+  \ class attrs **`default_workspace_folder`** + **`context_index_key`**, `__init__(format=...,\
+  \ path=..., session=..., workspace=...)`, and optional `@action` body overrides.\
+  \ **No** duplicated `@instruction(override=True)` for `contexts`, `template`, or\
+  \ framework action docstrings (`\"\"\"generate\"\"\"`, `\"\"\"repair\"\"\"`, ...).\
+  \ Empty docstring on an overridden action is fine - framework prose resolves from\
+  \ the action name. Pass `path` and `session` through to `super().__init__(..., path=path,\
+  \ session=session)`. Inherit peer entry points from base ContextTool: **`generate`**\
+  \ (plain), **`grill`**, **`sketch`**, **`iterate`** ΓÇö do not re-decorate domain\
+  \ `generate` with `@grill_with_context` / `@sketch` / `@iterate`.\n\n## Canonical\
+  \ markdown only\n\n- **`canonical-markdown-only`** ΓÇö All domain prose lives in **`{domain-slug}.md`**:\
+  \ ┬º Instructions, ┬º Contexts, ┬º Generate. **No** `reference/` folder, **no** duplicate\
+  \ `reference/generate.md`, **no** copying framework action prose into the domain\
+  \ md. Criteria live as named bullets under ┬º Contexts.\n\n## Compose other toolsets\
+  \ in plain code\n\n- **`compose-like-normal-code`** ΓÇö To inline another toolset's\
+  \ action, call it on an instance: `self._clean_engineering().generate()`. **No**\
+  \ `ToolsetLoader` for in-repo toolsets ΓÇö **direct import** (`from context_tools.clean_engineering.clean_engineering\
+  \ import CleanEngineering`). **No** `delegate_action`, **No** `Instruction.ref`\
+  \ overrides for context_tools/base/examples/template unless the other toolset is\
+  \ truly external. Actions inline; tools go on the tools list.\n\n## Hyphen folders\
+  \ and imports\n\n- **`underscore-folder-imports`** ΓÇö Domain folders use underscores\
+  \ (`context_tools/clean_engineering/`, `context_tools/agent_bdd/`) matching the\
+  \ Python import path. Hyphens in folder names break `__import__` and require fallback\
+  \ loader workarounds ΓÇö avoid them.\n\n## Domain folder layout\n\n- **`domain-folder-layout`**\
+  \ ΓÇö One folder per domain. The `.py` module lives **inside** that folder (e.g. `context_tools/agent_bdd/agent_bdd.py`,\
+  \ `context_tools/base/examples/car_chronicle/car_chronicle.py`). Same folder holds\
+  \ `{domain-slug}.md`, `examples/examples.md`, optional `formats/{format}/{domain-slug}-template.*`,\
+  \ optional `scanners/`. Repair fixtures: `examples/<descriptive-folder>/faultyAsset`\
+  \ and `repairedAsset`. **Never** park Python beside the folder and override `module_dir`\
+  \ to point at it ΓÇö that is a layout smell.\n\n## Scaffold vs patch\n\n- **`scaffold-vs-patch`**\
+  \ ΓÇö Folder missing or empty ΓåÆ create full tree from **`context_tools/base/templates/`**.\
+  \ Files already exist ΓåÆ add only missing pieces; **do not** overwrite good content\
+  \ or rebuild from scratch unless asked.\n\n## Do not duplicate content\n\n- **`do-not-duplicate-content`**\
+  \ ΓÇö Do not re-create markdown the framework already loads. Do not copy `context_tools/base/generate.md`\
+  \ into the domain. Do not add parallel prose files for slots the base class already\
+  \ resolves. **Patch surgically** when fixing a domain.\n\n## ContextTool class module\n\
+  \n- **`context-tool-class-module`** ΓÇö Line 1: `# @toolset-manifest python -m tools\
+  \ manifest <module>:<Class>`. Class docstring: `\"\"\"┬º Instructions\"\"\"`. Re-export\
+  \ `action` and `concept` only when needed. **Do not** subclass `ContextTool` in\
+  \ source ΓÇö `@context_tool` merges it. Framework lives at **`context_tools/base/`**\
+  \ (`context_tools.base.context_tool:ContextTool`).\n\n## Format templates vs scaffold\
+  \ templates\n\n- **`format-vs-scaffold-templates`** ΓÇö **`context_tools/base/templates/`**\
+  \ = meta scaffolds for **building new domains** (Python + md + examples); loaded\
+  \ via `templates` slot, **no format filter**. **`formats/{format}/`** in each domain\
+  \ = artifact templates for generate/satisfy; loaded via `template` slot with active\
+  \ `format`.\n\n## Reference extension example\n\n- **`reference-extension-example`**\
+  \ ΓÇö **`context_tools/base/examples/car_chronicle/`** shows a complete context extension:\
+  \ `car_chronicle.py` beside `car_chronicle.md`, `{domain-slug}-templates.md`, `examples/examples.md`,\
+  \ repair fixtures, and **`output/`** with sample generated artifact (`output/driving-log.md`).\
+  \ No `module_dir` override ΓÇö the class module and markdown share one folder.\n\n\
+  ## Examples and repair fixtures\n\n- **`examples-and-fixtures`** ΓÇö `examples/examples.md`\
+  \ for worked samples. Pair faulty/repaired assets under `examples/<rule-or-scenario>/`\
+  \ for repair regression; see `context_tools/base/repair.md`.\n\n## domain-examples.md\n\
+  \n# Worked examples\n\n## Example one\n\nSample output matching the template shape\
+  \ and concept rules.\n\n\n## domain-md.md\n\n# Instructions\n\nDescribe what this\
+  \ domain generates and who reads the output.\n\n---\n# Contexts\n\n## First concept\n\
+  \nOne paragraph ΓÇö what good output looks like.\n\n- **`first-rule-slug`** ΓÇö Testable\
+  \ requirement as a named rule.\n\n---\n# Generate\n\nDomain-specific generate steps\
+  \ (workflow, quality bar, when-not-to-use).\n\nFill `formats/{format}/{domain-slug}-template.*`\
+  \ for the active format.\n\n\n## domain-toolset.py\n\n# @toolset-manifest python\
+  \ -m tools manifest {module_path}:{ClassName}\n# Agent reading this file: run line\
+  \ 1 manifest, then python -m tools run -. Follow response.instructions only.\n#\
+  \ Do not author behavior from this Python source.\n\"\"\"{ClassName} generator.\"\
+  \"\"\n\nfrom __future__ import annotations\n\nfrom primitives.actions.action import\
+  \ action  # noqa: F401\nfrom context_tools import context_tool  # noqa: F401\n\n\
+  \n@context_tool\nclass {ClassName}:\n    \"\"\"┬º Instructions\"\"\"\n\n    # Override\
+  \ when this domain's durable root is not \".\" (e.g. \"tests\", \"src\", \"ux\"\
+  ).\n    default_workspace_folder: str = \".\"\n    # Key in ``{workspace}/.context/context-index.md``\
+  \ (e.g. \"stories\").\n    context_index_key: str = \"{domain_slug}\"\n\n    def\
+  \ __init__(\n        self,\n        format: str = \"python\",\n        path: str\
+  \ | None = None,\n        session: str | None = None,\n        workspace: str |\
+  \ None = None,\n    ) -> None:\n        super().__init__(format=format, path=path,\
+  \ session=session, workspace=workspace)\n\n\nEvery tool call uses this shape ΓÇö set\
+  \ `tool` and `arguments`, pipe to CLI:\n\n```yaml\ntoolset: context_tools.base.context_tool:ContextTool\n\
+  context:\n  path: context_tools/base\n  session: context-tool-split\n  workspace:\
+  \ .\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m tools run\
+  \ -\n\nSuggested flow (repeat and reorder as the story needs):\n\nRead `resources`\
+  \ from each response before choosing the next tool."
+arguments: {}
+tools: []
+resources: {}
+```
