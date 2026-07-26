@@ -24,13 +24,12 @@ _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_DIR = (
     _REPO_ROOT
     / "context_tools"
-    / "base"
     / "create_context_tool"
     / "examples"
     / "car_chronicle"
 )
 _CAR_CHRONICLE_TOOLSET = (
-    "context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+    "context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _LIFECYCLE_DIR = _REPO_ROOT / "context_tools" / "base"
 
@@ -92,7 +91,7 @@ with description("Repair on a BaseContextTool host"):
                 toolset_path=_CAR_CHRONICLE_TOOLSET,
                 arguments={
                     "asset": (
-                        "context_tools/base/create_context_tool/examples/car_chronicle/output/driving-log.md"
+                        "context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md"
                     ),
                     "violation": (
                         "Scanner: use-driving-voice — chronicle reads like a spec sheet"
@@ -133,7 +132,7 @@ with description("Repair on a BaseContextTool host"):
         with it("should substitute asset and violation arguments"):
             instructions = self.response["instructions"]
             expect(
-                "context_tools/base/create_context_tool/examples/car_chronicle/output/driving-log.md"
+                "context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md"
                 in instructions
             ).to(be_true)
             expect("use-driving-voice" in instructions).to(be_true)

@@ -1,4 +1,4 @@
-# @agent-spec-manifest python -m tools agent-spec context_tools/base/create_context_tool/create_context_tool_agent_spec.py
+# @agent-spec-manifest python -m tools agent-spec context_tools/create_context_tool/create_context_tool_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: context_tools/.agent_bdd_sessions/car-chronicle.json
@@ -11,15 +11,15 @@ from mamba import after, before, context, description, it
 
 from agent_bdd import agent
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-_SESSIONS = Path(__file__).resolve().parents[2] / ".agent_bdd_sessions"
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_SESSIONS = Path(__file__).resolve().parents[1] / ".agent_bdd_sessions"
 _CAR_ROOT = (
-    "context_tools/base/create_context_tool/examples/car_chronicle"
+    "context_tools/create_context_tool/examples/car_chronicle"
 )
 _OUTPUT_DIR = _REPO_ROOT / _CAR_ROOT / "output"
 _CAR_CHRONICLE_PY = f"{_CAR_ROOT}/car_chronicle.py"
 _CAR_TOOLSET = (
-    "context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+    "context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _GENERATE_YAML = f"""\
 toolset: {_CAR_TOOLSET}

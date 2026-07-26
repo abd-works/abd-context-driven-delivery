@@ -22,7 +22,7 @@ from tools.tool import Toolset, _ToolsetLoader
 
 _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
-    "context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+    "context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _STORIES_TOOLSET = "context_tools.stories.stories:Stories"
 _DEFAULT_PARTITION_SNIPPET = "Determine top-level structure based on user suggestion"

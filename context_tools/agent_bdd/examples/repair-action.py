@@ -17,10 +17,10 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SESSIONS = Path(__file__).resolve().parents[1] / ".agent_bdd_sessions"
 
 _REPAIR_YAML = """\
-toolset: context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 action: repair
 arguments:
-  asset: context_tools/base/create_context_tool/examples/car_chronicle/output/driving-log.md
+  asset: context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md
   violation: Scanner use-driving-voice — chronicle reads like a spec sheet
 """
 
@@ -29,7 +29,7 @@ with description("a CarChronicle generator"):
         with it("drives repair and asserts tools + argument substitution"):
             with agent(_REPO_ROOT, _SESSIONS / "repair-action-example.json"):
                 instruct(
-                    "Read context_tools/base/create_context_tool/examples/car_chronicle/car_chronicle.py from the workspace.",
+                    "Read context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py from the workspace.",
                     timeout_seconds=60,
                 )
 

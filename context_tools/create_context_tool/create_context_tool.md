@@ -2,7 +2,7 @@
 
 Build or patch a **BaseContextTool domain** — a `@base_context_tool` toolset under `context_tools/` beside `context_tools/base/`. Lifecycle + composer live in `base_context_tool.py` (kit action prose beside peer kits / base); scaffolds live in this CreateContextTool domain (`templates/`, `examples/`). Do not put new domains inside `base/` except under `create_context_tool/`.
 
-Scaffold from **`context_tools/base/create_context_tool/templates/`** (all files, no format filter). Match **`context_tools/base/create_context_tool/examples/car_chronicle/`** (minimal extension demo), **`context_tools/clean_engineering/`**, and **`context_tools/bdd/`** / **`context_tools/agent_bdd/`** as reference domains.
+Scaffold from **`context_tools/create_context_tool/templates/`** (all files, no format filter). Match **`context_tools/create_context_tool/examples/car_chronicle/`** (minimal extension demo), **`context_tools/clean_engineering/`**, and **`context_tools/bdd/`** / **`context_tools/agent_bdd/`** as reference domains.
 
 Every domain action ends with **validate**.
 
@@ -31,11 +31,11 @@ Every domain action ends with **validate**.
 
 ## Domain folder layout
 
-- **`domain-folder-layout`** — One folder per domain. The `.py` module lives **inside** that folder (e.g. `context_tools/agent_bdd/agent_bdd.py`, `context_tools/base/create_context_tool/examples/car_chronicle/car_chronicle.py`). Same folder holds `{domain-slug}.md`, `examples/examples.md`, optional `formats/{format}/{domain-slug}-template.*`, optional `scanners/`. Repair fixtures: `examples/<descriptive-folder>/faultyAsset` and `repairedAsset`. **Never** park Python beside the folder and override `module_dir` to point at it — that is a layout smell.
+- **`domain-folder-layout`** — One folder per domain. The `.py` module lives **inside** that folder (e.g. `context_tools/agent_bdd/agent_bdd.py`, `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`). Same folder holds `{domain-slug}.md`, `examples/examples.md`, optional `formats/{format}/{domain-slug}-template.*`, optional `scanners/`. Repair fixtures: `examples/<descriptive-folder>/faultyAsset` and `repairedAsset`. **Never** park Python beside the folder and override `module_dir` to point at it — that is a layout smell.
 
 ## Scaffold vs patch
 
-- **`scaffold-vs-patch`** — Folder missing or empty → create full tree from **`context_tools/base/create_context_tool/templates/`**. Files already exist → add only missing pieces; **do not** overwrite good content or rebuild from scratch unless asked.
+- **`scaffold-vs-patch`** — Folder missing or empty → create full tree from **`context_tools/create_context_tool/templates/`**. Files already exist → add only missing pieces; **do not** overwrite good content or rebuild from scratch unless asked.
 
 ## Do not duplicate content
 
@@ -47,11 +47,11 @@ Every domain action ends with **validate**.
 
 ## Format templates vs scaffold templates
 
-- **`format-vs-scaffold-templates`** — **`context_tools/base/create_context_tool/templates/`** = meta scaffolds for **building new domains** (Python + md + examples); loaded via `templates` slot, **no format filter**. **`formats/{format}/`** in each domain = artifact templates for generate/satisfy; loaded via `template` slot with active `format`.
+- **`format-vs-scaffold-templates`** — **`context_tools/create_context_tool/templates/`** = meta scaffolds for **building new domains** (Python + md + examples); loaded via `templates` slot, **no format filter**. **`formats/{format}/`** in each domain = artifact templates for generate/satisfy; loaded via `template` slot with active `format`.
 
 ## Reference extension example
 
-- **`reference-extension-example`** — **`context_tools/base/create_context_tool/examples/car_chronicle/`** shows a complete context extension: `car_chronicle.py` beside `car_chronicle.md`, `{domain-slug}-templates.md`, `examples/examples.md`, repair fixtures, and **`output/`** with sample generated artifact (`output/driving-log.md`). No `module_dir` override — the class module and markdown share one folder.
+- **`reference-extension-example`** — **`context_tools/create_context_tool/examples/car_chronicle/`** shows a complete context extension: `car_chronicle.py` beside `car_chronicle.md`, `{domain-slug}-templates.md`, `examples/examples.md`, repair fixtures, and **`output/`** with sample generated artifact (`output/driving-log.md`). No `module_dir` override — the class module and markdown share one folder.
 
 ## Examples and repair fixtures
 

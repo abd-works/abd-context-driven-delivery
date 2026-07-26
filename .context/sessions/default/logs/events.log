@@ -197,3 +197,17 @@
 2026-07-26T02:10:42 kind=expansion toolset=context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle name=generate ok=true summary=tools=read_context_index,record_context_root
 2026-07-26T02:10:42 kind=expansion toolset=context_tools.base.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput name=generate ok=true summary=tools=read_context_index,record_context_root,…
 2026-07-26T02:10:42 kind=expansion toolset=context_tools.base.base_context_tool:BaseContextTool name=generate ok=true summary=tools=read_context_index,record_context_root
+2026-07-26T02:20:31 kind=expansion toolset=context_tools.create_context_tool.create_context_tool:CreateContextTool name=generate ok=true summary=tools=read_context_index,record_context_root
+2026-07-26T02:20:31 kind=expansion toolset=context_tools.create_context_tool.create_context_tool:CreateContextTool name=generate ok=true summary=tools=read_context_index,record_context_root
+2026-07-26T02:20:31 kind=expansion toolset=context_tools.create_context_tool.create_context_tool:CreateContextTool name=generate ok=true summary=tools=read_context_index,record_context_root
+2026-07-26T02:20:31 kind=expansion toolset=context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle name=generate ok=true summary=tools=read_context_index,record_context_root
+2026-07-26T02:20:31 kind=expansion toolset=context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle name=generate ok=true summary=tools=read_context_index,record_context_root
+2026-07-26T02:20:31 kind=expansion toolset=context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle name=generate ok=true summary=tools=read_context_index,record_context_root
+2026-07-26T02:20:31 kind=expansion toolset=context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle name=generate ok=true summary=tools=read_context_index,record_context_root
+2026-07-26T02:20:31 kind=expansion toolset=context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle name=generate ok=true summary=tools=read_context_index,record_context_root
+2026-07-26T02:20:31 kind=expansion toolset=context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle name=generate ok=true summary=tools=read_context_index,record_context_root
+2026-07-26T02:20:31 kind=expansion toolset=context_tools.base.base_context_tool:BaseContextTool name=generate ok=true summary=tools=read_context_index,record_context_root
+2026-07-26T02:20:31 kind=expansion toolset=context_tools.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput name=generate ok=true summary=tools=read_context_index,record_context_root,…
+2026-07-26T02:20:32 kind=expansion toolset=context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle name=generate ok=true summary=tools=read_context_index,record_context_root
+2026-07-26T02:20:32 kind=expansion toolset=context_tools.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput name=generate ok=true summary=tools=read_context_index,record_context_root,…
+2026-07-26T02:20:32 kind=expansion toolset=context_tools.base.base_context_tool:BaseContextTool name=generate ok=true summary=tools=read_context_index,record_context_root

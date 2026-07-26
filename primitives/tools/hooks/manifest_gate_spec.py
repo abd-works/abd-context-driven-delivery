@@ -1,6 +1,5 @@
-"""BDD spec for manifest-gate hook — scan, run manifests, dispatch to post/pre handlers."""
+"""BDD spec for manifest-gate hook — scan, run manifests, deny-until-cleared."""
 
-import io
 import json
 import sys
 import tempfile
@@ -15,7 +14,7 @@ for _cat in ("primitives", "utilities", "context_tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_empty, be_true, contain, equal, expect, have_key
+from expects import be_empty, be_false, be_true, contain, equal, expect, have_key
 from mamba import before, context, description, it
 
 import tools.hooks.manifest_gate as gate
@@ -37,6 +36,7 @@ class Bar:
 """
 
 _FAKE_MANIFEST_OUTPUT = "```yaml\ntype: ooadanalysis\n```"
+_FAKE_INVOKE_OUTPUT = "ok: true\ninstructions: do the thing"
 
 
 with description("scan_manifest_lines"):
@@ -63,18 +63,46 @@ with description("scan_manifest_lines"):
             expect(lines).to(be_empty)
 
 
+with description("parse_invoke_directive / find_invoke_edit"):
+    with context("given action toolset and context segments"):
+        with it("parses each segment"):
+            parsed = gate.parse_invoke_directive(
+                "action satisfy | toolset: a.b:C | context.fidelity modules"
+            )
+            expect(parsed["action"]).to(equal("satisfy"))
+            expect(parsed["toolset"]).to(equal("a.b:C"))
+            expect(parsed["context"]["fidelity"]).to(equal("modules"))
+
+    with context("given manifest lines with invoke-edit"):
+        with it("returns action and toolset"):
+            lines = [
+                "# @toolset-manifest python -m tools manifest ooad.ooad:Ooad",
+                "# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd",
+            ]
+            invoke = gate.find_invoke_edit(lines)
+            expect(invoke is not None).to(be_true)
+            expect(invoke["action"]).to(equal("satisfy"))
+            expect(invoke["toolset"]).to(equal("context_tools.bdd.bdd:Bdd"))
+
+
 with description("handle_post_tool_use (Read hook)"):
     with context("given a file with manifest lines"):
-        with it("returns additional_context containing manifest output"):
+        with it("returns additional_context containing manifest and invoke output"):
             with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
                 f.write(_MANIFEST_FILE)
                 path = f.name
             data = {"tool_input": {"path": path}}
             with patch.object(gate, "run_manifests", return_value=_FAKE_MANIFEST_OUTPUT):
-                result = gate.handle_post_tool_use(data)
+                with patch.object(
+                    gate, "run_invoke_edit", return_value=(True, _FAKE_INVOKE_OUTPUT)
+                ):
+                    result = gate.handle_post_tool_use(data)
             expect(result).to(have_key("additional_context"))
             expect(result["additional_context"]).to(contain("MANIFEST GATE"))
             expect(result["additional_context"]).to(contain(_FAKE_MANIFEST_OUTPUT))
+            expect(result["additional_context"]).to(contain("invoke-edit"))
+            expect(result).to(have_key("user_message"))
+            expect(gate.is_cleared(path)).to(be_true)
 
     with context("given a file with no manifest lines"):
         with it("returns an empty dict"):
@@ -97,28 +125,58 @@ with description("handle_post_tool_use (Read hook)"):
                 path = f.name
             data = {"file_path": path}
             with patch.object(gate, "run_manifests", return_value=_FAKE_MANIFEST_OUTPUT):
-                result = gate.handle_post_tool_use(data)
+                with patch.object(
+                    gate, "run_invoke_edit", return_value=(True, _FAKE_INVOKE_OUTPUT)
+                ):
+                    result = gate.handle_post_tool_use(data)
             expect(result).to(have_key("additional_context"))
             expect(result["additional_context"]).to(contain("MANIFEST GATE"))
+            expect(result).to(have_key("user_message"))
 
 
 with description("handle_pre_tool_use (Write hook)"):
-    with context("given an existing file with manifest lines"):
-        with it("returns permission allow with agent_message containing manifest output"):
+    with context("given an existing file with invoke-edit and no clearance"):
+        with it("denies when invoke-edit cannot execute"):
             with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
                 f.write(_MANIFEST_FILE)
                 path = f.name
-            data = {"tool_input": {"path": path}}
+            # Ensure uncleared
+            store = gate._load_clearance()
+            store.pop(gate._norm_path(path), None)
+            gate._save_clearance(store)
+            data = {"tool_name": "Write", "tool_input": {"path": path, "contents": "x"}}
             with patch.object(gate, "run_manifests", return_value=_FAKE_MANIFEST_OUTPUT):
-                result = gate.handle_pre_tool_use(data)
+                with patch.object(
+                    gate, "run_invoke_edit", return_value=(False, "timeout")
+                ):
+                    result = gate.handle_pre_tool_use(data)
+            expect(result["permission"]).to(equal("deny"))
+            expect(result["agent_message"]).to(contain("EDIT BLOCKED"))
+            expect(result["user_message"]).to(contain("blocked"))
+
+    with context("given an existing file with invoke-edit that executes on pre"):
+        with it("allows and clears"):
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+                f.write(_MANIFEST_FILE)
+                path = f.name
+            store = gate._load_clearance()
+            store.pop(gate._norm_path(path), None)
+            gate._save_clearance(store)
+            data = {"tool_name": "Write", "tool_input": {"path": path, "contents": "x"}}
+            with patch.object(gate, "run_manifests", return_value=_FAKE_MANIFEST_OUTPUT):
+                with patch.object(
+                    gate, "run_invoke_edit", return_value=(True, _FAKE_INVOKE_OUTPUT)
+                ):
+                    result = gate.handle_pre_tool_use(data)
             expect(result["permission"]).to(equal("allow"))
-            expect(result).to(have_key("agent_message"))
-            expect(result["agent_message"]).to(contain("MANIFEST GATE"))
-            expect(result["agent_message"]).to(contain(_FAKE_MANIFEST_OUTPUT))
+            expect(gate.is_cleared(path)).to(be_true)
 
     with context("given a file that does not exist (new file creation)"):
         with it("returns permission allow with no agent_message"):
-            data = {"tool_input": {"path": "/does/not/exist.py"}}
+            data = {
+                "tool_name": "Write",
+                "tool_input": {"path": "/does/not/exist.py", "contents": "x"},
+            }
             result = gate.handle_pre_tool_use(data)
             expect(result["permission"]).to(equal("allow"))
             expect("agent_message" not in result).to(be_true)
@@ -128,10 +186,22 @@ with description("handle_pre_tool_use (Write hook)"):
             with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
                 f.write(_PLAIN_FILE)
                 path = f.name
-            data = {"tool_input": {"path": path}}
+            data = {"tool_name": "Write", "tool_input": {"path": path, "contents": "x"}}
             result = gate.handle_pre_tool_use(data)
             expect(result["permission"]).to(equal("allow"))
             expect("agent_message" not in result).to(be_true)
+
+    with context("given a non-mutating tool on a manifest file"):
+        with it("allows without requiring clearance"):
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+                f.write(_MANIFEST_FILE)
+                path = f.name
+            store = gate._load_clearance()
+            store.pop(gate._norm_path(path), None)
+            gate._save_clearance(store)
+            data = {"tool_name": "Read", "tool_input": {"path": path}}
+            result = gate.handle_pre_tool_use(data)
+            expect(result["permission"]).to(equal("allow"))
 
 
 with description("parse_hook_payload — double-BOM regression"):

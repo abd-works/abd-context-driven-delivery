@@ -39,4 +39,4 @@ ArtifactLifecycle is not a peer kit. Lifecycle methods live on BaseContextTool; 
 
 ### Base vs create seam (2026-07-25)
 - `base_context_tool` — base for all concrete domains; no aliases to old `ContextTool` / `@base_context_tool`.
-- `create_context_tool` — domain that scaffolds new domains (`templates/`, `examples/`, meta contexts). Layout: `context_tools/base/create_context_tool/`.
+- `create_context_tool` — domain that scaffolds new domains (`templates/`, `examples/`, meta contexts). Layout: `context_tools/create_context_tool/`.

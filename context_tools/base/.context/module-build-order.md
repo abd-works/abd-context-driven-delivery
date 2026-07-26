@@ -9,6 +9,6 @@ Concrete kits only (no separate interface tier — one test tier).
 3. `utilities/partition_pipeline` — PartitionPipeline
 4. `utilities/repair` — Repair
 5. `context_tools/base/base_context_tool.py` — BaseContextTool (composer + lifecycle) + `@base_context_tool`
-6. `context_tools/base/create_context_tool/` — CreateContextTool (meta generator domain)
+6. `context_tools/create_context_tool/` — CreateContextTool (meta generator domain)
 
 Composer MRO merges: PartitionPipeline, Repair, Scan, WorkspaceSession, Toolset (lifecycle methods on BaseContextTool).

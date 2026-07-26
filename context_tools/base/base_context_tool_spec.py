@@ -24,13 +24,13 @@ from tools.tool import Toolset, _ToolsetLoader
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _BASE_DIR = _REPO_ROOT / "context_tools" / "base"
 _CAR_CHRONICLE_DIR = (
-    _BASE_DIR / "create_context_tool" / "examples" / "car_chronicle"
+    _REPO_ROOT / "context_tools" / "create_context_tool" / "examples" / "car_chronicle"
 )
 _CAR_CHRONICLE_TOOLSET = (
-    "context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+    "context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _CHRONICLE_WITH_OUTPUT_TOOLSET = (
-    "context_tools.base.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
+    "context_tools.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
 )
 _BASE_TOOLSET = "context_tools.base.base_context_tool:BaseContextTool"
 _GENERATE_OUTPUT_PROSE = "Append each trip entry to the driving log before validating."

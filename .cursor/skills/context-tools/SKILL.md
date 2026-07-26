@@ -15,7 +15,7 @@ $env:PYTHONPATH = "$PWD;$PWD\primitives;$PWD\utilities;$PWD\context_tools"
 Run the manifest to load tools, actions, and instructions:
 
 ```
-python -m tools manifest context_tools.base.create_context_tool.create_context_tool:CreateContextTool
+python -m tools manifest context_tools.create_context_tool.create_context_tool:CreateContextTool
 ```
 
 Follow `response.instructions` before doing anything else. Invoke tools via:

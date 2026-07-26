@@ -1,9 +1,0 @@
-﻿toolset: contexts.clean_engineering.clean_engineering:CleanEngineering
-context:
-  fidelity: code
-  path: utilities/sessions
-  format: python
-action: satisfy
-arguments:
-  paths:
-    - utilities/sessions

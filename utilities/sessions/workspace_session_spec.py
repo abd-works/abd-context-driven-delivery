@@ -22,10 +22,10 @@ from tools.tool import Toolset, _ToolsetLoader, _discover_tools
 
 _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
-    "context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+    "context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _CHRONICLE_WITH_OUTPUT_TOOLSET = (
-    "context_tools.base.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
+    "context_tools.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
 )
 _BASE_TOOLSET = "context_tools.base.base_context_tool:BaseContextTool"
 

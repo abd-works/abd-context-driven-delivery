@@ -11,10 +11,10 @@ from primitives.actions.action import _ActionRunRequest, _ActionRunner
 from primitives.instructions import Instruction
 from tools.tool import Toolset, _ToolsetLoader
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 _CREATE_DIR = Path(__file__).resolve().parent
 _CREATE_TOOLSET = (
-    "context_tools.base.create_context_tool.create_context_tool:CreateContextTool"
+    "context_tools.create_context_tool.create_context_tool:CreateContextTool"
 )
 _META_CONTEXT_MARKER = "scaffold-vs-patch"
 

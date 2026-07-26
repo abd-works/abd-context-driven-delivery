@@ -1,10 +1,10 @@
 # HIERARCHY: BaseContextTool / CreateContextTool
 
 <!--
-Example in code: context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle (context_tools/base/create_context_tool/examples/car_chronicle/)
+Example in code: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle (context_tools/create_context_tool/examples/car_chronicle/)
 Production domain: context_tools.clean_engineering.clean_engineering:CleanEngineering
 Context spec: context_tools/base/base_context_tool_spec.py — ActionRunner expansion + direct tool calls (in-process)
-Agent spec: context_tools/base/create_context_tool_agent_spec.py — agent follows instructions; assert shell tool calls
+Agent spec: context_tools/create_context_tool_agent_spec.py — agent follows instructions; assert shell tool calls
 Primitives specs: primitives/instructions/instruction_spec.py, primitives/declared/declared_spec.py, primitives/assets/asset_spec.py, primitives/assets/markdown_extractor_spec.py
 Scanner spec: context_tools/scanners/scanner_spec.py — Scanner, Violation, execute_scan, ScannerCollection
 Per-scanner repair fixtures: context_tools/clean_engineering/evals/engineering/<rule>/faultyAsset and repairedAsset (scanners_spec.py)
@@ -65,13 +65,13 @@ Action expansion
       instructions should inline worked samples from context_tools/examples
 
   a domain BaseContextTool whose generate_output target calls self.add_epic()
-    context_tools/base/create_context_tool/examples/car_chronicle/chronicle_with_output.py — ChronicleWithOutput
+    context_tools/create_context_tool/examples/car_chronicle/chronicle_with_output.py — ChronicleWithOutput
     the generate action is expanded
       tools should name add_epic
       instructions should include prose from the generate_output target
 
   a domain BaseContextTool with no generate_output target wired
-    context_tools/base/create_context_tool/examples/car_chronicle/car_chronicle.py — base CarChronicle
+    context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py — base CarChronicle
     the generate action is expanded
       instructions should not include generate-output steps from a subclass target
 
@@ -88,7 +88,7 @@ Scanner tools
 Agent
 
   with agent and generate action
-    Agent reading this file: run in chat via @agent-spec-manifest (python -m tools agent-spec context_tools/base/create_context_tool_agent_spec.py)
+    Agent reading this file: run in chat via @agent-spec-manifest (python -m tools agent-spec context_tools/create_context_tool_agent_spec.py)
     agent-instruct-read car_chronicle/car_chronicle.py, then natural generate prompt for a driving chronicle
       it should parse generate action response with instructions
       it should name no tools on generate

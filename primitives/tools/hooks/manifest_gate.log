@@ -14831,3 +14831,218 @@ canners_spec.py
 2026-07-26T02:10:26Z [post] FIRED  C:\Users\thoma\AppData\Local\Temp\tmpp92_jaa0.py  — 2 manifest line(s)
 2026-07-26T02:10:26Z [pre ] FIRED  C:\Users\thoma\AppData\Local\Temp\tmplw5nq4od.py  — 2 manifest line(s)
 2026-07-26T02:10:26Z [pre ] skip  C:\Users\thoma\AppData\Local\Temp\tmps_s4h1tt.py
+2026-07-26T02:16:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-26T02:16:44Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\create_context_tool\__init__.py
+2026-07-26T02:16:45Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\create_context_tool\create_context_tool.py  — manifest ran but produced no output
+2026-07-26T02:16:45Z [read] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-26T02:16:45Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\create_context_tool\__init__.py
+2026-07-26T02:16:45Z [post] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-26T02:16:45Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\create_context_tool\__init__.py
+2026-07-26T02:16:46Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\create_context_tool\create_context_tool.py  — manifest ran but produced no output
+2026-07-26T02:16:46Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\create_context_tool\create_context_tool.py  — manifest ran but produced no output
+2026-07-26T02:17:16Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-26T02:17:16Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_agent_spec.py
+2026-07-26T02:17:16Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\__init__.py
+2026-07-26T02:17:16Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool.py  — manifest ran but produced no output
+2026-07-26T02:17:17Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-26T02:17:17Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_agent_spec.py
+2026-07-26T02:17:17Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\__init__.py
+2026-07-26T02:17:17Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\.context\module-context.md
+2026-07-26T02:17:17Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_agent_spec.py
+2026-07-26T02:17:17Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool.py  — manifest ran but produced no output
+2026-07-26T02:17:17Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\__init__.py
+2026-07-26T02:17:18Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool.py  — manifest ran but produced no output
+2026-07-26T02:18:35Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_agent_spec.py
+2026-07-26T02:18:36Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_agent_spec.py
+2026-07-26T02:18:36Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_agent_spec.py
+2026-07-26T02:18:37Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_agent_spec.py
+2026-07-26T02:18:37Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_agent_spec.py
+2026-07-26T02:18:38Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_agent_spec.py
+2026-07-26T02:18:48Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool_spec.py
+2026-07-26T02:18:48Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_spec.py
+2026-07-26T02:18:48Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool_spec.py
+2026-07-26T02:18:48Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_spec.py
+2026-07-26T02:18:49Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool_spec.py
+2026-07-26T02:18:49Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_spec.py
+2026-07-26T02:18:49Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_spec.py
+2026-07-26T02:18:50Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_spec.py
+2026-07-26T02:18:50Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\create_context_tool\create_context_tool_spec.py
+2026-07-26T02:19:05Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool_spec.py
+2026-07-26T02:19:05Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool_spec.py
+2026-07-26T02:19:06Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool_spec.py
+2026-07-26T02:19:06Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool_spec.py
+2026-07-26T02:19:07Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool_spec.py
+2026-07-26T02:19:07Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_spec.py
+2026-07-26T02:19:07Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool_spec.py
+2026-07-26T02:19:08Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_spec.py
+2026-07-26T02:19:08Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_spec.py
+2026-07-26T02:19:20Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_spec.py
+2026-07-26T02:19:21Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_spec.py
+2026-07-26T02:19:21Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_spec.py
+2026-07-26T02:19:22Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_spec.py
+2026-07-26T02:19:22Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_spec.py
+2026-07-26T02:19:23Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd_spec.py
+2026-07-26T02:20:12Z [post] skip  c:\dev\abd-context-driven-delivery\_scan_cct_refs.py
+2026-07-26T02:20:12Z [post] skip  c:\dev\abd-context-driven-delivery\_scan_cct_refs.py
+2026-07-26T02:20:28Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair_spec.py
+2026-07-26T02:20:29Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair_spec.py
+2026-07-26T02:20:29Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair_spec.py
+2026-07-26T02:20:29Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline_spec.py
+2026-07-26T02:20:30Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline_spec.py
+2026-07-26T02:20:30Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\partition_pipeline\partition_pipeline_spec.py
+2026-07-26T02:20:46Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair_spec.py
+2026-07-26T02:20:46Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair_spec.py
+2026-07-26T02:20:47Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair_spec.py
+2026-07-26T02:20:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair_spec.py
+2026-07-26T02:20:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair_spec.py
+2026-07-26T02:20:48Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\repair\repair_spec.py
+2026-07-26T02:21:59Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T02:22:00Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T02:22:00Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T02:22:10Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\hooks.json
+2026-07-26T02:22:10Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest-gate.json
+2026-07-26T02:22:10Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:22:10Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\hooks.json
+2026-07-26T02:22:10Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest-gate.json
+2026-07-26T02:22:10Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:22:11Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\hooks.json
+2026-07-26T02:22:11Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest-gate.json
+2026-07-26T02:22:11Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:25:12Z [pre ] skip  C:\Users\thoma\.cursor\skills-cursor\create-hook\SKILL.md
+2026-07-26T02:25:13Z [read] skip  C:\Users\thoma\.cursor\skills-cursor\create-hook\SKILL.md
+2026-07-26T02:25:13Z [post] skip  C:\Users\thoma\.cursor\skills-cursor\create-hook\SKILL.md
+2026-07-26T02:25:28Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:25:29Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:25:29Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:25:42Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:25:43Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:25:43Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:25:57Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:25:57Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:25:58Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:26:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:26:27Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T02:26:28Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:26:28Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T02:26:28Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:26:28Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T02:26:29Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:26:29Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:26:30Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T02:28:16Z [pre ] skip  c:\dev\abd-context-driven-delivery\.tmp-stories-manifest.txt
+2026-07-26T02:28:17Z [read] skip  c:\dev\abd-context-driven-delivery\.tmp-stories-manifest.txt
+2026-07-26T02:28:17Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-stories-manifest.txt
+2026-07-26T20:44:58Z [pre ] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-26T20:44:58Z [read] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-26T20:44:59Z [post] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-26T20:47:56Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-26T20:47:56Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\.context\module-context.md
+2026-07-26T20:47:56Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-26T20:47:56Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\.context\module-context.md
+2026-07-26T20:47:57Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-26T20:47:57Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\.context\module-context.md
+2026-07-26T20:48:35Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-26T20:48:36Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-26T20:48:36Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-26T20:48:49Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\toolset_header.py
+2026-07-26T20:48:50Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\toolset_header.py
+2026-07-26T20:48:50Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\toolset_header.py
+2026-07-26T20:49:10Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — manifest ran but produced no output
+2026-07-26T20:49:11Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — manifest ran but produced no output
+2026-07-26T20:49:11Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — manifest ran but produced no output
+2026-07-26T20:49:35Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\hooks.json
+2026-07-26T20:49:35Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\hooks.json
+2026-07-26T20:49:35Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\hooks.json
+2026-07-26T20:49:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool.py  — manifest ran but produced no output
+2026-07-26T20:49:36Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool.py  — manifest ran but produced no output
+2026-07-26T20:49:37Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool.py  — manifest ran but produced no output
+2026-07-26T20:50:21Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:50:22Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:50:22Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:51:13Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:51:13Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:51:13Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:51:14Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\hooks.json
+2026-07-26T20:51:14Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest-gate.json
+2026-07-26T20:51:15Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\hooks.json
+2026-07-26T20:51:15Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest-gate.json
+2026-07-26T20:51:15Z [pre ] skip  c:\dev\abd-context-driven-delivery\.cursor\hooks.json
+2026-07-26T20:51:15Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest-gate.json
+2026-07-26T20:51:15Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\hooks.json
+2026-07-26T20:51:16Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest-gate.json
+2026-07-26T20:51:16Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\hooks.json
+2026-07-26T20:51:16Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest-gate.json
+2026-07-26T20:51:36Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T20:51:37Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T20:51:37Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate_spec.py
+2026-07-26T20:51:41Z [pre ] skip  c:\dev\abd-context-driven-delivery\.gitignore
+2026-07-26T20:51:41Z [post] skip  c:\dev\abd-context-driven-delivery\.gitignore
+2026-07-26T20:51:41Z [post] skip  c:\dev\abd-context-driven-delivery\.gitignore
+2026-07-26T20:52:09Z [post] FIRED  C:\Users\thoma\AppData\Local\Temp\tmpvbyd0npw.py  — 2 line(s); cleared=True
+2026-07-26T20:52:09Z [post] skip  C:\Users\thoma\AppData\Local\Temp\tmpnf_cfwk8.py
+2026-07-26T20:52:09Z [post] FIRED  C:\Users\thoma\AppData\Local\Temp\tmpfhj4iaai.py  — 2 line(s); cleared=True
+2026-07-26T20:52:09Z [pre ] FIRED  C:\Users\thoma\AppData\Local\Temp\tmparua7mqj.py  — blocked; invoke-edit not executed
+2026-07-26T20:52:09Z [pre ] FIRED  C:\Users\thoma\AppData\Local\Temp\tmp09qm55p6.py  — invoke-edit executed; allow
+2026-07-26T20:52:09Z [pre ] skip  C:\Users\thoma\AppData\Local\Temp\tmp43viwqcg.py
+2026-07-26T20:52:47Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:52:47Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:52:47Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:52:52Z [read] FIRED  C:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — 4 line(s); cleared=True
+2026-07-26T20:52:52Z [pre ] FIRED  C:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  — cleared; allow
+2026-07-26T20:52:52Z [post] FIRED  C:\Users\thoma\AppData\Local\Temp\tmpyolowwsb.py  — 2 line(s); cleared=True
+2026-07-26T20:52:52Z [post] skip  C:\Users\thoma\AppData\Local\Temp\tmp9p0bt7e6.py
+2026-07-26T20:52:52Z [post] FIRED  C:\Users\thoma\AppData\Local\Temp\tmphd6d0hjn.py  — 2 line(s); cleared=True
+2026-07-26T20:52:52Z [pre ] FIRED  C:\Users\thoma\AppData\Local\Temp\tmp0i44_th3.py  — blocked; invoke-edit not executed
+2026-07-26T20:52:52Z [pre ] FIRED  C:\Users\thoma\AppData\Local\Temp\tmpgiry_1bk.py  — invoke-edit executed; allow
+2026-07-26T20:52:52Z [pre ] skip  C:\Users\thoma\AppData\Local\Temp\tmpa5z8lbjj.py
+2026-07-26T20:58:13Z [read] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-26T20:58:14Z [post] skip  c:\dev\abd-context-driven-delivery\AGENTS.md
+2026-07-26T20:58:46Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\__main__.py
+2026-07-26T20:58:46Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T20:58:47Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\__main__.py
+2026-07-26T20:58:47Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T20:58:57Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:58:57Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:59:07Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:59:07Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\hooks\manifest_gate.py
+2026-07-26T20:59:15Z [read] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\context-tools\SKILL.md
+2026-07-26T20:59:15Z [post] skip  c:\dev\abd-context-driven-delivery\.cursor\skills\context-tools\SKILL.md
+2026-07-26T20:59:19Z [read] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool.py  — 1 line(s); cleared=True
+2026-07-26T20:59:20Z [post] FIRED  c:\dev\abd-context-driven-delivery\context_tools\base\base_context_tool.py  — 1 line(s); cleared=True
+2026-07-26T20:59:23Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-26T20:59:24Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-26T20:59:30Z [read] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-26T20:59:30Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-26T20:59:30Z [post] skip  c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering_spec.py
+2026-07-26T20:59:30Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\cli.py
+2026-07-26T20:59:33Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T20:59:33Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T20:59:38Z [read] skip  c:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\terminals\2.txt
+2026-07-26T20:59:39Z [post] skip  c:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\terminals\2.txt
+2026-07-26T21:00:53Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\__main__.py
+2026-07-26T21:00:53Z [read] skip  c:\dev\abd-context-driven-delivery\.tmp-satisfy-instructions.txt
+2026-07-26T21:00:53Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\__main__.py
+2026-07-26T21:00:53Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-satisfy-instructions.txt
+2026-07-26T21:04:16Z [read] skip  c:\dev\abd-context-driven-delivery\.tmp-ce-manifest-run.txt
+2026-07-26T21:04:17Z [post] skip  c:\dev\abd-context-driven-delivery\.tmp-ce-manifest-run.txt
+2026-07-26T21:04:33Z [read] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\0601f780-1978-4aea-a41e-8f124b58a397\subagents\106049cd-878c-490e-ab49-dca338cdda5e.jsonl
+2026-07-26T21:04:33Z [post] skip  C:\Users\thoma\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\0601f780-1978-4aea-a41e-8f124b58a397\subagents\106049cd-878c-490e-ab49-dca338cdda5e.jsonl
+2026-07-26T21:05:56Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T21:05:56Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T21:05:56Z [read] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 line(s); cleared=True
+2026-07-26T21:05:57Z [post] FIRED  c:\dev\abd-context-driven-delivery\primitives\actions\action.py  — 5 line(s); cleared=True
+2026-07-26T21:06:09Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-26T21:06:10Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-26T21:06:21Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T21:06:22Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T21:06:22Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T21:06:23Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T21:06:35Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T21:06:35Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T21:06:36Z [read] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-26T21:06:36Z [post] skip  c:\dev\abd-context-driven-delivery\utilities\sessions\session.py
+2026-07-26T21:06:51Z [read] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T21:06:52Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T21:06:52Z [pre ] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T21:06:53Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py
+2026-07-26T21:06:53Z [post] skip  c:\dev\abd-context-driven-delivery\primitives\tools\tool.py

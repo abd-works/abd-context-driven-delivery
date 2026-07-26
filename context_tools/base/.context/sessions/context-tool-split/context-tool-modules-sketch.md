@@ -25,7 +25,7 @@ BaseContextTool : composer + lifecycle  (context_tools/base/base_context_tool.py
   module_dir, contexts, @base_context_tool
   action prose: # Generate / Validate / Satisfy / Document in base_context_tool.md
 
-CreateContextTool : meta generator domain  (context_tools/base/create_context_tool/)
+CreateContextTool : meta generator domain  (context_tools/create_context_tool/)
   @base_context_tool domain that scaffolds new domains
   owns templates/, examples/, create_context_tool.md meta contexts
 

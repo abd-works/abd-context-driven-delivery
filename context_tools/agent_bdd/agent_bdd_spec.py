@@ -45,7 +45,6 @@ with description("an agent spec file"):
             agent_spec = (
                 _REPO_ROOT
                 / "context_tools"
-                / "base"
                 / "create_context_tool"
                 / "create_context_tool_agent_spec.py"
             )
@@ -78,18 +77,18 @@ with description("an agent spec file"):
             prompt = (
                 "Using shell, run exactly: python -m tools run -\n"
                 "Pipe this YAML on stdin:\n"
-                "toolset: context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
+                "toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
                 "action: repair\n"
                 "Return the complete fenced YAML stdout from the CLI.\n"
                 "\nIMPORTANT: Invoke python -m tools run via shell."
             )
             body = yaml_from_prompt(prompt)
-            expect(body).to(equal("toolset: context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))
+            expect(body).to(equal("toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))
 
         with it("should reject captured CLI output when action does not match prompt YAML"):
             prompt = (
                 "Pipe this YAML on stdin:\n"
-                "toolset: context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
+                "toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
                 "action: repair\n"
             )
             wrong = "```yaml\nok: true\naction: generate\ninstructions: test\n```"

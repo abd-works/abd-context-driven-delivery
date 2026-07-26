@@ -17,7 +17,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SESSIONS = Path(__file__).resolve().parents[1] / ".agent_bdd_sessions"
 
 _GENERATE_YAML = """\
-toolset: context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 action: generate
 """
 
@@ -26,7 +26,7 @@ with description("a CarChronicle generator"):
         with it("drives generate then judges the log"):
             with agent(_REPO_ROOT, _SESSIONS / "generate-action-example.json"):
                 instruct(
-                    "Read context_tools/base/create_context_tool/examples/car_chronicle/car_chronicle.py from the workspace.",
+                    "Read context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py from the workspace.",
                     timeout_seconds=60,
                 )
 

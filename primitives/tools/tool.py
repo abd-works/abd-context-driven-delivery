@@ -223,6 +223,9 @@ class _ManifestYaml:
             }
         if isinstance(raw_value, list):
             return [self.serialize_value(element) for element in raw_value]
+        to_dict = getattr(raw_value, "to_dict", None)
+        if callable(to_dict):
+            return self.serialize_value(to_dict())
         return raw_value
 
     def dump_manifest(self, manifest_data: ManifestDocument) -> str:

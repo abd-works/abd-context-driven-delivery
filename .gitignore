@@ -4,5 +4,9 @@ __pycache__/
 *$py.class
 *.pyc
 
+# Manifest gate local state
+primitives/tools/hooks/.manifest_gate_clearance.json
+primitives/tools/hooks/manifest_gate.log
+
 # Sandbox Node toolchain
 sandbox/node_modules/
