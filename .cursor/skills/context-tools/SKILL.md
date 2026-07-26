@@ -1,6 +1,6 @@
 ---
 name: context-tools
-description: "Build or patch Context domains — scaffold @context toolsets."
+description: "Build or patch Context domains — scaffold @base_context_tool toolsets via CreateContextTool."
 disable-model-invocation: true
 ---
 
@@ -15,7 +15,7 @@ $env:PYTHONPATH = "$PWD;$PWD\primitives;$PWD\utilities;$PWD\context_tools"
 Run the manifest to load tools, actions, and instructions:
 
 ```
-python -m tools manifest context_tools.base.context:Context
+python -m tools manifest context_tools.base.create_context_tool.create_context_tool:CreateContextTool
 ```
 
 Follow `response.instructions` before doing anything else. Invoke tools via:

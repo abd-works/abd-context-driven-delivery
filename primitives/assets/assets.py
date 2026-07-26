@@ -79,24 +79,6 @@ def _search_root(module_dir: Path, group: str | None, filter_value: str | None) 
 
 
 def _locate_under(search_root: Path, module_dir: Path, domain_slug: str, label: str) -> AssetLocation:
-    if label == "generate_instructions":
-        section_file = _canonical_domain_md(module_dir, search_root, domain_slug)
-        return AssetLocation(
-            "section",
-            module_dir,
-            domain_slug,
-            section_file=section_file.resolve(),
-            section_heading="Generate",
-        )
-    if label == "document_instructions":
-        section_file = _canonical_domain_md(module_dir, search_root, domain_slug)
-        return AssetLocation(
-            "section",
-            module_dir,
-            domain_slug,
-            section_file=section_file.resolve(),
-            section_heading="Document",
-        )
     folder = search_root / label
     if folder.is_dir():
         return AssetLocation("folder", module_dir, domain_slug, folder=folder.resolve())

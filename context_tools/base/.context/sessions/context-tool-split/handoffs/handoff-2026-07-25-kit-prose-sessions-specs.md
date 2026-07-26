@@ -2,7 +2,7 @@
 
 ## 1. Next session focus
 
-**Kit hygiene landed; next is land/commit or pick next CE work.** ContextTool peer kits now own their prose (sections in `{slug}.md`), sessions is one package, and kit specs live beside the kits. Do not re-open the module cut unless to-fix forces it.
+**Kit hygiene landed; next is land/commit or pick next CE work.** BaseContextTool peer kits now own their prose (sections in `{slug}.md`), sessions is one package, and kit specs live beside the kits. Do not re-open the module cut unless to-fix forces it.
 
 ## 2. Resume in three lines
 
@@ -13,10 +13,10 @@
 ## 3. Generator state
 
 - Bout: `context_tools/base/.context/sessions/context-tool-split/`
-- Composer: `context_tools/base/context_tool.py` — inherits ArtifactLifecycle, PartitionPipeline, Repair, Scan, **WorkspaceSession** (from `sessions`), Toolset
+- Composer: `context_tools/base/context_tool.py` — inherits BaseContextTool, PartitionPipeline, Repair, Scan, **WorkspaceSession** (from `sessions`), Toolset
 - Sessions package (merged): `utilities/sessions/` — `Session`, `SessionLog`, `WorkspaceSession`, `context_index.py`, prose in `sessions.md`
 - Partition kit prose: `utilities/partition_pipeline/partition_pipeline.md` (§ Partition / Index / Segment)
-- Lifecycle prose: still per-file under `context_tools/base/artifact_lifecycle/{generate,validate,satisfy,document}.md` (not collapsed yet)
+- Lifecycle prose: still per-file under `context_tools/base/{generate,validate,satisfy,document}.md` (not collapsed yet)
 - Repair / scan: still `utilities/repair/repair.md`, `utilities/scanners/scan.md`
 - **context_index_path:** `.context/context-index.md`
 - **Current tool=root:** `clean_engineering = ./utilities/partition_pipeline/*` (was `./context_tools/base/*`)
@@ -48,7 +48,7 @@ None (no cdd-sketch in this bout).
   - `utilities/sessions/workspace_session_spec.py`
   - `utilities/partition_pipeline/partition_pipeline_spec.py`
   - `utilities/repair/repair_spec.py`
-  - `context_tools/base/artifact_lifecycle/artifact_lifecycle_spec.py`
+  - `context_tools/base/artifact_lifecycle_spec.py`
 - Slim composer: `context_tools/base/context_tool_spec.py` (domain/meta face only)
 
 ## 7. Open questions / risks

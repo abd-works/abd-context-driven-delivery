@@ -1,4 +1,4 @@
-"""BDD spec for PartitionPipeline — kit prose on ContextTool hosts."""
+"""BDD spec for PartitionPipeline — kit prose on BaseContextTool hosts."""
 
 import sys
 from pathlib import Path
@@ -22,7 +22,7 @@ from tools.tool import Toolset, _ToolsetLoader
 
 _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
-    "context_tools.base.examples.car_chronicle.car_chronicle:CarChronicle"
+    "context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _STORIES_TOOLSET = "context_tools.stories.stories:Stories"
 _DEFAULT_PARTITION_SNIPPET = "Determine top-level structure based on user suggestion"
@@ -59,7 +59,7 @@ with description("PartitionPipeline kit prose"):
         expect(_section("segment").startswith("# Segment")).to(be_true)
 
 
-with description("PartitionPipeline on a ContextTool host"):
+with description("PartitionPipeline on a BaseContextTool host"):
     with context("partition expanded on CarChronicle"):
         with before.all:
             cls = _ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)

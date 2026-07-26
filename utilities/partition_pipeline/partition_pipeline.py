@@ -1,4 +1,4 @@
-"""Partition pipeline kit — mergeable into ContextTool."""
+"""Partition pipeline kit — mergeable into BaseContextTool."""
 
 from __future__ import annotations
 

@@ -58,7 +58,6 @@ from primitives.instructions import (
     _expand_docstring,
     _inline,
     instruction_slot_names,
-    _is_framework_action,
 )
 from tools.tool import _SignatureReader
 
@@ -254,12 +253,8 @@ def _resolve_wrapper_static_kwargs(
     return resolved
 
 
-def _instance_for_action(action_func: Callable[..., Any]) -> Any | None:
-    """Best-effort construct the toolset that owns ``action_func`` for nested expansion.
-
-    Used when expanding a chained wrapper action so in-method calls
-    (e.g. ``self._grill_context().grill_with_context(...)``) resolve.
-    """
+def _owner_class_for_action(action_func: Callable[..., Any]) -> type | None:
+    """Return the class that defines ``action_func``, or None if unknown."""
     qualname = getattr(action_func, "__qualname__", "") or ""
     if "." not in qualname:
         return None
@@ -270,10 +265,38 @@ def _instance_for_action(action_func: Callable[..., Any]) -> Any | None:
     owner = getattr(module, class_name, None)
     if owner is None or not isinstance(owner, type):
         return None
+    return owner
+
+
+def _instance_for_action(action_func: Callable[..., Any]) -> Any | None:
+    """Best-effort construct the toolset that owns ``action_func`` for nested expansion.
+
+    Used when expanding a chained wrapper action so in-method calls
+    (e.g. ``self._grill_context().grill_with_context(...)``) resolve.
+    """
+    owner = _owner_class_for_action(action_func)
+    if owner is None:
+        return None
     try:
         return owner()
     except TypeError:
         return None
+
+
+def _wrapper_expand_instance(
+    chained_action: Callable[..., Any],
+    host: Any | None,
+) -> Any | None:
+    """Instance used to expand a chained wrapper action.
+
+    Prefer the host when it already merges the chained action's owning kit
+    (``isinstance(host, Owner)``) so resources like ``session`` reflect the
+    live run. Otherwise construct a fresh owner instance (engagement engines).
+    """
+    owner = _owner_class_for_action(chained_action)
+    if host is not None and owner is not None and isinstance(host, owner):
+        return host
+    return _instance_for_action(chained_action)
 
 
 def _self_member_name(node: ast.AST) -> str | None:
@@ -366,7 +389,7 @@ def _resolve_super_func(
     """Walk the MRO to find the next parent ``@action`` for *method_name*.
 
     When *after_class* is None, skip the instance's own definition (identity check —
-    class-synthesis decorators like ``@context_tool`` may copy the same function onto
+    class-synthesis decorators like ``@base_context_tool`` may copy the same function onto
     more than one MRO entry). When *after_class* is set (nested ``super()`` / empty-body
     walk), skip until after that class, then take the next ``@action``.
     Returns ``(func, defining_class)`` or ``None``.
@@ -605,7 +628,7 @@ class _ActionExpander:
         for index, spec in enumerate(specs):
             next_name = specs[index + 1].name if index + 1 < len(specs) else action_func.__name__
             prev_name = specs[index - 1].name if index > 0 else ""
-            wrapper_instance = _instance_for_action(spec.chained_action)
+            wrapper_instance = _wrapper_expand_instance(spec.chained_action, instance)
             if wrapper_instance is not None:
                 wrapper_body = self._parse_body_resolved(
                     spec.chained_action, wrapper_instance
@@ -705,17 +728,12 @@ class _ActionExpander:
 
         docstring = ast.get_docstring(function_def)
         action_func = getattr(toolset_cls, current_action)
-        if docstring and docstring.strip():
-            doc_text = docstring.strip()
-        elif getattr(toolset_cls, "_is_context", False) and _is_framework_action(current_action):
-            doc_text = current_action
-        else:
-            doc_text = ""
-        if doc_text:
-            expanded = _expand_docstring(doc_text, action_func, instance=instance)
-            if expanded and expanded not in seen_prose:
-                prose.append(expanded)
-                seen_prose.add(expanded)
+        # No docstring → same as docstring equal to the method name (instruction lookup label).
+        doc_text = docstring.strip() if docstring and docstring.strip() else current_action
+        expanded = _expand_docstring(doc_text, action_func, instance=instance)
+        if expanded and expanded not in seen_prose:
+            prose.append(expanded)
+            seen_prose.add(expanded)
 
         if _is_empty_action_body(function_def):
             resolved = _resolve_super_func(

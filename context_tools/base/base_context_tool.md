@@ -1,3 +1,7 @@
+# Instructions
+
+**BaseContextTool** is the shared base for every concrete `@base_context_tool` domain: peer-kit composer + artifact lifecycle (`generate` / `validate` / `satisfy` / `document`, plus `grill` / `sketch` / `iterate`).
+---
 # Generate
 
 1. Follow **`session_guidance`** and the session tools (`read_context_index`, `record_context_root`, `create_session` when needed). Resolve workspace + tool root, then use the **`session`** resource for `session.path` / `session.folder`.
@@ -12,3 +16,35 @@
 6. Fill the **template** scaffold and save the artifact under the session layout from `session_guidance`.
 7. Follow any extra build steps included in your instructions when present.
 8. Run **validate**. If it fails, fix the artifact and **validate** again until it passes.
+
+---
+# Validate
+
+Take the persona of a **critical judge** — do not edit the artifact.
+
+1. Follow **`session_guidance`**. Scope judgment to artifacts under `session.path` / the session layout.
+2. Use **contexts** as the rubric — report pass/fail per named context and named rule with brief evidence.
+3. Call **`scan`** on the session-rooted paths under review.
+4. Do not fix. Report failures for fixing, then **validate** again when ready.
+
+---
+# Satisfy
+
+Find and fix every problem in the artifact you wrote under the generator **`session`** root.
+
+1. Follow **`session_guidance`**. Edit only under that layout.
+2. Run **validate** against those session-rooted artifacts.
+3. Fix every reported violation in the artifact (same paths — do not invent a divergent folder).
+4. When done, run **validate** again until it passes.
+
+---
+# Document
+
+Take the persona of a **neutral observer** — describe what exists, do not prescribe what should exist.
+
+1. Follow **`session_guidance`**. Observe and write under the session layout.
+2. Read the **contexts** to understand the vocabulary and structure of the domain.
+3. Fill the **template** scaffold with observed content — describe current state only.
+4. Do not apply, suggest, or imply rules or best practices in the generated output.
+5. Call **`scan`** and append all violations to the document as-is — flag them, do not correct them.
+6. Save the artifact under the session layout from `session_guidance`.

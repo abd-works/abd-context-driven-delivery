@@ -2,7 +2,7 @@
 
 ## Concrete kits (no I* / impl split — one test tier)
 
-WorkspaceSession  (utilities/workspace_session/)
+WorkspaceSession  (utilities/sessions/)
   session; read_context_index; record_context_root
   create_session; close_session
 
@@ -16,32 +16,34 @@ PartitionPipeline  (utilities/partition_pipeline/)
 Repair  (utilities/repair/)
   write_to_fix; log_fix; repair
 
-ArtifactLifecycle  (context_tools/base/artifact_lifecycle/ — CT-only)
+BaseContextTool : composer + lifecycle  (context_tools/base/base_context_tool.py)
+  MI merge of utilities kits + inlined lifecycle
   generate validate satisfy document
   generate_output add_generate_header
   grill sketch iterate
   generate_instructions document_instructions examples templates
-  -> utilities GrillContext Sketcher Iterator (decorators)
+  module_dir, contexts, @base_context_tool
+  action prose: # Generate / Validate / Satisfy / Document in base_context_tool.md
 
-ContextTool : composer  (context_tools/base/context_tool.py)
-  MI merge of kits + shared domain face (module_dir, contexts) + @context_tool
-  hosts base-context/
-  Concept-owned instruction slots live on kits (partition_guidance, generate/document/examples/templates, …)
+CreateContextTool : meta generator domain  (context_tools/base/create_context_tool/)
+  @base_context_tool domain that scaffolds new domains
+  owns templates/, examples/, create_context_tool.md meta contexts
 
 ----
 
 ## Module dependencies
 
 ```
-WorkspaceSession / Scan / PartitionPipeline / Repair / ArtifactLifecycle
+WorkspaceSession / Scan / PartitionPipeline / Repair
   (no kit→kit deps)
 
-ContextTool → each kit above
+BaseContextTool → each utilities kit above (+ lifecycle inlined)
+CreateContextTool → BaseContextTool (via @base_context_tool)
 ```
 
 ----
 
 ## Layout
 
-utilities/: workspace_session, scanners, partition_pipeline, repair  
-context_tools/base/: artifact_lifecycle, context_tool.py, base-context/
+utilities/: sessions, scanners, partition_pipeline, repair  
+context_tools/base/: base_context_tool.py (+ lifecycle action md), create_context_tool/

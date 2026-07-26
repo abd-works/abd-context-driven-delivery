@@ -19,6 +19,7 @@ module dependency graph
 scoped source ref
 log-fix
 move tools into own packages 
+-merge lifecycle and extract genrationg new context-tools, examine need for.self.session, review context.md
 -----
 
 reviewing
@@ -35,9 +36,13 @@ developing
 
 
 backlog
------------------merge lifecycle and extract genrationg new context-tools, examine need for.self.session, review context.md
+----------------
+
 grill expansionsee below 
 stroy to ce algnment, story disc tpo detailed
+
+
+comnolodate handoff and session logs
 
 
 patterns and frameworks

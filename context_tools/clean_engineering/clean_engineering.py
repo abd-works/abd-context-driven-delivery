@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from focus import focus
-from context_tools import context_tool
+from context_tools import base_context_tool
 from context_tools.clean_engineering.class_model.drawio_class_model import DrawIOCleanEngineeringModel
 from context_tools.clean_engineering.class_model.java_class_model import JavaCleanEngineeringModel
 from context_tools.clean_engineering.class_model.javascript_class_model import JavaScriptCleanEngineeringModel
@@ -43,7 +43,7 @@ _CHANNELS: dict[str, type] = {
 _SUPPORTED_FORMATS = frozenset(_CHANNELS)
 
 
-@context_tool
+@base_context_tool
 class CleanEngineering:
     """§ Instructions"""
 

@@ -1,8 +1,8 @@
-# @agent-spec-manifest python -m tools agent-spec context_tools/base/context_tool_agent_spec.py
+# @agent-spec-manifest python -m tools agent-spec context_tools/base/create_context_tool/create_context_tool_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: context_tools/.agent_bdd_sessions/car-chronicle.json
-"""BDD agent spec for context_tool-behavior.md — agent discovers CarChronicle; generate and repair."""
+"""BDD agent spec for create_context_tool-behavior.md — CarChronicle generate and repair."""
 
 from pathlib import Path
 
@@ -11,19 +11,25 @@ from mamba import after, before, context, description, it
 
 from agent_bdd import agent
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-_SESSIONS = Path(__file__).resolve().parents[1] / ".agent_bdd_sessions"
-_OUTPUT_DIR = _REPO_ROOT / "context_tools" / "base" / "examples" / "car_chronicle" / "output"
-_CAR_CHRONICLE_PY = "context_tools/base/examples/car_chronicle/car_chronicle.py"
-_GENERATE_YAML = """\
-toolset: context_tools.base.examples.car_chronicle.car_chronicle:CarChronicle
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_SESSIONS = Path(__file__).resolve().parents[2] / ".agent_bdd_sessions"
+_CAR_ROOT = (
+    "context_tools/base/create_context_tool/examples/car_chronicle"
+)
+_OUTPUT_DIR = _REPO_ROOT / _CAR_ROOT / "output"
+_CAR_CHRONICLE_PY = f"{_CAR_ROOT}/car_chronicle.py"
+_CAR_TOOLSET = (
+    "context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+)
+_GENERATE_YAML = f"""\
+toolset: {_CAR_TOOLSET}
 action: generate
 """
-_REPAIR_YAML = """\
-toolset: context_tools.base.examples.car_chronicle.car_chronicle:CarChronicle
+_REPAIR_YAML = f"""\
+toolset: {_CAR_TOOLSET}
 action: repair
 arguments:
-  asset: context_tools/base/examples/car_chronicle/output/driving-log.md
+  asset: {_CAR_ROOT}/output/driving-log.md
   violation: Scanner use-driving-voice — chronicle reads like a spec sheet
 """
 
@@ -33,7 +39,7 @@ with description("a CarChronicle generator"):
         with before.all:
             self._agent = agent(_REPO_ROOT, _SESSIONS / "car-chronicle.json")
             self.session = self._agent.__enter__()
-            self.session.instruct("Read context_tools/base/examples/car_chronicle/car_chronicle.py from the workspace.")
+            self.session.instruct(f"Read {_CAR_CHRONICLE_PY} from the workspace.")
             self.generate_response = self.session.instruct_run(
                 "Using shell, run exactly: python -m tools run -\n"
                 "Pipe this YAML on stdin:\n"
@@ -66,11 +72,11 @@ with description("a CarChronicle generator"):
                 "driving voice" in instructions or "use-driving-voice" in instructions
             ).to(be_true)
 
-        with it("should write a markdown chronicle under context_tools/base/examples/car_chronicle/output"):
+        with it("should write a markdown chronicle under car_chronicle/output"):
             chronicle_files = list(_OUTPUT_DIR.glob("*.md")) if _OUTPUT_DIR.is_dir() else []
             session_text = self.chronicle_result.stdout.lower()
             wrote_file = len(chronicle_files) > 0
-            mentioned_output = "context_tools/base/examples/car_chronicle/output" in session_text or wrote_file
+            mentioned_output = f"{_CAR_ROOT}/output" in session_text or wrote_file
             expect(mentioned_output).to(be_true)
             if wrote_file:
                 body = chronicle_files[0].read_text(encoding="utf-8").lower()
@@ -124,5 +130,5 @@ with description("a CarChronicle generator"):
 
         with it("should substitute asset and violation arguments in repair instructions"):
             instructions = str(self.repair_response.instructions)
-            expect("context_tools/base/examples/car_chronicle/output/driving-log.md" in instructions).to(be_true)
+            expect(f"{_CAR_ROOT}/output/driving-log.md" in instructions).to(be_true)
             expect("use-driving-voice" in instructions).to(be_true)

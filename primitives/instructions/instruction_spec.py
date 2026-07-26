@@ -15,7 +15,7 @@ for _cat in ("primitives", "utilities", "context_tools"):
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"
 _GENERATOR_DIR = _REPO_ROOT / "context_tools" / "base"
-_ARTIFACT_LIFECYCLE_DIR = _GENERATOR_DIR / "artifact_lifecycle"
+_LIFECYCLE_PROSE_DIR = _GENERATOR_DIR  # sections in base_context_tool.md
 _REPAIR_DIR = _REPO_ROOT / "utilities" / "repair"
 
 from primitives.instructions import Instruction
@@ -181,28 +181,34 @@ with description("_expand_docstring"):
             expect(_expand_docstring("", empty_action)).to(equal(""))
 
     with context("a single-word framework action name on a generator subclass"):
-        with it("should equal the direct load of artifact_lifecycle/generate.md"):
-            from context_tools.base.context_tool import ContextTool
+        with it("should equal the direct load of § Generate in base_context_tool.md"):
+            from context_tools.base.base_context_tool import BaseContextTool
             expanded = _expand_docstring(
-                "generate", ContextTool.generate, instance=ContextTool()
+                "generate", BaseContextTool.generate, instance=BaseContextTool()
             )
-            direct = Instruction("generate", _ARTIFACT_LIFECYCLE_DIR).expand()
+            direct = Instruction(
+                _path_for_name(_LIFECYCLE_PROSE_DIR, "generate"),
+                _LIFECYCLE_PROSE_DIR,
+            ).expand()
             expect(expanded).to(equal(direct))
 
     with context("a kit-local path-ref action docstring"):
-        with it("should equal the direct load of artifact_lifecycle/generate.md"):
-            from context_tools.base.context_tool import ContextTool
+        with it("should equal the direct load of § Generate in base_context_tool.md"):
+            from context_tools.base.base_context_tool import BaseContextTool
             expanded = _expand_docstring(
-                "generate", ContextTool.generate, instance=ContextTool()
+                "generate", BaseContextTool.generate, instance=BaseContextTool()
             )
-            direct = Instruction("generate", _ARTIFACT_LIFECYCLE_DIR).expand()
+            direct = Instruction(
+                _path_for_name(_LIFECYCLE_PROSE_DIR, "generate"),
+                _LIFECYCLE_PROSE_DIR,
+            ).expand()
             expect(expanded).to(equal(direct))
 
     with context("a kit-local repair action docstring"):
         with it("should equal the direct load of utilities/repair/repair.md"):
-            from context_tools.base.context_tool import ContextTool
+            from context_tools.base.base_context_tool import BaseContextTool
             expanded = _expand_docstring(
-                "repair", ContextTool.repair, instance=ContextTool()
+                "repair", BaseContextTool.repair, instance=BaseContextTool()
             )
             direct = Instruction("repair", _REPAIR_DIR).expand()
             expect(expanded).to(equal(direct))

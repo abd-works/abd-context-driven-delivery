@@ -296,8 +296,8 @@ with description("OoadAnalysis transform tool"):
             expect(self.result["content"]).to(contain('id="modules-context"'))
 
         with it("should render seam-term bullets"):
-            expect(self.result["content"]).to(contain("• Trait"))
-            expect(self.result["content"]).to(contain("• ISource"))
+            expect(self.result["content"]).to(contain("\u2022 Trait"))
+            expect(self.result["content"]).to(contain("\u2022 ISource"))
 
         with it("should not include stack/tech callouts"):
             expect("stack / tech" in self.result["content"]).to(equal(False))

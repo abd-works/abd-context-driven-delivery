@@ -3,7 +3,7 @@
 # Do not author behavior from this Python source.
 """Handoff - compact the current session so a fresh agent can continue.
 
-Writes into the bout folder (session.folder) when destination is a named bout -
+Writes into the sprint folder (session.folder) when destination is a named sprint -
 not the OS temp directory.
 """
 from __future__ import annotations
@@ -189,8 +189,8 @@ def _collect_state(destination: str) -> dict:
     }
 
 
-def _maybe_close_bout(destination: str, handoff_name: str) -> None:
-    """If destination is a bout under sessions/, write End on session.md."""
+def _maybe_close_sprint(destination: str, handoff_name: str) -> None:
+    """If destination is a sprint under sessions/, write End on session.md."""
     dest = Path(destination)
     if dest.parent.name != "sessions":
         return
@@ -205,7 +205,7 @@ class Handoff:
     @tool
     def resolve_working_folder(self, destination: str) -> str:
         """Resolve docs folder via docs_dir(destination).
-        For a bout ({path}/.context/sessions/{name}/) writes flat there; otherwise
+        For a sprint ({path}/.context/sessions/{name}/) writes flat there; otherwise
         {destination}/.context/. Creates the folder if missing. Returns absolute path."""
         folder = docs_dir(destination)
         folder.mkdir(parents=True, exist_ok=True)
@@ -214,7 +214,7 @@ class Handoff:
     @tool
     def collect_session_state(self, destination: str) -> str:
         """Collect generator, grilling, and CDD progress state under destination.
-        destination defaults to the host generator session.folder (bout) or session.path.
+        destination defaults to the host generator session.folder (sprint) or session.path.
         Returns JSON with: working_folder, sketches, named_artifacts (grill-answers,
         cdd-sketch, module-context), context_index_path + context_index (workspace
         tool roots), cdd summary (fidelity/scope/flow/open/done/log_tail),
@@ -236,7 +236,7 @@ class Handoff:
         when focus (or a non-archive slug) is provided. Do not use plain 'handoff'
         or 'handoff-latest' as the archive name — those are reserved.
 
-        When destination is a bout under sessions/, closes the Session (End section).
+        When destination is a sprint under sessions/, closes the Session (End section).
         Returns the archive handoff path."""
         archive_slug = _resolve_archive_slug(slug=slug, focus=focus)
         if archive_slug in _RESERVED_SLUGS or archive_slug == "handoff-latest":
@@ -250,13 +250,13 @@ class Handoff:
         latest = _latest_handoff_path(destination)
         latest.parent.mkdir(parents=True, exist_ok=True)
         latest.write_text(content, encoding="utf-8")
-        _maybe_close_bout(destination, f"handoffs/{primary.name}")
+        _maybe_close_sprint(destination, f"handoffs/{primary.name}")
         return str(primary.resolve())
 
     @action
     def handoff_session(self, destination: str, next_focus: str = "") -> str:
         """Compact the current conversation into a handoff document under the session working folder so a fresh agent can continue. Tailor the doc to {{next_focus}} when provided."""
-        """Step 1 - Resolve the working folder: call resolve_working_folder(destination) where destination is the host generator session.folder (bout under {session.path}/.context/sessions/{name}/) or session.path. Never the OS temp directory."""
+        """Step 1 - Resolve the working folder: call resolve_working_folder(destination) where destination is the host generator session.folder (sprint under {session.path}/.context/sessions/{name}/) or session.path. Never the OS temp directory."""
         self.resolve_working_folder()
         """Step 2 - Call collect_session_state(destination). Use the returned JSON as ground truth for generator state (sketches), grilling state (grill-answers headings), and CDD progress (cdd-sketch fidelity/flow/open/done). Read named artifact files only when you need specifics; prefer paths and short summaries."""
         self.collect_session_state()

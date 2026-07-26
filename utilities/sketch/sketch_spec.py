@@ -215,6 +215,6 @@ with description("Sketcher toolset"):
         with it("calls grill_with_context in-method then owns sketch show/persist cadence"):
             joined = "\n".join(self.body.prose_parts)
             expect(joined).to(contain("(Recommended)"))
-            expect(joined).to(contain("2–3 grill answers"))
+            expect(joined).to(contain("2\u20133 grill answers"))
             expect(joined).to(contain("save_sketch"))
             expect(joined).to(contain("Grill the sketch plan"))

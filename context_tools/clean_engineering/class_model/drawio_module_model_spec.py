@@ -117,9 +117,9 @@ with description("DrawIO modules fidelity"):
 
         with it("should render module names and seam bullets"):
             expect(self.xml).to(contain("checks"))
-            expect(self.xml).to(contain("• Trait"))
+            expect(self.xml).to(contain("\u2022 Trait"))
             expect(self.xml).to(contain("character"))
-            expect(self.xml).to(contain("• ISource"))
+            expect(self.xml).to(contain("\u2022 ISource"))
 
         with it("should not include stack/tech callouts"):
             expect("stack / tech" in self.xml).to(be_false)
@@ -198,7 +198,7 @@ with description("DrawIO modules fidelity"):
 
         with it("should put Effect on the powers parent cell"):
             expect(self.xml).to(contain('id="powers"'))
-            expect(self.xml).to(contain("• Effect"))
+            expect(self.xml).to(contain("\u2022 Effect"))
 
         with it("should nest powers/attack inside powers"):
             expect(self.xml).to(contain('id="powers-attack"'))

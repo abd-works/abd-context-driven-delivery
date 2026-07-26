@@ -59,7 +59,7 @@ class Sketcher:
     ) -> str:
         """Persist a sketch to the destination docs dir as {slug}-sketch.md.
         Engagement sketches: destination = session.folder
-        ({path}/.context/sessions/{name}/) — files are written flat in that bout.
+        ({path}/.context/sessions/{name}/) — files are written flat in that sprint.
         Module sketches: destination = {session.path}/{module} — files go under
         {destination}/.context/. Creates parents if missing. Overwrites same path.
         Returns the resolved sketch path."""
@@ -81,10 +81,10 @@ class Sketcher:
 
     @action
     def sketch_session(self, slug: str, destination: str, agent_dir: str = "") -> str:
-        """Sketch {{slug}} interactively — rough artifact through an explicit grill_with_context call. MUST persist via save_sketch on the first interim draft and overwrite on every refinement. Never leave the sketch only in chat. destination defaults to session.folder (bout) for engagement sketches, or {session.path}/{module} for module sketches. Question shape (frame + options) comes from grill_with_context — do not restate bare options here."""
+        """Sketch {{slug}} interactively — rough artifact through an explicit grill_with_context call. MUST persist via save_sketch on the first interim draft and overwrite on every refinement. Never leave the sketch only in chat. destination defaults to session.folder (sprint) for engagement sketches, or {session.path}/{module} for module sketches. Question shape (frame + options) comes from grill_with_context — do not restate bare options here."""
         """Step 0 — Grill the sketch plan (concept-grounded questions via grill_with_context)."""
         self._grill_context().grill_with_context(slug)
-        """Step 1 — Resolve destination: engagement → session.folder; module → {session.path}/{module}. If no session bout exists yet, confirm path with the user, suggest a kebab slug, create_session, then use session.folder. Do not invent a divergent folder."""
+        """Step 1 — Resolve destination: engagement → session.folder; module → {session.path}/{module}. If no session sprint exists yet, confirm path with the user, suggest a kebab slug, create_session, then use session.folder. Do not invent a divergent folder."""
         """Step 2 — locate the sketch template via find_template(agent_dir=agent_dir). agent_dir is the concrete host toolset module directory (manifest chain agent_dir / module_dir of the invoked Context). If the caller supplied a template directly in context, use that instead."""
         self.find_template(agent_dir)
         """Step 3 — draft a rough sketch inspired by the template. Show it in chat, then IMMEDIATELY call save_sketch(destination, slug, content) before continuing the grill. A sketch that exists only in chat is a defect — the file under the destination docs dir is the working record."""

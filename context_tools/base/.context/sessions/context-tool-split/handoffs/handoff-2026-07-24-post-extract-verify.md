@@ -1,18 +1,18 @@
-# Handoff - ContextTool split extract complete
+# Handoff - BaseContextTool split extract complete
 
 ## 1. Next session focus
 
-**Post-extract verify / polish.** Concrete kits extracted; ContextTool is a thin MI composer; context_tool_spec 38/38 passed. Next: confirm layout vs sketch, optional kit-doc / duplicate cleanup, then close CE bout or pick next CE fidelity.
+**Post-extract verify / polish.** Concrete kits extracted; BaseContextTool is a thin MI composer; context_tool_spec 38/38 passed. Next: confirm layout vs sketch, optional kit-doc / duplicate cleanup, then close CE bout or pick next CE fidelity.
 
 ## 2. Resume in three lines
 
 (a) Stage: **model extract done** — CleanEngineering bout context-tool-split on context_tools/base; fidelity modules→model; index clean_engineering = ./context_tools/base/*.
-(b) Last accepted: peer kits live under utilities/ + rtifact_lifecycle under context_tools/base/; composer merges ArtifactLifecycle, PartitionPipeline, Repair, Scan, WorkspaceSession, Toolset; framework action prose via bare names + _FRAMEWORK_ACTIONS includes document/log_fix.
+(b) Last accepted: peer kits live under utilities/ + rtifact_lifecycle under context_tools/base/; composer merges BaseContextTool, PartitionPipeline, Repair, Scan, WorkspaceSession, Toolset; framework action prose via bare names + _FRAMEWORK_ACTIONS includes document/log_fix.
 (c) Next: smoke broader than context_tool_spec if needed; align leftover docs (grill still says utilities/scan / IScan in places); do not re-open module cut unless to-fix forces it.
 
 ## 3. Generator state
 
-- Toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering (via ContextTool)
+- Toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering (via BaseContextTool)
 - Bout: context_tools/base/.context/sessions/context-tool-split/
 - Modules sketch: context_tools/base/.context/sessions/context-tool-split/context-tool-modules-sketch.md
 - Build order: context_tools/base/.context/module-build-order.md (1–6 done)
@@ -30,7 +30,7 @@
   - Peers have no kit→kit deps; only composer depends on kits
   - log_fix + repair same kit (record vs root-cause fix)
   - Concrete classes only (no I*/impl tier)
-  - ArtifactLifecycle is CT-only under context_tools/base/
+  - BaseContextTool is CT-only under context_tools/base/
 - Suggested skills: /handoff (done), CleanEngineering validate/satisfy if closing bout, /grill-context only for new decisions
 
 ## 5. CDD progress
@@ -44,7 +44,7 @@ None (no cdd-sketch in this bout).
 - context_tools/base/.context/sessions/context-tool-split/context-tool-modules-sketch.md
 - context_tools/base/.context/module-build-order.md
 - context_tools/base/context_tool.py
-- Kit homes: utilities/workspace_session/, utilities/scanners/, utilities/partition_pipeline/, utilities/repair/, context_tools/base/artifact_lifecycle/
+- Kit homes: utilities/workspace_session/, utilities/scanners/, utilities/partition_pipeline/, utilities/repair/, context_tools/base/
 - Spec: context_tools/base/context_tool_spec.py (last known 38/38)
 
 ## 7. Open questions / risks

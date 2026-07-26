@@ -1,4 +1,4 @@
-"""BDD spec for WorkspaceSession — kit prose + tools on ContextTool hosts."""
+"""BDD spec for WorkspaceSession — kit prose + tools on BaseContextTool hosts."""
 
 import sys
 from pathlib import Path
@@ -22,12 +22,12 @@ from tools.tool import Toolset, _ToolsetLoader, _discover_tools
 
 _KIT_DIR = Path(__file__).resolve().parent
 _CAR_CHRONICLE_TOOLSET = (
-    "context_tools.base.examples.car_chronicle.car_chronicle:CarChronicle"
+    "context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _CHRONICLE_WITH_OUTPUT_TOOLSET = (
-    "context_tools.base.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
+    "context_tools.base.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
 )
-_BASE_TOOLSET = "context_tools.base.context_tool:ContextTool"
+_BASE_TOOLSET = "context_tools.base.base_context_tool:BaseContextTool"
 
 
 def _expand(
@@ -66,7 +66,7 @@ with description("WorkspaceSession kit prose"):
         expect("context-index.md" in text).to(be_true)
 
 
-with description("WorkspaceSession on a ContextTool host"):
+with description("WorkspaceSession on a BaseContextTool host"):
     with context("CarChronicle generate"):
         with before.all:
             cls = _ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
@@ -83,6 +83,12 @@ with description("WorkspaceSession on a ContextTool host"):
         with it("should inline Session section guidance"):
             expect("# Session" in self.response["instructions"]).to(be_true)
             expect("session.folder" in self.response["instructions"]).to(be_true)
+
+        with it("should expand session resource from the host instance"):
+            expect(
+                f"Resource `session` = {self.host.session!r}."
+                in self.response["instructions"]
+            ).to(be_true)
 
         with it("should expand kit tool instructions from sessions.md"):
             tools = _discover_tools(self.host)
@@ -108,7 +114,7 @@ with description("WorkspaceSession on a ContextTool host"):
                 )
             )
 
-    with context("base ContextTool generate"):
+    with context("BaseContextTool generate"):
         with before.all:
             cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
             self.host = cls()

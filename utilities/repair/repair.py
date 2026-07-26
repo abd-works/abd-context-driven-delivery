@@ -27,9 +27,9 @@ class Repair:
         path = folder / "to-fix.log"
         folder.mkdir(parents=True, exist_ok=True)
         if not path.is_file():
-            bout = self._session.name or "session"
+            sprint = self._session.name or "session"
             path.write_text(
-                f"# to-fix.log — {bout} bout\n"
+                f"# to-fix.log — {sprint} sprint\n"
                 "# Log omissions/errors here. Each entry:\n"
                 "#   when, artifact, rule, wrong (one line), original, improved\n"
                 '# User phrase "to fix" = failed to do it right; '

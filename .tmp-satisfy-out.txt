@@ -1,6 +1,6 @@
 ﻿```yaml
 ok: true
-toolset: context_tools.base.context_tool:ContextTool
+toolset: context_tools.base.base_context_tool:BaseBaseContextTool
 action: satisfy
 result: When done, run validate on artifacts under {session.path}/.
 instructions: "Offer and write Context Decision Records (CDRs) sparingly as decisions\
@@ -25,7 +25,7 @@ instructions: "Offer and write Context Decision Records (CDRs) sparingly as deci
   \ until it passes.\n\n\nsatisfy\n\nResource `session` = Session(path='context_tools/base',\
   \ name='context-tool-split'). Use session.path for durable artifacts and session.folder\
   \ for process bout docs.\n\n# Contexts\n\n## Favour defaults\n\n- **`favour-defaults`**\
-  \ ΓÇö The framework (`ContextTool`, `@instruction` slots, action docstrings ΓåÆ `context_tools/base/*.md`\
+  \ ΓÇö The framework (`BaseContextTool`, `@instruction` slots, action docstrings ΓåÆ `context_tools/base/*.md`\
   \ / domain md) already wires contexts, domain ┬º Generate, examples, format template,\
   \ and action prose. **Do not override** instruction slots or action docstrings.\
   \ **Do not override `module_dir`** ΓÇö put the `.py` file inside the domain folder;\
@@ -59,14 +59,14 @@ instructions: "Offer and write Context Decision Records (CDRs) sparingly as deci
   \ Partition `out_root` and durable corpus docs default toward **`session.path`**.\
   \ Do not invent a divergent working folder outside the indexed/confirmed root.\n\
   \n## Minimal Python module\n\n- **`minimal-python-module`** - Domain `.py` is thin:\
-  \ `@context_tool`, `\"\"\"Instructions section\"\"\"` (framework Instructions marker),\
+  \ `@base_context_tool`, `\"\"\"Instructions section\"\"\"` (framework Instructions marker),\
   \ class attrs **`default_workspace_folder`** + **`context_index_key`**, `__init__(format=...,\
   \ path=..., session=..., workspace=...)`, and optional `@action` body overrides.\
   \ **No** duplicated `@instruction(override=True)` for `contexts`, `template`, or\
   \ framework action docstrings (`\"\"\"generate\"\"\"`, `\"\"\"repair\"\"\"`, ...).\
   \ Empty docstring on an overridden action is fine - framework prose resolves from\
   \ the action name. Pass `path` and `session` through to `super().__init__(..., path=path,\
-  \ session=session)`. Inherit peer entry points from base ContextTool: **`generate`**\
+  \ session=session)`. Inherit peer entry points from base BaseContextTool: **`generate`**\
   \ (plain), **`grill`**, **`sketch`**, **`iterate`** ΓÇö do not re-decorate domain\
   \ `generate` with `@grill_with_context` / `@sketch` / `@iterate`.\n\n## Canonical\
   \ markdown only\n\n- **`canonical-markdown-only`** ΓÇö All domain prose lives in **`{domain-slug}.md`**:\
@@ -84,7 +84,7 @@ instructions: "Offer and write Context Decision Records (CDRs) sparingly as deci
   \ Python import path. Hyphens in folder names break `__import__` and require fallback\
   \ loader workarounds ΓÇö avoid them.\n\n## Domain folder layout\n\n- **`domain-folder-layout`**\
   \ ΓÇö One folder per domain. The `.py` module lives **inside** that folder (e.g. `context_tools/agent_bdd/agent_bdd.py`,\
-  \ `context_tools/base/examples/car_chronicle/car_chronicle.py`). Same folder holds\
+  \ `context_tools/base/create_context_tool/examples/car_chronicle/car_chronicle.py`). Same folder holds\
   \ `{domain-slug}.md`, `examples/examples.md`, optional `formats/{format}/{domain-slug}-template.*`,\
   \ optional `scanners/`. Repair fixtures: `examples/<descriptive-folder>/faultyAsset`\
   \ and `repairedAsset`. **Never** park Python beside the folder and override `module_dir`\
@@ -94,18 +94,18 @@ instructions: "Offer and write Context Decision Records (CDRs) sparingly as deci
   \ or rebuild from scratch unless asked.\n\n## Do not duplicate content\n\n- **`do-not-duplicate-content`**\
   \ ΓÇö Do not re-create markdown the framework already loads. Do not copy `context_tools/base/generate.md`\
   \ into the domain. Do not add parallel prose files for slots the base class already\
-  \ resolves. **Patch surgically** when fixing a domain.\n\n## ContextTool class module\n\
+  \ resolves. **Patch surgically** when fixing a domain.\n\n## BaseContextTool class module\n\
   \n- **`context-tool-class-module`** ΓÇö Line 1: `# @toolset-manifest python -m tools\
   \ manifest <module>:<Class>`. Class docstring: `\"\"\"┬º Instructions\"\"\"`. Re-export\
-  \ `action` and `concept` only when needed. **Do not** subclass `ContextTool` in\
-  \ source ΓÇö `@context_tool` merges it. Framework lives at **`context_tools/base/`**\
-  \ (`context_tools.base.context_tool:ContextTool`).\n\n## Format templates vs scaffold\
+  \ `action` and `concept` only when needed. **Do not** subclass `BaseContextTool` in\
+  \ source ΓÇö `@base_context_tool` merges it. Framework lives at **`context_tools/base/`**\
+  \ (`context_tools.base.base_context_tool:BaseBaseContextTool`).\n\n## Format templates vs scaffold\
   \ templates\n\n- **`format-vs-scaffold-templates`** ΓÇö **`context_tools/base/templates/`**\
   \ = meta scaffolds for **building new domains** (Python + md + examples); loaded\
   \ via `templates` slot, **no format filter**. **`formats/{format}/`** in each domain\
   \ = artifact templates for generate/satisfy; loaded via `template` slot with active\
   \ `format`.\n\n## Reference extension example\n\n- **`reference-extension-example`**\
-  \ ΓÇö **`context_tools/base/examples/car_chronicle/`** shows a complete context extension:\
+  \ ΓÇö **`context_tools/base/create_context_tool/examples/car_chronicle/`** shows a complete context extension:\
   \ `car_chronicle.py` beside `car_chronicle.md`, `{domain-slug}-templates.md`, `examples/examples.md`,\
   \ repair fixtures, and **`output/`** with sample generated artifact (`output/driving-log.md`).\
   \ No `module_dir` override ΓÇö the class module and markdown share one folder.\n\n\
@@ -123,8 +123,8 @@ instructions: "Offer and write Context Decision Records (CDRs) sparingly as deci
   \ 1 manifest, then python -m tools run -. Follow response.instructions only.\n#\
   \ Do not author behavior from this Python source.\n\"\"\"{ClassName} generator.\"\
   \"\"\n\nfrom __future__ import annotations\n\nfrom primitives.actions.action import\
-  \ action  # noqa: F401\nfrom context_tools import context_tool  # noqa: F401\n\n\
-  \n@context_tool\nclass {ClassName}:\n    \"\"\"┬º Instructions\"\"\"\n\n    # Override\
+  \ action  # noqa: F401\nfrom context_tools import base_context_tool  # noqa: F401\n\n\
+  \n@base_context_tool\nclass {ClassName}:\n    \"\"\"┬º Instructions\"\"\"\n\n    # Override\
   \ when this domain's durable root is not \".\" (e.g. \"tests\", \"src\", \"ux\"\
   ).\n    default_workspace_folder: str = \".\"\n    # Key in ``{workspace}/.context/context-index.md``\
   \ (e.g. \"stories\").\n    context_index_key: str = \"{domain_slug}\"\n\n    def\
@@ -132,7 +132,7 @@ instructions: "Offer and write Context Decision Records (CDRs) sparingly as deci
   \ | None = None,\n        session: str | None = None,\n        workspace: str |\
   \ None = None,\n    ) -> None:\n        super().__init__(format=format, path=path,\
   \ session=session, workspace=workspace)\n\n\nEvery tool call uses this shape ΓÇö set\
-  \ `tool` and `arguments`, pipe to CLI:\n\n```yaml\ntoolset: context_tools.base.context_tool:ContextTool\n\
+  \ `tool` and `arguments`, pipe to CLI:\n\n```yaml\ntoolset: context_tools.base.base_context_tool:BaseBaseContextTool\n\
   context:\n  path: context_tools/base\n  session: context-tool-split\n  workspace:\
   \ .\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m tools run\
   \ -\n\nSuggested flow (repeat and reorder as the story needs):\n\nRead `resources`\

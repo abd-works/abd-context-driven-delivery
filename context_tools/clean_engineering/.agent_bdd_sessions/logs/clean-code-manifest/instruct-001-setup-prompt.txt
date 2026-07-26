@@ -1,1 +1,1 @@
-Run the manifest command from the @toolset-manifest comment at the top of contexts/clean_engineering/clean_engineering.py. Show the manifest output.
+Run the manifest command from the @toolset-manifest comment at the top of context_tools/clean_engineering/clean_engineering.py. Show the manifest output.

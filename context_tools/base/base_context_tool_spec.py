@@ -1,34 +1,38 @@
-"""BDD spec for ContextTool composer face — domain slots, templates, meta contexts.
+"""BDD spec for BaseContextTool — domain host face + lifecycle prose.
 
 Peer-kit expansion lives with the kits:
 - ``utilities/sessions/workspace_session_spec.py``
 - ``utilities/partition_pipeline/partition_pipeline_spec.py``
 - ``utilities/repair/repair_spec.py``
-- ``context_tools/base/artifact_lifecycle/artifact_lifecycle_spec.py``
+
+Meta generator face (scaffold templates / create_context_tool.md) lives in
+``create_context_tool/create_context_tool_spec.py``.
 """
 
 from pathlib import Path
 from typing import Any
 
-from expects import equal, expect
+from expects import be_true, equal, expect
 from mamba import before, context, description, it
 
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
 import context_tools  # noqa: F401 — generator package on path
 from primitives.instructions import Instruction
+from primitives.instructions import _path_for_name
 from tools.tool import Toolset, _ToolsetLoader
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_EXAMPLES_DIR = _REPO_ROOT / "context_tools" / "base" / "examples"
-_CAR_CHRONICLE_DIR = _EXAMPLES_DIR / "car_chronicle"
-_GENERATOR_DIR = _REPO_ROOT / "context_tools" / "base"
+_BASE_DIR = _REPO_ROOT / "context_tools" / "base"
+_CAR_CHRONICLE_DIR = (
+    _BASE_DIR / "create_context_tool" / "examples" / "car_chronicle"
+)
 _CAR_CHRONICLE_TOOLSET = (
-    "context_tools.base.examples.car_chronicle.car_chronicle:CarChronicle"
+    "context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _CHRONICLE_WITH_OUTPUT_TOOLSET = (
-    "context_tools.base.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
+    "context_tools.base.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput"
 )
-_BASE_GENERATOR_TOOLSET = "context_tools.base.context_tool:ContextTool"
+_BASE_TOOLSET = "context_tools.base.base_context_tool:BaseContextTool"
 _GENERATE_OUTPUT_PROSE = "Append each trip entry to the driving log before validating."
 _META_CONTEXT_MARKER = "scaffold-vs-patch"
 
@@ -39,10 +43,6 @@ def _load_car_chronicle() -> Toolset:
 
 def _load_chronicle_with_output() -> Toolset:
     return _ToolsetLoader.instance().load(_CHRONICLE_WITH_OUTPUT_TOOLSET)()
-
-
-def _load_base_generator() -> Toolset:
-    return _ToolsetLoader.instance().load(_BASE_GENERATOR_TOOLSET)()
 
 
 def _expand_action(
@@ -63,23 +63,8 @@ def _expand_action(
     )
 
 
-def _load_meta_concepts() -> str:
-    return Instruction(
-        "\u00a7 Contexts", _GENERATOR_DIR, domain_slug="context_tool"
-    ).expand()
-
-
-def _load_generator_templates() -> str:
-    from primitives.assets import AssetCollection
-    from primitives.assets import AssetLocation
-
-    location = AssetLocation(
-        "folder",
-        _GENERATOR_DIR,
-        "context_tool",
-        folder=_GENERATOR_DIR / "templates",
-    )
-    return AssetCollection(location).merged()
+def _section(name: str) -> str:
+    return Instruction(_path_for_name(_BASE_DIR, name), _BASE_DIR).expand()
 
 
 def _load_car_contexts() -> str:
@@ -132,7 +117,14 @@ def _assert_contexts_inlined(instructions: str, concepts_text: str) -> None:
         expect(bullet in instructions).to(equal(True))
 
 
-with description("ContextTool composer"):
+with description("BaseContextTool lifecycle prose"):
+    with it("should resolve generate / validate / satisfy from base markdown"):
+        expect("# Generate" in _section("generate")).to(be_true)
+        expect("# Validate" in _section("validate")).to(be_true)
+        expect("# Satisfy" in _section("satisfy")).to(be_true)
+
+
+with description("BaseContextTool composer"):
     with context("a CarChronicle domain host"):
         with before.all:
             self.chronicle = _load_car_chronicle()
@@ -157,7 +149,7 @@ with description("ContextTool composer"):
             with it("should inline the full car_chronicle templates file"):
                 _assert_text_inlined(self.response["instructions"], self.template)
 
-            with it("should not inline meta contexts from context_tool.md"):
+            with it("should not inline meta contexts from create_context_tool.md"):
                 expect(
                     _META_CONTEXT_MARKER in self.response["instructions"]
                 ).to(equal(False))
@@ -166,6 +158,11 @@ with description("ContextTool composer"):
                 expect(
                     _GENERATE_OUTPUT_PROSE in self.response["instructions"]
                 ).to(equal(False))
+
+            with it("should inline generate prose"):
+                expect(_section("generate") in self.response["instructions"]).to(
+                    be_true
+                )
 
         with context("validate expands domain contexts as rubric"):
             with before.each:
@@ -178,37 +175,46 @@ with description("ContextTool composer"):
             with it("should inline the full Contexts section as rubric"):
                 _assert_contexts_inlined(self.response["instructions"], self.contexts)
 
-    with context("the base ContextTool toolset"):
-        with before.all:
-            self.generator = _load_base_generator()
-            self.meta_concepts = _load_meta_concepts()
-            self.template = _load_generator_templates()
+            with it("should name scan on tools"):
+                expect(self.response["tools"]).to(equal(["scan"]))
 
-        with context("generate expands meta face"):
+            with it("should inline validate prose"):
+                expect(_section("validate") in self.response["instructions"]).to(
+                    be_true
+                )
+
+        with context("satisfy"):
             with before.each:
                 self.response = _expand_action(
-                    self.generator,
-                    "generate",
-                    toolset_path=_BASE_GENERATOR_TOOLSET,
+                    self.chronicle,
+                    "satisfy",
+                    toolset_path=_CAR_CHRONICLE_TOOLSET,
                 )
 
-            with it("should inline meta contexts from context_tool.md"):
-                _assert_text_inlined(self.response["instructions"], self.meta_concepts)
+            with it("should set action to satisfy"):
+                expect(self.response["action"]).to(equal("satisfy"))
 
-            with it("should inline all files from context_tools/base/templates/"):
-                _assert_text_inlined(self.response["instructions"], self.template)
-                expect("@context_tool" in self.response["instructions"]).to(equal(True))
-                expect("# Instructions" in self.response["instructions"]).to(
-                    equal(True)
-                )
-                expect("# Worked examples" in self.response["instructions"]).to(
-                    equal(True)
+            with it("should name no tools on satisfy"):
+                expect(self.response["tools"]).to(equal([]))
+
+            with it("should inline satisfy prose"):
+                expect(_section("satisfy") in self.response["instructions"]).to(
+                    be_true
                 )
 
-            with it("should inline worked samples from context_tools/examples"):
-                expect("use-driving-voice" in self.response["instructions"]).to(
-                    equal(True)
-                )
+            with it("should inline the domain template"):
+                expect(self.template in self.response["instructions"]).to(be_true)
+
+    with context("BaseContextTool generate"):
+        with before.all:
+            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
+            self.host = cls()
+            self.response = _expand_action(
+                self.host, "generate", toolset_path=_BASE_TOOLSET
+            )
+
+        with it("should inline generate prose on the composer"):
+            expect(_section("generate") in self.response["instructions"]).to(be_true)
 
     with context("a subclass that overrides generate_output"):
         with before.all:

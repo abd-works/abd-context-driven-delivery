@@ -1,12 +1,12 @@
 # Session
 
-Every ContextTool exposes a **`session`** resource (`Session`) and workspace tools from this kit.
+Every BaseContextTool exposes a **`session`** resource (`Session`) and workspace tools from this kit.
 
 ## Constructor / run context
 
 - `workspace` — project/sandbox root (default `"."`)
 - `path` — tool working area
-- `session` — bout slug
+- `session` — sprint slug (named work period under `.context/sessions/{name}/`)
 
 On `tools run`, pass `context.workspace` / `context.path` / `context.session`.
 
@@ -24,7 +24,7 @@ Explicit `path` overrides and must be recorded via **`record_context_root`**.
   - Tool docs / diagrams → `{session.path}/.context/`
   - Partitioned chunks + module-local docs → `{session.path}/{module}/.context/`
   - Generated code and module folders → `{session.path}/`
-- **`session.folder`** — named process bout under `{session.path}/.context/sessions/{name}/` (`session.md`, grill-answers, engagement sketches, handoff). Create via **`create_session`** after confirming path and slug with the user (also records context-index). Close via **`close_session`**.
+- **`session.folder`** — named sprint under `{session.path}/.context/sessions/{name}/` (`session.md`, grill-answers, engagement sketches, handoff). Create via **`create_session`** after confirming path and slug with the user (also records context-index). Close via **`close_session`**.
 
 ## Defaults by kind of work
 

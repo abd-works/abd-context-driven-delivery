@@ -37,7 +37,7 @@ with description("a class"):
         with context("with a class-level description"):
             with it("should expose instructions matching the class-level description"):
                 expect(Car.manifest.instructions).to(
-                    equal("Operate a car — start, stop, and read current state.")
+                    equal("Operate a car \u2014 start, stop, and read current state.")
                 )
 
         with context("with methods marked as tools and method-level descriptions"):
@@ -57,7 +57,7 @@ with description("a class"):
 
                 with it("should include toolset-level instructions matching the class-level description"):
                     expect(Car.manifest.signature["instructions"]).to(
-                        equal("Operate a car — start, stop, and read current state.")
+                        equal("Operate a car \u2014 start, stop, and read current state.")
                     )
 
             with context("every marked method"):

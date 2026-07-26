@@ -58,11 +58,15 @@ def _invoke_tool(instance: Toolset, tool_name: str, arguments: dict[str, Any] | 
     return getattr(instance, tool_name)(**(arguments or {}))
 
 
-_ARTIFACT_LIFECYCLE_DIR = _GENERATOR_DIR / "artifact_lifecycle"
+_LIFECYCLE_PROSE_DIR = _GENERATOR_DIR  # sections in base_context_tool.md
 
 
 def _load_action_prose(action: str) -> str:
-    return Instruction(action, _ARTIFACT_LIFECYCLE_DIR).expand()
+    from primitives.instructions import _path_for_name
+
+    return Instruction(
+        _path_for_name(_LIFECYCLE_PROSE_DIR, action), _LIFECYCLE_PROSE_DIR
+    ).expand()
 
 
 def _load_contexts_section(module_dir: Path) -> str:

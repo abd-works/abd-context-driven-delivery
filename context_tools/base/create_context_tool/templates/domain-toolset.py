@@ -6,10 +6,10 @@
 from __future__ import annotations
 
 from primitives.actions.action import action  # noqa: F401
-from context_tools import context_tool  # noqa: F401
+from context_tools import base_context_tool  # noqa: F401
 
 
-@context_tool
+@base_context_tool
 class {ClassName}:
     """§ Instructions"""
 

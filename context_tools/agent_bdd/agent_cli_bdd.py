@@ -158,6 +158,10 @@ class ToolAgentBlock:
             log_dir=self._log_dir,
         )
 
+    def instruct_run(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
+        """Back-compat alias for ``instruct_use_tool``."""
+        return self.instruct_use_tool(prompt, timeout_seconds=timeout_seconds)
+
     def _finalize_run_response(
         self,
         prefix: str,

@@ -18,7 +18,7 @@ Capture a field’s guidelines and examples as a context, then use its tools to 
 
 ## Seam
 
-Annotate a class with `@context`, then create markdown for the named instruction properties: `contexts`, `generate_instructions`, `document_instructions`, `examples`, `templates`. Optionally extend any of the actions or tools to customize — `generate`, `validate`, `document`, `satisfy`, `repair`, `generate_output`, `add_generate_header_to_generated`, `scan`. Constraint: do not subclass `Context` directly; use `@context`. Constraint: AI consumers follow the manifest and `response.instructions`, not the context `.py` as the instruction document.
+Annotate a class with `@context`, then create markdown for the named instruction properties: `contexts`, `examples`, `templates` (action prose comes from the action docstring / `# Generate` / `# Document` sections). Optionally extend any of the actions or tools to customize — `generate`, `validate`, `document`, `satisfy`, `repair`, `generate_output`, `add_generate_header_to_generated`, `scan`. Constraint: do not subclass `Context` directly; use `@context`. Constraint: AI consumers follow the manifest and `response.instructions`, not the context `.py` as the instruction document.
 
 ## Public API
 

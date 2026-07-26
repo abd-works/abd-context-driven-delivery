@@ -1,10 +1,10 @@
-# HIERARCHY: ContextTool Framework
+# HIERARCHY: BaseContextTool / CreateContextTool
 
 <!--
-Example in code: context_tools.base.examples.car_chronicle.car_chronicle:CarChronicle (context_tools/base/examples/car_chronicle/)
+Example in code: context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle (context_tools/base/create_context_tool/examples/car_chronicle/)
 Production domain: context_tools.clean_engineering.clean_engineering:CleanEngineering
-Context spec: context_tools/base/context_tool_spec.py — ActionRunner expansion + direct tool calls (in-process)
-Agent spec: context_tools/base/context_tool_agent_spec.py — agent follows instructions; assert shell tool calls
+Context spec: context_tools/base/base_context_tool_spec.py — ActionRunner expansion + direct tool calls (in-process)
+Agent spec: context_tools/base/create_context_tool_agent_spec.py — agent follows instructions; assert shell tool calls
 Primitives specs: primitives/instructions/instruction_spec.py, primitives/declared/declared_spec.py, primitives/assets/asset_spec.py, primitives/assets/markdown_extractor_spec.py
 Scanner spec: context_tools/scanners/scanner_spec.py — Scanner, Violation, execute_scan, ScannerCollection
 Per-scanner repair fixtures: context_tools/clean_engineering/evals/engineering/<rule>/faultyAsset and repairedAsset (scanners_spec.py)
@@ -57,21 +57,21 @@ Action expansion
       instructions should inline validate.md from the contexts module
       instructions should inline generator-fix prose from repair.md
 
-  the base ContextTool toolset in context_tools/base/context_tool.py
+  the base BaseContextTool toolset in context_tools/base/context_tool.py
     the generate action is expanded
       instructions should inline meta contexts from context_tool.md
       instructions should inline all files from context_tools/base/templates/
       instructions should inline generate.md action prose
       instructions should inline worked samples from context_tools/examples
 
-  a domain ContextTool whose generate_output target calls self.add_epic()
-    context_tools/base/examples/car_chronicle/chronicle_with_output.py — ChronicleWithOutput
+  a domain BaseContextTool whose generate_output target calls self.add_epic()
+    context_tools/base/create_context_tool/examples/car_chronicle/chronicle_with_output.py — ChronicleWithOutput
     the generate action is expanded
       tools should name add_epic
       instructions should include prose from the generate_output target
 
-  a domain ContextTool with no generate_output target wired
-    context_tools/base/examples/car_chronicle/car_chronicle.py — base CarChronicle
+  a domain BaseContextTool with no generate_output target wired
+    context_tools/base/create_context_tool/examples/car_chronicle/car_chronicle.py — base CarChronicle
     the generate action is expanded
       instructions should not include generate-output steps from a subclass target
 
@@ -88,7 +88,7 @@ Scanner tools
 Agent
 
   with agent and generate action
-    Agent reading this file: run in chat via @agent-spec-manifest (python -m tools agent-spec context_tools/base/context_tool_agent_spec.py)
+    Agent reading this file: run in chat via @agent-spec-manifest (python -m tools agent-spec context_tools/base/create_context_tool_agent_spec.py)
     agent-instruct-read car_chronicle/car_chronicle.py, then natural generate prompt for a driving chronicle
       it should parse generate action response with instructions
       it should name no tools on generate
@@ -103,7 +103,7 @@ Agent
 
 Generate a Knowledge Artifact
 
-  a ContextTool
+  a BaseContextTool
     it should expose generate, validate, satisfy, repair, partition, index, and segment as actions owned by the base class
     it should expose scan as a tool on the base class
 
@@ -114,16 +114,16 @@ Generate a Knowledge Artifact
       instructions should inline partition guidance (domain partition.md or default)
       instructions should nest index and segment prose
 
-  a domain ContextTool with partition.md
+  a domain BaseContextTool with partition.md
     the index action is expanded
       instructions should inline that context's partition.md guidance
       instructions should name the index file as {subject}-index.md (corpus basename, not toolset)
 
-  a domain ContextTool without partition.md
+  a domain BaseContextTool without partition.md
     the index action is expanded
       instructions should inline the default partition guidance prose
 
-  a domain ContextTool with a generate_output target wired
+  a domain BaseContextTool with a generate_output target wired
     it should not declare its own generate action
     it should not declare its own validate action
     it should not declare its own satisfy action

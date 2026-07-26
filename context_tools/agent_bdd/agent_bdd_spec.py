@@ -22,7 +22,7 @@ with description("an agent spec file"):
         with it("should declare in_chat harness and session path"):
             manifest = read_manifest(_TOOLS_SPEC)
             expect(manifest.in_chat).to(be_true)
-            expect(manifest.session).to(equal("tools/.agent_bdd_sessions/general-lee.json"))
+            expect(manifest.session).to(equal("tools/.sessions/general-lee.json"))
             expect("agent-spec" in manifest.command).to(be_true)
 
         with it("should build a runbook with instruct steps from tools_agent_spec"):
@@ -41,14 +41,21 @@ with description("an agent spec file"):
             prompts = " ".join(step.prompt or "" for step in setup)
             expect("actions/examples/car.py" in prompts or "General Lee" in prompts).to(be_true)
 
-        with it("should build a generator runbook from concept_agent_spec"):
-            manifest = read_manifest(_REPO_ROOT / "context_tools" / "base" / "context_tool_agent_spec.py")
+        with it("should build a generator runbook from create_context_tool_agent_spec"):
+            agent_spec = (
+                _REPO_ROOT
+                / "context_tools"
+                / "base"
+                / "create_context_tool"
+                / "create_context_tool_agent_spec.py"
+            )
+            manifest = read_manifest(agent_spec)
             expect(manifest.in_chat).to(be_true)
             expect(manifest.session).to(equal("context_tools/.agent_bdd_sessions/car-chronicle.json"))
-            runbook = build_runbook(_REPO_ROOT / "context_tools" / "base" / "context_tool_agent_spec.py")
+            runbook = build_runbook(agent_spec)
             setup = [step for scenario in runbook.scenarios for step in scenario.setup]
             prompts = " ".join(step.prompt or "" for step in setup)
-            expect("car_chronicle" in prompts.lower()).to(be_true)
+            expect("driving chronicle" in prompts.lower() or "hazzard" in prompts.lower()).to(be_true)
             assertions = " ".join(
                 item.expression for scenario in runbook.scenarios for item in scenario.assertions
             )
@@ -71,18 +78,18 @@ with description("an agent spec file"):
             prompt = (
                 "Using shell, run exactly: python -m tools run -\n"
                 "Pipe this YAML on stdin:\n"
-                "toolset: context_tools.base.examples.car_chronicle.car_chronicle:CarChronicle\n"
+                "toolset: context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
                 "action: repair\n"
                 "Return the complete fenced YAML stdout from the CLI.\n"
                 "\nIMPORTANT: Invoke python -m tools run via shell."
             )
             body = yaml_from_prompt(prompt)
-            expect(body).to(equal("toolset: context_tools.base.examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))
+            expect(body).to(equal("toolset: context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))
 
         with it("should reject captured CLI output when action does not match prompt YAML"):
             prompt = (
                 "Pipe this YAML on stdin:\n"
-                "toolset: context_tools.base.examples.car_chronicle.car_chronicle:CarChronicle\n"
+                "toolset: context_tools.base.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
                 "action: repair\n"
             )
             wrong = "```yaml\nok: true\naction: generate\ninstructions: test\n```"

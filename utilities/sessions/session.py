@@ -1,4 +1,4 @@
-"""Named work-bout session under ``{path}/.context/sessions/{name}/``."""
+"""Named sprint session under ``{path}/.context/sessions/{name}/``."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pathlib import Path
 def docs_dir(destination: str | Path) -> Path:
     """Resolve where process docs live for a destination.
 
-    - Bout folder (``…/.context/sessions/{name}``) → write flat into that folder
+    - Sprint folder (``…/.context/sessions/{name}``) → write flat into that folder
     - Working area or module root → ``{destination}/.context/``
     """
     dest = Path(destination)
@@ -21,7 +21,7 @@ def docs_dir(destination: str | Path) -> Path:
 
 
 class ISession(ABC):
-    """Work bout: durable ``path``, process docs in ``folder``, event logs in ``log``."""
+    """Sprint: durable ``path``, process docs in ``folder``, event logs in ``log``."""
 
     # Identity fields — concrete on Session (dataclass); listed here for the interface surface.
     path: str
@@ -61,7 +61,7 @@ class ISession(ABC):
 
 @dataclass
 class Session(ISession):
-    """Current work bout: durable root is ``path``; process docs live in ``folder``."""
+    """Current sprint: durable root is ``path``; process docs live in ``folder``."""
 
     path: str
     name: str | None = None
@@ -129,9 +129,9 @@ class Session(ISession):
         fidelities: str = "",
         contexts: str = "",
     ) -> Path:
-        """Create bout folder + session.md Start when missing; refresh fields if provided."""
+        """Create sprint folder + session.md Start when missing; refresh fields if provided."""
         if not self.name:
-            raise ValueError("session name is required to create a bout folder")
+            raise ValueError("session name is required to create a sprint folder")
         if goal:
             self.goal = goal
         if fidelities:

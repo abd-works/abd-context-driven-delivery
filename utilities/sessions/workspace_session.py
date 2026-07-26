@@ -1,9 +1,10 @@
-"""Workspace binding for ContextTool — path defaults, context-index, session bout."""
+"""Workspace binding for BaseContextTool — path defaults, context-index, sprint."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
+from primitives.actions.action import action
 from primitives.instructions import Instruction
 from primitives.instructions import _path_for_name
 from primitives.instructions import instruction
@@ -44,7 +45,7 @@ def _resolve_working_path(
 
 
 class WorkspaceSession:
-    """Workspace root, path defaults, context-index, and session bout."""
+    """Workspace root, path defaults, context-index, and sprint."""
 
     default_workspace_folder: str = "."
     context_index_key: str = ""
@@ -76,6 +77,16 @@ class WorkspaceSession:
     def session(self) -> Session:
         """session"""
         return self._session
+
+    @action
+    def workspace_session_bind(self) -> str:
+        """Resolve workspace + session layout before the host action — follow session_guidance; scope work to session.path / session.folder."""
+        self.session_guidance
+        self.session
+        return (
+            "Workspace/session bound. Use session.path for durable work; "
+            "session.folder for sprint artifacts. Do not invent a divergent root."
+        )
 
     @tool
     def read_context_index(self) -> str:

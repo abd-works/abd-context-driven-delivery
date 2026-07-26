@@ -1,4 +1,4 @@
-# @toolset-manifest python -m tools manifest context_tools.base.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput
+# @toolset-manifest python -m tools manifest context_tools.base.create_context_tool.examples.car_chronicle.chronicle_with_output:ChronicleWithOutput
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
 # invoke-new: action generate
@@ -7,11 +7,11 @@
 from __future__ import annotations
 
 from primitives.actions.action import action
-from context_tools import context_tool  # noqa: F401
+from context_tools import base_context_tool  # noqa: F401
 from tools.tool import tool
 
 
-@context_tool
+@base_context_tool
 class ChronicleWithOutput:
     """§ Instructions"""
 

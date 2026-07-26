@@ -88,6 +88,10 @@ class ChatAgentBlock:
             )
         return self._finalize_run_response(prefix, cli_output)
 
+    def instruct_run(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
+        """Back-compat alias for ``instruct_use_tool``."""
+        return self.instruct_use_tool(prompt, timeout_seconds=timeout_seconds)
+
     def ai_judge(self, output: str, rubric: str, *, timeout_seconds: int = 60) -> JudgeResult:
         log_harness("agent_chat_bdd", "judge rubric:")
         sys.__stdout__.write(rubric + "\n")

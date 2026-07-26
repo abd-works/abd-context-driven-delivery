@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from context_tools import context_tool
+from context_tools import base_context_tool
 from tools.tool import tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -18,7 +18,7 @@ _FIDELITY_FORMAT_DEFAULTS = {
 _SUPPORTED_FORMATS = frozenset({"markdown", "python", "typescript", "java"})
 
 
-@context_tool
+@base_context_tool
 class Bdd:
     """§ Instructions"""
 
