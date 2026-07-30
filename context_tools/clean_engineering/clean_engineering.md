@@ -2,14 +2,13 @@
 
 Deepen OO design from modules toward production code. Each fidelity **adds** artifacts — do not invent detail from a deeper level.
 
-**Progression:** `partition` (action) → **modules** → **model** → **specification** → **code**.
+**Progression:** `partition` (action) → **modules** → **model** → **code**.
 
 | Fidelity | Default format | Produce |
 |---|---|---|
 | **modules** | markdown (+ drawio) | Independent modules, one-way deps, build order, thin seam terms |
-| **model** | python | Empty `I{Class}` contracts + full module-context |
-| **specification** | python | `Class(I{Class})` — public bodies; private empties; typed contracts |
-| **code** | python | Full production implementation behind the seam |
+| **model** | python | Empty `I{Class}` contracts + full module-context; stub example factories |
+| **code** | python | `Class(I{Class})` typed contracts → full production implementation |
 
 ---
 
@@ -18,7 +17,7 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 **Language is not invocable** (`context.fidelity: language` is rejected). Natural-language identity is a **companion** that deepens at every stage through code.
 
 - At each fidelity, refresh prose for terms/classes already named at that stage — definition, story bullets, invariants in plain English.
-- Keep identity on the class (or `## ClassName` section); member bullets move onto members as model/spec deepen.
+- Keep identity on the class (or `## ClassName` section); member bullets move onto members as model/code deepen.
 - Do **not** invent types, method bodies, relationship kinds, or Public API ahead of the active fidelity.
 - Prose lives under `{session}/{module}/` (markdown sections and/or class docstrings) and is updated in place — never a separate language-only generate run.
 
@@ -27,11 +26,13 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 ## modules
 
 **Default format:** markdown  
-**Diagram format:** `drawio` (modules view — blue boxes, seam-term bullets, one-way dependency arrows; template `templates/modules.drawio`). Language channels (python/java/…) are for **model** and later — not required here. Transform: `markdown` ↔ `drawio` ↔ `json`.
+**Diagram format:** `drawio` (modules view — blue boxes, seam-term bullets, one-way dependency arrows; template `templates/modules.drawio`). Language channels (python/java/…) are for **model** and later — not required here.
 
-**Goal:** After **partition** has cut modules and chunks, deepen to **independent modules with one-way dependencies** and an explicit **build order**. Thin class/term identification only — enough to show independence.
+**Goal:** Refine **modules** purpose, primary use case, rationale, key terms, and relationship to other modules. Strive for **independent modules with one-way dependencies** and an explicit **build order**. Thin class/term identification only — enough to show independence.
 
-- Consume the existing `{session}/.context/{subject}-index.md` and chunks — **do not re-cut** or wipe partition rows.
+A **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
+
+- Consume the existing `{session}/.context/{subject}-index.md` and partition chunks if they exist — **do not edit** or wipe partitions.
 - Create module structure (`physical-folder` / `nested-physical-folder`) under `{session}/{module}/`.
 - When nesting, the **parent module** owns shared base classes/terms (e.g. `powers` owns `Effect`). Specializing children use a path under the parent (`powers/attack`) and depend on the parent — not on siblings. Do **not** invent a `parent/base` submodule (e.g. no `powers/effect`) just to hold shared content; that content belongs on the parent. Diagram: path nesting = containment (children drawn inside the parent box).
 - Seed `{session}/{module}/.context/module-context.md` — thin only: **Purpose** (one paragraph), **Seam** (term/class name list), **Dependencies** (one-way module names), optional **Mechanism** note. No full Public API / `I{Class}` yet.
@@ -44,7 +45,56 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 - Dependencies are **one-way** (A → B means B is built before A).
 - Children → parent base; never sibling → sibling.
-- Partition’s thin Deps column is a hint; **modules** owns the formal graph and build order.
+- Partition's thin Deps column is a hint; **modules** owns the formal graph and build order.
+
+### Nested modules
+
+When several independently implementable modules share a **real common seam** (shared types, cost rules, activation protocol), nest them under a **parent module** rather than flattening siblings or duplicating the base into every child.
+
+| Kind | Owns | Example |
+|------|------|---------|
+| **Parent** | Shared base types/mechanics + optional parent seam; folder that contains children | `powers/` owns shared **Effect** (rank, duration, descriptors, activate protocol) |
+| **Child** | One independently implementable specialization | `powers/attack`, `powers/movement`, `powers/extras` |
+| **Organisational folder only** | No seam — **not** a module | Do not invent empty parents |
+
+**Rules**
+
+- **`nested-physical-folder`** — Child module path is `{parent}/{child}/` (e.g. `powers/attack/`). Each module that is a real seam owns its own folder and `.context/module-context.md`. Parent shared code lives in the **parent** folder (e.g. types at `powers/`), not copy-pasted into every child — do not invent a `powers/effect` submodule for shared base.
+- **`shared-base-before-siblings`** — If children would duplicate the same mechanics, extract **parent-owned base** types first; children depend on that base through a thin interface.
+- **`nest-when-shared-else-flat`** — Nest under a parent only when there is shared mechanics or a clear sub-system boundary. Independent top-level concepts (`checks`, `character`) stay flat.
+- **`independent-child`** — A child must still pass "implement with siblings stubbed"; it may depend on the **parent base**, not on sibling children.
+- **Naming** — Domain nouns; path form `parent/child` in indexes and sketches (`powers/general`, `conflicts/turns`).
+
+Examples: `powers` (owns Effect) + `powers/attack|control|defense|movement|sensory|general` + `powers/extras|flaws`; `conflicts/turns|actions|conditions`; `gear/equipment|headquarters|vehicles`.
+
+### Module rules
+
+- **`high-cohesion`** — Classes inside a module share a common purpose and operate on the same domain concept. Cross-class relationships within the module are strong and semantic, not incidental.
+- **`low-coupling`** — Modules depend on each other only through well-defined interfaces. Cross-module dependencies are explicit and minimal — no module reaches into another's internals.
+- **`single-boundary`** — Each module is the single source of truth for its domain concept. No other module holds, mutates, or duplicates that concept's state or rules.
+- **`named-seam-and-constraint`** — Every module owns a *seam* — the public surface of classes and operations callers depend on — paired with a *constraint* stating what callers must do or must not do at that boundary. A module is described by what it requires of its callers, not only by what it holds.
+- **`deep-module`** — The seam stays a short named list of classes and operations with substantial functionality behind it (Ousterhout: small interface, large hidden implementation). If internal helpers leak into the seam, encapsulation is overhead without benefit. Scanner heuristic: at most **40%** of top-level symbols may be public (leading underscore for the rest).
+- **`physical-folder`** — Each module occupies its own folder; class files, markdown documents, and other module-level artifacts live in it. Generated code belongs in that folder — not beside the module, not in a flat dump outside it. Nested modules use child folders under the parent (`nested-physical-folder`). Not every folder is a module — chapter or organisational folders may group several modules and must not be treated as one module unless they own `.context/module-context.md`.
+- **`cohesive-file`** — Put a **class family** in one file: the primary type, its subtypes, and tightly connected peers that only make sense together (element + collection, small aggregate + its part). Name the file after the family concept (`abilities.py` for `Ability` + `Abilities`). Split into another file only when a type is independently reused across families or the file becomes a grab-bag of unrelated types. Do not default to one class per file. **Exception:** `{Type}ExampleFactory` (and its `I{Type}ExampleFactory` + `examples` data) always live in a **sibling file** — never in the production family file (see **Example factories**).
+- **`abstraction-focus`** — Module description names *what* the module does at a higher level than the classes inside it; public verbs are caller-facing, not internal steps or storage layouts.
+- **`layer-separation`** — Adjacent modules operate at different abstraction levels; collapse pass-through modules.
+- **`complexity-absorption`** — Push configuration and edge-case handling into the module; callers pass intent, not setup flags.
+- **`information-hiding`** — Volatile implementation choices must not appear in public signatures or return types.
+- **`temporal-independence`** — Every public operation leaves the module in a valid state; avoid order-coupled APIs or document the constraint.
+- **`general-purpose-surface`** — Public interface is not hardcoded to one caller's UI/workflow.
+- **`errors-out-of-existence`** — Prefer total functions / empty states for routine edges; reserve exceptions for real failures.
+
+### Vanilla module vs. mechanism
+
+A module is either a **vanilla module** or a **mechanism**. Most modules are vanilla — they own one domain concept and are instantiated once.
+
+A **mechanism** is a structural pattern the codebase instantiates more than once. It has:
+- **Variation points** — what changes per instance (the parameters of the pattern).
+- **Fixed parts** — what the pattern enforces across all instances (the constants of the pattern).
+
+Whether a module is a mechanism is stereotyped lightly at **modules** fidelity and made precise at **model** / **code** (variation points and fixed parts listed in the context file). Mechanism identification is optional and exploratory — pursue it when the pattern is genuinely recurring, not as a default.
+
+At **modules** fidelity, `.context/module-context.md` is thin: Purpose, Seam (term list), Dependencies (one-way), optional Mechanism note — plus `{session}/.context/module-build-order.md`. At **model** fidelity it expands to **Purpose**, **Primary use case**, **Rationale**, **Seam**, **Public API**, and **Dependencies**.
 
 ---
 
@@ -52,38 +102,134 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 **Default format:** Python
 
-**Goal:** Define **modules** in terms of **purpose, primary use case, rationale, and public seam / API** — what the module is for, how callers typically use it, why it is shaped that way, and the classes/operations callers depend on (plus the constraint on that surface). The public seam is an **`I{Class}`** contract; `.context/module-context.md` records that seam.
+**Goal:** Define the public seam as an **`I{Class}`** contract — what the module exposes, why it is shaped that way, and what callers depend on. No production `Class` yet. Expand `module-context.md` fully. Stub example factories.
 
-- Create **`I{Class}` only** for each Public API type — no production `Class` yet. Public properties and operations are **empty interfaces** (Python: `ABC` + `@abstractmethod` / `@property`+`@abstractmethod` + `...`; Java: `interface`; other channels: abstract/empty equivalent). No internals until specification.
+- Create **`I{Class}` only** for each Public API type — no production `Class` yet. Public properties and operations are **empty interfaces** (Python: `ABC` + `@abstractmethod` / `@property`+`@abstractmethod` + `...`; Java: `interface`; other channels: abstract/empty equivalent). No internals until code.
 - Name the contract `I{Class}` (e.g. `IShoppingCart`). Keep `I{Class}` and its later extender in the **same file** (`cohesive-file`).
-- When the type will be used from Stories examples, also declare **`I{Type}ExampleFactory`** (empty) in a **sibling** `{type}_example_factory.{ext}` file — not in the production family file — with named methods that will load `examples[{example_key}]` multi-type bundles — see **Example factories** below.
+- When the type will be used from Stories examples, stub **`I{Type}ExampleFactory`** (empty) in a **sibling** `{type}_example_factory.{ext}` file with named methods — see **Example factories** below. Complete the factory at **code** fidelity.
 - Expand `.context/module-context.md` (seeded at modules) with **Purpose**, **Primary use case**, **Rationale**, **Seam**, **Public API**, **Dependencies**, optional **Mechanism stereotype**. Nested children list the **parent base** under Dependencies; parents list children as nested modules (not as a flat dump of sibling APIs).
 - Ensure code and context for a module belong only in that module's folder (parent owns shared base; child owns specialization).
-- Apply **`cohesive-file`**: one file per class family (primary type + subtypes + tightly connected peers such as element + collection); not one class per file by default. Example factories are **not** part of that cohesive production file (`example-factory-separate-file`).
+- Apply **`cohesive-file`**: one file per class family; example factories live in a sibling file (`example-factory-separate-file`).
 - Edit to carry forward language-companion identity into **Purpose**; expand primary use case and rationale at this fidelity.
 - Edit class docstrings so member bullets move down onto those members; keep everything inside the module folder (`physical-folder`).
-- Refresh the **language companion** for terms now on the Public API — still no typed signatures in prose ahead of specification.
+- Refresh the **language companion** for terms now on the Public API — still no typed signatures in prose ahead of code.
 
----
+### What is a class
 
-## specification
+A class is a named idea that earns its own identity because it has at least one of: **distinct identity**, **state**, **behavior**, **structure**, or **interactions** that cannot be collapsed into a property, instance, or subtype of something else.
 
-**Default format:** Python
+A class knows things (**state**), does things (**behavior**), interacts with other things (**interactions**), has (**relationships**) with other things, can be a sub type of other things (**inheritance**), and can implement (**interfaces**) — finally, it maintains the (**invariants**) that constrain it.
 
-**Goal:** Fully typed **contracts**. Keep `I{Class}` as the public/fakeable seam. Add production `Class(I{Class})` in the same file — public members get real bodies; internals stay empty interfaces on `Class` only.
+### Responsibilities
 
-- **Do not fill out `I{Class}`** and **do not add private members to it**. Spec **extends** the interface: `class Class(IClass)` (Java: `implements IClass`).
-- On `Class`: implement public properties and operations; add private properties/operations as **empty interfaces** (`...` / `@abstractmethod`); relationship kind + cardinality; invariants as **comments** (not methods).
-- Interactions: `@interaction` abstract methods on `Class` (not on `I{Class}`).
-- **Example factory (when Stories will use the type):** keep production **`I{Type}`** + **`{Type}`** in the family file; put **`I{Type}ExampleFactory`** + **`{Type}ExampleFactory`** + `examples` in **`{type}_example_factory.{ext}`**. Do **not** generate `Fake{Type}` / `Isolated{Type}` / `Production{Type}` subclasses. Factory methods load **multi-type bundles** keyed by `{example_key}` and build `I{Type}` in one of three **modes**:
-  - **Fake** — mocking/stub framework creates `I{Type}`; feed `examples[{example_key}]` (explore/spec default).
-  - **Isolated** — `new {Type}(...mocks/stubs via constructor injection...)` for a story-test tier.
-  - **Production** — `new {Type}(...real collaborators...)` for a story-test tier.
-- Add context sections: **Participants**, **Public API (specification)**, **Internal design**, **Domain separation**, optional **Mechanism** (variation points / fixed parts).
-- Edit the same `.context/module-context.md` seeded at modules and expanded at model — do not create parallel context files.
-- Edit so remaining language-companion bullets sit on members; class-level docstring keeps only the opening definition.
-- Keep editing inside the existing module folder — do not relocate files.
-- Refresh the **language companion** for contracts just made precise — do not invent code-level details.
+For each responsibility a class owns, ask: *hold something, do something, or both?* A responsibility may be a property, an operation, or **both** — the class holds state *and* exposes an action that works with it.
+
+### Properties
+
+The class must remember something across calls. Named as a **noun phrase**: *remaining budget*, *active status*, *target character*. A **property** encapsulates information a class exposes to its callers together with the logic required to access or update it. A property may be **typed** — carries a concrete type like `Person`, `int`, or `Car` or can be untyped.
+
+- **`use-property-not-accessor`** — Use `@property` (or the language equivalent) for read-only computed values; do not use `get_` / `set_` method prefixes.
+
+### Operations
+
+The class must do something on demand. Named as a **verb phrase**: *charge card*, *reserve seat*, *compute total*. An **operation** is an action a class performs or a result it computes on demand. Operations may be entirely stateless — depending only on their parameters — or work with the class's own state.
+
+- **`keep-operations-single-responsibility`** — Each operation has one reason to change — pure calculation or orchestration, not both. An operation doing two things reveals either a missing operation or a missing class.
+- **`separate-concerns`** — Pure calculation separate from I/O and mutation.
+- **`use-clear-operation-parameters`** — Prefer 0–2 parameters. When more configuration is needed, the extra parameters reveal a missing value object — promote them to a new class and pass that instead.
+
+### Interfaces (`I{Class}`)
+
+The public seam of a type is a separate **interface** named **`I{Class}`**, introduced at **model** fidelity. Properties and operations on the interface are empty contracts — typed signatures with no body.
+
+| Channel | `I{Class}` form |
+|---------|-----------------|
+| Python | `class IClass(ABC):` with `@abstractmethod` / `@property`+`@abstractmethod` |
+| Java | `public interface IClass` |
+| TypeScript / JavaScript | abstract or empty-method contract equivalent |
+| Markdown | `### **I{Class}**` compact block (public members only) |
+
+**Code** adds `Class` that **extends / implements** `I{Class}` in the **same file**. Public members are filled on `Class`; private members are empty interfaces on `Class` only — never added to `I{Class}`. `I{Class}` stays as the stable seam throughout (including for hand-written test fakes). Existing production types may satisfy `I{Class}` informally without a formal extends clause.
+
+Empty vs filled is inferred from the member body (`...` / empty vs real implementation) — no extra abstract flag on the model.
+
+
+### Inheritance and subtypes
+
+A **base class** defines the common identity, state, and behavior shared by a family of related things. It owns everything that is true of every member of that family — the responsibilities, rules, and collaborations that do not change regardless of which specific variant you are dealing with.
+
+A **subtype** is a class that specialises the base by adding or overriding behavior that only applies to it. The subtype inherits everything the base defines and records **only the delta** — inherited responsibilities are not repeated in the subtype. Use a subtype when the distinction changes what the thing *does*, not just what data it carries.
+
+#### Liskov Substitution rule
+
+**Anywhere the base is used, a subtype must work correctly in its place.** If swapping in a subtype breaks or weakens a rule the base guarantees, the subtype is not a true specialisation — it is a different thing that happens to share some behavior.
+
+### Relationships
+
+Relationship kind and cardinality are added  here. Three kinds, chosen by lifecycle:
+
+1. **Composition** — owner controls the other's lifecycle. (`Order` composes `OrderLine`.)
+2. **Aggregation** — collector groups members that can outlive it. (`Playlist` aggregates `Song`.)
+3. **Association** — both sides are independent; they simply use each other. (`Customer` associates with `SupportAgent`.)
+
+
+### Class Rules
+
+Before promoting a term to its own class, check whether it fits as a **property** (see *Properties*), an **instance** (see *Instances*), or a **subtype** (see *Inheritance and subtypes*). Only when none of those three fit does something deserve its own class.
+
+- **`keep-classes-single-responsibility`** — Each class has **one reason to change**.
+- **`hide-inner-details`** — Expose **behavior** through named methods; callers see what the class does, not how it stores or arranges its information.
+- **`eliminate-duplication`** — Repeated logic gets one canonical function.
+- **`use-explicit-dependencies`** — Pass every collaborator through the **constructor**; never reach for a global or construct a collaborator inside construction.
+- **`use-intention-revealing-names`** — Every name — class, property, operation, parameter — answers "why does this exist?" No abbreviations, no single-letter identifiers outside trivial loop indices.
+- **`use-consistent-naming`** — One word per concept across the model. Pick one verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`).
+
+### Example factories (Fake / Isolated / Production **modes**)
+
+When a type is used from **Stories** (helpers / scenario setup), the factory lives in a sibling file, separate from the production family:
+
+| File | Contents |
+|---|---|
+| `{family}.{ext}` | **`I{Type}`** + production **`{Type}`** (+ subtypes / peers) — production family only |
+| `{type}_example_factory.{ext}` | **`I{Type}ExampleFactory`** + **`{Type}ExampleFactory`** + `examples[{example_key}]` |
+
+Do **not** put factory wiring in the production family file. Do **not** generate `Fake{Type}` / `Isolated{Type}` / `Production{Type}` subclasses — those are **usage modes**, not an inheritance tree.
+
+**PATTERN** (see also `sketch-template.md` and templates):
+
+```
+# {family}.{ext}                          // production cohesive-file
+I{Type}                                   // public seam
+{Type}                                    // production — implements I{Type}
+
+# {type}_example_factory.{ext}            // separate file — always
+I{Type}ExampleFactory
+{Type}ExampleFactory
+  {example_method}(mode)
+    // loads examples[{example_key}] -> I{Type} (+ peers)
+    // Fake | Isolated | Production are modes of how the factory builds I{Type}
+```
+
+| Mode | When used | How it is built |
+|---|---|---|
+| **Fake** | Stories exploration + early code | Mocking / stub framework creates an `I{Type}`; feed `examples[{example_key}]` data into it. No hand-written `Fake{Type}` class. |
+| **Isolated** | Story-test tier | Construct production `{Type}` with **constructor injection** of mocks/stubs for collaborators. |
+| **Production** | Story-test tier | Construct production `{Type}` with **real** collaborators. |
+
+**At model fidelity:** stub `I{Type}ExampleFactory` (empty, named methods only). **At code fidelity:** complete `{Type}ExampleFactory` with all three modes.
+
+**Rules**
+
+- **`example-factory-separate-file`** — `{Type}ExampleFactory` (+ `I{Type}ExampleFactory` + `examples`) lives in `{type}_example_factory.{ext}`. Production file stays `I{Type}` + `{Type}` only.
+- **`no-fake-isolated-production-subclasses`** — Do not emit `Fake{Type}` / `Isolated{Type}` / `Production{Type}` types that extend `I{Type}`. Modes are factory behavior + mocking framework, not inheritance.
+- **`example-factory-by-pattern`** — Generate `{Type}ExampleFactory` as a plain class (no shared Loader base). Methods are shaped by `{example_key}` + mode.
+- **`examples-multi-type-bundle`** — Store data under `examples[{example_key}]` as a bundle of one or more `{IType}` payloads. Never `examples[{Type}][{example_key}]` alone when a method needs several types.
+- **`fake-via-mocking-framework`** — Fakes come from the project's mock/stub framework, fed example data.
+- **`isolated-via-constructor-injection`** — Isolated tier builds `{Type}(...injected mocks/stubs...)`.
+- **`stories-consume-via-factory`** — Callers obtain instances from factory methods; they do not invent Fake objects or Fake subclasses.
+- **`ensure_example_factory_family`** — Stub `I{Type}`, `{Type}`, and `{Type}ExampleFactory` before render/transform; render factories into the sibling factory file.
+
+Cart/Product names in sketches are **pattern examples only** — not a product under construction.
 
 ---
 
@@ -91,13 +237,28 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 **Default format:** Python
 
-**Goal:** Fully implemented **production** code on `Class` — real collaborators, persistence, and services behind the seam (not Fake/Isolated demo wiring alone). `I{Class}` stays as the separate contract (new production code extends it; existing code may satisfy it informally). Honour the seam with clean-code discipline.
+**Goal:** Two phases in one fidelity — first lock down the typed contracts (`Class(I{Class})`), then wire the full production implementation. `I{Class}` stays as the stable seam throughout.
 
-A vertical is not at **code** fidelity while it still depends on a mockup / Story Demo shell as the only UI, or on in-memory / fake factories as the only “backend.” **Code** means real backend (this fidelity) **and** real frontend (UX **code** fidelity) — not greybox + demo domain alone.
+A vertical is not at **code** fidelity while it still depends on a mockup / Story Demo shell as the only UI, or on in-memory / fake factories as the only "backend." **Code** means real backend **and** real frontend (UX **code** fidelity) — not greybox + demo domain alone.
 
-- Fill remaining empty bodies on `Class` (no `...`, no `# TODO` on production ops/props).
+### Phase 1 — typed contracts
+
+- Add `Class(I{Class})` (Java: `implements I{Class}`) in the **same file** as `I{Class}`. Do **not** fill out `I{Class}` or add private members to it.
+- On `Class`: implement public properties and operations; add private properties/operations as **empty interfaces** (`...` / `@abstractmethod`); add each relationship with its **kind** (composition / aggregation / association) and **cardinality** (e.g. `1..*`, `0..1`); invariants as **comments** (not methods).
+- Interactions: `@interaction` abstract methods on `Class` (not on `I{Class}`).
+- Complete `{Type}ExampleFactory` — fill in Fake, Isolated, and Production modes per the **Example factories** pattern in `## model`.
+- Add context sections: **Participants**, **Public API**, **Internal design**, **Domain separation**, optional **Mechanism** (variation points / fixed parts).
+- Edit the same `.context/module-context.md` — do not create parallel context files.
+- Edit so remaining language-companion bullets sit on members; class-level docstring keeps only the opening definition.
+
+
+State which side **navigates** to the other — direction is explicit.
+
+### Phase 2 — production implementation
+
+- Fill all remaining empty bodies on `Class` (no `...`, no `# TODO` on production ops/props).
 - Wire **Production** collaborators — real persistence, services, and cross-module dependencies — not Fake-mode stubs as the shipping path.
-- Drop `@interaction` methods — not needed in code.
+- Drop `@interaction` methods — not needed once implemented.
 - Keep invariants as **comments**.
 - Leave `I{Class}` in place for the public seam and for hand-written test fakes.
 - Add exceptions, named constants, private helpers as needed.
@@ -121,195 +282,3 @@ A vertical is not at **code** fidelity while it still depends on a mockup / Stor
 - **`use-exceptions-properly`** — Domain exceptions that name the failure.
 - **`never-swallow-exceptions`** — Log and re-raise or convert; never bare swallow.
 - **`stop-writing-useless-comments`** — Comments explain **why**, not **what**.
-
----
-
-## Module design
-
-A **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
-
-### Nested modules
-
-When several independently implementable modules share a **real common seam** (shared types, cost rules, activation protocol), nest them under a **parent module** rather than flattening siblings or duplicating the base into every child.
-
-| Kind | Owns | Example |
-|------|------|---------|
-| **Parent** | Shared base types/mechanics + optional parent seam; folder that contains children | `powers/` owns shared **Effect** (rank, duration, descriptors, activate protocol) |
-| **Child** | One independently implementable specialization | `powers/attack`, `powers/movement`, `powers/extras` |
-| **Organisational folder only** | No seam — **not** a module | Do not invent empty parents |
-
-**Rules**
-
-- **`nested-physical-folder`** — Child module path is `{parent}/{child}/` (e.g. `powers/attack/`). Each module that is a real seam owns its own folder and `.context/module-context.md`. Parent shared code lives in the **parent** folder (e.g. types at `powers/`), not copy-pasted into every child — do not invent a `powers/effect` submodule for shared base.
-- **`shared-base-before-siblings`** — If children would duplicate the same mechanics, extract **parent-owned base** types first; children depend on that base through a thin interface.
-- **`nest-when-shared-else-flat`** — Nest under a parent only when there is shared mechanics or a clear sub-system boundary. Independent top-level concepts (`checks`, `character`) stay flat.
-- **`independent-child`** — A child must still pass “implement with siblings stubbed”; it may depend on the **parent base**, not on sibling children.
-- **Naming** — Domain nouns; path form `parent/child` in indexes and sketches (`powers/general`, `conflicts/turns`).
-
-Examples: `powers` (owns Effect) + `powers/attack|control|defense|movement|sensory|general` + `powers/extras|flaws`; `conflicts/turns|actions|conditions`; `gear/equipment|headquarters|vehicles`.
-
-### Module rules
-
-- **`high-cohesion`** — Classes inside a module share a common purpose and operate on the same domain concept. Cross-class relationships within the module are strong and semantic, not incidental.
-- **`low-coupling`** — Modules depend on each other only through well-defined interfaces. Cross-module dependencies are explicit and minimal — no module reaches into another's internals.
-- **`single-boundary`** — Each module is the single source of truth for its domain concept. No other module holds, mutates, or duplicates that concept's state or rules.
-- **`named-seam-and-constraint`** — Every module owns a *seam* — the public surface of classes and operations callers depend on — paired with a *constraint* stating what callers must do or must not do at that boundary. A module is described by what it requires of its callers, not only by what it holds.
-- **`deep-module`** — The seam stays a short named list of classes and operations with substantial functionality behind it (Ousterhout: small interface, large hidden implementation). If internal helpers leak into the seam, encapsulation is overhead without benefit. Scanner heuristic: at most **40%** of top-level symbols may be public (leading underscore for the rest).
-- **`physical-folder`** — Each module occupies its own folder; class files, markdown documents, and other module-level artifacts live in it. Generated code belongs in that folder — not beside the module, not in a flat dump outside it. Nested modules use child folders under the parent (`nested-physical-folder`). Not every folder is a module — chapter or organisational folders may group several modules and must not be treated as one module unless they own `.context/module-context.md`.
-- **`cohesive-file`** — Put a **class family** in one file: the primary type, its subtypes, and tightly connected peers that only make sense together (element + collection, small aggregate + its part). Name the file after the family concept (`abilities.py` for `Ability` + `Abilities`). Split into another file only when a type is independently reused across families or the file becomes a grab-bag of unrelated types. Do not default to one class per file. **Exception:** `{Type}ExampleFactory` (and its `I{Type}ExampleFactory` + `examples` data) always live in a **sibling file** — never in the production family file (see **Example factories**).
-- **`abstraction-focus`** — Module description names *what* the module does at a higher level than the classes inside it; public verbs are caller-facing, not internal steps or storage layouts.
-- **`layer-separation`** — Adjacent modules operate at different abstraction levels; collapse pass-through modules.
-- **`complexity-absorption`** — Push configuration and edge-case handling into the module; callers pass intent, not setup flags.
-- **`information-hiding`** — Volatile implementation choices must not appear in public signatures or return types.
-- **`temporal-independence`** — Every public operation leaves the module in a valid state; avoid order-coupled APIs or document the constraint.
-- **`general-purpose-surface`** — Public interface is not hardcoded to one caller's UI/workflow.
-- **`errors-out-of-existence`** — Prefer total functions / empty states for routine edges; reserve exceptions for real failures.
-
-Further module design rules are declared per fidelity above (`## modules` … `## code`).
-
-### Vanilla module vs. mechanism
-
-A module is either a **vanilla module** or a **mechanism**. Most modules are vanilla — they own one domain concept and are instantiated once.
-
-A **mechanism** is a structural pattern the codebase instantiates more than once. It has:
-- **Variation points** — what changes per instance (the parameters of the pattern).
-- **Fixed parts** — what the pattern enforces across all instances (the constants of the pattern).
-
-Whether a module is a mechanism is stereotyped lightly at **modules** fidelity and made precise at **model** / **specification** (variation points and fixed parts listed in the context file). Mechanism identification is optional and exploratory — pursue it when the pattern is genuinely recurring, not as a default.
-
-At **modules** fidelity, `.context/module-context.md` is thin: Purpose, Seam (term list), Dependencies (one-way), optional Mechanism note — plus `{session}/.context/module-build-order.md`. At **model** fidelity it expands to **Purpose**, **Primary use case**, **Rationale**, **Seam**, **Public API**, and **Dependencies** (see fidelity sections above).
-
----
-
-## What is a class
-
-A class is a named idea that earns its own identity because it has at least one of: **distinct identity**, **state**, **behavior**, **structure**, or **interactions** that cannot be collapsed into a property, instance, or subtype of something else.
-
-A class knows things (**state**), does things (**behavior**), interacts with other things (**interactions**), has (**relationships**) with other things, can be a sub type of other things (**inheritance**), and can implement (**interfaces**) — finally, it maintains the (**invariants**) that constrain it.
-
----
-
-## Responsibilities
-
-For each responsibility a class owns, ask: *hold something, do something, or both?* A responsibility may be a property, an operation, or **both** — the class holds state *and* exposes an action that works with it. 
-
----
-
-## Properties
-
-The class must remember something across calls. Named as a **noun phrase**: *remaining budget*, *active status*, *target character*. A **property** encapsulates information a class exposes to its callers together with the logic required to access or update it. A property may be **typed** — carries a concrete type like `Person`, `int`, or `Car` or can be untyped.
-
-- **`use-property-not-accessor`** — Use `@property` (or the language equivalent) for read-only computed values; do not use `get_` / `set_` method prefixes.
-
-## Operations
-
-The class must do something on demand. Named as a **verb phrase**: *charge card*, *reserve seat*, *compute total*. An **operation** is an action a class performs or a result it computes on demand. Operations may be entirely stateless — depending only on their parameters — or work with the class's own state.
-
-- **`keep-operations-single-responsibility`** — Each operation has one reason to change — pure calculation or orchestration, not both. An operation doing two things reveals either a missing operation or a missing class.
-- **`separate-concerns`** — Pure calculation separate from I/O and mutation. Applies from model through specification and code.
-- **`use-clear-operation-parameters`** — Prefer 0–2 parameters. When more configuration is needed, the extra parameters reveal a missing value object — promote them to a new class and pass that instead.
-
----
-
-## Relationships
-
-A relationship describes how two classes depend on each other. Every relationship is one of three kinds, decided by a single question about lifecycle and independence:
-
-1. **Composition** — *Does one class own the other's lifecycle?* The other cannot exist without the first. If the owning class is gone, so is the owned one. (`Order` composes `OrderLine`.)
-2. **Aggregation** — *Does one class exist to collect or group the other?* The collecting class has no meaningful identity without its members, but the members can outlive it. Remove all members and the collector is empty of purpose. (`Playlist` aggregates `Song`.)
-3. **Association** — *Are both sides independent?* Each can exist and be meaningful without the other; they simply know about or use each other. (`Customer` associates with `SupportAgent`.)
-
-A relationship also has **direction**: the class that depends on, uses, or navigates to the other is the navigating end. Be explicit about which side initiates the dependency.
-
----
-
-## Interfaces (`I{Class}`)
-
-The public seam of a type is a separate **interface** named **`I{Class}`**, introduced at **model** fidelity. Properties and operations on the interface are empty contracts — treated the same way (typed signatures with no body).
-
-| Channel | `I{Class}` form |
-|---------|-----------------|
-| Python | `class IClass(ABC):` with `@abstractmethod` / `@property`+`@abstractmethod` |
-| Java | `public interface IClass` |
-| TypeScript / JavaScript | abstract or empty-method contract equivalent |
-| Markdown | `### **I{Class}**` compact block (public members only) |
-
-**Specification** adds `Class` that **extends / implements** `I{Class}` in the **same file**. Public members are filled on `Class`; private members are empty interfaces on `Class` only — never added to `I{Class}`. **Code** fills those remaining empties on `Class`, wires **real** collaborators / persistence / services (not Fake demo mode alone), and leaves `I{Class}` as the stable seam (including for hand-written test fakes). A product vertical at **code** also needs real frontend (UX **code**) — mockup / Story Demo alone is not enough. Existing production types may satisfy `I{Class}` informally without a formal extends clause.
-
-Empty vs filled is inferred from the member body (`...` / empty vs real implementation) — no extra abstract flag on the model.
-
----
-
-## Example factories (Fake / Isolated / Production **modes**)
-
-When a type is used from **Stories** (helpers / scenario setup), generate:
-
-| File | Contents |
-|---|---|
-| `{family}.{ext}` | **`I{Type}`** + production **`{Type}`** (+ subtypes / peers) — production family only |
-| `{type}_example_factory.{ext}` | **`I{Type}ExampleFactory`** + **`{Type}ExampleFactory`** + `examples[{example_key}]` — Stories / fake / isolated / production **modes** |
-
-Do **not** put the factory (or fake-mode wiring) in the production family file. Do **not** generate `Fake{Type}` / `Isolated{Type}` / `Production{Type}` subclasses — those are **usage modes**, not an inheritance tree.
-
-**PATTERN** (see also `sketch-template.md` and templates):
-
-```
-# {family}.{ext}                          // production cohesive-file
-I{Type}                                   // public seam
-{Type}                                    // production — implements I{Type}
-
-# {type}_example_factory.{ext}            // separate file — always
-I{Type}ExampleFactory
-{Type}ExampleFactory
-  {example_method}(mode)
-    // loads examples[{example_key}] -> I{Type} (+ peers)
-    // Fake | Isolated | Production are modes of how the factory builds I{Type}
-```
-
-| Mode | When used | How it is built |
-|---|---|---|
-| **Fake** | Stories exploration + specification | Mocking / stub framework creates an `I{Type}`; feed `examples[{example_key}]` data into it. No hand-written `Fake{Type}` class. |
-| **Isolated** | Story-test tier | Construct production `{Type}` with **constructor injection** of mocks/stubs (from the mocking framework) for collaborators. |
-| **Production** | Story-test tier | Construct production `{Type}` with **real** collaborators. |
-
-**Rules**
-
-- **`example-factory-separate-file`** — `{Type}ExampleFactory` (+ `I{Type}ExampleFactory` + `examples`) lives in `{type}_example_factory.{ext}` beside the production family file. Production file stays `I{Type}` + `{Type}` only.
-- **`no-fake-isolated-production-subclasses`** — Do not emit `Fake{Type}` / `Isolated{Type}` / `Production{Type}` types that extend `I{Type}`. Modes are factory behavior + mocking framework, not inheritance.
-- **`example-factory-by-pattern`** — Generate `{Type}ExampleFactory` as a plain class (no shared Loader base). Methods are shaped by `{example_key}` + mode (fake / isolated / production).
-- **`examples-multi-type-bundle`** — Store data under `examples[{example_key}]` as a bundle of one or more `{IType}` payloads. Never `examples[{Type}][{example_key}]` alone when a method needs several types.
-- **`fake-via-mocking-framework`** — Explore/spec fakes come from the project's mock/stub framework, fed example data.
-- **`isolated-via-constructor-injection`** — Isolated tier builds `{Type}(...injected mocks/stubs...)`.
-- **`stories-consume-via-factory`** — Callers obtain instances from factory methods (Stories helpers call the factory; they do not invent Fake objects or Fake subclasses).
-- **`ensure_example_factory_family`** — Stub `I{Type}`, `{Type}`, and `{Type}ExampleFactory` onto a module before render/transform (not Fake/Isolated/Production classes); render factories into the sibling factory file.
-
-Cart/Product names in sketches are **pattern examples only** — not a product under construction.
-
----
-
-## Inheritance and subtypes
-
-A **base class** defines the common identity, state, and behavior shared by a family of related things. It owns everything that is true of every member of that family — the responsibilities, rules, and collaborations that do not change regardless of which specific variant you are dealing with.
-
-A **subtype** is a class that specialises the base by adding or overriding behavior that only applies to it. The subtype inherits everything the base defines and records **only the delta** — inherited responsibilities are not repeated in the subtype. Use a subtype when the distinction changes what the thing *does*, not just what data it carries.
-
-### Liskov Substitution rule
-
-**Anywhere the base is used, a subtype must work correctly in its place.** If swapping in a subtype breaks or weakens a rule the base guarantees, the subtype is not a true specialisation — it is a different thing that happens to share some behavior.
-
----
-
-## Class design
-
-Before promoting a term to its own class, check whether it fits as a **property** (see *Properties*), an **instance** (see *Instances*), or a **subtype** (see *Inheritance and subtypes*). Only when none of those three fit does something deserve its own class.
-
-Follow these rules
-
-- **`keep-classes-single-responsibility`** — Each class has **one reason to change**.
-- **`hide-inner-details`** — Expose **behavior** through named methods; callers see what the class does, not how it stores or arranges its information.
-- **`eliminate-duplication`** — Repeated logic gets one canonical function.
-- **`use-explicit-dependencies`** — Pass every collaborator through the **constructor**; never reach for a global or construct a collaborator inside construction.
-- **`use-intention-revealing-names`** — Every name — class, property, operation, parameter — answers "why does this exist?" No abbreviations, no single-letter identifiers outside trivial loop indices.
-- **`use-consistent-naming`** — One word per concept across the model. Pick one verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`).
-
-
