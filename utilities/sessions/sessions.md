@@ -42,6 +42,7 @@ Also records this tool's root in `{workspace}/.context/context-index.md` when `c
 tool: create_session
 arguments:
   name: <kebab-slug>
+  path: <optional; overrides session.path — use when path was not set via context>
   goal: <optional>
   fidelities: <optional>
   contexts: <optional>

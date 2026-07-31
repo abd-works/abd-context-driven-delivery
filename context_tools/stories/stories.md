@@ -7,8 +7,7 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 | Fidelity | Default Format | Produce |
 |---|---|---|
 | **discovery** | markdown | Story map + thin-slice |
-| **exploration** | python | One main-flow scenario per story (fake + public seam) |
-| **specification** | python | Same `*_story` files + variations (still fake) |
+| **exploration** | python | One main-flow scenario per story (fake + public seam); optional variations |
 | **engineering** | python | `*_spec` + `*_spec.{tier}` |
 
 **Templates** live under `templates/` per format. **Scanners** read the canonical model only — never language syntax.
@@ -69,31 +68,21 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 4. Assert **Then** only on the public seam of `I{Type}` — no private fields, no hand-rolled Fakes.
 5. Pull values from `examples[{example_key}]` — no story-local example tables.
 6. Fill `templates/py|js/…/{story}_story.*` (md walk-through: `templates/md/scenario-main-flow.md` if documenting only).
+7. **Optional — variation scenarios (off by default).** In the same `*_story.{ext}`, add alternate / error / boundary scenarios and shared backgrounds only when **one of these is true**:
+   - The main-flow scenario already exists in the story file, **or**
+   - Explicitly asked for.
+   Apply the scenario rules below to any variation added here. Do not add variations before the main flow is confirmed.
 
-**Rules:** Use **specification** scenario rules on the **main-flow scenario only**.
-
----
-
-## specification
-
-**Format:** python · **Produce:** deepen the same `*_story` files with variations — still fake + public seam.
-
-**Do:**
-1. Add variation scenarios (errors, boundaries) in the same `*_story.{ext}`.
-2. Keep expected values in ExampleFactory (or peers in the same bundle).
-3. Share backgrounds / givens across scenarios when setup repeats.
-4. Deepen helper → factory links; name objects returned from helpers in steps.
-5. Do **not** invent a parallel `*_stories` data file — the story file *is* the spec.
-
-**Rules:**
+**Rules (main-flow and any optional variations):**
 - **`scenarios-shape`** / **`scenario-step-quality`** — Given / When / Then; domain-observable steps.
 - **`factory-backed-examples`** — Values in `{Type}ExampleFactory`; steps may name the method or returned object.
 - **`assert-public-interface`** — Then reads only the public seam of `I{Type}` (+ peers).
-- **`scenario-coverage`** — Cover important variations, not only happy path.
+- **`scenario-coverage`** — Cover important variations, not only happy path (when optional step 7 is active).
 - **`real-data-over-invented-values`** — Factory examples trace to domain / evidence.
 - **`atomic-deltas-over-repetition`** — State the delta; do not copy-paste walls.
 - **`alternate-actor-emphasis`** — Call out alternate actors when the path changes.
-- **`factory-objects-in-scenarios`** — Obtain objects via helpers → `{Type}ExampleFactory.{method}` (**fake** at explore/spec).
+- **`factory-objects-in-scenarios`** — Obtain objects via helpers → `{Type}ExampleFactory.{method}` (fake mode).
+- **`variations-after-main-flow`** — Never add alternate / boundary scenarios before the main-flow scenario exists and is confirmed.
 
 ---
 

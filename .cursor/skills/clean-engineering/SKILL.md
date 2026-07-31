@@ -1,15 +1,15 @@
 ---
-name: iterate
-description: "Iterate on formal generate output through a grill loop with validate + one fix pass."
+name: clean-engineering
+description: "Clean Engineering generator - multi-fidelity OO design and implementation."
 disable-model-invocation: true
 ---
 
-# Iterator
+# CleanEngineering
 
 Run the manifest to load tools, actions, and instructions:
 
 ```
-python -m tools manifest iterate.iterate:Iterator
+python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
 ```
 
 Follow `response.instructions` before doing anything else. Invoke tools by writing
@@ -23,7 +23,7 @@ Delete the file after the call. Request format — `toolset` is the classname fr
 the manifest step above:
 
 ```yaml
-toolset: iterate.iterate:Iterator
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
 context:
   key: value      # constructor params (fidelity, path, session, …)
 tool: <tool_name>   # or action: <action_name>

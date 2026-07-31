@@ -20,7 +20,7 @@ sandbox/<epic>/
 | Fidelity | Artifact |
 |---|---|
 | **ia** | One drawio under `.context/` — built via the **drawio-ux CLI**. |
-| **mockup → specification** | One HTML per concrete user goal at the epic or sub-epic folder (tight-knit screen set — not one file per screen, not one mega-file for a whole epic unless that *is* the goal). |
+| **mockup** | One HTML per concrete user goal at the epic or sub-epic folder (tight-knit screen set — not one file per screen, not one mega-file for a whole epic unless that *is* the goal). |
 
 Sketch/context MD stay in `.context/` (same pattern as other generators). Story / object-model JS stay where Stories / CE emit them; HTML imports those modules.
 
@@ -41,7 +41,7 @@ Do **not** bake product words (catalog, cart) into the template — those are bo
 
 **Layouts:** catalog in `ux_model/layouts.py` (layout id → named slots). Use `Screen.apply_layout` to set layout and seed empty regions.
 
-**Channels:** drawio, html, markdown, json — peer parse/render; `transform` moves sideways at the same fidelity. One `html` channel deepens by fidelity (js interactions → +css/brand → real frontend at **code**; host FE stacks welcome at **code**).
+**Channels:** drawio, html, markdown, json — peer parse/render; `transform` moves sideways at the same fidelity. One `html` channel deepens by fidelity (js interactions → optional brand layer + honest stubs at **mockup** → real frontend at **code**; host FE stacks welcome at **code**).
 
 ---
 
@@ -50,8 +50,7 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 | Fidelity | Default format | Output |
 |---|---|---|
 | **ia** | drawio | Site map + per-screen regions/nav (html optional via transform) |
-| **mockup** | html | Wired greybox screens (html+js); drawio remains a peer channel |
-| **specification** | html | Same html channel deepened — css/brand, richer stubs |
+| **mockup** | html | Wired greybox screens (html+js); drawio remains a peer channel; optional brand layer; honest stub catalogue |
 | **code** | html (or host FE stack) | Real frontend — production UI wired to real backend; not Story Demo / greybox alone |
 
 **Templates (AI generate):** drawio + html under `templates/`. Markdown context template optional. Other formats via channels / `transform`.
@@ -104,6 +103,10 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 5. Shell layout is fixed: product mockup **LEFT** (`#story-demo-frame`); explorer **RIGHT** (Play next / Reset / step tree). `data-goto` still navigates between product screens.
 6. Story modules must export `create{Story}Story(mode)` loadable in the browser for Play (no `node:test` import on that path — use story-test-core / a demo export if needed).
 7. Optional context md for notes not visible on screen.
+8. **Optional — branding (off by default).** Apply a css / design-tokens / brand layer only when **one of these is true**:
+   - The user explicitly asks for brand at this step, or
+   - Brand/css tokens already exist somewhere in the workspace (check before deciding).
+   Do not invent brand. When active: add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to **code** automatically — do not re-apply.
 
 ### Rules
 
@@ -112,25 +115,15 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 - **`key-interactions-wired`** — Nav/tabs via `data-goto` / interactions; story tracing via Story Demo mount (not bespoke product stubs).
 - **`story-demo-control-for-gwt`** — GWT-bound controls are `StoryDemoControl` in the model so HTML gets `data-story-steps`.
 - **`shell-from-template`** — Use `mockup_shell.html` / render channel; do not drop the explorer when generating screens.
+- **`brand-is-opt-in`** — Do not add css / design tokens / brand unless asked or pre-existing. Greybox is the default output.
+9. Document every faked behaviour explicitly — list all stubs; no silent pretence of production services.
+- **`stub-catalogue-honest`** — Every faked behaviour is listed in the html or a companion context note.
 
 ---
 
-## specification
+## code
 
 **Default format:** html
-
-**Goal:** Deepen the same html channel — brand/css, richer stubs, honest stub catalogue. Still not production.
-
-- Carry over regions, controls, labels from mockup.
-- Add css / design tokens / brand; document stubs.
-- Domain enter/display through imported domain JS; stories still listed (tracing/example injection later).
-
-### Rules
-
-- **`stub-catalogue-honest`** — Every faked behaviour is listed; no silent pretence of production services.
-- **`upstream-decisions-carried`** — Do not redecide layout or vocabulary at this fidelity.
-
----
 
 ## code
 
@@ -138,7 +131,7 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 
 **Goal:** Real frontend for the product — production UI and client wiring to a real backend. Not greybox, not Story Demo as the shipping surface, not stub-only services.
 
-- Replace mockup / specification stubs with the real client (routing, state, API calls, auth as needed).
+- Replace mockup stubs with the real client (routing, state, API calls, auth as needed).
 - Call CE **code**-fidelity backend / Production collaborators — not Fake factory or in-browser demo domain alone.
 - Story Demo may still exist as a review/exploration shell; it is not the product UI at this fidelity.
 - Carry IA vocabulary and control decisions forward; do not redecide screens under a new product name.

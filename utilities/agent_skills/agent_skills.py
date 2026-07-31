@@ -33,11 +33,26 @@ Run the manifest to load tools, actions, and instructions:
 {manifest_command}
 ```
 
-Follow `response.instructions` before doing anything else. Invoke tools via:
+Follow `response.instructions` before doing anything else. Invoke tools by writing
+the request to a YAML file (e.g. `_req.yaml`) and running:
 
 ```
-python -m tools run -
+python -m tools run _req.yaml
 ```
+
+Delete the file after the call. Request format — `toolset` is the classname from
+the manifest step above:
+
+```yaml
+toolset: {toolset_ref}
+context:
+  key: value      # constructor params (fidelity, path, session, …)
+tool: <tool_name>   # or action: <action_name>
+arguments:
+  key: value
+```
+
+Read `examples/` before guessing any field shape.
 """
 
 _CURSOR_COMMAND_TEMPLATE = """\
@@ -49,11 +64,15 @@ Run the manifest to load tools, actions, and instructions:
 {manifest_command}
 ```
 
-Follow `response.instructions` before doing anything else. Invoke via:
+Follow `response.instructions` before doing anything else. Write the request YAML
+to `_req.yaml`, then run:
 
 ```
-python -m tools run -
+python -m tools run _req.yaml
 ```
+
+Delete the file after the call. Request format:
+
 ```yaml
 toolset: {toolset_ref}
 new:
@@ -78,7 +97,14 @@ Run the manifest to load tools, actions, and instructions:
 {manifest_command}
 ```
 
-Follow `response.instructions` before doing anything else. Invoke via:
+Follow `response.instructions` before doing anything else. Write the request YAML
+to `_req.yaml`, then run:
+
+```
+python -m tools run _req.yaml
+```
+
+Delete the file after the call. Request format:
 
 ```yaml
 toolset: {toolset_ref}
@@ -368,6 +394,7 @@ class AgentSkills:
             skill_slug=skill_slug,
             class_name=class_name,
             manifest_command=manifest_command,
+            toolset_ref=_toolset_ref(manifest_command),
             description=safe_description,
         )
         skill_md.write_text(content, encoding="utf-8")

@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "abd-context-driven-delivery"
+version = "0.1.0"
+
+[tool.setuptools.packages.find]
+# Mirror _pythonpath_env() from manifest_gate.py:
+#   root     → context_tools, utilities, primitives (namespace packages)
+#   primitives/ → tools, actions, assets, declared, focus, instructions
+#   utilities/  → sessions, scanners, sketch, repair, …
+#   context_tools/ → cdd, stories, ux, …
+where = [".", "primitives", "utilities", "context_tools"]

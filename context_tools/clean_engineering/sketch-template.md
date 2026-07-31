@@ -137,13 +137,17 @@ CartExampleFactory
 - **Language companion** — prose identity refined at every stage (not a fidelity). Names and plain-English bullets only.
 - **Modules fidelity** — independent modules, thin terms, **one-way deps**, **build order** (after partition). No types / relationship kinds.
 - **Model fidelity** — `I{Class}`, typed properties and operation signatures; relationship kind decided per pair.
-- **Specification fidelity** — full typed contracts, invariants, cardinality. The sketch is superseded once the formal artifact captures all of this.
+- **Code fidelity (Phase 1)** — full typed contracts, `Class(I{Class})`, invariants, cardinality; example factories completed. The sketch is superseded once the formal artifact captures all of this.
+- **Code fidelity (Phase 2)** — production implementation; all empty bodies filled; real collaborators wired.
+
+> **Note:** `specification` was a prior fidelity name. It is retired — its work is now Phase 1 of `code`.
 
 ## Rules
 
 - Nothing needs a formal name until the grill reveals it. `thing` is fine as a placeholder if the concept isn't stable yet.
 - Indent = owned or subordinate. Never use indent for association — put associated classes as peers below `----`.
 - One class family per file (`cohesive-file`): a class plus its subtypes and tightly connected peers (element + collection, small aggregate + part). Multiple unrelated families belong in separate sketches / separate code files. Example factories always go in a sibling `{type}_example_factory` file (`example-factory-separate-file`).
+- **No `I{Type}` interface names in informal or modules-fidelity sketches.** Use concrete class names only. Interface types (`ICart`, `IRepository`, etc.) emerge at model fidelity when the formal artifact is generated — not before.
 
 ## Discovery precedence (context for the sketcher)
 

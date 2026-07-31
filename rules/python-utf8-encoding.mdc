@@ -1,0 +1,22 @@
+---
+description: Always set PYTHONIOENCODING=utf-8 when running Python commands to avoid charmap errors on Windows
+alwaysApply: true
+---
+
+# Python UTF-8 Encoding
+
+The markdown files in this repo contain Unicode characters (e.g. `→`, em-dashes, smart quotes). Python on Windows defaults to `cp1252`, which cannot encode them and will crash with `UnicodeEncodeError`.
+
+## Rule
+
+Always set `PYTHONIOENCODING=utf-8` before running any `python -m tools` command.
+
+```powershell
+# ❌ BAD — crashes on Unicode in markdown output
+python -m tools manifest context_tools.cdd.cdd:Cdd
+
+# ✅ GOOD
+$env:PYTHONIOENCODING="utf-8"; python -m tools manifest context_tools.cdd.cdd:Cdd
+```
+
+This applies to every `python -m tools` invocation in every response, with no exceptions.

@@ -35,9 +35,9 @@ Under a theme, include only the concept blocks you are advancing this cycle. Whe
 
 | Block | Must look like |
 |---|---|
-| `stories:` | Stories sketch — `{Epic}` / `{Sub-epic}` / `{Actor} --> {Story}` (discovery depth) |
-| `ddd:` | DDD sketch — BC names, aggregates, deps (stage fidelity) |
-| `ux:` | UX sketch — site map + screen boxes (stage fidelity) |
+| `stories:` | Stories sketch — `{Epic}` / `{Sub-epic}` / `{Actor} --> {Story}` (discovery); full scenario sentences (explore+) |
+| `ddd:` | DDD sketch — BC names + aggregates (discovery); typed building blocks (explore+) |
+| `ux:` | **discovery/ia:** site map lines only (`└─ [nav] action → Destination`). **explore/mockup+:** ASCII screen boxes with regions, glyphs, verb rows, Stories count, domain terms, and key — from the UX `sketch-template.md`. Site map lines alone are **wrong** at explore depth. |
 | `ce:` | clean_engineering sketch — class / property / operation indent notation |
 | `bdd:` | BDD sketch — describe/it (explore+) |
 

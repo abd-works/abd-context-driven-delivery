@@ -29,6 +29,18 @@ Rough, informal artifacts produced through an interactive grill loop, kept along
 5. **Refine and overwrite** — regenerate the sketch showing what changed, then **immediately** `save_sketch` again (same path). Do not batch saves; do not wait until the session ends.
 6. **Repeat** 4–5 until either the user says done, or every branch of the design tree has been sketched and reasoned out. Ask a question only when a branch genuinely cannot be resolved by sketching a recommendation.
 
+### Sketch cadence — question budget before first sketch
+
+**Sketch early. A sketch with placeholders beats one more question.**
+
+| Questions asked before first sketch | Status |
+|---|---|
+| 1–2 | Normal — expected range |
+| 3 | Exceptional — only when all three genuinely block the first draft |
+| 4+ | **Never** — sketch with `?` placeholders for unresolved branches instead |
+
+If you reach 3 questions without having shown any shape: stop, draft what you know, mark gaps with `?`, then ask. Do not ask a fourth question before the first sketch exists.
+
 ## When asking a question (grill inside sketch)
 
 Bare option lists are not allowed. The user must be able to decide from the concepts in play — not from intuition about unlabeled choices.
@@ -38,6 +50,19 @@ For every question:
 1. **Frame** — name the sketch branch, restate what is already agreed in the sketch, and ground the decision in the active practice concepts (e.g. for clean_engineering modules: high-cohesion, low-coupling, named-seam-and-constraint, deep-module, complexity-absorption; for OOAD: class vs property vs operation, composition/aggregation/association, single responsibility). Pull those concepts from the wrapped agent's material / fidelity docs, not from generic advice.
 2. **Options with rationale** — 3–5 choices; recommended first; each option gets one short concept-tied rationale (what it does to the seam, ownership, or coupling). End with "Other / I'll specify."
 3. **One question** — wait for the answer, then regenerate the sketch showing exactly what changed.
+
+**Always use the AskQuestion tool** — never list options as plain chat text. One tool call = one question:
+
+```
+AskQuestion:
+  title: "Grill — {theme name}"
+  question: "{single focused question with framing}"
+  options:
+    - {option a — rationale}        # recommended first
+    - {option b — rationale}
+    - {option c — rationale}
+    - Other / I'll specify
+```
 
 Question shape (frame + options) comes from `grill_with_context`, which `@sketch` pulls in explicitly. This section owns sketch show/persist cadence only.
 
@@ -61,6 +86,44 @@ If none of the above yield a template, the sketcher invents a shape for the doma
 - They persist until a formal artifact absorbs their content.
 - Retirement is manual for now — remove the sketch when the formal artifact fully captures its intent.
 
+## Multi-lens sketching (CDD and similar orchestrators)
+
+When sketching across multiple lenses (Stories / DDD / UX / Modules / BDD):
+
+### Rules
+
+- **`confirm-lenses-before-sketch`** — **Hard gate.** Before any scaffold or sketch, use AskQuestion (allow_multiple: true) to confirm which lenses are active. Present them by sketch label. Do not proceed until confirmed. All active lenses are recommended by default; user removes out-of-scope ones.
+- **`grill-before-theme-detail`** — **Hard gate.** Before writing any non-scaffold content for a theme, run at least one grill round on that theme's open questions. The session-level lens confirmation does NOT substitute for this per-theme grill.
+- **`one-sketch-per-engagement`** — One sketch file per engagement. Deepening fidelity updates `fidelity:` at the top and deepens blocks in place. Never create a new file for a new fidelity level.
+- **`scaffold-before-detail`** — A scaffold pass is required when the ask is greenfield, spans multiple themes/epics/modules, or no whole-design scaffold exists. Not required for a single narrow theme in an already-scaffolded design. Mark every scaffold line `< scaffold`. Never scaffold and detail in the same pass.
+- **`scaffold-per-epic-not-mega-block`** — One `=========` theme block per epic (or sub-epic for large systems). Do not group all epics into a single mega-theme block.
+- **`detail-updates-scaffold-in-place`** — When detailing a theme, update scaffold lines within the existing `=========` block. Remove `< scaffold` from filled lines. Never create a second parallel block for the same epic — one epic = one theme block for its lifetime.
+- **`lens-from-child-template`** — Every lens block body must use that lens's own sketch notation (from child `sketch_template`). No free prose inside `stories:` / `ddd:` / `ux:` / `ce:` / `bdd:`. Use `* approx …` or omit the block if the content is not yet known.
+
+### Scaffold level by lens
+
+| Lens | Scaffold contains | NOT scaffold |
+|---|---|---|
+| **Stories** | Epics, Sub-Epics, minimal story spine | Scenarios, Given/When/Then |
+| **DDD** | Bounded context names, top-level aggregate roots | Building blocks, value objects, domain events |
+| **UX** | Site map / navigation only | Screen boxes, controls, layouts |
+| **Modules** | Module folder names only | Classes, operations, properties |
+| **BDD** | Top-level `describe` lines only | `it …` / `with …` behaviours |
+
+### Common mistakes (multi-lens)
+
+❌ Skipping the lens confirmation gate before scaffold or sketch
+❌ Skipping the per-theme grill — lens confirmation does not substitute for it
+❌ Creating a new sketch file when moving to a deeper fidelity — deepen in place
+❌ Creating a new theme block when detailing — update scaffold lines in the existing block
+❌ Grouping all epics into one mega-theme block — one block per epic
+❌ Scaffolding and detailing in the same pass
+❌ Scaffolding one lens only when other active lenses also need a whole-system map
+❌ Leaving scaffold lines without the `< scaffold` marker
+❌ Writing free prose inside lens blocks — child notation only
+❌ Working multiple themes at once — finish one, then move to the next
+
+---
 ## Composition — how sketch chains with other actions
 
 `@sketch` **explicitly calls** `grill_with_context`, then chains `sketch_session`. Expansion order:
