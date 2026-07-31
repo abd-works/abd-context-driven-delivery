@@ -1,4 +1,4 @@
-"""Scanner: mixed logging/calc or validation/I/O — reads Operation callees/flags."""
+"""Scanner: mixed logging/calc or validation/I/O - reads Operation callees/flags."""
 from pathlib import Path
 
 from code_scanner import CodeScanner

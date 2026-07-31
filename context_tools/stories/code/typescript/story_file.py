@@ -1,4 +1,4 @@
-"""TypeScript runnable story-file renderer — mirrors JavaScript GWT stubs."""
+"""TypeScript runnable story-file renderer - mirrors JavaScript GWT stubs."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def render_story_file(
         lines.append(f" * Actor: {actor}")
     lines.extend(
         [
-            " * Wired to ExampleFactory fakes — not a tier test.",
+            " * Wired to ExampleFactory fakes - not a tier test.",
             " * Assert the public interface of I{Type} only.",
             f" * Specs: {_snake(story.name)}_spec.ts (isolated); "
             f"{_snake(story.name)}_spec.{{tier}}.ts (other tiers)",
@@ -58,7 +58,7 @@ def render_tier_spec_file(story: Story, *, tier: str) -> str:
     return "\n".join(
         [
             "/**",
-            f" * Tier: {tier} — same {story.name} story.",
+            f" * Tier: {tier} - same {story.name} story.",
             " */",
             "",
             f'import {{ {fn} }} from "./{_snake(story.name)}_story";',
@@ -75,16 +75,16 @@ def _render_scenario(scenario) -> List[str]:
     lines = [f"    scenario({_qs(scenario.name)}, ({{ given, when, then }}) => {{"]
     for clause in scenario.given:
         lines.append(f"      given({_qs(clause.text)}, () => {{")
-        lines.append("        // helper.given…({ mode }) — AI fills")
+        lines.append("        // helper.given...({ mode }) - AI fills")
         lines.append("      });")
     for interaction in scenario.interactions:
         for clause in interaction.when:
             lines.append(f"      when({_qs(clause.text)}, () => {{")
-            lines.append("        // public operations — AI fills")
+            lines.append("        // public operations - AI fills")
             lines.append("      });")
         for clause in interaction.then:
             lines.append(f"      then({_qs(clause.text)}, () => {{")
-            lines.append("        // assert public interface — AI fills")
+            lines.append("        // assert public interface - AI fills")
             lines.append("      });")
     lines.append("    });")
     lines.append("")

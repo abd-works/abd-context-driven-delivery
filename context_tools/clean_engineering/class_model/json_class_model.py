@@ -103,7 +103,7 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
                     module.classes.append(cls._class_from_dict(cd, sequential_order=j))
                 model.modules.append(module)
         elif "classes" in data:
-            # Legacy schema — wrap all classes in a single unnamed module
+            # Legacy schema - wrap all classes in a single unnamed module
             module = JsonModule(name="", sequential_order=1)
             for i, cd in enumerate(data["classes"], 1):
                 module.classes.append(cls._class_from_dict(cd, sequential_order=i))

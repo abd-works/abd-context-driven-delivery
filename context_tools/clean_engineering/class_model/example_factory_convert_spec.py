@@ -1,4 +1,4 @@
-"""BDD spec — a module with an example factory renders IType + Type + ExampleFactory (no Fake subclasses)."""
+"""BDD spec - a module with an example factory renders IType + Type + ExampleFactory (no Fake subclasses)."""
 
 import sys
 from pathlib import Path

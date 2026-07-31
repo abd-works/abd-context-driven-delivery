@@ -1,4 +1,4 @@
-"""brownfield-story-mapping — no lingering UNVERIFIED evidence markers."""
+"""brownfield-story-mapping - no lingering UNVERIFIED evidence markers."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""BDD spec for CleanEngineering model nodes — OoadClass, CleanEngineeringModel, translate_from reconciliation."""
+"""BDD spec for CleanEngineering model nodes - OoadClass, CleanEngineeringModel, translate_from reconciliation."""
 
 import sys
 from pathlib import Path

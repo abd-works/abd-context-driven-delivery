@@ -1,4 +1,4 @@
-"""Scan kit — mergeable toolset face over ScannerCollection."""
+"""Scan kit - mergeable toolset face over ScannerCollection."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Draw.io channel — IA via drawio-ux CLI (Detailed IA + Site Map).
+"""Draw.io channel - IA via drawio-ux CLI (Detailed IA + Site Map).
 
 Render builds CLI state from the UxMap and invokes `drawio_ux.mjs write`.
 Parse prefers the Site Map page for screens/transitions; region titles come
@@ -81,7 +81,7 @@ class DrawioUxMap(UxMap):
         try:
             root_el = ET.fromstring(text)
         except ET.ParseError:
-            ux_map.context.notes.append("drawio parse failed — invalid XML")
+            ux_map.context.notes.append("drawio parse failed - invalid XML")
             return ux_map
 
         site_map = _diagram_by_name(root_el, "Site Map")
@@ -130,7 +130,7 @@ class DrawioUxMap(UxMap):
             tgt = id_to_screen.get(cell.get("target", ""))
             if src is None or tgt is None:
                 continue
-            trigger = _strip_html(cell.get("value", "")) or f"{src.name} → {tgt.name}"
+            trigger = _strip_html(cell.get("value", "")) or f"{src.name} -> {tgt.name}"
             if " / " in trigger:
                 left, right = [part.strip() for part in trigger.split(" / ", 1)]
                 ux_map.transitions.append(

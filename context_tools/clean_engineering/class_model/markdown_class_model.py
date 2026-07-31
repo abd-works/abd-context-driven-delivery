@@ -4,7 +4,7 @@ Format (language companion + modules/model markdown, module-first):
 
     # ModuleName
 
-    *ModuleName* is [description — what it is, its boundary, collaborators, seam, constraint].
+    *ModuleName* is [description - what it is, its boundary, collaborators, seam, constraint].
 
     ## ClassName
 
@@ -70,7 +70,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         model = cls(name="", sequential_order=1)
         module_order = 1
 
-        # Split on H1 (`# Heading`) — each block is one module
+        # Split on H1 (`# Heading`) - each block is one module
         h1_blocks = re.split(r"(?m)^(?=#\s)", text)
         for block in h1_blocks:
             block = block.strip()
@@ -116,7 +116,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 if class_name.lower() in _MODULE_META_HEADINGS:
                     _apply_module_section(module, class_name, class_block[cm.end():])
                     continue
-                # "## FakeCart : ICart" / "## Cart : ICart" → class name only
+                # "## FakeCart : ICart" / "## Cart : ICart" -> class name only
                 if " : " in class_name:
                     class_name = class_name.split(" : ", 1)[0].strip()
                 class_body = class_block[cm.end():].lstrip("\n")
@@ -190,7 +190,7 @@ _MODULE_META_HEADINGS = frozenset({
 def _parse_term_list(raw: str) -> List[str]:
     text = raw.strip()
     text = re.sub(r"^\*\(?none\)?\*$", "", text, flags=re.IGNORECASE).strip()
-    if not text or text.lower() in {"*(none)*", "(none)", "none", "—", "-"}:
+    if not text or text.lower() in {"*(none)*", "(none)", "none", "-", "-"}:
         return []
     # Strip surrounding backticks per token
     parts = re.split(r"[,;]", text)
@@ -267,7 +267,7 @@ def _apply_module_section(module: Module, heading: str, body: str) -> None:
             module.dependencies = deps
         return
     if key == "seam":
-        # Narrative seam section — keep as seam prose; pull backticked names as terms
+        # Narrative seam section - keep as seam prose; pull backticked names as terms
         module.seam = body.strip()
         if not module.seam_terms:
             module.seam_terms = [

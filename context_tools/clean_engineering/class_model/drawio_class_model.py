@@ -2,17 +2,17 @@
 
 Two visual fidelities share this channel (auto-detected on parse/render):
 
-**Modules view** (modules fidelity) — system-context style:
+**Modules view** (modules fidelity) - system-context style:
   - Each Module is one rounded mxCell (MODULE_STYLE).
   - Path nesting is **containment**: `powers/attack` is a child cell inside `powers`.
   - Shared base classes/terms live on the **parent** (e.g. `Effect` on `powers`), not a
     fake `powers/effect` submodule. Missing path parents are synthesized as containers.
   - Cell HTML: bold name, italic purpose, <hr>, bullet list of public seam terms.
-  - Edges are one-way dependencies (A → B means A depends on B); child→path-parent
+  - Edges are one-way dependencies (A -> B means A depends on B); child->path-parent
     edges are omitted (containment already shows that).
   - No stack/tech callouts; no UML props/ops.
 
-**Class view** (model+ fidelity) — UML class diagram:
+**Class view** (model+ fidelity) - UML class diagram:
   - Each OoadClass becomes one mxCell vertex (CLASS_STYLE).
   - Properties and operations as HTML with <hr/> section separators.
   - Relationships as mxCell edges using EDGE_STYLES.
@@ -170,10 +170,10 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
                 continue
             style = cell.get("style", "")
             if "text;" in style or style.startswith("text;"):
-                # Title / subtitle — pull system name from title if present
+                # Title / subtitle - pull system name from title if present
                 if cell.get("id") == "title":
                     title = html.unescape(cell.get("value", ""))
-                    m = re.match(r"^(.+?)\s*[—\-]\s*Modules?", title)
+                    m = re.match(r"^(.+?)\s*[-\-]\s*Modules?", title)
                     if m:
                         model.name = m.group(1).strip()
                 continue
@@ -196,7 +196,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
                 model.modules.append(module)
             order += 1
 
-        # Containment restores child → real path-parent dependency when edge was omitted
+        # Containment restores child -> real path-parent dependency when edge was omitted
         for cell in mxcells:
             if cell.get("vertex") != "1":
                 continue
@@ -304,7 +304,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
 
         title = ET.SubElement(root_el, "mxCell")
         title.set("id", "title")
-        title.set("value", f"{system_name} — Modules Context")
+        title.set("value", f"{system_name} - Modules Context")
         title.set("style", MODULE_TITLE_STYLE)
         title.set("parent", "1")
         title.set("vertex", "1")
@@ -366,7 +366,7 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             path_parent = _path_parent(module.name)
             for dep in module.dependencies:
                 if dep == path_parent:
-                    continue  # containment already shows child → parent
+                    continue  # containment already shows child -> parent
                 tgt_id = name_to_id.get(dep)
                 if not src_id or not tgt_id:
                     continue
@@ -458,7 +458,7 @@ def _is_modules_view(canonical: CleanEngineeringModel) -> bool:
         return True
     if not canonical.classes:
         return True
-    # Thin term names as empty classes — still modules fidelity
+    # Thin term names as empty classes - still modules fidelity
     return all(
         not c.properties and not c.operations and not c.relationships
         for c in canonical.classes
@@ -481,7 +481,7 @@ def _looks_like_modules_diagram(mxcells: List[ET.Element]) -> bool:
         name, props, ops = _parse_class_html(value)
         if name and (props or ops or "hr size=" in value.lower()):
             class_cells += 1
-        elif name and "•" in html.unescape(value):
+        elif name and "-" in html.unescape(value):
             module_cells += 1
     if module_cells and not class_cells:
         return True
@@ -564,7 +564,7 @@ class _ContainmentForest:
 
 class _ContainmentLayout:
     def __init__(self) -> None:
-        # name -> (x, y, w, h) — absolute for roots; relative for nested children
+        # name -> (x, y, w, h) - absolute for roots; relative for nested children
         self.bounds: Dict[str, Tuple[float, float, float, float]] = {}
         self.parent_id: Dict[str, str] = {}
         self.name_to_id: Dict[str, str] = {}
@@ -797,14 +797,14 @@ def _build_module_html(module: Module) -> str:
     purpose = module.description.strip() or "{one-line purpose}"
     purpose_line = purpose.splitlines()[0].strip()
     if len(purpose_line) > MODULE_PURPOSE_MAX_CHARS:
-        purpose_line = purpose_line[: MODULE_PURPOSE_MAX_CHARS - 1].rstrip() + "…"
+        purpose_line = purpose_line[: MODULE_PURPOSE_MAX_CHARS - 1].rstrip() + "..."
     purpose_html = html.escape(purpose_line)
     terms = module.public_terms()
     if terms:
         shown = terms[:MODULE_MAX_SEAM_BULLETS]
-        bullets = "<br>".join(f"• {html.escape(t)}" for t in shown)
+        bullets = "<br>".join(f"- {html.escape(t)}" for t in shown)
         if len(terms) > MODULE_MAX_SEAM_BULLETS:
-            bullets += "<br>• …"
+            bullets += "<br>- ..."
         return (
             f'<b style="font-size: 14px;">{name_html}</b><br>'
             f"<i>{purpose_html}</i><hr>"
@@ -879,7 +879,7 @@ def _parse_module_html(value: str) -> Tuple[Optional[str], str, List[str]]:
         purpose = im.group(1).strip()
 
     terms: List[str] = []
-    for bullet in re.findall(r"•\s*([^<]+)", text):
+    for bullet in re.findall(r"-\s*([^<]+)", text):
         term = bullet.strip()
         if term and not term.startswith("{"):
             terms.append(term)
@@ -965,8 +965,8 @@ def _create_edge(
 
 def _parse_class_html(value: str) -> Tuple[Optional[str], List[Property], List[Operation]]:
     text = html.unescape(value)
-    # Skip module-style cells (bullets with • and purpose italics, no UML hr size)
-    if "•" in text and 'hr size="1"' not in text.lower() and "<hr size=" not in text.lower():
+    # Skip module-style cells (bullets with - and purpose italics, no UML hr size)
+    if "-" in text and 'hr size="1"' not in text.lower() and "<hr size=" not in text.lower():
         if re.search(r"<i[^>]*>", text, re.IGNORECASE):
             return None, [], []
 

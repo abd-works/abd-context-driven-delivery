@@ -1,4 +1,4 @@
-"""TypeScript spec-file renderer — the reference-architecture shape.
+"""TypeScript spec-file renderer - the reference-architecture shape.
 
 Renders one `<story-slug>-stories.ts` file per Story:
 
@@ -17,14 +17,14 @@ Renders one `<story-slug>-stories.ts` file per Story:
     } as const satisfies Story
 
 Consumes:
-  - `Story` (from context_tools.stories.story_model.nodes) — carries name, users,
+  - `Story` (from context_tools.stories.story_model.nodes) - carries name, users,
     domain_terms, evidence, and (attached by workspace/loader) scenarios.
-  - `Scenario` (from context_tools.stories.story_model.scenario) — phase-grouped.
+  - `Scenario` (from context_tools.stories.story_model.scenario) - phase-grouped.
 
 Emits:
   - str (the file body).
 
-Note on discipline: this file is FULLY regeneratable. It contains no code —
+Note on discipline: this file is FULLY regeneratable. It contains no code -
 just literal data. Never include user-authored logic here; tier files own
 that (write-once).
 """
@@ -109,7 +109,7 @@ def _strip_md_emphasis(value: str) -> str:
 
     Loader stores the verbatim step string with bold/italic markup preserved
     so scanners can extract concepts and values. Rendered spec files must be
-    plain prose — the reference architecture uses no markdown inside step
+    plain prose - the reference architecture uses no markdown inside step
     strings.
     """
     return _BACKTICK.sub(r"\1", _ITALIC.sub(r"\1", _BOLD.sub(r"\1", value)))

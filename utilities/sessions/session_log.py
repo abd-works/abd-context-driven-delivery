@@ -31,7 +31,7 @@ def is_logged(func: Callable[..., Any] | None) -> bool:
 
 
 # Marker attrs copied from a base method onto a subclass override when absent.
-# Action wrappers / chain annotations resolve via MRO in primitives.actions — not here.
+# Action wrappers / chain annotations resolve via MRO in primitives.actions - not here.
 _INHERITED_MARKER_ATTRS = ("_is_logged",)
 
 
@@ -300,18 +300,18 @@ def summarize_mapping(data: dict[str, Any] | None, *, limit: int = 120) -> str:
     text = ",".join(parts)
     if len(text) <= limit:
         return text
-    return text[: limit - 1] + "…"
+    return text[: limit - 1] + "..."
 
 
 def _short(value: Any, *, max_len: int = 40) -> str:
     text = str(value).replace("\n", " ")
     if len(text) <= max_len:
         return text
-    return text[: max_len - 1] + "…"
+    return text[: max_len - 1] + "..."
 
 
 def member_is_logged(owner: type | Any, name: str) -> bool:
-    """True when the named member — or a base-class definition — carries @log."""
+    """True when the named member - or a base-class definition - carries @log."""
     cls = owner if isinstance(owner, type) else type(owner)
     for base in cls.__mro__:
         member = base.__dict__.get(name)

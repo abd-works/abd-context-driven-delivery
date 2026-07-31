@@ -2,7 +2,7 @@
 
 Exercises the Uniform Callable Surface: parse(external) -> StoryMap,
 render(canonical, previous=None) -> str, sync(external, canonical) ->
-UpdateReport. The DrawIO backend is stateless — every call passes the canonical
+UpdateReport. The DrawIO backend is stateless - every call passes the canonical
 StoryMap explicitly, and `DiagramStoryMap` positioning stays an internal detail
 of the backend.
 """
@@ -139,7 +139,7 @@ with description("a DrawIO Story Map") as self:
             self.original = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
             self.parsed = self.drawio.parse(self.drawio.render(self.original))
 
-        with it("should preserve Story structure — scenarios are NOT embedded in the story-map view"):
+        with it("should preserve Story structure - scenarios are NOT embedded in the story-map view"):
             first_story = self.parsed.epics[0].sub_epics[0].stories[0]
             expect(first_story.scenarios).to(have_len(0))
 
@@ -153,9 +153,9 @@ with description("a DrawIO Story Map") as self:
     with context("rendering the thin-slice view for a StoryMap with 2 increments"):
         with before.each:
             self.source = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
-            inc_a = Increment(name="Increment A — first outcome", sequential_order=1)
+            inc_a = Increment(name="Increment A - first outcome", sequential_order=1)
             inc_a.stories = ["Story 1.1.1", "Story 1.2.1"]
-            inc_b = Increment(name="Increment B — second outcome", sequential_order=2)
+            inc_b = Increment(name="Increment B - second outcome", sequential_order=2)
             inc_b.stories = ["Story 1.3.1"]
             self.source.append_increment(inc_a)
             self.source.append_increment(inc_b)

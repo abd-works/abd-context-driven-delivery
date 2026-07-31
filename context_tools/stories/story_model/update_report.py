@@ -39,7 +39,7 @@ class Change:
 class ChildCollectionPair:
     """A pair of self/source child lists plus the factory that creates fresh children.
 
-    self_children is a live reference — reconcileCollection mutates it in place so the
+    self_children is a live reference - reconcileCollection mutates it in place so the
     change persists on the owning node.
     """
 
@@ -55,7 +55,7 @@ class NodeSnapshot:
     Immutable value: two snapshots with the same fields are interchangeable.
     """
 
-    node_id: int  # identity of the captured node — used to guard reverse against a foreign report
+    node_id: int  # identity of the captured node - used to guard reverse against a foreign report
     name: str
     sequential_order: int
     extra_fields: dict = field(default_factory=dict)

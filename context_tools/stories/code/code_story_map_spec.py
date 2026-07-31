@@ -1,9 +1,9 @@
 """Mamba spec for `a code Story Map`. Mirrors ../../bdd-context.md `## Code` -> `a code Story Map`.
 
 Uses a thin concrete backend `_MinimalCodeBackend` to observe the abstract folder-tree
-behavior — the language-specific leaf content is covered by the TS/Python/Java specs.
+behavior - the language-specific leaf content is covered by the TS/Python/Java specs.
 
-Exercises the Uniform Callable Surface: the backend is stateless — every call
+Exercises the Uniform Callable Surface: the backend is stateless - every call
 passes the canonical StoryMap explicitly through `render(canonical, previous=None)`,
 `parse(external)`, and `sync(external, canonical)`.
 """

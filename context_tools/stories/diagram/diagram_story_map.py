@@ -1,4 +1,4 @@
-"""DiagramStoryMap — positioning layer shared by every diagram backend.
+"""DiagramStoryMap - positioning layer shared by every diagram backend.
 
 Grid model:
 
@@ -111,7 +111,7 @@ class DiagramStoryMap:
         return self.actor_row_y()
 
     def place_child_under_parent(self, child, parent) -> None:
-        # WHY: single guard on all invalid placements — every rejection leaf
+        # WHY: single guard on all invalid placements - every rejection leaf
         # collapses to a check on the type pair (parent, child).
         if isinstance(parent, Story):
             raise PlacementError("Stories cannot have child nodes")

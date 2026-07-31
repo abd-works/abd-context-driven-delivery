@@ -1,4 +1,4 @@
-"""Scanner: detect operations exceeding 20 lines — reads Operation.line_count."""
+"""Scanner: detect operations exceeding 20 lines - reads Operation.line_count."""
 from pathlib import Path
 
 from code_scanner import CodeScanner

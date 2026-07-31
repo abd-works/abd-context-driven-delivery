@@ -1,4 +1,4 @@
-"""StoryContext — the `story-context.md` on-request aggregate placed at an epic or sub-epic root."""
+"""StoryContext - the `story-context.md` on-request aggregate placed at an epic or sub-epic root."""
 
 from __future__ import annotations
 
@@ -28,12 +28,12 @@ class StoryContext:
     Fields describe what the file contained, so scanners can enforce placement
     and minimum shape without re-parsing text:
 
-    - `folder` — folder that contained the file (relative to workspace root)
-    - `title` — the H1 title (typically an epic or sub-epic verb–noun)
-    - `has_status`, `has_stories_in_scope`, `has_context_notes` — presence flags
+    - `folder` - folder that contained the file (relative to workspace root)
+    - `title` - the H1 title (typically an epic or sub-epic verb-noun)
+    - `has_status`, `has_stories_in_scope`, `has_context_notes` - presence flags
       for the labelled sections in the canonical template
-    - `stories_in_scope` — the verb–noun items enumerated under Stories in scope
-    - `is_leaf_folder` — true if the containing folder has no child sub-folders
+    - `stories_in_scope` - the verb-noun items enumerated under Stories in scope
+    - `is_leaf_folder` - true if the containing folder has no child sub-folders
       (i.e. a story-level folder); placement rule uses this to flag violations
     """
 

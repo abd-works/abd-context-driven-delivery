@@ -1,6 +1,6 @@
 """Concrete domain node types: Epic, SubEpic, Story.
 
-`AcceptanceCriteria` has been removed — `Story` now owns `Scenario` children
+`AcceptanceCriteria` has been removed - `Story` now owns `Scenario` children
 through `child_collections`, mirroring how `SubEpic` owns stories.
 
 Format backends (Markdown, JSON, DrawIO, Miro, TypeScript, ...) subclass these
@@ -75,7 +75,7 @@ class SubEpic(StoryNode):
         self.example_factories: List[str] = []
         self.test_file: str = ""
         # Populated by the workspace loader after load; never reconciled as
-        # tree children — copied through update_self as a value list.
+        # tree children - copied through update_self as a value list.
         self.test_suites: List["TestSuite"] = []
 
     @property
@@ -89,7 +89,7 @@ class SubEpic(StoryNode):
         self.domain_concepts = list(source.domain_concepts)
         self.example_factories = list(getattr(source, "example_factories", None) or [])
         self.estimate = source.estimate or ""
-        # TestSuites are ValueObjects — copied as values, never tree-reconciled.
+        # TestSuites are ValueObjects - copied as values, never tree-reconciled.
         self.test_suites = list(getattr(source, "test_suites", []) or [])
 
     def child_collections(self, source: "SubEpic") -> List[ChildCollectionPair]:
@@ -122,7 +122,7 @@ class SubEpic(StoryNode):
         return result
 
     def layout_column_count(self) -> int:
-        """Story grid columns — named stories only (estimates are not story cells)."""
+        """Story grid columns - named stories only (estimates are not story cells)."""
         nested = sum(s.layout_column_count() for s in self.sub_epics)
         own = len(self.stories)
         if self.sub_epics:
@@ -170,10 +170,10 @@ class Story(StoryNode):
         self.users: List[str] = []
         self.domain_terms: List[str] = []
         self.evidence: List[str] = []
-        # Scenario children — reconciled as tree children via child_collections.
+        # Scenario children - reconciled as tree children via child_collections.
         self.scenarios: List["Scenario"] = []
         # Populated by the workspace loader after load; never reconciled as
-        # tree children — copied through update_self as a value list.
+        # tree children - copied through update_self as a value list.
         self.test_cases: List["TestCase"] = []
 
     def update_self(self, source: "Story") -> None:
@@ -183,9 +183,9 @@ class Story(StoryNode):
         self.users = list(source.users)
         self.domain_terms = list(getattr(source, "domain_terms", []) or [])
         self.evidence = list(getattr(source, "evidence", []) or [])
-        # TestCases are ValueObjects — copied as values, never tree-reconciled.
+        # TestCases are ValueObjects - copied as values, never tree-reconciled.
         self.test_cases = list(getattr(source, "test_cases", []) or [])
-        # NOTE: scenarios are NOT copied here — they are reconciled by
+        # NOTE: scenarios are NOT copied here - they are reconciled by
         # child_collections / _reconcileCollection so that translate_from
         # produces the correct UpdateReport entries for scenario adds/removes.
 

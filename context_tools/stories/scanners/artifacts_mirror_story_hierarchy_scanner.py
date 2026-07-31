@@ -1,4 +1,4 @@
-"""artifacts-mirror-story-hierarchy — scenarios and suites follow the map.
+"""artifacts-mirror-story-hierarchy - scenarios and suites follow the map.
 
 Uses only Workspace model fields. Path shape is language-agnostic.
 """

@@ -1,4 +1,4 @@
-"""Scanner: bare/swallowed except — reads Operation.bare_except_lines / swallowed_except_lines."""
+"""Scanner: bare/swallowed except - reads Operation.bare_except_lines / swallowed_except_lines."""
 from pathlib import Path
 
 from code_scanner import CodeScanner

@@ -1,4 +1,4 @@
-"""BDD spec for sketch — @sketch decorator + Sketcher toolset + _ActionExpander integration."""
+"""BDD spec for sketch - @sketch decorator + Sketcher toolset + _ActionExpander integration."""
 
 import sys
 from pathlib import Path

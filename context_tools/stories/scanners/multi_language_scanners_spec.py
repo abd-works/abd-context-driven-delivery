@@ -1,8 +1,8 @@
-"""Cross-language Stories scanners — same rules across py / ts / js / java channels.
+"""Cross-language Stories scanners - same rules across py / ts / js / java channels.
 
 Architecture (mirrors Clean Engineering):
-  language channel parses file → canonical model fields
-  scanner reads model only — never language syntax
+  language channel parses file -> canonical model fields
+  scanner reads model only - never language syntax
 """
 
 import tempfile
@@ -22,7 +22,7 @@ _STORY_MAP = """\
         (S) Customer --> Submit Order
 """
 
-# Tier file stubs — channels must flag unimplemented_steps / has_unimplemented_body
+# Tier file stubs - channels must flag unimplemented_steps / has_unimplemented_body
 _TIER_FAULT = {
     "python": (
         "tests/manage-orders/place-order/submit-order/test_submit_order_server.py",

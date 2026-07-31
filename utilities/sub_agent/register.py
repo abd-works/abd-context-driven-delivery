@@ -1,4 +1,4 @@
-"""Register sub-agent tools with Tools — import this package to attach them."""
+"""Register sub-agent tools with Tools - import this package to attach them."""
 from __future__ import annotations
 
 from sub_agent.sub_agent import discover_sub_agent_tools

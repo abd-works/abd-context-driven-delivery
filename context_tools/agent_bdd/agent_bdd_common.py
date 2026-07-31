@@ -20,7 +20,7 @@ _TOOLS_RUN = re.compile(r"(?:python\s+-m\s+tools\s+run|tools\s+run\b)", re.IGNOR
 JUDGE_TASK = """\
 You are an AI judge.
 Evaluate OUTPUT against RUBRIC.
-Reply with ONLY one JSON object on one line — no markdown, no code fences, no commentary.
+Reply with ONLY one JSON object on one line - no markdown, no code fences, no commentary.
 The JSON must have keys verdict (PASS or FAIL) and reason (one sentence).
 
 --- RUBRIC ---
@@ -46,7 +46,7 @@ INBOX_POLL_SECONDS = 0.25
 
 
 class AgentHarnessError(RuntimeError):
-    """Agent or CLI step failed — carries artifacts for debugging."""
+    """Agent or CLI step failed - carries artifacts for debugging."""
 
     def __init__(
         self,
@@ -123,7 +123,7 @@ class RunResponse:
             raise AgentHarnessError(f"tools run output is not a mapping: {text[:200]!r}")
         if not data.get("ok"):
             error = str(data.get("error") or "unknown error")
-            raise AgentHarnessError(f"tools run returned ok: false — {error}", stdout=text)
+            raise AgentHarnessError(f"tools run returned ok: false - {error}", stdout=text)
         tools_field = data.get("tools")
         return cls(
             ok=True,
@@ -220,7 +220,7 @@ class AgentSession:
             raise RuntimeError("cursor-agent not found on PATH")
         log_harness(
             "cursor_channel",
-            f"agent run starting (session={self.chat_id[:8]}…, timeout={timeout_seconds}s)",
+            f"agent run starting (session={self.chat_id[:8]}..., timeout={timeout_seconds}s)",
         )
         args = [
             exe,
@@ -299,7 +299,7 @@ class AgentSession:
         try:
             exit_code = proc.wait(timeout=timeout_seconds)
         except subprocess.TimeoutExpired:
-            log_harness("cursor_channel", f"TIMEOUT after {timeout_seconds}s — killing cursor-agent")
+            log_harness("cursor_channel", f"TIMEOUT after {timeout_seconds}s - killing cursor-agent")
             proc.kill()
             proc.wait()
             raise
@@ -528,7 +528,7 @@ def embedded_judge_verdicts(text: str) -> list[tuple[str, str]]:
 
 
 # ---------------------------------------------------------------------------
-# Manifest — @agent-spec-manifest header parsing
+# Manifest - @agent-spec-manifest header parsing
 # ---------------------------------------------------------------------------
 
 AGENT_SPEC_MARKER = "@agent-spec-manifest"
@@ -599,7 +599,7 @@ def _find_marker_command(text: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Runbook — build chat runbook YAML from an agent spec Python file
+# Runbook - build chat runbook YAML from an agent spec Python file
 # ---------------------------------------------------------------------------
 
 @dataclass

@@ -1,4 +1,4 @@
-"""BDD spec for tools-behavior.md — Discoverable Toolsets (lines 9–28)."""
+"""BDD spec for tools-behavior.md - Discoverable Toolsets (lines 9-28)."""
 
 import subprocess
 import sys

@@ -1,4 +1,4 @@
-"""Canonical UX model — UxMap and node types."""
+"""Canonical UX model - UxMap and node types."""
 
 from .collections import ContentTypes, NavComponents, Transitions, UxComponentCollection
 from .nodes import (

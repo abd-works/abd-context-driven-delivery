@@ -1,6 +1,6 @@
 """Local fenced-YAML helpers for parsing ``python -m tools run`` CLI output.
 
-Owned by agent_bdd — not part of the Tools author seam. Tools authors get
+Owned by agent_bdd - not part of the Tools author seam. Tools authors get
 manifest text via ``front_matter`` or the CLI; harnesses parse CLI envelopes here.
 """
 from __future__ import annotations

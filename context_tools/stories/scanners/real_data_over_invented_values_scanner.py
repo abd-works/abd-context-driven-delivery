@@ -1,4 +1,4 @@
-"""real-data-over-invented-values — no placeholder values in scenarios."""
+"""real-data-over-invented-values - no placeholder values in scenarios."""
 
 from __future__ import annotations
 

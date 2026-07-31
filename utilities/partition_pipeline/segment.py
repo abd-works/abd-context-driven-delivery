@@ -1,4 +1,4 @@
-"""Partition segment resource — a ``*-segment.md`` chunk and its named entries."""
+"""Partition segment resource - a ``*-segment.md`` chunk and its named entries."""
 
 from __future__ import annotations
 
@@ -161,7 +161,7 @@ class Segment:
                 f"completeness: {overall} "
                 f"({ok_count}/{total} OK, {incomplete} incomplete)"
             ),
-            "note: span length alone is a false PASS — named-entry completeness is required",
+            "note: span length alone is a false PASS - named-entry completeness is required",
             "",
             "| Entry | Status | Body chars |",
             "|-------|--------|------------|",
@@ -217,8 +217,8 @@ class Segment:
         ]
         if incomplete == 0 and total > 0:
             rows.append(
-                f"| — | (all expected entries) | OK | "
-                f"≥{self._config.min_body_chars} |"
+                f"| - | (all expected entries) | OK | "
+                f">={self._config.min_body_chars} |"
             )
         return rows
 

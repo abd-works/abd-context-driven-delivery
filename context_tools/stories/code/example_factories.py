@@ -1,4 +1,4 @@
-"""Shared domain helpers — collect ExampleFactory names from the story graph.
+"""Shared domain helpers - collect ExampleFactory names from the story graph.
 
 Epic / SubEpic may declare ``example_factories`` (e.g. ``CartExampleFactory``).
 Language emitters live next to each converter:
@@ -16,7 +16,7 @@ _FACTORY_NAME = re.compile(r"^[A-Z][A-Za-z0-9]*ExampleFactory$")
 
 
 def normalize_factory_name(name: str) -> str:
-    """Ensure PascalCase …ExampleFactory (accepts Cart or CartExampleFactory)."""
+    """Ensure PascalCase ...ExampleFactory (accepts Cart or CartExampleFactory)."""
     raw = (name or "").strip()
     if not raw:
         return ""

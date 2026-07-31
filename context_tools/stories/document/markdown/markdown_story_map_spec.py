@@ -199,7 +199,7 @@ with description("a Markdown document") as self:
 
     with context("that includes metadata and prose around valid story structure"):
         with before.each:
-            self.document = """# Story Map — Sample
+            self.document = """# Story Map - Sample
 
 **Actors:** Customer, System
 _Scope: mixed markdown content should be tolerated._
@@ -223,7 +223,7 @@ _Scope: mixed markdown content should be tolerated._
 
     with context("that uses `(E)/(S)` outline notation"):
         with before.each:
-            self.document = """# Story Map — pml-my
+            self.document = """# Story Map - pml-my
 
 **Actors:** Customer, System
 
@@ -267,7 +267,7 @@ _Scope: mixed markdown content should be tolerated._
 
     with context("that uses outline estimate lines"):
         with before.each:
-            self.document = """# Story Map — Treasury
+            self.document = """# Story Map - Treasury
 
 (E) Move money
     * approx 22-27 total stories
@@ -298,7 +298,7 @@ _Scope: mixed markdown content should be tolerated._
 
     with context("that uses heading-style stories and numbered acceptance criteria"):
         with before.each:
-            self.document = """# Acceptance Criteria — Full Application
+            self.document = """# Acceptance Criteria - Full Application
 
 ## Authenticate
 ### Sign In

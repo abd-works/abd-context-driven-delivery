@@ -1,4 +1,4 @@
-"""Base scanner for production code quality — uses the language channel parse only."""
+"""Base scanner for production code quality - uses the language channel parse only."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -20,7 +20,7 @@ _SKIP_DIRS = {
     "__pycache__",
     ".venv",
     "venv",
-    "examples",  # fixtures / demos — not production seam
+    "examples",  # fixtures / demos - not production seam
 }
 
 _CHANNEL_BY_EXT = {

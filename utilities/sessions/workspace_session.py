@@ -1,4 +1,4 @@
-"""Workspace binding for BaseContextTool — path defaults, context-index, sprint."""
+"""Workspace binding for BaseContextTool - path defaults, context-index, sprint."""
 
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ class WorkspaceSession:
 
     @instruction(override=True)
     def session_guidance(self) -> str:
-        """Kit-local session layout (``sessions.md`` § Session)."""
+        """Kit-local session layout (``sessions.md`` # Session)."""
         return Instruction(_path_for_name(_KIT_DIR, "session"), _KIT_DIR).expand()
 
     @property
@@ -80,7 +80,7 @@ class WorkspaceSession:
 
     @action
     def workspace_session_bind(self) -> str:
-        """Resolve workspace + session layout before the host action — follow session_guidance; scope work to session.path / session.folder."""
+        """Resolve workspace + session layout before the host action - follow session_guidance; scope work to session.path / session.folder."""
         self.session_guidance
         self.session
         return (
@@ -114,10 +114,12 @@ class WorkspaceSession:
         goal: str = "",
         fidelities: str = "",
         contexts: str = "",
+        path: str = "",
     ) -> str:
         """create_session"""
+        effective_path = path.strip() or self._session.path
         self._session = Session(
-            path=self._session.path,
+            path=effective_path,
             name=name,
             goal=goal,
             fidelities=fidelities,

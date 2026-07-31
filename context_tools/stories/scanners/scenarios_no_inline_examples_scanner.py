@@ -1,4 +1,4 @@
-"""factory-backed-examples — concrete values belong in ExampleFactory, not inline steps."""
+"""factory-backed-examples - concrete values belong in ExampleFactory, not inline steps."""
 
 from __future__ import annotations
 
@@ -38,8 +38,8 @@ class ScenariosNoInlineExamplesScanner(StoryWorkspaceScanner):
             example_clause = offending[0]
             yield self.violation(
                 f"Scenario {sc.name!r}: step {example_clause.text!r} contains "
-                f"a concrete example value — load it from {{Type}}ExampleFactory "
-                f"(helper.given… / load*) instead of inventing values in the story",
+                f"a concrete example value - load it from {{Type}}ExampleFactory "
+                f"(helper.given... / load*) instead of inventing values in the story",
                 location=self.loc(sc, f"scenario {sc.name!r}"),
                 severity="warning",
             )

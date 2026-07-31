@@ -1,4 +1,4 @@
-"""Scanner: `complexity-absorption` — public operations don't offload config on callers.
+"""Scanner: `complexity-absorption` - public operations don't offload config on callers.
 
 Proxy metric: public method parameter count. A public method with more than
 four parameters (excluding `self`, `cls`, and defaulted parameters) is a

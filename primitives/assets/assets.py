@@ -54,7 +54,7 @@ class AssetLocator:
             meta = module_dir / "templates"
             if meta.is_dir():
                 return AssetLocation("folder", module_dir, domain_slug, folder=meta.resolve())
-        # Same lookup with or without a filter: optional group → filter subfolder → label.
+        # Same lookup with or without a filter: optional group -> filter subfolder -> label.
         search_root = _search_root(module_dir, self.group, filter_value)
         return _locate_under(search_root, module_dir, domain_slug, self.label)
 
@@ -64,7 +64,7 @@ def _search_root(module_dir: Path, group: str | None, filter_value: str | None) 
 
     filter_value selects a subdirectory under the group (e.g. fidelities/language/).
     If that directory is missing but a single file stem matches, use the group folder
-    and let label lookup find `{filter_value}.*` only when the label equals the stem —
+    and let label lookup find `{filter_value}.*` only when the label equals the stem -
     otherwise prefer the directory layout.
     """
     root = module_dir
@@ -86,7 +86,7 @@ def _locate_under(search_root: Path, module_dir: Path, domain_slug: str, label: 
         candidate = search_root / name
         if candidate.is_file():
             return AssetLocation("file", module_dir, domain_slug, path=candidate.resolve())
-    # Any extension: context_tools.md, examples.py, examples.ts, …
+    # Any extension: context_tools.md, examples.py, examples.ts, ...
     matches = sorted(
         p for p in search_root.glob(f"{label}.*") if p.is_file()
     ) if search_root.is_dir() else []
@@ -119,7 +119,7 @@ def _locate_templates(module_dir: Path, domain_slug: str, active_format: str | N
     ]
     shared = module_dir / "templates"
     if shared.is_dir():
-        # Prefer the format-specific template file when present (py / js / md / …).
+        # Prefer the format-specific template file when present (py / js / md / ...).
         ext = _FORMAT_TEMPLATE_EXT.get(active_format or "", "")
         if ext:
             for stem in stems:

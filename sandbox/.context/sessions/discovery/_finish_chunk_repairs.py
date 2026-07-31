@@ -21,7 +21,7 @@ VERIFY_SENSORY = ROOT / "sandbox/.context/sessions/discovery/segment-verify-sens
 VERIFY_GEAR = ROOT / "sandbox/.context/sessions/discovery/segment-verify-gear.md"
 
 FOOTER = re.compile(
-    r"(?m)^(MUTANTS & MASTERMINDS|DELUXE HERO’S HANDBOOK|DELUXE HERO'S HANDBOOK|"
+    r"(?m)^(MUTANTS & MASTERMINDS|DELUXE HERO'S HANDBOOK|DELUXE HERO'S HANDBOOK|"
     r"CHAPTER 6: POWERS|CHAPTER 7: GADGETS & GEAR|\d{2,3})\s*$"
 )
 HYPHEN = re.compile(r"(\w)-\n(\w)")
@@ -158,16 +158,16 @@ def repair_sensory() -> None:
 
 def write_verify_reports() -> None:
     VERIFY_SENSORY.write_text(
-        """# Segment verify — powers/sensory (repair pass)
+        """# Segment verify - powers/sensory (repair pass)
 
 ## Checks
 1. Span / extract quality for #### Senses options
 2. Named-entry completeness via `verify_segment_completeness` + expected-entries marker
 
 ## Status
-- Senses options re-extracted from PDF pages 177–180 (column order).
-- expected-entries marker on sensory-segment.md covers Accurate…Ultravision (including previously missing Detect/Precognition/etc.).
-- X-Ray Vision is not a separate Senses-option header in the Deluxe PDF extract (mentioned in sense-types primer only) — treat as Microscopic/Penetrates Concealment scenarios if needed.
+- Senses options re-extracted from PDF pages 177-180 (column order).
+- expected-entries marker on sensory-segment.md covers Accurate...Ultravision (including previously missing Detect/Precognition/etc.).
+- X-Ray Vision is not a separate Senses-option header in the Deluxe PDF extract (mentioned in sense-types primer only) - treat as Microscopic/Penetrates Concealment scenarios if needed.
 - Run: `verify_segment_completeness` on `sandbox/modules/powers/sensory/.context/sensory-segment.md`
 
 ## Gate
@@ -176,18 +176,18 @@ def write_verify_reports() -> None:
         encoding="utf-8",
     )
     VERIFY_GEAR.write_text(
-        """# Segment verify — gear (repair pass)
+        """# Segment verify - gear (repair pass)
 
 ## Checks
 1. Re-extract weapons/armor, vehicles, HQ features from PDF (column order)
 2. Named-entry completeness for HQ features via expected-entries + `verify_segment_completeness`
 
 ## Status
-- equipment-segment.md: weapons/armor region repaired from PDF pp.214–222
-- vehicles-segment.md: repaired from PDF pp.222–227
-- headquarters-segment.md: features repaired from PDF pp.227–232 + expected-entries marker
+- equipment-segment.md: weapons/armor region repaired from PDF pp.214-222
+- vehicles-segment.md: repaired from PDF pp.222-227
+- headquarters-segment.md: features repaired from PDF pp.227-232 + expected-entries marker
 - Run `verify_segment_completeness` on headquarters-segment.md
-- Table rows remain examples under Use Equipment Effect / Outfit Vehicle — not one story per table line
+- Table rows remain examples under Use Equipment Effect / Outfit Vehicle - not one story per table line
 - Operate Vehicle stays under Use Skills
 
 ## Gate
@@ -237,7 +237,7 @@ def repair_gear_v2() -> None:
     veh_front = VEH.read_text(encoding="utf-8")
     # keep header through first ---
     parts = veh_front.split("---", 1)
-    header = parts[0] + "---\n\n" if len(parts) > 1 else "# Segment — `gear/vehicles`\n\n---\n\n"
+    header = parts[0] + "---\n\n" if len(parts) > 1 else "# Segment - `gear/vehicles`\n\n---\n\n"
     # keep source line if present
     src = re.search(r"<!-- source:.*?-->", veh_front)
     src_line = (src.group(0) + "\n") if src else ""
@@ -262,7 +262,7 @@ def repair_gear_v2() -> None:
         hq_block = re.sub(r"(?i)^HEADQUARTERS\s*", "#### Headquarters\n\n", hq_block, count=1)
     hq_front = HQ.read_text(encoding="utf-8")
     parts = hq_front.split("---", 1)
-    header = parts[0] + "---\n\n" if len(parts) > 1 else "# Segment — `gear/headquarters`\n\n---\n\n"
+    header = parts[0] + "---\n\n" if len(parts) > 1 else "# Segment - `gear/headquarters`\n\n---\n\n"
     src = re.search(r"<!-- source:.*?-->", hq_front)
     src_line = (src.group(0) + "\n") if src else ""
     HQ.write_text(

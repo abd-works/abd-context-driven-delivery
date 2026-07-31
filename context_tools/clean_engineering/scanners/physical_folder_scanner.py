@@ -1,4 +1,4 @@
-"""Scanner: `physical-folder` — module context file exists and folder is well-formed.
+"""Scanner: `physical-folder` - module context file exists and folder is well-formed.
 
 Checks per module:
 - `.context/module-context.md` exists and is non-empty (guaranteed by module discovery)

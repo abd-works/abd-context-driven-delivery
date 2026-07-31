@@ -1,4 +1,4 @@
-"""thin-slice-increment-shape — every increment carries an outcome and stories."""
+"""thin-slice-increment-shape - every increment carries an outcome and stories."""
 
 from __future__ import annotations
 

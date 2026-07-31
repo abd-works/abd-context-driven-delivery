@@ -1,4 +1,4 @@
-"""Channel-side step-body analysis — language knowledge lives here, not in scanners.
+"""Channel-side step-body analysis - language knowledge lives here, not in scanners.
 
 Each code channel calls these helpers while parsing a tier/test file, then stores
 results on TestSuite / TestCase. Scanners only read the model fields.

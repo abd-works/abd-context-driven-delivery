@@ -1,4 +1,4 @@
-"""@workspace_session decorator — chains WorkspaceSession.workspace_session_bind in front of an @action.
+"""@workspace_session decorator - chains WorkspaceSession.workspace_session_bind in front of an @action.
 
 The decorator registers a chained_action reference on the target function.
 At expansion time, ActionExpander expands workspace_session_bind against the

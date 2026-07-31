@@ -1,4 +1,4 @@
-"""BDD spec — a JavaScript story-spec Story Map renders runnable GWT stories."""
+"""BDD spec - a JavaScript story-spec Story Map renders runnable GWT stories."""
 
 import re
 import sys

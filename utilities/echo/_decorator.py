@@ -1,4 +1,4 @@
-"""@echo decorator — chains Echoer.echo_session in front of an @action.
+"""@echo decorator - chains Echoer.echo_session in front of an @action.
 
 Diagnostic-only. Expands Echoer.echo_session and prepends its "print everything
 inside a DO-NOT-FOLLOW fence then stop" instructions to the base action's prose.

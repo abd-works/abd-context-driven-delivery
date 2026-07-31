@@ -1,4 +1,4 @@
-"""tests-shape — every test suite has a describe/class wrapper + at least one case."""
+"""tests-shape - every test suite has a describe/class wrapper + at least one case."""
 
 from __future__ import annotations
 

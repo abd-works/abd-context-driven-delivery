@@ -1,8 +1,8 @@
-"""@grill_with_context decorator — chains GrillContext.grill_with_context in front of an @action.
+"""@grill_with_context decorator - chains GrillContext.grill_with_context in front of an @action.
 
 The decorator registers a chained_action reference on the target function.
 At expansion time, ActionExpander expands grill_with_context and prepends its
-real instructions to the base action's prose — no preamble strings.
+real instructions to the base action's prose - no preamble strings.
 """
 from __future__ import annotations
 

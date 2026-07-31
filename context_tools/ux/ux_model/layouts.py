@@ -1,4 +1,4 @@
-"""Thin layout catalog — layout id → named region slots.
+"""Thin layout catalog - layout id -> named region slots.
 
 Extracted from abd-skills IA screen-templates (vocabulary + slots only).
 Not a paste library of ASCII/drawio fragments.
@@ -20,7 +20,7 @@ class LayoutTemplate:
     aliases: Tuple[str, ...] = ()
 
 
-# Core IA layouts — CLI layouts first, then high-value navigation/structure patterns.
+# Core IA layouts - CLI layouts first, then high-value navigation/structure patterns.
 LAYOUTS: Tuple[LayoutTemplate, ...] = (
     LayoutTemplate("sidebar", ("panel", "body"), "Navigation"),
     LayoutTemplate("form", ("body",), "Utility"),

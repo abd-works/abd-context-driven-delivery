@@ -86,7 +86,7 @@ with description("an Increment") as self:
 
         with context("the model"):
             with it("should not raise"):
-                # Building the model with orphan references is allowed —
+                # Building the model with orphan references is allowed -
                 # scanners detect the inconsistency, not the model.
                 expect(len(self.story_map.increments)).to(equal(1))
 

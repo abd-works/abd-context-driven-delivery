@@ -2,7 +2,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: context_tools/.agent_bdd_sessions/car-chronicle.json
-"""BDD agent spec for create_context_tool-behavior.md — CarChronicle generate and repair."""
+"""BDD agent spec for create_context_tool-behavior.md - CarChronicle generate and repair."""
 
 from pathlib import Path
 
@@ -30,7 +30,7 @@ toolset: {_CAR_TOOLSET}
 action: repair
 arguments:
   asset: {_CAR_ROOT}/output/driving-log.md
-  violation: Scanner use-driving-voice — chronicle reads like a spec sheet
+  violation: Scanner use-driving-voice - chronicle reads like a spec sheet
 """
 
 

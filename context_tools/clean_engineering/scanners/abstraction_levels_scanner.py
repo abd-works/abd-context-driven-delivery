@@ -1,4 +1,4 @@
-"""Scanner: high-level ops mixing low-level I/O — reads Operation.callees / literals."""
+"""Scanner: high-level ops mixing low-level I/O - reads Operation.callees / literals."""
 from pathlib import Path
 
 from code_scanner import CodeScanner

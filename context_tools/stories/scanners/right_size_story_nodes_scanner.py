@@ -1,4 +1,4 @@
-"""right-size-story-nodes — flag siblings that look like superficial variants."""
+"""right-size-story-nodes - flag siblings that look like superficial variants."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ class RightSizeStoryNodesScanner(StoryWorkspaceScanner):
                 if _char_diff(a_name, b_name) <= 2:
                     yield self.violation(
                         f"Siblings {a_name!r} and {b_name!r} under {parent_kind} "
-                        f"{parent_name!r} differ by <=2 chars — likely superficial variant",
+                        f"{parent_name!r} differ by <=2 chars - likely superficial variant",
                         location=self.loc(a_node, f"{parent_kind} {parent_name!r}"),
                         severity="warning",
                     )

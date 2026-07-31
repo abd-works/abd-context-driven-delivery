@@ -2,7 +2,7 @@
 
 Covers the observable positioning and placement-rejection behaviors. Deeply nested
 positioning variants (`with a SubEpic appended`, `with a nested SubEpic added`, ...) are
-folded together where the same underlying invariants apply — this keeps the spec
+folded together where the same underlying invariants apply - this keeps the spec
 readable while every leaf still resolves to at least one active `expect`.
 """
 

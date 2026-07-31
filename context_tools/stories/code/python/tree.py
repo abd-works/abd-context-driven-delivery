@@ -1,4 +1,4 @@
-"""Python tree renderer — runnable `*_story.py` per Story folder."""
+"""Python tree renderer - runnable `*_story.py` per Story folder."""
 
 from __future__ import annotations
 
@@ -40,14 +40,14 @@ def _render_epic_helper(epic: Epic) -> str:
     factories = collect_example_factories(epic)
     helper_class = f"{to_pascal(epic.name)}Helper"
     lines: list[str] = [
-        '"""Epic helper — ExampleFactory accessors; AI fills given_* bodies."""',
+        '"""Epic helper - ExampleFactory accessors; AI fills given_* bodies."""',
         "",
         "from __future__ import annotations",
         "",
     ]
     lines.extend(render_python_factory_imports(factories))
     lines.append(f"class {helper_class}:")
-    lines.append('    """Shared helpers. Explore/spec → fake mode; tiers pass isolated|production."""')
+    lines.append('    """Shared helpers. Explore/spec -> fake mode; tiers pass isolated|production."""')
     lines.append("")
     lines.extend(render_python_factory_accessors(factories))
     if not factories:
@@ -76,7 +76,7 @@ def _render_story(
     story_snake = to_snake(story.name)
     story_folder = f"{parent}/{story_slug}"
     helper_module = f"{to_snake(epic.name)}_helper"
-    # Import path: story is 3 levels under epic (sub/story/file) → relative via package note
+    # Import path: story is 3 levels under epic (sub/story/file) -> relative via package note
     relative_helper = f"..{to_snake(epic.name)}_helper"
     # Prefer simple module name; AI adjusts sys.path / package layout
     tree[f"{story_folder}/{story_snake}_story.py"] = render_story_file(

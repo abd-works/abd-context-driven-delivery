@@ -1,4 +1,4 @@
-"""Scanner: detect deep nesting — reads Operation.nesting_depth."""
+"""Scanner: detect deep nesting - reads Operation.nesting_depth."""
 from pathlib import Path
 
 from code_scanner import CodeScanner

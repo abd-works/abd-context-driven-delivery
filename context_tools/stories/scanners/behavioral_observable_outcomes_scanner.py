@@ -1,4 +1,4 @@
-"""behavioral-observable-outcomes — Then steps describe observable outcomes."""
+"""behavioral-observable-outcomes - Then steps describe observable outcomes."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ class BehavioralObservableOutcomesScanner(StoryWorkspaceScanner):
                     if re.search(rf"\b{verb}\b", clause.text.lower()):
                         yield self.violation(
                             f"Scenario {sc.name!r}: then-clause uses internal-"
-                            f"mechanic verb {verb!r} — describe the observable "
+                            f"mechanic verb {verb!r} - describe the observable "
                             f"outcome instead",
                             location=self.loc(clause, f"scenario {sc.name!r}"),
                             severity="warning",

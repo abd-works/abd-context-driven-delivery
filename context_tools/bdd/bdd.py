@@ -4,7 +4,7 @@
 # invoke-new: action generate | context.fidelity behavior
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
-"""BDD generator — multi-fidelity behavior skeletons and development."""
+"""BDD generator - multi-fidelity behavior skeletons and development."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ _SUPPORTED_FORMATS = frozenset({"markdown", "python", "typescript", "java"})
 
 @base_context_tool
 class Bdd:
-    """§ Instructions"""
+    """# Instructions"""
 
     default_workspace_folder: str = "src"
     context_index_key: str = "bdd"

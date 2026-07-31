@@ -1,6 +1,6 @@
 """Base scanner for CleanEngineering module-level rules.
 
-Module rules operate on a *module* — a folder containing `.context/module-context.md`.
+Module rules operate on a *module* - a folder containing `.context/module-context.md`.
 Scanners here identify modules from an input file list, then evaluate rules across
 the whole folder rather than per-file.
 """
@@ -21,7 +21,7 @@ _SKIP_DIRS = {
     "__pycache__",
     ".venv",
     "venv",
-    "examples",  # fixtures / demos — not production seam
+    "examples",  # fixtures / demos - not production seam
 }
 _CONTEXT_FILENAME = "module-context.md"
 _CONTEXT_DIR = ".context"
@@ -39,7 +39,7 @@ class Module:
 class ModuleScanner(Scanner):
     """Scanner that evaluates rules once per module folder.
 
-    Subclasses override :meth:`scan_module` — one call per module folder discovered
+    Subclasses override :meth:`scan_module` - one call per module folder discovered
     among the files under scan.
     """
 

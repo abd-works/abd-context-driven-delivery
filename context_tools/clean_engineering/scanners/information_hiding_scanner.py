@@ -1,13 +1,13 @@
-"""Scanner: `information-hiding` — public signatures don't leak internal representations.
+"""Scanner: `information-hiding` - public signatures don't leak internal representations.
 
 Flags return-type and parameter-type annotations on public methods when they
 expose implementation-shaped structures. Leaky patterns detected:
 
-- `dict`, `Dict[str, Any]`, `Dict[str, object]`, plain `Dict` — untyped mapping
+- `dict`, `Dict[str, Any]`, `Dict[str, object]`, plain `Dict` - untyped mapping
   as a public type usually means an internal row / payload leaking out
-- `Any` as a return type — the module has not committed to a domain type
-- `list`, `List` untyped — leaking a collection without saying of what
-- `tuple`, `Tuple` untyped — same
+- `Any` as a return type - the module has not committed to a domain type
+- `list`, `List` untyped - leaking a collection without saying of what
+- `tuple`, `Tuple` untyped - same
 
 Only public operations (name does not begin with `_`) on public classes
 (class name does not begin with `_`) are inspected.
@@ -55,7 +55,7 @@ class InformationHidingScanner(ModuleScanner):
                 found.append(
                     self.violation(
                         f"Public operation '{class_node.name}.{method.name}' accepts "
-                        f"'{arg.arg}: {issue}' — wrap in a domain type instead of leaking "
+                        f"'{arg.arg}: {issue}' - wrap in a domain type instead of leaking "
                         f"an internal representation.",
                         location=str(file_path),
                         line=method.lineno,
@@ -66,7 +66,7 @@ class InformationHidingScanner(ModuleScanner):
             found.append(
                 self.violation(
                     f"Public operation '{class_node.name}.{method.name}' returns "
-                    f"'{returns_issue}' — commit to a domain type in the public signature.",
+                    f"'{returns_issue}' - commit to a domain type in the public signature.",
                     location=str(file_path),
                     line=method.lineno,
                 )

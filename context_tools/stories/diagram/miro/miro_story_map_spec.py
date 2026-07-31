@@ -133,7 +133,7 @@ with description("a Miro Story Map") as self:
             self.original = _story_map_with_4_epics_and_3_sub_epics_and_1_story()
             self.parsed = self.miro.parse(self.miro.render(self.original))
 
-        with it("should preserve Story structure — scenarios are NOT embedded in the story-map view"):
+        with it("should preserve Story structure - scenarios are NOT embedded in the story-map view"):
             first_story = self.parsed.epics[0].sub_epics[0].stories[0]
             expect(first_story.scenarios).to(have_len(0))
 

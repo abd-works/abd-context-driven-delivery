@@ -2,7 +2,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: actions/.agent_bdd_sessions/travel-to.json
-"""BDD agent spec for action.py — agent invokes @action via tools CLI."""
+"""BDD agent spec for action.py - agent invokes @action via tools CLI."""
 
 from pathlib import Path
 

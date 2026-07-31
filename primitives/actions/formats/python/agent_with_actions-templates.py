@@ -1,5 +1,5 @@
 # =============================================================================
-# Agent-With-Actions Template — @toolset class with @action orchestration recipes
+# Agent-With-Actions Template - @toolset class with @action orchestration recipes
 # =============================================================================
 # Fill placeholders (delete this block before committing):
 #
@@ -51,4 +51,4 @@ class {ClassName}:
         """{action_instruction}"""
         """{mid_action_prose}"""
         self.{tool_name}()
-        return "Instructions for {action_name} — {action_param}: {{{action_param}}}"
+        return "Instructions for {action_name} - {action_param}: {{{action_param}}}"

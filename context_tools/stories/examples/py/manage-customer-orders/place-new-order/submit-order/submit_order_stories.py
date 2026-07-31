@@ -1,4 +1,4 @@
-"""Story data — regeneratable. Do not add logic or imports."""
+"""Story data - regeneratable. Do not add logic or imports."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ SUBMIT_ORDER_MAIN_FLOW: Final = {
     "story":        "Submit Order",
     "actor":        "Customer",
     "domain_terms": ("Order", "Cart", "Payment Method", "Order Confirmation", "Order Number"),
-    "evidence":     ("Checkout workshop 2026-05-04 — happy-path wall walk",),
+    "evidence":     ("Checkout workshop 2026-05-04 - happy-path wall walk",),
 
     "main_flow": {
         "name":         "order submitted with valid cart and payment",
@@ -35,7 +35,7 @@ SUBMIT_ORDER: Final = {
     "story":        "Submit Order",
     "actor":        "Customer",
     "domain_terms": ("Order", "Cart", "Payment Method", "Order Number", "Order Status"),
-    "evidence":     ("Checkout workshop 2026-05-04 — happy-path wall walk", "API spec v3 — POST /orders §\"submission errors\""),
+    "evidence":     ("Checkout workshop 2026-05-04 - happy-path wall walk", "API spec v3 - POST /orders #\"submission errors\""),
 
     "submission_succeeds": {
         "name":         "order accepted for a valid cart and payment method",
@@ -77,10 +77,10 @@ SUBMIT_ORDER: Final = {
 }
 
 SUBMIT_ORDER_OUTLINE: Final = {
-    "story":        "Submit Order — outline",
+    "story":        "Submit Order - outline",
     "actor":        "Customer",
     "domain_terms": ("Order", "Payment Method", "Order Status"),
-    "evidence":     ("API spec v3 — POST /orders §\"submission errors\"",),
+    "evidence":     ("API spec v3 - POST /orders #\"submission errors\"",),
 
     "outline": {
         "name":         "submission result varies with payment method status",

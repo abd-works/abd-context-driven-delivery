@@ -1,4 +1,4 @@
-"""ia-named-regions-only — IA surfaces list named regions; control-like labels fail."""
+"""ia-named-regions-only - IA surfaces list named regions; control-like labels fail."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ class IaNamedRegionsOnlyScanner(UxWorkspaceScanner):
             for region in screen.regions:
                 if _CONTROL_HINT.search(region.name):
                     yield self.violation(
-                        f"region {region.name!r} on {screen.name!r} looks like a control — "
+                        f"region {region.name!r} on {screen.name!r} looks like a control - "
                         "IA lists named regions only",
                         location=f"screen:{screen.name}/region:{region.name}",
                     )

@@ -1,4 +1,4 @@
-"""TypeScript tier scaffolder — `*_spec.ts` / `*_spec.{tier}.ts`."""
+"""TypeScript tier scaffolder - `*_spec.ts` / `*_spec.{tier}.ts`."""
 
 from __future__ import annotations
 

@@ -69,7 +69,7 @@ def _latest_handoff_path(destination: str) -> Path:
 
 
 def _context_dir(destination: str) -> Path:
-    """Alias for docs_dir — kept for specs / callers (pure)."""
+    """Alias for docs_dir - kept for specs / callers (pure)."""
     return docs_dir(destination)
 
 
@@ -234,7 +234,7 @@ class Handoff:
 
         Naming: slug defaults to handoff-YYYY-MM-DD, or handoff-YYYY-MM-DD-{focus}
         when focus (or a non-archive slug) is provided. Do not use plain 'handoff'
-        or 'handoff-latest' as the archive name — those are reserved.
+        or 'handoff-latest' as the archive name - those are reserved.
 
         When destination is a sprint under sessions/, closes the Session (End section).
         Returns the archive handoff path."""
@@ -263,7 +263,7 @@ class Handoff:
         """Step 3 - Draft the handoff in chat first. Required sections:
         1. Next session focus (from next_focus, or 'not specified')
         2. Resume in three lines - (a) stage x active generator/skill x scope, (b) last work accepted or in flight, (c) exact next action / skill / generator to invoke
-        3. Generator state - active toolset(s), fidelity, sketch paths from collect_session_state; include context_index_path and the Current tool=root lines (where Stories/CE/Bdd/Ux put work — defaults or overrides)
+        3. Generator state - active toolset(s), fidelity, sketch paths from collect_session_state; include context_index_path and the Current tool=root lines (where Stories/CE/Bdd/Ux put work - defaults or overrides)
         4. Grilling / skills state - grill-answers path + heading list; suggested skills the next agent should invoke
         5. CDD progress - fidelity, scope, flow status/recommend/next, open items, done, log tail (omit if no cdd-sketch)
         6. Artifacts to read - paths only; always list context-index.md when present; do not duplicate PRDs, plans, ADRs, issues, commits, diffs, or full grill/sketch bodies

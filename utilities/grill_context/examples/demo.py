@@ -1,4 +1,4 @@
-"""Demo toolsets used by grill_context_decorator_spec — real .py so inspect.getsource works.
+"""Demo toolsets used by grill_context_decorator_spec - real .py so inspect.getsource works.
 
 All demo classes are self-contained within the grill_context package.
 No imports from sketch, ooad, or any other domain decorator package.
@@ -13,7 +13,7 @@ from tools.tool import tool, toolset
 
 
 def _stub_outer_session(self) -> str:  # type: ignore[misc]
-    """Stub outer wrapper instructions — stands in for any real outermost decorator."""
+    """Stub outer wrapper instructions - stands in for any real outermost decorator."""
     return "stub outer done"
 
 
@@ -26,7 +26,7 @@ def stub_outer(func):  # type: ignore[misc]
 
 @toolset
 class DemoGrill:
-    """@grill_with_context-only demo — one decorated action, one unwrapped action."""
+    """@grill_with_context-only demo - one decorated action, one unwrapped action."""
 
     @tool
     def do_thing(self) -> str:
@@ -36,8 +36,8 @@ class DemoGrill:
     @grill_with_context
     @action
     def generate(self) -> str:
-        """Demo grill base body — appears after the grill preamble."""
-        """Step 1 — call do_thing."""
+        """Demo grill base body - appears after the grill preamble."""
+        """Step 1 - call do_thing."""
         self.do_thing()
         return "generate done"
 
@@ -49,7 +49,7 @@ class DemoGrill:
 
 @toolset
 class DemoStack:
-    """stub_outer stacked with @grill_with_context — declaration order top-down."""
+    """stub_outer stacked with @grill_with_context - declaration order top-down."""
 
     @tool
     def do_thing(self) -> str:
@@ -61,6 +61,6 @@ class DemoStack:
     @action
     def generate(self) -> str:
         """Stacked-decorator base body."""
-        """Step 1 — call do_thing."""
+        """Step 1 - call do_thing."""
         self.do_thing()
         return "generate done"

@@ -11,7 +11,7 @@ from context_tools import base_context_tool  # noqa: F401
 
 @base_context_tool
 class CarChronicle:
-    """§ Instructions"""
+    """# Instructions"""
 
     def __init__(self, path: str | None = None, session: str | None = None) -> None:
         super().__init__(path=path, session=session)

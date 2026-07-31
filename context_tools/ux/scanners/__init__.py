@@ -1,1 +1,1 @@
-"""UX scanners — operate on the canonical Workspace model."""
+"""UX scanners - operate on the canonical Workspace model."""

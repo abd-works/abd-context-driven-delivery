@@ -1,4 +1,4 @@
-"""Java tier scaffolder — Spec / Spec{Tier} classes."""
+"""Java tier scaffolder - Spec / Spec{Tier} classes."""
 
 from __future__ import annotations
 

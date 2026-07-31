@@ -11,14 +11,14 @@ from tools.tool import resource, tool, toolset
 
 @toolset
 class RecipeGuide:
-    """Collect and draft recipes — brainstorm ideas, then write step-by-step recipes."""
+    """Collect and draft recipes - brainstorm ideas, then write step-by-step recipes."""
 
     def __init__(self, cuisine: str) -> None:
         self._cuisine = cuisine
         self._drafts: list[str] = []
         super().__init__()
 
-    # ── resources: observable state ───────────────────────────────────────────
+    # -- resources: observable state -------------------------------------------
 
     @property
     @resource
@@ -32,7 +32,7 @@ class RecipeGuide:
         """Number of drafted recipes so far."""
         return len(self._drafts)
 
-    # ── tools: callable by the AI ─────────────────────────────────────────────
+    # -- tools: callable by the AI ---------------------------------------------
 
     @tool
     def add_draft(self, recipe: str) -> str:
@@ -47,22 +47,22 @@ class RecipeGuide:
             return "No drafts yet."
         return "\n".join(f"{i + 1}. {d}" for i, d in enumerate(self._drafts))
 
-    # ── instruction slots ─────────────────────────────────────────────────────
+    # -- instruction slots -----------------------------------------------------
 
-    # Form B — named slot → section in recipe_guide.md
-    #   "technique" → _section_heading_for_name → "Technique"
+    # Form B - named slot -> section in recipe_guide.md
+    #   "technique" -> _section_heading_for_name -> "Technique"
     #   matches ## Technique in recipe_guide.md (same slug as this file)
     @instruction
     def technique(self) -> Instruction: ...
 
-    # Form C — named slot with explicit label → standalone file
-    #   label="plating-rules" → resolves to plating-rules.md beside this package
+    # Form C - named slot with explicit label -> standalone file
+    #   label="plating-rules" -> resolves to plating-rules.md beside this package
     @instruction(label="plating-rules")
     def plating(self) -> Instruction: ...
 
-    # ── actions ───────────────────────────────────────────────────────────────
+    # -- actions ---------------------------------------------------------------
 
-    # Form A — inline prose: each string literal in the body IS instruction text.
+    # Form A - inline prose: each string literal in the body IS instruction text.
     #   {{expr}} substitutions are rendered against the live instance before the AI sees them.
     @action
     def brainstorm(self, theme: str) -> str:
@@ -75,7 +75,7 @@ class RecipeGuide:
     @action
     def draft_recipe(self, name: str) -> str:
         """Draft a complete recipe called {{name}}."""
-        self.technique()   # → expands § Technique section from recipe_guide.md
-        self.plating()     # → expands plating-rules.md
+        self.technique()   # -> expands # Technique section from recipe_guide.md
+        self.plating()     # -> expands plating-rules.md
         self.add_draft()
         return f"Drafted: {name}"

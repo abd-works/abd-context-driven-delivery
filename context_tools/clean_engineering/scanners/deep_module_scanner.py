@@ -1,17 +1,17 @@
-"""Scanner: `deep-module` — small public seam, substantial functionality behind it.
+"""Scanner: `deep-module` - small public seam, substantial functionality behind it.
 
 Heuristic: count public top-level symbols (classes and functions whose names do
 not begin with underscore) across all module files, and count total top-level
-symbols. Flag when the public-to-total ratio exceeds a threshold — the module
+symbols. Flag when the public-to-total ratio exceeds a threshold - the module
 exports too much of its internals for the seam to be meaningful.
 
 Threshold rationale: Ousterhout's deep modules (A Philosophy of Software Design)
 ask for a *small* interface relative to hidden functionality (iceberg / tall-narrow
-rectangle) — not a numeric %. Secondary heuristics often cite few public methods
-(e.g. ~3–7) and implementation much larger than the interface. A 70% public-symbol
+rectangle) - not a numeric %. Secondary heuristics often cite few public methods
+(e.g. ~3-7) and implementation much larger than the interface. A 70% public-symbol
 cap still allows a mostly-exported module and is too loose for that intent. Cap at
 40% so a clear majority of top-level symbols stay private. Empirically, Java
-codebases also show substantial over-exposure (~20–25% of classes/methods more
+codebases also show substantial over-exposure (~20-25% of classes/methods more
 visible than needed), which argues against a high public-ratio allowance.
 
 FP profile: LOW-MEDIUM. Threshold-based heuristic. Very small modules are

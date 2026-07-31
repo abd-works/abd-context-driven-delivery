@@ -11,8 +11,8 @@ from pathlib import Path
 def docs_dir(destination: str | Path) -> Path:
     """Resolve where process docs live for a destination.
 
-    - Sprint folder (``…/.context/sessions/{name}``) → write flat into that folder
-    - Working area or module root → ``{destination}/.context/``
+    - Sprint folder (``.../.context/sessions/{name}``) -> write flat into that folder
+    - Working area or module root -> ``{destination}/.context/``
     """
     dest = Path(destination)
     if dest.name and dest.parent.name == "sessions":
@@ -23,7 +23,7 @@ def docs_dir(destination: str | Path) -> Path:
 class ISession(ABC):
     """Sprint: durable ``path``, process docs in ``folder``, event logs in ``log``."""
 
-    # Identity fields — concrete on Session (dataclass); listed here for the interface surface.
+    # Identity fields - concrete on Session (dataclass); listed here for the interface surface.
     path: str
     name: str | None
 
@@ -77,7 +77,7 @@ class Session(ISession):
     def folder(self) -> Path:
         if not self.name:
             raise ValueError(
-                "session name is not set — confirm working path and session slug with the "
+                "session name is not set - confirm working path and session slug with the "
                 "user, then call create_session before grill/sketch/handoff"
             )
         return Path(self.path) / ".context" / "sessions" / self.name

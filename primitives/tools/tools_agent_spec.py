@@ -2,7 +2,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: tools/.sessions/general-lee.json
-"""BDD agent spec for tools-behavior.md — agent discovers manifest and invokes tools."""
+"""BDD agent spec for tools-behavior.md - agent discovers manifest and invokes tools."""
 
 from pathlib import Path
 

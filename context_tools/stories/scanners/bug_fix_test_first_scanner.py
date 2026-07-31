@@ -1,4 +1,4 @@
-"""bug-fix-test-first — every bug-fix test cites a walk-through with the same bug."""
+"""bug-fix-test-first - every bug-fix test cites a walk-through with the same bug."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ class BugFixTestFirstScanner(StoryWorkspaceScanner):
                 if bug.upper() not in scenario_bug_ids:
                     yield self.violation(
                         f"Test case {case.name!r} cites bug {bug!r} but no scenario "
-                        f"references it — walk-through must precede the fix",
+                        f"references it - walk-through must precede the fix",
                         location=_case_loc(case, path),
                         severity="error",
                     )

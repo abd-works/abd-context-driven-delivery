@@ -1,4 +1,4 @@
-"""UxMap — root container for screens and UxComponent collections."""
+"""UxMap - root container for screens and UxComponent collections."""
 
 from __future__ import annotations
 
@@ -68,15 +68,15 @@ class UxMap(UxNode):
         raise KeyError(f"Screen {name!r} not found")
 
     def append_transition(self, transition: Transition) -> None:
-        """Delegate — prefer `ux_map.transitions.append(transition)`."""
+        """Delegate - prefer `ux_map.transitions.append(transition)`."""
         self.transitions.append(transition)
 
     def append_content_type(self, content_type: ContentType) -> None:
-        """Delegate — prefer `ux_map.content_types.append(content_type)`."""
+        """Delegate - prefer `ux_map.content_types.append(content_type)`."""
         self.content_types.append(content_type)
 
     def append_nav_component(self, nav_component: NavComponent) -> None:
-        """Delegate — prefer `ux_map.nav_components.append(nav_component)`."""
+        """Delegate - prefer `ux_map.nav_components.append(nav_component)`."""
         self.nav_components.append(nav_component)
 
     def update_self(self, source: "UxMap") -> None:

@@ -7,7 +7,7 @@ from tools.types import ManifestDocument, SignatureEntry
 
 
 class _SignatureContributor(Protocol):
-    """One manifest member — adds its own entry under its name."""
+    """One manifest member - adds its own entry under its name."""
 
     name: str
 
@@ -19,7 +19,7 @@ class _SignatureContributor(Protocol):
 
 
 class _ManifestBuilder:
-    """Build a toolset signature — each member adds itself."""
+    """Build a toolset signature - each member adds itself."""
 
     def __init__(self, instance: Any) -> None:
         self._instance = instance

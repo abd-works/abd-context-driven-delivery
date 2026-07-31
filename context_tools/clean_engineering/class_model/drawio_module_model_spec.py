@@ -124,11 +124,11 @@ with description("DrawIO modules fidelity"):
         with it("should not include stack/tech callouts"):
             expect("stack / tech" in self.xml).to(be_false)
 
-        with it("should draw a dependency edge character → checks"):
+        with it("should draw a dependency edge character -> checks"):
             expect(self.xml).to(contain('source="character"'))
             expect(self.xml).to(contain('target="checks"'))
 
-    with context("round-trip markdown → drawio → model"):
+    with context("round-trip markdown -> drawio -> model"):
         with before.each:
             parsed = MarkdownCleanEngineeringModel.parse(_MODULES_MD)
             drawio = DrawIOCleanEngineeringModel.render(parsed)
@@ -143,7 +143,7 @@ with description("DrawIO modules fidelity"):
             expect(checks.seam_terms).to(contain("Check"))
             expect(checks.seam_terms).to(contain("CheckResult"))
 
-        with it("should recover character → checks dependency"):
+        with it("should recover character -> checks dependency"):
             character = next(m for m in self.back.modules if m.name == "character")
             expect(character.dependencies).to(contain("checks"))
 
@@ -211,8 +211,8 @@ with description("DrawIO modules fidelity"):
             expect("powers/effect" in self.xml).to(be_false)
             expect('id="powers-effect"' in self.xml).to(be_false)
 
-        with it("should omit child→parent dependency edge"):
-            # attack → powers is containment; edge should not target powers from attack
+        with it("should omit child->parent dependency edge"):
+            # attack -> powers is containment; edge should not target powers from attack
             expect(self.xml).not_to(
                 contain('source="powers-attack" target="powers"')
             )

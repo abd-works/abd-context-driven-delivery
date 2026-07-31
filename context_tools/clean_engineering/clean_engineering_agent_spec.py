@@ -2,7 +2,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: context_tools/clean_engineering/.agent_bdd_sessions/clean-code-manifest.json
-"""BDD agent spec for clean_engineering — agent runs manifest and invokes CleanEngineering."""
+"""BDD agent spec for clean_engineering - agent runs manifest and invokes CleanEngineering."""
 
 from pathlib import Path
 
@@ -116,7 +116,7 @@ with description("a Clean Code generator"):
                 )
                 self.validate_result = self.validate_session.instruct(
                     "Follow the validate instructions: run scan on the Cart module under packages/. "
-                    "Report pass or fail per concept — do not fix violations.",
+                    "Report pass or fail per concept - do not fix violations.",
                     timeout_seconds=240,
                 )
 

@@ -1,4 +1,4 @@
-"""StoryDemoControl extends Control — JSON + HTML emit."""
+"""StoryDemoControl extends Control - JSON + HTML emit."""
 
 import sys
 from pathlib import Path
@@ -86,7 +86,7 @@ with description("StoryDemoControl"):
             "product",
             [{"kind": "when", "label": "the Customer selects a Product from the Product Catalog"}],
             "name",
-            "{name} · {unitPrice}",
+            "{name} . {unitPrice}",
         )
         html = _render_control(control)
         expect("data-bound-list" in html).to(equal(True))

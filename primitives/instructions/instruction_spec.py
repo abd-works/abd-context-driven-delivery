@@ -1,4 +1,4 @@
-"""BDD spec for instruction.py — Instruction, routing helpers, @instruction slot decorator."""
+"""BDD spec for instruction.py - Instruction, routing helpers, @instruction slot decorator."""
 import sys
 from pathlib import Path
 
@@ -181,7 +181,7 @@ with description("_expand_docstring"):
             expect(_expand_docstring("", empty_action)).to(equal(""))
 
     with context("a single-word framework action name on a generator subclass"):
-        with it("should equal the direct load of § Generate in base_context_tool.md"):
+        with it("should equal the direct load of # Generate in base_context_tool.md"):
             from context_tools.base.base_context_tool import BaseContextTool
             expanded = _expand_docstring(
                 "generate", BaseContextTool.generate, instance=BaseContextTool()
@@ -193,7 +193,7 @@ with description("_expand_docstring"):
             expect(expanded).to(equal(direct))
 
     with context("a kit-local path-ref action docstring"):
-        with it("should equal the direct load of § Generate in base_context_tool.md"):
+        with it("should equal the direct load of # Generate in base_context_tool.md"):
             from context_tools.base.base_context_tool import BaseContextTool
             expanded = _expand_docstring(
                 "generate", BaseContextTool.generate, instance=BaseContextTool()

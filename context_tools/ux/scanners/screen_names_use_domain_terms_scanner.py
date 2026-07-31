@@ -1,4 +1,4 @@
-"""screen-names-use-domain-terms — screen labels should appear in collected domain terms."""
+"""screen-names-use-domain-terms - screen labels should appear in collected domain terms."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ class ScreenNamesUseDomainTermsScanner(UxWorkspaceScanner):
         if not domain_terms:
             return
         for screen in workspace.ux_map.screens:
-            # Tab-state suffix: compare base name before " — "
-            base = screen.name.split(" — ")[0].split(" - ")[0].strip().lower()
+            # Tab-state suffix: compare base name before " - "
+            base = screen.name.split(" - ")[0].split(" - ")[0].strip().lower()
             if base not in domain_terms and screen.name.strip().lower() not in domain_terms:
                 yield self.violation(
                     f"screen {screen.name!r} is not in domain terms/content types on the map",

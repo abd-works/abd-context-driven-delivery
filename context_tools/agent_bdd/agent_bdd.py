@@ -4,12 +4,12 @@
 # invoke-new: action generate | context.format python
 # invoke-edit: action satisfy | context.format python
 # invoke-check: action validate | context.format python
-"""Agent BDD generator — write agent specs against the agent() harness, composing vanilla bdd."""
+"""Agent BDD generator - write agent specs against the agent() harness, composing vanilla bdd."""
 
 from __future__ import annotations
 
-import agent_bdd.conf  # noqa: F401 — repo root on sys.path
-import context_tools  # noqa: F401 — Bdd merges with BaseContextTool at import
+import agent_bdd.conf  # noqa: F401 - repo root on sys.path
+import context_tools  # noqa: F401 - Bdd merges with BaseContextTool at import
 from primitives.actions.action import action  # noqa: F401
 from context_tools.bdd.bdd import Bdd
 from context_tools import base_context_tool  # noqa: F401
@@ -17,7 +17,7 @@ from context_tools import base_context_tool  # noqa: F401
 
 @base_context_tool
 class AgentBdd:
-    """§ Instructions"""
+    """# Instructions"""
 
     def __init__(self, format: str = "python", path: str | None = None, session: str | None = None) -> None:
         super().__init__(format=format, path=path, session=session)

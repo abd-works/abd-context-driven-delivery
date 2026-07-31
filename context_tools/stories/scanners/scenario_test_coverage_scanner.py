@@ -1,4 +1,4 @@
-"""scenario-test-coverage — every Scenario has a covering TestCase (any language)."""
+"""scenario-test-coverage - every Scenario has a covering TestCase (any language)."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ class ScenarioTestCoverageScanner(StoryWorkspaceScanner):
     def scan_workspace(self, workspace):
         if not workspace.has_story_map():
             return
-        # Flatten all cases once — language is irrelevant after channel parse.
+        # Flatten all cases once - language is irrelevant after channel parse.
         all_cases = list(workspace.iter_test_cases())
         for story in workspace.story_map.all_stories():
             scenarios = list(getattr(story, "scenarios", []) or [])

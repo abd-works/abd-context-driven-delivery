@@ -1,4 +1,4 @@
-"""atomic-deltas-over-repetition — sibling scenarios sharing prefix → Background."""
+"""atomic-deltas-over-repetition - sibling scenarios sharing prefix -> Background."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ class AtomicDeltasOverRepetitionScanner(StoryWorkspaceScanner):
                     later = group[j]
                     yield self.violation(
                         f"Scenarios {group[i].name!r} and {later.name!r} "
-                        f"share their first {shared} step(s) — factor into "
+                        f"share their first {shared} step(s) - factor into "
                         f"a Background block or state the general case once",
                         location=self.loc(later, f"scenario {later.name!r}"),
                         severity="warning",

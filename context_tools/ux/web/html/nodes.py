@@ -1,4 +1,4 @@
-"""HTML(+JS[+CSS]) channel — one channel; fidelity deepens brand/css."""
+"""HTML(+JS[+CSS]) channel - one channel; fidelity deepens brand/css."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ class HtmlUxMap(UxMap):
             end = content.index("-->", start)
             return JsonUxMap.parse(content[start:end].strip())
         ux_map = cls()
-        ux_map.context.notes.append("html parse stub — structural DOM parser later")
+        ux_map.context.notes.append("html parse stub - structural DOM parser later")
         return ux_map
 
     @classmethod
@@ -60,15 +60,15 @@ class HtmlUxMap(UxMap):
                     f'data-region="{region.name}">'
                     f"<h3>{region.name}</h3>{controls}</section>"
                 )
-            story_trace = " · ".join(screen.story_names)
+            story_trace = " . ".join(screen.story_names)
             layout_attr = f' data-layout="{screen.layout}"' if screen.layout else ""
             screens_html.append(
                 f'<article class="screen" data-slug="{screen.slug}"'
                 f"{layout_attr}{hidden}>"
                 f"<h2>{screen.name}</h2>"
-                f'<p class="layout">{screen.layout or "—"}</p>'
+                f'<p class="layout">{screen.layout or "-"}</p>'
                 f'<div class="regions">{"".join(regions)}</div>'
-                f'<p class="screen-stories">Stories: {story_trace or "—"}</p>'
+                f'<p class="screen-stories">Stories: {story_trace or "-"}</p>'
                 f"</article>"
             )
         stories_list = (
@@ -171,7 +171,7 @@ def _story_demo_attrs(control) -> str:
 
 
 def _render_control(control) -> str:
-    """Render a control as a visible affordance (sketch glyphs → HTML)."""
+    """Render a control as a visible affordance (sketch glyphs -> HTML)."""
     ctype = (control.control_type or "").lower()
     label = control.label or control.name
     name = control.name
@@ -223,8 +223,8 @@ def _render_control(control) -> str:
             f'data-input-field="{input_key}" /></label>'
         )
     if ctype in {"bound-list", "list-host"}:
-        # Domain-agnostic list host — mount paints rows from bound_field expose path.
-        # item_story_steps ⇒ row click runs When; else set_input ⇒ row selects only.
+        # Domain-agnostic list host - mount paints rows from bound_field expose path.
+        # item_story_steps => row click runs When; else set_input => row selects only.
         return (
             f'<div class="control" data-type="bound-list" data-bound-list'
             f"{name_attr}{attrs}{hidden}>"
@@ -248,7 +248,7 @@ def _render_control(control) -> str:
             f'<input type="checkbox"{checked}{disabled} /> {label}</label>'
         )
     if ctype == "tree":
-        twist = "▼" if "expanded" in visual else "▶" if "collapsed" in visual else "·"
+        twist = "v" if "expanded" in visual else ">" if "collapsed" in visual else "."
         role = (
             ' data-role="folder"'
             if "expanded" in visual or "collapsed" in visual

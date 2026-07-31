@@ -1,11 +1,11 @@
-"""Sub-agent decorator — marks a tool as a non-blocking background sub-agent launch.
+"""Sub-agent decorator - marks a tool as a non-blocking background sub-agent launch.
 
 Usage::
 
     @sub_agent
     @tool
     def diagnose(self) -> str:
-        \"\"\"Full instructions for the sub-agent go here — inline in the docstring.\"\"\"
+        \"\"\"Full instructions for the sub-agent go here - inline in the docstring.\"\"\"
 
 When the agent reads the manifest it will see ``kind: sub_agent`` with
 ``launch: non_blocking``.  It must launch a background sub-agent using

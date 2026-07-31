@@ -1,4 +1,4 @@
-"""BDD spec for BaseContextTool — domain host face + lifecycle prose.
+"""BDD spec for BaseContextTool - domain host face + lifecycle prose.
 
 Peer-kit expansion lives with the kits:
 - ``utilities/sessions/workspace_session_spec.py``
@@ -16,7 +16,7 @@ from expects import be_true, equal, expect
 from mamba import before, context, description, it
 
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
-import context_tools  # noqa: F401 — generator package on path
+import context_tools  # noqa: F401 - generator package on path
 from primitives.instructions import Instruction
 from primitives.instructions import _path_for_name
 from tools.tool import Toolset, _ToolsetLoader

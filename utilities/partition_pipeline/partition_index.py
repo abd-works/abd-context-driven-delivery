@@ -1,4 +1,4 @@
-"""Partition root index resource — `{subject}-index.md` plus its config."""
+"""Partition root index resource - `{subject}-index.md` plus its config."""
 
 from __future__ import annotations
 

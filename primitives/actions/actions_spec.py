@@ -1,4 +1,4 @@
-"""BDD spec for action.py — @action expansion via CLI."""
+"""BDD spec for action.py - @action expansion via CLI."""
 
 import subprocess
 import sys

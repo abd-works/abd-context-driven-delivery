@@ -1,4 +1,4 @@
-"""BDD spec — UX scanners discover against the UX package."""
+"""BDD spec - UX scanners discover against the UX package."""
 
 import sys
 from pathlib import Path

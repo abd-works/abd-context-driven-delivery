@@ -1,4 +1,4 @@
-"""tab-states-are-separate-screens — tab siblings use chrome_of / inactive_tabs."""
+"""tab-states-are-separate-screens - tab siblings use chrome_of / inactive_tabs."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ class TabStatesAreSeparateScreensScanner(UxWorkspaceScanner):
             return
         screens_by_name = {screen.name: screen for screen in workspace.ux_map.screens}
         for screen in workspace.ux_map.screens:
-            if " — " not in screen.name and " - " not in screen.name:
+            if " - " not in screen.name and " - " not in screen.name:
                 continue
             if not screen.chrome_of:
                 yield self.violation(

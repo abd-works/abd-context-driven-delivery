@@ -4,7 +4,7 @@
 # invoke-new: action generate | context.fidelity ia
 # invoke-edit: action satisfy | toolset: context_tools.ux.ux:Ux
 # invoke-check: action validate | toolset: context_tools.ux.ux:Ux
-"""UX generator — multi-fidelity IA, mockups, specs, and production frontend (code)."""
+"""UX generator - multi-fidelity IA, mockups, specs, and production frontend (code)."""
 
 from __future__ import annotations
 
@@ -19,11 +19,10 @@ from tools.tool import tool  # noqa: F401
 _FIDELITY_FORMAT_DEFAULTS = {
     "ia": "drawio",
     "mockup": "html",
-    "specification": "html",
-    "code": "html",
+        "code": "html",
 }
 
-# Peer channels — same CLI surface; transform moves sideways at one fidelity.
+# Peer channels - same CLI surface; transform moves sideways at one fidelity.
 _CHANNELS: dict[str, tuple[str, str]] = {
     "drawio": ("ux.diagram.drawio.nodes", "DrawioUxMap"),
     "html": ("ux.web.html.nodes", "HtmlUxMap"),
@@ -45,7 +44,7 @@ def _load_channel_class(format_name: str) -> type:
 
 @base_context_tool
 class Ux:
-    """§ Instructions"""
+    """# Instructions"""
 
     default_workspace_folder: str = "ux"
     context_index_key: str = "ux"
@@ -87,7 +86,7 @@ class Ux:
 
     @tool
     def ensure_javascript(self, generator: str, source_format: str, content: Any) -> dict:
-        """Ensure Stories or Clean Engineering JS exists — transform via that generator if needed.
+        """Ensure Stories or Clean Engineering JS exists - transform via that generator if needed.
         generator: 'stories' | 'clean_engineering'. Returns {format: javascript, content: ...}."""
         if generator == "stories":
             from context_tools.stories.stories import Stories

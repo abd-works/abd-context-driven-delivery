@@ -1,8 +1,8 @@
-"""Python code channel for the CleanEngineering model — module-first.
+"""Python code channel for the CleanEngineering model - module-first.
 
 ONE parse surface for transform + validate: regex for design stubs, ast for
 executable Python (fills Operation metrics). Scanners must not import ast
-directly — call parse / parse_detailed instead.
+directly - call parse / parse_detailed instead.
 """
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ class PythonCleanEngineeringModel(CleanEngineeringModel):
 
     @classmethod
     def parse_detailed(cls, text: str) -> ParsedPython:
-        """Single parse entry — prefer ast (metrics); fall back to regex stubs."""
+        """Single parse entry - prefer ast (metrics); fall back to regex stubs."""
         lines = text.split("\n")
         try:
             tree = ast.parse(text)

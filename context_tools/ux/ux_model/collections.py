@@ -1,4 +1,4 @@
-"""UxComponent collections — Transitions, ContentTypes, NavComponents."""
+"""UxComponent collections - Transitions, ContentTypes, NavComponents."""
 
 from __future__ import annotations
 

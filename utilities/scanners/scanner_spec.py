@@ -1,4 +1,4 @@
-"""BDD spec for scanners/scanner-behavior.md — Scanner, Violation, execute_scan."""
+"""BDD spec for scanners/scanner-behavior.md - Scanner, Violation, execute_scan."""
 
 import tempfile
 from pathlib import Path

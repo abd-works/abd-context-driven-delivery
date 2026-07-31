@@ -1,4 +1,4 @@
-"""Scanner: encapsulation — public fields, leaked mutables, missing property."""
+"""Scanner: encapsulation - public fields, leaked mutables, missing property."""
 from pathlib import Path
 
 from code_scanner import CodeScanner
@@ -37,7 +37,7 @@ class PropertyEncapsulationCodeScanner(CodeScanner):
                     self.violation(
                         (
                             f"Method '{op.name}' in '{oclass.name}' takes no args "
-                            "beyond self — use a property/getter."
+                            "beyond self - use a property/getter."
                         ),
                         location=str(file_path),
                         line=op.line,

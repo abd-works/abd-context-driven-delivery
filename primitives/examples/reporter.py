@@ -1,7 +1,7 @@
 # @toolset-manifest python -m tools manifest primitives.examples.reporter:Reporter
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Integrated example — @toolset, @tool, @resource, @instruction (all three forms), @action."""
+"""Integrated example - @toolset, @tool, @resource, @instruction (all three forms), @action."""
 from __future__ import annotations
 
 from primitives.actions.action import action
@@ -15,7 +15,7 @@ class Reporter:
 
     Resources expose live state. Tools are called by the AI directly.
     Instruction slots load prose from markdown assets. Actions are
-    recipes interpreted by the AI — the body is never executed by Python.
+    recipes interpreted by the AI - the body is never executed by Python.
     """
 
     def __init__(self, beat: str) -> None:
@@ -23,7 +23,7 @@ class Reporter:
         self._notes: list[str] = []
         super().__init__()
 
-    # ── @resource — observable state ─────────────────────────────────────────
+    # -- @resource - observable state -----------------------------------------
     # The AI reads these between tool calls to inform its decisions.
 
     @property
@@ -38,7 +38,7 @@ class Reporter:
         """Number of field notes collected so far."""
         return len(self._notes)
 
-    # ── @tool — directly callable by the AI ──────────────────────────────────
+    # -- @tool - directly callable by the AI ----------------------------------
     # Python executes these; results are returned to the AI as tool outputs.
 
     @tool
@@ -59,26 +59,26 @@ class Reporter:
         """Discard all notes and start fresh."""
         self._notes.clear()
 
-    # ── @instruction — content slots ─────────────────────────────────────────
-    # Three forms — all resolved automatically; bodies are always `...`.
+    # -- @instruction - content slots -----------------------------------------
+    # Three forms - all resolved automatically; bodies are always `...`.
 
-    # Form B — section: "style" → title-case "Style" → ## Style in reporter.md
+    # Form B - section: "style" -> title-case "Style" -> ## Style in reporter.md
     @instruction
     def style(self) -> Instruction: ...
 
-    # Form C — file: label= required because the filename contains a hyphen
+    # Form C - file: label= required because the filename contains a hyphen
     @instruction(label="house-guidelines")
     def guidelines(self) -> Instruction: ...
 
-    # ── @action — AI-orchestrated recipes ────────────────────────────────────
+    # -- @action - AI-orchestrated recipes ------------------------------------
     # Body is AST-parsed into AI instructions; Python never runs it.
-    # String literals → prose. self.tool() → tool call. self.slot() → expanded content.
+    # String literals -> prose. self.tool() -> tool call. self.slot() -> expanded content.
 
-    # Form A — inline prose: each string literal in the body IS the instruction text
+    # Form A - inline prose: each string literal in the body IS the instruction text
     @action
     def gather(self, topic: str) -> str:
         """Gather notes on {{topic}} for the {{self.beat}} beat."""
-        """Find 3–5 distinct facts or quotes. Record each with add_note."""
+        """Find 3-5 distinct facts or quotes. Record each with add_note."""
         self.add_note()
         return f"gathered notes on {topic}"
 
@@ -86,8 +86,8 @@ class Reporter:
     @action
     def file_report(self, headline: str) -> str:
         """Write a field report with the headline: {{headline}}."""
-        self.style()        # → expands § Style section from reporter.md
-        self.guidelines()   # → expands house-guidelines.md
+        self.style()        # -> expands # Style section from reporter.md
+        self.guidelines()   # -> expands house-guidelines.md
         self.read_notes()
         self.clear_notes()
         return f"report filed: {headline}"

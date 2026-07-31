@@ -1,4 +1,4 @@
-"""alternate-actor-emphasis — no 3+ consecutive same-actor beats in a scenario."""
+"""alternate-actor-emphasis - no 3+ consecutive same-actor beats in a scenario."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ class AlternateActorEmphasisScanner(StoryWorkspaceScanner):
                     if run_len >= 3:
                         yield self.violation(
                             f"Scenario {sc.name!r} has {run_len} consecutive "
-                            f"{prev_kind}-only steps — insert the missing beat "
+                            f"{prev_kind}-only steps - insert the missing beat "
                             f"from the other actor or split the story",
                             location=self.loc(sc, f"scenario {sc.name!r}"),
                             severity="warning",

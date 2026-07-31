@@ -1,4 +1,4 @@
-"""Java spec-file renderer — emits one `<StoryPascalCase>Stories.java` per Story.
+"""Java spec-file renderer - emits one `<StoryPascalCase>Stories.java` per Story.
 
 Shape produced (reference architecture, Java flavour):
 
@@ -28,7 +28,7 @@ Shape produced (reference architecture, Java flavour):
         };
     }
 
-This file is FULLY regeneratable — it contains only data derived from the
+This file is FULLY regeneratable - it contains only data derived from the
 canonical Scenario model. Tier files own hand-authored logic (write-once).
 """
 

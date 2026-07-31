@@ -1,1 +1,1 @@
-"""HTML channel — mockup/specification default; deepens by fidelity."""
+"""HTML channel - mockup/specification default; deepens by fidelity."""

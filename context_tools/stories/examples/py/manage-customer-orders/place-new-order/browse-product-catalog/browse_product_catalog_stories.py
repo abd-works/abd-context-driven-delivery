@@ -1,4 +1,4 @@
-"""Story data — regeneratable. Do not add logic or imports."""
+"""Story data - regeneratable. Do not add logic or imports."""
 
 from __future__ import annotations
 

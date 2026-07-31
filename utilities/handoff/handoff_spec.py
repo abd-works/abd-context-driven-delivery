@@ -1,4 +1,4 @@
-"""BDD spec for handoff — Handoff toolset helpers and tools."""
+"""BDD spec for handoff - Handoff toolset helpers and tools."""
 
 import json
 import sys
@@ -32,7 +32,7 @@ from handoff.handoff import (
 
 _SAMPLE_CDD = """\
 fidelity: explore
-scope: Increment 1 — place order
+scope: Increment 1 - place order
 
 flow:
   status: in-progress
@@ -89,7 +89,7 @@ with description("_summarize_cdd_sketch"):
     with it("extracts fidelity, scope, flow, open, done, and log tail"):
         summary = _summarize_cdd_sketch(_SAMPLE_CDD)
         expect(summary["fidelity"]).to(equal("explore"))
-        expect(summary["scope"]).to(equal("Increment 1 — place order"))
+        expect(summary["scope"]).to(equal("Increment 1 - place order"))
         expect(summary["flow_status"]).to(equal("in-progress"))
         expect(summary["flow_recommend"]).to(equal("more-same-stage"))
         expect(summary["flow_next"]).to(equal("explore"))

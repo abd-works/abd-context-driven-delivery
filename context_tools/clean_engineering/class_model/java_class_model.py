@@ -1,4 +1,4 @@
-"""Java code channel for the CleanEngineering model — model fidelity.
+"""Java code channel for the CleanEngineering model - model fidelity.
 
 Renders Java class stubs with typed fields and abstract method signatures.
 Parses class names from Java source.

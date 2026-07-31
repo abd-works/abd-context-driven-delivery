@@ -1,4 +1,4 @@
-"""Markdown format story nodes — all seven StoryNode subtypes plus I/O.
+"""Markdown format story nodes - all seven StoryNode subtypes plus I/O.
 
 Layout produced:
 
@@ -57,7 +57,7 @@ def _split_outline_story(raw_text: str) -> tuple[str, str]:
     return _strip_backticks(actor_part), _strip_backticks(story_part)
 
 
-# ── MarkdownIncrement ─────────────────────────────────────────────────────────
+# -- MarkdownIncrement ---------------------------------------------------------
 
 _INCREMENT_H3 = re.compile(r"^###\s+Increment\s+\d+\s*:\s*(.+?)\s*$", re.IGNORECASE)
 _ANY_H2 = re.compile(r"^##\s+(?!#)")
@@ -130,7 +130,7 @@ class MarkdownIncrement(Increment):
         return increments
 
 
-# ── MarkdownScenario ──────────────────────────────────────────────────────────
+# -- MarkdownScenario ----------------------------------------------------------
 
 _SCENARIO_H3 = re.compile(
     r"^###\s+Scenario(?:\s+Outline)?(?:\s+\d+)?\s*:\s*(.+?)\s*$", re.IGNORECASE
@@ -368,7 +368,7 @@ def _consume_background(keyword: str, text: str, source: SourceLocation,
     return phase
 
 
-# ── Leaf node types ───────────────────────────────────────────────────────────
+# -- Leaf node types -----------------------------------------------------------
 
 class MarkdownStory(Story):
     def create_child_scenario(self, source: Scenario) -> MarkdownScenario:
@@ -388,7 +388,7 @@ class MarkdownEpic(Epic):
         return MarkdownSubEpic(source.name, source.sequential_order)
 
 
-# ── Root node + I/O ───────────────────────────────────────────────────────────
+# -- Root node + I/O -----------------------------------------------------------
 
 _DOC_TITLE_PREFIXES = ("story map", "thin slic", "acceptance criteria", "specification by example")
 _OUTLINE_EPIC_RE = re.compile(r"^(\s*)\(E\)\s+(.+)$")
@@ -441,7 +441,7 @@ class MarkdownStoryMap(StoryMap):
                 merged.source = _SL(rel, 1)
         return merged if merged.epics else None
 
-    # ── Uniform Callable Surface ──────────────────────────────────────────────
+    # -- Uniform Callable Surface ----------------------------------------------
 
     def render(self, story_map: "MarkdownStoryMap", previous: Optional[str] = None) -> str:
         if self._should_render_outline(story_map, previous):
@@ -514,7 +514,7 @@ class MarkdownStoryMap(StoryMap):
     def sync(self, text: str, canonical: "MarkdownStoryMap") -> UpdateReport:
         return canonical.translate_from(self.parse(text))
 
-    # ── Source location stamping ──────────────────────────────────────────────
+    # -- Source location stamping ----------------------------------------------
 
     def attach_source_locations(self, text: str, rel_file: str) -> None:
         """Stamp SourceLocation onto each Epic/SubEpic/Story from the markdown text."""
@@ -573,7 +573,7 @@ class MarkdownStoryMap(StoryMap):
                 story.source = loc
                 return
 
-    # ── render helpers ────────────────────────────────────────────────────────
+    # -- render helpers --------------------------------------------------------
 
     def _render_epic(self, epic: MarkdownEpic, lines: List[str], depth: int) -> None:
         lines.append(f"{'#' * depth} {epic.name}")
@@ -592,7 +592,7 @@ class MarkdownStoryMap(StoryMap):
             for scenario in story.scenarios:
                 lines.append(f"  - {scenario.name}")
 
-    # ── parse helpers ─────────────────────────────────────────────────────────
+    # -- parse helpers ---------------------------------------------------------
 
     def _guard_has_structure(self, lines: List[str]) -> None:
         for line in lines:
@@ -747,7 +747,7 @@ class MarkdownStoryMap(StoryMap):
                 continue
             m = _OUTLINE_STORY_PATTERN.match(raw)
             if m and current_epic is not None:
-                # Stories require a SubEpic parent (Epic → SubEpic → Story).
+                # Stories require a SubEpic parent (Epic -> SubEpic -> Story).
                 # When authors hang (S) lines directly under (E), mirror the
                 # heading parser: synthesize a sub-epic instead of dropping them.
                 if not stack:

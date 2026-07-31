@@ -1,4 +1,4 @@
-"""factory-backed-examples — placeholders must resolve via factory or example rows.
+"""factory-backed-examples - placeholders must resolve via factory or example rows.
 
 Preferred: concrete values live in {Type}ExampleFactory. Legacy outline
 example_rows are still checked for column/placeholder alignment when present.
@@ -29,7 +29,7 @@ class ScenarioOutlineStructureScanner(StoryWorkspaceScanner):
                 if placeholders:
                     yield self.violation(
                         f"Scenario {sc.name!r} uses placeholders "
-                        f"{sorted(placeholders)} — resolve them via "
+                        f"{sorted(placeholders)} - resolve them via "
                         f"{{Type}}ExampleFactory.load* (not a story-local examples table)",
                         location=self.loc(sc, f"scenario {sc.name!r}"),
                         severity="warning",

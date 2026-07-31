@@ -1,4 +1,4 @@
-"""Scanner: mixed snake_case / camelCase — reads Operation.name."""
+"""Scanner: mixed snake_case / camelCase - reads Operation.name."""
 import re
 from pathlib import Path
 

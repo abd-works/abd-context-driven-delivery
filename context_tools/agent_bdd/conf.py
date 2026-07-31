@@ -1,4 +1,4 @@
-"""Agent BDD runtime configuration — local secrets and import paths."""
+"""Agent BDD runtime configuration - local secrets and import paths."""
 from __future__ import annotations
 
 import importlib.util

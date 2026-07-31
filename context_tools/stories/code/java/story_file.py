@@ -1,4 +1,4 @@
-"""Java runnable story-file renderer — GWT stubs for AI to fill."""
+"""Java runnable story-file renderer - GWT stubs for AI to fill."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def render_story_file(story: Story, *, helper_class: str | None = None) -> str:
                 lines.append(f'    // WHEN: {clause.text}')
             for clause in interaction.then:
                 lines.append(f'    // THEN: {clause.text}')
-        lines.append("    // AI fills: helper → ExampleFactory; assert public interface")
+        lines.append("    // AI fills: helper -> ExampleFactory; assert public interface")
         lines.append("  }")
         lines.append("")
     lines.append("  public static void main(String[] args) {")
@@ -63,7 +63,7 @@ def render_tier_spec_file(story: Story, *, tier: str) -> str:
     )
     return "\n".join(
         [
-            f"/** Tier: {tier} — same {story.name} story. */",
+            f"/** Tier: {tier} - same {story.name} story. */",
             f"public class {spec} {{",
             "  @org.junit.jupiter.api.Test",
             "  void runStory() {",

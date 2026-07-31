@@ -1,4 +1,4 @@
-"""BDD spec for WorkspaceSession — kit prose + tools on BaseContextTool hosts."""
+"""BDD spec for WorkspaceSession - kit prose + tools on BaseContextTool hosts."""
 
 import sys
 from pathlib import Path

@@ -1,1 +1,1 @@
-"""Stories scanners — operate on the canonical Workspace model."""
+"""Stories scanners - operate on the canonical Workspace model."""

@@ -1,4 +1,4 @@
-"""tier-bodies-implemented — tier step / case bodies must not be stubs.
+"""tier-bodies-implemented - tier step / case bodies must not be stubs.
 
 Language channels fill `TestSuite.unimplemented_steps` and
 `TestCase.has_unimplemented_body`. This scanner never reads source text.
@@ -15,7 +15,7 @@ class TierBodiesImplementedScanner(StoryWorkspaceScanner):
             loc = self.loc(suite, suite.source.file if suite.source else suite.name)
             for step in getattr(suite, "unimplemented_steps", []) or []:
                 yield self.violation(
-                    f"Tier step {step!r} in {loc} has an unimplemented body — "
+                    f"Tier step {step!r} in {loc} has an unimplemented body - "
                     f"engineering fidelity must produce real code, not scaffolder TODOs",
                     location=loc,
                     severity="warning",
@@ -23,7 +23,7 @@ class TierBodiesImplementedScanner(StoryWorkspaceScanner):
             for case in suite.cases:
                 if getattr(case, "has_unimplemented_body", False):
                     yield self.violation(
-                        f"Test case {case.name!r} in {loc} has an unimplemented body — "
+                        f"Test case {case.name!r} in {loc} has an unimplemented body - "
                         f"engineering fidelity must produce real code, not scaffolder TODOs",
                         location=self.loc(case, f"{loc}:{case.name}"),
                         severity="warning",

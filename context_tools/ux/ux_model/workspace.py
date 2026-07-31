@@ -1,4 +1,4 @@
-"""Workspace — parsed UX artifacts scanners consume."""
+"""Workspace - parsed UX artifacts scanners consume."""
 
 from __future__ import annotations
 

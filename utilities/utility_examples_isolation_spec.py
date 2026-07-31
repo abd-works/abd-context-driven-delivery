@@ -1,6 +1,6 @@
 """Static BDD: each utility uses its own examples; sibling-utility examples are off-limits.
 
-Production imports between utilities (e.g. diagnose → sub_agent) are allowed.
+Production imports between utilities (e.g. diagnose -> sub_agent) are allowed.
 Only ``*.examples`` imports from a different utilities/ package are violations.
 """
 

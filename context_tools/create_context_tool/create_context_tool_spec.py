@@ -1,4 +1,4 @@
-"""BDD spec for CreateContextTool — meta generator face (scaffold domains)."""
+"""BDD spec for CreateContextTool - meta generator face (scaffold domains)."""
 
 from pathlib import Path
 from typing import Any

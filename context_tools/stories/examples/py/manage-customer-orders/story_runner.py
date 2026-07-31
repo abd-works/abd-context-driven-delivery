@@ -1,16 +1,16 @@
-"""Generic scenario runner — the ONLY test-framework glue.
+"""Generic scenario runner - the ONLY test-framework glue.
 
 Every tier reuses this function; tier files just wire a Story constant, a
 scenario key, and a factory that produces the tier's `TierImpl`. The runner:
 
 1. Validates that every step string in the scenario has a matching key in
-   `tier.given` / `tier.when` / `tier.then` — missing keys fail with the
+   `tier.given` / `tier.when` / `tier.then` - missing keys fail with the
    exact string and phase, so the author knows what's unimplemented.
 2. Walks `given`, then each interaction's `when` steps, then dispatches one
    pytest test per `then` step (so each observable outcome is its own row).
 3. Runs `cleanup` after every scenario, even on failure.
 
-Sync and async step bodies both work — the runner awaits when needed.
+Sync and async step bodies both work - the runner awaits when needed.
 """
 
 from __future__ import annotations

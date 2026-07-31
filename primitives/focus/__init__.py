@@ -1,7 +1,7 @@
-"""focus — @focus decorator for focus-group binding.
+"""focus - @focus decorator for focus-group binding.
 
 Public exports:
-    focus   — @focus(focus="fidelities") on @action or @instruction
+    focus   - @focus(focus="fidelities") on @action or @instruction
 
 On @action: ActionExpander appends {module_dir}/{focus}/{filter_value}.md to prose.
 On @instruction: sets group/filter_key so the slot resolves that same path.

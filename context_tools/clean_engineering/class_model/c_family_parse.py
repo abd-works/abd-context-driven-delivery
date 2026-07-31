@@ -1,4 +1,4 @@
-"""Shared brace-language parse → CleanEngineering model (TypeScript / JavaScript / Java).
+"""Shared brace-language parse -> CleanEngineering model (TypeScript / JavaScript / Java).
 
 Fills the same Operation metrics as the Python channel so RuleEvals stay language-agnostic.
 """
@@ -223,7 +223,7 @@ def _catch_issues(body: str, base_line: int) -> tuple[list[int], list[int]]:
             continue
         lineno = base_line + body.count("\n", 0, m.start())
         binding = (m.group(1) or "").strip()
-        # Optional catch binding / bare catch → bare_except
+        # Optional catch binding / bare catch -> bare_except
         if not binding or binding == "()":
             bare.append(lineno)
         stripped = catch_body.strip()

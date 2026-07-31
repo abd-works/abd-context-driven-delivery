@@ -1,4 +1,4 @@
-"""Scanner: vague/short names — reads Operation.assigned_names / parameters / loop targets."""
+"""Scanner: vague/short names - reads Operation.assigned_names / parameters / loop targets."""
 from pathlib import Path
 
 from code_scanner import CodeScanner

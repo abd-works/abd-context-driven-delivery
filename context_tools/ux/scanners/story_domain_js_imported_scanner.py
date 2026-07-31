@@ -1,4 +1,4 @@
-"""story-domain-js-imported — bound story/object reference paths must exist on disk."""
+"""story-domain-js-imported - bound story/object reference paths must exist on disk."""
 
 from __future__ import annotations
 
@@ -15,14 +15,14 @@ class StoryDomainJsImportedScanner(UxWorkspaceScanner):
         for path in workspace.ux_map.story_references:
             if not _exists(root, path):
                 yield self.violation(
-                    f"story reference {path!r} is bound but missing — "
+                    f"story reference {path!r} is bound but missing - "
                     "run Stories transform / emit_story_javascript",
                     location=f"story_reference:{path}",
                 )
         for path in workspace.ux_map.object_references:
             if not _exists(root, path):
                 yield self.violation(
-                    f"object reference {path!r} is bound but missing — "
+                    f"object reference {path!r} is bound but missing - "
                     "run Clean Engineering transform to javascript",
                     location=f"object_reference:{path}",
                 )

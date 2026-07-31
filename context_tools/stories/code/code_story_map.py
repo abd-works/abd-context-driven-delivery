@@ -1,4 +1,4 @@
-"""CodeStoryMap — abstract base that renders a canonical StoryMap as a source-code tree.
+"""CodeStoryMap - abstract base that renders a canonical StoryMap as a source-code tree.
 
 Layout produced (identical shape across TS/Python/Java backends):
 
@@ -46,7 +46,7 @@ from context_tools.stories.story_model.nodes import Epic, Story, SubEpic
 from context_tools.stories.story_model.story_map import StoryMap
 from context_tools.stories.story_model.update_report import UpdateReport
 
-# WHY: import deferred to avoid circular dependency at module load — each
+# WHY: import deferred to avoid circular dependency at module load - each
 # concrete subclass overrides _make_story_map / _make_epic / _make_sub_epic
 # so the base only needs these for its own fallback default implementations.
 
@@ -117,7 +117,7 @@ class CodeStoryMap:
         return tree
 
     def parse(self, external: Dict[str, str]) -> StoryMap:
-        # WHY: reconstruct by walking every leaf file path — the shape encodes
+        # WHY: reconstruct by walking every leaf file path - the shape encodes
         # the Epic/SubEpic hierarchy uniquely.
         if not isinstance(external, dict):
             raise CodeStoryMapError("Tree must be a mapping of paths to file content")
@@ -170,15 +170,15 @@ class CodeStoryMap:
         return story_map
 
     def _make_story_map(self) -> StoryMap:
-        """Factory — overridden by concrete subclasses to return format-typed root."""
+        """Factory - overridden by concrete subclasses to return format-typed root."""
         return StoryMap()
 
     def _make_epic(self, name: str, order: int) -> Epic:
-        """Factory — overridden by concrete subclasses to return format-typed Epic."""
+        """Factory - overridden by concrete subclasses to return format-typed Epic."""
         return Epic(name, order)
 
     def _make_sub_epic(self, name: str, order: int) -> SubEpic:
-        """Factory — overridden by concrete subclasses to return format-typed SubEpic."""
+        """Factory - overridden by concrete subclasses to return format-typed SubEpic."""
         return SubEpic(name, order)
 
     def _hydrate_leaf_sub_epic_from_content(

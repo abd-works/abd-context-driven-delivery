@@ -4,7 +4,7 @@
 # invoke-new: action generate | context.fidelity discovery
 # invoke-edit: action satisfy | toolset: context_tools.stories.stories:Stories
 # invoke-check: action validate | toolset: context_tools.stories.stories:Stories
-"""Stories generator — multi-fidelity story maps and acceptance tests."""
+"""Stories generator - multi-fidelity story maps and acceptance tests."""
 
 from __future__ import annotations
 
@@ -20,11 +20,10 @@ from tools.tool import tool  # noqa: F401
 _FIDELITY_FORMAT_DEFAULTS = {
     "discovery": "markdown",
     "exploration": "python",
-    "specification": "python",
     "engineering": "python",
 }
 
-# Adapter class path per format — peer channels, same CLI surface.
+# Adapter class path per format - peer channels, same CLI surface.
 _CHANNELS: dict[str, tuple[str, str]] = {
     "markdown": ("stories.document.markdown.nodes", "MarkdownStoryMap"),
     "json": ("stories.document.json.nodes", "JsonStoryMap"),
@@ -55,7 +54,7 @@ def _normalize_input(format_name: str, content: Any) -> Any:
             return content
         if isinstance(content, str):
             return json.loads(content)
-        raise TypeError(f"{format_name} transform expects a path→content dict or JSON object")
+        raise TypeError(f"{format_name} transform expects a path->content dict or JSON object")
     if not isinstance(content, str):
         raise TypeError(f"{format_name} transform expects a string")
     return content
@@ -63,7 +62,7 @@ def _normalize_input(format_name: str, content: Any) -> Any:
 
 @base_context_tool
 class Stories:
-    """§ Instructions"""
+    """# Instructions"""
 
     default_workspace_folder: str = "tests"
     context_index_key: str = "stories"

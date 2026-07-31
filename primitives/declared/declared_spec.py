@@ -1,4 +1,4 @@
-"""BDD spec for declared.py — DeclaredMember, DeclaredOperation, DeclaredProperty."""
+"""BDD spec for declared.py - DeclaredMember, DeclaredOperation, DeclaredProperty."""
 import sys
 from pathlib import Path
 

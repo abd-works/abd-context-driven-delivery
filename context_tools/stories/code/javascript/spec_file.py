@@ -24,7 +24,7 @@ def render_tier_spec_file(story: Story, *, tier: str) -> str:
 
     lines = [
         "/**",
-        f" * Tier: {tier} — same {story.name} story,",
+        f" * Tier: {tier} - same {story.name} story,",
         " * ExampleFactory builds types with injected deps (isolated) or real collaborators (production).",
         " */",
         "",
@@ -39,7 +39,7 @@ def render_tier_spec_file(story: Story, *, tier: str) -> str:
     return "\n".join(lines)
 
 
-# Back-compat alias — old pure-data renderer callers
+# Back-compat alias - old pure-data renderer callers
 def render_story_spec_file(story: Story, *, relative_types_path: str = "../story-types") -> str:
     """Deprecated: explore/spec use story_file.render_story_file."""
     from context_tools.stories.code.javascript.story_file import render_story_file

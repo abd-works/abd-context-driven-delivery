@@ -1,4 +1,4 @@
-"""scenario-coverage — every in-scope story has at least one scenario."""
+"""scenario-coverage - every in-scope story has at least one scenario."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Demo toolset used by iterate_spec — a minimal @iterate-wrapped @action.
+"""Demo toolset used by iterate_spec - a minimal @iterate-wrapped @action.
 
 Living in a real .py file (not string-eval'd) so inspect.getsource can read it.
 """
@@ -11,7 +11,7 @@ from tools.tool import tool, toolset
 
 @toolset
 class Demo:
-    """Demo generator for testing the @iterate → ActionExpander integration."""
+    """Demo generator for testing the @iterate -> ActionExpander integration."""
 
     @tool
     def do_thing(self) -> str:
@@ -21,7 +21,7 @@ class Demo:
     @iterate
     @action
     def generate(self) -> str:
-        """Base generate action body — should appear after the iterate preamble."""
-        """Step 1 — call do_thing."""
+        """Base generate action body - should appear after the iterate preamble."""
+        """Step 1 - call do_thing."""
         self.do_thing()
         return "generate done"

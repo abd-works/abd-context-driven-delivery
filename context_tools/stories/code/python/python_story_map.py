@@ -1,4 +1,4 @@
-"""PythonStoryMap — runnable `*_story.py` per Story (explore/spec).
+"""PythonStoryMap - runnable `*_story.py` per Story (explore/spec).
 
 Engineering: ``*_spec.py`` (isolated); ``*_spec.{tier}.py`` for other tiers.
 """
@@ -61,7 +61,7 @@ class PythonStoryMap(CodeStoryMap):
 
     def parse(self, external: Dict[str, str]) -> StoryMap:
         if not isinstance(external, dict):
-            raise CodeStoryMapError("Python story map parse expects a path→content dict")
+            raise CodeStoryMapError("Python story map parse expects a path->content dict")
         story_map = self._make_story_map()
         for path, content in sorted(external.items()):
             if not path.endswith(self.LEAF_EXTENSION):

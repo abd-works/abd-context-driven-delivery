@@ -1,4 +1,4 @@
-"""TypeScript code channel for the CleanEngineering model — model fidelity.
+"""TypeScript code channel for the CleanEngineering model - model fidelity.
 
 Renders typed class stubs with property declarations and stub method bodies.
 Parses class names from TypeScript source.

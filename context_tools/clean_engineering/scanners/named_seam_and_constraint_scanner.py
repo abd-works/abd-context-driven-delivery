@@ -1,4 +1,4 @@
-"""Scanner: `named-seam-and-constraint` — module-context.md declares seam and constraint.
+"""Scanner: `named-seam-and-constraint` - module-context.md declares seam and constraint.
 
 The Seam section should be natural-language prose (not labeled sub-slots). This
 scanner only checks that the ideas are named in the file (case-insensitive):

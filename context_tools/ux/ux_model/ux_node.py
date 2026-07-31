@@ -1,4 +1,4 @@
-"""UxNode — abstract base for every node in every format."""
+"""UxNode - abstract base for every node in every format."""
 
 from __future__ import annotations
 

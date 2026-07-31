@@ -1,1 +1,1 @@
-"""Stories generator — story maps, scenarios, and acceptance tests."""
+"""Stories generator - story maps, scenarios, and acceptance tests."""

@@ -46,7 +46,7 @@ class RecordDecisions:
 
     @tool
     def read_cdr_format(self) -> str:
-        """Return CDR-FORMAT.md — when to offer a CDR, template, numbering, and optional sections.
+        """Return CDR-FORMAT.md - when to offer a CDR, template, numbering, and optional sections.
         Read this before offering or writing a CDR."""
         return _FORMAT_PATH.read_text(encoding="utf-8")
 
@@ -63,9 +63,9 @@ class RecordDecisions:
     def write_cdr(self, root: str, slug: str, content: str) -> str:
         """Write one Context Decision Record to {root}/.context/cdr/{NNNN}-{slug}.md.
         NNNN is the next sequential number under .context/cdr/. Creates the directory lazily.
-        content: full markdown following CDR-FORMAT.md (title + 1–3 sentence body; optional sections only when valuable).
+        content: full markdown following CDR-FORMAT.md (title + 1-3 sentence body; optional sections only when valuable).
         slug: kebab-case short name (e.g. 'event-sourced-orders').
-        Returns the resolved path. Call immediately when a qualifying decision crystallises — do not batch."""
+        Returns the resolved path. Call immediately when a qualifying decision crystallises - do not batch."""
         target = _cdr_path(root, slug)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content.strip() + "\n", encoding="utf-8")
@@ -73,13 +73,13 @@ class RecordDecisions:
 
     @action
     def record_decisions_session(self, root: str = ".") -> str:
-        """Offer and write Context Decision Records (CDRs) sparingly as decisions crystallise during the wrapped action — never batch; never invent decisions."""
-        """Step 1 — Read the format once via read_cdr_format. Internalise the three-criteria gate and the minimal template."""
+        """Offer and write Context Decision Records (CDRs) sparingly as decisions crystallise during the wrapped action - never batch; never invent decisions."""
+        """Step 1 - Read the format once via read_cdr_format. Internalise the three-criteria gate and the minimal template."""
         self.read_cdr_format()
-        """Step 2 — Optionally call list_cdrs(root) so you do not re-record an already-captured decision."""
+        """Step 2 - Optionally call list_cdrs(root) so you do not re-record an already-captured decision."""
         self.list_cdrs()
-        """Step 3 — During the session (grill, sketch, or generate), watch for decisions that meet ALL three: hard to reverse, surprising without context, and a real trade-off. If any criterion is missing, skip the CDR."""
-        """Step 4 — When a qualifying decision crystallises, offer a CDR briefly (title + one-line gist). If the user accepts, call write_cdr immediately with a kebab slug and content matching CDR-FORMAT.md. Do not batch; do not wait until the end."""
+        """Step 3 - During the session (grill, sketch, or generate), watch for decisions that meet ALL three: hard to reverse, surprising without context, and a real trade-off. If any criterion is missing, skip the CDR."""
+        """Step 4 - When a qualifying decision crystallises, offer a CDR briefly (title + one-line gist). If the user accepts, call write_cdr immediately with a kebab slug and content matching CDR-FORMAT.md. Do not batch; do not wait until the end."""
         self.write_cdr()
-        """Step 5 — Keep CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences only when they add genuine value."""
+        """Step 5 - Keep CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences only when they add genuine value."""
         return "CDR session active for {{root}}."

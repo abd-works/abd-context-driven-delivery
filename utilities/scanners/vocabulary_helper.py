@@ -1,7 +1,7 @@
 """NLTK-backed word/POS helpers for story and naming scanners.
 
 Requires **nltk** (and downloads WordNet / punkt / tagger data on first use). Used by
-**abd-story-mapping** scanners; keep imports explicit — not re-exported from
+**abd-story-mapping** scanners; keep imports explicit - not re-exported from
 ``scanner.__init__`` to avoid import-time NLTK side effects for unrelated code.
 """
 

@@ -1,4 +1,4 @@
-"""Reference path properties — ordered, de-duplicated paths to external JS artifacts."""
+"""Reference path properties - ordered, de-duplicated paths to external JS artifacts."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from typing import Iterable, Iterator, List, overload
 
 
 class ReferencePaths:
-    """Paths pointing at story or object-model JS (references only — not the modules)."""
+    """Paths pointing at story or object-model JS (references only - not the modules)."""
 
     def __init__(self, paths: Iterable[str] | None = None) -> None:
         self._paths: List[str] = []

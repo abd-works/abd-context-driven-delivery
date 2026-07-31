@@ -4,10 +4,10 @@
 # invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
 # invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
 
-CleanEngineering Python template — two files when Stories-bound:
+CleanEngineering Python template - two files when Stories-bound:
 
-    {family_slug}.py                 — I{Class} + {Class} (+ subtypes)   PRODUCTION
-    {type_slug}_example_factory.py   — I{Class}ExampleFactory + factory  SEPARATE
+    {family_slug}.py                 - I{Class} + {Class} (+ subtypes)   PRODUCTION
+    {type_slug}_example_factory.py   - I{Class}ExampleFactory + factory  SEPARATE
 
 A production file holds the public seam I{Class}, the production Class that
 extends it, subtypes, and tightly connected peers. Not one class per file.
@@ -23,18 +23,18 @@ Naming:
     Interface          I{Class}                (public seam; model fidelity)
     Class              {Class}(I{Class})       (production; specification+)
     ExampleFactory     {Class}ExampleFactory   (plain class; no Loader base; Md+/S+)
-    Modes              Fake | Isolated | Production  (factory behavior — not subclasses)
-    Property           {owned_property}, …     (snake_case slots)
-    Operation          {operation_name}, …     (snake_case slots)
+    Modes              Fake | Isolated | Production  (factory behavior - not subclasses)
+    Property           {owned_property}, ...     (snake_case slots)
+    Operation          {operation_name}, ...     (snake_case slots)
     Params             {param}, {dep}
     Type slots         {Type}, {ReturnType}
     Invariant          comment                 (plain-English; not a method)
     Interaction        abstract method at S    (on Class only; dropped at code)
 
 Fidelity tags:
-    L  = language companion (prose; refined every stage — not a fidelity)
-    Mu = modules       (thin terms, one-way deps, build order — markdown / module-context)
-    Md = model         (I{Class} only — empty public props/ops; optional I{Class}ExampleFactory in factory file)
+    L  = language companion (prose; refined every stage - not a fidelity)
+    Mu = modules       (thin terms, one-way deps, build order - markdown / module-context)
+    Md = model         (I{Class} only - empty public props/ops; optional I{Class}ExampleFactory in factory file)
     S  = specification (Class extends I{Class}; public filled; privates empty on Class;
                        {Class}ExampleFactory modes in sibling factory file when Stories-bound)
     C  = code          (fill remaining empties on Class; drop interactions)
@@ -45,12 +45,12 @@ from abc import ABC, abstractmethod
 
 
 # =============================================================================
-# FILE: {family_slug}.py — production family only (cohesive-file)
+# FILE: {family_slug}.py - production family only (cohesive-file)
 # =============================================================================
 
 
 class I{ClassName}(ABC):                                                # Md
-    """*{ClassName}* is — one sentence: what it is, its unique role.
+    """*{ClassName}* is - one sentence: what it is, its unique role.
     Identity only. No relationship or behavior sentences here."""     # L
 
     # -- Public properties (empty interfaces) --------------------------------
@@ -76,18 +76,18 @@ class I{ClassName}(ABC):                                                # Md
 
 
 class {ClassName}(I{ClassName}):                                        # S
-    """*{ClassName}* is — one sentence: what it is, its unique role."""  # L
+    """*{ClassName}* is - one sentence: what it is, its unique role."""  # L
 
     # -- Public properties (filled at specification) -------------------------
 
-    """{sentence about this property — what it holds and why.}
+    """{sentence about this property - what it holds and why.}
     @composition"""                                                     # S
     @property                                                           # S
     def {owned_property}(self) -> {Type}:                               # S
         ...                                                             # S
 
     """{sentence about this plain property.}"""                         # L
-    # Invariant: {constraint sentence — the rule in plain English.}    # S
+    # Invariant: {constraint sentence - the rule in plain English.}    # S
     @property                                                           # S
     def {plain_property}(self) -> {Type}:                               # S
         ...                                                             # S
@@ -124,27 +124,27 @@ class {ClassName}(I{ClassName}):                                        # S
         ...
 
 
-# Subtype — delta only; parent members are inherited, not repeated     # Md/S
+# Subtype - delta only; parent members are inherited, not repeated     # Md/S
 class I{ChildClass}(ABC):                                               # Md
-    """{delta — what {ChildClass} adds}"""                              # L
+    """{delta - what {ChildClass} adds}"""                              # L
 
     @abstractmethod                                                     # Md
     def {delta_operation}(self, {param}: {Type}) -> {ReturnType}: ...   # Md
 
 
 class {ChildClass}({ClassName}, I{ChildClass}):                         # S
-    """{delta — what {ChildClass} adds or overrides}"""                 # L
+    """{delta - what {ChildClass} adds or overrides}"""                 # L
 
     def {delta_operation}(self, {param}: {Type}) -> {ReturnType}:       # S/C
         ...                                                             # S/C
 
 
 # =============================================================================
-# FILE: {type_slug}_example_factory.py — Stories factory (separate file)
+# FILE: {type_slug}_example_factory.py - Stories factory (separate file)
 # from .{family_slug} import {ClassName}, I{ClassName}
-# Pattern only — no ExampleLoader base. examples[{example_key}] is a
-# multi-type bundle (not examples[{Type}][…]).
-# Fake / Isolated / Production are modes — not Fake{ClassName} subclasses.
+# Pattern only - no ExampleLoader base. examples[{example_key}] is a
+# multi-type bundle (not examples[{Type}][...]).
+# Fake / Isolated / Production are modes - not Fake{ClassName} subclasses.
 # =============================================================================
 
 

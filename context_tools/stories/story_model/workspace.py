@@ -1,4 +1,4 @@
-"""Workspace — the parsed-artifact aggregate that scanners consume.
+"""Workspace - the parsed-artifact aggregate that scanners consume.
 
 Use `Workspace.load(root)` to populate from a workspace folder.
 
@@ -84,7 +84,7 @@ class Workspace:
             story_contexts=StoryContext.from_workspace(root),
         )
 
-    # ── canonical guards ────────────────────────────────────────────────────
+    # -- canonical guards ----------------------------------------------------
 
     def has_story_map(self) -> bool:
         try:
@@ -104,7 +104,7 @@ class Workspace:
     def has_story_contexts(self) -> bool:
         return bool(self.story_contexts)
 
-    # ── convenience views ───────────────────────────────────────────────────
+    # -- convenience views ---------------------------------------------------
 
     @property
     def increments(self) -> List[Increment]:
@@ -113,7 +113,7 @@ class Workspace:
 
     @property
     def tests(self) -> List[TestSuite]:
-        """Alias for `test_suites` — scanner-facing name for the flat suite list."""
+        """Alias for `test_suites` - scanner-facing name for the flat suite list."""
         return list(self.test_suites)
 
     def iter_test_cases(self) -> Iterator:

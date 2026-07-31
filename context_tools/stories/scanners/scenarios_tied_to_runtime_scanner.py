@@ -1,4 +1,4 @@
-"""scenarios-tied-to-runtime — boundary-crossing steps use concrete shapes."""
+"""scenarios-tied-to-runtime - boundary-crossing steps use concrete shapes."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ class ScenariosTiedToRuntimeScanner(StoryWorkspaceScanner):
                 if _VAGUE_BOUNDARY.search(clause.text):
                     yield self.violation(
                         f"Scenario {sc.name!r}: clause {clause.text!r} names a service "
-                        f"boundary vaguely — use the concrete endpoint / event / "
+                        f"boundary vaguely - use the concrete endpoint / event / "
                         f"queue / table",
                         location=self.loc(clause, f"scenario {sc.name!r}"),
                         severity="warning",

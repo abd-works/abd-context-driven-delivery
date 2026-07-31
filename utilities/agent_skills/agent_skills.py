@@ -1,7 +1,7 @@
 # @toolset-manifest python -m tools manifest agent_skills.agent_skills:AgentSkills
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Deploy workspace toolsets as IDE shims — one skill per toolset."""
+"""Deploy workspace toolsets as IDE shims - one skill per toolset."""
 from __future__ import annotations
 
 import ast
@@ -41,7 +41,7 @@ python -m tools run -
 """
 
 _CURSOR_COMMAND_TEMPLATE = """\
-# {class_name} — {action} at {focus_value} fidelity
+# {class_name} - {action} at {focus_value} fidelity
 
 Run the manifest to load tools, actions, and instructions:
 
@@ -64,13 +64,13 @@ action: {action}
 
 _VSCODE_PROMPT_TEMPLATE = """\
 ---
-description: "{class_name} — {action} at {focus_value} fidelity"
+description: "{class_name} - {action} at {focus_value} fidelity"
 name: "{command_name}"
 argument-hint: "Describe what to {action}"
 agent: agent
 ---
 
-# {class_name} — {action} at {focus_value} fidelity
+# {class_name} - {action} at {focus_value} fidelity
 
 Run the manifest to load tools, actions, and instructions:
 
@@ -161,7 +161,7 @@ def _parse_focus_actions(py_file: Path) -> list[dict[str, str]]:
 
 
 def _list_focus_values(module_dir: Path, focus_group: str) -> list[str]:
-    """List filter values under a focus group — subdirs first, then legacy *.md stems."""
+    """List filter values under a focus group - subdirs first, then legacy *.md stems."""
     group_dir = module_dir / focus_group
     if not group_dir.is_dir():
         return []
@@ -261,7 +261,51 @@ def _enrich_toolset_entry(entry: dict) -> dict:
 
 @toolset
 class AgentSkills:
-    """Deploy workspace toolsets — one skill per toolset."""
+    """Deploy workspace toolsets - one skill per toolset."""
+
+    @staticmethod
+    def _skill_slug(module_dir_name: str) -> str:
+        return _skill_slug(module_dir_name)
+
+    @staticmethod
+    def _command_prefix(module_dir_name: str) -> str:
+        return _command_prefix(module_dir_name)
+
+    @staticmethod
+    def _command_name(prefix: str, focus_value: str, action: str) -> str:
+        return _command_name(prefix, focus_value, action)
+
+    @staticmethod
+    def _toolset_ref(manifest_command: str) -> str:
+        return _toolset_ref(manifest_command)
+
+    @staticmethod
+    def _parse_focus_actions(py_file: Path) -> list[dict[str, str]]:
+        return _parse_focus_actions(py_file)
+
+    @staticmethod
+    def _list_focus_values(module_dir: Path, focus_group: str) -> list[str]:
+        return _list_focus_values(module_dir, focus_group)
+
+    @staticmethod
+    def _stale_focus_skill_slugs(command_prefix: str, focus_values: list[str]) -> list[str]:
+        return _stale_focus_skill_slugs(command_prefix, focus_values)
+
+    @staticmethod
+    def _is_self_manifest(py_file: Path, manifest_command: str) -> bool:
+        return _is_self_manifest(py_file, manifest_command)
+
+    @staticmethod
+    def _merge_hooks(existing: dict, new: dict) -> dict:
+        return _merge_hooks(existing, new)
+
+    @staticmethod
+    def _should_skip(path: Path) -> bool:
+        return _should_skip(path)
+
+    @staticmethod
+    def _enrich_toolset_entry(entry: dict) -> dict:
+        return _enrich_toolset_entry(entry)
 
     @tool
     def scan_toolsets(self) -> str:
@@ -312,8 +356,8 @@ class AgentSkills:
         ide: str,
     ) -> str:
         """Write a skill shim SKILL.md with a hardcoded manifest call.
-        ide=cursor → .cursor/skills/{skill_slug}/SKILL.md
-        ide=vscode → .github/skills/{skill_slug}/SKILL.md
+        ide=cursor -> .cursor/skills/{skill_slug}/SKILL.md
+        ide=vscode -> .github/skills/{skill_slug}/SKILL.md
         Returns the absolute path of the written file."""
         base = ".cursor" if ide == "cursor" else ".github"
         skill_dir = _REPO_ROOT / base / "skills" / skill_slug
@@ -342,8 +386,8 @@ class AgentSkills:
         ide: str,
     ) -> str:
         """Write a focus shortcut for an @focus action.
-        ide=cursor → .cursor/commands/{command_name}.md
-        ide=vscode → .github/prompts/{command_name}.prompt.md
+        ide=cursor -> .cursor/commands/{command_name}.md
+        ide=vscode -> .github/prompts/{command_name}.prompt.md
         Returns the absolute path of the written file."""
         if ide == "cursor":
             target_dir = _REPO_ROOT / ".cursor" / "commands"
@@ -360,7 +404,7 @@ class AgentSkills:
         else:
             target_dir = _REPO_ROOT / ".github" / "prompts"
             target_dir.mkdir(parents=True, exist_ok=True)
-            safe_description = f"{class_name} — {action} at {focus_value} fidelity".replace('"', "'")
+            safe_description = f"{class_name} - {action} at {focus_value} fidelity".replace('"', "'")
             target = target_dir / f"{command_name}.prompt.md"
             content = _VSCODE_PROMPT_TEMPLATE.format(
                 class_name=class_name,
@@ -378,8 +422,8 @@ class AgentSkills:
     @tool
     def remove_focus_shortcut(self, command_name: str, ide: str) -> str:
         """Remove a deployed focus shortcut.
-        ide=cursor → .cursor/commands/{command_name}.md
-        ide=vscode → .github/prompts/{command_name}.prompt.md
+        ide=cursor -> .cursor/commands/{command_name}.md
+        ide=vscode -> .github/prompts/{command_name}.prompt.md
         Returns the removed path or 'not found: <path>'."""
         if ide == "cursor":
             target = _REPO_ROOT / ".cursor" / "commands" / f"{command_name}.md"
@@ -422,8 +466,8 @@ class AgentSkills:
     @tool
     def deploy_hooks(self, ide: str) -> str:
         """Deploy primitives/tools/hooks/manifest-gate.json to the IDE hooks location.
-        ide=cursor → merges into .cursor/hooks.json (creates if absent).
-        ide=vscode → copies to .github/hooks/manifest-gate.json.
+        ide=cursor -> merges into .cursor/hooks.json (creates if absent).
+        ide=vscode -> copies to .github/hooks/manifest-gate.json.
         Returns the path written, or 'not found: <path>' if the source is missing."""
         source = _REPO_ROOT / "primitives" / "tools" / "hooks" / "manifest-gate.json"
         if not source.exists():
@@ -474,7 +518,7 @@ class AgentSkills:
             deployed_skills.append(entry["skill_slug"])
             for stale_slug in entry.get("stale_focus_skill_slugs", []):
                 self.remove_skill_shim(skill_slug=stale_slug, ide=ide)
-            # Drop legacy per-focus×action commands/prompts — not a good IDE fit.
+            # Drop legacy per-focusxaction commands/prompts - not a good IDE fit.
             for shortcut in entry.get("focus_shortcuts", []):
                 self.remove_focus_shortcut(
                     command_name=shortcut["command_name"],
@@ -485,16 +529,16 @@ class AgentSkills:
     @action
     def deploy_tools_as_skills(self, name_filter: str, ide: str) -> str:
         """Deploy workspace toolsets as IDE shims. ide={ide}, filter={name_filter}."""
-        """Step 1 — If ide is empty, ask: Which IDE? cursor (Recommended) / vscode."""
-        """Step 2 — If name_filter is empty, ask: Deploy all toolsets (Recommended) / enter a module_dir substring."""
+        """Step 1 - If ide is empty, ask: Which IDE? cursor (Recommended) / vscode."""
+        """Step 2 - If name_filter is empty, ask: Deploy all toolsets (Recommended) / enter a module_dir substring."""
         self.scan_toolsets()
-        """Step 3 — Apply name_filter: keep entries whose module_dir or skill_slug contains it; skip if filter is empty (= all)."""
-        """Step 4 — Present the filtered list of skills and ask the user to confirm before writing."""
-        """Step 5 — For each confirmed entry: write one skill shim, remove stale per-focus skill shims and legacy focus commands."""
+        """Step 3 - Apply name_filter: keep entries whose module_dir or skill_slug contains it; skip if filter is empty (= all)."""
+        """Step 4 - Present the filtered list of skills and ask the user to confirm before writing."""
+        """Step 5 - For each confirmed entry: write one skill shim, remove stale per-focus skill shims and legacy focus commands."""
         self.write_skill_shim()
-        """Step 6 — Call deploy_hooks(ide) to install hooks/manifest-gate.json into the IDE hooks location."""
+        """Step 6 - Call deploy_hooks(ide) to install hooks/manifest-gate.json into the IDE hooks location."""
         self.deploy_hooks()
-        """Step 7 — Call save_state with ide, name_filter, deployed skill_slugs, and empty deployed_commands."""
+        """Step 7 - Call save_state with ide, name_filter, deployed skill_slugs, and empty deployed_commands."""
         self.save_state()
         return "IDE shims written. Hooks deployed. State saved. Reload the IDE to pick them up."
 

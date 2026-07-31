@@ -1,4 +1,4 @@
-"""Python spec-file renderer — mirrors the TypeScript reference shape.
+"""Python spec-file renderer - mirrors the TypeScript reference shape.
 
 Renders one `<story_slug>_stories.py` file per Story:
 
@@ -44,7 +44,7 @@ def render_story_spec_file(story: Story) -> str:
     actor = (story.users[0] if story.users else "").strip()
 
     lines: List[str] = []
-    lines.append('"""Story data — regeneratable. Do not add logic or imports."""')
+    lines.append('"""Story data - regeneratable. Do not add logic or imports."""')
     lines.append("")
     lines.append("from __future__ import annotations")
     lines.append("")

@@ -4,7 +4,7 @@
 # invoke-new: action generate | context.fidelity modules
 # invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
 # invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
-"""Clean Engineering generator — multi-fidelity OO design and implementation."""
+"""Clean Engineering generator - multi-fidelity OO design and implementation."""
 
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ _SUPPORTED_FORMATS = frozenset(_CHANNELS)
 
 @base_context_tool
 class CleanEngineering:
-    """§ Instructions"""
+    """# Instructions"""
 
     default_workspace_folder: str = "src"
     context_index_key: str = "clean_engineering"
@@ -60,7 +60,7 @@ class CleanEngineering:
     ) -> None:
         if fidelity == "language":
             raise ValueError(
-                "language is not a fidelity — it is a companion prose layer refined at "
+                "language is not a fidelity - it is a companion prose layer refined at "
                 "every stage. Use fidelity 'modules' (after partition), then 'model', "
                 f"'specification', or 'code'. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
             )
@@ -74,7 +74,7 @@ class CleanEngineering:
         )
         self.fidelity = fidelity
 
-    # Resolves to § Contexts in clean_engineering.md (fidelities + design vocabulary).
+    # Resolves to # Contexts in clean_engineering.md (fidelities + design vocabulary).
     @instruction
     def contexts(self) -> Instruction: ...
 
@@ -85,7 +85,7 @@ class CleanEngineering:
         drawio auto-selects modules view (system-context style) vs UML class view from model content.
         Generate AI surfaces: markdown / python / javascript templates under templates/;
         modules.drawio for modules-fidelity diagrams (seam bullets + dependency arrows).
-        Moves content sideways between formats at the same fidelity — no analytical upgrade."""
+        Moves content sideways between formats at the same fidelity - no analytical upgrade."""
         if source_format not in _CHANNELS:
             raise ValueError(
                 f"Unsupported source_format {source_format!r}. Choose from: {sorted(_CHANNELS)}"

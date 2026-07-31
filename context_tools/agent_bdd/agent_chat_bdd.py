@@ -1,4 +1,4 @@
-"""In-chat agent BDD harness — fulfills instruct steps via inbox response files."""
+"""In-chat agent BDD harness - fulfills instruct steps via inbox response files."""
 from __future__ import annotations
 
 import sys
@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-import agent_bdd.conf  # noqa: F401 — secrets + import paths
+import agent_bdd.conf  # noqa: F401 - secrets + import paths
 
 from agent_bdd.agent_bdd_common import (
     AgentHarnessError,
@@ -59,7 +59,7 @@ class ChatAgentBlock:
 
     def instruct(self, prompt: str, *, timeout_seconds: int = 300) -> AgentResult:
         prefix = self._next_instruct_prefix("setup")
-        log_harness("agent_chat_bdd", f"{prefix} prompt: {prompt[:120]}{'…' if len(prompt) > 120 else ''}")
+        log_harness("agent_chat_bdd", f"{prefix} prompt: {prompt[:120]}{'...' if len(prompt) > 120 else ''}")
         self._write_artifact(f"{prefix}-prompt.txt", prompt)
         stdout = self._wait_for_inbox(prefix, prompt, timeout_seconds=timeout_seconds)
         self._write_artifact(f"{prefix}-response.txt", stdout)
@@ -68,7 +68,7 @@ class ChatAgentBlock:
     def instruct_use_tool(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
         full_prompt = prompt.rstrip() + RUN_PROMPT_SUFFIX
         prefix = self._next_instruct_prefix("run")
-        log_harness("agent_chat_bdd", f"{prefix} prompt: {full_prompt[:120]}{'…' if len(full_prompt) > 120 else ''}")
+        log_harness("agent_chat_bdd", f"{prefix} prompt: {full_prompt[:120]}{'...' if len(full_prompt) > 120 else ''}")
         self._write_artifact(f"{prefix}-prompt.txt", full_prompt)
         stdout = self._wait_for_inbox(prefix, full_prompt, timeout_seconds=timeout_seconds)
         self._write_artifact(f"{prefix}-response.txt", stdout)
@@ -81,7 +81,7 @@ class ChatAgentBlock:
                 cli_output = run_yaml_request(yaml_body, self._workspace, prefix=prefix)
         if cli_output is None:
             raise AgentHarnessError(
-                "no python -m tools run output — chat runner must return fenced YAML",
+                "no python -m tools run output - chat runner must return fenced YAML",
                 prefix=prefix,
                 stdout=stdout,
                 log_dir=self._log_dir,
@@ -115,7 +115,7 @@ class ChatAgentBlock:
                 stdout=judge_stdout,
                 log_dir=self._log_dir,
             )
-        log_harness("agent_chat_bdd", f"judge verdict: {verdict} — {reason}")
+        log_harness("agent_chat_bdd", f"judge verdict: {verdict} - {reason}")
         return JudgeResult(verdict=verdict, reason=reason, elapsed_seconds=0.0)
 
     def _finalize_run_response(self, prefix: str, cli_output: str) -> RunResponse:

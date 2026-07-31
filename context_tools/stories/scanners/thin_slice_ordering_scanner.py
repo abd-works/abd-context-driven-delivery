@@ -1,4 +1,4 @@
-"""thin-slice-ordering — every increment names a decision prompt."""
+"""thin-slice-ordering - every increment names a decision prompt."""
 
 from __future__ import annotations
 

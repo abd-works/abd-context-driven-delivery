@@ -1,1 +1,1 @@
-"""CDD — context-driven delivery orchestrator concept."""
+"""CDD - context-driven delivery orchestrator concept."""

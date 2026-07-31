@@ -1,4 +1,4 @@
-"""Convert UxMap → drawio-ux CLI state (Detailed IA + Site Map)."""
+"""Convert UxMap -> drawio-ux CLI state (Detailed IA + Site Map)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from context_tools.ux.ux_model.layouts import resolve_layout
 from context_tools.ux.ux_model.nodes import Control, Region, Screen
 from context_tools.ux.ux_model.ux_map import UxMap
 
-# Layouts the CLI templates understand (alias → CLI id).
+# Layouts the CLI templates understand (alias -> CLI id).
 _CLI_LAYOUTS = {
     "stack": "stack",
     "list": "stack",
@@ -38,7 +38,7 @@ def ux_map_to_cli_state(ux_map: UxMap, target: str = "") -> Dict[str, Any]:
             "terms": list(screen.domain_terms or screen.domain_concepts),
         }
         if screen.inactive_tabs:
-            # Sibling chrome hint — kept as callout note via terms if needed.
+            # Sibling chrome hint - kept as callout note via terms if needed.
             pass
         screens.append(entry)
 

@@ -1,4 +1,4 @@
-"""story-map-outline-shape — shaping fidelity outline constraints."""
+"""story-map-outline-shape - shaping fidelity outline constraints."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ class StoryMapOutlineShapeScanner(StoryWorkspaceScanner):
 
         if sm.epics and not has_estimate_only_sub_epic:
             yield self.violation(
-                "Every sub-epic has named stories — map appears to be at discovery depth, not shaping",
+                "Every sub-epic has named stories - map appears to be at discovery depth, not shaping",
                 location="story-map.md",
                 severity="warning",
             )

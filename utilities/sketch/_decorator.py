@@ -1,4 +1,4 @@
-"""@sketch decorator — chains Sketcher.sketch_session in front of an @action.
+"""@sketch decorator - chains Sketcher.sketch_session in front of an @action.
 
 sketch_session calls grill_with_context in-method; expanding the chain pulls
 that nested grill prose then sketch cadence.

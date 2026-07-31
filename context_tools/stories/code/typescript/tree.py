@@ -1,4 +1,4 @@
-"""TypeScript tree — `*_story.ts` per Story folder."""
+"""TypeScript tree - `*_story.ts` per Story folder."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def _helper(epic: Epic) -> str:
     factories = collect_example_factories(epic)
     helper_class = f"{to_pascal(epic.name)}Helper"
     lines = [
-        "/** Epic helper — ExampleFactory accessors; AI fills given_* bodies. */",
+        "/** Epic helper - ExampleFactory accessors; AI fills given_* bodies. */",
         "",
     ]
     if factories:
@@ -51,7 +51,7 @@ def _helper(epic: Epic) -> str:
         lines.append("")
     lines.append(f"export class {helper_class} {{")
     lines.append(
-        "  // explore/spec → fake mode; tier specs → isolated|production"
+        "  // explore/spec -> fake mode; tier specs -> isolated|production"
     )
     for name in factories:
         method = name[0].lower() + name[1:]

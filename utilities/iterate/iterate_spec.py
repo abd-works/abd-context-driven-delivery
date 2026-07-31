@@ -1,4 +1,4 @@
-"""BDD spec for iterate — @iterate decorator + Iterator toolset + ActionExpander integration."""
+"""BDD spec for iterate - @iterate decorator + Iterator toolset + ActionExpander integration."""
 
 import sys
 from pathlib import Path

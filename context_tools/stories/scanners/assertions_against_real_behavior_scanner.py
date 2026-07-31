@@ -1,4 +1,4 @@
-"""assertions-against-real-behavior — tests carry real assertions on real imports."""
+"""assertions-against-real-behavior - tests carry real assertions on real imports."""
 
 from __future__ import annotations
 

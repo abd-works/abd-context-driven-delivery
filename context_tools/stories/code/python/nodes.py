@@ -105,6 +105,6 @@ class PythonStoryMap(StoryMap):
 
 
 def _scenario_name_from_test(test_name: str) -> str:
-    """Best-effort: test_order_accepted_… → order accepted …"""
+    """Best-effort: test_order_accepted_... -> order accepted ..."""
     slug = test_name[5:] if test_name.startswith("test_") else test_name
     return slug.replace("_", " ").strip()

@@ -4,7 +4,7 @@
 # invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
 # invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
 """
-"""Example factory seams at model fidelity — I{Class} only.
+"""Example factory seams at model fidelity - I{Class} only.
 
 PATTERN: I{Type} / {Type} (production) / {Type}ExampleFactory.
 Modes (not subclasses):
@@ -35,7 +35,7 @@ class ICart(ABC):
 
 
 class IProduct(ABC):
-    """Product contract — often bundled with cart in the same example_key."""
+    """Product contract - often bundled with cart in the same example_key."""
 
     @abstractmethod
     def __init__(self) -> None: ...

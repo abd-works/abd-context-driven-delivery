@@ -8,7 +8,7 @@ Language-specific scanners
 --------------------------
 Pass ``language="python"`` (or ``"javascript"``, etc.) to look inside ``scanners/<language>/``
 instead of ``scanners/`` directly.  Rule frontmatter stays the same plain stem regardless of
-language — only the lookup path changes:
+language - only the lookup path changes:
 
     scanner: orchestrator_pattern_scanner.py   # resolves to scanners/python/ when --language python
 
@@ -48,13 +48,13 @@ def _resolve_scanner_value(
     """Map ``scanner:`` frontmatter to a relative path under ``scanners/``.
 
     Resolution order (first match wins):
-    1. ``scanners/<language>/<filename>``  — when ``language`` is given
-    2. ``scanners/<filename>``             — flat layout (backward compat)
+    1. ``scanners/<language>/<filename>``  - when ``language`` is given
+    2. ``scanners/<filename>``             - flat layout (backward compat)
 
     ``<filename>`` is derived from ``raw``:
-    - ends with ``.py``      → used as-is
-    - ends with ``-scanner`` → ``{raw}.py``
-    - otherwise              → ``{raw}-scanner.py``
+    - ends with ``.py``      -> used as-is
+    - ends with ``-scanner`` -> ``{raw}.py``
+    - otherwise              -> ``{raw}-scanner.py``
 
     Rejects values containing path separators or ``..`` to prevent traversal.
     """

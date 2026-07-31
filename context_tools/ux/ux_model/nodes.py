@@ -102,10 +102,10 @@ class Control(UxNode):
 class StoryDemoControl(Control):
     """Control subtype for Story Demo Play / Interactive bindings.
 
-    Interactive extras (domain-agnostic — not catalog/cart-specific):
-    - set_input — DOM → scenario.input(key) (list pick or host)
-    - item_story_steps — shared When on a bound-list host (rows fill {name}/{product})
-    - item_value / item_label — which item field is the pick value / row label template
+    Interactive extras (domain-agnostic - not catalog/cart-specific):
+    - set_input - DOM -> scenario.input(key) (list pick or host)
+    - item_story_steps - shared When on a bound-list host (rows fill {name}/{product})
+    - item_value / item_label - which item field is the pick value / row label template
     """
 
     _semantic_type_name = "StoryDemoControl"
@@ -124,7 +124,7 @@ class StoryDemoControl(Control):
         item_label: str = "",
     ) -> None:
         super().__init__(name, sequential_order, control_type, label, bound_field)
-        # [{ "kind": "given"|"when"|"then", "label": "…" }, …]
+        # [{ "kind": "given"|"when"|"then", "label": "..." }, ...]
         self.story_steps: List[Dict[str, Any]] = [
             {"kind": s.get("kind", ""), "label": s.get("label", "")}
             for s in (story_steps or [])
@@ -413,7 +413,7 @@ class NavComponent(UxComponent):
 
 
 class UxContext(UxNode):
-    """Optional notes — invariants / thinking not on screens."""
+    """Optional notes - invariants / thinking not on screens."""
 
     _semantic_type_name = "UxContext"
 

@@ -1,4 +1,4 @@
-"""BDD spec for Repair kit — action expansion on BaseContextTool hosts."""
+"""BDD spec for Repair kit - action expansion on BaseContextTool hosts."""
 
 import sys
 from pathlib import Path
@@ -94,7 +94,7 @@ with description("Repair on a BaseContextTool host"):
                         "context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md"
                     ),
                     "violation": (
-                        "Scanner: use-driving-voice — chronicle reads like a spec sheet"
+                        "Scanner: use-driving-voice - chronicle reads like a spec sheet"
                     ),
                 },
             )

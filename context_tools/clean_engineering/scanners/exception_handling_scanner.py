@@ -1,4 +1,4 @@
-"""Scanner: bare/pass except — reads Operation except line lists."""
+"""Scanner: bare/pass except - reads Operation except line lists."""
 from pathlib import Path
 
 from code_scanner import CodeScanner

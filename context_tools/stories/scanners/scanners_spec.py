@@ -1,4 +1,4 @@
-"""BDD spec — Stories scanners discover and run against discovery fixtures."""
+"""BDD spec - Stories scanners discover and run against discovery fixtures."""
 
 import sys
 from pathlib import Path

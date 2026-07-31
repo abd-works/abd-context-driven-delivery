@@ -1,4 +1,4 @@
-"""screen-story-budget — ~4 user stories per screen; 5+ is a warning signal."""
+"""screen-story-budget - ~4 user stories per screen; 5+ is a warning signal."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ class ScreenStoryBudgetScanner(UxWorkspaceScanner):
             count = len(screen.story_names)
             if count > _SOFT_MAX:
                 yield self.violation(
-                    f"screen {screen.name!r} has {count} stories (budget ~{_SOFT_MAX}) — "
+                    f"screen {screen.name!r} has {count} stories (budget ~{_SOFT_MAX}) - "
                     "look for a missed tab, detail, or mode screen",
                     location=f"screen:{screen.name}",
                     severity="warning",

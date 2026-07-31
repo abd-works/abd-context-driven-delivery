@@ -1,7 +1,7 @@
-"""vocabulary-traces-to-domain-source — terms must trace to a domain source.
+"""vocabulary-traces-to-domain-source - terms must trace to a domain source.
 
 Applicability gate: skips when no domain source is present. Term-by-term
-traceability is AI-judge territory — this scanner yields no mechanical
+traceability is AI-judge territory - this scanner yields no mechanical
 violations of its own.
 """
 
@@ -24,7 +24,7 @@ class VocabularyTracesToDomainSourceScanner(StoryWorkspaceScanner):
         if not self._has_domain_source(workspace):
             return
         return
-        yield  # pragma: no cover — keeps method a generator
+        yield  # pragma: no cover - keeps method a generator
 
     def _has_domain_source(self, workspace) -> bool:
         for name in _DOMAIN_SOURCE_NAMES:

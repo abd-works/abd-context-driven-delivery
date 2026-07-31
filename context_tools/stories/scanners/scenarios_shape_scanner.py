@@ -1,4 +1,4 @@
-"""scenarios-shape — validates the fundamental Gherkin skeleton."""
+"""scenarios-shape - validates the fundamental Gherkin skeleton."""
 
 from __future__ import annotations
 

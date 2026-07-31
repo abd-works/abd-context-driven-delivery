@@ -1,4 +1,4 @@
-"""Story data — regeneratable. Do not add logic or imports."""
+"""Story data - regeneratable. Do not add logic or imports."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ REQUEST_ORDER_CANCELLATION: Final = {
     "story":        "Request Order Cancellation",
     "actor":        "Customer",
     "domain_terms": ("Order", "Cancellation Request", "Cancellation Reason", "Order Status"),
-    "evidence":     ("Cancellation policy doc v2 §3", "Customer support call review 2026-05-18"),
+    "evidence":     ("Cancellation policy doc v2 #3", "Customer support call review 2026-05-18"),
 
     "cancellation_accepted_before_shipment": {
         "name":         "cancellation accepted while the order is still placed",

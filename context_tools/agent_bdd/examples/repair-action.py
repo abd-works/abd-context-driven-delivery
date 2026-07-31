@@ -5,7 +5,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: context_tools/agent_bdd/.agent_bdd_sessions/repair-action-example.json
-"""Example — repair action; assert on tools list and argument substitution inline."""
+"""Example - repair action; assert on tools list and argument substitution inline."""
 from pathlib import Path
 
 from expects import be_true, contain, equal, expect
@@ -21,7 +21,7 @@ toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:
 action: repair
 arguments:
   asset: context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md
-  violation: Scanner use-driving-voice — chronicle reads like a spec sheet
+  violation: Scanner use-driving-voice - chronicle reads like a spec sheet
 """
 
 with description("a CarChronicle generator"):

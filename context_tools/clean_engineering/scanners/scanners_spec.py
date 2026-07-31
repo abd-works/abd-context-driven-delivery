@@ -1,4 +1,4 @@
-"""BDD spec for scanners/scanner-behavior.md — one repair fixture pair test per Clean Code python scanner."""
+"""BDD spec for scanners/scanner-behavior.md - one repair fixture pair test per Clean Code python scanner."""
 
 import tempfile
 from pathlib import Path

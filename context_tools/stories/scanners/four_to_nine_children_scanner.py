@@ -1,4 +1,4 @@
-"""four-to-nine-children — every parent has 4–9 direct children."""
+"""four-to-nine-children - every parent has 4-9 direct children."""
 
 from __future__ import annotations
 

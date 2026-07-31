@@ -1,4 +1,4 @@
-"""Markdown channel — optional UxContext / scratch notes; not mandatory generate path."""
+"""Markdown channel - optional UxContext / scratch notes; not mandatory generate path."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""BDD spec — Epics that declare ExampleFactories emit factory links in helpers and markdown."""
+"""BDD spec - Epics that declare ExampleFactories emit factory links in helpers and markdown."""
 
 import sys
 from pathlib import Path

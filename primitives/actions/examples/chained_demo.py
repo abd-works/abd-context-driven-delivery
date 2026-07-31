@@ -1,6 +1,6 @@
 """Minimal demo for testing framework chain navigation in isolation.
 
-Uses add_action_wrapper directly — no dependency on @sketch, @grill_with_context,
+Uses add_action_wrapper directly - no dependency on @sketch, @grill_with_context,
 or any other domain decorator. Two stub wrappers (alpha, beta) chain onto a base
 action so chain_navigation injection can be verified without importing other modules.
 """
@@ -112,7 +112,7 @@ _ActionRunner.instance().validate_toolset(SuperDelegationBase)
 class SuperDelegationChild(SuperDelegationBase):
     """Child that delegates to super().generate() and adds a wrapper on top.
 
-    ``@beta`` on the base generate is inherited automatically — do not redeclare it.
+    ``@beta`` on the base generate is inherited automatically - do not redeclare it.
     """
 
     @alpha
@@ -124,7 +124,7 @@ class SuperDelegationChild(SuperDelegationBase):
 
 
 class InheritOnlyChild(SuperDelegationBase):
-    """Override with bare @action — still inherits base @beta."""
+    """Override with bare @action - still inherits base @beta."""
 
     @action
     def generate(self) -> str:
@@ -138,7 +138,7 @@ _ActionRunner.instance().validate_toolset(SuperDelegationChild)
 
 
 class AutoSuperChild(SuperDelegationBase):
-    """Child with empty body — ActionExpander auto-delegates to parent generate."""
+    """Child with empty body - ActionExpander auto-delegates to parent generate."""
 
     @alpha
     @action
@@ -150,7 +150,7 @@ _ActionRunner.instance().validate_toolset(AutoSuperChild)
 
 
 class AutoSuperWithReturn(SuperDelegationBase):
-    """Empty steps but custom return — parent tools/prose, child result template."""
+    """Empty steps but custom return - parent tools/prose, child result template."""
 
     @action
     def generate(self) -> str:
@@ -164,7 +164,7 @@ _ActionRunner.instance().validate_toolset(AutoSuperWithReturn)
 
 @toolset
 class StaticKwargsDemo:
-    """Wrapper with static_kwargs — verifies manifest chain dict serialization."""
+    """Wrapper with static_kwargs - verifies manifest chain dict serialization."""
 
     @static_wrapper
     @action

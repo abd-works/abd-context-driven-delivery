@@ -7,9 +7,9 @@ doc. This module extracts them so the code-emission pipeline knows which
 
 Detection order:
 
-1. Prose scan — look for lines like "Tiers: server, client, e2e, domain" or
+1. Prose scan - look for lines like "Tiers: server, client, e2e, domain" or
    a bullet block naming tier participants under an "Tiers" heading.
-2. Filesystem fallback — if no prose declaration is found, walk `tests-root`
+2. Filesystem fallback - if no prose declaration is found, walk `tests-root`
    and infer tiers from existing `<slug>-<tier>.<ext>` filenames. This keeps
    the pipeline useful before a project has authored its arch context.
 
@@ -71,7 +71,7 @@ def _read_from_prose(text: str) -> Tuple[str, ...]:
             continue
         return _split_tier_list(m.group(1))
 
-    # No "Tiers: ..." line — try a bulleted block under a "Testing tiers" heading.
+    # No "Tiers: ..." line - try a bulleted block under a "Testing tiers" heading.
     heading_re = re.compile(r"^#+\s+.*tiers?\b", re.IGNORECASE)
     for i, line in enumerate(lines):
         if not heading_re.match(line):

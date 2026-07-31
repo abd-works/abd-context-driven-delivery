@@ -1,4 +1,4 @@
-"""JSON channel — round-trip UxMap fields for transform and scanners."""
+"""JSON channel - round-trip UxMap fields for transform and scanners."""
 
 from __future__ import annotations
 

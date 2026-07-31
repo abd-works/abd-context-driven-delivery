@@ -1,4 +1,4 @@
-"""Layout catalog — thin vocabulary from IA screen-templates."""
+"""Layout catalog - thin vocabulary from IA screen-templates."""
 
 import sys
 from pathlib import Path

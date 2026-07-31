@@ -1,10 +1,10 @@
-"""JavaScriptStoryMap — CodeStoryMap backend for runnable `*_story.js` files.
+"""JavaScriptStoryMap - CodeStoryMap backend for runnable `*_story.js` files.
 
 Explore / specification leaf shape (via ``story_file.render_story_file``):
 
   export function createSubmitOrderStory(mode) {
     story("Submit Order", () => {
-      scenario("…", ({ given, when, then }) => { … });
+      scenario("...", ({ given, when, then }) => { ... });
     });
   }
 
@@ -71,20 +71,20 @@ class JavaScriptStoryMap(CodeStoryMap):
 
     def parse(self, external: Dict[str, str]) -> StoryMap:
         if not isinstance(external, dict):
-            raise CodeStoryMapError("JavaScript story map parse expects a path→content dict")
+            raise CodeStoryMapError("JavaScript story map parse expects a path->content dict")
         story_map = self._make_story_map()
         # Group *_story.js by epic / sub-epic / story folder
         for path, content in sorted(external.items()):
             if not path.endswith(self.LEAF_EXTENSION):
                 continue
             parts = path.strip("/").split("/")
-            # tests/epic/sub/story/name_story.js  → need ≥ 5 parts with tests root
+            # tests/epic/sub/story/name_story.js  -> need >= 5 parts with tests root
             if len(parts) < 4:
                 continue
             # Drop tests_root if present
             if parts[0] == self.tests_root:
                 parts = parts[1:]
-            # epic / …subs… / story-folder / file
+            # epic / ...subs... / story-folder / file
             if len(parts) < 4:
                 continue
             epic_slug = parts[0]

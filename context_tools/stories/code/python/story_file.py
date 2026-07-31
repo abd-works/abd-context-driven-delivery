@@ -4,7 +4,7 @@ Emits a mode-parameterized story function with GWT stubs for AI to fill:
 
     def create_submit_order_story(mode: str = "fake") -> None:
         def test_main_flow() -> None:
-            # given / when / then stubs → helper → ExampleFactory
+            # given / when / then stubs -> helper -> ExampleFactory
             ...
         # register tests...
 
@@ -41,7 +41,7 @@ def render_story_file(
         lines.append(f"Domain terms: {', '.join(domain)}")
     if evidence:
         lines.append(f"Evidence: {', '.join(evidence)}")
-    lines.append("Wired to ExampleFactory fakes — not a tier test.")
+    lines.append("Wired to ExampleFactory fakes - not a tier test.")
     lines.append("Assert the public interface of I{Type} only.")
     lines.append(
         f"Specs: {to_snake(story.name)}_spec.py (isolated); "
@@ -70,7 +70,7 @@ def render_story_file(
         lines.extend(_render_scenario(scenario, indent="    "))
 
     lines.append("")
-    lines.append("# Story path — fake when this module is the pytest/entry module")
+    lines.append("# Story path - fake when this module is the pytest/entry module")
     lines.append(f'{fn}("fake")')
     lines.append("")
     return "\n".join(lines)
@@ -81,7 +81,7 @@ def render_tier_spec_file(story: Story, *, tier: str) -> str:
     module = f"{to_snake(story.name)}_story"
     lines = [
         '"""',
-        f"Tier: {tier} — same {story.name} story.",
+        f"Tier: {tier} - same {story.name} story.",
         "ExampleFactory builds types with injected deps (isolated) or real collaborators.",
         '"""',
         "",
@@ -112,9 +112,9 @@ def _render_scenario(scenario, *, indent: str) -> List[str]:
     if example_rows:
         lines.append(f"{indent}    EXAMPLES: see ExampleFactory / markdown examples table")
     lines.append(f'{indent}    """')
-    lines.append(f"{indent}    # given — helper.given_…(mode=mode) → fake I{{Type}}")
-    lines.append(f"{indent}    # when — exercise public operations")
-    lines.append(f"{indent}    # then — assert public interface only (AI fills)")
+    lines.append(f"{indent}    # given - helper.given_...(mode=mode) -> fake I{{Type}}")
+    lines.append(f"{indent}    # when - exercise public operations")
+    lines.append(f"{indent}    # then - assert public interface only (AI fills)")
     lines.append(f"{indent}    assert True  # replace with public-seam assertion")
     lines.append("")
     return lines

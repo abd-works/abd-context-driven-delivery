@@ -1,4 +1,4 @@
-"""Scanner: too many or vague parameters — reads Operation.param_count / parameters."""
+"""Scanner: too many or vague parameters - reads Operation.param_count / parameters."""
 from pathlib import Path
 
 from code_scanner import CodeScanner

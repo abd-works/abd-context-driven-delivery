@@ -3,10 +3,10 @@
 Renders ES6 class stubs with constructor and stub method bodies (no types).
 Parses class names from JavaScript source.
 
-Companion resolution: production {Type} → I{Type}.
+Companion resolution: production {Type} -> I{Type}.
 Legacy Fake|Isolated|Production{Type} names still resolve to I{Type} if present.
 {Type}ExampleFactory stays a plain class (no ExampleLoader base).
-Do not emit Fake/Isolated/Production subclasses — those are factory modes.
+Do not emit Fake/Isolated/Production subclasses - those are factory modes.
 """
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ from context_tools.clean_engineering.class_model.update_report import UpdateRepo
 
 
 def _camel(name: str) -> str:
-    """snake_case / plain → camelCase for JS members and params."""
+    """snake_case / plain -> camelCase for JS members and params."""
     raw = (name or "").strip()
     if not raw:
         return raw
@@ -115,26 +115,26 @@ class JavaScriptCleanEngineeringModel(CleanEngineeringModel):
             return "\n".join(lines)
 
         if is_example_factory_name(oclass.name):
-            lines.append("// example factory — plain class; no ExampleLoader base")
+            lines.append("// example factory - plain class; no ExampleLoader base")
             if iface:
                 lines.append(f"// implements {iface}")
             lines.append(f"class {oclass.name} {{")
             for op in oclass.operations:
                 lines.append(f"  {_camel(op.name)}({_camel_params(op.parameters)}) {{ }}")
             if not oclass.operations and not oclass.properties:
-                lines.append("  // load{ExampleKey}() — examples[{example_key}] multi-type bundle")
+                lines.append("  // load{ExampleKey}() - examples[{example_key}] multi-type bundle")
             lines.append("}")
             return "\n".join(lines)
 
         if kind:
-            # Legacy Fake/Isolated/Production class names — do not emit subclasses.
+            # Legacy Fake/Isolated/Production class names - do not emit subclasses.
             note = {
-                "Fake": "mode: mock/stub framework + examples — not a generated class",
-                "Isolated": "mode: new Type(...ctor-injected mocks...) — not a generated class",
-                "Production": "mode: new Type(...real collaborators...) — use production class",
+                "Fake": "mode: mock/stub framework + examples - not a generated class",
+                "Isolated": "mode: new Type(...ctor-injected mocks...) - not a generated class",
+                "Production": "mode: new Type(...real collaborators...) - use production class",
             }.get(kind, "")
             return (
-                f"// {oclass.name} — deprecated as a type. {note}\n"
+                f"// {oclass.name} - deprecated as a type. {note}\n"
                 f"// Use {base_type_name_for(oclass.name)}ExampleFactory modes instead."
             )
 

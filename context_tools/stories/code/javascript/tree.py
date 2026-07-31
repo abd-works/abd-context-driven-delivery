@@ -1,4 +1,4 @@
-"""JavaScript tree renderer — full file tree for a Workspace.
+"""JavaScript tree renderer - full file tree for a Workspace.
 
 Story folder layout (explore / specification):
 
@@ -67,7 +67,7 @@ def _render_epic_helper(epic: Epic) -> str | None:
     lines.extend(render_js_factory_imports(factories))
     lines.append(f"export class {helper_class} {{")
     lines.append(
-        "  /** Shared given/when/then helpers. Call ExampleFactory methods — do not invent Fakes. */"
+        "  /** Shared given/when/then helpers. Call ExampleFactory methods - do not invent Fakes. */"
     )
     lines.append("  /** Explore/spec default: mode \"fake\". Tiers pass isolated|production. */")
     lines.append("")

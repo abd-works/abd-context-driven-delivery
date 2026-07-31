@@ -1,4 +1,4 @@
-"""BDD spec for CleanEngineering transform tool — sideways format conversion."""
+"""BDD spec for CleanEngineering transform tool - sideways format conversion."""
 
 import sys
 from pathlib import Path
@@ -302,7 +302,7 @@ with description("OoadAnalysis transform tool"):
         with it("should not include stack/tech callouts"):
             expect("stack / tech" in self.result["content"]).to(equal(False))
 
-        with it("should draw character → checks dependency"):
+        with it("should draw character -> checks dependency"):
             expect(self.result["content"]).to(contain('source="character"'))
             expect(self.result["content"]).to(contain('target="checks"'))
 

@@ -6,17 +6,17 @@ Markdown artifact context_tools/stories/src has a first-class renderer for
 (`MarkdownStoryMap` in `markdown_story_map.py`).
 
 When adapters for `thin-slice.md`, `scenarios/*.md`, and `story-context.md`
-land, this function is the single place to grow — the CLI does not need to
+land, this function is the single place to grow - the CLI does not need to
 change.
 
 Signature parity with the code backends
 ---------------------------------------
 
-- `story_map` — canonical StoryMap (matches `render_ts_tree` etc.).
-- `tests_root` — sub-folder prefix. Defaults to `""` because Markdown
+- `story_map` - canonical StoryMap (matches `render_ts_tree` etc.).
+- `tests_root` - sub-folder prefix. Defaults to `""` because Markdown
   artifacts sit at the workspace root by convention (`story-map.md`,
-  `thin-slice.md`) — no `tests/` intermediary.
-- `include_shared` — accepted for parity and ignored. Markdown has no
+  `thin-slice.md`) - no `tests/` intermediary.
+- `include_shared` - accepted for parity and ignored. Markdown has no
   shared/template files.
 """
 
@@ -36,7 +36,7 @@ def render_md_tree(
 ) -> Dict[str, str]:
     """Render Markdown artifacts for `story_map`.
 
-    Returns an empty dict when the story map has no epics — no point writing
+    Returns an empty dict when the story map has no epics - no point writing
     an empty `story-map.md`. Callers can rely on `if not tree:` to detect
     that case rather than probing artifact-by-artifact.
     """

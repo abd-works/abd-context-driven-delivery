@@ -1,9 +1,9 @@
-"""DrawIO format story nodes — all seven StoryNode subtypes plus I/O.
+"""DrawIO format story nodes - all seven StoryNode subtypes plus I/O.
 
 Three views:
-- story-map  render(canonical)            — Epic → SubEpic → Story grid
-- thin-slice render_thin_slice(canonical) — Epic/sub-epic column headers × increment swim-lane rows
-- scenario   render_scenario(canonical)   — Story + Scenario + Clause cells
+- story-map  render(canonical)            - Epic -> SubEpic -> Story grid
+- thin-slice render_thin_slice(canonical) - Epic/sub-epic column headers x increment swim-lane rows
+- scenario   render_scenario(canonical)   - Story + Scenario + Clause cells
 """
 
 from __future__ import annotations
@@ -145,7 +145,7 @@ def _max_sub_epic_depth(story_map: StoryMap) -> int:
 
 
 def _subepic_y_for_depth(base_y: int, depth: int) -> int:
-    """Parent sub-epics above children: depth 0 at base_y, depth 1 below, …"""
+    """Parent sub-epics above children: depth 0 at base_y, depth 1 below, ..."""
     return base_y + depth * (SUBEPIC_HEIGHT + SUBEPIC_DEPTH_GAP)
 
 
@@ -171,7 +171,7 @@ def _layout_rows(story_map: StoryMap) -> tuple[int, int]:
     return base, detail
 
 
-# ── Leaf node types ───────────────────────────────────────────────────────────
+# -- Leaf node types -----------------------------------------------------------
 
 class DrawIOIncrement(Increment):
     pass
@@ -200,7 +200,7 @@ class DrawIOEpic(Epic):
         return DrawIOSubEpic(source.name, source.sequential_order)
 
 
-# ── Root node + I/O ───────────────────────────────────────────────────────────
+# -- Root node + I/O -----------------------------------------------------------
 
 class DrawIOParseError(Exception):
     """Raised when a document is not a valid Draw.io story map."""
@@ -219,7 +219,7 @@ class DrawIOStoryMap(StoryMap):
     def create_child_increment(self, source: Increment) -> DrawIOIncrement:
         return DrawIOIncrement(source.name, source.sequential_order)
 
-    # ── Uniform Callable Surface ──────────────────────────────────────────────
+    # -- Uniform Callable Surface ----------------------------------------------
 
     def render(self, canonical: "DrawIOStoryMap", previous: Optional[str] = None) -> str:
         mxfile = ET.Element("mxfile", attrib={"host": "app.diagrams.net"})
@@ -303,10 +303,10 @@ class DrawIOStoryMap(StoryMap):
     def sync(self, text: str, canonical: "DrawIOStoryMap") -> UpdateReport:
         return canonical.translate_from(self.parse(text))
 
-    # ── Thin-slice view ───────────────────────────────────────────────────────
+    # -- Thin-slice view -------------------------------------------------------
 
     def render_thin_slice(self, canonical: StoryMap) -> str:
-        """Render a swim-lane grid: epic/sub-epic columns × increment rows.
+        """Render a swim-lane grid: epic/sub-epic columns x increment rows.
 
         Row 1: Epic headers (same positions as story-map view).
         Row 2: Sub-epic headers.
@@ -320,7 +320,7 @@ class DrawIOStoryMap(StoryMap):
         ET.SubElement(graph_root, "mxCell", attrib={"id": "0"})
         ET.SubElement(graph_root, "mxCell", attrib={"id": "1", "parent": "0"})
 
-        # Build story → x-position map (same column positions as the story-map view).
+        # Build story -> x-position map (same column positions as the story-map view).
         story_x: Dict[str, int] = {}
         self._collect_story_x(canonical, story_x)
 
@@ -424,7 +424,7 @@ class DrawIOStoryMap(StoryMap):
                         inc.stories.append(value.strip())
         return increments
 
-    # ── Scenario view ─────────────────────────────────────────────────────────
+    # -- Scenario view ---------------------------------------------------------
 
     def render_scenario(self, canonical: StoryMap) -> str:
         root, graph_root, cell_id = self._new_document()
@@ -456,7 +456,7 @@ class DrawIOStoryMap(StoryMap):
             y += BLOCK_GAP
         return ET.tostring(root, encoding="unicode")
 
-    # ── Private helpers ───────────────────────────────────────────────────────
+    # -- Private helpers -------------------------------------------------------
 
     def _emit_epic(
         self,

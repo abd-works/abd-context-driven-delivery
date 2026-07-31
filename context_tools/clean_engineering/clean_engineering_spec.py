@@ -1,4 +1,4 @@
-"""BDD spec for clean_engineering — action expansion and scanner tools (in-process)."""
+"""BDD spec for clean_engineering - action expansion and scanner tools (in-process)."""
 
 import ast
 import re
@@ -18,7 +18,7 @@ for _cat in ("primitives", "utilities", "context_tools"):
         sys.path.insert(0, _p)
 
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
-import context_tools  # noqa: F401 — generator package on path
+import context_tools  # noqa: F401 - generator package on path
 from primitives.instructions import Instruction
 from scanners import ScannerCollection
 from tools.tool import Toolset, _ToolsetLoader
@@ -133,7 +133,7 @@ def _assert_contexts_inlined(instructions: str, concepts_text: str) -> None:
     for slug in slugs:
         expect(slug in instructions).to(be_true)
     # Prefer full-section inline; fall back to slug/bullet coverage when validate
-    # composes a shorter rubric than the full § Contexts body.
+    # composes a shorter rubric than the full # Contexts body.
     if concepts_text not in instructions:
         for bullet in bullets:
             expect(bullet in instructions).to(be_true)
@@ -247,7 +247,7 @@ with description("clean_engineering content helpers"):
 
     with context("concept_rule_slugs"):
         with it("should extract bold-backtick slugs from text"):
-            text = "- **`maintain-abstraction-levels`** — desc.\n- **`no-useless-comments`** — desc."
+            text = "- **`maintain-abstraction-levels`** - desc.\n- **`no-useless-comments`** - desc."
             expect(_context_rule_slugs(text)).to(equal(["maintain-abstraction-levels", "no-useless-comments"]))
 
         with it("should return empty list when no slugs present"):
@@ -255,7 +255,7 @@ with description("clean_engineering content helpers"):
 
     with context("concept_bullet_lines"):
         with it("should return lines containing a slug"):
-            text = "- **`slug-one`** — desc.\nsome prose\n- **`slug-two`** — other."
+            text = "- **`slug-one`** - desc.\nsome prose\n- **`slug-two`** - other."
             lines = _concept_bullet_lines(text)
             expect(len(lines)).to(equal(2))
 

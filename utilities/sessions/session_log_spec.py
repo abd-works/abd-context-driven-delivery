@@ -1,4 +1,4 @@
-"""BDD development specs for session logging — usage order; describes are conditions, not hubs."""
+"""BDD development specs for session logging - usage order; describes are conditions, not hubs."""
 
 import sys
 import tempfile

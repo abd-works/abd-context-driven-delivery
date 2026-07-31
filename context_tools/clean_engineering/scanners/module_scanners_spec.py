@@ -46,7 +46,7 @@ _GOOD_CONTEXT = """
 
 ## Public API
 
-- `Cart` — running tally.
+- `Cart` - running tally.
 """.strip()
 
 _MINIMAL_CONTEXT = "# Cart\n\nA cart.\n"

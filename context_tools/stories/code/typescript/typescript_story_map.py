@@ -1,4 +1,4 @@
-"""TypeScriptStoryMap — runnable `*_story.ts` per Story."""
+"""TypeScriptStoryMap - runnable `*_story.ts` per Story."""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ class TypeScriptStoryMap(CodeStoryMap):
 
     def parse(self, external: Dict[str, str]) -> StoryMap:
         if not isinstance(external, dict):
-            raise CodeStoryMapError("TypeScript story map parse expects a path→content dict")
+            raise CodeStoryMapError("TypeScript story map parse expects a path->content dict")
         story_map = self._make_story_map()
         for path, content in sorted(external.items()):
             if not path.endswith(self.LEAF_EXTENSION):

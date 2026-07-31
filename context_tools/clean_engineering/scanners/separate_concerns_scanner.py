@@ -1,4 +1,4 @@
-"""Scanner: I/O mixed with calculation — reads Operation.callees / has_calculation."""
+"""Scanner: I/O mixed with calculation - reads Operation.callees / has_calculation."""
 from pathlib import Path
 
 from code_scanner import CodeScanner

@@ -48,17 +48,17 @@ class IShoppingCart(ABC):
 class ShoppingCart(IShoppingCart):
     """Running tally of what a customer intends to buy in a single shopping session."""
 
-    """@association — belongs to exactly one customer whose identity anchors the cart."""
+    """@association - belongs to exactly one customer whose identity anchors the cart."""
     @property
     def customer(self) -> Customer:
         return self._customer
 
-    """@composition — collects CartItems as the customer browses; keeps the total current."""
+    """@composition - collects CartItems as the customer browses; keeps the total current."""
     @property
     def items(self) -> list[CartItem]:
         return self._items
 
-    """@association — optional reduction rule applied before the total is computed."""
+    """@association - optional reduction rule applied before the total is computed."""
     @property
     def discount(self) -> Discount | None:
         return self._discount

@@ -1,4 +1,4 @@
-"""BDD spec for manifest-gate hook — scan, run manifests, deny-until-cleared."""
+"""BDD spec for manifest-gate hook - scan, run manifests, deny-until-cleared."""
 
 import json
 import sys
@@ -204,7 +204,7 @@ with description("handle_pre_tool_use (Write hook)"):
             expect(result["permission"]).to(equal("allow"))
 
 
-with description("parse_hook_payload — double-BOM regression"):
+with description("parse_hook_payload - double-BOM regression"):
     with context("given raw bytes with a single BOM"):
         with it("parses correctly"):
             payload = {"tool_name": "Read", "tool_input": {"path": "/tmp/x.py"}}

@@ -1,1 +1,1 @@
-"""Draw.io channel — default IA format."""
+"""Draw.io channel - default IA format."""

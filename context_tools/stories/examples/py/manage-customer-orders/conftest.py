@@ -1,4 +1,4 @@
-"""Test-root conftest — adds this folder to sys.path."""
+"""Test-root conftest - adds this folder to sys.path."""
 
 from __future__ import annotations
 

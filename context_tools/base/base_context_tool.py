@@ -1,7 +1,7 @@
 # @toolset-manifest python -m tools manifest context_tools.base.base_context_tool:BaseContextTool
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""BaseContextTool — composer + artifact lifecycle; shared face for every concrete domain."""
+"""BaseContextTool - composer + artifact lifecycle; shared face for every concrete domain."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ class BaseContextTool(
     WorkspaceSession,
     Toolset,
 ):
-    """§ Instructions"""
+    """# Instructions"""
 
     @property
     def module_dir(self) -> Path:
@@ -52,7 +52,7 @@ class BaseContextTool(
 
     @action
     def add_generate_header_to_generated(self) -> str:
-        """Prepend the following block verbatim as the very first lines of the file you are writing — before any imports, before any code."""
+        """Prepend the following block verbatim as the very first lines of the file you are writing - before any imports, before any code."""
         cls = type(self)
         return (
             '"""\n'
@@ -88,7 +88,7 @@ class BaseContextTool(
     @grill_with_context
     @action
     def grill(self) -> str:
-        """Grill then generate — pure grill loop, then the host generate body."""
+        """Grill then generate - pure grill loop, then the host generate body."""
         self.generate()
         return "Grill complete; generate instructions applied."
 
@@ -97,7 +97,7 @@ class BaseContextTool(
     @sketch
     @action
     def sketch(self) -> str:
-        """Sketch then generate — grill + sketch cadence, then the host generate body."""
+        """Sketch then generate - grill + sketch cadence, then the host generate body."""
         self.generate()
         return "Sketch complete; generate instructions applied."
 
@@ -106,7 +106,7 @@ class BaseContextTool(
     @iterate
     @action
     def iterate(self) -> str:
-        """Iterate then generate — grill + formal generate/validate/one-fix ticks."""
+        """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
         self.generate()
         return "Iterate complete; generate instructions applied."
 
@@ -125,7 +125,7 @@ class BaseContextTool(
         self.scan(paths)
         self.generate_output()
         self.add_generate_header_to_generated()
-        return "Document existing state under {session.path}/ — violations flagged, none corrected."
+        return "Document existing state under {session.path}/ - violations flagged, none corrected."
 
     @workspace_session
     @record_decisions
@@ -147,7 +147,7 @@ def base_context_tool(cls: T) -> T:
         return cls
     if issubclass(cls, BaseContextTool):
         raise TypeError(
-            f"{cls.__name__} must use @base_context_tool — do not subclass BaseContextTool directly"
+            f"{cls.__name__} must use @base_context_tool - do not subclass BaseContextTool directly"
         )
     merged = type(
         cls.__name__,

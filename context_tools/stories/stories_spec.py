@@ -1,4 +1,4 @@
-"""BDD spec for Stories generator — fidelity defaults, transform, context_tools."""
+"""BDD spec for Stories generator - fidelity defaults, transform, context_tools."""
 
 import sys
 from pathlib import Path
@@ -14,7 +14,7 @@ for _cat in ("primitives", "utilities", "context_tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import context_tools  # noqa: F401 — generator package on path
+import context_tools  # noqa: F401 - generator package on path
 from context_tools.stories.stories import Stories
 
 _SAMPLE_MARKDOWN = """\
@@ -81,7 +81,7 @@ with description("Stories transform tool"):
         with it("should set format to python"):
             expect(self.result["format"]).to(equal("python"))
 
-        with it("should set content to a dict of path→file text"):
+        with it("should set content to a dict of path->file text"):
             expect(isinstance(self.result["content"], dict)).to(be_true)
             expect(len(self.result["content"]) > 0).to(be_true)
             for path, text in self.result["content"].items():

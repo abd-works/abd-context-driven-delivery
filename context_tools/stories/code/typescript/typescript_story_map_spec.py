@@ -1,4 +1,4 @@
-"""BDD spec — TypeScript runnable-story Story Map."""
+"""BDD spec - TypeScript runnable-story Story Map."""
 
 import sys
 from pathlib import Path

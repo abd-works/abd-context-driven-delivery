@@ -1,4 +1,4 @@
-"""BDD spec for PartitionPipeline — kit prose on BaseContextTool hosts."""
+"""BDD spec for PartitionPipeline - kit prose on BaseContextTool hosts."""
 
 import sys
 from pathlib import Path

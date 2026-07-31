@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator
 
-import agent_bdd.conf  # noqa: F401 — secrets + import paths
+import agent_bdd.conf  # noqa: F401 - secrets + import paths
 
 from agent_bdd.agent_bdd_common import (
     CMDLINE_SAFE,
@@ -46,7 +46,7 @@ def _log(msg: str) -> None:
 
 
 class ToolAgentBlock:
-    """One cursor-agent session — multiple instructs share the same chat."""
+    """One cursor-agent session - multiple instructs share the same chat."""
 
     def __init__(self, workspace: Path, session_file: Path) -> None:
         self._workspace = workspace.resolve()
@@ -75,11 +75,11 @@ class ToolAgentBlock:
             raise RuntimeError("cursor-agent not found on PATH")
         completed = subprocess.run([exe, "status"], capture_output=True, text=True, timeout=30)
         if completed.returncode != 0:
-            raise RuntimeError("cursor-agent not authenticated — run `cursor-agent login` first")
+            raise RuntimeError("cursor-agent not authenticated - run `cursor-agent login` first")
 
     def instruct(self, prompt: str, *, timeout_seconds: int = 300) -> AgentResult:
         prefix = self._next_instruct_prefix("setup")
-        _log(f"{prefix} prompt: {prompt[:120]}{'…' if len(prompt) > 120 else ''}")
+        _log(f"{prefix} prompt: {prompt[:120]}{'...' if len(prompt) > 120 else ''}")
         self._write_artifact(f"{prefix}-prompt.txt", prompt)
         session = self._require_session()
         capture = self._run_capture(
@@ -94,13 +94,13 @@ class ToolAgentBlock:
         for index, shell in enumerate(capture.shell_captures, start=1):
             self._write_artifact(f"{prefix}-shell-{index:02d}-cmd.txt", shell.command)
             self._write_artifact(f"{prefix}-shell-{index:02d}-out.txt", shell.output)
-        _log(f"{prefix} response: {len(result.text)} chars → {self._log_dir / f'{prefix}-response.txt'}")
+        _log(f"{prefix} response: {len(result.text)} chars -> {self._log_dir / f'{prefix}-response.txt'}")
         return result
 
     def instruct_use_tool(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
         full_prompt = prompt.rstrip() + RUN_PROMPT_SUFFIX
         prefix = self._next_instruct_prefix("run")
-        _log(f"{prefix} prompt: {full_prompt[:120]}{'…' if len(full_prompt) > 120 else ''}")
+        _log(f"{prefix} prompt: {full_prompt[:120]}{'...' if len(full_prompt) > 120 else ''}")
         self._write_artifact(f"{prefix}-prompt.txt", full_prompt)
         capture: _AgentRunCapture | None = None
         timed_out = False
@@ -151,7 +151,7 @@ class ToolAgentBlock:
             cli_output = run_yaml_request(yaml_body, self._workspace, prefix=prefix)
             return self._finalize_run_response(prefix, None, cli_output)
         raise AgentHarnessError(
-            "no python -m tools run output — agent must invoke the toolset CLI",
+            "no python -m tools run output - agent must invoke the toolset CLI",
             prefix=prefix,
             stdout=capture.agent_result.text if capture else "",
             stderr=capture.agent_result.stderr if capture else "",
@@ -234,12 +234,12 @@ class ToolAgentBlock:
                 stderr=result.stderr,
                 log_dir=self._log_dir,
             )
-        _log(f"judge verdict: {verdict} — {reason}")
+        _log(f"judge verdict: {verdict} - {reason}")
         return JudgeResult(verdict=verdict, reason=reason, elapsed_seconds=result.elapsed_seconds)
 
     def _require_session(self) -> AgentSession:
         if self._session is None:
-            raise RuntimeError("agent session not started — use `with agent(...)`")
+            raise RuntimeError("agent session not started - use `with agent(...)`")
         return self._session
 
     def _run_capture(

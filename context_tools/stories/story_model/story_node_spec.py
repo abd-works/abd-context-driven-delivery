@@ -160,7 +160,7 @@ with description("a StoryNode") as self:
         "that has been translated from a source with a child moved to a different parent"
     ):
         with before.each:
-            # WHY: model move as two independent parent reconciliations — old parent
+            # WHY: model move as two independent parent reconciliations - old parent
             # sees a removal, new parent sees an addition. The BDD leaf verifies both.
             self.old_parent = _epic_with_children("Epic 1", 1, ["SubEpic 1"])
             self.new_parent = Epic("Epic 2", 2)

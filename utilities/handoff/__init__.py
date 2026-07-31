@@ -1,7 +1,7 @@
-"""Handoff — session handoff toolset for generator / grill / CDD work.
+"""Handoff - session handoff toolset for generator / grill / CDD work.
 
 Public exports:
-    Handoff — standalone handoff toolset (tools + handoff_session action)
+    Handoff - standalone handoff toolset (tools + handoff_session action)
 """
 from handoff.handoff import Handoff
 

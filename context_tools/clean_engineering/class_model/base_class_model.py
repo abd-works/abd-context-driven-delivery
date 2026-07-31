@@ -1,4 +1,4 @@
-"""Canonical CleanEngineering class model — OoadNode base and typed nodes."""
+"""Canonical CleanEngineering class model - OoadNode base and typed nodes."""
 
 from __future__ import annotations
 
@@ -53,14 +53,14 @@ def is_example_factory_name(name: str) -> bool:
 
 
 def example_factory_name_for(type_name: str) -> str:
-    """Cart or ICart → CartExampleFactory."""
+    """Cart or ICart -> CartExampleFactory."""
     return f"{base_type_name_for(type_name)}{_EXAMPLE_FACTORY_SUFFIX}"
 
 
 def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str | None:
     """If class_name has a sibling I{Class} in known_names, return that name.
 
-    Resolves production Class → IClass and Fake|Isolated|Production{Type} → I{Type}.
+    Resolves production Class -> IClass and Fake|Isolated|Production{Type} -> I{Type}.
     """
     if is_interface_name(class_name) or is_example_factory_name(class_name):
         return None
@@ -79,7 +79,7 @@ def companion_interface_name(class_name: str, known_names: Iterable[str]) -> str
 def ensure_example_factory_family(module: "Module", type_name: str) -> list["OoadClass"]:
     """Ensure I{Type}, production {Type}, and {Type}ExampleFactory exist.
 
-    Does **not** add Fake/Isolated/Production subclasses — those are factory modes
+    Does **not** add Fake/Isolated/Production subclasses - those are factory modes
     (mock framework / ctor injection / real collaborators), not types.
     ``type_name`` may be Cart, ICart, or a legacy FakeCart name (base is stripped).
     Returns the classes that were added.
@@ -92,7 +92,7 @@ def ensure_example_factory_family(module: "Module", type_name: str) -> list["Ooa
         (base, f"Production {base} implementing {iface}."),
         (
             factory,
-            f"Loads examples[{{example_key}}] — Fake via mock framework; "
+            f"Loads examples[{{example_key}}] - Fake via mock framework; "
             f"Isolated via {base} ctor injection; Production via real {base}.",
         ),
     ]
@@ -195,7 +195,7 @@ class Operation:
     parameters: List[str] = field(default_factory=list)
     return_type: str = ""
     description: str = ""
-    # Code facts — filled by language channel parse; formats may omit on render.
+    # Code facts - filled by language channel parse; formats may omit on render.
     line: int | None = None
     line_count: int = 0
     nesting_depth: int = 0
@@ -326,7 +326,7 @@ class CleanEngineeringModel(OoadNode):
 
     @property
     def classes(self) -> List[OoadClass]:
-        """Flat view of all classes across all modules — for backward compat."""
+        """Flat view of all classes across all modules - for backward compat."""
         return [cls for module in self.modules for cls in module.classes]
 
     def update_self(self, source: "OoadNode") -> None:

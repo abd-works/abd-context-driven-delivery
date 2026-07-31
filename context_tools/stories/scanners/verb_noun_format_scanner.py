@@ -1,4 +1,4 @@
-"""verb-noun-format — Epic / SubEpic / Story names are `<Verb> <Noun>`."""
+"""verb-noun-format - Epic / SubEpic / Story names are `<Verb> <Noun>`."""
 
 from __future__ import annotations
 

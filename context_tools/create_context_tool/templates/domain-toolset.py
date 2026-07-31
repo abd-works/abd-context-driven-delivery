@@ -11,7 +11,7 @@ from context_tools import base_context_tool  # noqa: F401
 
 @base_context_tool
 class {ClassName}:
-    """§ Instructions"""
+    """# Instructions"""
 
     # Override when this domain's durable root is not "." (e.g. "tests", "src", "ux").
     default_workspace_folder: str = "."

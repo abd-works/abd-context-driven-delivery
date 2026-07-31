@@ -66,7 +66,7 @@ with description("a Scenario") as self:
             source.is_outline = True
             source.example_rows = [{"amount": "10000 USD"}]
             source.background = [_given("the system is available")]
-            source.evidence = ["ref §3"]
+            source.evidence = ["ref #3"]
 
             self.target = Scenario("placeholder", 99)
             self.target.translate_from(source)
@@ -89,11 +89,11 @@ with description("a Scenario") as self:
             expect(self.target.is_outline).to(be_true)
             expect(self.target.example_rows).to(equal([{"amount": "10000 USD"}]))
             expect(self.target.background[0].text).to(equal("the system is available"))
-            expect(self.target.evidence).to(equal(["ref §3"]))
+            expect(self.target.evidence).to(equal(["ref #3"]))
 
         with context("its interactions"):
             with it(
-                "should be a value copy — mutating the source's interactions after "
+                "should be a value copy - mutating the source's interactions after "
                 "translation should not affect the target"
             ):
                 self.source.interactions[0].when.append(_when("extra step"))

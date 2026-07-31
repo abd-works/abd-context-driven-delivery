@@ -1,4 +1,4 @@
-"""Register Actions with Tools — import this package to attach @action recipes."""
+"""Register Actions with Tools - import this package to attach @action recipes."""
 from __future__ import annotations
 
 from primitives.actions.action import _ActionRunRequest, _ActionRunner, _discover_actions, _has_actions

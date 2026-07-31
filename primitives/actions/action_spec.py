@@ -23,7 +23,7 @@ _BASE_TOOLSET = "context_tools.base.base_context_tool:BaseContextTool"
 
 
 class _PlainHost(Toolset):
-    """Non-context toolset — empty-docstring default must still apply."""
+    """Non-context toolset - empty-docstring default must still apply."""
 
 
 _PlainHost._is_toolset = True  # type: ignore[attr-defined]

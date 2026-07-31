@@ -1,13 +1,13 @@
-"""@focus decorator — marks an @action or @instruction to bind a focus group.
+"""@focus decorator - marks an @action or @instruction to bind a focus group.
 
 On @action: ActionExpander appends {module_dir}/{focus}/{filter_value}.md to prose.
 On @instruction: sets group/filter_key so Instruction.ref resolves the same file
-(or folder layout) via AssetLocator — e.g. @focus(focus="fidelities") on rules.
+(or folder layout) via AssetLocator - e.g. @focus(focus="fidelities") on rules.
 
 The filter_key is derived automatically from the group name:
-  "fidelities" → "fidelity"   (ies → y)
-  "formats"    → "format"     (trailing s stripped)
-  "modes"      → "mode"
+  "fidelities" -> "fidelity"   (ies -> y)
+  "formats"    -> "format"     (trailing s stripped)
+  "modes"      -> "mode"
 
 Raises TypeError when applied to a target that is neither @action nor @instruction.
 """

@@ -1,4 +1,4 @@
-"""scenario-step-quality — keyword roles are used correctly."""
+"""scenario-step-quality - keyword roles are used correctly."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ class ScenarioStepQualityScanner(StoryWorkspaceScanner):
                     first_when = interaction.when[0]
                     yield self.violation(
                         f"Scenario {sc.name!r} has a when-block with no observed "
-                        f"then before a new When begins — chain follow-on triggers "
+                        f"then before a new When begins - chain follow-on triggers "
                         f"with And, not a bare When",
                         location=self.loc(first_when, f"scenario {sc.name!r}"),
                         severity="warning",

@@ -1,8 +1,8 @@
-"""Mamba spec for `TestSuite / TestCase / Test` (§ Test Suite in bdd-context.md).
+"""Mamba spec for `TestSuite / TestCase / Test` (# Test Suite in bdd-context.md).
 
 These value objects are populated by the workspace loader and never translated
-across formats. The tests here cover the static model — structure, value
-copying, and stub coverage guards — without invoking the workspace loader
+across formats. The tests here cover the static model - structure, value
+copying, and stub coverage guards - without invoking the workspace loader
 (those behaviours are integration tests in the workspace layer).
 """
 
@@ -64,7 +64,7 @@ with description("a SubEpic") as self:
                 ),
             ]
 
-        with it("should hold 2 TestSuites — one per discovered tier"):
+        with it("should hold 2 TestSuites - one per discovered tier"):
             expect(self.sub.test_suites).to(have_len(2))
 
         with context("every TestSuite"):
@@ -106,7 +106,7 @@ with description("a SubEpic") as self:
 
         with context("its testSuites"):
             with it(
-                "should be a value copy — TestSuite objects are ValueObjects and are "
+                "should be a value copy - TestSuite objects are ValueObjects and are "
                 "copied through updateSelf; they never reconcile as tree children"
             ):
                 # Mutating source after translate_from must not affect target.

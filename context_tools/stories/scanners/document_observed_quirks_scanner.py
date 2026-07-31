@@ -1,4 +1,4 @@
-"""document-observed-quirks — no bare TODO/FIXME/HACK markers in artifacts."""
+"""document-observed-quirks - no bare TODO/FIXME/HACK markers in artifacts."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ class DocumentObservedQuirksScanner(StoryWorkspaceScanner):
             if not m:
                 continue
             yield self.violation(
-                f"{rel_file}:{i} contains a bare {m.group(1)} marker — "
+                f"{rel_file}:{i} contains a bare {m.group(1)} marker - "
                 f"convert to `## Context gaps` bullet or `_Observed quirk:_` note",
                 location=f"{rel_file}:{i}",
                 severity="warning",

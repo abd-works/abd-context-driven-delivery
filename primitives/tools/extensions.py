@@ -1,7 +1,7 @@
 """Extension hooks so peer packages can attach to toolsets without Tools importing them.
 
 Actions, sub-agents, and similar packages register discoverers / handlers here at
-import time. Tools only iterates the registry — it never names those packages.
+import time. Tools only iterates the registry - it never names those packages.
 """
 from __future__ import annotations
 

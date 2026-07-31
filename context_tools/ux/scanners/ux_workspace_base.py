@@ -10,7 +10,7 @@ from context_tools.ux.ux_model.workspace import Workspace
 
 
 class UxWorkspaceScanner(Scanner):
-    """Scanners operate on Workspace — not format-specific text."""
+    """Scanners operate on Workspace - not format-specific text."""
 
     def scan(self, root: Path, files: list[Path]) -> list:
         workspace = Workspace.load(root)

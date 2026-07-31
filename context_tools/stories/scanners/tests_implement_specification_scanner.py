@@ -1,4 +1,4 @@
-"""tests-implement-specification — every test case names a scenario in the spec."""
+"""tests-implement-specification - every test case names a scenario in the spec."""
 
 from __future__ import annotations
 

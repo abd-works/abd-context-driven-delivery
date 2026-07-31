@@ -1,7 +1,7 @@
 # @toolset-manifest python -m tools manifest primitives.actions.examples.car:Car
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Example @toolset with @action — orchestrates Car tools via travelTo."""
+"""Example @toolset with @action - orchestrates Car tools via travelTo."""
 from __future__ import annotations
 
 from primitives.actions.action import action
@@ -10,7 +10,7 @@ from tools.tool import resource, tool, toolset
 
 @toolset
 class Car:
-    """Operate a car — start, stop, and read current state."""
+    """Operate a car - start, stop, and read current state."""
 
     def __init__(self, make: str, model: str, year: int, personality: str) -> None:
         """create a new car based on the description given and assign it a personality that is fun and flavorful with a unique name and a unique description"""
@@ -67,14 +67,14 @@ class Car:
     def drive(self, miles: float) -> str:
         """Drive the given number of miles. Engine must be running."""
         if not self._running:
-            return f"{self._make} {self._model} cannot drive — engine is off"
+            return f"{self._make} {self._model} cannot drive - engine is off"
         return f"Drove {miles} miles in the {self._make} {self._model}"
 
     @tool
     def accelerate(self, amount: float) -> str:
         """Speed up by the given amount."""
         if not self._running:
-            return f"{self._make} {self._model} cannot accelerate — engine is off"
+            return f"{self._make} {self._model} cannot accelerate - engine is off"
         self._speed += amount
         return f"Accelerated to {self._speed:.0f} mph"
 
@@ -82,7 +82,7 @@ class Car:
     def decelerate(self, amount: float) -> str:
         """Slow down by the given amount."""
         if not self._running:
-            return f"{self._make} {self._model} cannot decelerate — engine is off"
+            return f"{self._make} {self._model} cannot decelerate - engine is off"
         self._speed = max(0.0, self._speed - amount)
         return f"Decelerated to {self._speed:.0f} mph"
 
@@ -96,7 +96,7 @@ class Car:
         """Tell an interesting story about how the {{self.make}} {{self.model}} gets to {{destination}}."""
         """Conditions: {{conditions}}. Start the engine, then decide what to do according to personality."""
         self.start()
-        """Options include accelerate, decelerate, or stop — invoke as the story needs."""
+        """Options include accelerate, decelerate, or stop - invoke as the story needs."""
         self.accelerate()
         self.decelerate()
         self.stop()

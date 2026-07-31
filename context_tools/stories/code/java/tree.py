@@ -1,4 +1,4 @@
-"""Java tree — `{Story}Story.java` per Story folder."""
+"""Java tree - `{Story}Story.java` per Story folder."""
 
 from __future__ import annotations
 
@@ -30,9 +30,9 @@ def _render_epic(epic: Epic, *, root: str, tree: Dict[str, str]) -> None:
 def _helper(epic: Epic, helper_class: str) -> str:
     factories = collect_example_factories(epic)
     lines = [
-        f"/** Epic helper — ExampleFactory accessors; AI fills given_* bodies. */",
+        f"/** Epic helper - ExampleFactory accessors; AI fills given_* bodies. */",
         f"public class {helper_class} {{",
-        "  // explore/spec → fake mode; tiers → isolated|production",
+        "  // explore/spec -> fake mode; tiers -> isolated|production",
     ]
     for name in factories:
         method = name[0].lower() + name[1:]

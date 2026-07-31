@@ -1,8 +1,8 @@
-"""grill_context — chainable action decorator + GrillContext toolset.
+"""grill_context - chainable action decorator + GrillContext toolset.
 
 Public exports:
-    grill_with_context   — @grill_with_context decorator (marks an @action as grill-wrapped)
-    GrillContext         — standalone grilling toolset (tools + grill_with_context action)
+    grill_with_context   - @grill_with_context decorator (marks an @action as grill-wrapped)
+    GrillContext         - standalone grilling toolset (tools + grill_with_context action)
 
 The decorator and the toolset action deliberately share the name
 ``grill_with_context`` because they are two faces of the same behavior: the

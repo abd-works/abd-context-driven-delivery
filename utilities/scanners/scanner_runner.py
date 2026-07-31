@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one scanner: workspace path, file list, named rule → violations."""
+"""Run one scanner: workspace path, file list, named rule -> violations."""
 from __future__ import annotations
 
 import argparse

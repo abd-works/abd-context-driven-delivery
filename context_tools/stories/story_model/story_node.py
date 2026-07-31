@@ -1,4 +1,4 @@
-"""StoryNode — abstract base for every node in every format.
+"""StoryNode - abstract base for every node in every format.
 
 Defines the FINAL translate_from algorithm and reconcileCollection helper. Subclasses
 override update_self, child_collections, and one create_child_xxx per child type.

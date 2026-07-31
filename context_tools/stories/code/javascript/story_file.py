@@ -1,13 +1,13 @@
 """JavaScript runnable story-file renderer (explore / specification).
 
-Emits Given / When / Then against factory fakes — not pure data.
+Emits Given / When / Then against factory fakes - not pure data.
 
     export function createSubmitOrderStory(mode) {
       story("Submit Order", () => {
-        scenario("…", ({ given, when, then }) => {
-          given("…", () => { /* helper → ExampleFactory fake */ });
-          when("…", () => { /* public operations */ });
-          then("…", () => { /* assert public interface of I{Type} */ });
+        scenario("...", ({ given, when, then }) => {
+          given("...", () => { /* helper -> ExampleFactory fake */ });
+          when("...", () => { /* public operations */ });
+          then("...", () => { /* assert public interface of I{Type} */ });
         });
       });
     }
@@ -42,7 +42,7 @@ def render_story_file(
     lines.append(f" * Story: {story.name} (tier-neutral).")
     if actor:
         lines.append(f" * Actor: {actor}")
-    lines.append(" * Wired to ExampleFactory fakes — not a tier test.")
+    lines.append(" * Wired to ExampleFactory fakes - not a tier test.")
     lines.append(" * Assert the public interface of I{Type} only.")
     lines.append(" *")
     lines.append(
@@ -74,7 +74,7 @@ def render_story_file(
     lines.append("}")
     lines.append("")
     lines.append(
-        "// Story path — fake only when this file is the test entry (not when a tier imports it)"
+        "// Story path - fake only when this file is the test entry (not when a tier imports it)"
     )
     lines.append("const thisFile = fileURLToPath(import.meta.url);")
     lines.append("const entry = process.argv[1] && path.resolve(process.argv[1]);")
@@ -92,7 +92,7 @@ def _render_scenario(scenario) -> List[str]:
     for clause in scenario.given:
         lines.append(f'      given({_js_string(clause.text)}, () => {{')
         lines.append(
-            "        // helper.given…({ mode }) — fake I{Type} from ExampleFactory"
+            "        // helper.given...({ mode }) - fake I{Type} from ExampleFactory"
         )
         lines.append("      });")
         lines.append("")

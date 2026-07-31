@@ -1,4 +1,4 @@
-"""story-context-placement — story-context.md sits at the right level."""
+"""story-context-placement - story-context.md sits at the right level."""
 
 from __future__ import annotations
 

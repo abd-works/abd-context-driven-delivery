@@ -4,7 +4,7 @@
 # format: py
 # ---
 #
-# Tier: production — same story, ExampleFactory builds {Type} with real collaborators.
+# Tier: production - same story, ExampleFactory builds {Type} with real collaborators.
 
 """Production tier spec for `{Story Name}`."""
 

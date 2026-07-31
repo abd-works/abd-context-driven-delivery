@@ -1,4 +1,4 @@
-"""Python tier scaffolder — `*_spec.py` (isolated) and `*_spec.{tier}.py`."""
+"""Python tier scaffolder - `*_spec.py` (isolated) and `*_spec.{tier}.py`."""
 
 from __future__ import annotations
 

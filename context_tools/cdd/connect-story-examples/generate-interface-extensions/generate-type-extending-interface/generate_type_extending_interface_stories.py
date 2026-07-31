@@ -1,4 +1,4 @@
-"""Story data — regeneratable. Do not add logic or imports.
+"""Story data - regeneratable. Do not add logic or imports.
 
 One story, three scenarios (Fake / Isolated / Production).
 Owned by clean_engineering generator instructions/templates.
@@ -21,8 +21,8 @@ GENERATE_TYPE_EXTENDING_INTERFACE: Final = {
         "example_key",
     ),
     "evidence": (
-        "cdd-sketch.md — Fake/Isolated/Production for any {Type}",
-        "context_tools/clean_engineering — example factory pattern",
+        "cdd-sketch.md - Fake/Isolated/Production for any {Type}",
+        "context_tools/clean_engineering - example factory pattern",
     ),
 
     "fake_extension_for_explore_spec": {

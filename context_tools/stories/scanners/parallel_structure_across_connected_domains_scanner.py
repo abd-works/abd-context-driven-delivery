@@ -1,4 +1,4 @@
-"""parallel-structure-across-connected-domains — sibling domain epics stay in sync."""
+"""parallel-structure-across-connected-domains - sibling domain epics stay in sync."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class ParallelStructureAcrossConnectedDomainsScanner(StoryWorkspaceScanner):
                     continue
                 yield self.violation(
                     f"Epic {epic.name!r} has {count} sub-epics, but siblings in "
-                    f"the {frame[0].capitalize()} … {frame[1].capitalize()} "
+                    f"the {frame[0].capitalize()} ... {frame[1].capitalize()} "
                     f"cluster have {baseline}",
                     location=self.loc(epic, f"epic {epic.name!r}"),
                     severity="warning",

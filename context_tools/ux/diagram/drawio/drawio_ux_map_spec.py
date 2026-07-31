@@ -1,4 +1,4 @@
-"""Draw.io UX channel — CLI Detailed IA + Site Map against the UxMap sketch."""
+"""Draw.io UX channel - CLI Detailed IA + Site Map against the UxMap sketch."""
 
 import sys
 from pathlib import Path
@@ -27,7 +27,7 @@ def _site_map() -> DrawioUxMap:
     sheet.attach_story_name("Update Ability Rank")
     sheet.attach_domain_term("Character")
 
-    abilities = Screen("Character Sheet — Abilities", 1, chrome_of="Character Sheet")
+    abilities = Screen("Character Sheet - Abilities", 1, chrome_of="Character Sheet")
     abilities.inactive_tabs = ["Identities", "Movements"]
 
     ux_map.append_screen(sheet)
@@ -37,7 +37,7 @@ def _site_map() -> DrawioUxMap:
             "selects Abilities tab",
             0,
             from_screen="Character Sheet",
-            to_screen="Character Sheet — Abilities",
+            to_screen="Character Sheet - Abilities",
             trigger="selects Abilities tab",
             nav_type="action",
         )
@@ -67,7 +67,7 @@ with description("DrawioUxMap"):
 
     with it("should round-trip screen names from the Site Map page"):
         names = [screen.name for screen in self.parsed.screens]
-        expect(names).to(equal(["Character Sheet", "Character Sheet — Abilities"]))
+        expect(names).to(equal(["Character Sheet", "Character Sheet - Abilities"]))
 
     with it("should round-trip layout-seeded region titles from Detailed IA"):
         sheet = next(s for s in self.parsed.screens if s.name == "Character Sheet")
@@ -76,6 +76,6 @@ with description("DrawioUxMap"):
     with it("should round-trip transitions via the Transitions collection"):
         expect(len(self.parsed.transitions)).to(equal(1))
         expect(self.parsed.transitions[0].to_screen).to(
-            equal("Character Sheet — Abilities")
+            equal("Character Sheet - Abilities")
         )
         expect(self.parsed.transitions[0].trigger).to(equal("selects Abilities tab"))

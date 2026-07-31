@@ -1,4 +1,4 @@
-"""BDD spec for asset.py — AssetLocation, AssetLocator, Asset, AssetCollection."""
+"""BDD spec for asset.py - AssetLocation, AssetLocator, Asset, AssetCollection."""
 import sys
 import tempfile
 from pathlib import Path
@@ -47,7 +47,7 @@ with description("AssetLocator"):
 
             self.location = AssetLocator(_Host(), "contexts").locate()
 
-        with it("should resolve to § Contexts in clean_engineering.md"):
+        with it("should resolve to # Contexts in clean_engineering.md"):
             expect(self.location.kind).to(equal("section"))
             expect(self.location.section_heading).to(equal("Contexts"))
             expect(self.location.section_file).to(

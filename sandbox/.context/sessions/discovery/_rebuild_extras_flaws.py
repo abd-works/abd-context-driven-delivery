@@ -20,7 +20,7 @@ VERIFY_OUT = ROOT / "sandbox/.context/sessions/discovery/segment-verify-extras-f
 
 
 FOOTER_RE = re.compile(
-    r"(?m)^(MUTANTS & MASTERMINDS|DELUXE HERO’S HANDBOOK|DELUXE HERO'S HANDBOOK|"
+    r"(?m)^(MUTANTS & MASTERMINDS|DELUXE HERO'S HANDBOOK|DELUXE HERO'S HANDBOOK|"
     r"CHAPTER 6: POWERS|\d{2,3})\s*$"
 )
 PAGE_MARK_RE = re.compile(r"(?m)^<!-- PDF page \d+ -->\n?")
@@ -76,7 +76,7 @@ def body_status(segment: str, name: str) -> tuple[str, int]:
     skip = {
         "MUTANTS & MASTERMINDS",
         "CHAPTER 6: POWERS",
-        "DELUXE HERO’S HANDBOOK",
+        "DELUXE HERO'S HANDBOOK",
         "DELUXE HERO'S HANDBOOK",
         "SHAPE",
         "SINGLE TARGET",
@@ -179,7 +179,7 @@ FLAWS_TABLE = [
 
 def write_segment(path: Path, module: str, spans: str, source_comment: str, body: str) -> None:
     path.write_text(
-        f"# Segment — `{module}`\n\n"
+        f"# Segment - `{module}`\n\n"
         f"Corpus: `sandbox/HeroesHandbook.md`\n"
         f"Spans: {spans}\n\n"
         f"---\n\n"
@@ -261,7 +261,7 @@ def write_verify(extras_body: str, flaws_body: str, el: int, fl: int, dl: int) -
     total = ok + incomplete
     status = "PASS" if incomplete == 0 else "FAIL"
     lines = [
-        "# Segment verify — extras / flaws (repair pass)",
+        "# Segment verify - extras / flaws (repair pass)",
         "",
         "## Checks run",
         "1. **Span length:** segment chars vs handbook L-span chars (PASS if ratio ~1.0).",
@@ -270,7 +270,7 @@ def write_verify(extras_body: str, flaws_body: str, el: int, fl: int, dl: int) -
         "",
         "## Repair source",
         f"- PDF: `{PDF}`",
-        "- Method: PyMuPDF block extract with left-then-right column order (PDF pages 189–204).",
+        "- Method: PyMuPDF block extract with left-then-right column order (PDF pages 189-204).",
         "- Rebuilt `extras-segment.md`, `flaws-segment.md`, and patched `HeroesHandbook.md` Extras/Flaws spans.",
         "",
         "## Span length",
@@ -289,11 +289,11 @@ def write_verify(extras_body: str, flaws_body: str, el: int, fl: int, dl: int) -
     er = len(seg_body(extras_seg)) / max(len(extras_span), 1)
     fr = len(seg_body(flaws_seg)) / max(len(flaws_span), 1)
     lines += [
-        f"- extras handbook L{el}-L{fl-1}: {len(extras_span)} chars; segment body: {len(seg_body(extras_seg))} chars; ratio {er:.3f} — LENGTH {'PASS' if 0.9 <= er <= 1.15 else 'CHECK'}.",
-        f"- flaws handbook L{fl}-L{dl-1}: {len(flaws_span)} chars; segment body: {len(seg_body(flaws_seg))} chars; ratio {fr:.3f} — LENGTH {'PASS' if 0.9 <= fr <= 1.15 else 'CHECK'}.",
+        f"- extras handbook L{el}-L{fl-1}: {len(extras_span)} chars; segment body: {len(seg_body(extras_seg))} chars; ratio {er:.3f} - LENGTH {'PASS' if 0.9 <= er <= 1.15 else 'CHECK'}.",
+        f"- flaws handbook L{fl}-L{dl-1}: {len(flaws_span)} chars; segment body: {len(seg_body(flaws_seg))} chars; ratio {fr:.3f} - LENGTH {'PASS' if 0.9 <= fr <= 1.15 else 'CHECK'}.",
         "",
         "## Named-entry completeness",
-        f"- OK: {ok}/{total}; incomplete: {incomplete}/{total} — COMPLETENESS {status}.",
+        f"- OK: {ok}/{total}; incomplete: {incomplete}/{total} - COMPLETENESS {status}.",
         "",
         "| Module | Modifier | Status | Body chars |",
         "|--------|----------|--------|------------|",
@@ -302,7 +302,7 @@ def write_verify(extras_body: str, flaws_body: str, el: int, fl: int, dl: int) -
         if st != "OK":
             lines.append(f"| {module} | {name} | {st} | {nch} |")
     if incomplete == 0:
-        lines.append("| — | (all cost-table modifiers) | OK | ≥120 |")
+        lines.append("| - | (all cost-table modifiers) | OK | >=120 |")
     lines += [
         "",
         "## Implication",

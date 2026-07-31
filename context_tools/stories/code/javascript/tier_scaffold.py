@@ -1,7 +1,7 @@
-"""JavaScript tier scaffolder — write-once specs.
+"""JavaScript tier scaffolder - write-once specs.
 
-- isolated → ``{story}_spec.js``
-- other tiers → ``{story}_spec.{tier}.js``
+- isolated -> ``{story}_spec.js``
+- other tiers -> ``{story}_spec.{tier}.js``
 
 Each re-runs the shared story function with the matching mode.
 """

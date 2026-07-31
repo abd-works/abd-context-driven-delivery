@@ -1,4 +1,4 @@
-"""BDD spec — Java runnable-story Story Map."""
+"""BDD spec - Java runnable-story Story Map."""
 
 import sys
 from pathlib import Path

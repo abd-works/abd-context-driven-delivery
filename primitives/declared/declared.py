@@ -111,7 +111,7 @@ class DeclaredProperty(DeclaredMember):
     def resolve_root(self, instance: InstructionHost) -> Path:
         module_dir = Path(getattr(instance, "module_dir", Path(".")))
         instruction = self.route(instance)
-        if instruction.text.startswith("§"):
+        if instruction.text.startswith("#"):
             return module_dir
         normalized = instruction.text.rstrip("/")
         return (module_dir / normalized).resolve()

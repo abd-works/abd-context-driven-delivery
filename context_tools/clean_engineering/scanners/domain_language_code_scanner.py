@@ -1,4 +1,4 @@
-"""Scanner: generic class/method names — reads OoadClass.name / Operation.name."""
+"""Scanner: generic class/method names - reads OoadClass.name / Operation.name."""
 from pathlib import Path
 
 from code_scanner import CodeScanner

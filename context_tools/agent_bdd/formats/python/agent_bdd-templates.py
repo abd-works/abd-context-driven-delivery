@@ -1,5 +1,5 @@
 # =============================================================================
-# Agent BDD Template — mamba spec driving an agent through the agent() harness
+# Agent BDD Template - mamba spec driving an agent through the agent() harness
 # =============================================================================
 # Fill placeholders (delete this block before committing):
 #

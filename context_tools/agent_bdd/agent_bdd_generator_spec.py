@@ -1,4 +1,4 @@
-"""BDD spec — AgentBdd expands agent-test content and composes bdd actions."""
+"""BDD spec - AgentBdd expands agent-test content and composes bdd actions."""
 
 from pathlib import Path
 from typing import Any
@@ -7,7 +7,7 @@ from expects import be_true, equal, expect
 from mamba import before, context, description, it
 
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
-import agent_bdd.conf  # noqa: F401 — repo root on sys.path
+import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 import context_tools  # noqa: F401
 from primitives.instructions import Instruction
 from primitives.instructions import _path_for_name
@@ -80,7 +80,7 @@ with description("AgentBdd action expansion"):
             with it("should inline agent-BDD concepts from agent_bdd.md"):
                 _assert_text_inlined(self.response["instructions"], self.contexts)
 
-            with it("should inline agent_bdd.md § Generate from generate docstring"):
+            with it("should inline agent_bdd.md # Generate from generate docstring"):
                 generate_prose = Instruction(
                     "\u00a7 Generate", _AGENT_BDD_DIR, domain_slug="agent_bdd"
                 ).expand()
@@ -89,7 +89,7 @@ with description("AgentBdd action expansion"):
             with it("should inline bdd concepts via nested bdd generate"):
                 _assert_text_inlined(self.response["instructions"], self.bdd_contexts)
 
-            with it("should inline § Generate from base_context_tool.md"):
+            with it("should inline # Generate from base_context_tool.md"):
                 shared = _lifecycle_prose("generate")
                 _assert_text_inlined(self.response["instructions"], shared)
 

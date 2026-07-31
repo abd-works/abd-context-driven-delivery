@@ -1,4 +1,4 @@
-"""BDD spec for markdown_extractor.py — _read_file, _read_section, _merge_folder, _collect_subsections, _extract_single, _extract_collection."""
+"""BDD spec for markdown_extractor.py - _read_file, _read_section, _merge_folder, _collect_subsections, _extract_single, _extract_collection."""
 import sys
 import tempfile
 from pathlib import Path
@@ -97,7 +97,7 @@ with description("_collect_subsections"):
                 _write(md, "# Concepts\n\n## Rule One\n\nrule one body\n\n## Rule Two\n\nrule two body\n")
                 # Act
                 result = _collect_subsections(md, "Concepts")
-                # Assert — keys are subsection headings
+                # Assert - keys are subsection headings
                 expect("Rule One" in result).to(equal(True))
                 expect("Rule Two" in result).to(equal(True))
                 expect("rule one body" in result["Rule One"]).to(equal(True))

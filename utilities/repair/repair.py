@@ -1,4 +1,4 @@
-"""Repair kit — record failures; when repairing, fix root cause."""
+"""Repair kit - record failures; when repairing, fix root cause."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ class Repair:
         if not path.is_file():
             sprint = self._session.name or "session"
             path.write_text(
-                f"# to-fix.log — {sprint} sprint\n"
+                f"# to-fix.log - {sprint} sprint\n"
                 "# Log omissions/errors here. Each entry:\n"
                 "#   when, artifact, rule, wrong (one line), original, improved\n"
                 '# User phrase "to fix" = failed to do it right; '

@@ -2,7 +2,7 @@
 
 Workflow for a @toolset class file:
 1. Read the mandatory @toolset-manifest comment at the top of the file.
-2. Read the Agent reading this file line — instructions load via CLI, not Python source.
+2. Read the Agent reading this file line - instructions load via CLI, not Python source.
 3. Run manifest to load YAML front matter (signature with kind tags).
 4. Invoke: python -m tools run <request.yaml|-> with tool: or action:.
 5. Follow response.instructions before authoring behavior.
@@ -540,12 +540,12 @@ class _RunRequest:
 
 
 def _slugify_class_name(name: str) -> str:
-    """PascalCase → snake_case so toolset_name matches package/folder names."""
+    """PascalCase -> snake_case so toolset_name matches package/folder names."""
     return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name).lower()
 
 
 class Toolset:
-    """Injected by @toolset — use the decorator, not direct subclassing."""
+    """Injected by @toolset - use the decorator, not direct subclassing."""
 
     def __init__(self) -> None:
         pass
@@ -622,7 +622,7 @@ class Toolset:
 
     @_classproperty
     def manifest(cls) -> Toolset:
-        """Toolset without context — read front matter and MCP shape without running tools."""
+        """Toolset without context - read front matter and MCP shape without running tools."""
         if not _ToolsetLoader.instance().check_toolset(cls):
             raise TypeError(f"{cls.__name__} is not a @toolset class")
         instance = object.__new__(cls)
@@ -643,7 +643,7 @@ class _Tool:
 
     @property
     def manifest(self) -> ToolDocument:
-        """MCP _Tool — name, description, inputSchema, optional outputSchema."""
+        """MCP _Tool - name, description, inputSchema, optional outputSchema."""
         reader = _SignatureReader.instance()
         entry: ToolDocument = {
             "name": self.name,
@@ -687,7 +687,7 @@ class _Resource:
 
     @property
     def manifest(self) -> ResourceDocument:
-        """MCP _Resource — uri, name, description, mimeType."""
+        """MCP _Resource - uri, name, description, mimeType."""
         return {
             "uri": f"resource://{self.toolset_name}/{self.name}",
             "name": self.name,
@@ -719,7 +719,7 @@ def resource(func: Callable[..., Any]) -> Callable[..., Any]:
     return func
 
 
-# Re-export — authors mark tools/actions with @log from tools.tool or sessions
+# Re-export - authors mark tools/actions with @log from tools.tool or sessions
 from sessions import log as log  # noqa: E402
 
 
@@ -753,7 +753,7 @@ def toolset(cls: type) -> type:
     if getattr(cls, "_is_toolset", False):
         return cls
     if issubclass(cls, Toolset):
-        raise TypeError(f"{cls.__name__} must use @toolset — do not subclass Toolset")
+        raise TypeError(f"{cls.__name__} must use @toolset - do not subclass Toolset")
     merged = type(
         cls.__name__,
         (cls, Toolset),

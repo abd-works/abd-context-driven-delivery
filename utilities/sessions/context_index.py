@@ -1,4 +1,4 @@
-"""Workspace ``.context/context-index.md`` — where each context tool puts durable work."""
+"""Workspace ``.context/context-index.md`` - where each context tool puts durable work."""
 
 from __future__ import annotations
 
@@ -155,7 +155,7 @@ def upsert_entry(
         if previous:
             detail += f" (was {previous})"
         if note:
-            detail += f" — {note}"
+            detail += f" - {note}"
         log_lines.append(f"{day}: {detail}")
     path.write_text(render_index(entries, log_lines), encoding="utf-8")
     return path

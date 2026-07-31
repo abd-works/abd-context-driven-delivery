@@ -1,4 +1,4 @@
-"""JSON format story nodes — all seven StoryNode subtypes plus I/O.
+"""JSON format story nodes - all seven StoryNode subtypes plus I/O.
 
 Schema (camelCase, mirrors the legacy `story-graph.json` conventions):
 
@@ -43,7 +43,7 @@ from context_tools.stories.story_model.thin_slice import Increment
 from context_tools.stories.story_model.update_report import UpdateReport
 
 
-# ── Leaf node types ───────────────────────────────────────────────────────────
+# -- Leaf node types -----------------------------------------------------------
 
 class JsonIncrement(Increment):
     pass
@@ -72,7 +72,7 @@ class JsonEpic(Epic):
         return JsonSubEpic(source.name, source.sequential_order)
 
 
-# ── Root node + I/O ───────────────────────────────────────────────────────────
+# -- Root node + I/O -----------------------------------------------------------
 
 class JsonParseError(Exception):
     """Raised when a document does not conform to the story-graph.json schema."""
@@ -91,7 +91,7 @@ class JsonStoryMap(StoryMap):
     def create_child_increment(self, source: Increment) -> JsonIncrement:
         return JsonIncrement(source.name, source.sequential_order)
 
-    # ── Uniform Callable Surface ──────────────────────────────────────────────
+    # -- Uniform Callable Surface ----------------------------------------------
 
     def render(self, story_map: "JsonStoryMap", previous: Optional[str] = None) -> str:
         payload: Dict[str, Any] = {
@@ -146,7 +146,7 @@ class JsonStoryMap(StoryMap):
         except Exception:
             return None
 
-    # ── render helpers ────────────────────────────────────────────────────────
+    # -- render helpers --------------------------------------------------------
 
     def _epic_to_dict(self, epic: JsonEpic) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
@@ -214,7 +214,7 @@ class JsonStoryMap(StoryMap):
             payload["slicingNotes"] = inc.slicing_notes
         return payload
 
-    # ── parse helpers ─────────────────────────────────────────────────────────
+    # -- parse helpers ---------------------------------------------------------
 
     def _guard_schema(self, payload: Any) -> None:
         if not isinstance(payload, dict):

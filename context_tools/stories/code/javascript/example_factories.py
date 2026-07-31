@@ -14,7 +14,7 @@ def render_js_factory_imports(
         return []
     names = ", ".join(factories)
     return [
-        "// Example factories (clean_engineering) — adjust path to match CE layout",
+        "// Example factories (clean_engineering) - adjust path to match CE layout",
         f"import {{ {names} }} from '{ce_module}';",
         "",
     ]
@@ -24,7 +24,7 @@ def render_js_factory_accessors(factories: Sequence[str]) -> List[str]:
     if not factories:
         return []
     lines = [
-        "  // Example factories (explore/spec → fake; tier specs → isolated|production)",
+        "  // Example factories (explore/spec -> fake; tier specs -> isolated|production)",
         "",
     ]
     for name in factories:

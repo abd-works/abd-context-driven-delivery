@@ -1,4 +1,4 @@
-"""@iterate decorator — chains Iterator.iterate_session in front of an @action.
+"""@iterate decorator - chains Iterator.iterate_session in front of an @action.
 
 iterate_session calls grill_with_context in-method; expanding the chain pulls
 that nested grill prose then iterate cadence.

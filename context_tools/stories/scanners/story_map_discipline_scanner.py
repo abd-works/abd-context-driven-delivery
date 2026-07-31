@@ -1,4 +1,4 @@
-"""story-map-discipline — the map must carry scope boundaries."""
+"""story-map-discipline - the map must carry scope boundaries."""
 
 from __future__ import annotations
 

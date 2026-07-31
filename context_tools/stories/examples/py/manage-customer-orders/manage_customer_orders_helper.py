@@ -2,7 +2,7 @@
 
 Kept as a snake_case module because Python's import system does not accept
 hyphens in module names. This is the single naming exception in the code
-family — every other file and folder uses kebab-case (matching story slugs).
+family - every other file and folder uses kebab-case (matching story slugs).
 
 The helper collects shared type aliases and background factories that the
 per-story `<slug>-stories.py` files can reuse. When those files are loaded

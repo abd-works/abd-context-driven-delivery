@@ -1,4 +1,4 @@
-"""Miro format story nodes — all seven StoryNode subtypes plus I/O."""
+"""Miro format story nodes - all seven StoryNode subtypes plus I/O."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from context_tools.stories.story_model.update_report import UpdateReport
 from context_tools.stories.diagram.diagram_story_map import BASE_WIDTH, ROW_HEIGHT, DiagramStoryMap
 
 
-# ── Leaf node types ───────────────────────────────────────────────────────────
+# -- Leaf node types -----------------------------------------------------------
 
 class MiroIncrement(Increment):
     pass
@@ -42,7 +42,7 @@ class MiroEpic(Epic):
         return MiroSubEpic(source.name, source.sequential_order)
 
 
-# ── Root node + I/O ───────────────────────────────────────────────────────────
+# -- Root node + I/O -----------------------------------------------------------
 
 class MiroParseError(Exception):
     """Raised when the payload is not a valid Miro story map."""
@@ -60,7 +60,7 @@ class MiroStoryMap(StoryMap):
     def create_child_increment(self, source: Increment) -> MiroIncrement:
         return MiroIncrement(source.name, source.sequential_order)
 
-    # ── Uniform Callable Surface ──────────────────────────────────────────────
+    # -- Uniform Callable Surface ----------------------------------------------
 
     def render(self, canonical: "MiroStoryMap", previous: Optional[str] = None) -> str:
         layout = DiagramStoryMap(canonical)
@@ -115,7 +115,7 @@ class MiroStoryMap(StoryMap):
     def sync(self, text: str, canonical: "MiroStoryMap") -> UpdateReport:
         return canonical.translate_from(self.parse(text))
 
-    # ── Private helpers ───────────────────────────────────────────────────────
+    # -- Private helpers -------------------------------------------------------
 
     def _collect_sub_epic_items(self, sub_epic: SubEpic, layout: DiagramStoryMap,
                                 items: List[Dict[str, Any]]) -> None:

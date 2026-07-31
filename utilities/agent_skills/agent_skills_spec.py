@@ -1,4 +1,4 @@
-"""BDD spec for agent_skills — deploy hooks and focus shortcuts."""
+"""BDD spec for agent_skills - deploy hooks and focus shortcuts."""
 
 import json
 import sys
@@ -177,7 +177,7 @@ with description("deploy_hooks tool"):
         self._orig_root = _mod._REPO_ROOT
         _mod._REPO_ROOT = self.root
 
-    with context("ide=cursor — .cursor/hooks.json does not exist"):
+    with context("ide=cursor - .cursor/hooks.json does not exist"):
         with it("creates .cursor/hooks.json with the gate config"):
             result = self.skills.deploy_hooks(ide="cursor")
             target = self.root / ".cursor" / "hooks.json"
@@ -186,7 +186,7 @@ with description("deploy_hooks tool"):
             expect("PostToolUse" in written["hooks"]).to(be_true)
             expect(result).to(contain(".cursor"))
 
-    with context("ide=cursor — .cursor/hooks.json already exists with other hooks"):
+    with context("ide=cursor - .cursor/hooks.json already exists with other hooks"):
         with it("merges without duplicating"):
             cursor_dir = self.root / ".cursor"
             cursor_dir.mkdir()

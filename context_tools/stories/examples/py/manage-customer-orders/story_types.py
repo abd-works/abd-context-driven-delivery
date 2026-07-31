@@ -1,6 +1,6 @@
 """Story types for Python spec-files.
 
-Python's type system is dynamic — we can't produce a compile-time analogue of
+Python's type system is dynamic - we can't produce a compile-time analogue of
 TypeScript's `TierImpl<S>`. Instead the runner does runtime step-key
 assertions (see `story_runner.py`): every step string in a scenario must
 resolve to a callable in `tier.given` / `tier.when` / `tier.then`; missing
@@ -38,7 +38,7 @@ from typing import Any, Awaitable, Callable, Dict, Tuple, TypedDict, Union
 
 
 StepFn = Callable[[], Union[None, Awaitable[None]]]
-"""One step body. May be sync or async — the runner awaits either."""
+"""One step body. May be sync or async - the runner awaits either."""
 
 
 class Interaction(TypedDict):
@@ -63,7 +63,7 @@ Story = Dict[str, Any]
 
 
 class TierImpl(TypedDict):
-    """Tier contract — dispatch tables plus a cleanup hook.
+    """Tier contract - dispatch tables plus a cleanup hook.
 
     `given` / `when` / `then` are dicts keyed by the EXACT step strings from
     the scenario. `cleanup` runs after every scenario, regardless of outcome.

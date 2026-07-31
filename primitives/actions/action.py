@@ -5,7 +5,7 @@
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
-"""Action expansion — orchestration recipes that never execute, only instruct."""
+"""Action expansion - orchestration recipes that never execute, only instruct."""
 from __future__ import annotations
 
 import ast
@@ -20,7 +20,7 @@ _PARAM_PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 _SELF_PLACEHOLDER = re.compile(r"\{\{self\.(\w+)\}\}")
 
 # Sentinel for wrapper static_kwargs: resolve to the concrete toolset owner's module dir
-# at manifest time (e.g. @sketch on Context.sketch → context_tools/bdd when owner is Bdd).
+# at manifest time (e.g. @sketch on Context.sketch -> context_tools/bdd when owner is Bdd).
 OWNER_MODULE_DIR = "@owner"
 
 from tools.types import (
@@ -74,7 +74,7 @@ class ActionValidationError(Exception):
         location = f"{class_name}.{action_name}"
         if lineno is not None:
             location = f"{location}:{lineno}"
-        super().__init__(f"{location} — {message}")
+        super().__init__(f"{location} - {message}")
         self.class_name = class_name
         self.action_name = action_name
         self.lineno = lineno
@@ -101,7 +101,7 @@ class _WrapperSpec:
 
     ``chained_action`` is a real ``@action``-marked callable whose body
     the framework expands and prepends to the base action at expansion time.
-    No preamble strings — the chained action *is* the instruction.
+    No preamble strings - the chained action *is* the instruction.
 
     ``static_kwargs`` are fixed parameters the decorator supplies to the
     chained action (e.g. ``agent_dir`` for ``@sketch``). They are surfaced
@@ -125,7 +125,7 @@ def _mro_action_wrapper_specs(owner: type, name: str) -> tuple[_WrapperSpec, ...
 
     The most-derived ``@action`` keeps its own wrappers. Wrapper names declared on
     base definitions of the same method and missing from the child are prepended
-    so base annotations stay outer — overrides inherit action annotations automatically.
+    so base annotations stay outer - overrides inherit action annotations automatically.
     """
     defining: Callable[..., Any] | None = None
     for klass in owner.__mro__:
@@ -197,7 +197,7 @@ def _action_wrapper_names(
 def require_action(func: Callable[..., Any], decorator_name: str) -> None:
     """Guard: ensure a chainable-action decorator's target is already ``@action``-marked.
 
-    Chainable decorators (``@sketch``, ``@grill_with_context``, …) must be applied on top
+    Chainable decorators (``@sketch``, ``@grill_with_context``, ...) must be applied on top
     of ``@action``. This helper centralises the guard so each decorator raises a consistent
     TypeError instead of duplicating the check.
     """
@@ -218,13 +218,13 @@ def add_action_wrapper(
 
     ``chained_action`` is a real ``@action``-marked callable. At expansion
     time, ``_ActionExpander`` calls ``_parse_body_static(chained_action)`` and
-    prepends the resulting prose to the base action's expanded body — no
+    prepends the resulting prose to the base action's expanded body - no
     preamble strings, no builders, no slots. The chained action's own
     instructions *are* the wrapper's contribution.
 
     Prepends to ``_action_wrapper_specs`` and rebuilds ``_action_wrappers``
     from it. Prepending matches Python's inner-first decoration order so a
-    top-declared decorator ends up first in the spec list — declaration order
+    top-declared decorator ends up first in the spec list - declaration order
     equals execution order.
     """
     spec = _WrapperSpec(name=name, chained_action=chained_action, static_kwargs=static_kwargs or {})
@@ -353,7 +353,7 @@ def _is_ellipsis_expr(node: ast.AST) -> bool:
 
 
 def _is_empty_action_body(function_def: ast.FunctionDef) -> bool:
-    """True when the body has no steps — only docstring, ``...``, ``pass``, and/or ``return``.
+    """True when the body has no steps - only docstring, ``...``, ``pass``, and/or ``return``.
 
     Empty bodies auto-delegate to the same-named parent ``@action`` when one exists
     (implicit ``super().method()``). Explicit ``super()`` or any ``self.*`` step means
@@ -388,7 +388,7 @@ def _resolve_super_func(
 ) -> "tuple[Callable[..., Any], type] | None":
     """Walk the MRO to find the next parent ``@action`` for *method_name*.
 
-    When *after_class* is None, skip the instance's own definition (identity check —
+    When *after_class* is None, skip the instance's own definition (identity check -
     class-synthesis decorators like ``@base_context_tool`` may copy the same function onto
     more than one MRO entry). When *after_class* is set (nested ``super()`` / empty-body
     walk), skip until after that class, then take the next ``@action``.
@@ -423,6 +423,27 @@ def _cross_instance_providers(body: ast.Module) -> set[str]:
     return providers
 
 
+def _for_each_providers(body: ast.Module) -> set[str]:
+    """Collect provider method names used as iterables in for-each action bodies.
+
+    Recognises the pattern::
+
+        for <var> in self.<provider>():
+            <var>.<action>()
+
+    The provider name is added to the allowed-names set so the validator does
+    not reject ``self.<provider>()`` as an unrecognised member call.
+    """
+    providers: set[str] = set()
+    for node in ast.walk(body):
+        if not isinstance(node, ast.For):
+            continue
+        iter_member = _self_member_name(node.iter)
+        if iter_member is not None:
+            providers.add(iter_member)
+    return providers
+
+
 class _ActionValidator:
     """Validates @action bodies reference only allowed members."""
 
@@ -450,6 +471,8 @@ class _ActionValidator:
     ) -> None:
         body = self._parse_source(action_func)
         cross_providers = _cross_instance_providers(body)
+        for_providers = _for_each_providers(body)
+        all_providers = cross_providers | for_providers
         base_line = action_func.__code__.co_firstlineno
         for node in ast.walk(body):
             if _cross_instance_call(node) is not None:
@@ -457,7 +480,7 @@ class _ActionValidator:
             member_name = _self_member_name(node)
             if member_name is None:
                 continue
-            if member_name not in allowed_names and member_name not in cross_providers:
+            if member_name not in allowed_names and member_name not in all_providers:
                 raise ActionValidationError(
                     f"self.{member_name} is not a @tool, @instruction, @action, or @resource",
                     class_name=class_name,
@@ -513,7 +536,7 @@ def _resolve_chain_placeholders(part: str, next_name: str, prev_name: str) -> st
 def _chain_navigation(next_name: str, prev_name: str) -> list[str]:
     """Return framework-injected navigation hints for a wrapper in a chain.
 
-    These are emitted automatically — individual actions must not repeat them.
+    These are emitted automatically - individual actions must not repeat them.
     When run standalone (no chain), this returns an empty list.
     """
     hints: list[str] = []
@@ -671,7 +694,7 @@ class _ActionExpander:
         """Append focus-group content when @focus is on an @action.
 
         Folder layout ({group}/{filter}/) is loaded via @instruction slots with the
-        same focus — do not dump the folder here. Legacy flat {group}/{filter}.md
+        same focus - do not dump the folder here. Legacy flat {group}/{filter}.md
         files are still appended when present.
         """
         focus_entries = _mro_action_focus_entries(
@@ -728,7 +751,7 @@ class _ActionExpander:
 
         docstring = ast.get_docstring(function_def)
         action_func = getattr(toolset_cls, current_action)
-        # No docstring → same as docstring equal to the method name (instruction lookup label).
+        # No docstring -> same as docstring equal to the method name (instruction lookup label).
         doc_text = docstring.strip() if docstring and docstring.strip() else current_action
         expanded = _expand_docstring(doc_text, action_func, instance=instance)
         if expanded and expanded not in seen_prose:
@@ -763,6 +786,47 @@ class _ActionExpander:
                 continue
             expr_node = statement.value if isinstance(statement, ast.Expr) else statement
             if isinstance(statement, ast.Expr) and _is_ellipsis_expr(statement.value):
+                continue
+            # For-each expansion: for <var> in self.<provider>(): <var>.<action>()
+            # The provider is called at expansion time to get the list of target instances.
+            # Each instance's named action (or tool) is then expanded/appended inline.
+            if isinstance(statement, ast.For):
+                iter_node = statement.iter
+                loop_var = statement.target
+                if isinstance(loop_var, ast.Name) and isinstance(iter_node, ast.Call):
+                    iter_member = _self_member_name(iter_node)
+                    if iter_member is not None:
+                        items = getattr(instance, iter_member)()
+                        var_name = loop_var.id
+                        for item in items:
+                            for body_stmt in statement.body:
+                                if not isinstance(body_stmt, ast.Expr):
+                                    continue
+                                body_call = body_stmt.value
+                                if not isinstance(body_call, ast.Call):
+                                    continue
+                                func = body_call.func
+                                if not (
+                                    isinstance(func, ast.Attribute)
+                                    and isinstance(func.value, ast.Name)
+                                    and func.value.id == var_name
+                                ):
+                                    continue
+                                member_name = func.attr
+                                target_cls = type(item)
+                                target_actions = _action_slot_names(target_cls)
+                                target_tools = self._validator._tool_names(target_cls)
+                                if member_name in target_actions:
+                                    nested_prose, nested_tools = self._walk_nested_action(
+                                        item, member_name, visited
+                                    )
+                                    for part in nested_prose:
+                                        if part and part not in seen_prose:
+                                            prose.append(part)
+                                            seen_prose.add(part)
+                                    tool_steps.extend(nested_tools)
+                                elif member_name in target_tools:
+                                    tool_steps.append(member_name)
                 continue
             cross = _cross_instance_call(expr_node)
             if cross:
@@ -938,7 +1002,7 @@ class _ActionExpander:
             )
             lines.append("")
         lines.append(
-            "Every tool call uses this shape — set `tool` and `arguments`, pipe to CLI:"
+            "Every tool call uses this shape - set `tool` and `arguments`, pipe to CLI:"
         )
         lines.append("")
         lines.append("```yaml")
@@ -982,9 +1046,13 @@ class _ActionExpander:
         *,
         instance: Any | None = None,
     ) -> str:
-        """Expand {{param}} from arguments and {{self.attr}} from instance. Fail if unresolved."""
-        _ = parameter_names
+        """Expand {{param}} from arguments and {{self.attr}} from instance.
 
+        Only substitutes {{name}} when ``name`` is a declared parameter.
+        Unknown {{tokens}} that appear inside embedded template content are
+        left as-is rather than raising - they are not action parameters.
+        Raises only when a declared parameter has no matching argument value.
+        """
         def replace_self(match: re.Match[str]) -> str:
             attr = match.group(1)
             placeholder = "{{self." + attr + "}}"
@@ -998,10 +1066,12 @@ class _ActionExpander:
 
         def replace_param(match: re.Match[str]) -> str:
             name = match.group(1)
-            placeholder = "{{" + name + "}}"
+            if name not in parameter_names:
+                # Not a declared parameter - embedded template content, leave untouched.
+                return match.group(0)
             if name not in arguments:
                 raise ValueError(
-                    f"missing argument {name!r} for placeholder {placeholder}"
+                    f"missing argument {name!r} for placeholder {{{{{name}}}}}"
                 )
             return str(arguments[name])
 
@@ -1040,7 +1110,7 @@ def action(func: Callable[..., Any]) -> Callable[..., Any]:
 
 @dataclass(frozen=True)
 class Action:
-    """One orchestration recipe on a toolset — expanded into instructions, never executed."""
+    """One orchestration recipe on a toolset - expanded into instructions, never executed."""
 
     name: str
     callable: Callable[..., Any]

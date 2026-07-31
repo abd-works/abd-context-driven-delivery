@@ -5,7 +5,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: context_tools/agent_bdd/.agent_bdd_sessions/shell-captures-example.json
-"""Example — session_shell_captures; assert tool invocations appeared then judge the story."""
+"""Example - session_shell_captures; assert tool invocations appeared then judge the story."""
 from pathlib import Path
 
 from expects import be_true, contain, equal, expect
@@ -48,7 +48,7 @@ with description("a Car toolset"):
                 expect(str(response.instructions).lower()).to(contain("courthouse"))
 
                 story = instruct(
-                    "Follow the travelTo instructions — call start, then speak once in character.",
+                    "Follow the travelTo instructions - call start, then speak once in character.",
                     timeout_seconds=180,
                 ).text
 

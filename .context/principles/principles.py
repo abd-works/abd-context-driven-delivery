@@ -1,4 +1,4 @@
-"""principles — manage guiding principles and their examples."""
+"""principles - manage guiding principles and their examples."""
 from __future__ import annotations
 
 import argparse

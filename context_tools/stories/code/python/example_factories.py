@@ -15,7 +15,7 @@ def render_python_factory_imports(
     if not factories:
         return []
     lines = [
-        f"# Example factories (clean_engineering) — adjust `{ce_module}` to match CE layout",
+        f"# Example factories (clean_engineering) - adjust `{ce_module}` to match CE layout",
     ]
     for name in factories:
         lines.append(f"from {ce_module} import {name}")
@@ -28,7 +28,7 @@ def render_python_factory_accessors(factories: Sequence[str]) -> List[str]:
     if not factories:
         return []
     lines = [
-        "    # -- Example factories (explore/spec → fake mode; tiers → isolated|production) --",
+        "    # -- Example factories (explore/spec -> fake mode; tiers -> isolated|production) --",
         "",
     ]
     for name in factories:

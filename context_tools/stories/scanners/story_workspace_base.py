@@ -10,7 +10,7 @@ from context_tools.stories.story_model.workspace import Workspace
 
 
 class StoryWorkspaceScanner(Scanner):
-    """Scanners operate on Workspace — not language-specific text."""
+    """Scanners operate on Workspace - not language-specific text."""
 
     def scan(self, root: Path, files: list[Path]) -> list:
         # File list is ignored: story rules are graph-wide.

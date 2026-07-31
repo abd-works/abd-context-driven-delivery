@@ -1,4 +1,4 @@
-"""BDD spec for scanners/scanner_collection.py — ScannerCollection discovery, catalog, and run."""
+"""BDD spec for scanners/scanner_collection.py - ScannerCollection discovery, catalog, and run."""
 
 import sys
 from pathlib import Path

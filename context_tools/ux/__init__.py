@@ -1,1 +1,1 @@
-"""UX generator — information architecture, mockups, and clickable specs."""
+"""UX generator - information architecture, mockups, and clickable specs."""

@@ -1,4 +1,4 @@
-"""story-map-shape — validates the fundamental Patton skeleton."""
+"""story-map-shape - validates the fundamental Patton skeleton."""
 
 from __future__ import annotations
 

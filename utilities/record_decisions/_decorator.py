@@ -1,8 +1,8 @@
-"""@record_decisions decorator — chains RecordDecisions.record_decisions_session in front of an @action.
+"""@record_decisions decorator - chains RecordDecisions.record_decisions_session in front of an @action.
 
 The decorator registers a chained_action reference on the target function.
 At expansion time, ActionExpander expands record_decisions_session and prepends
-its real instructions to the base action's prose — no preamble strings.
+its real instructions to the base action's prose - no preamble strings.
 """
 from __future__ import annotations
 

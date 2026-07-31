@@ -1,4 +1,4 @@
-"""thin-slice-shape — validates the fundamental increments skeleton."""
+"""thin-slice-shape - validates the fundamental increments skeleton."""
 
 from __future__ import annotations
 

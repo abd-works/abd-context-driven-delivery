@@ -1,4 +1,4 @@
-"""Scanner: `low-coupling` — module depends on few external modules.
+"""Scanner: `low-coupling` - module depends on few external modules.
 
 Counts distinct *sibling* modules (other module folders under the same parent)
 that this module imports from. Flags modules whose fan-out exceeds a threshold.
@@ -8,7 +8,7 @@ imports are ignored. This keeps the metric focused on architectural coupling.
 
 FP profile: MEDIUM. Threshold-based. A module with genuinely broad coordination
 responsibility (e.g. a top-level composition root) can legitimately import from
-many siblings — this scanner's report should be treated as an indicator for
+many siblings - this scanner's report should be treated as an indicator for
 human review, not an absolute failure.
 """
 from __future__ import annotations
@@ -40,7 +40,7 @@ class LowCouplingScanner(ModuleScanner):
             self.violation(
                 f"Module '{module.folder.name}' imports from {len(imported)} sibling "
                 f"modules ({', '.join(sorted(imported))}). Fan-out above "
-                f"{MAX_SIBLING_IMPORTS} suggests high coupling — introduce a facade or "
+                f"{MAX_SIBLING_IMPORTS} suggests high coupling - introduce a facade or "
                 f"push shared logic behind a mediator.",
                 location=str(module.folder),
             )

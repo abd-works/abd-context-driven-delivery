@@ -1,10 +1,10 @@
-"""VSCode agent hook — run header manifests / invoke-edit; block writes until cleared.
+"""VSCode agent hook - run header manifests / invoke-edit; block writes until cleared.
 
 beforeReadFile / postToolUse:
   Scan header, run @toolset-manifest, run invoke-edit via ``python -m tools run -``,
   inject output, and clear the path once invoke-edit has been executed.
 
-preToolUse (Write / StrReplace / …):
+preToolUse (Write / StrReplace / ...):
   Deny mutating edits to files with invoke-edit until that path is cleared.
   Non-mutating tools are always allowed.
 
@@ -64,7 +64,7 @@ def _log(mode: str, path: str, fired: bool, detail: str = "") -> None:
     status = "FIRED" if fired else "skip"
     line = f"{ts} [{mode:4}] {status}  {path}"
     if detail:
-        line += f"  — {detail}"
+        line += f"  - {detail}"
     try:
         with _LOG_FILE.open("a", encoding="utf-8") as fh:
             fh.write(line + "\n")
@@ -258,7 +258,7 @@ def run_manifests(manifest_lines: list[str]) -> str:
 def run_invoke_edit(invoke: dict[str, Any]) -> tuple[bool, str]:
     """Run invoke-edit via ``python -m tools run -``.
 
-    Returns (executed, output). ``executed`` means the CLI ran to completion —
+    Returns (executed, output). ``executed`` means the CLI ran to completion -
     clearance keys off execution, not action ok:true (some actions still error
     on response serialization after producing instructions).
     """
@@ -295,11 +295,11 @@ def _format_message(
 ) -> str:
     header = "\n".join(f"  {l}" for l in manifest_lines)
     parts = [
-        f"MANIFEST GATE — {path}",
+        f"MANIFEST GATE - {path}",
         (
             "EDIT BLOCKED until invoke-edit has been executed for this file."
             if blocked
-            else "Header executed. Follow response.instructions only — do not author from source."
+            else "Header executed. Follow response.instructions only - do not author from source."
         ),
         "",
         header,
@@ -312,7 +312,7 @@ def _format_message(
         parts.extend(
             [
                 "",
-                f"invoke-edit → action {invoke['action']} | toolset: {invoke['toolset']}",
+                f"invoke-edit -> action {invoke['action']} | toolset: {invoke['toolset']}",
                 "tools run request:",
                 "```yaml",
                 req.rstrip(),
@@ -328,7 +328,7 @@ def _format_message(
 def _user_notification(path: str, *, blocked: bool = False, cleared: bool = False) -> str:
     name = Path(path).name
     if blocked:
-        return f"Manifest gate: blocked edit of {name} — run invoke-edit first"
+        return f"Manifest gate: blocked edit of {name} - run invoke-edit first"
     if cleared:
         return f"Manifest gate: cleared {name} after invoke-edit"
     return f"Manifest gate: ran header for {name}"
@@ -381,7 +381,7 @@ def _prepare_file(path: str, lines: list[str]) -> tuple[str, dict[str, Any] | No
 
 
 def handle_before_read_file(data: dict) -> dict:
-    """beforeReadFile — execute header; clear when invoke-edit runs."""
+    """beforeReadFile - execute header; clear when invoke-edit runs."""
     path = _extract_path(data)
     if not path:
         return {}
@@ -403,7 +403,7 @@ def handle_before_read_file(data: dict) -> dict:
 
 
 def handle_post_tool_use(data: dict) -> dict:
-    """postToolUse — same prepare/inject as read."""
+    """postToolUse - same prepare/inject as read."""
     path = _extract_path(data)
     if not path:
         return {}
@@ -425,7 +425,7 @@ def handle_post_tool_use(data: dict) -> dict:
 
 
 def handle_pre_tool_use(data: dict) -> dict:
-    """preToolUse — deny mutating edits until invoke-edit cleared the path."""
+    """preToolUse - deny mutating edits until invoke-edit cleared the path."""
     path = _extract_path(data)
     if not path:
         return {"permission": "allow"}
@@ -461,7 +461,7 @@ def handle_pre_tool_use(data: dict) -> dict:
             "user_message": _user_notification(path, cleared=True),
         }
 
-    # Not cleared — execute invoke-edit now; allow only if executed.
+    # Not cleared - execute invoke-edit now; allow only if executed.
     manifest_output, invoke, invoke_output, cleared = _prepare_file(path, lines)
     if cleared:
         _log("pre ", path, fired=True, detail="invoke-edit executed; allow")
@@ -493,7 +493,7 @@ def handle_pre_tool_use(data: dict) -> dict:
 
 
 def handle_after_shell(data: dict) -> dict:
-    """afterShellExecution — clear pending paths when agent ran matching invoke-edit."""
+    """afterShellExecution - clear pending paths when agent ran matching invoke-edit."""
     command = str(data.get("command") or (data.get("tool_input") or {}).get("command") or "")
     output = str(
         data.get("output")

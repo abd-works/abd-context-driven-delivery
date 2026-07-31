@@ -1,4 +1,4 @@
-"""CLI entry for python -m tools — manifest and run subcommands."""
+"""CLI entry for python -m tools - manifest and run subcommands."""
 from __future__ import annotations
 
 import json

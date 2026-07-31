@@ -1,4 +1,4 @@
-"""Scenario — phase-grouped Given → When → Then walk-through.
+"""Scenario - phase-grouped Given -> When -> Then walk-through.
 
 Canonical shape derives from the reference testing architecture:
 
@@ -7,12 +7,12 @@ Canonical shape derives from the reference testing architecture:
 `Scenario` is a `StoryNode` leaf: `child_collections` returns `[]` and all
 fields are copied through `update_self`, not reconciled as tree children.
 
-The first clause of each phase is unprefixed (`Given a User…`, `When they …`,
-`Then it …`). Continuation clauses carry their own `And ` / `But ` prefix in
-the text — that string is the same key used later by the tier-class runner
+The first clause of each phase is unprefixed (`Given a User...`, `When they ...`,
+`Then it ...`). Continuation clauses carry their own `And ` / `But ` prefix in
+the text - that string is the same key used later by the tier-class runner
 to dispatch step implementations, so preserving it verbatim matters.
 
-Phase membership is IMPLICIT in which list a clause lives in — no more
+Phase membership is IMPLICIT in which list a clause lives in - no more
 `kind` enum. Scanners that used to check `step.kind == WHEN` now iterate
 `scenario.when_clauses` (or filter via a helper property).
 """
@@ -40,14 +40,14 @@ class Phase(str, Enum):
 class Clause:
     """One step string in a scenario.
 
-    - `text` — the verbatim step string (with any `And ` / `But ` continuation
+    - `text` - the verbatim step string (with any `And ` / `But ` continuation
        prefix intact; empty first-of-phase clauses have no prefix)
-    - `is_continuation` — true when `text` starts with `And ` / `But `
-    - `phase` — cached membership (given/when/then) so `all_clauses` can be
+    - `is_continuation` - true when `text` starts with `And ` / `But `
+    - `phase` - cached membership (given/when/then) so `all_clauses` can be
        walked without losing phase context
-    - `concepts` — bold-marked concept names (**X**) extracted from `text`
-    - `values` — italic-marked values (*v*) extracted from `text`
-    - `actor` — first bold concept treated as an actor (heuristic; empty if unclear)
+    - `concepts` - bold-marked concept names (**X**) extracted from `text`
+    - `values` - italic-marked values (*v*) extracted from `text`
+    - `actor` - first bold concept treated as an actor (heuristic; empty if unclear)
     """
 
     text: str
@@ -61,7 +61,7 @@ class Clause:
 
 @dataclass
 class Interaction:
-    """A when-then block — one action, one observed set of outcomes.
+    """A when-then block - one action, one observed set of outcomes.
 
     A scenario usually has exactly one interaction; multi-interaction scenarios
     model chains where a follow-up when only makes sense after the previous
@@ -74,22 +74,22 @@ class Interaction:
 
 
 class Scenario(StoryNode):
-    """A behaviour walk-through under a story — promoted to StoryNode leaf.
+    """A behaviour walk-through under a story - promoted to StoryNode leaf.
 
     `child_collections` returns `[]`; all fields are copied through
     `update_self`. The reconciliation loop never recurses into scenario
-    children — scenarios are always value-copied, not reconciled.
+    children - scenarios are always value-copied, not reconciled.
 
     Fields:
-    - `name` — the scenario title (verb-noun, outcome-oriented)
-    - `sequential_order` — position within the parent story (1-indexed)
-    - `story_name` — parent story name (empty if not resolvable)
-    - `given` — setup clauses
-    - `interactions` — one or more when-then blocks
-    - `is_outline` — true when this is a Scenario Outline backed by example rows
-    - `example_rows` — rows of the outline's examples table
-    - `background` — clauses applied before the scenario runs
-    - `evidence` — free-text lines tying the scenario back to sources
+    - `name` - the scenario title (verb-noun, outcome-oriented)
+    - `sequential_order` - position within the parent story (1-indexed)
+    - `story_name` - parent story name (empty if not resolvable)
+    - `given` - setup clauses
+    - `interactions` - one or more when-then blocks
+    - `is_outline` - true when this is a Scenario Outline backed by example rows
+    - `example_rows` - rows of the outline's examples table
+    - `background` - clauses applied before the scenario runs
+    - `evidence` - free-text lines tying the scenario back to sources
     """
 
     _semantic_type_name = "Scenario"
@@ -127,7 +127,7 @@ class Scenario(StoryNode):
         self.source = source.source
 
     def child_collections(self, source: "Scenario") -> List[ChildCollectionPair]:  # type: ignore[override]
-        # WHY: Scenario is a leaf — clauses and interactions are value-copied
+        # WHY: Scenario is a leaf - clauses and interactions are value-copied
         # through update_self, not reconciled as tree children.
         return []
 
@@ -142,7 +142,7 @@ class Scenario(StoryNode):
             "evidence": list(self.evidence),
         }
 
-    # ── convenience properties ──────────────────────────────────────────────
+    # -- convenience properties ----------------------------------------------
 
     @property
     def when_clauses(self) -> List[Clause]:

@@ -1,4 +1,4 @@
-"""Partition pipeline kit — mergeable into BaseContextTool."""
+"""Partition pipeline kit - mergeable into BaseContextTool."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ class PartitionPipeline:
         return (
             "Determine top-level structure based on user suggestion, available context, "
             "skill-provided material, and what is evident in the source. "
-            "Keep it thin — only enough to ground partitions; TODOs are fine."
+            "Keep it thin - only enough to ground partitions; TODOs are fine."
         )
 
     @tool

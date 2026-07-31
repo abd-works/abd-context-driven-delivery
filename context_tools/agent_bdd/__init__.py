@@ -1,7 +1,7 @@
-"""Agent BDD harness selection — cli (cursor-agent) or in-chat (inbox subagents)."""
+"""Agent BDD harness selection - cli (cursor-agent) or in-chat (inbox subagents)."""
 from __future__ import annotations
 
-import agent_bdd.conf  # noqa: F401 — secrets + import paths
+import agent_bdd.conf  # noqa: F401 - secrets + import paths
 
 import os
 import threading
@@ -85,7 +85,7 @@ def ai_judge(output: str, rubric: str, *, timeout_seconds: int = 60) -> None:
     """Assert that output passes the rubric; raises AssertionError(reason) if the judge returns FAIL."""
     result = _current().ai_judge(output, rubric, timeout_seconds=timeout_seconds)
     if result.failed():
-        raise AssertionError(f"ai_judge FAIL — {result.reason}")
+        raise AssertionError(f"ai_judge FAIL - {result.reason}")
 
 
 def _in_chat_from_env() -> bool:

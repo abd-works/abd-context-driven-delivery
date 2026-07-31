@@ -1,4 +1,4 @@
-"""StoryMap — root container that holds Epics and Increments.
+"""StoryMap - root container that holds Epics and Increments.
 
 Both collections are reconciled as tree children in a single `child_collections`
 pass, so `translate_from` produces UpdateReport entries for epic-level AND
@@ -23,7 +23,7 @@ class StoryMap(StoryNode):
         self.epics: List[Epic] = []
         self.increments: List[Increment] = []
 
-    # ── Epic mutations ───────────────────────────────────────────────────────
+    # -- Epic mutations -------------------------------------------------------
 
     def append_epic(self, epic: Epic) -> None:
         self.epics.append(epic)
@@ -50,7 +50,7 @@ class StoryMap(StoryNode):
                 return epic
         raise KeyError(f"Epic {name!r} not found")
 
-    # ── Increment mutations ──────────────────────────────────────────────────
+    # -- Increment mutations --------------------------------------------------
 
     def append_increment(self, increment: Increment) -> None:
         self.increments.append(increment)
@@ -73,7 +73,7 @@ class StoryMap(StoryNode):
         self.increments = [by_name[name] for name in new_name_order]
         self._renumber(self.increments)
 
-    # ── StoryNode protocol ───────────────────────────────────────────────────
+    # -- StoryNode protocol ---------------------------------------------------
 
     def update_self(self, source: "StoryMap") -> None:
         self.name = source.name
@@ -102,7 +102,7 @@ class StoryMap(StoryNode):
     def snapshot_fields(self) -> dict:
         return {}
 
-    # ── attachment ───────────────────────────────────────────────────────────
+    # -- attachment -----------------------------------------------------------
 
     def attach_scenarios(self, scenarios) -> None:
         """Link each Scenario to its parent Story by name."""
@@ -171,7 +171,7 @@ class StoryMap(StoryNode):
                 if target is not None:
                     target.test_cases.append(case)
 
-    # ── tree traversal ───────────────────────────────────────────────────────
+    # -- tree traversal -------------------------------------------------------
 
     def all_stories(self) -> List:
         """All Story nodes in the tree, depth-first left-to-right."""
@@ -193,7 +193,7 @@ class StoryMap(StoryNode):
             out.append(sub)
             self._collect_sub_epics(sub, out)
 
-    # ── helpers ──────────────────────────────────────────────────────────────
+    # -- helpers --------------------------------------------------------------
 
     @staticmethod
     def _renumber(nodes: List[StoryNode]) -> None:

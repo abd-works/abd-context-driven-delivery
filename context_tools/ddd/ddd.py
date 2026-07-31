@@ -4,7 +4,7 @@
 # invoke-new: action generate | context.fidelity bounded_context
 # invoke-edit: action satisfy | toolset: context_tools.ddd.ddd:Ddd
 # invoke-check: action validate | toolset: context_tools.ddd.ddd:Ddd
-"""DDD generator — domain emphasis, contexts, building blocks over clean_engineering."""
+"""DDD generator - domain emphasis, contexts, building blocks over clean_engineering."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ _FIDELITY_FORMAT_DEFAULTS = {
     "code": "python",
 }
 
-# DDD fidelity → clean_engineering fidelity (CE owns OO ladder; DDD overlays domain/strategic).
+# DDD fidelity -> clean_engineering fidelity (CE owns OO ladder; DDD overlays domain/strategic).
 _CE_FIDELITY = {
     "bounded_context": "modules",
     "building_blocks": "model",
@@ -34,7 +34,7 @@ _SUPPORTED_FORMATS = frozenset(
 
 @base_context_tool
 class Ddd:
-    """§ Instructions"""
+    """# Instructions"""
 
     def __init__(
         self,
@@ -95,5 +95,5 @@ class Ddd:
     @tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:
         """Sideways format conversion at the same fidelity.
-        Delegates to clean_engineering.transform — DDD adds no separate channel model."""
+        Delegates to clean_engineering.transform - DDD adds no separate channel model."""
         return self._clean_engineering().transform(source_format, target_format, content)
