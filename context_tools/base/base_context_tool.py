@@ -1,7 +1,15 @@
 # @toolset-manifest python -m tools manifest context_tools.base.base_context_tool:BaseContextTool
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""BaseContextTool - composer + artifact lifecycle; shared face for every concrete domain."""
+# invoke-new: action generate | context.fidelity discovery
+# invoke-edit: action satisfy | toolset: context_tools.base.base_context_tool:BaseContextTool
+# invoke-check: action validate | toolset: context_tools.base.base_context_tool:BaseContextTool
+"""BaseContextTool - composer + artifact lifecycle; shared face for every concrete domain.
+
+Non-primitive kits (workspace bind, CDRs, grill/sketch/iterate) are called
+in-method via lazy providers — not `@` chain decorators. `@action` /
+`@instruction` / `@tool` stay; those are primitives.
+"""
 
 from __future__ import annotations
 
@@ -9,20 +17,18 @@ import inspect
 from pathlib import Path
 from typing import TypeVar
 
-from grill_context import grill_with_context
-from iterate import iterate
+from grill_context.grill_context import GrillContext
+from iterate.iterate import Iterator
 from partition_pipeline.partition_pipeline import PartitionPipeline
 from primitives.actions.action import _ActionRunner
 from primitives.actions.action import action
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from record_decisions import record_decisions
+from record_decisions.record_decisions import RecordDecisions
 from repair.repair import Repair
 from scanners.scan import Scan
 from sessions import WorkspaceSession
-from sessions import log
-from sessions._decorator import workspace_session
-from sketch import sketch
+from sketch.sketch import Sketcher
 from tools.tool import Toolset
 
 T = TypeVar("T", bound=type)
@@ -41,6 +47,38 @@ class BaseContextTool(
     def module_dir(self) -> Path:
         return Path(inspect.getfile(type(self))).resolve().parent
 
+    # -- Lazy providers (non-primitive kits; no @ chain decorators) ----------
+
+    def sketcher(self) -> Sketcher:
+        kit = getattr(self, "_sketcher_kit", None)
+        if kit is None:
+            kit = Sketcher(agent_dir=str(self.module_dir))
+            self._sketcher_kit = kit
+        return kit
+
+    def grill_context(self) -> GrillContext:
+        kit = getattr(self, "_grill_kit", None)
+        if kit is None:
+            kit = GrillContext()
+            self._grill_kit = kit
+        return kit
+
+    def iterator(self) -> Iterator:
+        kit = getattr(self, "_iterator_kit", None)
+        if kit is None:
+            kit = Iterator()
+            self._iterator_kit = kit
+        return kit
+
+    def decisions(self) -> RecordDecisions:
+        kit = getattr(self, "_decisions_kit", None)
+        if kit is None:
+            kit = RecordDecisions()
+            self._decisions_kit = kit
+        return kit
+
+    # -- Instructions --------------------------------------------------------
+
     @instruction
     def contexts(self) -> Instruction: ...
 
@@ -49,6 +87,8 @@ class BaseContextTool(
 
     @instruction
     def templates(self) -> Instruction: ...
+
+    # -- Lifecycle actions (linear bodies) -----------------------------------
 
     @action
     def add_generate_header_to_generated(self) -> str:
@@ -69,11 +109,10 @@ class BaseContextTool(
         """"""
         return ""
 
-    @workspace_session
-    @record_decisions
-    @log
     @action
     def generate(self) -> str:
+        self.workspace_session_bind()
+        self.decisions().record_decisions_session()
         self.read_context_index()
         self.record_context_root()
         self.contexts
@@ -83,43 +122,44 @@ class BaseContextTool(
         self.add_generate_header_to_generated()
         return "When done, run validate."
 
-    @workspace_session
-    @record_decisions
-    @grill_with_context
     @action
     def grill(self) -> str:
         """Grill then generate - pure grill loop, then the host generate body."""
+        self.workspace_session_bind()
+        self.decisions().record_decisions_session()
+        self.grill_context().grill_with_context()
         self.generate()
         return "Grill complete; generate instructions applied."
 
-    @workspace_session
-    @record_decisions
-    @sketch
     @action
     def sketch(self) -> str:
         """Sketch then generate - grill + sketch cadence, then the host generate body."""
+        self.workspace_session_bind()
+        self.decisions().record_decisions_session()
+        """Sketch under session.folder; pass agent_dir={{self.module_dir}} to find_template."""
+        self.sketcher().sketch_session()
         self.generate()
         return "Sketch complete; generate instructions applied."
 
-    @workspace_session
-    @record_decisions
-    @iterate
     @action
     def iterate(self) -> str:
         """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
+        self.workspace_session_bind()
+        self.decisions().record_decisions_session()
+        self.iterator().iterate_session()
         self.generate()
         return "Iterate complete; generate instructions applied."
 
-    @workspace_session
     @action
     def validate(self) -> str:
+        self.workspace_session_bind()
         self.contexts
         self.scan()
         return "Validation report for artifacts under {session.path}/."
 
-    @workspace_session
     @action
     def document(self, paths: list[str]) -> str:
+        self.workspace_session_bind()
         self.contexts
         self.templates
         self.scan(paths)
@@ -127,10 +167,10 @@ class BaseContextTool(
         self.add_generate_header_to_generated()
         return "Document existing state under {session.path}/ - violations flagged, none corrected."
 
-    @workspace_session
-    @record_decisions
     @action
     def satisfy(self) -> str:
+        self.workspace_session_bind()
+        self.decisions().record_decisions_session()
         self.contexts
         self.templates
         return "When done, run validate on artifacts under {session.path}/."

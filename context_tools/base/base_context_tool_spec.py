@@ -64,12 +64,15 @@ def _expand_action(
 
 
 def _section(name: str) -> str:
-    return Instruction(_path_for_name(_BASE_DIR, name), _BASE_DIR).expand()
+    # _path_for_name emits "stem § Heading"; Instruction._split_section only
+    # understands "stem # Heading" (or bare "# Heading" via domain_slug).
+    text = _path_for_name(_BASE_DIR, name).replace(" \u00a7 ", " # ", 1)
+    return Instruction(text, _BASE_DIR, domain_slug="base_context_tool").expand()
 
 
 def _load_car_contexts() -> str:
     return Instruction(
-        "\u00a7 Contexts", _CAR_CHRONICLE_DIR, domain_slug="car_chronicle"
+        "# Contexts", _CAR_CHRONICLE_DIR, domain_slug="car_chronicle"
     ).expand()
 
 
@@ -194,8 +197,10 @@ with description("BaseContextTool composer"):
             with it("should set action to satisfy"):
                 expect(self.response["action"]).to(equal("satisfy"))
 
-            with it("should name no tools on satisfy"):
-                expect(self.response["tools"]).to(equal([]))
+            with it("should name CDR tools from decisions() on satisfy"):
+                expect(self.response["tools"]).to(
+                    equal(["read_cdr_format", "list_cdrs", "write_cdr"])
+                )
 
             with it("should inline satisfy prose"):
                 expect(_section("satisfy") in self.response["instructions"]).to(
@@ -227,3 +232,52 @@ with description("BaseContextTool composer"):
 
         with it("should inline prose from the subclass generate_output action"):
             _assert_text_inlined(self.response["instructions"], _GENERATE_OUTPUT_PROSE)
+
+
+with description("BaseContextTool linear kit delegation"):
+    with context("sketch expands providers in-method (no @ chain)"):
+        with before.all:
+            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
+            self.host = cls()
+            self.entry = self.host.actions["sketch"].signature_entry
+            self.response = _expand_action(
+                self.host, "sketch", toolset_path=_BASE_TOOLSET
+            )
+
+        with it("should have no decorator chain on sketch"):
+            expect("chain" in self.entry).to(equal(False))
+
+        with it("should inline workspace bind prose"):
+            expect(
+                "Resolve workspace + session layout" in self.response["instructions"]
+            ).to(be_true)
+
+        with it("should inline sketch_session cadence (save_sketch)"):
+            expect("save_sketch" in self.response["tools"]).to(be_true)
+
+        with it("should inline grill via sketcher (explore_context_files)"):
+            expect("explore_context_files" in self.response["tools"]).to(be_true)
+
+    with context("generate expands providers in-method (no @ chain)"):
+        with before.all:
+            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
+            self.host = cls()
+            self.entry = self.host.actions["generate"].signature_entry
+
+        with it("should have no decorator chain on generate"):
+            expect("chain" in self.entry).to(equal(False))
+
+    with context("grill expands GrillContext in-method (no @ chain)"):
+        with before.all:
+            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
+            self.host = cls()
+            self.entry = self.host.actions["grill"].signature_entry
+            self.response = _expand_action(
+                self.host, "grill", toolset_path=_BASE_TOOLSET
+            )
+
+        with it("should have no decorator chain on grill"):
+            expect("chain" in self.entry).to(equal(False))
+
+        with it("should name explore_context_files from GrillContext"):
+            expect("explore_context_files" in self.response["tools"]).to(be_true)
