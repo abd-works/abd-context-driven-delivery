@@ -11,7 +11,7 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
-from context_tools import base_context_tool
+from context_tools.base.base_context_tool import BaseContextTool
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from tools.tool import tool  # noqa: F401
@@ -42,8 +42,7 @@ def _load_channel_class(format_name: str) -> type:
     return getattr(importlib.import_module(module_path), attr)
 
 
-@base_context_tool
-class Ux:
+class Ux(BaseContextTool):
     """# Instructions"""
 
     default_workspace_folder: str = "ux"

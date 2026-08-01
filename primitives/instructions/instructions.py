@@ -36,10 +36,10 @@ def _path_for_name(module_dir: Path, name: str) -> str:
     if (module_dir / f"{name}.md").is_file():
         return name
     heading = _section_heading_for_name(name)
-    # Section in kit ``{folder}.md`` (sessions.md, ...) - # form uses domain_slug = folder name.
+    # Section in kit ``{folder}.md`` or class-named prose (workspace_session.md, ...) - # form uses domain_slug.
     kit_md = _kit_markdown(module_dir)
     if kit_md is not None and _heading_in_markdown(kit_md, heading):
-        return "\u00a7 " + heading
+        return f"{kit_md.stem} \u00a7 {heading}"
     # Flat module beside its md (base/base_context_tool.py -> base_context_tool.md).
     for md_path in sorted(module_dir.glob("*.md")):
         if _heading_in_markdown(md_path, heading):
@@ -152,6 +152,14 @@ class Instruction:
 
         if self._label is not None and self._host is not None:
             return self._expand_ref()
+        # Normalise section-only refs: "§ Heading" / "stem § Heading" → "#" form
+        text = self.text
+        if " \u00a7 " in text:
+            stem, _, heading = text.partition(" \u00a7 ")
+            text = f"{stem} # {heading}" if stem.strip() else f"# {heading.strip()}"
+            self = Instruction(text, self.module_dir, domain_slug=self.domain_slug)
+        elif text.startswith("\u00a7 "):
+            self = Instruction(f"# {text[2:].strip()}", self.module_dir, domain_slug=self.domain_slug)
         if not self.matches_file_or_folder():
             return self.text
         path_part, section = self._split_section()
@@ -309,11 +317,15 @@ def _is_framework_action(action_name: str) -> bool:
 
 
 def _kit_markdown(module_dir: Path) -> Path | None:
-    """``{slug}.md`` beside a kit package (``sessions.md``, ``partition_pipeline.md``, ...)."""
+    """``{slug}.md`` beside a kit package (``workspace_session.md``, ``partition_pipeline.md``, ...)."""
     for slug in _slug_variants(module_dir.name):
         candidate = module_dir / f"{slug}.md"
         if candidate.is_file():
             return candidate
+    # Class-named prose beside the package (e.g. sessions/workspace_session.md)
+    for path in sorted(module_dir.glob("*_session.md")):
+        if path.is_file():
+            return path
     return None
 
 

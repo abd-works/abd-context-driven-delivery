@@ -98,7 +98,7 @@ def _locate_under(search_root: Path, module_dir: Path, domain_slug: str, label: 
         module_dir,
         domain_slug,
         section_file=section_file.resolve(),
-        section_heading=label.title(),
+        section_heading=label.replace("_", " ").replace("-", " ").title(),
     )
 
 

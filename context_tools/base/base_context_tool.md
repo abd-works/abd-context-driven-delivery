@@ -1,10 +1,10 @@
 # Instructions
 
-**BaseContextTool** is the shared base for every concrete `@base_context_tool` domain: peer-kit composer + artifact lifecycle (`generate` / `validate` / `satisfy` / `document`, plus `grill` / `sketch` / `iterate`).
+**BaseContextTool** is the shared base for every concrete domain (subclass it): peer-kit composer + artifact lifecycle (`generate` / `validate` / `satisfy` / `document`, plus `grill` / `sketch` / `iterate`).
 ---
 # Generate
 
-1. Follow **`session_guidance`** and the session tools (`read_context_index`, `record_context_root`, `create_session` when needed). Resolve workspace + tool root, then use the **`session`** resource for `session.path` / `session.folder`.
+1. Follow **`session_guidance`** and the session tools (`read_context_index`, `record_context_root`, `create_session` when needed). Resolve workspace + tool root, then use the **`active`** resource for `active.path` / `active.folder`.
 2. **MUST — prove-read before asking.** Before any grill/iterate question (and before inventing options or story/module names):
    - Identify **every relevant context file referenced or implied** by the decision — not one favorite type. Typical set: `{workspace}/.context/context-index.md`, owning `*-segment.md`, `module-context.md`, session grill-answers / sketches / handoff, peer story-context, build-order, and any path the plan or prior answers cite. Include index/overlay only for structure hints; **never** treat mid-epic stub columns as inventory.
    - **Read each of those files with the Read tool** (chunk through large ones). Grep, title lists, memory, or primer-only skims **do not count**.
@@ -30,7 +30,7 @@ Take the persona of a **critical judge** — do not edit the artifact.
 ---
 # Satisfy
 
-Find and fix every problem in the artifact you wrote under the generator **`session`** root.
+Find and fix every problem in the artifact you wrote under the generator **`active`** root.
 
 1. Follow **`session_guidance`**. Edit only under that layout.
 2. Run **validate** against those session-rooted artifacts.

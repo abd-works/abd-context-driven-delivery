@@ -1,11 +1,10 @@
-"""Session model (named sprints), logging, and BaseContextTool workspace binding.
+"""Session model (named sprints + workspace kit), logging, and binding.
 
-Public exports include ``workspace_session`` (decorator) and ``WorkspaceSession`` (kit).
-``WorkspaceSession`` / ``workspace_session`` load lazily so ``from sessions import log``
+``Session`` / ``WorkspaceSession`` load lazily so ``from sessions import log``
 does not re-enter ``primitives.actions.action`` while that module is still importing.
 """
 
-from sessions.session import ISession, Session, docs_dir
+from sessions.session import docs_dir
 from sessions.session_log import (
     ISessionLog,
     SessionLog,
@@ -18,7 +17,6 @@ from sessions.session_log import (
 )
 
 __all__ = [
-    "ISession",
     "ISessionLog",
     "Session",
     "SessionLog",
@@ -30,17 +28,12 @@ __all__ = [
     "log",
     "member_is_logged",
     "summarize_mapping",
-    "workspace_session",
 ]
 
 
 def __getattr__(name: str):
-    if name == "WorkspaceSession":
-        from sessions.workspace_session import WorkspaceSession
+    if name in ("Session", "WorkspaceSession"):
+        from sessions.workspace_session import Session, WorkspaceSession
 
-        return WorkspaceSession
-    if name == "workspace_session":
-        from sessions._decorator import workspace_session
-
-        return workspace_session
+        return Session if name == "Session" else WorkspaceSession
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

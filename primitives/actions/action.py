@@ -290,7 +290,7 @@ def _wrapper_expand_instance(
     """Instance used to expand a chained wrapper action.
 
     Prefer the host when it already merges the chained action's owning kit
-    (``isinstance(host, Owner)``) so resources like ``session`` reflect the
+    (``isinstance(host, Owner)``) so resources like ``active`` reflect the
     live run. Otherwise construct a fresh owner instance (engagement engines).
     """
     owner = _owner_class_for_action(chained_action)
@@ -389,7 +389,7 @@ def _resolve_super_func(
     """Walk the MRO to find the next parent ``@action`` for *method_name*.
 
     When *after_class* is None, skip the instance's own definition (identity check -
-    class-synthesis decorators like ``@base_context_tool`` may copy the same function onto
+    subclasses may override the same function; look up the concrete host type first
     more than one MRO entry). When *after_class* is set (nested ``super()`` / empty-body
     walk), skip until after that class, then take the next ``@action``.
     Returns ``(func, defining_class)`` or ``None``.

@@ -2,15 +2,14 @@
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
 # invoke-new: action generate
-"""Minimal @base_context_tool example for generator specs."""
+"""Minimal BaseContextTool subclass example for generator specs."""
 
 from __future__ import annotations
 
-from context_tools import base_context_tool  # noqa: F401
+from context_tools.base.base_context_tool import BaseContextTool
 
 
-@base_context_tool
-class CarChronicle:
+class CarChronicle(BaseContextTool):
     """# Instructions"""
 
     def __init__(self, path: str | None = None, session: str | None = None) -> None:

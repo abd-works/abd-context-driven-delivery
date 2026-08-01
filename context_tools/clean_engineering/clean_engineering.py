@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from focus import focus
-from context_tools import base_context_tool
+from context_tools.base.base_context_tool import BaseContextTool
 from context_tools.clean_engineering.class_model.drawio_class_model import DrawIOCleanEngineeringModel
 from context_tools.clean_engineering.class_model.java_class_model import JavaCleanEngineeringModel
 from context_tools.clean_engineering.class_model.javascript_class_model import JavaScriptCleanEngineeringModel
@@ -19,7 +19,6 @@ from context_tools.clean_engineering.class_model.python_class_model import Pytho
 from context_tools.clean_engineering.class_model.typescript_class_model import TypeScriptCleanEngineeringModel
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from echo import echo
 from tools.tool import resource, tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
@@ -43,8 +42,7 @@ _CHANNELS: dict[str, type] = {
 _SUPPORTED_FORMATS = frozenset(_CHANNELS)
 
 
-@base_context_tool
-class CleanEngineering:
+class CleanEngineering(BaseContextTool):
     """# Instructions"""
 
     default_workspace_folder: str = "src"

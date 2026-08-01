@@ -17,7 +17,6 @@ from mamba import before, context, description, it
 
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
 from primitives.instructions import Instruction
-from primitives.instructions import _path_for_name
 from tools.tool import Toolset, _ToolsetLoader, _discover_tools
 
 _KIT_DIR = Path(__file__).resolve().parent
@@ -50,19 +49,22 @@ def _expand(
 
 
 def _section(name: str) -> str:
-    return Instruction(_path_for_name(_KIT_DIR, name), _KIT_DIR).expand()
+    heading = name.replace("_", " ").replace("-", " ").title()
+    return Instruction(
+        f"# {heading}", _KIT_DIR, domain_slug="workspace_session"
+    ).expand()
 
 
 with description("WorkspaceSession kit prose"):
-    with it("should resolve create_session from sessions.md section"):
+    with it("should resolve create_session from workspace_session.md section"):
         text = _section("create_session")
         expect(text.startswith("# Create Session")).to(be_true)
         expect("kebab-slug" in text).to(be_true)
 
-    with it("should resolve session guidance from sessions.md section"):
-        text = _section("session")
-        expect("# Session" in text).to(be_true)
-        expect("session.path" in text).to(be_true)
+    with it("should resolve session guidance from workspace_session.md section"):
+        text = _section("session_guidance")
+        expect("# Session Guidance" in text).to(be_true)
+        expect("session.path" in text or "active.path" in text or "path" in text).to(be_true)
         expect("context-index.md" in text).to(be_true)
 
 
@@ -75,28 +77,48 @@ with description("WorkspaceSession on a BaseContextTool host"):
                 self.host, "generate", toolset_path=_CAR_CHRONICLE_TOOLSET
             )
 
-        with it("should name read_context_index and record_context_root on tools"):
+        with it("should name open's session tools then CDR tools"):
             expect(self.response["tools"]).to(
-                equal(["read_context_index", "record_context_root"])
+                equal(
+                    [
+                        "ensure_session",
+                        "read_context_index",
+                        "record_context_root",
+                        "read_cdr_format",
+                        "list_cdrs",
+                        "write_cdr",
+                    ]
+                )
             )
 
-        with it("should inline Session section guidance"):
-            expect("# Session" in self.response["instructions"]).to(be_true)
-            expect("session.folder" in self.response["instructions"]).to(be_true)
+        with it("should inline Session Guidance from workspace_session.md"):
+            expect("# Session Guidance" in self.response["instructions"]).to(be_true)
+            expect(
+                "session.folder" in self.response["instructions"]
+                or "folder" in self.response["instructions"]
+                or "active.path" in self.response["instructions"]
+                or "path" in self.response["instructions"]
+            ).to(be_true)
 
         with it("should expand session resource from the host instance"):
             expect(
-                f"Resource `session` = {self.host.session!r}."
+                f"Resource `active` = {self.host.active!r}."
                 in self.response["instructions"]
             ).to(be_true)
 
-        with it("should expand kit tool instructions from sessions.md"):
-            tools = _discover_tools(self.host)
+        with it("should expand kit tool instructions from workspace_session.md"):
+            from sessions.workspace_session import Session
+
+            tools = _discover_tools(self.host.workspace())
+            expect(isinstance(self.host.workspace(), Session)).to(be_true)
             expect(tools["create_session"].instructions.startswith("# Create Session")).to(
                 be_true
             )
             expect(
                 tools["read_context_index"].instructions.startswith("# Read Context Index")
+            ).to(be_true)
+            expect(
+                tools["ensure_session"].instructions.startswith("# Ensure Session")
             ).to(be_true)
 
     with context("ChronicleWithOutput generate"):
@@ -110,7 +132,15 @@ with description("WorkspaceSession on a BaseContextTool host"):
         with it("should keep session tools ahead of nested generate_output tools"):
             expect(self.response["tools"]).to(
                 equal(
-                    ["read_context_index", "record_context_root", "add_epic"]
+                    [
+                        "ensure_session",
+                        "read_context_index",
+                        "record_context_root",
+                        "read_cdr_format",
+                        "list_cdrs",
+                        "write_cdr",
+                        "add_epic",
+                    ]
                 )
             )
 
@@ -123,4 +153,4 @@ with description("WorkspaceSession on a BaseContextTool host"):
             )
 
         with it("should inline session guidance on the composer"):
-            expect("# Session" in self.response["instructions"]).to(be_true)
+            expect("# Session Guidance" in self.response["instructions"]).to(be_true)

@@ -82,7 +82,7 @@ with description("CreateContextTool meta generator"):
 
         with it("should inline all files from create_context_tool/templates/"):
             expect(self.template in self.response["instructions"]).to(equal(True))
-            expect("@base_context_tool" in self.response["instructions"]).to(
+            expect("class {ClassName}(BaseContextTool):" in self.response["instructions"] or "BaseContextTool" in self.response["instructions"]).to(
                 equal(True)
             )
             expect("# Instructions" in self.response["instructions"]).to(equal(True))

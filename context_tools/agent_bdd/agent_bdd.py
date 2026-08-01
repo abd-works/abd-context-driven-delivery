@@ -12,19 +12,18 @@ import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 import context_tools  # noqa: F401 - Bdd merges with BaseContextTool at import
 from primitives.actions.action import action  # noqa: F401
 from context_tools.bdd.bdd import Bdd
-from context_tools import base_context_tool  # noqa: F401
+from context_tools.base.base_context_tool import BaseContextTool
 
 
-@base_context_tool
-class AgentBdd:
+class AgentBdd(BaseContextTool):
     """# Instructions"""
 
     def __init__(self, format: str = "python", path: str | None = None, session: str | None = None) -> None:
         super().__init__(format=format, path=path, session=session)
 
     def _bdd(self) -> Bdd:
-        sprint = self.session.name or None
-        return Bdd(format=self.format, path=self.session.path, session=sprint)
+        sprint = self.active.name or None
+        return Bdd(format=self.format, path=self.active.path, session=sprint)
 
     @action
     def generate_output(self) -> str:

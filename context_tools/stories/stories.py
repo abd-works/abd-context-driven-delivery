@@ -12,7 +12,7 @@ import importlib
 import json
 from typing import Any
 
-from context_tools import base_context_tool
+from context_tools.base.base_context_tool import BaseContextTool
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from tools.tool import tool  # noqa: F401
@@ -60,8 +60,7 @@ def _normalize_input(format_name: str, content: Any) -> Any:
     return content
 
 
-@base_context_tool
-class Stories:
+class Stories(BaseContextTool):
     """# Instructions"""
 
     default_workspace_folder: str = "tests"

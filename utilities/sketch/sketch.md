@@ -76,7 +76,7 @@ If none of the above yield a template, the sketcher invents a shape for the doma
 
 ## Persistence lifecycle
 
-- **Session-rooted paths:** when chained from a Context generator, read the host **`session`** resource.
+- **Session-rooted paths:** when chained from a Context generator, read the host **`active`** resource.
   - Engagement docs/diagrams → `destination = session` → `{session}/.context/{slug}-sketch.md`
   - Module sketch → `destination = {session}/{module}` → `{session}/{module}/.context/{slug}-sketch.md`
   - Generated code for that module → `{session}/{module}/` (not under `.context/`)

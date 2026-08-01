@@ -80,7 +80,7 @@ class PartitionPipeline:
     @action
     def index(self, context: str, out_root: str | None = None) -> str:
         """index"""
-        self.session
+        self.active
         self.session_guidance
         self.contexts
         self.partition_guidance
@@ -92,7 +92,7 @@ class PartitionPipeline:
     @action
     def segment(self, out_root: str | None = None) -> str:
         """segment"""
-        self.session
+        self.active
         self.session_guidance
         self.contexts
         self.partition_guidance
@@ -111,7 +111,7 @@ class PartitionPipeline:
         out_root: str | None = None,
     ) -> str:
         """partition"""
-        self.session
+        self.active
         self.session_guidance
         self.contexts
         self.partition_guidance

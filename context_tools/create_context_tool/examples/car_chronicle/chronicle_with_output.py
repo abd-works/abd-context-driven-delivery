@@ -7,12 +7,11 @@
 from __future__ import annotations
 
 from primitives.actions.action import action
-from context_tools import base_context_tool  # noqa: F401
+from context_tools.base.base_context_tool import BaseContextTool
 from tools.tool import tool
 
 
-@base_context_tool
-class ChronicleWithOutput:
+class ChronicleWithOutput(BaseContextTool):
     """# Instructions"""
 
     def __init__(self, path: str | None = None, session: str | None = None) -> None:

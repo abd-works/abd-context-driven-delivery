@@ -11,14 +11,13 @@ from __future__ import annotations
 
 import context_tools  # noqa: F401 - Bdd and AgentBdd merge with BaseContextTool at import
 from agent_bdd.agent_bdd import AgentBdd
-from context_tools import base_context_tool  # noqa: F401
+from context_tools.base.base_context_tool import BaseContextTool
 from context_tools.bdd.bdd import Bdd
 
 from .action import action  # noqa: F401
 
 
-@base_context_tool
-class AgentWithActions:
+class AgentWithActions(BaseContextTool):
     """# Instructions"""
 
     def __init__(self, format: str = "python") -> None:

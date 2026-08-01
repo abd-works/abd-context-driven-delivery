@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from primitives.actions.action import action
-from context_tools import base_context_tool
+from context_tools.base.base_context_tool import BaseContextTool
 from context_tools.bdd.bdd import Bdd
 from context_tools.clean_engineering.clean_engineering import CleanEngineering
 from context_tools.ddd.ddd import Ddd
@@ -55,8 +55,7 @@ _STAGES: dict[str, list[tuple[type, str]]] = {
 }
 
 
-@base_context_tool
-class Cdd:
+class Cdd(BaseContextTool):
     """# Instructions"""
 
     def __init__(

@@ -6,11 +6,10 @@
 from __future__ import annotations
 
 from primitives.actions.action import action  # noqa: F401
-from context_tools import base_context_tool  # noqa: F401
+from context_tools.base.base_context_tool import BaseContextTool
 
 
-@base_context_tool
-class {ClassName}:
+class {ClassName}(BaseContextTool):
     """# Instructions"""
 
     # Override when this domain's durable root is not "." (e.g. "tests", "src", "ux").

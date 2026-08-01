@@ -2,15 +2,14 @@
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
 # invoke-new: action generate
-"""CreateContextTool - scaffold new @base_context_tool domains under context_tools/."""
+"""CreateContextTool - scaffold new BaseContextTool domains under context_tools/."""
 
 from __future__ import annotations
 
-from context_tools import base_context_tool
+from context_tools.base.base_context_tool import BaseContextTool
 
 
-@base_context_tool
-class CreateContextTool:
+class CreateContextTool(BaseContextTool):
     """# Instructions"""
 
     default_workspace_folder: str = "."

@@ -6,7 +6,7 @@ Orchestrate a thin partition of source material using this context's lens.
 
 - `context` — path to the corpus (markdown and/or code).
 - `mode` — `one_go` (default) | `pause` | `index_only`.
-- `out_root` — optional override for the index/segment root. **Default = the generator `session` resource** (index lands under `{session.path}/.context/`; chunks under `{session.path}/{module}/.context/`). Use `out_root` only for true sandbox forks — see **Multi-pass**.
+- `out_root` — optional override for the index/segment root. **Default = the generator `active` resource** (index lands under `{active.path}/.context/`; chunks under `{active.path}/{module}/.context/`). Use `out_root` only for true sandbox forks — see **Multi-pass**.
 
 **Session layout**
 
@@ -30,7 +30,7 @@ false PASS. Completeness FAIL blocks story inventory until the chunk is repaired
 `{subject}` = corpus basename from the `context` path (file stem or directory name), **not** the skill/toolset name
 (e.g. session `sandbox`, corpus `sandbox/HeroesHandbook.md` → `sandbox/.context/HeroesHandbook-index.md`).
 
-1. Resolve output root: `out_root` if set, else the toolset **`session`** resource.
+1. Resolve output root: `out_root` if set, else the toolset **`active`** resource.
 2. Run **index** on the given `context` (writes or updates `{session.path}/.context/{subject}-index.md`).
 3. Then by `mode`:
    - **`one_go`** (default) — continue immediately to **segment** when new chunks are needed.
@@ -95,7 +95,7 @@ Same pattern for **UX** (add `Screen` / transitions mapped to chunks) and **BDD*
 Build or **extend** a thin sections index over the source at the given `context` path — enough to ground partitions, not a full exploration.
 
 1. Read the source as **code or markdown** (no separate channel required).
-2. Resolve output root: `out_root` if set, else the generator **`session`** resource. Docs go under `{session.path}/.context/`.
+2. Resolve output root: `out_root` if set, else the generator **`active`** resource. Docs go under `{active.path}/.context/`.
 3. **If `{session.path}/.context/{subject}-index.md` already exists, open it and ADD — do not replace.** See base `partition.md` **Multi-pass / multi-lens**. Prior columns, chunk links, and rows stay unless the user explicitly asked to repartition from scratch.
 4. Apply **contexts** plus **partition guidance** (`partition.md` in this context folder, or the base default when missing). Guidance names this lens’s **top-level artifacts**.
    - **Hard fail:** if the domain has `{domain}.md` § Contexts and/or `partition.md`, that lens’s artifacts **must** appear in the index (as rows on a first pass, or as **added columns / maps** on a later pass). Ignoring the lens or mirroring the corpus TOC/chapters/files is a failed partition — do not ship.
@@ -149,7 +149,7 @@ Repartition-from-scratch of chunks requires an **explicit** user request.
 
 ## Steps
 
-1. Resolve output root: `out_root` if set, else the generator **`session`** resource.
+1. Resolve output root: `out_root` if set, else the generator **`active`** resource.
 2. Read the index file (`{session.path}/.context/{subject}-index.md` for the corpus, or the path the user / caller gave). `{subject}` is the corpus basename — not the skill/toolset name.
 3. If chunks already cover the needed spans, **skip extract** for those rows; ensure the index points at the existing paths (and any new lens columns map to them). Stop here for covered material.
 4. Open the **same source corpus** the index describes. Use **contexts** and **partition guidance** only to interpret **which uncovered spans** still need a chunk — do not deepen into a full generate.

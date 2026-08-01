@@ -10,7 +10,7 @@ That text may be a scanner report, a user complaint, or both together. The loop
 fixes **why the generator produced the violation** — not the artifact in isolation.
 Never proceed without a verifiable error signal from **scan** or **validate**.
 
-Read the **`session`** resource first. `{{asset}}` and repaired outputs live under
+Read the **`active`** resource first. `{{asset}}` and repaired outputs live under
 that root (docs → `{session.path}/.context/`; code → `{session.path}/{module}/`). Do not
 repair into a divergent folder.
 

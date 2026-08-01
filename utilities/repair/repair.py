@@ -72,7 +72,7 @@ class Repair:
         status: str = "fixed",
     ) -> str:
         """log_fix"""
-        self.session
+        self.active
         self.write_to_fix()
         return (
             "After correcting the failure, entry is in {session.folder}/to-fix.log "
@@ -82,7 +82,7 @@ class Repair:
     @action
     def repair(self, asset: str, violation: str) -> str:
         """repair"""
-        self.session
+        self.active
         self.scan()
         self.contexts
         self.examples

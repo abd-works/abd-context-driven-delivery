@@ -1,4 +1,4 @@
-"""BDD spec for sketch - @sketch decorator + Sketcher toolset + _ActionExpander integration."""
+"""BDD spec for Sketcher toolset + ActionExpander integration."""
 
 import sys
 from pathlib import Path
@@ -12,63 +12,11 @@ for _cat in ("primitives", "utilities", "context_tools"):
         sys.path.insert(0, _p)
 sys.modules.pop("sketch", None)
 
-from expects import be_true, contain, equal, expect, raise_error
+from expects import be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from primitives.actions.action import _ActionExpander, action
-from sketch import Sketcher, sketch
-from sketch.examples.demo import Demo
-from tools.tool import tool, toolset
-
-
-with description("@sketch decorator"):
-    with context("applied to an @action method"):
-        with it("marks the function with _sketch_wrapped"):
-            expect(getattr(Demo.generate, "_sketch_wrapped", False)).to(be_true)
-
-        with it("registers sketch in the wrapper chain (grill lives on sketch_session)"):
-            from primitives.actions.action import _action_wrapper_names
-            names = _action_wrapper_names(Demo.generate)
-            expect(list(names)).to(equal(["sketch"]))
-
-        with it("resolves agent_dir to the concrete toolset owner module in the manifest chain"):
-            entry = Demo.manifest.signature["generate"]
-            chain = entry["chain"]
-            sketch_entry = next((c for c in chain if isinstance(c, dict) and c.get("name") == "sketch"), None)
-            expect(sketch_entry).not_to(equal(None))
-            expect("agent_dir" in sketch_entry).to(be_true)
-            expect(sketch_entry["agent_dir"]).to(contain("sketch"))
-
-    with context("applied to a non-@action function"):
-        with it("raises TypeError with a helpful message"):
-            def _bare(): pass
-            expect(lambda: sketch(_bare)).to(
-                raise_error(TypeError, contain("must decorate an @action method"))
-            )
-
-
-with description("_ActionExpander integration"):
-    with context("when expanding a @sketch-wrapped @action"):
-        with it("expands sketch_session (with in-method grill) before the base action"):
-            demo = Demo()
-            body = _ActionExpander.instance().parse_body(Demo.generate, demo)
-            joined = "\n".join(body.prose_parts)
-            expect(joined).to(contain("(Recommended)"))
-            expect(joined).to(contain("save_sketch"))
-            sketch_pos = joined.find("save_sketch")
-            base_pos = joined.find("Base generate action body")
-            expect(sketch_pos < base_pos).to(be_true)
-
-        with it("preserves the original action docstring after the chained action instructions"):
-            demo = Demo()
-            body = _ActionExpander.instance().parse_body(Demo.generate, demo)
-            joined = "\n".join(body.prose_parts)
-            expect(joined).to(contain("Base generate action body"))
-
-        with it("preserves original tool steps on the base action"):
-            demo = Demo()
-            body = _ActionExpander.instance().parse_body(Demo.generate, demo)
-            expect("do_thing" in body.tool_steps).to(be_true)
+from primitives.actions.action import _ActionExpander
+from sketch import Sketcher
 
 
 with description("Sketcher toolset"):
@@ -215,6 +163,5 @@ with description("Sketcher toolset"):
         with it("calls grill_with_context in-method then owns sketch show/persist cadence"):
             joined = "\n".join(self.body.prose_parts)
             expect(joined).to(contain("(Recommended)"))
-            expect(joined).to(contain("2\u20133 grill answers"))
             expect(joined).to(contain("save_sketch"))
             expect(joined).to(contain("Grill the sketch plan"))

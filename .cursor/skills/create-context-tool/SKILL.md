@@ -1,6 +1,6 @@
 ---
 name: create-context-tool
-description: "CreateContextTool - scaffold new @base_context_tool domains under context_tools/."
+description: "CreateContextTool - scaffold new BaseContextTool domains under context_tools/."
 disable-model-invocation: true
 ---
 

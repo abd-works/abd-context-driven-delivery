@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from primitives.actions.action import action
-from context_tools import base_context_tool
+from context_tools.base.base_context_tool import BaseContextTool
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from tools.tool import tool  # noqa: F401
@@ -32,8 +32,7 @@ _SUPPORTED_FORMATS = frozenset(
 )
 
 
-@base_context_tool
-class Ddd:
+class Ddd(BaseContextTool):
     """# Instructions"""
 
     def __init__(

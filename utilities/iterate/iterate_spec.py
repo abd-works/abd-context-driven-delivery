@@ -1,4 +1,4 @@
-"""BDD spec for iterate - @iterate decorator + Iterator toolset + ActionExpander integration."""
+"""BDD spec for Iterator toolset + ActionExpander integration."""
 
 import sys
 from pathlib import Path
@@ -12,47 +12,11 @@ for _cat in ("primitives", "utilities", "context_tools"):
         sys.path.insert(0, _p)
 sys.modules.pop("iterate", None)
 
-from expects import be_true, contain, equal, expect, raise_error
+from expects import contain, equal, expect
 from mamba import context, description, it
 
-from primitives.actions.action import _ActionExpander, _action_wrapper_names, action
-from iterate import Iterator, iterate
-from iterate.examples.demo import Demo
-
-
-with description("@iterate decorator"):
-    with context("applied to an @action method"):
-        with it("marks the function with _iterate_wrapped"):
-            expect(getattr(Demo.generate, "_iterate_wrapped", False)).to(be_true)
-
-        with it("registers iterate in the wrapper chain (grill lives on iterate_session)"):
-            names = _action_wrapper_names(Demo.generate)
-            expect(list(names)).to(equal(["iterate"]))
-
-    with context("applied to a non-@action function"):
-        with it("raises TypeError with a helpful message"):
-            def _bare(): pass
-            expect(lambda: iterate(_bare)).to(
-                raise_error(TypeError, contain("must decorate an @action method"))
-            )
-
-
-with description("_ActionExpander integration"):
-    with context("when expanding an @iterate-wrapped @action"):
-        with it("expands iterate_session (with in-method grill) before the base action"):
-            demo = Demo()
-            body = _ActionExpander.instance().parse_body(Demo.generate, demo)
-            joined = "\n".join(body.prose_parts)
-            expect(joined).to(contain("(Recommended)"))
-            expect(joined).to(contain("validate"))
-            iterate_pos = joined.find("validate")
-            base_pos = joined.find("Base generate action body")
-            expect(iterate_pos < base_pos).to(be_true)
-
-        with it("preserves original tool steps on the base action"):
-            demo = Demo()
-            body = _ActionExpander.instance().parse_body(Demo.generate, demo)
-            expect("do_thing" in body.tool_steps).to(be_true)
+from primitives.actions.action import _ActionExpander
+from iterate import Iterator
 
 
 with description("Iterator toolset"):

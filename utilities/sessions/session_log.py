@@ -10,11 +10,18 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
-from sessions.session import Session
+if TYPE_CHECKING:
+    from sessions.workspace_session import Session
 
 F = TypeVar("F", bound=Callable[..., Any])
+
+
+def _session_cls():
+    from sessions.workspace_session import Session
+
+    return Session
 
 
 def log(func: F) -> F:
@@ -77,7 +84,7 @@ class _LastPayload:
 
 
 class ISessionLog(ABC):
-    """Append-only session event log bound to an ``ISession``."""
+    """Append-only session event log bound to a ``Session``."""
 
     @classmethod
     @abstractmethod
@@ -122,7 +129,7 @@ class SessionLog(ISessionLog):
     def __init__(self, sessions_root: Path | None = None) -> None:
         # Test override only: when set, log_dir = sessions_root / session.name
         self._sessions_root = sessions_root
-        self._session = Session(path=".", name="default")
+        self._session = _session_cls()(path=".", name="default")
         self._verbose = False
         self._last_payload: _LastPayload | None = None
         self._event_count = 0
@@ -165,6 +172,7 @@ class SessionLog(ISessionLog):
 
     def set_session(self, session: str | Session | None) -> None:
         """Bind a Session, or a name (legacy) as ``Session(path=".", name=...)``."""
+        Session = _session_cls()
         if isinstance(session, Session):
             self.bind(session)
             return

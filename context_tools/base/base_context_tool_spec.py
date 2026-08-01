@@ -178,9 +178,17 @@ with description("BaseContextTool composer"):
             with it("should inline the full Contexts section as rubric"):
                 _assert_contexts_inlined(self.response["instructions"], self.contexts)
 
-            with it("should name scan on tools"):
-                expect(self.response["tools"]).to(equal(["scan"]))
-
+            with it("should name open session tools then scan"):
+                expect(self.response["tools"]).to(
+                    equal(
+                        [
+                            "ensure_session",
+                            "read_context_index",
+                            "record_context_root",
+                            "scan",
+                        ]
+                    )
+                )
             with it("should inline validate prose"):
                 expect(_section("validate") in self.response["instructions"]).to(
                     be_true
@@ -197,9 +205,18 @@ with description("BaseContextTool composer"):
             with it("should set action to satisfy"):
                 expect(self.response["action"]).to(equal("satisfy"))
 
-            with it("should name CDR tools from decisions() on satisfy"):
+            with it("should name open session tools then CDR tools on satisfy"):
                 expect(self.response["tools"]).to(
-                    equal(["read_cdr_format", "list_cdrs", "write_cdr"])
+                    equal(
+                        [
+                            "ensure_session",
+                            "read_context_index",
+                            "record_context_root",
+                            "read_cdr_format",
+                            "list_cdrs",
+                            "write_cdr",
+                        ]
+                    )
                 )
 
             with it("should inline satisfy prose"):
@@ -247,9 +264,11 @@ with description("BaseContextTool linear kit delegation"):
         with it("should have no decorator chain on sketch"):
             expect("chain" in self.entry).to(equal(False))
 
-        with it("should inline workspace bind prose"):
+        with it("should inline workspace open prose"):
             expect(
-                "Resolve workspace + session layout" in self.response["instructions"]
+                "Open the workspace session" in self.response["instructions"]
+                or "Workspace open" in self.response["instructions"]
+                or "# Session Guidance" in self.response["instructions"]
             ).to(be_true)
 
         with it("should inline sketch_session cadence (save_sketch)"):
