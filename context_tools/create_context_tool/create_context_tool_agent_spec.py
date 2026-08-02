@@ -1,7 +1,7 @@
 # @agent-spec-manifest python -m tools agent-spec context_tools/create_context_tool/create_context_tool_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
-# session: context_tools/create_context_tool/.agent_bdd_sessions/car-chronicle.json
+# session: context_tools/create_context_tool/.context/.agent_bdd_sessions/car-chronicle.json
 """BDD agent spec for create_context_tool — generate and repair via shared helpers."""
 
 from expects import be_true, expect

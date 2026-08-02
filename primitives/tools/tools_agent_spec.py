@@ -1,7 +1,7 @@
 # @agent-spec-manifest python -m tools agent-spec primitives/tools/tools_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
-# session: primitives/tools/.agent_bdd_sessions/general-lee.json
+# session: primitives/tools/.context/.agent_bdd_sessions/general-lee.json
 """BDD agent spec for tools-behavior.md — construct resources, then multi-tool CLI use."""
 
 from expects import be_true, equal, expect

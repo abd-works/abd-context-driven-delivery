@@ -1,7 +1,7 @@
 # @agent-spec-manifest python -m tools agent-spec context_tools/clean_engineering/clean_engineering_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
-# session: context_tools/clean_engineering/.agent_bdd_sessions/clean-code-generate.json
+# session: context_tools/clean_engineering/.context/.agent_bdd_sessions/clean-code-generate.json
 """BDD agent spec for CleanEngineering — manifest + generate/validate instruction surface."""
 
 from expects import be_true, expect

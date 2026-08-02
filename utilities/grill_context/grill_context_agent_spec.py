@@ -1,7 +1,7 @@
 # @agent-spec-manifest python -m tools agent-spec utilities/grill_context/grill_context_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
-# session: utilities/grill_context/.agent_bdd_sessions/grill-write.json
+# session: utilities/grill_context/.context/.agent_bdd_sessions/grill-write.json
 """Agent BDD spec for utilities/grill_context/grill_context.py — GrillContext toolset.
 
 Verifies that an AI agent can:
@@ -25,7 +25,7 @@ from mamba import after, before, context, description, it
 
 from agent_bdd import agent
 
-_SESSIONS = Path(__file__).resolve().parent / ".agent_bdd_sessions"
+_SESSIONS = Path(__file__).resolve().parent / ".context" / ".agent_bdd_sessions"
 _TOOLSET = "utilities.grill_context.grill_context:GrillContext"
 # This module's own .context/ folder is a stable source of context files to explore.
 _GRILL_CONTEXT_DIR = str(Path(__file__).resolve().parent)

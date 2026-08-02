@@ -1,7 +1,7 @@
 # @agent-spec-manifest python -m tools agent-spec primitives/assets/assets_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
-# session: primitives/assets/.agent_bdd_sessions/card-file.json
+# session: primitives/assets/.context/.agent_bdd_sessions/card-file.json
 """BDD agent spec for CardFile — AI discovers AssetLocator-backed tools."""
 
 from expects import be_true, contain, expect

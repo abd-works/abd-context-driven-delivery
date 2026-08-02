@@ -1,7 +1,7 @@
 # @agent-spec-manifest python -m tools agent-spec primitives/actions/actions_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
-# session: primitives/actions/.agent_bdd_sessions/travel-to.json
+# session: primitives/actions/.context/.agent_bdd_sessions/travel-to.json
 """BDD agent spec for action.py — travelTo via shared helpers."""
 
 from expects import be_true, expect

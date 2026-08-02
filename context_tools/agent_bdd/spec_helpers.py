@@ -24,8 +24,8 @@ def repo_root_from(file: str | Path, *, parents: int = 2) -> Path:
 
 
 def sessions_dir(spec_file: str | Path, *, folder: str = ".agent_bdd_sessions") -> Path:
-    """Session JSON directory beside the spec (or under its parent package)."""
-    return Path(spec_file).resolve().parent / folder
+    """Session JSON directory under .context/ in the spec's package."""
+    return Path(spec_file).resolve().parent / ".context" / folder
 
 
 # ---------------------------------------------------------------------------

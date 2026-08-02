@@ -1,7 +1,7 @@
 # @agent-spec-manifest python -m tools agent-spec context_tools/bdd/bdd_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
-# session: context_tools/bdd/.agent_bdd_sessions/bdd-generate.json
+# session: context_tools/bdd/.context/.agent_bdd_sessions/bdd-generate.json
 """BDD agent spec for Bdd — manifest + generate instruction surface."""
 
 from expects import be_true, expect

@@ -1,7 +1,7 @@
 # @agent-spec-manifest python -m tools agent-spec utilities/record_decisions/record_decisions_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
-# session: utilities/record_decisions/.agent_bdd_sessions/write-cdr.json
+# session: utilities/record_decisions/.context/.agent_bdd_sessions/write-cdr.json
 """Agent BDD spec for utilities/record_decisions/record_decisions.py — RecordDecisions toolset.
 
 Verifies that an AI agent can:
@@ -25,7 +25,7 @@ from mamba import after, before, context, description, it
 
 from agent_bdd import agent
 
-_SESSIONS = Path(__file__).resolve().parent / ".agent_bdd_sessions"
+_SESSIONS = Path(__file__).resolve().parent / ".context" / ".agent_bdd_sessions"
 _TOOLSET = "utilities.record_decisions.record_decisions:RecordDecisions"
 
 
