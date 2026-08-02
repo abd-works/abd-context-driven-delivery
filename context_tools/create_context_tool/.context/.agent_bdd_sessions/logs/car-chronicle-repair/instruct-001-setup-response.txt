@@ -1,6 +1,6 @@
-Here is `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
+The path you gave no longer exists. The file is now at `context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py`. Contents:
 
-```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
+```1:20:context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py
 # @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
@@ -23,11 +23,9 @@ class CarChronicle(BaseContextTool):
 
 ```
 
-The header comments tell agents to manifest `CarChronicle`, then `python -m tools run -`, and to follow manifest instructions rather than infer behavior from this stub. BDD hooks point at `generate`, `satisfy`, and `validate` on `context_tools.bdd.bdd:Bdd`. The class only subclasses `BaseContextTool` with a `# Instructions` docstring placeholder and a constructor that passes `path` and `session` through.
+Same minimal `CarChronicle` stub as before: manifest/BDD header comments, `# Instructions` docstring placeholder, constructor forwarding to `BaseContextTool`. Line 1 still references the module id `context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle` even though the file lives under `.context/examples/`.The path you gave no longer exists. The file is now at `context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py`. Contents:
 
-The sibling `.context/module-context.md` describes this folder as the minimal driving-chronicle example for CreateContextTool scaffolds, with related pieces like `ChronicleWithOutput` and `car_chronicle.md` in the same directory.Here is `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
-
-```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
+```1:20:context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py
 # @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
@@ -50,11 +48,9 @@ class CarChronicle(BaseContextTool):
 
 ```
 
-The header comments tell agents to manifest `CarChronicle`, then `python -m tools run -`, and to follow manifest instructions rather than infer behavior from this stub. BDD hooks point at `generate`, `satisfy`, and `validate` on `context_tools.bdd.bdd:Bdd`. The class only subclasses `BaseContextTool` with a `# Instructions` docstring placeholder and a constructor that passes `path` and `session` through.
+Same minimal `CarChronicle` stub as before: manifest/BDD header comments, `# Instructions` docstring placeholder, constructor forwarding to `BaseContextTool`. Line 1 still references the module id `context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle` even though the file lives under `.context/examples/`.The path you gave no longer exists. The file is now at `context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py`. Contents:
 
-The sibling `.context/module-context.md` describes this folder as the minimal driving-chronicle example for CreateContextTool scaffolds, with related pieces like `ChronicleWithOutput` and `car_chronicle.md` in the same directory.Here is `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
-
-```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
+```1:20:context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py
 # @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
@@ -77,6 +73,4 @@ class CarChronicle(BaseContextTool):
 
 ```
 
-The header comments tell agents to manifest `CarChronicle`, then `python -m tools run -`, and to follow manifest instructions rather than infer behavior from this stub. BDD hooks point at `generate`, `satisfy`, and `validate` on `context_tools.bdd.bdd:Bdd`. The class only subclasses `BaseContextTool` with a `# Instructions` docstring placeholder and a constructor that passes `path` and `session` through.
-
-The sibling `.context/module-context.md` describes this folder as the minimal driving-chronicle example for CreateContextTool scaffolds, with related pieces like `ChronicleWithOutput` and `car_chronicle.md` in the same directory.
+Same minimal `CarChronicle` stub as before: manifest/BDD header comments, `# Instructions` docstring placeholder, constructor forwarding to `BaseContextTool`. Line 1 still references the module id `context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle` even though the file lives under `.context/examples/`.

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import inspect
 from pathlib import Path
+from typing import ClassVar
 
 from grill_context.grill_context import GrillContext
 from iterate.iterate import Iterator
@@ -38,12 +39,72 @@ from tools.tool import resource
 from tools.tool import tool
 
 
-class BaseContextTool(
-    PartitionPipeline,
-    Repair,
-    AgenticToolset,
-):
+# ---------------------------------------------------------------------------
+# Fidelity method generator — called from __init_subclass__ when a subclass
+# declares a ``fidelities`` class dict.  Plain Python methods (not @action);
+# each one calls ``_set_fidelity`` then delegates to the named lifecycle action.
+# ---------------------------------------------------------------------------
+
+def _generate_fidelity_methods(cls: type) -> None:
+    """Add generate_{f}, validate_{f}, satisfy_{f} for every fidelity in cls.fidelities."""
+    fidelity_names: set[str] = set(cls.fidelities.values())  # type: ignore[union-attr]
+    for action_name in ("generate", "validate", "satisfy"):
+        for fidelity_name in fidelity_names:
+            method_name = f"{action_name}_{fidelity_name}"
+            if not hasattr(cls, method_name):
+                def _make(act: str, fid: str):
+                    def _fidelity_method(self):
+                        self._set_fidelity(fid)
+                        return getattr(self, act)()
+                    _fidelity_method.__name__ = f"{act}_{fid}"
+                    _fidelity_method.__qualname__ = f"{cls.__qualname__}.{act}_{fid}"
+                    return _fidelity_method
+                setattr(cls, method_name, _make(action_name, fidelity_name))
+
+
+class BaseContextTool(AgenticToolset):
     """# Instructions"""
+
+    # -- PartitionPipeline (composed, not inherited) -------------------------
+    # Methods are bound from the kit's own function objects so that
+    # inspect.getfile still resolves to utilities/partition_pipeline/ for prose.
+    partition_guidance = PartitionPipeline.__dict__["partition_guidance"]
+    verify_segment_completeness = PartitionPipeline.__dict__["verify_segment_completeness"]
+    _segment_for = PartitionPipeline.__dict__["_segment_for"]
+    _read_partition_index = PartitionPipeline.__dict__["_read_partition_index"]
+    index = PartitionPipeline.__dict__["index"]
+    segment = PartitionPipeline.__dict__["segment"]
+    partition = PartitionPipeline.__dict__["partition"]
+
+    # -- Repair (composed, not inherited) ------------------------------------
+    # Same principle — prose lookup stays in utilities/repair/.
+    write_to_fix = Repair.__dict__["write_to_fix"]
+    log_fix = Repair.__dict__["log_fix"]
+    repair = Repair.__dict__["repair"]
+
+    # ------------------------------------------------------------------
+    # Stage constants — shared vocabulary for CDD delivery stages.
+    # Subclasses use these as keys in their ``fidelities`` class dict.
+    # ------------------------------------------------------------------
+    SHAPING:   ClassVar[str] = "shaping"
+    DISCOVERY: ClassVar[str] = "discovery"
+    SPEC:      ClassVar[str] = "spec"
+    ENGINEER:  ClassVar[str] = "engineer"
+
+    # ------------------------------------------------------------------
+    # fidelities — ordered mapping of stage constant → this tool's
+    # fidelity name for that stage.  Subclasses declare this as a plain
+    # class-level dict; __init_subclass__ auto-generates lifecycle methods
+    # from it.  None means "not declared" (base class default).
+    # ------------------------------------------------------------------
+    fidelities: ClassVar[dict[str, str] | None] = None
+
+    # ------------------------------------------------------------------
+    # _fidelity_format_defaults — fidelity_name → default format string.
+    # Subclasses shadow this with their own dict so that _set_fidelity
+    # can update self.format when the fidelity changes.
+    # ------------------------------------------------------------------
+    _fidelity_format_defaults: ClassVar[dict[str, str]] = {}
 
     default_workspace_folder: str = "."
     context_index_key: str = ""
@@ -53,6 +114,10 @@ class BaseContextTool(
         cls._is_context = True  # type: ignore[attr-defined]
         cls._is_toolset = True  # type: ignore[attr-defined]
         _ActionRunner.instance().validate_toolset(cls)
+        # Auto-generate generate_{f} / validate_{f} / satisfy_{f} whenever
+        # a subclass declares a ``fidelities`` class dict.
+        if "fidelities" in cls.__dict__ and isinstance(cls.__dict__["fidelities"], dict):
+            _generate_fidelity_methods(cls)
 
     def __init__(
         self,
@@ -76,6 +141,20 @@ class BaseContextTool(
     @property
     def module_dir(self) -> Path:
         return Path(inspect.getfile(type(self))).resolve().parent
+
+    def _set_fidelity(self, fidelity_name: str) -> None:
+        """Update self.fidelity and resolve the matching default format.
+
+        Used by generated fidelity methods (generate_{f}, validate_{f}, …) to
+        switch fidelity at runtime without reconstructing the toolset instance.
+        Format is only updated when fidelity_name appears in the subclass's
+        ``_fidelity_format_defaults`` class dict; otherwise self.format is
+        left unchanged.
+        """
+        self.fidelity = fidelity_name
+        defaults: dict[str, str] = getattr(type(self), "_fidelity_format_defaults", {})
+        if fidelity_name in defaults:
+            self.format = defaults[fidelity_name]
 
     # -- Kit providers (real instances, not self) ----------------------------
 
@@ -118,17 +197,10 @@ class BaseContextTool(
             self._decisions_kit = RecordDecisions()
         return self._decisions_kit
 
-    # -- Bridges for kits that still expect host fields ----------------------
-
-    @property
-    def _session(self) -> Session:
-        """Repair.write_to_fix reads ``self._session``; delegate to workspace kit."""
-        return self.workspace()
-
     @property
     @resource
     def active(self) -> Session:
-        """active"""
+        """The current workspace session — exposes the session as a host resource."""
         return self.workspace()
 
     @instruction(override=True)

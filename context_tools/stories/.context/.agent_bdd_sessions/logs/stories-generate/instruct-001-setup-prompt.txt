@@ -1,1 +1,2 @@
-Run the manifest command from the @toolset-manifest comment at the top of context_tools/stories/stories.py. Show the manifest output.
+Using shell, run exactly: python -m tools manifest context_tools.stories.stories:Stories
+Return the complete manifest stdout (full fenced YAML; do not summarize).

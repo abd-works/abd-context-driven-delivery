@@ -1,61 +1,70 @@
-Ran from the repo root (with `PYTHONIOENCODING=utf-8` per project rules):
+Command:
 
 ```powershell
 python -m tools run -
 ```
 
-Output:
+(`PYTHONIOENCODING=utf-8` was set in the shell per repo rules.)
+
+**Exit code:** 1
+
+**Output:**
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-With no YAML on stdin, `run -` has nothing to parse, so it fails with `request missing toolset`. To drive it, pipe or here-string a request, for example:
+With no YAML on stdin, `run -` has nothing to parse. Pipe a request, for example:
 
 ```powershell
 @"
 toolset: context_tools.stories.stories:Stories
-tool: read_manifest
 "@ | python -m tools run -
-```Ran from the repo root (with `PYTHONIOENCODING=utf-8` per project rules):
+```Command:
 
 ```powershell
 python -m tools run -
 ```
 
-Output:
+(`PYTHONIOENCODING=utf-8` was set in the shell per repo rules.)
+
+**Exit code:** 1
+
+**Output:**
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-With no YAML on stdin, `run -` has nothing to parse, so it fails with `request missing toolset`. To drive it, pipe or here-string a request, for example:
+With no YAML on stdin, `run -` has nothing to parse. Pipe a request, for example:
 
 ```powershell
 @"
 toolset: context_tools.stories.stories:Stories
-tool: read_manifest
 "@ | python -m tools run -
-```Ran from the repo root (with `PYTHONIOENCODING=utf-8` per project rules):
+```Command:
 
 ```powershell
 python -m tools run -
 ```
 
-Output:
+(`PYTHONIOENCODING=utf-8` was set in the shell per repo rules.)
+
+**Exit code:** 1
+
+**Output:**
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-With no YAML on stdin, `run -` has nothing to parse, so it fails with `request missing toolset`. To drive it, pipe or here-string a request, for example:
+With no YAML on stdin, `run -` has nothing to parse. Pipe a request, for example:
 
 ```powershell
 @"
 toolset: context_tools.stories.stories:Stories
-tool: read_manifest
 "@ | python -m tools run -
 ```

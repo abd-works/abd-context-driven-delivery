@@ -38,10 +38,6 @@ with description("a CDD orchestrator"):
             with it("should retain fidelity discovery"):
                 expect(self.cdd.fidelity).to(equal("discovery"))
 
-        with context("with explore fidelity"):
-            with it("should default format to markdown"):
-                expect(Cdd(fidelity="explore").format).to(equal("markdown"))
-
         with context("with spec fidelity"):
             with it("should default format to python"):
                 expect(Cdd(fidelity="spec").format).to(equal("python"))
@@ -62,8 +58,8 @@ with description("a CDD orchestrator"):
         with it("should return four child tools"):
             expect(len(self.tools)).to(equal(4))
 
-        with it("should wire Stories at discovery"):
-            expect(self.pairs[0]).to(equal((Stories, "discovery")))
+        with it("should wire Stories at story_map"):
+            expect(self.pairs[0]).to(equal((Stories, "story_map")))
 
         with it("should wire Ddd at bounded_context"):
             expect(self.pairs[1]).to(equal((Ddd, "bounded_context")))
@@ -78,22 +74,8 @@ with description("a CDD orchestrator"):
             expect(any(isinstance(t, Bdd) for t in self.tools)).to(equal(False))
 
     with context("that resolves context tools for explore"):
-        with before.each:
-            self.tools = Cdd(fidelity="explore").context_tools()
-            self.pairs = [(type(t), t.fidelity) for t in self.tools]
-
-        with it("should include Bdd at behavior after CleanEngineering"):
-            expect(self.pairs).to(
-                equal(
-                    [
-                        (Ddd, "building_blocks"),
-                        (Stories, "exploration"),
-                        (Ux, "mockup"),
-                        (CleanEngineering, "model"),
-                        (Bdd, "behavior"),
-                    ]
-                )
-            )
+        with it("should raise ValueError (explore stage no longer exists)"):
+            expect(lambda: Cdd(fidelity="explore")).to(raise_error(ValueError))
 
     with context("that resolves context tools for spec"):
         with before.each:
@@ -101,15 +83,15 @@ with description("a CDD orchestrator"):
                 (type(t), t.fidelity) for t in Cdd(fidelity="spec").context_tools()
             ]
 
-        with it("should wire children at code / exploration / mockup / development"):
+        with it("should wire children at building_blocks / scenarios / mockup / model / behavior"):
             expect(self.pairs).to(
                 equal(
                     [
-                        (Ddd, "code"),
-                        (Stories, "exploration"),
+                        (Ddd, "building_blocks"),
+                        (Stories, "scenarios"),
                         (Ux, "mockup"),
-                        (CleanEngineering, "code"),
-                        (Bdd, "development"),
+                        (CleanEngineering, "model"),
+                        (Bdd, "behavior"),
                     ]
                 )
             )
@@ -121,12 +103,13 @@ with description("a CDD orchestrator"):
                 for t in Cdd(fidelity="engineer").context_tools()
             ]
 
-        with it("should omit Ux and keep Bdd at development"):
+        with it("should include Ux at code and Bdd at development"):
             expect(self.pairs).to(
                 equal(
                     [
                         (Ddd, "code"),
-                        (Stories, "engineering"),
+                        (Stories, "acceptance_tests"),
+                        (Ux, "code"),
                         (CleanEngineering, "code"),
                         (Bdd, "development"),
                     ]

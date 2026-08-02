@@ -6,9 +6,9 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 | Fidelity | Default Format | Produce |
 |---|---|---|
-| **discovery** | markdown | Story map + thin-slice |
-| **exploration** | python | One main-flow scenario per story (fake + public seam); optional variations |
-| **engineering** | python | `*_spec` + `*_spec.{tier}` |
+| **story_map** | markdown | Story map + thin-slice |
+| **scenarios** | python | Main-flow scenarios per story (single or multiple); optional variations; fake + public seam |
+| **acceptance_tests** | python | `*_spec` + `*_spec.{tier}` — CE runs alongside to produce matching production code |
 
 **Templates** live under `templates/` per format. **Scanners** read the canonical model only — never language syntax.
 
@@ -133,6 +133,6 @@ Declare on the model: `Epic.example_factories` / `SubEpic.example_factories`. No
 1. Confirm fidelity and format (defaults above).
 2. Read this file — shared rules + active fidelity.
 3. **MUST** follow base `generate` step 2: before any grill/iterate question, prove-read every relevant referenced context for that decision (segments, module-context, grill-answers, story-context, build-order, cited paths, …). Index mid-epic stubs are not inventory. Apply `read-all-source-context-in-full`.
-4. Use peer actions when useful (`grill`, `sketch`, `iterate`; `sketch-template.md`).
+4. Use peer actions when useful (`grill`, `sketch`, `iterate`; `templates/stories-sketch.md`).
 5. Fill templates for the active fidelity.
 6. Run **validate**.

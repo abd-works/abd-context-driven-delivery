@@ -5,18 +5,18 @@ ok: false
 error: request missing toolset
 ```
 
-With no YAML on stdin, `run -` has nothing to dispatch. Pipe a request (for example after manifesting `CarChronicle`) if you want a successful run.The command exited with code 1:
+Nothing was on stdin, so the runner had no `toolset` in the request. Pipe YAML into `-` (or redirect a request file) when you want it to execute something.The command exited with code 1:
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-With no YAML on stdin, `run -` has nothing to dispatch. Pipe a request (for example after manifesting `CarChronicle`) if you want a successful run.The command exited with code 1:
+Nothing was on stdin, so the runner had no `toolset` in the request. Pipe YAML into `-` (or redirect a request file) when you want it to execute something.The command exited with code 1:
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-With no YAML on stdin, `run -` has nothing to dispatch. Pipe a request (for example after manifesting `CarChronicle`) if you want a successful run.
+Nothing was on stdin, so the runner had no `toolset` in the request. Pipe YAML into `-` (or redirect a request file) when you want it to execute something.

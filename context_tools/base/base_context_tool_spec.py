@@ -1,4 +1,4 @@
-"""BDD spec for BaseContextTool - domain host face + lifecycle prose.
+"""BDD spec for BaseContextTool - domain host face, lifecycle prose, and fidelity system.
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
@@ -13,10 +13,12 @@ Meta generator face (scaffold templates / create_context_tool.md) lives in
 ``create_context_tool/create_context_tool_spec.py``.
 """
 
+import sys
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
-from expects import be_true, equal, expect
+from expects import be_true, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
@@ -25,7 +27,17 @@ from primitives.instructions import Instruction
 from primitives.instructions import _path_for_name
 from tools.tool import Toolset, _ToolsetLoader
 
+from context_tools.base.base_context_tool import BaseContextTool
+from context_tools.bdd.bdd import Bdd
+from context_tools.clean_engineering.clean_engineering import CleanEngineering
+from context_tools.ddd.ddd import Ddd
+from context_tools.stories.stories import Stories
+from context_tools.ux.ux import Ux
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+for _p in [str(_REPO_ROOT), *[str(_REPO_ROOT / c) for c in ("context_tools", "primitives", "utilities")]]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 _BASE_DIR = _REPO_ROOT / "context_tools" / "base"
 _CAR_CHRONICLE_DIR = (
     _REPO_ROOT / "context_tools" / "create_context_tool" / "examples" / "car_chronicle"
@@ -395,3 +407,179 @@ with description("BaseContextTool public host face"):
         header = self.host.add_generate_header_to_generated()
         expect("@toolset-manifest" in header).to(be_true)
         expect("invoke-edit: action satisfy" in header).to(be_true)
+
+
+# ---------------------------------------------------------------------------
+# Stage constants
+# ---------------------------------------------------------------------------
+
+with description("BaseContextTool stage constants"):
+    with it("should define SHAPING as 'shaping'"):
+        expect(BaseContextTool.SHAPING).to(equal("shaping"))
+
+    with it("should define DISCOVERY as 'discovery'"):
+        expect(BaseContextTool.DISCOVERY).to(equal("discovery"))
+
+    with it("should define SPEC as 'spec'"):
+        expect(BaseContextTool.SPEC).to(equal("spec"))
+
+    with it("should define ENGINEER as 'engineer'"):
+        expect(BaseContextTool.ENGINEER).to(equal("engineer"))
+
+
+# ---------------------------------------------------------------------------
+# fidelities class variable — per tool
+# ---------------------------------------------------------------------------
+
+with description("BaseContextTool.fidelities class variable"):
+    with context("on Stories"):
+        with it("should map DISCOVERY to story_map"):
+            expect(Stories.fidelities[BaseContextTool.DISCOVERY]).to(equal("story_map"))
+
+        with it("should map SPEC to scenarios"):
+            expect(Stories.fidelities[BaseContextTool.SPEC]).to(equal("scenarios"))
+
+        with it("should map ENGINEER to acceptance_tests"):
+            expect(Stories.fidelities[BaseContextTool.ENGINEER]).to(equal("acceptance_tests"))
+
+    with context("on Bdd"):
+        with it("should map DISCOVERY to modules"):
+            expect(Bdd.fidelities[BaseContextTool.DISCOVERY]).to(equal("modules"))
+
+        with it("should map SPEC to behavior"):
+            expect(Bdd.fidelities[BaseContextTool.SPEC]).to(equal("behavior"))
+
+        with it("should map ENGINEER to development"):
+            expect(Bdd.fidelities[BaseContextTool.ENGINEER]).to(equal("development"))
+
+    with context("on Ddd"):
+        with it("should map DISCOVERY to bounded_context"):
+            expect(Ddd.fidelities[BaseContextTool.DISCOVERY]).to(equal("bounded_context"))
+
+        with it("should map SPEC to building_blocks"):
+            expect(Ddd.fidelities[BaseContextTool.SPEC]).to(equal("building_blocks"))
+
+        with it("should map ENGINEER to code"):
+            expect(Ddd.fidelities[BaseContextTool.ENGINEER]).to(equal("code"))
+
+    with context("on Ux"):
+        with it("should map DISCOVERY to ia"):
+            expect(Ux.fidelities[BaseContextTool.DISCOVERY]).to(equal("ia"))
+
+        with it("should map SPEC to mockup"):
+            expect(Ux.fidelities[BaseContextTool.SPEC]).to(equal("mockup"))
+
+        with it("should map ENGINEER to code"):
+            expect(Ux.fidelities[BaseContextTool.ENGINEER]).to(equal("code"))
+
+    with context("on CleanEngineering"):
+        with it("should map DISCOVERY to modules"):
+            expect(CleanEngineering.fidelities[BaseContextTool.DISCOVERY]).to(equal("modules"))
+
+        with it("should map SPEC to model"):
+            expect(CleanEngineering.fidelities[BaseContextTool.SPEC]).to(equal("model"))
+
+        with it("should map ENGINEER to code"):
+            expect(CleanEngineering.fidelities[BaseContextTool.ENGINEER]).to(equal("code"))
+
+
+# ---------------------------------------------------------------------------
+# _set_fidelity helper
+# ---------------------------------------------------------------------------
+
+with description("BaseContextTool._set_fidelity"):
+    with context("on a Stories instance starting at story_map"):
+        with before.each:
+            self.stories = Stories(fidelity="story_map")
+
+        with it("should update fidelity to scenarios"):
+            self.stories._set_fidelity("scenarios")
+            expect(self.stories.fidelity).to(equal("scenarios"))
+
+        with it("should update format to python when set to scenarios"):
+            self.stories._set_fidelity("scenarios")
+            expect(self.stories.format).to(equal("python"))
+
+        with it("should update fidelity to acceptance_tests"):
+            self.stories._set_fidelity("acceptance_tests")
+            expect(self.stories.fidelity).to(equal("acceptance_tests"))
+
+    with context("on a CleanEngineering instance starting at modules"):
+        with before.each:
+            self.ce = CleanEngineering(fidelity="modules")
+
+        with it("should update fidelity to model"):
+            self.ce._set_fidelity("model")
+            expect(self.ce.fidelity).to(equal("model"))
+
+        with it("should update format to python when set to model"):
+            self.ce._set_fidelity("model")
+            expect(self.ce.format).to(equal("python"))
+
+
+# ---------------------------------------------------------------------------
+# Generated fidelity lifecycle methods
+# ---------------------------------------------------------------------------
+
+with description("BaseContextTool generated fidelity methods"):
+    with context("on Stories class"):
+        with it("should have generate_story_map method"):
+            expect(callable(getattr(Stories, "generate_story_map", None))).to(be_true)
+
+        with it("should have generate_scenarios method"):
+            expect(callable(getattr(Stories, "generate_scenarios", None))).to(be_true)
+
+        with it("should have generate_acceptance_tests method"):
+            expect(callable(getattr(Stories, "generate_acceptance_tests", None))).to(be_true)
+
+        with it("should have validate_story_map method"):
+            expect(callable(getattr(Stories, "validate_story_map", None))).to(be_true)
+
+        with it("should have satisfy_story_map method"):
+            expect(callable(getattr(Stories, "satisfy_story_map", None))).to(be_true)
+
+    with context("on Bdd class"):
+        with it("should have generate_modules method"):
+            expect(callable(getattr(Bdd, "generate_modules", None))).to(be_true)
+
+        with it("should have generate_behavior method"):
+            expect(callable(getattr(Bdd, "generate_behavior", None))).to(be_true)
+
+        with it("should have generate_development method"):
+            expect(callable(getattr(Bdd, "generate_development", None))).to(be_true)
+
+    with context("on CleanEngineering class"):
+        with it("should have generate_modules method"):
+            expect(callable(getattr(CleanEngineering, "generate_modules", None))).to(be_true)
+
+        with it("should have generate_model method"):
+            expect(callable(getattr(CleanEngineering, "generate_model", None))).to(be_true)
+
+        with it("should have generate_code method"):
+            expect(callable(getattr(CleanEngineering, "generate_code", None))).to(be_true)
+
+    with context("calling generate_story_map on a Stories instance starting at scenarios"):
+        with before.each:
+            self.stories = Stories(fidelity="scenarios")
+
+        with it("should set fidelity to story_map before calling generate"):
+            captured = []
+            with patch.object(type(self.stories), "generate", lambda s: captured.append(s.fidelity)):
+                self.stories.generate_story_map()
+            expect(captured[0]).to(equal("story_map"))
+
+        with it("should set format to markdown before calling generate"):
+            captured = []
+            with patch.object(type(self.stories), "generate", lambda s: captured.append(s.format)):
+                self.stories.generate_story_map()
+            expect(captured[0]).to(equal("markdown"))
+
+    with context("calling validate_scenarios on a Stories instance starting at story_map"):
+        with before.each:
+            self.stories = Stories(fidelity="story_map")
+
+        with it("should set fidelity to scenarios before calling validate"):
+            captured = []
+            with patch.object(type(self.stories), "validate", lambda s: captured.append(s.fidelity)):
+                self.stories.validate_scenarios()
+            expect(captured[0]).to(equal("scenarios"))

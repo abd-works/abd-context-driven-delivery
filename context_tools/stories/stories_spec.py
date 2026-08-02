@@ -33,40 +33,40 @@ def _expanded(stories, action_name):
 
 
 with description("Stories"):
-    with context("that is constructed with fidelity discovery"):
+    with context("that is constructed with fidelity story_map"):
         with before.each:
-            self.stories = Stories(fidelity="discovery")
+            self.stories = Stories(fidelity="story_map")
 
         with it("should default format to markdown"):
             expect(self.stories.format).to(equal("markdown"))
 
-        with it("should retain fidelity discovery"):
-            expect(self.stories.fidelity).to(equal("discovery"))
+        with it("should retain fidelity story_map"):
+            expect(self.stories.fidelity).to(equal("story_map"))
 
-    with context("that is constructed with fidelity exploration"):
+    with context("that is constructed with fidelity scenarios"):
         with before.each:
-            self.stories = Stories(fidelity="exploration")
+            self.stories = Stories(fidelity="scenarios")
 
         with it("should default format to python"):
             expect(self.stories.format).to(equal("python"))
 
-        with it("should retain fidelity exploration"):
-            expect(self.stories.fidelity).to(equal("exploration"))
+        with it("should retain fidelity scenarios"):
+            expect(self.stories.fidelity).to(equal("scenarios"))
 
-    with context("that is constructed with fidelity engineering"):
+    with context("that is constructed with fidelity acceptance_tests"):
         with it("should default format to python"):
-            expect(Stories(fidelity="engineering").format).to(equal("python"))
+            expect(Stories(fidelity="acceptance_tests").format).to(equal("python"))
 
     with context("that is constructed with an unsupported fidelity"):
         with it("should raise ValueError"):
-            expect(lambda: Stories(fidelity="specification")).to(raise_error(ValueError))
+            expect(lambda: Stories(fidelity="discovery")).to(raise_error(ValueError))
 
         with it("should raise ValueError for unknown names"):
             expect(lambda: Stories(fidelity="nope")).to(raise_error(ValueError))
 
     with context("that is constructed with an unsupported format"):
         with it("should raise ValueError"):
-            expect(lambda: Stories(fidelity="discovery", format="yaml")).to(
+            expect(lambda: Stories(fidelity="story_map", format="yaml")).to(
                 raise_error(ValueError)
             )
 
@@ -93,7 +93,7 @@ with description("Stories"):
 
     with context("whose transform tool converts markdown to python"):
         with before.each:
-            self.stories = Stories(fidelity="discovery")
+            self.stories = Stories(fidelity="story_map")
             self.result = self.stories.transform(
                 source_format="markdown",
                 target_format="python",
@@ -115,7 +115,7 @@ with description("Stories"):
 
     with context("whose contexts slot is expanded"):
         with before.each:
-            self.stories = Stories(fidelity="discovery")
+            self.stories = Stories(fidelity="story_map")
             self.contexts = self.stories.contexts().expand()
 
         with it("should return non-empty prose"):
@@ -124,5 +124,5 @@ with description("Stories"):
         with it("should include the verb-noun-format rule slug"):
             expect("verb-noun-format" in self.contexts).to(be_true)
 
-        with it("should name the discovery fidelity"):
-            expect("discovery" in self.contexts).to(be_true)
+        with it("should name the story_map fidelity"):
+            expect("story_map" in self.contexts).to(be_true)

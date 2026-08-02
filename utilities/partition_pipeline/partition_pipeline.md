@@ -39,9 +39,7 @@ false PASS. Completeness FAIL blocks story inventory until the chunk is repaired
 4. When segmenting, follow **segment** — extract/copy contributing source into **`{session.path}/{module}/.context/`**. Do not substitute paraphrased notes or API sketches for source text.
 5. After new chunks exist, the index must **point at them** (chunk paths). Partition is incomplete while new chunk rows only cite corpus TOC labels.
 
-Base behavior: read code or markdown. Guidance is `partition.md` in the context folder when present; otherwise determine top-level structure from user suggestion, context, skill-provided material, etc.
-
-**Hard fail (lens):** when domain `partition.md` and/or `{domain}.md` § Contexts exist, that lens’s artifacts (epics / screens / subjects / modules / …) **must** appear correctly in the index. Mirroring corpus chapters, TOC, files, or types is a failed partition — stop and regroup.
+Base behavior: read code or markdown. Guidance is the domain `partition.md` + `partition_guidance.md` template (parameterized, injected at runtime) when the domain has them; otherwise determine top-level structure from user suggestion, context, skill-provided material, etc.
 
 ---
 
@@ -96,7 +94,7 @@ Build or **extend** a thin sections index over the source at the given `context`
 
 1. Read the source as **code or markdown** (no separate channel required).
 2. Resolve output root: `out_root` if set, else the generator **`active`** resource. Docs go under `{active.path}/.context/`.
-3. **If `{session.path}/.context/{subject}-index.md` already exists, open it and ADD — do not replace.** See base `partition.md` **Multi-pass / multi-lens**. Prior columns, chunk links, and rows stay unless the user explicitly asked to repartition from scratch.
+3. **If `{session.path}/.context/{subject}-index.md` already exists, open it and ADD — do not replace.** See **Multi-pass / multi-lens** below. Prior columns, chunk links, and rows stay unless the user explicitly asked to repartition from scratch.
 4. Apply **contexts** plus **partition guidance** (`partition.md` in this context folder, or the base default when missing). Guidance names this lens’s **top-level artifacts**.
    - **Hard fail:** if the domain has `{domain}.md` § Contexts and/or `partition.md`, that lens’s artifacts **must** appear in the index (as rows on a first pass, or as **added columns / maps** on a later pass). Ignoring the lens or mirroring the corpus TOC/chapters/files is a failed partition — do not ship.
 5. Infer guiding structure from that **lens** — not from the corpus TOC. Source chapters/files/paths (and existing **chunk paths**) are **evidence that contributes to** lens artifacts; artifacts are **not** 1:1 with chapters, files, or bookmarks.
@@ -138,10 +136,10 @@ Chunks share the **same directory tree** as later generate output (`{session.pat
 
 ## Additive rule (hard)
 
-If module folders already have `*-segment.md` chunks for this corpus:
+If folders already have `*-segment.md` chunks for this corpus:
 
 - **Do not** delete, empty, or rewrite existing `*-segment.md` files.
-- **Do not** re-extract the whole corpus into a parallel tree for a new lens (Stories / UX / BDD / CE).
+- **Do not** re-extract the whole corpus into a parallel tree for a new lens (Stories / UX / BDD / CE / DDD/ etc).
 - **Do** leave existing chunks as the source of truth and let the **index** map new lens labels onto them.
 - **Do** create **new** segment files only for **uncovered** spans the current lens needs (additive gap-fill).
 
@@ -170,3 +168,28 @@ Repartition-from-scratch of chunks requires an **explicit** user request.
     - Put expected names in the segment (`<!-- expected-entries … -->`) or pass them as `expected_names`.
     - Project layout noise (`non-entry-headers`, `short-body-pattern`, `min-body-chars`) lives in the partition root index `<!-- partition-config -->` block — see `index.md` **Config**. Never hardcode project headers into the kit.
     - **Span length alone is a false PASS.** Completeness FAIL = hard fail — repair the chunk before story inventory.
+
+---
+
+## Domain extension inheritance
+
+A domain `partition.md` (e.g. `bdd/partition.md`, `ux/partition.md`, `stories/partition.md`, `clean_engineering/partition.md`) **inherits every base rule**. Extensions must not re-state the following — they are owned and enforced here:
+
+- All **Multi-pass / multi-lens** hard fails and additive rules
+- **Index** steps 1–11 and anti-mirror check
+- All **Segment** steps 1–11 including the additive hard-fail and done-check
+- Universal done-check items: *prior lens columns/chunk links intact; [lens] data added not substituted; every artifact maps to ≥1 chunk or explicit gap-fill*
+- Universal anti-pattern rows: *wipe shared index for [lens]-only; re-chunk whole corpus per artifact when chunks exist*
+
+**What each extension file provides:**
+
+| Section | Extension provides | Inherited — do not repeat |
+|---|---|---|
+| Opening `Hard fail` | Cite `{tool}.md § Contexts` by name | Multi-pass / re-chunk paragraph (→ "see base § Multi-pass") |
+| **Top-level artifacts** | Lens artifact names + definition | — |
+| **Must follow** | `{tool}.md` + lens-specific templates | Base `partition_pipeline.md` reference (implicit) |
+| **Index › First pass** | Lens-specific skim, naming, thin structure steps | — |
+| **Index › Additive pass** | One-liner → "see base § Multi-pass" | Full 3-step additive prose (already above) |
+| **Index › Done-check** | Lens-specific checks only | Prior-columns-intact and maps-to-chunk items |
+| **Index › Anti-patterns** | Lens-specific rows only | Wipe-index and re-chunk rows |
+| **Segment** | Lens-specific note (one line, if any) | Full segment procedure |

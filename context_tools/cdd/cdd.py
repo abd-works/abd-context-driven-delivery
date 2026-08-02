@@ -23,40 +23,24 @@ _FORMAT = {
     "engineer":  "python",
 }
 
-# Stage -> ordered (ContextClass, child_fidelity).
-# This is the complete fidelity contract. AI may reorder or skip rows.
-_STAGES: dict[str, list[tuple[type, str]]] = {
-    "discovery": [
-        (Stories,          "discovery"),
-        (Ddd,              "bounded_context"),
-        (Ux,               "ia"),
-        (CleanEngineering, "modules"),
-    ],
-    "explore": [
-        (Ddd,              "building_blocks"),
-        (Stories,          "exploration"),
-        (Ux,               "mockup"),
-        (CleanEngineering, "model"),
-        (Bdd,              "behavior"),
-    ],
-    "spec": [
-        (Ddd,              "code"),
-        (Stories,          "exploration"),   # specification absorbed into exploration (optional variations)
-        (Ux,               "mockup"),        # specification absorbed into mockup (stubs + optional brand)
-        (CleanEngineering, "code"),          # specification fidelity retired; Phase 1 typed contracts are "code"
-        (Bdd,              "development"),
-    ],
-    "engineer": [
-        (Ddd,              "code"),
-        (Stories,          "engineering"),
-        (CleanEngineering, "code"),
-        (Bdd,              "development"),
-    ],
+# Stage → ordered list of context tool classes for that stage.
+# Child fidelity is looked up from each class's own ``fidelities`` dict
+# using the same stage key — no inline (class, fidelity) pairs needed.
+_CONTEXT_TOOLS_BY_STAGE: dict[str, list[type]] = {
+    "discovery": [Stories, Ddd, Ux, CleanEngineering],
+    "spec":      [Ddd, Stories, Ux, CleanEngineering, Bdd],
+    "engineer":  [Ddd, Stories, Ux, CleanEngineering, Bdd],
 }
 
 
 class Cdd(BaseContextTool):
     """# Instructions"""
+
+    fidelities = {
+        BaseContextTool.DISCOVERY: "discovery",
+        BaseContextTool.SPEC:      "spec",
+        BaseContextTool.ENGINEER:  "engineer",
+    }
 
     def __init__(
         self,
@@ -65,9 +49,9 @@ class Cdd(BaseContextTool):
         path: str | None = None,
         session: str | None = None,
     ) -> None:
-        if fidelity not in _STAGES:
+        if fidelity not in _CONTEXT_TOOLS_BY_STAGE:
             raise ValueError(
-                f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_STAGES)}"
+                f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_CONTEXT_TOOLS_BY_STAGE)}"
             )
         super().__init__(format=format or _FORMAT[fidelity], path=path, session=session)
         self.fidelity = fidelity
@@ -75,11 +59,15 @@ class Cdd(BaseContextTool):
 
     # -- Context-tool provider -------------------------------------------------
     # Returns the ordered list of active context tool instances for this stage.
-    # The for-each expander calls this at expansion time and walks each instance's
-    # named @action method inline - embedding its full decorator stack automatically.
+    # Each class's own ``fidelities`` dict maps the stage key to the child fidelity,
+    # replacing the old inline (class, fidelity) tuples in _STAGES.
 
     def context_tools(self) -> list:
-        return [cls(fidelity=fidelity) for cls, fidelity in _STAGES[self.fidelity]]
+        stage = self.fidelity
+        return [
+            cls(fidelity=cls.fidelities[stage])
+            for cls in _CONTEXT_TOOLS_BY_STAGE[stage]
+        ]
 
     # -- Actions ---------------------------------------------------------------
     # Each action body is a single for-each loop over context_tools().

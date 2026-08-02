@@ -13,6 +13,9 @@
 ## Public API
 
 - `module_dir` — package folder for the concrete subclass
+- Stage constants: `SHAPING`, `DISCOVERY`, `SPEC`, `ENGINEER`
+- `fidelities: ClassVar[dict[str, str] | None]` — subclasses declare stage → fidelity_name mapping; triggers auto-generated lifecycle methods
+- `_set_fidelity(fidelity_name)` — updates `self.fidelity` and `self.format` at runtime
 - Kit providers: `workspace()`, `scanner()`, `sketcher()`, `grill_context()`, `iterator()`, `decisions()`
 - Forwarded session/scan tools: `ensure_session`, `create_session`, `close_session`, `read_context_index`, `record_context_root`, `scan`
 - Resource `active`; instruction `session_guidance`
@@ -21,4 +24,4 @@
 
 ## Dependencies
 
-Session (composed via `workspace()`), Scan (composed instances); PartitionPipeline, Repair (MI peers); Sketcher, GrillContext, Iterator, RecordDecisions (composed)
+Session (composed via `workspace()`), Scan (composed instances); Sketcher, GrillContext, Iterator, RecordDecisions (composed); PartitionPipeline, Repair (methods injected by explicit binding — not MI; prose lookup stays in their source dirs)

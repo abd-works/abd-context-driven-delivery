@@ -47,7 +47,9 @@ with description("Sketcher toolset"):
         with it("returns the agent-dir template when agent_dir was set at construction"):
             import tempfile
             with tempfile.TemporaryDirectory() as agent_dir:
-                template_path = Path(agent_dir) / "sketch-template.md"
+                templates_dir = Path(agent_dir) / "templates"
+                templates_dir.mkdir()
+                template_path = templates_dir / "test-sketch.md"
                 template_path.write_text("# constructed agent template\n", encoding="utf-8")
                 sketcher = Sketcher(agent_dir=agent_dir)
                 content = sketcher.sketch_template
@@ -59,10 +61,12 @@ with description("Sketcher toolset"):
             content = sketcher.find_template(agent_dir="")
             expect(content).to(contain("terse-indent notation"))
 
-        with it("returns the agent's own sketch-template.* when the directory contains one"):
+        with it("returns the agent's own *-sketch.* when the templates directory contains one"):
             import tempfile
             with tempfile.TemporaryDirectory() as agent_dir:
-                template_path = Path(agent_dir) / "sketch-template.md"
+                templates_dir = Path(agent_dir) / "templates"
+                templates_dir.mkdir()
+                template_path = templates_dir / "demo-sketch.md"
                 template_path.write_text("# demo agent template\nrough shape\n", encoding="utf-8")
                 sketcher = Sketcher()
                 content = sketcher.find_template(agent_dir=agent_dir)

@@ -15,21 +15,29 @@ from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from tools.tool import tool
 
+_KIT_DIR = Path(__file__).parent
+
 
 class PartitionPipeline:
     """Thin corpus partition: index, segment, completeness."""
 
+    def _partition_params(self) -> dict[str, str]:
+        """Override in domain tools to supply lens-specific values for partition_guidance substitution."""
+        return {}
+
     @instruction(override=True)
     def partition_guidance(self) -> str:
-        """Domain partition.md when present; otherwise base default guidance."""
-        path = self.module_dir / "partition.md"
-        if path.is_file():
-            return Instruction.ref(self, "partition").expand()
-        return (
-            "Determine top-level structure based on user suggestion, available context, "
-            "skill-provided material, and what is evident in the source. "
-            "Keep it thin - only enough to ground partitions; TODOs are fine."
-        )
+        """Base template + domain partition.md, with all {{key}} placeholders substituted from _partition_params()."""
+            params = {"domain_slug": self.domain_slug, "partition_done_checks": "", **self._partition_params()}
+        base = Instruction("partition_guidance", _KIT_DIR).expand()
+        for k, v in params.items():
+            base = base.replace("{{" + k + "}}", v)
+        if (self.module_dir / "partition.md").is_file():
+            domain = Instruction.ref(self, "partition").expand()
+            for k, v in params.items():
+                domain = domain.replace("{{" + k + "}}", v)
+            return f"{base}\n\n{domain}"
+        return base
 
     @tool
     def verify_segment_completeness(

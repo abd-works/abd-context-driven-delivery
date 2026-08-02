@@ -47,6 +47,28 @@ class Ux(BaseContextTool):
 
     default_workspace_folder: str = "ux"
     context_index_key: str = "ux"
+    def _partition_params(self) -> dict[str, str]:
+        return {
+            "lens_name": "UX",
+            "index_columns": "Screen / Interaction / Transition",
+            "primary_artifact": "Screen",
+            "secondary_artifact": "transitions and key interactions",
+            "artifact_naming_rule": "domain / user language",
+            "skim_focus": "user-facing goals, places, and moves",
+            "partition_done_checks": (
+                "- [ ] `screen-names-use-domain-terms` applied — screen names are user/domain language, not chapter titles.\n"
+                "- [ ] `tab-states-are-separate-screens` applied — each distinct tab or alternate state is its own screen entry.\n"
+                "- [ ] No control/region detail beyond named screens."
+            ),
+        }
+
+    _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+
+    fidelities = {
+        BaseContextTool.DISCOVERY: "ia",
+        BaseContextTool.SPEC:      "mockup",
+        BaseContextTool.ENGINEER:  "code",
+    }
 
     def __init__(
         self,

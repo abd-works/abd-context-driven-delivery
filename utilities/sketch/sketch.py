@@ -16,7 +16,7 @@ from tools.tool import tool, toolset
 from sessions import docs_dir
 
 
-_DEFAULT_TEMPLATE = Path(__file__).parent / "sketch-template.md"
+_DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 
 
 @toolset
@@ -43,14 +43,16 @@ class Sketcher:
     def find_template(self, agent_dir: str = "") -> str:
         """Locate a sketch template using tiered discovery.
         1. Session context - the caller passes an example directly (skip this tool).
-        2. Convention - {agent_dir}/sketch-template.* alongside the wrapped agent's module.
-        3. Default - sketch/sketch-template.md (this toolset's canonical terse-indent notation).
+        2. Convention - {agent_dir}/templates/*-sketch.* inside the wrapped agent's templates folder.
+        3. Default - sketch/templates/sketch-template.md (this toolset's canonical terse-indent notation).
         Returns the resolved template contents as a string."""
         if agent_dir:
             root = Path(agent_dir)
             if root.is_dir():
-                for path in sorted(root.glob("sketch-template.*")):
-                    return path.read_text(encoding="utf-8")
+                templates_dir = root / "templates"
+                if templates_dir.is_dir():
+                    for path in sorted(templates_dir.glob("*-sketch.*")):
+                        return path.read_text(encoding="utf-8")
         return _DEFAULT_TEMPLATE.read_text(encoding="utf-8")
 
     @tool

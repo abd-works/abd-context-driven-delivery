@@ -3,23 +3,27 @@
 using
 
 -----
-clean-code
-generate generators
-bdd generator
-grill-me packages
-modules  -- ooad
-fidelity bundled
+clean-code, modules
+context-tool
+context creator
+bdd
 stories 
 UX
+
+
+grill-me
+fidelity
 document
-partition
-context-tool
-simple log_fix 
-module dependency graph
+partition   *
 scoped source ref
 log-fix
-move tools into own packages 
--merge lifecycle and extract genrationg new context-tools, examine need for.self.session, review context.md
+-session and //context
+simple log_fix 
+module dependency graph
+
+
+tools / actions /
+
 -----
 
 reviewing
@@ -32,12 +36,13 @@ session
 developing
 
 ----------
-
-
+fidelity - base conncept 3 only
+iterative story testing
+partition refactor
 
 backlog
 ----------------
-
+UX templates suck
 grill expansionsee below 
 stroy to ce algnment, story disc to detailed
 
@@ -48,14 +53,12 @@ hook notifications and debugging
 
 patterns and frameworks
 session plan
-fidelity as a distinct concept
+
 
 
 
 checklist
-
 know extension points for solutions- ai automatically flexes along these points
-
 simpler invokation approach eg no manifest
 
 

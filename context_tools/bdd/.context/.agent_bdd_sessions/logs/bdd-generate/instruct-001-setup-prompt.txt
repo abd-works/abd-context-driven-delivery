@@ -1,2 +1,2 @@
 Using shell, run exactly: python -m tools manifest context_tools.bdd.bdd:Bdd
-Return the complete manifest stdout.
+Return the complete manifest stdout (full fenced YAML; do not summarize).

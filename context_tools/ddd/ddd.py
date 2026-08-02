@@ -52,8 +52,26 @@ class Ddd(BaseContextTool):
     module load time).
     """
 
+    _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+
+    fidelities = {
+        BaseContextTool.DISCOVERY: "bounded_context",
+        BaseContextTool.SPEC:      "building_blocks",
+        BaseContextTool.ENGINEER:  "code",
+    }
+
     default_workspace_folder: str = "src"
     context_index_key: str = "ddd"
+    def _partition_params(self) -> dict[str, str]:
+        return {
+            "lens_name": "DDD",
+            "index_columns": "Bounded Context / Ubiquitous Language",
+            "primary_artifact": "Bounded Context",
+            "secondary_artifact": "candidate aggregates and a ubiquitous-language note",
+            "artifact_naming_rule": "domain noun",
+            "skim_focus": "language boundaries — where a term shifts meaning or belongs to a different team",
+            "partition_done_checks": "- [ ] `language-is-context-scoped` applied — context names are domain nouns anchored to a language boundary, not chapter titles.",
+        }
 
     def __init__(
         self,

@@ -1,6 +1,6 @@
 # Contexts
 
-Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`sketch-template.md`).
+Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`templates/bdd-sketch.md`).
 
 ## Hierarchy shape (required)
 
@@ -81,7 +81,7 @@ This skill operates at **multiple levels of fidelity**. Start from an agreed ske
 - Convert every sketch hierarchy line to its framework equivalent (see Framework syntax).
 - Process in batches of ~18 describe blocks when the hierarchy is large.
 
-Fill the **behavior** (SIGNATURE) section of `formats/{format}/bdd-template.*`.
+Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
 
 ### Framework syntax
 
@@ -119,7 +119,7 @@ it('should apply a percentage discount to eligible items', () => {
 1. **Confirm framework** — inherit from the behavior file.
 2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report count.
 3. **Identify shared setup** — extract to `beforeEach` / `with before.each:` or a factory when three or more siblings share arrangement.
-4. Pick **one** marker. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `formats/{format}/bdd-template.*`.
+4. Pick **one** marker. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
 5. Run the test — confirm RED for the right reason.
 6. Write the **minimum** production code until GREEN (PRODUCTION CODE section of the same template).
 7. Refactor only while green. Move to the next marker.

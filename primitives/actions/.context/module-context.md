@@ -18,6 +18,18 @@ Mark a toolset method with `@action`. On import, Actions registers with `Toolset
 
 The seam is the path from a decorated `@action` method to an expanded run payload: discover actions on a toolset, validate the body, expand docstring/instruction slots and tool steps, then return instructions plus the tool list for the AI to interpret. The constraint on callers is that action bodies only reference tools and instruction slots that exist on the same toolset instance — expansion fails with `ActionValidationError` when the body reaches across instances or names unknown members. The AI—not the expander—decides which listed tools or further actions to call.
 
+### Substitution — where `{{...}}` placeholders resolve
+
+Every prose part (string literals in `@action` bodies, text loaded from `@instruction` file/section slots, and text returned by `@instruction(override=True)` methods) is passed through `_ActionExpander._substitute()` as the **last step** of `_build_instructions()`. This is the single substitution point.
+
+| Placeholder | Source | Raises when |
+|---|---|---|
+| `{{self.attr}}` | `getattr(instance, attr)` at expand time | attribute does not exist on the live instance |
+| `{{param}}` | action `arguments` dict | argument missing AND `param` is a declared action parameter |
+| Unknown `{{token}}` | — | left as-is (embedded template content, not an action parameter) |
+
+**Critical:** `Instruction.expand()` returns **raw text** — it does NOT touch `{{...}}` placeholders. A `{{self.domain_slug}}` in `partition_guidance.md` is not resolved when the file is read; it survives into `prose_parts` and resolves when `_substitute()` runs against the live toolset instance. Agents or authors reading a `.md` instruction file that contains `{{self.attr}}` should expect that value to be injected at action expansion time, not at file-read time.
+
 ## Public API
 
 **`@action`** — decorator that marks a toolset method as an orchestration recipe. The body is read as instructions, not executed.

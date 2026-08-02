@@ -23,11 +23,11 @@ class Repair:
         when: str = "",
     ) -> str:
         """Append one entry to ``{session.folder}/to-fix.log``."""
-        folder = self._session.folder
+        folder = self.workspace().folder
         path = folder / "to-fix.log"
         folder.mkdir(parents=True, exist_ok=True)
         if not path.is_file():
-            sprint = self._session.name or "session"
+            sprint = self.workspace().name or "session"
             path.write_text(
                 f"# to-fix.log - {sprint} sprint\n"
                 "# Log omissions/errors here. Each entry:\n"

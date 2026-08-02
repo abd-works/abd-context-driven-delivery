@@ -148,7 +148,7 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 
 1. Confirm fidelity (`ia` → `code`) and format (defaults above).
 2. Read § Contexts — shared rules and the active fidelity (including its Rules).
-3. Use peer actions when useful (`grill`, `sketch`, `iterate`; `sketch-template.md`):
+3. Use peer actions when useful (`grill`, `sketch`, `iterate`; `templates/ux-sketch.md`):
    - **Site map on top** (connection tree).
    - **Screen boxes** show controls/states as glyphs — not `type=` / `state=` labels.
    - **Key under each screen** for glyph meanings and interactions.

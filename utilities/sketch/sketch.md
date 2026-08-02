@@ -69,8 +69,8 @@ Question shape (frame + options) comes from `grill_with_context`, which `@sketch
 ## Template discovery (tiered)
 
 1. **Session context** — templates or examples the caller passed in at invocation time. Owned by the current session. Highest priority: a user pasting an example in chat immediately shapes the sketch.
-2. **Convention (wrapped agent's own template)** — `{agent_dir}/sketch-template.*` sitting next to the wrapped agent's module. Owned by whoever wrote that agent; lets each agent shape its own sketches without touching the sketch toolset.
-3. **Default (built-in fallback)** — `sketch/sketch-template.md` shipped inside the sketch toolset itself. Owned by this toolset; used only when nobody upstream supplied a template.
+2. **Convention (wrapped agent's own template)** — `{agent_dir}/templates/*-sketch.*` inside the wrapped agent's `templates/` folder (e.g. `bdd/templates/bdd-sketch.md`). Owned by whoever wrote that agent; lets each agent shape its own sketches without touching the sketch toolset.
+3. **Default (built-in fallback)** — `sketch/templates/sketch-template.md` shipped inside the sketch toolset itself. Owned by this toolset; used only when nobody upstream supplied a template.
 
 If none of the above yield a template, the sketcher invents a shape for the domain at hand — explicitly a fallback, not a design target.
 

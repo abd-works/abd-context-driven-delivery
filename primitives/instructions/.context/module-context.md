@@ -29,10 +29,23 @@ The seam is the path from a labeled `@instruction` slot to expanded text:
 
 1. `AssetLocator(instance, label)` walks `module_dir` — folder → file → section.
 2. `Instruction.ref(host, label)` builds the value object.
-3. `Instruction.expand()` reads the resolved location and returns the text.
-4. Action expansion calls `_inline(instance, member)` for each `self.slot_name()` call found in the `@action` body.
+3. `Instruction.expand()` reads the resolved location and returns **raw text** — no substitution happens here.
+4. Action expansion calls `_inline(instance, member)` for each `self.slot_name()` call found in the `@action` body; the result is appended to `prose_parts`.
+5. `_ActionExpander._build_instructions()` iterates every prose part (including text that came from instruction files) through `_substitute()` — **this is where `{{self.attr}}` and `{{param}}` placeholders are resolved**.
+
+**Substitution contract (step 5):**
+
+| Placeholder | Resolved from | Raises when |
+|---|---|---|
+| `{{self.attr}}` | `getattr(instance, attr)` | attribute missing on instance |
+| `{{param}}` | action `arguments` dict | argument missing AND `param` is a declared parameter |
+| Unknown `{{token}}` | — | left as-is (not a declared parameter, treated as embedded template content) |
+
+`Instruction.expand()` does **not** touch `{{...}}` placeholders — they survive raw into the prose part and are only resolved at step 5. Do not add `{{self.attr}}` to instruction content expecting it to resolve at file-read time.
 
 **Constraint:** An unresolvable label expands to empty string without raising. Validate slot resolution with `_instruction_ref_resolves(instance, label)`.
+
+**`override=True` instructions:** When `@instruction(override=True)` is used, the method body runs as normal Python and returns a plain `str`. That str is treated identically — appended to `prose_parts` and substituted at step 5. This is how `partition_guidance()` in `partition_pipeline.py` injects `{{self.domain_slug}}`: the method assembles the string, returns it, and the action expander resolves the placeholder against the live instance.
 
 ## Public API
 
@@ -44,6 +57,8 @@ The seam is the path from a labeled `@instruction` slot to expanded text:
 
 ## Three forms of instruction content (summary)
 
+All three forms end up as entries in `prose_parts`. Every entry goes through `_substitute()` at expand time — `{{self.attr}}` and `{{param}}` work in all three.
+
 **Form A — Inline prose (no `@instruction` slot needed)**
 
 ```python
@@ -54,7 +69,7 @@ def brainstorm(self, theme: str) -> str:
     self.add_draft()
     return "done"
 ```
-Each string literal in the `@action` body is injected as instruction prose. Use `{{expr}}` for substitutions.
+Each string literal in the `@action` body is injected as instruction prose. `{{theme}}` → resolved from action arguments; `{{self.cuisine}}` → resolved from instance attribute at expansion time.
 
 ---
 
@@ -64,7 +79,7 @@ Each string literal in the `@action` body is injected as instruction prose. Use 
 @instruction
 def technique(self) -> Instruction: ...
 ```
-Resolves to the `## Technique` section in `recipe_guide.md` because the method name (`technique`) matches a heading in the kit doc.
+Resolves to the `## Technique` section in `recipe_guide.md` because the method name (`technique`) matches a heading in the kit doc. Any `{{self.attr}}` placeholders in that section are substituted at expansion time — `Instruction.expand()` returns raw text; substitution happens later when the prose part is processed by `_substitute()`.
 
 ---
 
@@ -74,7 +89,7 @@ Resolves to the `## Technique` section in `recipe_guide.md` because the method n
 @instruction(label="plating-rules")
 def plating(self) -> Instruction: ...
 ```
-Resolves to `plating-rules.md` beside the package. The `label=` override is needed when the on-disk name would not be a valid Python identifier.
+Resolves to `plating-rules.md` beside the package. The `label=` override is needed when the on-disk name would not be a valid Python identifier. Same substitution rule as Form B — placeholders in the file content are resolved at expansion time, not at file-read time.
 
 ---
 
@@ -84,8 +99,8 @@ Slots are consumed inside `@action` bodies:
 @action
 def draft_recipe(self, name: str) -> str:
     """Draft a recipe called {{name}}."""
-    self.technique()  # expands to § Technique in recipe_guide.md
-    self.plating()    # expands to plating-rules.md
+    self.technique()  # expands to § Technique in recipe_guide.md; {{self.attr}} in that section resolves here
+    self.plating()    # expands to plating-rules.md; same
     self.add_draft()
     return f"Drafted: {name}"
 ```

@@ -4,7 +4,7 @@
 # invoke-new: action generate | context.fidelity discovery
 # invoke-edit: action satisfy | toolset: context_tools.stories.stories:Stories
 # invoke-check: action validate | toolset: context_tools.stories.stories:Stories
-"""Stories generator - multi-fidelity story maps and acceptance tests."""
+"""Stories generator - multi-fidelity story maps, scenarios, and acceptance tests."""
 
 from __future__ import annotations
 
@@ -22,9 +22,9 @@ if TYPE_CHECKING:
     from utilities.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
-    "discovery": "markdown",
-    "exploration": "python",
-    "engineering": "python",
+    "story_map": "markdown",
+    "scenarios": "python",
+    "acceptance_tests": "python",
 }
 
 # Adapter class path per format - peer channels, same CLI surface.
@@ -69,10 +69,28 @@ class Stories(BaseContextTool):
 
     default_workspace_folder: str = "tests"
     context_index_key: str = "stories"
+    def _partition_params(self) -> dict[str, str]:
+        return {
+            "lens_name": "Stories",
+            "index_columns": "Epic / Mid-epic",
+            "primary_artifact": "Epic",
+            "secondary_artifact": "grounding stories",
+            "artifact_naming_rule": "verb–noun",
+            "skim_focus": "activities and capabilities stakeholders care about",
+            "partition_done_checks": "- [ ] `branch-on-mechanical-uniqueness` applied — epic and story names are verb–noun, stakeholder-observable outcomes.",
+        }
+
+    _fidelity_format_defaults = _FIDELITY_FORMAT_DEFAULTS
+
+    fidelities = {
+        BaseContextTool.DISCOVERY: "story_map",
+        BaseContextTool.SPEC:      "scenarios",
+        BaseContextTool.ENGINEER:  "acceptance_tests",
+    }
 
     def __init__(
         self,
-        fidelity: str = "discovery",
+        fidelity: str = "story_map",
         format: str | None = None,
         path: str | None = None,
         session: str | None = None,
@@ -99,14 +117,41 @@ class Stories(BaseContextTool):
 
         return Diagnose()
 
+    def ce(self) -> "BaseContextTool":
+        """CleanEngineering companion at code fidelity — used at acceptance_tests fidelity
+        to generate or update matching production class implementations after writing specs.
+        Invoke as a tool (not inlined into stories generate)."""
+        from context_tools.clean_engineering.clean_engineering import CleanEngineering
+
+        instance = CleanEngineering(
+            fidelity="code",
+            path=self._ws_path,
+            session=self._ws_session_name,
+            workspace=self._ws_workspace,
+        )
+        instance.mode = "tool"
+        return instance
+
     @instruction
     def contexts(self) -> Instruction: ...
 
     @action
+    def generate(self) -> str:
+        """Generate story artifacts at the current fidelity.
+        At story_map fidelity: write the story map and thin-slice only.
+        At scenarios fidelity: write main-flow scenarios (single or multiple per story) with optional variations; use ExampleFactory fakes where available.
+        At acceptance_tests fidelity: write *_spec and *_spec.{tier} acceptance test files. When spec files are written, call ce().generate() to produce or update the matching production class implementations and wire any supporting code changes."""
+        super().generate()
+        self.ce().generate()
+        return "When done, run validate."
+
+    @action
     def iterate(self) -> str:
         """Iterate then generate - grill + formal generate/validate/one-fix ticks.
+        At acceptance_tests fidelity: after each spec cycle, call ce().iterate() to wire the minimum production code until GREEN.
         If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails)."""
         super().iterate()
+        self.ce().iterate()
         self.diagnostic().diagnose()
         return "Iterate complete; generate instructions applied."
 
@@ -121,7 +166,8 @@ class Stories(BaseContextTool):
     @tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:
         """Parse content from source_format into the canonical StoryMap, then render into target_format.
-        All formatters are peer channels. Sideways format move at the same fidelity."""
+        All formatters are peer channels. Sideways format move at the same fidelity.
+        At acceptance_tests fidelity: after transforming story artifacts, call ce().transform() or ce().generate() to produce matching production class code alongside the spec output."""
         source_cls = _load_channel_class(source_format)
         target_cls = _load_channel_class(target_format)
         source = source_cls()

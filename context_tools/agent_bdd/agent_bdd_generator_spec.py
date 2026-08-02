@@ -93,9 +93,9 @@ with description("AgentBdd action expansion"):
                 shared = _lifecycle_prose("generate")
                 _assert_text_inlined(self.response["instructions"], shared)
 
-            with it("should inline formats/python/agent_bdd-templates.py from format resource"):
+            with it("should inline templates/agent_bdd-templates.py from format resource"):
                 template = Instruction(
-                    "formats/python/agent_bdd-templates.py", _AGENT_BDD_DIR
+                    "templates/agent_bdd-templates.py", _AGENT_BDD_DIR
                 ).expand()
                 # Generate may strip scaffold header comments; require distinctive body markers.
                 expect("with description" in self.response["instructions"]).to(be_true)

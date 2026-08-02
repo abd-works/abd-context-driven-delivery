@@ -1,6 +1,6 @@
-Here is `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
+The path `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py` is not in the workspace anymore. The same file lives at `context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py`:
 
-```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
+```1:20:context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py
 # @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
@@ -22,9 +22,9 @@ class CarChronicle(BaseContextTool):
         super().__init__(path=path, session=session)
 ```
 
-Agents are directed to manifest `CarChronicle`, run `python -m tools run -`, and follow manifest instructions—not infer behavior from this stub. Workflow: `generate` for new work; `satisfy` / `validate` on `Bdd` for edit and check. Domain behavior lives in `car_chronicle.md` (via the `"""# Instructions"""` docstring hook), not in extra Python methods.Here is `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
+The manifest entry point is still `context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle` (line 1). Agents should manifest that toolset, run `python -m tools run -`, and follow response instructions rather than inferring behavior from this stub class.The path `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py` is not in the workspace anymore. The same file lives at `context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py`:
 
-```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
+```1:20:context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py
 # @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
@@ -46,9 +46,9 @@ class CarChronicle(BaseContextTool):
         super().__init__(path=path, session=session)
 ```
 
-Agents are directed to manifest `CarChronicle`, run `python -m tools run -`, and follow manifest instructions—not infer behavior from this stub. Workflow: `generate` for new work; `satisfy` / `validate` on `Bdd` for edit and check. Domain behavior lives in `car_chronicle.md` (via the `"""# Instructions"""` docstring hook), not in extra Python methods.Here is `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
+The manifest entry point is still `context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle` (line 1). Agents should manifest that toolset, run `python -m tools run -`, and follow response instructions rather than inferring behavior from this stub class.The path `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py` is not in the workspace anymore. The same file lives at `context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py`:
 
-```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
+```1:20:context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py
 # @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
@@ -70,4 +70,4 @@ class CarChronicle(BaseContextTool):
         super().__init__(path=path, session=session)
 ```
 
-Agents are directed to manifest `CarChronicle`, run `python -m tools run -`, and follow manifest instructions—not infer behavior from this stub. Workflow: `generate` for new work; `satisfy` / `validate` on `Bdd` for edit and check. Domain behavior lives in `car_chronicle.md` (via the `"""# Instructions"""` docstring hook), not in extra Python methods.
+The manifest entry point is still `context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle` (line 1). Agents should manifest that toolset, run `python -m tools run -`, and follow response instructions rather than inferring behavior from this stub class.

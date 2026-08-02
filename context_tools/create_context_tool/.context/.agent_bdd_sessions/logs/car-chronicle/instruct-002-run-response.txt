@@ -4,7 +4,7 @@ Ran from the repo root:
 python -m tools run -
 ```
 
-(With `PYTHONIOENCODING=utf-8` so Unicode in tool output does not break on Windows.)
+(With `PYTHONIOENCODING=utf-8` for Windows Unicode safety.)
 
 Exit code: **1**
 
@@ -13,9 +13,7 @@ ok: false
 error: request missing toolset
 ```
 
-`-` tells the CLI to read the run request from **stdin**. With nothing piped in, there is no `toolset` field, so the run fails.
-
-After manifesting `CarChronicle`, pipe a request, for example:
+`-` reads the run request from stdin. With nothing piped in, there is no `toolset`, so the CLI rejects the request. Pipe YAML into it, for example after manifesting `CarChronicle`:
 
 ```powershell
 $env:PYTHONIOENCODING="utf-8"; @"
@@ -28,7 +26,7 @@ action: generate
 python -m tools run -
 ```
 
-(With `PYTHONIOENCODING=utf-8` so Unicode in tool output does not break on Windows.)
+(With `PYTHONIOENCODING=utf-8` for Windows Unicode safety.)
 
 Exit code: **1**
 
@@ -37,9 +35,7 @@ ok: false
 error: request missing toolset
 ```
 
-`-` tells the CLI to read the run request from **stdin**. With nothing piped in, there is no `toolset` field, so the run fails.
-
-After manifesting `CarChronicle`, pipe a request, for example:
+`-` reads the run request from stdin. With nothing piped in, there is no `toolset`, so the CLI rejects the request. Pipe YAML into it, for example after manifesting `CarChronicle`:
 
 ```powershell
 $env:PYTHONIOENCODING="utf-8"; @"
@@ -52,7 +48,7 @@ action: generate
 python -m tools run -
 ```
 
-(With `PYTHONIOENCODING=utf-8` so Unicode in tool output does not break on Windows.)
+(With `PYTHONIOENCODING=utf-8` for Windows Unicode safety.)
 
 Exit code: **1**
 
@@ -61,9 +57,7 @@ ok: false
 error: request missing toolset
 ```
 
-`-` tells the CLI to read the run request from **stdin**. With nothing piped in, there is no `toolset` field, so the run fails.
-
-After manifesting `CarChronicle`, pipe a request, for example:
+`-` reads the run request from stdin. With nothing piped in, there is no `toolset`, so the CLI rejects the request. Pipe YAML into it, for example after manifesting `CarChronicle`:
 
 ```powershell
 $env:PYTHONIOENCODING="utf-8"; @"

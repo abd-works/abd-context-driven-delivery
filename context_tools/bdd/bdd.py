@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from utilities.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
+    "modules": "markdown",   # delegates to CE; no BDD-specific spec file written
     "behavior": "python",
     "development": "python",
 }
@@ -25,7 +26,8 @@ _SUPPORTED_FORMATS = frozenset({"markdown", "python", "typescript", "java"})
 
 # BDD fidelity → CleanEngineering fidelity at the same design depth.
 _CE_FIDELITY: dict[str, str] = {
-    "behavior": "specification",
+    "modules": "modules",
+    "behavior": "model",
     "development": "code",
 }
 
@@ -61,6 +63,28 @@ class Bdd(BaseContextTool):
 
     default_workspace_folder: str = "src"
     context_index_key: str = "bdd"
+    def _partition_params(self) -> dict[str, str]:
+        return {
+            "lens_name": "BDD",
+            "index_columns": "Subject / `that`·`with`",
+            "primary_artifact": "Subject",
+            "secondary_artifact": "`that` / `with` candidates",
+            "artifact_naming_rule": "usage order",
+            "skim_focus": "observable domain behaviors",
+            "partition_done_checks": (
+                "- [ ] Subjects are plain-English domain observables — no internals/`@…`.\n"
+                "- [ ] `state-not-when` applied — order is a usage story; nest hints use `that`/`with`, never `when`.\n"
+                "- [ ] Subject count ≠ chapter / major-heading / top-level-type count (mirrored TOC = hard fail)."
+            ),
+        }
+
+    _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+
+    fidelities = {
+        BaseContextTool.DISCOVERY: "modules",
+        BaseContextTool.SPEC:      "behavior",
+        BaseContextTool.ENGINEER:  "development",
+    }
 
     def __init__(
         self,
@@ -103,8 +127,11 @@ class Bdd(BaseContextTool):
 
     @action
     def generate(self) -> str:
-        """Write all BDD test signatures first (SIGNATURE markers at behavior fidelity, full bodies at development fidelity).
+        """At modules fidelity: delegate entirely to ce().generate() — no BDD spec file is written at this stage. Use this to bootstrap CE class structure before writing tests.
+        At behavior fidelity: write all BDD test signatures (SIGNATURE markers).
+        At development fidelity: write full test bodies and production code.
         When the target module already exists, scan the production source for every public method and property and verify each has test coverage — add missing signatures for any gap before writing new ones.
+        BDD tests must conform to CE class structure: describe/it hierarchies must map onto public CE interfaces and operations.
         When BDD artifacts are complete, call ce().generate() to produce the matching class skeletons."""
         super().generate()
         self.ce().generate()

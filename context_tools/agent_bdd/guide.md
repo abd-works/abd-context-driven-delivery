@@ -1,6 +1,6 @@
 1. Read `context_tools/bdd/bdd.md` § Contexts — the underlying test discipline applies here too.
 2. Read § Contexts above and the harness surface: `context_tools/agent_bdd/__init__.py`, `context_tools/agent_bdd/agent_bdd_common.py` (types `AgentResult`, `RunResponse`, `JudgeResult`).
-3. Scaffold from `formats/{format}/agent-bdd-template.py`:
+3. Scaffold from `templates/agent_bdd-templates.py`:
    - `with description(...)` → `with context(...)` → `with it(...)` → `with agent(...):`.
    - Assert immediately after each step — `expect(response.ok).to(be_true)` right after `instruct_use_tool`, `ai_judge(...)` right after the final `instruct`. No `self.*`, no `before.all`.
 4. Assert `response.action`, `response.tools`, and required substrings in `response.instructions`. Use `ai_judge` for prose outputs.

@@ -195,7 +195,7 @@ When a type is used from **Stories** (helpers / scenario setup), the factory liv
 
 Do **not** put factory wiring in the production family file. Do **not** generate `Fake{Type}` / `Isolated{Type}` / `Production{Type}` subclasses — those are **usage modes**, not an inheritance tree.
 
-**PATTERN** (see also `sketch-template.md` and templates):
+**PATTERN** (see also `templates/clean_engineering-sketch.md` and templates):
 
 ```
 # {family}.{ext}                          // production cohesive-file

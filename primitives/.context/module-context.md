@@ -38,3 +38,8 @@ tools    →  primitives/instructions
 ```
 
 Never import `tools` or `actions` from inside `primitives`. Peers self-register through `ToolsetExtensions`.
+
+
+
+## Rules 
+- maximize use of templated variables to keep utility specific markdown as reusable and generic as possible 

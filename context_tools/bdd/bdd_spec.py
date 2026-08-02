@@ -45,20 +45,26 @@ with description("a Bdd toolset"):
             with it("should default to python format"):
                 expect(Bdd(fidelity="development").format).to(equal("python"))
 
-        with context("with an unsupported fidelity"):
-            with it("should raise ValueError"):
-                expect(lambda: Bdd(fidelity="modules")).to(raise_error(ValueError))
+        with context("with modules fidelity"):
+            with it("should default to markdown format"):
+                expect(Bdd(fidelity="modules").format).to(equal("markdown"))
 
         with context("with an unsupported format"):
             with it("should raise ValueError"):
                 expect(lambda: Bdd(fidelity="behavior", format="drawio")).to(raise_error(ValueError))
 
     with context("that provides a CleanEngineering companion"):
+        with context("with modules fidelity"):
+            with it("should return a CleanEngineering instance at modules fidelity"):
+                ce = Bdd(fidelity="modules").ce()
+                expect(ce).to(be_a(CleanEngineering))
+                expect(ce.fidelity).to(equal("modules"))
+
         with context("with behavior fidelity"):
-            with it("should return a CleanEngineering instance at specification fidelity"):
+            with it("should return a CleanEngineering instance at model fidelity"):
                 ce = Bdd(fidelity="behavior").ce()
                 expect(ce).to(be_a(CleanEngineering))
-                expect(ce.fidelity).to(equal("specification"))
+                expect(ce.fidelity).to(equal("model"))
 
         with context("with development fidelity"):
             with it("should return a CleanEngineering instance at code fidelity"):

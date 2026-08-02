@@ -41,7 +41,7 @@ Ask: what must be consistent in one transaction? what can tolerate lag? cost of 
 
 **Input traps:** hidden coupling; ownership ambiguity; false cognates; missing unnamed contexts; unclear direction.
 
-**Produce:** one `bounded-context-map.md` — inventory, dependencies, aggregates per context (root, members, invariants, cross-agg consistency); every inventoried context on an arc or declared standalone. Fill `formats/markdown/bounded-context-template.md`. Call clean_engineering at **modules**.
+**Produce:** one `bounded-context-map.md` — inventory, dependencies, aggregates per context (root, members, invariants, cross-agg consistency); every inventoried context on an arc or declared standalone. Fill `templates/bounded-context-template.md`. Call clean_engineering at **modules**.
 
 **Rules:**
 
@@ -75,7 +75,7 @@ Honour aggregate boundaries from bounded_context; do not redraw by relatedness. 
 
 **Input traps:** identity by habit; aggregate redrawn by relatedness; VO as Entity; Service as dump; silent consistency.
 
-**Produce:** Update `bounded-context-map.md` — CE compact blocks + stereotypes under each owning context (`formats/markdown/bounded-context-template.md`). Call clean_engineering at **specification**. No tables, brokers, frameworks, or REST endpoints here — infrastructure at **code**.
+**Produce:** Update `bounded-context-map.md` — CE compact blocks + stereotypes under each owning context (`templates/bounded-context-template.md`). Call clean_engineering at **specification**. No tables, brokers, frameworks, or REST endpoints here — infrastructure at **code**.
 
 **Rules:**
 
@@ -104,7 +104,7 @@ Honour aggregate boundaries from bounded_context; do not redraw by relatedness. 
 
 1. Confirm fidelity (`bounded_context` → `building_blocks` → `code`) and format.
 2. Read the active fidelity section above (including its Rules). Do not re-author CE OO theory.
-3. Use peer actions when useful (`grill`, `sketch`, `iterate`; `sketch-template.md`).
+3. Use peer actions when useful (`grill`, `sketch`, `iterate`; `templates/ddd-sketch.md`).
 4. Fill / deepen `bounded-context-map.md`; at **code**, resolve architecture first.
 5. Call clean_engineering at the mapped fidelity (`generate_output`).
 6. Run **validate**.

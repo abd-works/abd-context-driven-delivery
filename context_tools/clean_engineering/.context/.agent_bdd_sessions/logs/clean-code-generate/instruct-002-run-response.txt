@@ -1,14 +1,14 @@
-Exit code 1. With no YAML on stdin:
+Exit code 1:
 
 ```yaml
 ok: false
 error: request missing toolset
-```Exit code 1. With no YAML on stdin:
+```Exit code 1:
 
 ```yaml
 ok: false
 error: request missing toolset
-```Exit code 1. With no YAML on stdin:
+```Exit code 1:
 
 ```yaml
 ok: false

@@ -66,7 +66,9 @@ signature:
     kind: tool
     instructions: "Parse content from source_format into the canonical StoryMap, then\
       \ render into target_format.\n        All formatters are peer channels. Sideways\
-      \ format move at the same fidelity."
+      \ format move at the same fidelity.\n        At acceptance_tests fidelity: after\
+      \ transforming story artifacts, call ce().transform() or ce().generate() to\
+      \ produce matching production class code alongside the spec output."
     parameters:
       source_format: str
       target_format: str
@@ -136,35 +138,14 @@ signature:
     returns: str
   generate:
     kind: action
-    tools:
-    - generate_output
-    - add_generate_header_to_generated
-    instructions: "# Generate\n\n1. Follow **`session_guidance`** and the session\
-      \ tools (`read_context_index`, `record_context_root`, `create_session` when\
-      \ needed). Resolve workspace + tool root, then use the **`active`** resource\
-      \ for `active.path` / `active.folder`.\n2. **MUST — prove-read before asking.**\
-      \ Before any grill/iterate question (and before inventing options or story/module\
-      \ names):\n   - Identify **every relevant context file referenced or implied**\
-      \ by the decision — not one favorite type. Typical set: `{workspace}/.context/context-index.md`,\
-      \ owning `*-segment.md`, `module-context.md`, session grill-answers / sketches\
-      \ / handoff, peer story-context, build-order, and any path the plan or prior\
-      \ answers cite. Include index/overlay only for structure hints; **never** treat\
-      \ mid-epic stub columns as inventory.\n   - **Read each of those files with\
-      \ the Read tool** (chunk through large ones). Grep, title lists, memory, or\
-      \ primer-only skims **do not count**.\n   - **Prove it in the question turn:**\
-      \ name the path(s) read and ground options in concrete terms from them. If you\
-      \ cannot cite specifics from the relevant files, you have not read them — go\
-      \ read before asking.\n   - Asking from a skim is a **defect**, same class as\
-      \ dumping a whole artifact in one iterate tick.\n3. **`sources-scoped-to-generated-context`**\
-      \ — Hang `**Sources / context:**` on the node they ground: epic / sub-epic /\
-      \ feature / module, or a lower item (scenario, class, screen, component, …).\
-      \ Root or parent-level Sources are fine when those files apply to the **entire**\
-      \ artifact or subtree.\n4. Apply all guidance and named rules in each **context**\
-      \ — each bullet is a requirement.\n5. Match **examples** for shape, depth, and\
-      \ tone.\n6. Fill the **template** scaffold and save the artifact under the session\
-      \ layout from `session_guidance`.\n7. Follow any extra build steps included\
-      \ in your instructions when present.\n8. Run **validate**. If it fails, fix\
-      \ the artifact and **validate** again until it passes.\n\n---"
+    tools: []
+    instructions: "Generate story artifacts at the current fidelity.\n        At story_map\
+      \ fidelity: write the story map and thin-slice only.\n        At scenarios fidelity:\
+      \ write main-flow scenarios (single or multiple per story) with optional variations;\
+      \ use ExampleFactory fakes where available.\n        At acceptance_tests fidelity:\
+      \ write *_spec and *_spec.{tier} acceptance test files. When spec files are\
+      \ written, call ce().generate() to produce or update the matching production\
+      \ class implementations and wire any supporting code changes."
     returns: str
   generate_output:
     kind: action
@@ -230,10 +211,12 @@ signature:
     kind: action
     tools: []
     instructions: "Iterate then generate - grill + formal generate/validate/one-fix\
-      \ ticks.\n        If the same acceptance scenario is still RED after 2 consecutive\
-      \ fix attempts — stop guessing. Call diagnostic().diagnose() before a third\
-      \ fix (tier wiring, stale Story constant, vocabulary drift, or transform that\
-      \ fixed the map while the leaf still fails)."
+      \ ticks.\n        At acceptance_tests fidelity: after each spec cycle, call\
+      \ ce().iterate() to wire the minimum production code until GREEN.\n        If\
+      \ the same acceptance scenario is still RED after 2 consecutive fix attempts\
+      \ — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring,\
+      \ stale Story constant, vocabulary drift, or transform that fixed the map while\
+      \ the leaf still fails)."
     returns: str
   log_fix:
     kind: action

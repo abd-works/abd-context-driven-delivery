@@ -43,7 +43,7 @@ UX has no engineering fidelity — production UI follows stories + clean_enginee
 
 ### Sketch (one file)
 
-Path: `{session.folder}/cdd-sketch.md` (see `sketch-template.md`).
+Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 
 - **One file per engagement** — deepening fidelity (discovery → explore → spec → engineer) updates `fidelity:` at the top and deepens blocks in place. Never create a new file for a new fidelity.
 - **Themes** — group lens blocks under one theme (epic, module, user goal, increment, or sub-epic).

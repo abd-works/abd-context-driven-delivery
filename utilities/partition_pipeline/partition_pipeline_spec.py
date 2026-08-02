@@ -35,7 +35,7 @@ _CAR_CHRONICLE_TOOLSET = (
     "context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
 )
 _STORIES_TOOLSET = "context_tools.stories.stories:Stories"
-_DEFAULT_PARTITION_SNIPPET = "Determine top-level structure based on user suggestion"
+_DEFAULT_PARTITION_SNIPPET = "Hard fail"
 _STORIES_PARTITION_SNIPPET = "**Epics**"
 
 
