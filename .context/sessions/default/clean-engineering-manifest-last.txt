@@ -5,7 +5,7 @@ capabilities:
 - tool
 - agent
 signature:
-  instructions: ┬º Instructions
+  instructions: '# Instructions'
   read_manifest:
     kind: meta
     instructions: Get the latest manifest (this document).
@@ -26,57 +26,39 @@ signature:
       workspace: str | None
   close_session:
     kind: tool
-    instructions: "# Close Session\n\nWrite the End section on `{session.folder}/session.md`.\n\
-      \n```yaml\ntool: close_session\narguments:\n  outcome: <optional>\n  handoff:\
-      \ handoff.md\n```"
     parameters:
       outcome: str
       handoff: str
     returns: str
   create_session:
     kind: tool
-    instructions: "# Create Session\n\nCreate `{session.path}/.context/sessions/{name}/session.md`\
-      \ (Start section) after confirming path and kebab slug with the user.\n\nAlso\
-      \ records this tool's root in `{workspace}/.context/context-index.md` when `context_index_key`\
-      \ is set.\n\n```yaml\ntool: create_session\narguments:\n  name: <kebab-slug>\n\
-      \  goal: <optional>\n  fidelities: <optional>\n  contexts: <optional>\n```"
     parameters:
       name: str
       goal: str
       fidelities: str
       contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
     returns: str
   read_context_index:
     kind: tool
-    instructions: '# Read Context Index
-
-
-      Read `{workspace}/.context/context-index.md` (creates nothing). Prefer an existing
-      entry for this tool over guessing a root.
-
-
-      ```yaml
-
-      tool: read_context_index
-
-      ```'
     returns: str
   record_context_root:
     kind: tool
-    instructions: "# Record Context Root\n\nUpsert this toolset's root into `{workspace}/.context/context-index.md`\
-      \ after the user confirms the working path (including overrides). Handoffs must\
-      \ cite this file.\n\n```yaml\ntool: record_context_root\narguments:\n  root:\
-      \ <optional; defaults to session.path>\n  note: <optional>\n```"
     parameters:
       root: str
       note: str
     returns: str
   scan:
     kind: tool
-    instructions: "# Scan\n\nRun every registered scanner rule against files on disk.\n\
-      \n```yaml\ntool: scan\narguments:\n  paths:\n    - <path>\n```\n\nReturn the\
-      \ scanner report with registered rules and violations; fix failures before calling\
-      \ work done.\n"
     parameters:
       paths: list[str]
     returns: str
@@ -89,7 +71,7 @@ signature:
       \        Generate AI surfaces: markdown / python / javascript templates under\
       \ templates/;\n        modules.drawio for modules-fidelity diagrams (seam bullets\
       \ + dependency arrows).\n        Moves content sideways between formats at the\
-      \ same fidelity ΓÇö no analytical upgrade."
+      \ same fidelity - no analytical upgrade."
     parameters:
       source_format: str
       target_format: str
@@ -116,36 +98,78 @@ signature:
       status: str
       when: str
     returns: str
-  session:
+  active:
     kind: resource
     type: Session
+  mode:
+    kind: resource
+    type: str
   add_generate_header_to_generated:
     kind: action
     tools: []
     instructions: Prepend the following block verbatim as the very first lines of
-      the file you are writing ΓÇö before any imports, before any code.
+      the file you are writing - before any imports, before any code.
     returns: str
   document:
     kind: action
     tools:
-    - scan
     - generate_output
     - add_generate_header_to_generated
-    chain:
-    - workspace_session
+    instructions: '# Document
+
+
+      Take the persona of a **neutral observer** ΓÇö describe what exists, do not prescribe
+      what should exist.
+
+
+      1. Follow **`session_guidance`**. Observe and write under the session layout.
+
+      2. Read the **contexts** to understand the vocabulary and structure of the domain.
+
+      3. Fill the **template** scaffold with observed content ΓÇö describe current state
+      only.
+
+      4. Do not apply, suggest, or imply rules or best practices in the generated
+      output.
+
+      5. Call **`scan`** and append all violations to the document as-is ΓÇö flag them,
+      do not correct them.
+
+      6. Save the artifact under the session layout from `session_guidance`.'
     parameters:
       paths: list[str]
     returns: str
   generate:
     kind: action
     tools:
-    - read_context_index
-    - record_context_root
     - generate_output
     - add_generate_header_to_generated
-    chain:
-    - workspace_session
-    - record_decisions
+    instructions: "# Generate\n\n1. Follow **`session_guidance`** and the session\
+      \ tools (`read_context_index`, `record_context_root`, `create_session` when\
+      \ needed). Resolve workspace + tool root, then use the **`active`** resource\
+      \ for `active.path` / `active.folder`.\n2. **MUST ΓÇö prove-read before asking.**\
+      \ Before any grill/iterate question (and before inventing options or story/module\
+      \ names):\n   - Identify **every relevant context file referenced or implied**\
+      \ by the decision ΓÇö not one favorite type. Typical set: `{workspace}/.context/context-index.md`,\
+      \ owning `*-segment.md`, `module-context.md`, session grill-answers / sketches\
+      \ / handoff, peer story-context, build-order, and any path the plan or prior\
+      \ answers cite. Include index/overlay only for structure hints; **never** treat\
+      \ mid-epic stub columns as inventory.\n   - **Read each of those files with\
+      \ the Read tool** (chunk through large ones). Grep, title lists, memory, or\
+      \ primer-only skims **do not count**.\n   - **Prove it in the question turn:**\
+      \ name the path(s) read and ground options in concrete terms from them. If you\
+      \ cannot cite specifics from the relevant files, you have not read them ΓÇö go\
+      \ read before asking.\n   - Asking from a skim is a **defect**, same class as\
+      \ dumping a whole artifact in one iterate tick.\n3. **`sources-scoped-to-generated-context`**\
+      \ ΓÇö Hang `**Sources / context:**` on the node they ground: epic / sub-epic /\
+      \ feature / module, or a lower item (scenario, class, screen, component, ΓÇª).\
+      \ Root or parent-level Sources are fine when those files apply to the **entire**\
+      \ artifact or subtree.\n4. Apply all guidance and named rules in each **context**\
+      \ ΓÇö each bullet is a requirement.\n5. Match **examples** for shape, depth, and\
+      \ tone.\n6. Fill the **template** scaffold and save the artifact under the session\
+      \ layout from `session_guidance`.\n7. Follow any extra build steps included\
+      \ in your instructions when present.\n8. Run **validate**. If it fails, fix\
+      \ the artifact and **validate** again until it passes.\n\n---"
     returns: str
   generate_output:
     kind: action
@@ -155,11 +179,7 @@ signature:
     kind: action
     tools:
     - generate
-    chain:
-    - workspace_session
-    - record_decisions
-    - grill_with_context
-    instructions: Grill then generate ΓÇö pure grill loop, then the host generate body.
+    instructions: Grill then generate - pure grill loop, then the host generate body.
     returns: str
   index:
     kind: action
@@ -167,8 +187,8 @@ signature:
     instructions: "# Index\n\nBuild or **extend** a thin sections index over the source\
       \ at the given `context` path ΓÇö enough to ground partitions, not a full exploration.\n\
       \n1. Read the source as **code or markdown** (no separate channel required).\n\
-      2. Resolve output root: `out_root` if set, else the generator **`session`**\
-      \ resource. Docs go under `{session.path}/.context/`.\n3. **If `{session.path}/.context/{subject}-index.md`\
+      2. Resolve output root: `out_root` if set, else the generator **`active`** resource.\
+      \ Docs go under `{active.path}/.context/`.\n3. **If `{session.path}/.context/{subject}-index.md`\
       \ already exists, open it and ADD ΓÇö do not replace.** See base `partition.md`\
       \ **Multi-pass / multi-lens**. Prior columns, chunk links, and rows stay unless\
       \ the user explicitly asked to repartition from scratch.\n4. Apply **contexts**\
@@ -215,11 +235,7 @@ signature:
     kind: action
     tools:
     - generate
-    chain:
-    - workspace_session
-    - record_decisions
-    - iterate
-    instructions: Iterate then generate ΓÇö grill + formal generate/validate/one-fix
+    instructions: Iterate then generate - grill + formal generate/validate/one-fix
       ticks.
     returns: str
   log_fix:
@@ -264,8 +280,8 @@ signature:
       \ using this context's lens.\n\n**Parameters**\n\n- `context` ΓÇö path to the\
       \ corpus (markdown and/or code).\n- `mode` ΓÇö `one_go` (default) | `pause` |\
       \ `index_only`.\n- `out_root` ΓÇö optional override for the index/segment root.\
-      \ **Default = the generator `session` resource** (index lands under `{session.path}/.context/`;\
-      \ chunks under `{session.path}/{module}/.context/`). Use `out_root` only for\
+      \ **Default = the generator `active` resource** (index lands under `{active.path}/.context/`;\
+      \ chunks under `{active.path}/{module}/.context/`). Use `out_root` only for\
       \ true sandbox forks ΓÇö see **Multi-pass**.\n\n**Session layout**\n\n- Index\
       \ (+ durable diagrams at session scope) ΓåÆ `{session.path}/.context/`\n- Partitioned\
       \ chunks ΓåÆ `{session.path}/{module}/.context/{leaf}-segment.md` (same tree as\
@@ -281,8 +297,8 @@ signature:
       \ until the chunk is repaired.\n\n`{subject}` = corpus basename from the `context`\
       \ path (file stem or directory name), **not** the skill/toolset name\n(e.g.\
       \ session `sandbox`, corpus `sandbox/HeroesHandbook.md` ΓåÆ `sandbox/.context/HeroesHandbook-index.md`).\n\
-      \n1. Resolve output root: `out_root` if set, else the toolset **`session`**\
-      \ resource.\n2. Run **index** on the given `context` (writes or updates `{session.path}/.context/{subject}-index.md`).\n\
+      \n1. Resolve output root: `out_root` if set, else the toolset **`active`** resource.\n\
+      2. Run **index** on the given `context` (writes or updates `{session.path}/.context/{subject}-index.md`).\n\
       3. Then by `mode`:\n   - **`one_go`** (default) ΓÇö continue immediately to **segment**\
       \ when new chunks are needed.\n   - **`pause`** ΓÇö stop after index; wait for\
       \ the user before running **segment**.\n   - **`index_only`** ΓÇö stop after index;\
@@ -351,12 +367,11 @@ signature:
     kind: action
     tools:
     - scan
-    - validate
     instructions: "# Repair\n\nIterate until **validate** passes on `{{asset}}`. The\
       \ violation signal is:\n\n```\n{{violation}}\n```\n\nThat text may be a scanner\
       \ report, a user complaint, or both together. The loop\nfixes **why the generator\
       \ produced the violation** ΓÇö not the artifact in isolation.\nNever proceed without\
-      \ a verifiable error signal from **scan** or **validate**.\n\nRead the **`session`**\
+      \ a verifiable error signal from **scan** or **validate**.\n\nRead the **`active`**\
       \ resource first. `{{asset}}` and repaired outputs live under\nthat root (docs\
       \ ΓåÆ `{session.path}/.context/`; code ΓåÆ `{session.path}/{module}/`). Do not\n\
       repair into a divergent folder.\n\nRun this loop inline in the current session.\n\
@@ -404,7 +419,13 @@ signature:
       \ example pair under\n`<domain>/examples/*/`:\n\n- Every `faultyAsset` or file\
       \ under `faultyAssets/` must still **violate**\n- Every `repairedAsset` or file\
       \ under `repairedAssets/` must still be **clean**\n\nThe folder structure is\
-      \ the registry ΓÇö no separate cases file.\n"
+      \ the registry ΓÇö no separate cases file.\n\n---\n\n# Validate\n\nTake the persona\
+      \ of a **critical judge** ΓÇö do not edit the artifact.\n\n1. Follow **`session_guidance`**.\
+      \ Scope judgment to artifacts under `session.path` / the session layout.\n2.\
+      \ Use **contexts** as the rubric ΓÇö report pass/fail per named context and named\
+      \ rule with brief evidence.\n3. Call **`scan`** on the session-rooted paths\
+      \ under review.\n4. Do not fix. Report failures for fixing, then **validate**\
+      \ again when ready.\n\n---\n"
     parameters:
       asset: str
       violation: str
@@ -412,9 +433,30 @@ signature:
   satisfy:
     kind: action
     tools: []
-    chain:
-    - workspace_session
-    - record_decisions
+    instructions: '# Satisfy
+
+
+      Find and fix every problem in the artifact you wrote under the generator **`active`**
+      root ΓÇö including generating any missing artifacts.
+
+
+      1. Follow **`session_guidance`**. Edit only under that layout.
+
+      2. **Generate missing artifacts first.** Before validate, check each module
+      folder under `path` for a missing `.context/module-context.md`. A missing context
+      file IS a violation ΓÇö create it at the current fidelity (thin at modules: Purpose,
+      Seam, Dependencies; full at model: + Primary use case, Rationale, Public API)
+      before running validate. Do not skip this step.
+
+      3. Run **validate** against those session-rooted artifacts.
+
+      4. Fix every reported violation in the artifact (same paths ΓÇö do not invent
+      a divergent folder).
+
+      5. When done, run **validate** again until it passes.
+
+
+      ---'
     returns: str
   segment:
     kind: action
@@ -433,7 +475,7 @@ signature:
       \ segment files only for **uncovered** spans the current lens needs (additive\
       \ gap-fill).\n\nRepartition-from-scratch of chunks requires an **explicit**\
       \ user request.\n\n## Steps\n\n1. Resolve output root: `out_root` if set, else\
-      \ the generator **`session`** resource.\n2. Read the index file (`{session.path}/.context/{subject}-index.md`\
+      \ the generator **`active`** resource.\n2. Read the index file (`{session.path}/.context/{subject}-index.md`\
       \ for the corpus, or the path the user / caller gave). `{subject}` is the corpus\
       \ basename ΓÇö not the skill/toolset name.\n3. If chunks already cover the needed\
       \ spans, **skip extract** for those rows; ensure the index points at the existing\
@@ -482,26 +524,30 @@ signature:
     kind: action
     tools:
     - generate
-    chain:
-    - workspace_session
-    - record_decisions
-    - name: sketch
-      agent_dir: C:\dev\abd-context-driven-delivery\context_tools\clean_engineering
-    instructions: Sketch then generate ΓÇö grill + sketch cadence, then the host generate
+    instructions: Sketch then generate - grill + sketch cadence, then the host generate
       body.
     returns: str
   validate:
     kind: action
-    tools:
-    - scan
-    chain:
-    - workspace_session
-    returns: str
-  workspace_session_bind:
-    kind: action
     tools: []
-    instructions: Resolve workspace + session layout before the host action ΓÇö follow
-      session_guidance; scope work to session.path / session.folder.
+    instructions: '# Validate
+
+
+      Take the persona of a **critical judge** ΓÇö do not edit the artifact.
+
+
+      1. Follow **`session_guidance`**. Scope judgment to artifacts under `session.path`
+      / the session layout.
+
+      2. Use **contexts** as the rubric ΓÇö report pass/fail per named context and named
+      rule with brief evidence.
+
+      3. Call **`scan`** on the session-rooted paths under review.
+
+      4. Do not fix. Report failures for fixing, then **validate** again when ready.
+
+
+      ---'
     returns: str
 ---
 ```

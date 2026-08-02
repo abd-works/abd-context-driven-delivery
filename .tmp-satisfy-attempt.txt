@@ -1,4 +1,0 @@
-﻿```yaml
-ok: false
-error: ('cannot represent an object', Session(path='src', name=None))
-```
