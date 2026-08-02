@@ -16,7 +16,7 @@ def _validate_toolset(toolset_cls: type) -> None:
 
 
 def _run_action(request, **kwargs):
-    return _ActionRunner.instance().run(_ActionRunRequest(request=request, **kwargs))
+    return _ActionRunner.instance().invoke_action(_ActionRunRequest(request=request, **kwargs))
 
 
 def _register() -> None:

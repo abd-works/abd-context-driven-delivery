@@ -10,12 +10,16 @@ from __future__ import annotations
 
 import importlib
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from context_tools.base.base_context_tool import BaseContextTool
+from primitives.actions.action import action
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from tools.tool import tool  # noqa: F401
+from primitives.tools.tool import tool  # noqa: F401
+
+if TYPE_CHECKING:
+    from utilities.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
     "discovery": "markdown",
@@ -88,8 +92,31 @@ class Stories(BaseContextTool):
         )
         self.fidelity = fidelity
 
+    def diagnostic(self) -> "Diagnose":
+        """Diagnose companion — common six-phase loop as a tool (not inlined)."""
+        # lazy import: keeps diagnose optional at module load
+        from utilities.diagnose.diagnose import Diagnose
+
+        return Diagnose()
+
     @instruction
     def contexts(self) -> Instruction: ...
+
+    @action
+    def iterate(self) -> str:
+        """Iterate then generate - grill + formal generate/validate/one-fix ticks.
+        If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails)."""
+        super().iterate()
+        self.diagnostic().diagnose()
+        return "Iterate complete; generate instructions applied."
+
+    @action
+    def satisfy(self) -> str:
+        """Find and fix every problem in the story artifacts under the session root.
+        If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails)."""
+        super().satisfy()
+        self.diagnostic().diagnose()
+        return "When done, run validate on artifacts under {session.path}/."
 
     @tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:

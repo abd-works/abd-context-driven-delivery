@@ -1,0 +1,2 @@
+Using shell, run exactly: python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
+Return the complete manifest stdout (full fenced YAML; do not summarize).

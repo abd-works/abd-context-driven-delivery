@@ -1,0 +1,73 @@
+Ran from the repo root:
+
+```powershell
+python -m tools run -
+```
+
+(With `PYTHONIOENCODING=utf-8` so Unicode in tool output does not break on Windows.)
+
+Exit code: **1**
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+`-` tells the CLI to read the run request from **stdin**. With nothing piped in, there is no `toolset` field, so the run fails.
+
+After manifesting `CarChronicle`, pipe a request, for example:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+action: generate
+"@ | python -m tools run -
+```Ran from the repo root:
+
+```powershell
+python -m tools run -
+```
+
+(With `PYTHONIOENCODING=utf-8` so Unicode in tool output does not break on Windows.)
+
+Exit code: **1**
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+`-` tells the CLI to read the run request from **stdin**. With nothing piped in, there is no `toolset` field, so the run fails.
+
+After manifesting `CarChronicle`, pipe a request, for example:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+action: generate
+"@ | python -m tools run -
+```Ran from the repo root:
+
+```powershell
+python -m tools run -
+```
+
+(With `PYTHONIOENCODING=utf-8` so Unicode in tool output does not break on Windows.)
+
+Exit code: **1**
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+`-` tells the CLI to read the run request from **stdin**. With nothing piped in, there is no `toolset` field, so the run fails.
+
+After manifesting `CarChronicle`, pipe a request, for example:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+action: generate
+"@ | python -m tools run -
+```

@@ -1,0 +1,19 @@
+```yaml
+ok: true
+toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+tool: scan
+result: '{''ok'': True, ''rules'': [], ''violations'': []}'
+resources:
+  active:
+    path: .
+    name: null
+    folder: null
+    goal: null
+    fidelities: null
+    contexts: null
+    started: '2026-08-01'
+    ended: null
+    outcome: null
+    handoff: null
+  mode: action
+```

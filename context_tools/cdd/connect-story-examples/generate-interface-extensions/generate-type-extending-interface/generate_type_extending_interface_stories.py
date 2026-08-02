@@ -1,6 +1,6 @@
 """Story data - regeneratable. Do not add logic or imports.
 
-One story, three scenarios (Fake / Isolated / Production).
+One story, three scenarios (Fake / Isolated / Production modes).
 Owned by clean_engineering generator instructions/templates.
 """
 
@@ -14,68 +14,68 @@ GENERATE_TYPE_EXTENDING_INTERFACE: Final = {
     "actor": "Generator",
     "domain_terms": (
         "IType",
-        "FakeType",
-        "IsolatedType",
-        "ProductionType",
-        "ExampleFactory",
+        "Type",
+        "TypeExampleFactory",
         "example_key",
+        "mode",
     ),
     "evidence": (
-        "cdd-sketch.md - Fake/Isolated/Production for any {Type}",
+        "cdd-sketch.md - Fake/Isolated/Production modes for any {Type}",
         "context_tools/clean_engineering - example factory pattern",
+        "context_tools/cdd/example-factories - modes are not subclasses",
     ),
 
-    "fake_extension_for_explore_spec": {
-        "name": "fake extension for explore/spec",
+    "fake_mode_for_explore_spec": {
+        "name": "fake mode for explore/spec",
         "given": (
-            "an IType",
+            "an IType seam",
             "And examples[example_key] with field values for the types involved",
         ),
         "interactions": (
             {
                 "when": (
-                    "CE generates FakeType extending IType",
+                    "CE generates TypeExampleFactory that builds IType in fake mode",
                 ),
                 "then": (
-                    "FakeType implements the public API from examples[example_key]",
+                    "the factory returns IType filled from examples[example_key]",
                     "And dependencies are not real collaborators",
                 ),
             },
         ),
     },
 
-    "isolated_extension_for_a_story_test_tier": {
-        "name": "isolated extension for a story-test tier",
+    "isolated_mode_for_a_story_test_tier": {
+        "name": "isolated mode for a story-test tier",
         "given": (
-            "an IType",
+            "an IType seam",
             "And a tier test that must not pull the full stack",
         ),
         "interactions": (
             {
                 "when": (
-                    "CE generates IsolatedType extending IType",
+                    "CE generates TypeExampleFactory that builds Type in isolated mode",
                 ),
                 "then": (
-                    "IsolatedType implements the real public API for that tier",
-                    "And its dependencies are stubs or mocks",
+                    "the factory returns Type with ctor-injected mocks or stubs",
+                    "And no FakeType / IsolatedType / ProductionType subclasses are emitted",
                 ),
             },
         ),
     },
 
-    "production_extension_for_a_story_test_tier": {
-        "name": "production extension for a story-test tier",
+    "production_mode_for_a_story_test_tier": {
+        "name": "production mode for a story-test tier",
         "given": (
-            "an IType",
+            "an IType seam",
         ),
         "interactions": (
             {
                 "when": (
-                    "CE generates ProductionType extending IType",
+                    "CE generates TypeExampleFactory that builds Type in production mode",
                 ),
                 "then": (
-                    "ProductionType is the real implementation for that tier",
-                    "And tier tests can run against it with real collaborators",
+                    "the factory returns Type with real collaborators",
+                    "And tier tests can run against the production implementation",
                 ),
             },
         ),

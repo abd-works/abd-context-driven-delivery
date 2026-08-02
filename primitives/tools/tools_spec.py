@@ -22,7 +22,7 @@ from agent_bdd.yaml_fence import load_fenced
 from tools.toolset_header import read_toolset_header
 
 _CLEAN_CODE_PY = _REPO_ROOT / "context_tools" / "clean_engineering" / "clean_engineering.py"
-_CAR_PY = _REPO_ROOT / "primitives" / "tools" / "examples" / "car.py"
+_CAR_PY = _REPO_ROOT / "primitives" / "tools" / "examples" / "car" / "car.py"
 
 
 def car_instance(running=False):

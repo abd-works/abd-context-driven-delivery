@@ -9,18 +9,12 @@ from pathlib import Path
 from primitives.actions.action import action
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from sessions.context_index import (
-    context_index_path,
-    lookup_root,
-    path_to_root_glob,
-    root_glob_to_path,
-    upsert_entry,
-)
-from sessions.session import docs_dir
+from sessions.context_index import ContextIndex
+from sessions.session import SessionPaths
 from tools.tool import resource, tool
 
-# Re-export for ``from sessions.workspace_session import docs_dir``
-__all__ = ["Session", "WorkspaceSession", "docs_dir"]
+# Re-export for ``from sessions.workspace_session import SessionPaths.docs_dir``
+__all__ = ["Session", "WorkspaceSession", "SessionPaths.docs_dir"]
 
 
 class Session:
@@ -113,9 +107,9 @@ class Session:
         if working_area is not None:
             return working_area
         key = self.context_index_key or ""
-        indexed = lookup_root(self.workspace_root, key) if key else None
+        indexed = ContextIndex.lookup_root(self.workspace_root, key) if key else None
         if indexed:
-            return root_glob_to_path(self.workspace_root, indexed)
+            return ContextIndex.root_glob_to_path(self.workspace_root, indexed)
         folder = self.default_workspace_folder or "."
         if folder in (".", ""):
             return self.workspace_root
@@ -380,7 +374,7 @@ class Session:
     @tool
     def read_context_index(self) -> str:
         """read_context_index"""
-        path = context_index_path(self.workspace_root)
+        path = ContextIndex.context_index_path(self.workspace_root)
         if not path.is_file():
             self._context_index = None
             return f"missing: {path.as_posix()} (no roots recorded yet)"
@@ -395,8 +389,8 @@ class Session:
         if not key:
             return "skipped: this toolset has no context_index_key"
         working = root if root else self.path
-        glob = path_to_root_glob(self.workspace_root, working)
-        path = upsert_entry(self.workspace_root, key, glob, note=note)
+        glob = ContextIndex.path_to_root_glob(self.workspace_root, working)
+        path = ContextIndex.upsert_entry(self.workspace_root, key, glob, note=note)
         if path.is_file():
             self._context_index = path.read_text(encoding="utf-8")
         return str(path.resolve())

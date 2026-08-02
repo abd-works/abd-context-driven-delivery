@@ -1,0 +1,1 @@
+Read primitives/assets/.agent_bdd_sessions/logs/card-file/judge-prompt.txt and follow it exactly. Reply with only one JSON line as specified in that file.

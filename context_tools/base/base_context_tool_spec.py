@@ -1,4 +1,8 @@
 """BDD spec for BaseContextTool - domain host face + lifecycle prose.
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 
 Peer-kit expansion lives with the kits:
 - ``utilities/sessions/workspace_session_spec.py``
@@ -51,7 +55,7 @@ def _expand_action(
     *,
     toolset_path: str,
 ) -> dict[str, Any]:
-    return _ActionRunner.instance().run(
+    return _ActionRunner.instance().invoke_action(
         _ActionRunRequest(
             request={"toolset": toolset_path, "context": {}},
             toolset_path=toolset_path,
@@ -300,3 +304,94 @@ with description("BaseContextTool linear kit delegation"):
 
         with it("should name explore_context_files from GrillContext"):
             expect("explore_context_files" in self.response["tools"]).to(be_true)
+
+    with context("iterate expands Iterator in-method (no @ chain)"):
+        with before.all:
+            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
+            self.host = cls()
+            self.entry = self.host.actions["iterate"].signature_entry
+            self.response = _expand_action(
+                self.host, "iterate", toolset_path=_BASE_TOOLSET
+            )
+
+        with it("should have no decorator chain on iterate"):
+            expect("chain" in self.entry).to(equal(False))
+
+    with context("document expands providers in-method (no @ chain)"):
+        with before.all:
+            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
+            self.host = cls()
+            self.entry = self.host.actions["document"].signature_entry
+            self.response = _expand_action(
+                self.host, "document", toolset_path=_BASE_TOOLSET
+            )
+
+        with it("should have no decorator chain on document"):
+            expect("chain" in self.entry).to(equal(False))
+
+        with it("should inline document prose"):
+            expect(_section("document") in self.response["instructions"]).to(be_true)
+
+
+with description("BaseContextTool public host face"):
+    with before.all:
+        cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
+        self.host = cls()
+
+    with it("should resolve module_dir to the base package folder"):
+        expect(self.host.module_dir).to(equal(_BASE_DIR.resolve()))
+
+    with it("should default default_workspace_folder to the workspace root"):
+        expect(type(self.host).default_workspace_folder).to(equal("."))
+
+    with it("should default context_index_key to empty"):
+        expect(type(self.host).context_index_key).to(equal(""))
+
+    with it("should return a Session from workspace"):
+        from sessions.workspace_session import Session
+
+        expect(isinstance(self.host.workspace(), Session)).to(be_true)
+
+    with it("should return a Scan from scanner"):
+        from scanners.scan import Scan
+
+        expect(isinstance(self.host.scanner(), Scan)).to(be_true)
+
+    with it("should return a Sketcher from sketcher"):
+        from sketch.sketch import Sketcher
+
+        expect(isinstance(self.host.sketcher(), Sketcher)).to(be_true)
+
+    with it("should return a GrillContext from grill_context"):
+        from grill_context.grill_context import GrillContext
+
+        expect(isinstance(self.host.grill_context(), GrillContext)).to(be_true)
+
+    with it("should return an Iterator from iterator"):
+        from iterate.iterate import Iterator
+
+        expect(isinstance(self.host.iterator(), Iterator)).to(be_true)
+
+    with it("should return RecordDecisions from decisions"):
+        from record_decisions.record_decisions import RecordDecisions
+
+        expect(isinstance(self.host.decisions(), RecordDecisions)).to(be_true)
+
+    with it("should expose active as the workspace Session"):
+        expect(self.host.active).to(equal(self.host.workspace()))
+
+    with it("should delegate session_guidance to the workspace kit"):
+        guidance = self.host.session_guidance()
+        expect(isinstance(guidance, Instruction)).to(be_true)
+        expect("Session Guidance" in guidance.expand() or "session" in guidance.expand().lower()).to(
+            be_true
+        )
+
+    with it("should expose create_session and close_session as host tools"):
+        expect("create_session" in self.host.tools).to(be_true)
+        expect("close_session" in self.host.tools).to(be_true)
+
+    with it("should prepend a BDD-capable generate header"):
+        header = self.host.add_generate_header_to_generated()
+        expect("@toolset-manifest" in header).to(be_true)
+        expect("invoke-edit: action satisfy" in header).to(be_true)

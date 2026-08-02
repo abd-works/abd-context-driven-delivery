@@ -1,15 +1,199 @@
-```yaml
-ok: true
-toolset: tools.example.car:Car
-tool: start
-result: null
-resources:
-  make: Dodge
-  model: Charger
-  year: 1969
-  personality: General Lee ? a rebellious, high-spirited orange 1969 Dodge Charger
-    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
-    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
-    every Hazzard adventure.
-  running: true
-```
+self._yaml = _ManifestYaml.instance()
+
+    @classmethod
+    def instance(cls) -> _ToolsetRunner:
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    @classmethod
+    def set_instance(cls, runner: _ToolsetRunner | None) -> None:
+        cls._instance = runner
+
+    def run_request(self, request: RunRequestDocument) -> RunResponseDocument:
+        from sessions import SessionLog, member_is_logged, summarize_mapping
+
+        parsed = self._parse_run_request(request)
+        slog = SessionLog.instance()
+        slog.set_session(parsed.session)
+        if parsed.log_control is not None:
+            slog.apply_log_control(parsed.log_control)
+        toolset_cls = self._loader.load(str(parsed.toolset_path))
+        instance = self._build_instance(toolset_cls, parsed.context)
+        member_name = str(parsed.action_name or parsed.tool_name)
+        should_log = member_is_logged(toolset_cls, member_name)
+        try:
+            if parsed.action_name:
+                response = self._run_action(request, parsed, instance)
+            else:
+                response = self._run_tool(request, parsed, instance)
+        except RunError as exc:
+            if should_log:
+                slog.append(
+                    kind="action" if parsed.action_name else "tool",
+                    toolset=str(parsed.toolset_path),
+                    name=member_name,
+                    summary=summarize_mapping(parsed.arguments),
+                    ok=False,
+                    error=str(exc),
+                    payload={
+                        "request": {
+                            "toolset": str(parsed.toolset_path),
+                            "arguments": parsed.arguments,
+                            "context": parsed.context,
+                        },
+                        "response": exc.response,
+                    },
+                )
+            raise
+        if should_log:
+            slog.append(
+                kind="action" if parsed.action_name else "tool",
+                toolset=str(parsed.toolset_path),
+                name=member_name,
+                summary=summarize_mapping(parsed.arguments),
+                ok=bool(response.get("ok", True)),
+                error=None if response.get("ok", True) else str(response.get("error")),
+                payload={
+                    "request": {
+                        "toolset": str(parsed.toolset_path),
+                        "arguments": parsed.arguments,
+                        "context": parsed.context,
+                    },
+                    "response": response,
+                },
+            )
+        return response
+
+    def _run_tool(
+        self,
+        request: dict[str, Any],
+        parsed: "_RunRequest",
+        instance: Toolset,
+    ) -> dict[str, Any]:
+        result = self._invoke_tool(instance, str(parsed.tool_name), parsed.arguments)
+        return self._build_tool_response(request, parsed.toolset_path, parsed.tool_name, instance, result)
+
+    def _run_action(
+        self,
+        request: dict[str, Any],
+        parsed: "_RunRequest",
+        instance: Toolset,
+    ) -> dict[str, Any]:
+        from tools.extensions import ToolsetExtensions
+
+        return ToolsetExtensions.instance().run(
+            "action",
+            request,
+            toolset_path=parsed.toolset_path,
+            action_name=parsed.action_name,
+            context=parsed.context,
+            arguments=parsed.arguments,
+            instance=instance,
+        )
+
+    def _parse_run_request(self, request: dict[str, Any]) -> "_RunRequest":
+        if not isinstance(request, dict):
+            raise RunError("request must be a YAML mapping", response={"ok": False, "error": "invalid request"})
+        toolset_path = request.get("toolset")
+        if not toolset_path:
+            raise RunError("request missing toolset", response={"ok": False, "error": "request missing toolset"})
+        tool_name = request.get("tool")
+        action_name = request.get("action")
+        if tool_name and action_name:
+            raise RunError(
+                "request must use tool or action, not both",
+                response={"ok": False, "error": "tool and action are mutually exclusive"},
+            )
+        if not tool_name and not action_name:
+            raise RunError(
+                "request missing tool or action",
+                response={"ok": False, "error": "request missing tool or action"},
+            )
+        context = self._mapping_field(request, "context", default={})
+        arguments = self._mapping_field(request, "arguments", default={})
+        session = request.get("session")
+        log_control = request.get("log")
+        return _RunRequest(
+            toolset_path=toolset_path,
+            tool_name=tool_name,
+            action_name=action_name,
+            context=context,
+            arguments=arguments,
+            session=str(session) if session is not None else None,
+            log_control=str(log_control) if log_control is not None else None,
+        )
+
+    def _mapping_field(
+        self, request: dict[str, Any], field_name: str, *, default: dict[str, Any]
+    ) -> dict[str, Any]:
+        field_value = request.get(field_name, default)
+        if not isinstance(field_value, dict):
+            raise RunError(
+                f"{field_name} must be a mapping",
+                response={"ok": False, "error": f"invalid {field_name}"},
+            )
+        return field_value
+
+    def _build_instance(self, toolset_cls: type, context: dict[str, Any]) -> Toolset:
+        try:
+            return toolset_cls(**context)
+        except TypeError as exc:
+            raise RunError(
+                f"invalid context for {toolset_cls.manifest_path}: {exc}",
+                response={"ok": False, "error": "invalid context", "detail": str(exc)},
+            ) from exc
+
+    def _invoke_tool(self, instance: Toolset, tool_name: str, arguments: dict[str, Any]) -> Any:
+        if tool_name not in instance.tools:
+            raise RunError(
+                f"unknown tool {tool_name!r}",
+                response={"ok": False, "tool": tool_name, "error": "unknown tool"},
+            )
+        tool = instance.tools[tool_name]
+        self._validate_arguments(tool, arguments)
+        return getattr(instance, tool_name)(**arguments)
+
+    def _validate_arguments(self, tool: _Tool, arguments: dict[str, Any]) -> None:
+        reader = _SignatureReader.instance()
+        schema = reader.input_schema(tool.callable)
+        missing = [name for name in schema.get("required", []) if name not in arguments]
+        if missing:
+            raise RunError(
+                f"{tool.name} missing required arguments: {', '.join(missing)}",
+                response={
+                    "ok": False,
+                    "tool": tool.name,
+                    "error": "missing required arguments",
+                    "missing": missing,
+                },
+            )
+
+    def _build_tool_response(
+        self,
+        request: dict[str, Any],
+        toolset_path: Any,
+        tool_name: Any,
+        instance: Toolset,
+        result: Any,
+    ) -> dict[str, Any]:
+        response: dict[str, Any] = {
+            "ok": True,
+            "toolset": str(toolset_path),
+            "tool": str(tool_name),
+            "result": self._yaml.serialize_value(result),
+        }
+        if request.get("include_resources", True):
+            response["resources"] = self._yaml.serialize_value(instance.resources)
+        return response
+
+
+@dataclass(frozen=True)
+class _RunRequest:
+    toolset_path: Any
+    tool_name: Any
+    action_name: Any
+    context: dict[str, Any]
+    arguments: dict[str, Any]
+    session: str | None = None
+    log_control: str | None = None

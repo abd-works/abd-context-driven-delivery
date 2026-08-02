@@ -21,30 +21,30 @@ SKIP_DIR_NAMES = frozenset(
 )
 
 
-def is_skipped_path(path: Path) -> bool:
-    """True when *path* sits under a skipped directory name (e.g. ``examples/``)."""
-    return any(part in SKIP_DIR_NAMES for part in Path(path).parts)
-
-
-def filter_scan_files(files: list[Path]) -> list[Path]:
-    """Drop paths under skipped directories so demos do not inflate module metrics."""
-    return [path for path in files if not is_skipped_path(path)]
-
-
 class Scanner(ABC):
     """Scan a named rule over files under *root*."""
 
     def __init__(self, rule: str) -> None:
         self.rule = rule
 
+    @staticmethod
+    def is_skipped_path(path: Path) -> bool:
+        """True when *path* sits under a skipped directory name (e.g. ``examples/``)."""
+        return any(part in SKIP_DIR_NAMES for part in Path(path).parts)
+
+    @staticmethod
+    def filter_scan_files(files: list[Path]) -> list[Path]:
+        """Drop paths under skipped directories so demos do not inflate module metrics."""
+        return [path for path in files if not Scanner.is_skipped_path(path)]
+
     def scan(self, root: Path, files: list[Path]) -> list[Violation]:
         root = root.resolve()
         violations: list[Violation] = []
-        for file_path in filter_scan_files(files):
+        for file_path in Scanner.filter_scan_files(files):
             path = file_path if file_path.is_absolute() else root / file_path
             if not path.is_file():
                 continue
-            if is_skipped_path(path):
+            if Scanner.is_skipped_path(path):
                 continue
             violations.extend(self.scan_file(root, path))
         return violations

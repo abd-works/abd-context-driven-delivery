@@ -18,12 +18,6 @@ if TYPE_CHECKING:
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def _session_cls():
-    from sessions.workspace_session import Session
-
-    return Session
-
-
 def log(func: F) -> F:
     """Mark a @tool or @action so SessionLog records its run/expansion."""
     func._is_logged = True  # type: ignore[attr-defined]
@@ -126,10 +120,16 @@ class SessionLog(ISessionLog):
 
     _instance: SessionLog | None = None
 
+    @staticmethod
+    def _session_cls():
+        from sessions.workspace_session import Session
+
+        return Session
+
     def __init__(self, sessions_root: Path | None = None) -> None:
         # Test override only: when set, log_dir = sessions_root / session.name
         self._sessions_root = sessions_root
-        self._session = _session_cls()(path=".", name="default")
+        self._session = SessionLog._session_cls()(path=".", name="default")
         self._verbose = False
         self._last_payload: _LastPayload | None = None
         self._event_count = 0
@@ -172,7 +172,7 @@ class SessionLog(ISessionLog):
 
     def set_session(self, session: str | Session | None) -> None:
         """Bind a Session, or a name (legacy) as ``Session(path=".", name=...)``."""
-        Session = _session_cls()
+        Session = SessionLog._session_cls()
         if isinstance(session, Session):
             self.bind(session)
             return
@@ -210,7 +210,7 @@ class SessionLog(ISessionLog):
         index = self._event_count
         self.log_dir.mkdir(parents=True, exist_ok=True)
         payload_ref = self._maybe_write_payloads(index, payload)
-        line = _format_event_line(
+        line = self._format_event_line(
             kind=kind,
             toolset=toolset,
             name=name,
@@ -256,49 +256,49 @@ class SessionLog(ISessionLog):
         req_name = f"event-{index:03d}-request.yaml"
         res_name = f"event-{index:03d}-response.yaml"
         (self.log_dir / req_name).write_text(
-            _dump_yamlish(payload.get("request")),
+            self._dump_yamlish(payload.get("request")),
             encoding="utf-8",
         )
         (self.log_dir / res_name).write_text(
-            _dump_yamlish(payload.get("response")),
+            self._dump_yamlish(payload.get("response")),
             encoding="utf-8",
         )
         return req_name, res_name
 
+    @staticmethod
+    def _format_event_line(
+        *,
+        kind: str,
+        toolset: str,
+        name: str,
+        summary: str,
+        ok: bool,
+        error: str | None,
+        payload_ref: str | None,
+    ) -> str:
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+        parts = [
+            ts,
+            f"kind={kind}",
+            f"toolset={toolset}",
+            f"name={name}",
+            f"ok={'true' if ok else 'false'}",
+            f"summary={summary}",
+        ]
+        if error:
+            parts.append(f"error={error}")
+        if payload_ref:
+            parts.append(f"payload={payload_ref}")
+        return " ".join(parts)
 
-def _format_event_line(
-    *,
-    kind: str,
-    toolset: str,
-    name: str,
-    summary: str,
-    ok: bool,
-    error: str | None,
-    payload_ref: str | None,
-) -> str:
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-    parts = [
-        ts,
-        f"kind={kind}",
-        f"toolset={toolset}",
-        f"name={name}",
-        f"ok={'true' if ok else 'false'}",
-        f"summary={summary}",
-    ]
-    if error:
-        parts.append(f"error={error}")
-    if payload_ref:
-        parts.append(f"payload={payload_ref}")
-    return " ".join(parts)
+    @staticmethod
+    def _dump_yamlish(value: Any) -> str:
+        try:
+            import yaml
 
-
-def _dump_yamlish(value: Any) -> str:
-    try:
-        import yaml
-
-        return yaml.safe_dump(value, sort_keys=False)
-    except (ImportError, TypeError, ValueError):
-        return json.dumps(value, indent=2, default=str)
+            return yaml.safe_dump(value, sort_keys=False)
+        except (ImportError, TypeError, ValueError):
+            return json.dumps(value, indent=2, default=str)
 
 
 def summarize_mapping(data: dict[str, Any] | None, *, limit: int = 120) -> str:

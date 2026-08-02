@@ -75,15 +75,14 @@ class _SignatureReader:
         cls._instance = reader
 
     def member_instructions(self, func: Callable[..., Any]) -> str:
-        doc = (func.__doc__ or "").strip()
-        if not doc:
-            return ""
-        # Single-token docstring -> kit-local {name}.md beside the defining module.
-        if doc.isidentifier():
-            from primitives.instructions import _expand_docstring
+        from primitives.instructions import _expand_docstring
 
-            return _expand_docstring(doc, func)
-        return doc
+        doc = (func.__doc__ or "").strip()
+        # No docstring: use the method name as the lookup label (same fallback _walk_body uses).
+        label = doc if doc else func.__name__
+        if label.isidentifier():
+            return _expand_docstring(label, func)
+        return label
 
     def simple_type(self, annotation: TypeAnnotation) -> str:
         if annotation is inspect.Parameter.empty:

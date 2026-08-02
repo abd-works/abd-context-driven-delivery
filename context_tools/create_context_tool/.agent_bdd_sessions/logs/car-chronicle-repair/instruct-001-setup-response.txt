@@ -1,0 +1,82 @@
+Here is `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
+
+```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
+# @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
+# invoke-new: action generate
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""Minimal BaseContextTool subclass example for generator specs."""
+
+from __future__ import annotations
+
+from context_tools.base.base_context_tool import BaseContextTool
+
+
+class CarChronicle(BaseContextTool):
+    """# Instructions"""
+
+    def __init__(self, path: str | None = None, session: str | None = None) -> None:
+        super().__init__(path=path, session=session)
+
+```
+
+The header comments tell agents to manifest `CarChronicle`, then `python -m tools run -`, and to follow manifest instructions rather than infer behavior from this stub. BDD hooks point at `generate`, `satisfy`, and `validate` on `context_tools.bdd.bdd:Bdd`. The class only subclasses `BaseContextTool` with a `# Instructions` docstring placeholder and a constructor that passes `path` and `session` through.
+
+The sibling `.context/module-context.md` describes this folder as the minimal driving-chronicle example for CreateContextTool scaffolds, with related pieces like `ChronicleWithOutput` and `car_chronicle.md` in the same directory.Here is `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
+
+```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
+# @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
+# invoke-new: action generate
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""Minimal BaseContextTool subclass example for generator specs."""
+
+from __future__ import annotations
+
+from context_tools.base.base_context_tool import BaseContextTool
+
+
+class CarChronicle(BaseContextTool):
+    """# Instructions"""
+
+    def __init__(self, path: str | None = None, session: str | None = None) -> None:
+        super().__init__(path=path, session=session)
+
+```
+
+The header comments tell agents to manifest `CarChronicle`, then `python -m tools run -`, and to follow manifest instructions rather than infer behavior from this stub. BDD hooks point at `generate`, `satisfy`, and `validate` on `context_tools.bdd.bdd:Bdd`. The class only subclasses `BaseContextTool` with a `# Instructions` docstring placeholder and a constructor that passes `path` and `session` through.
+
+The sibling `.context/module-context.md` describes this folder as the minimal driving-chronicle example for CreateContextTool scaffolds, with related pieces like `ChronicleWithOutput` and `car_chronicle.md` in the same directory.Here is `context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
+
+```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
+# @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
+# invoke-new: action generate
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""Minimal BaseContextTool subclass example for generator specs."""
+
+from __future__ import annotations
+
+from context_tools.base.base_context_tool import BaseContextTool
+
+
+class CarChronicle(BaseContextTool):
+    """# Instructions"""
+
+    def __init__(self, path: str | None = None, session: str | None = None) -> None:
+        super().__init__(path=path, session=session)
+
+```
+
+The header comments tell agents to manifest `CarChronicle`, then `python -m tools run -`, and to follow manifest instructions rather than infer behavior from this stub. BDD hooks point at `generate`, `satisfy`, and `validate` on `context_tools.bdd.bdd:Bdd`. The class only subclasses `BaseContextTool` with a `# Instructions` docstring placeholder and a constructor that passes `path` and `session` through.
+
+The sibling `.context/module-context.md` describes this folder as the minimal driving-chronicle example for CreateContextTool scaffolds, with related pieces like `ChronicleWithOutput` and `car_chronicle.md` in the same directory.

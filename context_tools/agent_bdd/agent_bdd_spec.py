@@ -9,6 +9,7 @@ from agent_bdd import agent
 from agent_bdd.agent_bdd_common import (
     build_runbook,
     cli_output_matches_prompt,
+    looks_like_tools_run_output,
     read_manifest,
     yaml_from_prompt,
 )
@@ -95,3 +96,13 @@ with description("an agent spec file"):
             expect(cli_output_matches_prompt(wrong, prompt)).to(equal(False))
             right = "```yaml\nok: true\naction: repair\ninstructions: test\n```"
             expect(cli_output_matches_prompt(right, prompt)).to(be_true)
+
+        with it("should reject non-YAML shell captures without raising"):
+            prompt = (
+                "Pipe this YAML on stdin:\n"
+                "toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\n"
+                "action: generate\n"
+            )
+            garbage = "lines = [f\"toolset: {invoke['toolset']}\", f\"action: {invoke['action']}\"]"
+            expect(cli_output_matches_prompt(garbage, prompt)).to(equal(False))
+            expect(looks_like_tools_run_output(garbage)).to(equal(False))

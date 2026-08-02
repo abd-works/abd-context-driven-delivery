@@ -1,0 +1,28 @@
+The command finished from the repo root with `PYTHONIOENCODING=utf-8` (required for `python -m tools` on Windows). Exit code was 1.
+
+Stdin was empty, so the runner had nothing to parse and returned:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+`python -m tools run -` reads the run request from stdin (for example a YAML block with `toolset:` and `tool:`). To exercise the car example after manifest, pipe or here-string that request into the same command. If you want that wired up for `Car`, say what request body to use and we can run it.The command finished from the repo root with `PYTHONIOENCODING=utf-8` (required for `python -m tools` on Windows). Exit code was 1.
+
+Stdin was empty, so the runner had nothing to parse and returned:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+`python -m tools run -` reads the run request from stdin (for example a YAML block with `toolset:` and `tool:`). To exercise the car example after manifest, pipe or here-string that request into the same command. If you want that wired up for `Car`, say what request body to use and we can run it.The command finished from the repo root with `PYTHONIOENCODING=utf-8` (required for `python -m tools` on Windows). Exit code was 1.
+
+Stdin was empty, so the runner had nothing to parse and returned:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+`python -m tools run -` reads the run request from stdin (for example a YAML block with `toolset:` and `tool:`). To exercise the car example after manifest, pipe or here-string that request into the same command. If you want that wired up for `Car`, say what request body to use and we can run it.

@@ -1,0 +1,9 @@
+ok: true
+toolset: tools.examples.car:Car
+tool: start
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: a rebellious, high-spirited, and loyal country boy
+  running: true

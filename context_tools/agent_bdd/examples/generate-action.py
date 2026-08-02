@@ -5,44 +5,43 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: context_tools/agent_bdd/.agent_bdd_sessions/generate-action-example.json
-"""Example - act -> assert -> act -> assert inline; no self.* accumulation."""
-from pathlib import Path
-
-from expects import be_true, equal, expect
+"""Example — helpers: read → run_toolset → follow → ai_judge."""
+from agent_bdd import (
+    agent,
+    ai_judge,
+    expect_instructions_contain,
+    expect_ok_action,
+    follow_instructions,
+    read_workspace,
+    repo_root_from,
+    run_toolset,
+    sessions_dir,
+)
 from mamba import context, description, it
 
-from agent_bdd import agent, ai_judge, instruct, instruct_use_tool
-
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-_SESSIONS = Path(__file__).resolve().parents[1] / ".agent_bdd_sessions"
-
-_GENERATE_YAML = """\
-toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
-action: generate
-"""
+_REPO_ROOT = repo_root_from(__file__, parents=3)
+_SESSIONS = sessions_dir(__file__)
 
 with description("a CarChronicle generator"):
     with context("with agent and generate action"):
         with it("drives generate then judges the log"):
             with agent(_REPO_ROOT, _SESSIONS / "generate-action-example.json"):
-                instruct(
-                    "Read context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py from the workspace.",
-                    timeout_seconds=60,
+                read_workspace(
+                    "context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py"
                 )
 
-                response = instruct_use_tool(
-                    "Using shell, run exactly: python -m tools run -\n"
-                    "Pipe this YAML on stdin:\n"
-                    f"{_GENERATE_YAML}\n"
-                    "Return the complete fenced YAML stdout from the CLI.",
+                response = run_toolset(
+                    toolset=(
+                        "context_tools.create_context_tool.examples."
+                        "car_chronicle.car_chronicle:CarChronicle"
+                    ),
+                    action="generate",
                     timeout_seconds=120,
                 )
-                expect(response.ok).to(be_true)
-                expect(response.action).to(equal("generate"))
-                expect(response.tools or []).to(equal([]))
-                expect("use-driving-voice" in str(response.instructions).lower()).to(be_true)
+                expect_ok_action(response, "generate")
+                expect_instructions_contain(response, "use-driving-voice")
 
-                chronicle = instruct(
+                chronicle = follow_instructions(
                     "Follow the generate instructions and write a driving chronicle entry "
                     "for one trip from the Hazzard County garage to the courthouse.",
                     timeout_seconds=300,

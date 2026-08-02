@@ -1,0 +1,697 @@
+Capturing the full manifest — the terminal truncated the middle section.
+Capturing the full manifest — the terminal truncated the middle section.
+Command (from line 1 of `context_tools/stories/stories.py`):
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; python -m tools manifest context_tools.stories.stories:Stories
+```
+
+Exit code: **0**. Full manifest (~530 lines):
+
+```yaml
+---
+type: stories
+capabilities:
+- tool
+- agent
+signature:
+  instructions: '# Instructions'
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest context_tools.stories.stories:Stories
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      fidelity: str
+      format: str | None
+      path: str | None
+      session: str | None
+      workspace: str | None
+  close_session:
+    kind: tool
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  read_context_index:
+    kind: tool
+    returns: str
+  record_context_root:
+    kind: tool
+    parameters:
+      root: str
+      note: str
+    returns: str
+  scan:
+    kind: tool
+    parameters:
+      paths: list[str]
+    returns: str
+  transform:
+    kind: tool
+    instructions: "Parse content from source_format into the canonical StoryMap, then\
+      \ render into target_format.\n        All formatters are peer channels. Sideways\
+      \ format move at the same fidelity."
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: dict
+  verify_segment_completeness:
+    kind: tool
+    instructions: Run named-entry completeness on a ``*-segment.md`` chunk.
+    parameters:
+      segment_path: str
+      expected_names: str
+      min_body_chars: int
+      index_path: str
+    returns: str
+  write_to_fix:
+    kind: tool
+    instructions: Append one entry to ``{session.folder}/to-fix.log``.
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      improved: str
+      status: str
+      when: str
+    returns: str
+  active:
+    kind: resource
+    type: Session
+  mode:
+    kind: resource
+    type: str
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing - before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: '# Document ...'  # neutral observer; session_guidance; scan violations
+    parameters:
+      paths: list[str]
+    returns: str
+  generate:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: "# Generate\n\n1. Follow **`session_guidance`** ... 8. Run **validate** ..."
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  grill:
+    kind: action
+    tools:
+    - generate
+    instructions: Grill then generate - pure grill loop, then the host generate body.
+    returns: str
+  index:
+    kind: action
+    tools: []
+    instructions: "# Index\n\nBuild or **extend** a thin sections index ..."
+    parameters:
+      context: str
+      out_root: str | None
+    returns: str
+  iterate:
+    kind: action
+    tools: []
+    instructions: "Iterate then generate - grill + formal generate/validate/one-fix ticks..."
+    returns: str
+  log_fix:
+    kind: action
+    tools:
+    - write_to_fix
+    instructions: "# Log fix\n\nWhen the user says **to fix** ..."
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      improved: str
+      status: str
+    returns: str
+  partition:
+    kind: action
+    tools:
+    - index
+    - segment
+    - verify_segment_completeness
+    instructions: "# Partition\n\nOrchestrate a thin partition ..."
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools:
+    - scan
+    instructions: "# Repair\n\nIterate until **validate** passes on `{{asset}}` ..."
+    parameters:
+      asset: str
+      violation: str
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Find and fix every problem in the story artifacts under the session root..."
+    returns: str
+  segment:
+    kind: action
+    tools:
+    - verify_segment_completeness
+    instructions: "# Segment\n\nTurn index guidance into **named segment files** ..."
+    parameters:
+      out_root: str | None
+    returns: str
+  sketch:
+    kind: action
+    tools:
+    - generate
+    instructions: Sketch then generate - grill + sketch cadence, then the host generate body.
+    returns: str
+  validate:
+    kind: action
+    tools: []
+    instructions: '# Validate ... critical judge; scan; do not fix.'
+    returns: str
+---
+```
+
+The CLI wraps that YAML in a markdown fence (`` ```yaml `` … `` ``` ``). I abbreviated the long `instructions` strings in the block above so the reply stays readable; the run emitted every field verbatim.
+
+Summary of what the manifest declares:
+
+- **type:** `stories`
+- **capabilities:** `tool`, `agent`
+- **Meta:** `read_manifest`, `invoke`
+- **Constructor:** `new` (`fidelity`, `format`, `path`, `session`, `workspace`)
+- **Tools:** session helpers, `scan`, `transform`, `verify_segment_completeness`, `write_to_fix`
+- **Resources:** `active` (Session), `mode` (str)
+- **Actions:** `document`, `generate`, `grill`, `sketch`, `iterate`, `index`, `segment`, `partition`, `validate`, `satisfy`, `repair`, `log_fix`, plus helpers `generate_output`, `add_generate_header_to_generated`
+
+To print the exact bytes locally (no abbreviation):
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; python -m tools manifest context_tools.stories.stories:Stories
+```Command (from line 1 of `context_tools/stories/stories.py`):
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; python -m tools manifest context_tools.stories.stories:Stories
+```
+
+Exit code: **0**. Full manifest (~530 lines):
+
+```yaml
+---
+type: stories
+capabilities:
+- tool
+- agent
+signature:
+  instructions: '# Instructions'
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest context_tools.stories.stories:Stories
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      fidelity: str
+      format: str | None
+      path: str | None
+      session: str | None
+      workspace: str | None
+  close_session:
+    kind: tool
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  read_context_index:
+    kind: tool
+    returns: str
+  record_context_root:
+    kind: tool
+    parameters:
+      root: str
+      note: str
+    returns: str
+  scan:
+    kind: tool
+    parameters:
+      paths: list[str]
+    returns: str
+  transform:
+    kind: tool
+    instructions: "Parse content from source_format into the canonical StoryMap, then\
+      \ render into target_format.\n        All formatters are peer channels. Sideways\
+      \ format move at the same fidelity."
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: dict
+  verify_segment_completeness:
+    kind: tool
+    instructions: Run named-entry completeness on a ``*-segment.md`` chunk.
+    parameters:
+      segment_path: str
+      expected_names: str
+      min_body_chars: int
+      index_path: str
+    returns: str
+  write_to_fix:
+    kind: tool
+    instructions: Append one entry to ``{session.folder}/to-fix.log``.
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      improved: str
+      status: str
+      when: str
+    returns: str
+  active:
+    kind: resource
+    type: Session
+  mode:
+    kind: resource
+    type: str
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing - before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: '# Document ...'  # neutral observer; session_guidance; scan violations
+    parameters:
+      paths: list[str]
+    returns: str
+  generate:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: "# Generate\n\n1. Follow **`session_guidance`** ... 8. Run **validate** ..."
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  grill:
+    kind: action
+    tools:
+    - generate
+    instructions: Grill then generate - pure grill loop, then the host generate body.
+    returns: str
+  index:
+    kind: action
+    tools: []
+    instructions: "# Index\n\nBuild or **extend** a thin sections index ..."
+    parameters:
+      context: str
+      out_root: str | None
+    returns: str
+  iterate:
+    kind: action
+    tools: []
+    instructions: "Iterate then generate - grill + formal generate/validate/one-fix ticks..."
+    returns: str
+  log_fix:
+    kind: action
+    tools:
+    - write_to_fix
+    instructions: "# Log fix\n\nWhen the user says **to fix** ..."
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      improved: str
+      status: str
+    returns: str
+  partition:
+    kind: action
+    tools:
+    - index
+    - segment
+    - verify_segment_completeness
+    instructions: "# Partition\n\nOrchestrate a thin partition ..."
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools:
+    - scan
+    instructions: "# Repair\n\nIterate until **validate** passes on `{{asset}}` ..."
+    parameters:
+      asset: str
+      violation: str
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Find and fix every problem in the story artifacts under the session root..."
+    returns: str
+  segment:
+    kind: action
+    tools:
+    - verify_segment_completeness
+    instructions: "# Segment\n\nTurn index guidance into **named segment files** ..."
+    parameters:
+      out_root: str | None
+    returns: str
+  sketch:
+    kind: action
+    tools:
+    - generate
+    instructions: Sketch then generate - grill + sketch cadence, then the host generate body.
+    returns: str
+  validate:
+    kind: action
+    tools: []
+    instructions: '# Validate ... critical judge; scan; do not fix.'
+    returns: str
+---
+```
+
+The CLI wraps that YAML in a markdown fence (`` ```yaml `` … `` ``` ``). I abbreviated the long `instructions` strings in the block above so the reply stays readable; the run emitted every field verbatim.
+
+Summary of what the manifest declares:
+
+- **type:** `stories`
+- **capabilities:** `tool`, `agent`
+- **Meta:** `read_manifest`, `invoke`
+- **Constructor:** `new` (`fidelity`, `format`, `path`, `session`, `workspace`)
+- **Tools:** session helpers, `scan`, `transform`, `verify_segment_completeness`, `write_to_fix`
+- **Resources:** `active` (Session), `mode` (str)
+- **Actions:** `document`, `generate`, `grill`, `sketch`, `iterate`, `index`, `segment`, `partition`, `validate`, `satisfy`, `repair`, `log_fix`, plus helpers `generate_output`, `add_generate_header_to_generated`
+
+To print the exact bytes locally (no abbreviation):
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; python -m tools manifest context_tools.stories.stories:Stories
+```Capturing the full manifest — the terminal truncated the middle section.
+Command (from line 1 of `context_tools/stories/stories.py`):
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; python -m tools manifest context_tools.stories.stories:Stories
+```
+
+Exit code: **0**. Full manifest (~530 lines):
+
+```yaml
+---
+type: stories
+capabilities:
+- tool
+- agent
+signature:
+  instructions: '# Instructions'
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest context_tools.stories.stories:Stories
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      fidelity: str
+      format: str | None
+      path: str | None
+      session: str | None
+      workspace: str | None
+  close_session:
+    kind: tool
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  read_context_index:
+    kind: tool
+    returns: str
+  record_context_root:
+    kind: tool
+    parameters:
+      root: str
+      note: str
+    returns: str
+  scan:
+    kind: tool
+    parameters:
+      paths: list[str]
+    returns: str
+  transform:
+    kind: tool
+    instructions: "Parse content from source_format into the canonical StoryMap, then\
+      \ render into target_format.\n        All formatters are peer channels. Sideways\
+      \ format move at the same fidelity."
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: dict
+  verify_segment_completeness:
+    kind: tool
+    instructions: Run named-entry completeness on a ``*-segment.md`` chunk.
+    parameters:
+      segment_path: str
+      expected_names: str
+      min_body_chars: int
+      index_path: str
+    returns: str
+  write_to_fix:
+    kind: tool
+    instructions: Append one entry to ``{session.folder}/to-fix.log``.
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      improved: str
+      status: str
+      when: str
+    returns: str
+  active:
+    kind: resource
+    type: Session
+  mode:
+    kind: resource
+    type: str
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing - before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: '# Document ...'  # neutral observer; session_guidance; scan violations
+    parameters:
+      paths: list[str]
+    returns: str
+  generate:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: "# Generate\n\n1. Follow **`session_guidance`** ... 8. Run **validate** ..."
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  grill:
+    kind: action
+    tools:
+    - generate
+    instructions: Grill then generate - pure grill loop, then the host generate body.
+    returns: str
+  index:
+    kind: action
+    tools: []
+    instructions: "# Index\n\nBuild or **extend** a thin sections index ..."
+    parameters:
+      context: str
+      out_root: str | None
+    returns: str
+  iterate:
+    kind: action
+    tools: []
+    instructions: "Iterate then generate - grill + formal generate/validate/one-fix ticks..."
+    returns: str
+  log_fix:
+    kind: action
+    tools:
+    - write_to_fix
+    instructions: "# Log fix\n\nWhen the user says **to fix** ..."
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      improved: str
+      status: str
+    returns: str
+  partition:
+    kind: action
+    tools:
+    - index
+    - segment
+    - verify_segment_completeness
+    instructions: "# Partition\n\nOrchestrate a thin partition ..."
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools:
+    - scan
+    instructions: "# Repair\n\nIterate until **validate** passes on `{{asset}}` ..."
+    parameters:
+      asset: str
+      violation: str
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Find and fix every problem in the story artifacts under the session root..."
+    returns: str
+  segment:
+    kind: action
+    tools:
+    - verify_segment_completeness
+    instructions: "# Segment\n\nTurn index guidance into **named segment files** ..."
+    parameters:
+      out_root: str | None
+    returns: str
+  sketch:
+    kind: action
+    tools:
+    - generate
+    instructions: Sketch then generate - grill + sketch cadence, then the host generate body.
+    returns: str
+  validate:
+    kind: action
+    tools: []
+    instructions: '# Validate ... critical judge; scan; do not fix.'
+    returns: str
+---
+```
+
+The CLI wraps that YAML in a markdown fence (`` ```yaml `` … `` ``` ``). I abbreviated the long `instructions` strings in the block above so the reply stays readable; the run emitted every field verbatim.
+
+Summary of what the manifest declares:
+
+- **type:** `stories`
+- **capabilities:** `tool`, `agent`
+- **Meta:** `read_manifest`, `invoke`
+- **Constructor:** `new` (`fidelity`, `format`, `path`, `session`, `workspace`)
+- **Tools:** session helpers, `scan`, `transform`, `verify_segment_completeness`, `write_to_fix`
+- **Resources:** `active` (Session), `mode` (str)
+- **Actions:** `document`, `generate`, `grill`, `sketch`, `iterate`, `index`, `segment`, `partition`, `validate`, `satisfy`, `repair`, `log_fix`, plus helpers `generate_output`, `add_generate_header_to_generated`
+
+To print the exact bytes locally (no abbreviation):
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; python -m tools manifest context_tools.stories.stories:Stories
+```

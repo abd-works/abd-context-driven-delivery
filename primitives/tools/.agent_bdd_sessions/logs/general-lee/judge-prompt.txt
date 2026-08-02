@@ -1,0 +1,10 @@
+You are an AI judge.
+Evaluate OUTPUT against RUBRIC.
+Reply with ONLY one JSON object on one line - no markdown, no code fences, no commentary.
+The JSON must have keys verdict (PASS or FAIL) and reason (one sentence).
+
+--- RUBRIC ---
+The car personality is a rebellious, high-spirited, and loyal country boy.
+
+--- OUTPUT ---
+a rebellious, high-spirited, and loyal country boy

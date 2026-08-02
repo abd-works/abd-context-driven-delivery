@@ -19,15 +19,22 @@ from primitives.actions.action import _ActionExpander
 from iterate import Iterator
 
 
-with description("Iterator toolset"):
-    with context("manifest signature"):
-        with it("exposes iterate_session as an action with no decorator chain"):
+with description("an Iterator"):
+    with context("that records an iterate tick"):
+        with it("should return the iterate-tick marker"):
+            # Arrange / Act
+            result = Iterator().mark_iterate_tick()
+            # Assert
+            expect(result).to(equal("iterate-tick"))
+
+    with context("with iterate_session in its manifest"):
+        with it("should expose iterate_session as an action with no decorator chain"):
             entry = Iterator.manifest.signature["iterate_session"]
             expect(entry["kind"]).to(equal("action"))
             expect(entry.get("chain")).to(equal(None))
 
-    with context("iterate_session action body"):
-        with it("requires one scan and one fix pass with no rescan"):
+    with context("with the iterate_session action body"):
+        with it("should require one scan and one fix pass with no rescan"):
             iterator = Iterator()
             body = _ActionExpander.instance().parse_body(
                 Iterator.iterate_session, iterator
@@ -36,7 +43,7 @@ with description("Iterator toolset"):
             expect(joined).to(contain("one fix"))
             expect(joined).to(contain("Do NOT re-scan"))
 
-        with it("forbids dumping the whole artifact in one tick"):
+        with it("should forbid dumping the whole artifact in one tick"):
             iterator = Iterator()
             body = _ActionExpander.instance().parse_body(
                 Iterator.iterate_session, iterator

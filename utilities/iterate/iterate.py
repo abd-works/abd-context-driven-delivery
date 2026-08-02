@@ -1,5 +1,8 @@
 # @toolset-manifest python -m tools manifest iterate.iterate:Iterator
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 # Do not author behavior from this Python source.
 """Iterate on formal generate output through a grill loop with validate + one fix pass.
 

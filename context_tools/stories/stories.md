@@ -101,7 +101,7 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 2. Scaffold `*_spec` (isolated) and/or `*_spec.{tier}` if missing — never overwrite existing bodies; each calls the shared story fn with matching mode.
 3. Keep fake in the story file only; isolated = `{Type}` + injected mocks; other tiers via `*_spec.{tier}`.
 4. RED → GREEN → REFACTOR one scenario at a time.
-5. After **2 consecutive fix failures** — stop; read `diagnose.md`.
+5. After **2 consecutive fix failures** — stop; call `diagnostic().diagnose()` before a third fix.
 6. Run **validate**.
 
 **Rules:** `tests-shape` · `tests-implement-specification` · `tier-bodies-implemented` · `assertions-against-real-behavior` · `scenarios-tied-to-runtime` · `bug-fix-test-first` · `tier-factory-kind` (call story with `isolated` or named tier — never invent Fake subclasses in tier bodies).

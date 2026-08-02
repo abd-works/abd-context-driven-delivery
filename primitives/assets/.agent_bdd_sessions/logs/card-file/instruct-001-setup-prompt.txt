@@ -1,0 +1,1 @@
+Read primitives/assets/examples/card_file/card_file.py from the workspace.

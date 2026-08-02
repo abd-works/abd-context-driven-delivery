@@ -1,0 +1,4 @@
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+action: generate
+"@ | python -m tools run -

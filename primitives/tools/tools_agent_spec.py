@@ -1,50 +1,63 @@
-# @agent-spec-manifest python -m tools agent-spec tools/tools_agent_spec.py
+# @agent-spec-manifest python -m tools agent-spec primitives/tools/tools_agent_spec.py
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
-# session: tools/.sessions/general-lee.json
-"""BDD agent spec for tools-behavior.md - agent discovers manifest and invokes tools."""
-
-from pathlib import Path
+# session: primitives/tools/.agent_bdd_sessions/general-lee.json
+"""BDD agent spec for tools-behavior.md — construct resources, then multi-tool CLI use."""
 
 from expects import be_true, equal, expect
-from mamba import after, before, context, description, it
+from mamba import context, description, it
 
-from agent_bdd import agent
+from agent_bdd import (
+    agent,
+    ai_judge,
+    expect_ok_tool,
+    read_workspace,
+    repo_root_from,
+    run_toolset,
+    sessions_dir,
+)
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-_SESSIONS = Path(__file__).resolve().parent / ".sessions"
-
+_REPO_ROOT = repo_root_from(__file__, parents=2)
+_SESSIONS = sessions_dir(__file__)
+_CAR_PY = "primitives/tools/examples/car/car.py"
+_CAR_TOOLSET = "tools.examples.car:Car"
+_LEE = {
+    "make": "Dodge",
+    "model": "Charger",
+    "year": 1969,
+    "personality": "a rebellious, high-spirited, and loyal country boy",
+}
 
 with description("a class"):
     with context("with a toolset applied"):
         with context("with agent"):
-            with before.all:
-                self._agent = agent(_REPO_ROOT, _SESSIONS / "general-lee.json")
-                self.session = self._agent.__enter__()
-                self.session.instruct("Read tools/examples/car.py from the workspace.")
-                self.ai_response = self.session.instruct_run(
-                    "Create a car based on the general lee from the Dukes of Hazzard."
-                )
+            with it("starts, speaks, and judges General Lee personality"):
+                with agent(_REPO_ROOT, _SESSIONS / "general-lee.json"):
+                    read_workspace(_CAR_PY)
 
-            with after.all:
-                self._agent.__exit__(None, None, None)
+                    started = run_toolset(
+                        toolset=_CAR_TOOLSET,
+                        tool="start",
+                        context=_LEE,
+                        timeout_seconds=120,
+                    )
+                    expect_ok_tool(started, "start")
+                    expect(started.resources.get("running")).to(be_true)
+                    expect("Dodge" in str(started.resources.get("make", ""))).to(be_true)
+                    expect("Charger" in str(started.resources.get("model", ""))).to(be_true)
+                    expect(started.resources.get("year")).to(equal(1969))
 
-            with it("should parse the fenced CLI yaml into ai-response"):
-                expect(self.ai_response.ok).to(be_true)
-                expect(len(self.ai_response.resources) > 0).to(be_true)
+                    spoken = run_toolset(
+                        toolset=_CAR_TOOLSET,
+                        tool="speak",
+                        context=_LEE,
+                        arguments={"line": "Yee-haw! Hazzard County or bust!"},
+                        timeout_seconds=120,
+                    )
+                    expect_ok_tool(spoken, "speak")
+                    expect("says" in str(spoken.result).lower()).to(be_true)
 
-            with it("should set ai-response.make containing Dodge"):
-                expect("Dodge" in str(self.ai_response.resources.get("make", ""))).to(be_true)
-
-            with it("should set ai-response.model containing Charger"):
-                expect("Charger" in str(self.ai_response.resources.get("model", ""))).to(be_true)
-
-            with it("should set ai-response.year to 1969"):
-                expect(self.ai_response.resources.get("year")).to(equal(1969))
-
-            with it("should judge ai-response.personality as a rebellious country boy"):
-                verdict = self.session.ai_judge(
-                    str(self.ai_response.resources.get("personality", "")),
-                    "The car should be a rebellious, high-spirited, and loyal country boy.",
-                )
-                expect(verdict.passed()).to(be_true)
+                    ai_judge(
+                        str(started.resources.get("personality", "")),
+                        "The car personality is a rebellious, high-spirited, and loyal country boy.",
+                    )

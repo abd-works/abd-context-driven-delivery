@@ -1,0 +1,67 @@
+Checking how `python -m tools run -` expects stdin, since `-` reads from standard input.
+Checking how `python -m tools run -` expects stdin, since `-` reads from standard input.
+Running the command with stdin closed (no piped YAML), as requested:
+Running the command with stdin closed (no piped YAML), as requested:
+The command ran from the repo root (with `PYTHONIOENCODING=utf-8` set first).
+
+Exit code: **1**
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+`python -m tools run -` reads the request YAML from **stdin**. In this non-interactive run nothing was piped in, so the request was empty and the runner reported a missing `toolset`.
+
+To run it with a request, pipe YAML, for example:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: context_tools.bdd.bdd:Bdd
+tool: read_manifest
+"@ | python -m tools run -
+```
+
+If you have a specific request body you want executed, paste it and we can run that.The command ran from the repo root (with `PYTHONIOENCODING=utf-8` set first).
+
+Exit code: **1**
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+`python -m tools run -` reads the request YAML from **stdin**. In this non-interactive run nothing was piped in, so the request was empty and the runner reported a missing `toolset`.
+
+To run it with a request, pipe YAML, for example:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: context_tools.bdd.bdd:Bdd
+tool: read_manifest
+"@ | python -m tools run -
+```
+
+If you have a specific request body you want executed, paste it and we can run that.Checking how `python -m tools run -` expects stdin, since `-` reads from standard input.
+Running the command with stdin closed (no piped YAML), as requested:
+The command ran from the repo root (with `PYTHONIOENCODING=utf-8` set first).
+
+Exit code: **1**
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+`python -m tools run -` reads the request YAML from **stdin**. In this non-interactive run nothing was piped in, so the request was empty and the runner reported a missing `toolset`.
+
+To run it with a request, pipe YAML, for example:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: context_tools.bdd.bdd:Bdd
+tool: read_manifest
+"@ | python -m tools run -
+```
+
+If you have a specific request body you want executed, paste it and we can run that.

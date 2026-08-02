@@ -1,58 +1,115 @@
-Your General Lee is ready — engine running.
+Following the Car toolset workflow: checking example manifests and running the manifest command.
+
+
+Following the Car toolset workflow: checking example manifests and running the manifest command.
+
+
+Checking how to invoke the Car constructor via `tools run`:
+
+
+Checking how to invoke the Car constructor via `tools run`:
+
+
+Creating the General Lee via the Car toolset using the documented specs and invoking it.
+
+
+Creating the General Lee via the Car toolset using the documented specs and invoking it.
+
+
+Your General Lee is created and running through the `Car` toolset (`tools.examples.car:Car`).
+
+| Field | Value |
+|--------|--------|
+| Make | Dodge |
+| Model | Charger |
+| Year | 1969 |
+| Name / character | General Lee |
+| Engine | Running (`start` was invoked) |
+
+Personality (from the constructor context):
+
+General Lee â€” the iconic orange 1969 Dodge Charger from *The Dukes of Hazzard* (doors marked 01, Confederate flag on the roof). A rebellious, high-spirited, loyal country boy from Hazzard County who treats every run like an adventure, loves flying creek jumps and outrunning Rosco P. Coltrane, and speaks with warm Southern charm while standing by Bo and Luke Duke.
+
+The instance is tied to session `general-lee`. You can drive it with `python -m tools run -` and YAML like:
 
 ```yaml
-ok: true
-toolset: tools.example.car:Car
-tool: start
-resources:
+toolset: tools.examples.car:Car
+session: general-lee
+context:
   make: Dodge
   model: Charger
   year: 1969
-  personality: General Lee — a rebellious, high-spirited orange 1969 Dodge Charger
-    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
-    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
-    every Hazzard adventure.
-  running: true
+  personality: <same personality string>
+tool: drive
+arguments:
+  miles: 10
 ```
 
-**General Lee** — 1969 Dodge Charger, orange with the flag on the roof. Rebellious, high-spirited, fiercely loyal country boy who lives for creek jumps, outrunning Sheriff Rosco, and riding with Bo and Luke through every Hazzard adventure.
+Or call `speak`, `accelerate`, `stop`, and the other tools from the manifest. Say what you want it to do next if youâ€™d like me to run a command.Your General Lee is created and running through the `Car` toolset (`tools.examples.car:Car`).
 
-Want to take him for a spin? You can `drive`, `accelerate`, or have him `speak` in character.Your General Lee is ready — engine running.
+| Field | Value |
+|--------|--------|
+| Make | Dodge |
+| Model | Charger |
+| Year | 1969 |
+| Name / character | General Lee |
+| Engine | Running (`start` was invoked) |
+
+Personality (from the constructor context):
+
+General Lee â€” the iconic orange 1969 Dodge Charger from *The Dukes of Hazzard* (doors marked 01, Confederate flag on the roof). A rebellious, high-spirited, loyal country boy from Hazzard County who treats every run like an adventure, loves flying creek jumps and outrunning Rosco P. Coltrane, and speaks with warm Southern charm while standing by Bo and Luke Duke.
+
+The instance is tied to session `general-lee`. You can drive it with `python -m tools run -` and YAML like:
 
 ```yaml
-ok: true
-toolset: tools.example.car:Car
-tool: start
-resources:
+toolset: tools.examples.car:Car
+session: general-lee
+context:
   make: Dodge
   model: Charger
   year: 1969
-  personality: General Lee — a rebellious, high-spirited orange 1969 Dodge Charger
-    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
-    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
-    every Hazzard adventure.
-  running: true
+  personality: <same personality string>
+tool: drive
+arguments:
+  miles: 10
 ```
 
-**General Lee** — 1969 Dodge Charger, orange with the flag on the roof. Rebellious, high-spirited, fiercely loyal country boy who lives for creek jumps, outrunning Sheriff Rosco, and riding with Bo and Luke through every Hazzard adventure.
+Or call `speak`, `accelerate`, `stop`, and the other tools from the manifest. Say what you want it to do next if youâ€™d like me to run a command.Following the Car toolset workflow: checking example manifests and running the manifest command.
 
-Want to take him for a spin? You can `drive`, `accelerate`, or have him `speak` in character.Your General Lee is ready — engine running.
+
+Checking how to invoke the Car constructor via `tools run`:
+
+
+Creating the General Lee via the Car toolset using the documented specs and invoking it.
+
+
+Your General Lee is created and running through the `Car` toolset (`tools.examples.car:Car`).
+
+| Field | Value |
+|--------|--------|
+| Make | Dodge |
+| Model | Charger |
+| Year | 1969 |
+| Name / character | General Lee |
+| Engine | Running (`start` was invoked) |
+
+Personality (from the constructor context):
+
+General Lee â€” the iconic orange 1969 Dodge Charger from *The Dukes of Hazzard* (doors marked 01, Confederate flag on the roof). A rebellious, high-spirited, loyal country boy from Hazzard County who treats every run like an adventure, loves flying creek jumps and outrunning Rosco P. Coltrane, and speaks with warm Southern charm while standing by Bo and Luke Duke.
+
+The instance is tied to session `general-lee`. You can drive it with `python -m tools run -` and YAML like:
 
 ```yaml
-ok: true
-toolset: tools.example.car:Car
-tool: start
-resources:
+toolset: tools.examples.car:Car
+session: general-lee
+context:
   make: Dodge
   model: Charger
   year: 1969
-  personality: General Lee — a rebellious, high-spirited orange 1969 Dodge Charger
-    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
-    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
-    every Hazzard adventure.
-  running: true
+  personality: <same personality string>
+tool: drive
+arguments:
+  miles: 10
 ```
 
-**General Lee** — 1969 Dodge Charger, orange with the flag on the roof. Rebellious, high-spirited, fiercely loyal country boy who lives for creek jumps, outrunning Sheriff Rosco, and riding with Bo and Luke through every Hazzard adventure.
-
-Want to take him for a spin? You can `drive`, `accelerate`, or have him `speak` in character.
+Or call `speak`, `accelerate`, `stop`, and the other tools from the manifest. Say what you want it to do next if youâ€™d like me to run a command.

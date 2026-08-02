@@ -5,10 +5,6 @@
 
 Sketcher is a standalone toolset. Any agent or human can invoke its tools and
 sketch_session action directly without decorating anything.
-
-The complementary @sketch decorator (see _decorator.py, re-exported from the
-package root) marks a generator's @action so framework-level composition can
-prepend sketch_session (which calls grill_with_context in-method).
 """
 from __future__ import annotations
 
@@ -23,17 +19,16 @@ from sessions import docs_dir
 _DEFAULT_TEMPLATE = Path(__file__).parent / "sketch-template.md"
 
 
-def _sketch_path(destination: str, slug: str) -> Path:
-    """Resolve sketch path under the destination docs dir (pure)."""
-    return docs_dir(destination) / f"{slug}-sketch.md"
-
-
 @toolset
 class Sketcher:
     """Sketch a solution interactively before generating the formal artifact."""
 
     def __init__(self, agent_dir: str = "") -> None:
         self._agent_dir = agent_dir
+
+    def _sketch_path(self, destination: str, slug: str) -> Path:
+        """Resolve sketch path under the destination docs dir (pure)."""
+        return docs_dir(destination) / f"{slug}-sketch.md"
 
     @property
     def sketch_template(self) -> str:
@@ -71,7 +66,7 @@ class Sketcher:
         Module sketches: destination = {session.path}/{module} - files go under
         {destination}/.context/. Creates parents if missing. Overwrites same path.
         Returns the resolved sketch path."""
-        target = _sketch_path(destination, slug)
+        target = self._sketch_path(destination, slug)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
         return str(target)

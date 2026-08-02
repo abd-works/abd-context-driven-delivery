@@ -1,5 +1,5 @@
-@'
-toolset: agents.example.car:Car
+$yaml = @"
+toolset: primitives.actions.examples.car:Car
 context:
   make: Dodge
   model: Charger
@@ -9,4 +9,6 @@ action: travelTo
 arguments:
   destination: Hazzard County courthouse
   conditions: muddy back roads, Sheriff Rosco in pursuit
-'@ | python -m tools run -
+"@
+$env:PYTHONIOENCODING="utf-8"
+$yaml | python -m tools run -

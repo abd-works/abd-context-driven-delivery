@@ -1,0 +1,10 @@
+ok: true
+toolset: tools.examples.car:Car
+tool: speak
+result: 'Dodge Charger says: "Yee-haw! Hazzard County or bust!"'
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: a rebellious, high-spirited, and loyal country boy
+  running: false

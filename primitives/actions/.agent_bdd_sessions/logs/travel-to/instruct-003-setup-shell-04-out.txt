@@ -1,0 +1,13 @@
+```yaml
+ok: true
+toolset: tools.examples.car:Car
+tool: start
+result: null
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: A rebellious, high-spirited, loyal country boy from Hazzard County
+    who loves muddy back roads and outrunning Rosco P. Coltrane.
+  running: true
+```

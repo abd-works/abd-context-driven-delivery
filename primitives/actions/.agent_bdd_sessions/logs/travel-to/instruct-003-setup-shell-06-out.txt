@@ -1,0 +1,14 @@
+```yaml
+ok: true
+toolset: tools.examples.car:Car
+tool: speak
+result: 'Dodge Charger says: "Hold on, cousin ? Rosco''s siren''s wailin'' but this
+  orange Charger ain''t stoppin'' till we''re up the courthouse steps, mud or no mud!"'
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: A rebellious, high-spirited, loyal country boy from Hazzard County
+    who loves muddy back roads and outrunning Rosco P. Coltrane.
+  running: false
+```

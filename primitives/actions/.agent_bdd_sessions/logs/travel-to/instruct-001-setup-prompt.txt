@@ -1,1 +1,1 @@
-Read actions/examples/car.py from the workspace.
+Read primitives/actions/examples/car.py from the workspace.

@@ -1,0 +1,122 @@
+```yaml
+ok: true
+toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+action: generate
+result: When done, run validate.
+instructions: "# Generate\n\n1. Follow **`session_guidance`** and the session tools\
+  \ (`read_context_index`, `record_context_root`, `create_session` when needed). Resolve\
+  \ workspace + tool root, then use the **`active`** resource for `active.path` /\
+  \ `active.folder`.\n2. **MUST — prove-read before asking.** Before any grill/iterate\
+  \ question (and before inventing options or story/module names):\n   - Identify\
+  \ **every relevant context file referenced or implied** by the decision — not one\
+  \ favorite type. Typical set: `{workspace}/.context/context-index.md`, owning `*-segment.md`,\
+  \ `module-context.md`, session grill-answers / sketches / handoff, peer story-context,\
+  \ build-order, and any path the plan or prior answers cite. Include index/overlay\
+  \ only for structure hints; **never** treat mid-epic stub columns as inventory.\n\
+  \   - **Read each of those files with the Read tool** (chunk through large ones).\
+  \ Grep, title lists, memory, or primer-only skims **do not count**.\n   - **Prove\
+  \ it in the question turn:** name the path(s) read and ground options in concrete\
+  \ terms from them. If you cannot cite specifics from the relevant files, you have\
+  \ not read them — go read before asking.\n   - Asking from a skim is a **defect**,\
+  \ same class as dumping a whole artifact in one iterate tick.\n3. **`sources-scoped-to-generated-context`**\
+  \ — Hang `**Sources / context:**` on the node they ground: epic / sub-epic / feature\
+  \ / module, or a lower item (scenario, class, screen, component, …). Root or parent-level\
+  \ Sources are fine when those files apply to the **entire** artifact or subtree.\n\
+  4. Apply all guidance and named rules in each **context** — each bullet is a requirement.\n\
+  5. Match **examples** for shape, depth, and tone.\n6. Fill the **template** scaffold\
+  \ and save the artifact under the session layout from `session_guidance`.\n7. Follow\
+  \ any extra build steps included in your instructions when present.\n8. Run **validate**.\
+  \ If it fails, fix the artifact and **validate** again until it passes.\n\n---\n\
+  \n# Generate\n\n1. Read § Contexts and `examples/examples.md` for voice and shape.\n\
+  2. Fill `car_chronicle-templates.md` for each new trip entry.\n3. Save generated\
+  \ chronicles under `output/` (e.g. `output/driving-log.md`).\n4. Run **validate**;\
+  \ fix until scan passes on concept slugs.\n\n**Sample output:** see `output/driving-log.md`\
+  \ — this is what a successful generate produces.\n\nOpen the workspace session in\
+  \ one step: set path (durable root), ensure the sprint exists (create if missing),\
+  \ load context index if present, record this tool's root when keyed. Follow session_guidance.\
+  \ Scope durable work to path and sprint docs to folder.\n\n# Session Guidance\n\n\
+  `Session` tracks three things:\n\n| Name | Meaning | Example |\n|------|---------|---------|\n\
+  | **path** | Durable tool root (`active.path`) | `…/sandbox` |\n| **folder** | Sprint\
+  \ folder (`active.folder`) | `…/sandbox/.context/sessions/{name}/` |\n| **context_index**\
+  \ | `{workspace_root}/.context/context-index.md` when present | tool → root map\
+  \ |\n\n## Constructor / run context\n\n- `workspace` — workspace root where `context-index.md`\
+  \ lives (default `\".\"`)\n- `path` — durable tool root\n- `session` — sprint slug\
+  \ under `{path}/.context/sessions/{name}/`\n\n## One call to open\n\n**`open`**\
+  \ — single action before generate / grill / sketch / iterate / validate:\n\n1. Resolve\
+  \ durable root (`path`)\n2. Ensure sprint exists (load or create)\n3. Load context\
+  \ index if present\n4. Record this tool's root when `context_index_key` is set\n\
+  \n```yaml\naction: open   # via self.workspace().open() from BaseContextTool\n```\n\
+  \nDo **not** separately chain bind + read_context_index + record_context_root from\
+  \ lifecycle bodies — `open` already does that.\n\n## Layout\n\n- **path** — docs\
+  \ → `{path}/.context/`; code/modules → `{path}/`\n- **folder** — `session.md`, grill-answers,\
+  \ engagement sketches, handoff, `to-fix.log`\n- **context-index** — `{workspace_root}/.context/context-index.md`\n\
+  \n## Root when `path` omitted\n\n1. context-index entry for `context_index_key`\n\
+  2. else `{workspace_root}/{default_workspace_folder}`\n\nResource `active` = Session(path='.',\
+  \ name=None).\n\nOffer and write Context Decision Records (CDRs) sparingly as decisions\
+  \ crystallise during the wrapped action - never batch; never invent decisions.\n\
+  \nStep 1 - Read the format once via read_cdr_format. Internalise the three-criteria\
+  \ gate and the minimal template.\n\nStep 2 - Optionally call list_cdrs(root) so\
+  \ you do not re-record an already-captured decision.\n\nStep 3 - During the session\
+  \ (grill, sketch, or generate), watch for decisions that meet ALL three: hard to\
+  \ reverse, surprising without context, and a real trade-off. If any criterion is\
+  \ missing, skip the CDR.\n\nStep 4 - When a qualifying decision crystallises, offer\
+  \ a CDR briefly (title + one-line gist). If the user accepts, call write_cdr immediately\
+  \ with a kebab slug and content matching CDR-FORMAT.md. Do not batch; do not wait\
+  \ until the end.\n\nStep 5 - Keep CDRs short. Prefer a single paragraph. Add Status\
+  \ / Considered Options / Consequences only when they add genuine value.\n\n# Contexts\n\
+  \n## Driving voice\n\nThe chronicle is told from the car's perspective — personality,\
+  \ quirks, and reactions to weather and traffic.\n\n- **`use-driving-voice`** — First-person\
+  \ from the car; name the driver indirectly; no passive trip summaries.\n\n## Trip\
+  \ logging\n\nEach entry covers one outing with date, route summary, odometer delta,\
+  \ and a short narrative beat.\n\n- **`record-mileage`** — Include start/end mileage\
+  \ or miles driven as a number on every entry.\n- **`name-the-route`** — State origin\
+  \ and destination in plain language, not GPS coordinates.\n\n---\n\n## examples.md\n\
+  \n# Driving history examples\n\n## Rainy commute — 2024-03-12\n\nI carried Alex\
+  \ from Maple Street to the office loop — twelve soggy miles. Wipers beat in triple\
+  \ time; I liked the rhythm. Odometer: 41,220 → 41,232.\n\n## Weekend lake run —\
+  \ 2024-03-16\n\nSun on my hood, windows down after the pass. Home to Cedar Lake\
+  \ and back — forty-eight lazy miles. Odometer: 41,232 → 41,280.\n\n\n## use-driving-voice-spec-sheet/faultyAsset\n\
+  \n## Trip log entry\n\nRoute: Hazzard County garage to courthouse\nDistance: 6 miles\n\
+  Odometer start: 41288\nOdometer end: 41294\nDriver: Bo\nNotes: County trip completed.\
+  \ Vehicle performed as expected.\n\n\n## use-driving-voice-spec-sheet/repairedAsset\n\
+  \n## 2026-07-11\n\n**Route:** Hazzard County garage → Hazzard County courthouse\
+  \  \n**Miles:** 6  \n**Odometer:** 41,288 → 41,294\n\nI woke to Bo turning the key\
+  \ — courthouse run, and I never treat six county miles like an errand. Dust kicked\
+  \ up behind us, sun warmed my hood, and the gravel sang under my tires all the way\
+  \ into town. He kept one hand easy on the wheel; I kept my General Lee heart loud\
+  \ and loyal until we rolled up to the courthouse steps.\n\n\n# Driving log template\n\
+  \n## {date}\n\n**Route:** {origin} → {destination}  \n**Miles:** {miles_driven}\
+  \  \n**Odometer:** {odometer_start} → {odometer_end}\n\n{ narrative paragraph in\
+  \ the car's voice }\n\n\nPrepend the following block verbatim as the very first\
+  \ lines of the file you are writing - before any imports, before any code.\n\nEvery\
+  \ tool call uses this shape - set `tool` and `arguments`, pipe to CLI:\n\n```yaml\n\
+  toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n\
+  context:\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m tools\
+  \ run -\n\nSuggested flow (repeat and reorder as the story needs):\n\n1. tool: ensure_session\n\
+  \   arguments:\n     name: <value>\n     goal: <value>\n     fidelities: <value>\n\
+  \     contexts: <value>\n     path: <value>\n\n2. tool: read_context_index\n\n3.\
+  \ tool: record_context_root\n   arguments:\n     root: <value>\n     note: <value>\n\
+  \n4. tool: read_cdr_format\n\n5. tool: list_cdrs\n\n6. tool: write_cdr\n\nRead `resources`\
+  \ from each response before choosing the next tool."
+arguments: {}
+tools:
+- ensure_session
+- read_context_index
+- record_context_root
+- read_cdr_format
+- list_cdrs
+- write_cdr
+resources:
+  active:
+    path: .
+    name: null
+    folder: null
+    goal: null
+    fidelities: null
+    contexts: null
+    started: '2026-08-01'
+    ended: null
+    outcome: null
+    handoff: null
+  mode: action
+```

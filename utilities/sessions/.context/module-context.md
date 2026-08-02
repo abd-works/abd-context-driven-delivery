@@ -25,7 +25,7 @@ BaseContextTool holds a composed `Session` via `workspace()` and calls **`self.w
 
 - `Session` — sprint record + kit: `path`, `folder`, `context_index`; `load` / `ensure_started` / `close`; action **`open`**; tools `ensure_session` / `create_session` / `close_session` / `read_context_index` / `record_context_root`
 - Prose: **`workspace_session.md`** (`# Session Guidance` and tool sections) — resolved via normal `@instruction` / tool docstring lookup (`domain_slug = workspace_session`)
-- `docs_dir` (in `session.py`), `SessionLog`, `@log`, context_index helpers
+- `docs_dir` / `SessionPaths.docs_dir` (in `session.py`), `SessionLog`, `@log`, `ContextIndex` helpers
 
 ## Dependencies
 

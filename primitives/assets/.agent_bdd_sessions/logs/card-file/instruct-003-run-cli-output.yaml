@@ -1,0 +1,8 @@
+```yaml
+ok: true
+toolset: primitives.assets.examples.card_file.card_file:CardFile
+tool: set_topic
+result: 'Topic set to: faq'
+resources:
+  topic: faq
+```

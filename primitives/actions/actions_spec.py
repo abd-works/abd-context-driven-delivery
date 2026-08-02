@@ -15,22 +15,73 @@ sys.modules.pop("actions", None)
 
 import yaml
 from expects import be_true, contain, equal, expect
-from mamba import context, description, it
+from mamba import before, context, description, it
 
-from primitives.actions.action import _ActionExpander
+from primitives.actions.action import (
+    Action,
+    ActionValidationError,
+    AgenticToolset,
+    _ActionExpander,
+    action,
+    agentic_toolset,
+)
 from primitives.actions.examples.car import Car
-from primitives.actions.action import _action_wrapper_names
-from primitives.actions.examples.chained_demo import (
-    AutoSuperChild,
-    AutoSuperWithReturn,
-    ChainedDemo,
-    InheritOnlyChild,
-    SingleWrapperDemo,
-    StaticKwargsDemo,
-    SuperDelegationBase,
-    SuperDelegationChild,
+from primitives.actions.examples.super_delegation import (
+    EmptySuperChild,
+    EmptyWithReturn,
+    ExplicitSuperChild,
+    SuperBase,
 )
 from agent_bdd.yaml_fence import load_fenced
+from tools.tool import tool as _tool
+
+
+@agentic_toolset
+class _ModeFixture:
+    @_tool
+    def ping(self) -> str:
+        """ping tool"""
+        return "pong"
+
+    @action
+    def run(self) -> str:
+        """Run by calling ping."""
+        self.ping()
+
+
+@agentic_toolset
+class _CalleeAgent:
+    """Companion agentic toolset invoked across instances."""
+
+    @_tool
+    def polish(self) -> str:
+        """Polish the work product."""
+        return "polished"
+
+    @action
+    def prepare(self) -> str:
+        """CALLEE_PREPARE_MARKER: prepare the work carefully."""
+        self.polish()
+        return "prepared"
+
+
+@agentic_toolset
+class _CallerAgent:
+    """Caller that expands a cross-instance action on a companion."""
+
+    def __init__(self, helper: _CalleeAgent | None = None) -> None:
+        self._helper = helper if helper is not None else _CalleeAgent()
+        super().__init__()
+
+    def helper(self) -> _CalleeAgent:
+        return self._helper
+
+    @action
+    def orchestrate(self) -> str:
+        """CALLER_ORCHESTRATE_MARKER: may invoke helper().prepare()."""
+        self.helper().prepare()
+        return "orchestrated"
+
 
 _CAR_TOOLSET = "primitives.actions.examples.car:Car"
 
@@ -138,11 +189,11 @@ with description("an action"):
 
     with context("that has instructions loaded from an md file with templating"):
         with it("should put {{param}} / {{self.attr}} values into the loaded md instructions"):
-            from primitives.actions.examples.templated_md_demo import TemplatedMdDemo
+            from primitives.actions.examples.templated_md import TemplatedMdDemo
 
             request = yaml.safe_dump(
                 {
-                    "toolset": "primitives.actions.examples.templated_md_demo:TemplatedMdDemo",
+                    "toolset": "primitives.actions.examples.templated_md:TemplatedMdDemo",
                     "context": {"label": "Desk"},
                     "action": "greet",
                     "arguments": {"name": "Pat"},
@@ -163,166 +214,168 @@ with description("an action"):
             expect("{Placeholder}" in response["instructions"]).to(be_true)
 
 
-with description("chain navigation hints"):
-    with context("outermost wrapper"):
-        with it("injects 'proceed to' naming the next stage"):
-            demo = ChainedDemo()
-            body = _ActionExpander.instance().parse_body(ChainedDemo.generate, demo)
-            joined = "\n".join(body.prose_parts)
-            expect(joined).to(contain("proceed to beta"))
-
-        with it("does not inject 'return to' when there is no predecessor"):
-            demo = SingleWrapperDemo()
-            body = _ActionExpander.instance().parse_body(SingleWrapperDemo.generate, demo)
-            joined = "\n".join(body.prose_parts)
-            expect(joined).not_to(contain("return to"))
-
-    with context("inner wrapper"):
-        with it("injects 'proceed to' naming the base action"):
-            demo = ChainedDemo()
-            body = _ActionExpander.instance().parse_body(ChainedDemo.generate, demo)
-            joined = "\n".join(body.prose_parts)
-            expect(joined).to(contain("proceed to generate"))
-
-        with it("injects 'return to' naming the predecessor wrapper"):
-            demo = ChainedDemo()
-            body = _ActionExpander.instance().parse_body(ChainedDemo.generate, demo)
-            joined = "\n".join(body.prose_parts)
-            expect(joined).to(contain("return to alpha"))
-
-    with context("unwrapped action"):
-        with it("injects no navigation hints"):
-            demo = ChainedDemo()
-            body = _ActionExpander.instance().parse_body(ChainedDemo.standalone, demo)
-            joined = "\n".join(body.prose_parts)
-            expect(joined).not_to(contain("proceed to"))
-            expect(joined).not_to(contain("return to"))
-
-
-with description("action annotation inheritance across overrides"):
-    with context("when a base @action has a wrapper and the child overrides with another"):
-        with it("should resolve both wrappers with the base annotation outer"):
-            expect(
-                list(
-                    _action_wrapper_names(
-                        SuperDelegationChild.generate,
-                        owner=SuperDelegationChild,
-                        name="generate",
-                    )
-                )
-            ).to(equal(["beta", "alpha"]))
-
-        with it("should expand base-wrapper prose ahead of child-wrapper prose"):
-            child = SuperDelegationChild()
-            body = _ActionExpander.instance().parse_body(SuperDelegationChild.generate, child)
-            joined = "\n".join(body.prose_parts)
-            beta_pos = joined.index("Beta wrapper instructions")
-            alpha_pos = joined.index("Alpha wrapper instructions")
-            expect(beta_pos < alpha_pos).to(be_true)
-
-        with it("should expose the inherited chain on the manifest"):
-            expect(SuperDelegationChild.manifest.signature["generate"].get("chain")).to(
-                equal(["beta", "alpha"])
-            )
-
-    with context("when a child overrides with a bare @action"):
-        with it("should still inherit the base wrappers"):
-            expect(
-                list(
-                    _action_wrapper_names(
-                        InheritOnlyChild.generate,
-                        owner=InheritOnlyChild,
-                        name="generate",
-                    )
-                )
-            ).to(equal(["beta"]))
-
-        with it("should expand the inherited wrapper prose"):
-            child = InheritOnlyChild()
-            body = _ActionExpander.instance().parse_body(InheritOnlyChild.generate, child)
-            joined = "\n".join(body.prose_parts)
-            expect("Beta wrapper instructions" in joined).to(be_true)
-
-
 with description("super() delegation in action bodies"):
-    with context("a child class that calls super().generate() with a wrapper"):
+    with context("a child class that calls super().generate() explicitly"):
         with it("should inline the parent's prose in the child expansion"):
-            child = SuperDelegationChild()
-            body = _ActionExpander.instance().parse_body(SuperDelegationChild.generate, child)
+            child = ExplicitSuperChild()
+            body = _ActionExpander.instance().parse_body(ExplicitSuperChild.generate, child)
             joined = "\n".join(body.prose_parts)
             expect("Base generate instructions" in joined).to(be_true)
 
-        with it("should include the wrapper prose ahead of the parent prose"):
-            child = SuperDelegationChild()
-            body = _ActionExpander.instance().parse_body(SuperDelegationChild.generate, child)
-            joined = "\n".join(body.prose_parts)
-            expect("Alpha wrapper instructions" in joined).to(be_true)
-            alpha_pos = joined.index("Alpha wrapper instructions")
-            base_pos = joined.index("Base generate instructions")
-            expect(alpha_pos < base_pos).to(be_true)
-
         with it("should include tool steps from the parent action"):
-            child = SuperDelegationChild()
-            body = _ActionExpander.instance().parse_body(SuperDelegationChild.generate, child)
+            child = ExplicitSuperChild()
+            body = _ActionExpander.instance().parse_body(ExplicitSuperChild.generate, child)
             expect("do_work" in body.tool_steps).to(be_true)
-
-        with it("should not include the child-only wrapper in the base class expansion"):
-            base = SuperDelegationBase()
-            body = _ActionExpander.instance().parse_body(SuperDelegationBase.generate, base)
-            joined = "\n".join(body.prose_parts)
-            expect("Alpha wrapper instructions" in joined).to(equal(False))
-            expect("Beta wrapper instructions" in joined).to(be_true)
 
 
 with description("empty-body auto-super in action bodies"):
     with context("a child whose generate body is only Ellipsis"):
         with it("should inline the parent's prose"):
-            child = AutoSuperChild()
-            body = _ActionExpander.instance().parse_body(AutoSuperChild.generate, child)
+            child = EmptySuperChild()
+            body = _ActionExpander.instance().parse_body(EmptySuperChild.generate, child)
             joined = "\n".join(body.prose_parts)
             expect("Base generate instructions" in joined).to(be_true)
 
-        with it("should include wrapper prose ahead of the parent prose"):
-            child = AutoSuperChild()
-            body = _ActionExpander.instance().parse_body(AutoSuperChild.generate, child)
-            joined = "\n".join(body.prose_parts)
-            expect("Alpha wrapper instructions" in joined).to(be_true)
-            alpha_pos = joined.index("Alpha wrapper instructions")
-            base_pos = joined.index("Base generate instructions")
-            expect(alpha_pos < base_pos).to(be_true)
-
         with it("should include tool steps from the parent action"):
-            child = AutoSuperChild()
-            body = _ActionExpander.instance().parse_body(AutoSuperChild.generate, child)
+            child = EmptySuperChild()
+            body = _ActionExpander.instance().parse_body(EmptySuperChild.generate, child)
             expect("do_work" in body.tool_steps).to(be_true)
 
         with it("should inherit the parent's result template"):
-            child = AutoSuperChild()
-            body = _ActionExpander.instance().parse_body(AutoSuperChild.generate, child)
+            child = EmptySuperChild()
+            body = _ActionExpander.instance().parse_body(EmptySuperChild.generate, child)
             expect(body.result_template).to(equal("generate done"))
 
     with context("a child with Ellipsis plus a custom return"):
         with it("should use the child's result template"):
-            child = AutoSuperWithReturn()
-            body = _ActionExpander.instance().parse_body(AutoSuperWithReturn.generate, child)
+            child = EmptyWithReturn()
+            body = _ActionExpander.instance().parse_body(EmptyWithReturn.generate, child)
             expect(body.result_template).to(equal("child result only"))
 
         with it("should still inline parent tool steps"):
-            child = AutoSuperWithReturn()
-            body = _ActionExpander.instance().parse_body(AutoSuperWithReturn.generate, child)
+            child = EmptyWithReturn()
+            body = _ActionExpander.instance().parse_body(EmptyWithReturn.generate, child)
             expect("do_work" in body.tool_steps).to(be_true)
 
 
-with description("static_kwargs in manifest chain"):
-    with context("when a wrapper carries static_kwargs"):
-        with it("emits a dict entry with name and the kwargs merged in"):
-            entry = StaticKwargsDemo.manifest.signature["generate"]
-            chain = entry["chain"]
-            expect(len(chain)).to(equal(1))
-            expect(chain[0]).to(equal({"name": "static_wrapper", "key": "value", "num": 42}))
+with description("AgenticToolset"):
+    with context("the mode resource"):
+        with it("should default to 'action'"):
+            instance = _ModeFixture()
+            expect(instance.mode).to(equal("action"))
 
-    with context("when a wrapper has no static_kwargs"):
-        with it("emits a plain string entry for each wrapper"):
-            entry = ChainedDemo.manifest.signature["generate"]
-            chain = entry["chain"]
-            expect(all(isinstance(c, str) for c in chain)).to(be_true)
+        with it("should accept 'tool' as a valid mode"):
+            instance = _ModeFixture()
+            instance.mode = "tool"
+            expect(instance.mode).to(equal("tool"))
+
+        with it("should reject unknown mode values with a ValueError"):
+            instance = _ModeFixture()
+            raised = False
+            try:
+                instance.mode = "bogus"
+            except ValueError:
+                raised = True
+            expect(raised).to(be_true)
+
+    with context("when a caller expands a cross-instance action on a companion"):
+        with context("and the companion mode is action"):
+            with before.each:
+                self.callee = _CalleeAgent()
+                self.callee.mode = "action"
+                self.caller = _CallerAgent(self.callee)
+                self.body = _ActionExpander.instance().parse_body(
+                    _CallerAgent.orchestrate, self.caller
+                )
+                self.joined = "\n".join(self.body.prose_parts)
+
+            with it("should keep the caller's own instructions"):
+                expect("CALLER_ORCHESTRATE_MARKER" in self.joined).to(be_true)
+
+            with it("should inline the companion action's instructions"):
+                expect("CALLEE_PREPARE_MARKER" in self.joined).to(be_true)
+
+            with it("should include the companion's inner tools in the expansion"):
+                expect("polish" in self.body.tool_steps).to(be_true)
+
+            with it("should not list the companion action itself as a deferred tool"):
+                expect("prepare" in self.body.tool_steps).to(equal(False))
+
+        with context("and the companion mode is tool"):
+            with before.each:
+                self.callee = _CalleeAgent()
+                self.callee.mode = "tool"
+                self.caller = _CallerAgent(self.callee)
+                self.body = _ActionExpander.instance().parse_body(
+                    _CallerAgent.orchestrate, self.caller
+                )
+                self.joined = "\n".join(self.body.prose_parts)
+
+            with it("should keep the caller's own instructions"):
+                expect("CALLER_ORCHESTRATE_MARKER" in self.joined).to(be_true)
+
+            with it("should not inline the companion action's instructions"):
+                expect("CALLEE_PREPARE_MARKER" in self.joined).to(equal(False))
+
+            with it("should list the companion action in the expansion tools"):
+                expect("prepare" in self.body.tool_steps).to(be_true)
+
+            with it("should not expose the companion's inner tools until that action runs"):
+                expect("polish" in self.body.tool_steps).to(equal(False))
+
+
+with description("ActionValidationError"):
+    with context("when constructed without a line number"):
+        with it("should format the message as class.action - message"):
+            err = ActionValidationError(
+                "self.foo is not allowed",
+                class_name="MyClass",
+                action_name="my_action",
+            )
+            expect(str(err)).to(equal("MyClass.my_action - self.foo is not allowed"))
+
+    with context("when constructed with a line number"):
+        with it("should include the line number in the message"):
+            err = ActionValidationError(
+                "self.foo is not allowed",
+                class_name="MyClass",
+                action_name="my_action",
+                lineno=42,
+            )
+            expect(str(err)).to(equal("MyClass.my_action:42 - self.foo is not allowed"))
+
+        with it("should expose class_name, action_name, and lineno attributes"):
+            err = ActionValidationError(
+                "msg",
+                class_name="Cls",
+                action_name="act",
+                lineno=10,
+            )
+            expect(err.class_name).to(equal("Cls"))
+            expect(err.action_name).to(equal("act"))
+            expect(err.lineno).to(equal(10))
+
+
+with description("Action"):
+    with context("the instructions property"):
+        with it("should return the docstring text from the action callable"):
+            car = Car("Ford", "Mustang", 1965, "Pony")
+            action_obj = car.actions["travelTo"]
+            expect("interesting story" in action_obj.instructions).to(be_true)
+
+    with context("the signature_entry property"):
+        with it("should return a dict with kind 'action' and the tool list"):
+            car = Car("Ford", "Mustang", 1965, "Pony")
+            action_obj = car.actions["travelTo"]
+            entry = action_obj.signature_entry
+            expect(entry["kind"]).to(equal("action"))
+            expect(entry["tools"]).to(equal(["start", "accelerate", "decelerate", "stop", "speak"]))
+
+    with context("the add_to_signature method"):
+        with it("should insert the entry under the action name in the given signature dict"):
+            car = Car("Ford", "Mustang", 1965, "Pony")
+            action_obj = car.actions["travelTo"]
+            sig = {}
+            action_obj.add_to_signature(sig)
+            expect("travelTo" in sig).to(be_true)
+            expect(sig["travelTo"]["kind"]).to(equal("action"))

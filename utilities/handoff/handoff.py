@@ -25,182 +25,177 @@ _STATE_NAMES = (
 _RESERVED_SLUGS = frozenset({"handoff", "handoff-latest", "latest"})
 
 
-def _kebab_focus(focus: str) -> str:
-    """Turn next_focus / label into a short kebab fragment (pure)."""
-    cleaned = "".join(ch.lower() if ch.isalnum() else "-" for ch in focus.strip())
-    while "--" in cleaned:
-        cleaned = cleaned.replace("--", "-")
-    return cleaned.strip("-")
-
-
-def _archive_slug(focus: str = "", today: date | None = None) -> str:
-    """Build archive slug handoff-YYYY-MM-DD or handoff-YYYY-MM-DD-{focus} (pure)."""
-    day = (today or date.today()).isoformat()
-    fragment = _kebab_focus(focus) if focus else ""
-    if fragment:
-        return f"handoff-{day}-{fragment}"
-    return f"handoff-{day}"
-
-
-def _resolve_archive_slug(slug: str = "", focus: str = "", today: date | None = None) -> str:
-    """Prefer explicit archive slug; otherwise date (+ optional focus). Never plain handoff (pure)."""
-    cleaned = (slug or "").strip()
-    if cleaned.startswith("handoff-") and cleaned not in _RESERVED_SLUGS:
-        return cleaned
-    fragment = (focus or "").strip()
-    if not fragment and cleaned and cleaned not in _RESERVED_SLUGS:
-        fragment = cleaned
-    return _archive_slug(focus=fragment, today=today)
-
-
-def _handoffs_dir(destination: str) -> Path:
-    """Resolve handoffs/ archive folder under docs_dir(destination) (pure)."""
-    return docs_dir(destination) / "handoffs"
-
-
-def _handoff_path(destination: str, slug: str) -> Path:
-    """Resolve archive handoff markdown under docs_dir(destination)/handoffs/ (pure)."""
-    return _handoffs_dir(destination) / f"{slug}.md"
-
-
-def _latest_handoff_path(destination: str) -> Path:
-    """Resolve handoff-latest.md at docs root (resume pointer; not in handoffs/) (pure)."""
-    return docs_dir(destination) / "handoff-latest.md"
-
-
-def _context_dir(destination: str) -> Path:
-    """Alias for docs_dir - kept for specs / callers (pure)."""
-    return docs_dir(destination)
-
-
-def _read_if_exists(path: Path) -> str | None:
-    if not path.is_file():
-        return None
-    return path.read_text(encoding="utf-8")
-
-
-def _summarize_cdd_sketch(text: str) -> dict:
-    """Pull fidelity / flow / open / done lines from a cdd-sketch body (pure)."""
-    summary: dict = {
-        "fidelity": None,
-        "scope": None,
-        "flow_status": None,
-        "flow_recommend": None,
-        "flow_next": None,
-        "open": [],
-        "done": [],
-        "log_tail": [],
-    }
-    section: str | None = None
-    log_lines: list[str] = []
-    in_log = False
-    for raw in text.splitlines():
-        line = raw.rstrip()
-        stripped = line.strip()
-        if stripped.startswith("fidelity:"):
-            summary["fidelity"] = stripped.split(":", 1)[1].strip()
-            continue
-        if stripped.startswith("scope:"):
-            summary["scope"] = stripped.split(":", 1)[1].strip()
-            continue
-        if stripped == "flow:":
-            section = "flow"
-            continue
-        if stripped.startswith("## log"):
-            in_log = True
-            section = None
-            continue
-        if in_log:
-            if stripped.startswith("- "):
-                log_lines.append(stripped[2:].strip())
-            continue
-        if section == "flow":
-            if stripped.startswith("status:"):
-                summary["flow_status"] = stripped.split(":", 1)[1].strip()
-            elif stripped.startswith("recommend:"):
-                summary["flow_recommend"] = stripped.split(":", 1)[1].strip()
-            elif stripped.startswith("next:"):
-                summary["flow_next"] = stripped.split(":", 1)[1].strip()
-            elif stripped.startswith("open:"):
-                section = "open"
-            elif stripped.startswith("done:"):
-                section = "done"
-            continue
-        if section in ("open", "done"):
-            if stripped.startswith("done:"):
-                section = "done"
-                continue
-            if stripped.startswith("open:"):
-                section = "open"
-                continue
-            if stripped.startswith("- "):
-                summary[section].append(stripped[2:].strip())
-            elif stripped and not stripped.startswith("#"):
-                section = None
-    summary["log_tail"] = log_lines[-5:]
-    return summary
-
-
-def _grill_headings(text: str) -> list[str]:
-    """Extract ### headings from grill-answers.md (pure)."""
-    return [
-        line[4:].strip()
-        for line in text.splitlines()
-        if line.startswith("### ")
-    ]
-
-
-def _find_context_index(start: Path) -> Path | None:
-    """Walk up from start looking for ``.context/context-index.md``."""
-    for folder in [start, *start.resolve().parents]:
-        candidate = folder / ".context" / "context-index.md"
-        if candidate.is_file():
-            return candidate
-    return None
-
-
-def _collect_state(destination: str) -> dict:
-    """Assemble generator / grill / CDD state under destination (pure + IO)."""
-    context = docs_dir(destination)
-    sketches = sorted(str(p) for p in context.glob("*-sketch.md")) if context.is_dir() else []
-    named: dict[str, str | None] = {}
-    for name in _STATE_NAMES:
-        path = context / name
-        named[name] = str(path) if path.is_file() else None
-
-    cdd_path = context / "cdd-sketch.md"
-    cdd_text = _read_if_exists(cdd_path)
-    grill_path = context / "grill-answers.md"
-    grill_text = _read_if_exists(grill_path)
-    index_path = _find_context_index(Path(destination))
-    index_text = _read_if_exists(index_path) if index_path else None
-
-    return {
-        "destination": str(Path(destination)),
-        "working_folder": str(context),
-        "sketches": sketches,
-        "named_artifacts": named,
-        "context_index_path": str(index_path) if index_path else None,
-        "context_index": index_text,
-        "cdd": _summarize_cdd_sketch(cdd_text) if cdd_text else None,
-        "grill_answers_exists": grill_text is not None,
-        "grill_answers_chars": len(grill_text) if grill_text else 0,
-        "grill_headings": _grill_headings(grill_text) if grill_text else [],
-    }
-
-
-def _maybe_close_sprint(destination: str, handoff_name: str) -> None:
-    """If destination is a sprint under sessions/, write End on session.md."""
-    dest = Path(destination)
-    if dest.parent.name != "sessions":
-        return
-    working = str(dest.parent.parent.parent)
-    Session.load(working, dest.name).close(outcome="handoff written", handoff=handoff_name)
-
-
 @toolset
 class Handoff:
     """Compact the current conversation into a handoff for the next agent session."""
+
+    # ------------------------------------------------------------------
+    # Private helpers (pure unless noted)
+    # ------------------------------------------------------------------
+
+    def _kebab_focus(self, focus: str) -> str:
+        """Turn next_focus / label into a short kebab fragment (pure)."""
+        cleaned = "".join(ch.lower() if ch.isalnum() else "-" for ch in focus.strip())
+        while "--" in cleaned:
+            cleaned = cleaned.replace("--", "-")
+        return cleaned.strip("-")
+
+    def _archive_slug(self, focus: str = "", today: date | None = None) -> str:
+        """Build archive slug handoff-YYYY-MM-DD or handoff-YYYY-MM-DD-{focus} (pure)."""
+        day = (today or date.today()).isoformat()
+        fragment = self._kebab_focus(focus) if focus else ""
+        if fragment:
+            return f"handoff-{day}-{fragment}"
+        return f"handoff-{day}"
+
+    def _resolve_archive_slug(self, slug: str = "", focus: str = "", today: date | None = None) -> str:
+        """Prefer explicit archive slug; otherwise date (+ optional focus). Never plain handoff (pure)."""
+        cleaned = (slug or "").strip()
+        if cleaned.startswith("handoff-") and cleaned not in _RESERVED_SLUGS:
+            return cleaned
+        fragment = (focus or "").strip()
+        if not fragment and cleaned and cleaned not in _RESERVED_SLUGS:
+            fragment = cleaned
+        return self._archive_slug(focus=fragment, today=today)
+
+    def _handoffs_dir(self, destination: str) -> Path:
+        """Resolve handoffs/ archive folder under docs_dir(destination) (pure)."""
+        return docs_dir(destination) / "handoffs"
+
+    def _handoff_path(self, destination: str, slug: str) -> Path:
+        """Resolve archive handoff markdown under docs_dir(destination)/handoffs/ (pure)."""
+        return self._handoffs_dir(destination) / f"{slug}.md"
+
+    def _latest_handoff_path(self, destination: str) -> Path:
+        """Resolve handoff-latest.md at docs root (resume pointer; not in handoffs/) (pure)."""
+        return docs_dir(destination) / "handoff-latest.md"
+
+    def _context_dir(self, destination: str) -> Path:
+        """Alias for docs_dir - kept for specs / callers (pure)."""
+        return docs_dir(destination)
+
+    def _read_if_exists(self, path: Path) -> str | None:
+        if not path.is_file():
+            return None
+        return path.read_text(encoding="utf-8")
+
+    def _summarize_cdd_sketch(self, text: str) -> dict:
+        """Pull fidelity / flow / open / done lines from a cdd-sketch body (pure)."""
+        summary: dict = {
+            "fidelity": None,
+            "scope": None,
+            "flow_status": None,
+            "flow_recommend": None,
+            "flow_next": None,
+            "open": [],
+            "done": [],
+            "log_tail": [],
+        }
+        section: str | None = None
+        log_lines: list[str] = []
+        in_log = False
+        for raw in text.splitlines():
+            line = raw.rstrip()
+            stripped = line.strip()
+            if stripped.startswith("fidelity:"):
+                summary["fidelity"] = stripped.split(":", 1)[1].strip()
+                continue
+            if stripped.startswith("scope:"):
+                summary["scope"] = stripped.split(":", 1)[1].strip()
+                continue
+            if stripped == "flow:":
+                section = "flow"
+                continue
+            if stripped.startswith("## log"):
+                in_log = True
+                section = None
+                continue
+            if in_log:
+                if stripped.startswith("- "):
+                    log_lines.append(stripped[2:].strip())
+                continue
+            if section == "flow":
+                if stripped.startswith("status:"):
+                    summary["flow_status"] = stripped.split(":", 1)[1].strip()
+                elif stripped.startswith("recommend:"):
+                    summary["flow_recommend"] = stripped.split(":", 1)[1].strip()
+                elif stripped.startswith("next:"):
+                    summary["flow_next"] = stripped.split(":", 1)[1].strip()
+                elif stripped.startswith("open:"):
+                    section = "open"
+                elif stripped.startswith("done:"):
+                    section = "done"
+                continue
+            if section in ("open", "done"):
+                if stripped.startswith("done:"):
+                    section = "done"
+                    continue
+                if stripped.startswith("open:"):
+                    section = "open"
+                    continue
+                if stripped.startswith("- "):
+                    summary[section].append(stripped[2:].strip())
+                elif stripped and not stripped.startswith("#"):
+                    section = None
+        summary["log_tail"] = log_lines[-5:]
+        return summary
+
+    def _grill_headings(self, text: str) -> list[str]:
+        """Extract ### headings from grill-answers.md (pure)."""
+        return [
+            line[4:].strip()
+            for line in text.splitlines()
+            if line.startswith("### ")
+        ]
+
+    def _find_context_index(self, start: Path) -> Path | None:
+        """Walk up from start looking for ``.context/context-index.md``."""
+        for folder in [start, *start.resolve().parents]:
+            candidate = folder / ".context" / "context-index.md"
+            if candidate.is_file():
+                return candidate
+        return None
+
+    def _collect_state(self, destination: str) -> dict:
+        """Assemble generator / grill / CDD state under destination (pure + IO)."""
+        context = docs_dir(destination)
+        sketches = sorted(str(p) for p in context.glob("*-sketch.md")) if context.is_dir() else []
+        named: dict[str, str | None] = {}
+        for name in _STATE_NAMES:
+            path = context / name
+            named[name] = str(path) if path.is_file() else None
+
+        cdd_path = context / "cdd-sketch.md"
+        cdd_text = self._read_if_exists(cdd_path)
+        grill_path = context / "grill-answers.md"
+        grill_text = self._read_if_exists(grill_path)
+        index_path = self._find_context_index(Path(destination))
+        index_text = self._read_if_exists(index_path) if index_path else None
+
+        return {
+            "destination": str(Path(destination)),
+            "working_folder": str(context),
+            "sketches": sketches,
+            "named_artifacts": named,
+            "context_index_path": str(index_path) if index_path else None,
+            "context_index": index_text,
+            "cdd": self._summarize_cdd_sketch(cdd_text) if cdd_text else None,
+            "grill_answers_exists": grill_text is not None,
+            "grill_answers_chars": len(grill_text) if grill_text else 0,
+            "grill_headings": self._grill_headings(grill_text) if grill_text else [],
+        }
+
+    def _maybe_close_sprint(self, destination: str, handoff_name: str) -> None:
+        """If destination is a sprint under sessions/, write End on session.md."""
+        dest = Path(destination)
+        if dest.parent.name != "sessions":
+            return
+        working = str(dest.parent.parent.parent)
+        Session.load(working, dest.name).close(outcome="handoff written", handoff=handoff_name)
+
+    # ------------------------------------------------------------------
+    # Public tools / actions
+    # ------------------------------------------------------------------
 
     @tool
     def resolve_working_folder(self, destination: str) -> str:
@@ -214,12 +209,12 @@ class Handoff:
     @tool
     def collect_session_state(self, destination: str) -> str:
         """Collect generator, grilling, and CDD progress state under destination.
-        destination defaults to the host generator session.folder (sprint) or session.path.
+        destination defaults to the host generator session.folder (sprint under {session.path}/.context/sessions/{name}/) or session.path.
         Returns JSON with: working_folder, sketches, named_artifacts (grill-answers,
         cdd-sketch, module-context), context_index_path + context_index (workspace
         tool roots), cdd summary (fidelity/scope/flow/open/done/log_tail),
         and grill_answers headings. Call this before drafting the handoff - do not invent state."""
-        return json.dumps(_collect_state(destination), indent=2)
+        return json.dumps(self._collect_state(destination), indent=2)
 
     @tool
     def write_handoff(
@@ -238,19 +233,19 @@ class Handoff:
 
         When destination is a sprint under sessions/, closes the Session (End section).
         Returns the archive handoff path."""
-        archive_slug = _resolve_archive_slug(slug=slug, focus=focus)
+        archive_slug = self._resolve_archive_slug(slug=slug, focus=focus)
         if archive_slug in _RESERVED_SLUGS or archive_slug == "handoff-latest":
             raise ValueError(
                 f"Invalid handoff archive slug {archive_slug!r}; "
-                "use handoff-YYYY-MM-DD or handoff-YYYY-MM-DD-{{focus}}"
+                "use handoff-YYYY-MM-DD or handoff-YYYY-MM-DD-{focus}"
             )
-        primary = _handoff_path(destination, archive_slug)
+        primary = self._handoff_path(destination, archive_slug)
         primary.parent.mkdir(parents=True, exist_ok=True)
         primary.write_text(content, encoding="utf-8")
-        latest = _latest_handoff_path(destination)
+        latest = self._latest_handoff_path(destination)
         latest.parent.mkdir(parents=True, exist_ok=True)
         latest.write_text(content, encoding="utf-8")
-        _maybe_close_sprint(destination, f"handoffs/{primary.name}")
+        self._maybe_close_sprint(destination, f"handoffs/{primary.name}")
         return str(primary.resolve())
 
     @action

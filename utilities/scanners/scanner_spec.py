@@ -3,10 +3,14 @@
 import tempfile
 from pathlib import Path
 
-from expects import be_true, equal, expect
+from expects import be_false, be_true, equal, expect
 from mamba import before, context, description, it
 
-from scanners import Scanner, Violation, execute_scan
+from scanners import (
+    Scanner,
+    ScannerRunner,
+    Violation,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -59,7 +63,7 @@ with description("Violation"):
             expect(payload["location"]).to(equal("sample.py"))
 
 
-with description("execute_scan"):
+with description("ScannerRunner.execute_scan"):
     with context("a scanner class and explicit file list"):
         with before.each:
             self.temp_dir = tempfile.TemporaryDirectory()
@@ -68,6 +72,51 @@ with description("execute_scan"):
             self.file_path.write_text("bad\n", encoding="utf-8")
 
         with it("should delegate to scanner.scan and return violations"):
-            violations = execute_scan(_RuleScanner, "example-rule", self.root, [self.file_path])
+            violations = ScannerRunner.execute_scan(_RuleScanner, "example-rule", self.root, [self.file_path])
             expect(len(violations)).to(equal(1))
             expect(violations[0].rule).to(equal("example-rule"))
+
+
+with description("Scanner.filter_scan_files"):
+    with context("a file list that includes paths under skipped directories"):
+        with it("should exclude any path whose components include a skipped directory name"):
+            files = [Path("node_modules/foo.py"), Path("__pycache__/bar.pyc"), Path("src/baz.py")]
+            result = Scanner.filter_scan_files(files)
+            expect(result).to(equal([Path("src/baz.py")]))
+
+    with context("a file list with no paths under skipped directories"):
+        with it("should return all files unchanged"):
+            files = [Path("src/a.py"), Path("lib/b.py")]
+            result = Scanner.filter_scan_files(files)
+            expect(result).to(equal(files))
+
+
+with description("Scanner.is_skipped_path"):
+    with context("a path whose components include a skipped directory name"):
+        with it("should return True for a path under node_modules"):
+            expect(Scanner.is_skipped_path(Path("node_modules/foo.py"))).to(be_true)
+
+        with it("should return True for a path under __pycache__"):
+            expect(Scanner.is_skipped_path(Path("src/__pycache__/bar.pyc"))).to(be_true)
+
+    with context("a path outside all skipped directory names"):
+        with it("should return False for a normal source file"):
+            expect(Scanner.is_skipped_path(Path("src/module/foo.py"))).to(be_false)
+
+
+with description("ScannerRunner.violations_exit_code"):
+    with context("a violations list that is empty"):
+        with it("should return exit code 0"):
+            expect(ScannerRunner.violations_exit_code([])).to(equal(0))
+
+    with context("a violations list with at least one violation"):
+        with it("should return exit code 1"):
+            v = Violation("rule", "msg")
+            expect(ScannerRunner.violations_exit_code([v])).to(equal(1))
+
+
+with description("ScannerRunner.run_scanner_main"):
+    with context("a scanner class and a collect_files that returns no files"):
+        with it("should return exit code 0 when no violations are found"):
+            result = ScannerRunner.run_scanner_main(_RuleScanner, "example-rule", lambda _: [], argv=[])
+            expect(result).to(equal(0))

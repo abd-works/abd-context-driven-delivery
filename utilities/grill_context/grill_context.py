@@ -12,29 +12,27 @@ from tools.tool import tool, toolset
 from sessions import docs_dir
 
 
-def _grill_answers_path(root: str) -> Path:
-    """Resolve grill-answers under the destination docs dir (pure).
-
-    Engagement grilling: ``root`` is ``session.folder``
-    (``{path}/.context/sessions/{name}/``) - file is written flat there.
-    """
-    return docs_dir(root) / "grill-answers.md"
-
-
-def _appended_answers_content(existing: str | None, heading: str, body: str) -> str:
-    """Compose the full grill-answers document after appending one entry (pure).
-
-    ``existing`` is the current file contents, or ``None`` when the file has
-    not been created yet - in which case a fresh document header is emitted.
-    """
-    base = existing if existing is not None else "# Grill Answers\n\n"
-    entry = f"### {heading}\n\n{body.strip()}\n\n"
-    return base + entry
-
-
 @toolset
 class GrillContext:
     """Interview a plan relentlessly against the codebase context until reaching shared understanding."""
+
+    def _grill_answers_path(self, root: str) -> Path:
+        """Resolve grill-answers under the destination docs dir (pure).
+
+        Engagement grilling: ``root`` is ``session.folder``
+        (``{path}/.context/sessions/{name}/``) - file is written flat there.
+        """
+        return docs_dir(root) / "grill-answers.md"
+
+    def _appended_answers_content(self, existing: str | None, heading: str, body: str) -> str:
+        """Compose the full grill-answers document after appending one entry (pure).
+
+        ``existing`` is the current file contents, or ``None`` when the file has
+        not been created yet - in which case a fresh document header is emitted.
+        """
+        base = existing if existing is not None else "# Grill Answers\n\n"
+        entry = f"### {heading}\n\n{body.strip()}\n\n"
+        return base + entry
 
     @tool
     def explore_context_files(self, root: str) -> str:
@@ -73,10 +71,10 @@ class GrillContext:
         Creates the file if it does not exist. Call immediately when an insight is resolved - do not batch.
         heading: short title for the insight (e.g. 'How actions are discovered').
         body: 1-3 concise sentences. Reference file paths and names instead of repeating logic."""
-        answers_path = _grill_answers_path(root)
+        answers_path = self._grill_answers_path(root)
         answers_path.parent.mkdir(parents=True, exist_ok=True)
         existing = answers_path.read_text(encoding="utf-8") if answers_path.exists() else None
-        answers_path.write_text(_appended_answers_content(existing, heading, body), encoding="utf-8")
+        answers_path.write_text(self._appended_answers_content(existing, heading, body), encoding="utf-8")
         return str(answers_path)
 
     @action

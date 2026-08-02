@@ -30,12 +30,13 @@ Take the persona of a **critical judge** — do not edit the artifact.
 ---
 # Satisfy
 
-Find and fix every problem in the artifact you wrote under the generator **`active`** root.
+Find and fix every problem in the artifact you wrote under the generator **`active`** root — including generating any missing artifacts.
 
 1. Follow **`session_guidance`**. Edit only under that layout.
-2. Run **validate** against those session-rooted artifacts.
-3. Fix every reported violation in the artifact (same paths — do not invent a divergent folder).
-4. When done, run **validate** again until it passes.
+2. **Generate missing artifacts first.** Before validate, check each module folder under `path` for a missing `.context/module-context.md`. A missing context file IS a violation — create it at the current fidelity (thin at modules: Purpose, Seam, Dependencies; full at model: + Primary use case, Rationale, Public API) before running validate. Do not skip this step.
+3. Run **validate** against those session-rooted artifacts.
+4. Fix every reported violation in the artifact (same paths — do not invent a divergent folder).
+5. When done, run **validate** again until it passes.
 
 ---
 # Document

@@ -1,4 +1,9 @@
-"""BDD spec for Sketcher toolset + ActionExpander integration."""
+"""BDD spec for Sketcher toolset + ActionExpander integration.
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""
 
 import sys
 from pathlib import Path
@@ -32,6 +37,21 @@ with description("Sketcher toolset"):
             expect(entry["kind"]).to(equal("action"))
             expect(entry["tools"]).to(equal(["find_template", "save_sketch"]))
             expect(entry.get("chain")).to(equal(None))
+
+    with context("sketch_template property"):
+        with it("returns the default template when agent_dir was not set at construction"):
+            sketcher = Sketcher()
+            content = sketcher.sketch_template
+            expect(content).to(contain("terse-indent notation"))
+
+        with it("returns the agent-dir template when agent_dir was set at construction"):
+            import tempfile
+            with tempfile.TemporaryDirectory() as agent_dir:
+                template_path = Path(agent_dir) / "sketch-template.md"
+                template_path.write_text("# constructed agent template\n", encoding="utf-8")
+                sketcher = Sketcher(agent_dir=agent_dir)
+                content = sketcher.sketch_template
+                expect(content).to(contain("constructed agent template"))
 
     with context("find_template tool"):
         with it("falls back to the default template when no agent_dir template exists"):

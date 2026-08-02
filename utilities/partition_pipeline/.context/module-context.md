@@ -19,5 +19,3 @@
 - `SegmentEntry` — props: `name`, `body`, `body_chars`, `status`, `is_complete`
 
 **Dependencies:** (none)
-
-**Mechanism:** Concrete mergeable kit (one test tier — no I*/impl split). Completeness loads nearby `PartitionIndex` config, then asks `Segment` for its report.

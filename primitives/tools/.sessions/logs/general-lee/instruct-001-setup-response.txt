@@ -1,12 +1,18 @@
-Searching the workspace for `car.py`.
-Searching the workspace for `car.py`.
-`tools/examples/car.py` is not in the workspace anymore. The file lives at `primitives/tools/examples/car.py`:
+Locating and reading `tools/examples/car.py`, checking for nearby context first.
 
-```1:92:primitives/tools/examples/car.py
+
+Locating and reading `tools/examples/car.py`, checking for nearby context first.
+
+
+The file lives at `primitives/tools/examples/car/car.py` (package path `tools.examples.car:Car`). There is no `module-context.md` in that example folder; only session context under `.context/sessions/`.
+
+Full contents:
+
+```1:92:primitives/tools/examples/car/car.py
 # @toolset-manifest python -m tools manifest tools.examples.car:Car
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Example @toolset class — tools and resources only."""
+"""Example @toolset class - tools and resources only."""
 from __future__ import annotations
 
 from tools.tool import resource, tool, toolset
@@ -14,7 +20,7 @@ from tools.tool import resource, tool, toolset
 
 @toolset
 class Car:
-    """Operate a car — start, stop, and read current state."""
+    """Operate a car â€” start, stop, and read current state."""
 
     def __init__(self, make: str, model: str, year: int, personality: str) -> None:
         """create a new car based on the description given and assign it a personality that is fun and flavorful with a unique name and a unique description"""
@@ -71,14 +77,14 @@ class Car:
     def drive(self, miles: float) -> str:
         """Drive the given number of miles. Engine must be running."""
         if not self._running:
-            return f"{self._make} {self._model} cannot drive — engine is off"
+            return f"{self._make} {self._model} cannot drive - engine is off"
         return f"Drove {miles} miles in the {self._make} {self._model}"
 
     @tool
     def accelerate(self, amount: float) -> str:
         """Speed up by the given amount."""
         if not self._running:
-            return f"{self._make} {self._model} cannot accelerate — engine is off"
+            return f"{self._make} {self._model} cannot accelerate - engine is off"
         self._speed += amount
         return f"Accelerated to {self._speed:.0f} mph"
 
@@ -86,7 +92,7 @@ class Car:
     def decelerate(self, amount: float) -> str:
         """Slow down by the given amount."""
         if not self._running:
-            return f"{self._make} {self._model} cannot decelerate — engine is off"
+            return f"{self._make} {self._model} cannot decelerate - engine is off"
         self._speed = max(0.0, self._speed - amount)
         return f"Decelerated to {self._speed:.0f} mph"
 
@@ -96,18 +102,15 @@ class Car:
         return f'{self._make} {self._model} says: "{line}"'
 ```
 
-This is an example `@toolset` class that models a car with:
+Summary: example `@toolset` with constructor args `make`, `model`, `year`, and `personality`; read-only `@resource` properties for those plus `running`; tools `start`, `stop`, `drive`, `accelerate`, `decelerate`, and `speak`. Drive/accelerate/decelerate guard on `_running`. The header says agents should use manifest/run instructions rather than treating this Python as the source of truth for behavior. Related files in the same folder include `car-manifest.yaml`, `car-run.yaml`, and `examples.md`.The file lives at `primitives/tools/examples/car/car.py` (package path `tools.examples.car:Car`). There is no `module-context.md` in that example folder; only session context under `.context/sessions/`.
 
-- **Resources** (read-only properties): `make`, `model`, `year`, `personality`, `running`
-- **Tools** (actions): `start`, `stop`, `drive`, `accelerate`, `decelerate`, `speak`
+Full contents:
 
-The file header notes that you should run `python -m tools manifest tools.examples.car:Car` before invoking it with `python -m tools run -`, and to follow `response.instructions` only rather than authoring behavior from the Python source.`tools/examples/car.py` is not in the workspace anymore. The file lives at `primitives/tools/examples/car.py`:
-
-```1:92:primitives/tools/examples/car.py
+```1:92:primitives/tools/examples/car/car.py
 # @toolset-manifest python -m tools manifest tools.examples.car:Car
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Example @toolset class — tools and resources only."""
+"""Example @toolset class - tools and resources only."""
 from __future__ import annotations
 
 from tools.tool import resource, tool, toolset
@@ -115,7 +118,7 @@ from tools.tool import resource, tool, toolset
 
 @toolset
 class Car:
-    """Operate a car — start, stop, and read current state."""
+    """Operate a car â€” start, stop, and read current state."""
 
     def __init__(self, make: str, model: str, year: int, personality: str) -> None:
         """create a new car based on the description given and assign it a personality that is fun and flavorful with a unique name and a unique description"""
@@ -172,14 +175,14 @@ class Car:
     def drive(self, miles: float) -> str:
         """Drive the given number of miles. Engine must be running."""
         if not self._running:
-            return f"{self._make} {self._model} cannot drive — engine is off"
+            return f"{self._make} {self._model} cannot drive - engine is off"
         return f"Drove {miles} miles in the {self._make} {self._model}"
 
     @tool
     def accelerate(self, amount: float) -> str:
         """Speed up by the given amount."""
         if not self._running:
-            return f"{self._make} {self._model} cannot accelerate — engine is off"
+            return f"{self._make} {self._model} cannot accelerate - engine is off"
         self._speed += amount
         return f"Accelerated to {self._speed:.0f} mph"
 
@@ -187,7 +190,7 @@ class Car:
     def decelerate(self, amount: float) -> str:
         """Slow down by the given amount."""
         if not self._running:
-            return f"{self._make} {self._model} cannot decelerate — engine is off"
+            return f"{self._make} {self._model} cannot decelerate - engine is off"
         self._speed = max(0.0, self._speed - amount)
         return f"Decelerated to {self._speed:.0f} mph"
 
@@ -197,19 +200,18 @@ class Car:
         return f'{self._make} {self._model} says: "{line}"'
 ```
 
-This is an example `@toolset` class that models a car with:
+Summary: example `@toolset` with constructor args `make`, `model`, `year`, and `personality`; read-only `@resource` properties for those plus `running`; tools `start`, `stop`, `drive`, `accelerate`, `decelerate`, and `speak`. Drive/accelerate/decelerate guard on `_running`. The header says agents should use manifest/run instructions rather than treating this Python as the source of truth for behavior. Related files in the same folder include `car-manifest.yaml`, `car-run.yaml`, and `examples.md`.Locating and reading `tools/examples/car.py`, checking for nearby context first.
 
-- **Resources** (read-only properties): `make`, `model`, `year`, `personality`, `running`
-- **Tools** (actions): `start`, `stop`, `drive`, `accelerate`, `decelerate`, `speak`
 
-The file header notes that you should run `python -m tools manifest tools.examples.car:Car` before invoking it with `python -m tools run -`, and to follow `response.instructions` only rather than authoring behavior from the Python source.Searching the workspace for `car.py`.
-`tools/examples/car.py` is not in the workspace anymore. The file lives at `primitives/tools/examples/car.py`:
+The file lives at `primitives/tools/examples/car/car.py` (package path `tools.examples.car:Car`). There is no `module-context.md` in that example folder; only session context under `.context/sessions/`.
 
-```1:92:primitives/tools/examples/car.py
+Full contents:
+
+```1:92:primitives/tools/examples/car/car.py
 # @toolset-manifest python -m tools manifest tools.examples.car:Car
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Example @toolset class — tools and resources only."""
+"""Example @toolset class - tools and resources only."""
 from __future__ import annotations
 
 from tools.tool import resource, tool, toolset
@@ -217,7 +219,7 @@ from tools.tool import resource, tool, toolset
 
 @toolset
 class Car:
-    """Operate a car — start, stop, and read current state."""
+    """Operate a car â€” start, stop, and read current state."""
 
     def __init__(self, make: str, model: str, year: int, personality: str) -> None:
         """create a new car based on the description given and assign it a personality that is fun and flavorful with a unique name and a unique description"""
@@ -274,14 +276,14 @@ class Car:
     def drive(self, miles: float) -> str:
         """Drive the given number of miles. Engine must be running."""
         if not self._running:
-            return f"{self._make} {self._model} cannot drive — engine is off"
+            return f"{self._make} {self._model} cannot drive - engine is off"
         return f"Drove {miles} miles in the {self._make} {self._model}"
 
     @tool
     def accelerate(self, amount: float) -> str:
         """Speed up by the given amount."""
         if not self._running:
-            return f"{self._make} {self._model} cannot accelerate — engine is off"
+            return f"{self._make} {self._model} cannot accelerate - engine is off"
         self._speed += amount
         return f"Accelerated to {self._speed:.0f} mph"
 
@@ -289,7 +291,7 @@ class Car:
     def decelerate(self, amount: float) -> str:
         """Slow down by the given amount."""
         if not self._running:
-            return f"{self._make} {self._model} cannot decelerate — engine is off"
+            return f"{self._make} {self._model} cannot decelerate - engine is off"
         self._speed = max(0.0, self._speed - amount)
         return f"Decelerated to {self._speed:.0f} mph"
 
@@ -299,9 +301,4 @@ class Car:
         return f'{self._make} {self._model} says: "{line}"'
 ```
 
-This is an example `@toolset` class that models a car with:
-
-- **Resources** (read-only properties): `make`, `model`, `year`, `personality`, `running`
-- **Tools** (actions): `start`, `stop`, `drive`, `accelerate`, `decelerate`, `speak`
-
-The file header notes that you should run `python -m tools manifest tools.examples.car:Car` before invoking it with `python -m tools run -`, and to follow `response.instructions` only rather than authoring behavior from the Python source.
+Summary: example `@toolset` with constructor args `make`, `model`, `year`, and `personality`; read-only `@resource` properties for those plus `running`; tools `start`, `stop`, `drive`, `accelerate`, `decelerate`, and `speak`. Drive/accelerate/decelerate guard on `_running`. The header says agents should use manifest/run instructions rather than treating this Python as the source of truth for behavior. Related files in the same folder include `car-manifest.yaml`, `car-run.yaml`, and `examples.md`.

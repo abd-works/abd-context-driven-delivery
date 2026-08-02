@@ -56,7 +56,7 @@ class StoryContext:
             if path in seen or not path.is_file():
                 continue
             seen.add(path)
-            context_tools.append(cls._parse_file(path, root))
+            contexts.append(cls._parse_file(path, root))
         return contexts
 
     @classmethod

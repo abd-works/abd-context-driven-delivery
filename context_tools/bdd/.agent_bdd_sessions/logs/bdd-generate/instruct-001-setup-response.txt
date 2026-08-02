@@ -1,0 +1,19 @@
+The command finished successfully (exit code 0).
+
+I ran it from the repo root with `PYTHONIOENCODING=utf-8` set first, per your workspace rule for `python -m tools` on Windows.
+
+Output is the Bdd manifest: `type: bdd`, capabilities `tool` and `agent`, plus meta entries (`read_manifest`, `invoke`), constructor `new`, session/context tools (`create_session`, `scan`, `transform`, etc.), and actions such as `document`, `generate`, `grill`, `index`, `iterate`, `partition`, `segment`, `satisfy`, and `validate`.
+
+The shell truncated the YAML in the capture; the full manifest is what `python -m tools manifest context_tools.bdd.bdd:Bdd` printed on stdout.The command finished successfully (exit code 0).
+
+I ran it from the repo root with `PYTHONIOENCODING=utf-8` set first, per your workspace rule for `python -m tools` on Windows.
+
+Output is the Bdd manifest: `type: bdd`, capabilities `tool` and `agent`, plus meta entries (`read_manifest`, `invoke`), constructor `new`, session/context tools (`create_session`, `scan`, `transform`, etc.), and actions such as `document`, `generate`, `grill`, `index`, `iterate`, `partition`, `segment`, `satisfy`, and `validate`.
+
+The shell truncated the YAML in the capture; the full manifest is what `python -m tools manifest context_tools.bdd.bdd:Bdd` printed on stdout.The command finished successfully (exit code 0).
+
+I ran it from the repo root with `PYTHONIOENCODING=utf-8` set first, per your workspace rule for `python -m tools` on Windows.
+
+Output is the Bdd manifest: `type: bdd`, capabilities `tool` and `agent`, plus meta entries (`read_manifest`, `invoke`), constructor `new`, session/context tools (`create_session`, `scan`, `transform`, etc.), and actions such as `document`, `generate`, `grill`, `index`, `iterate`, `partition`, `segment`, `satisfy`, and `validate`.
+
+The shell truncated the YAML in the capture; the full manifest is what `python -m tools manifest context_tools.bdd.bdd:Bdd` printed on stdout.

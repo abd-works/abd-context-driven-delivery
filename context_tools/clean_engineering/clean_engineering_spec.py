@@ -42,7 +42,7 @@ def _expand_action(
     context: dict[str, Any] | None = None,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return _ActionRunner.instance().run(
+    return _ActionRunner.instance().invoke_action(
         _ActionRunRequest(
             request={"toolset": toolset_path, "context": context or {}},
             toolset_path=toolset_path,

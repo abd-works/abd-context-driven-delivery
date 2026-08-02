@@ -4,7 +4,8 @@
 does not re-enter ``primitives.actions.action`` while that module is still importing.
 """
 
-from sessions.session import docs_dir
+from sessions.session import SessionPaths
+docs_dir = SessionPaths.docs_dir
 from sessions.session_log import (
     ISessionLog,
     SessionLog,

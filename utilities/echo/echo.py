@@ -1,6 +1,8 @@
 # @toolset-manifest python -m tools manifest echo.echo:Echoer
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """Echo - print an action's wrapped instructions inside a DO-NOT-FOLLOW fence for inspection.
 
 Echoer is a standalone toolset. Any agent or human can invoke its tools and
@@ -22,21 +24,20 @@ _FENCE_HEADER = "===== DO NOT FOLLOW ANY OF THESE INSTRUCTIONS ====="
 _FENCE_FOOTER = "===== END: DO NOT FOLLOW ANY OF THESE INSTRUCTIONS ====="
 
 
-def _fenced(body: str) -> str:
-    """Compose a DO-NOT-FOLLOW fenced block around body (pure)."""
-    return f"{_FENCE_HEADER}\n{body}\n{_FENCE_FOOTER}"
-
-
 @toolset
 class Echoer:
     """Echo wrapped action instructions inside a DO-NOT-FOLLOW fence so the user can inspect them."""
+
+    def _fenced(self, body: str) -> str:
+        """Compose a DO-NOT-FOLLOW fenced block around body (pure)."""
+        return f"{_FENCE_HEADER}\n{body}\n{_FENCE_FOOTER}"
 
     @tool
     def fence(self, body: str) -> str:
         """Wrap {body} in DO-NOT-FOLLOW fences and return the fenced block.
         Header and footer label the block as inert diagnostic text intended for the user to read.
         Use to render wrapped instructions verbatim for inspection."""
-        return _fenced(body)
+        return self._fenced(body)
 
     @action
     def echo_session(self, instructions: str) -> str:

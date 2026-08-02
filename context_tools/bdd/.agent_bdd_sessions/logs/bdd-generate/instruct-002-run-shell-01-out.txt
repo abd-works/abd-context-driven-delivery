@@ -1,0 +1,80 @@
+def _run_main(self, argv: list[str]) -> int:
+        if not argv:
+            print(
+                "usage: python -m tools run <request.yaml|-> [-o response.yaml] [--plain]",
+                file=sys.stderr,
+            )
+            return 1
+        source, output, plain = self._parse_run_args(argv)
+        try:
+            request = self._read_request_yaml(source)
+            response = self._runner.run_request(request)
+            self._write_response_yaml(response, output, plain=plain)
+            return 0
+        except RunError as exc:
+            self._write_response_yaml(exc.response, output, plain=plain)
+            return 1
+        except Exception as exc:
+            self._write_response_yaml({"ok": False, "error": str(exc)}, output, plain=plain)
+            return 1
+
+    def _parse_run_args(self, argv: list[str]) -> tuple[str, str | None, bool]:
+        source = argv[0]
+        output: str | None = None
+        plain = False
+        index = 1
+        while index < len(argv):
+            token = argv[index]
+            if token == "--plain":
+                plain = True
+                index += 1
+                continue
+            if token in ("-o", "--output"):
+                if index + 1 >= len(argv):
+                    raise RunError(
+                        "missing output path after -o",
+                        response={"ok": False, "error": "missing output path"},
+                    )
+                output = argv[index + 1]
+                index += 2
+                continue
+            raise RunError(
+                f"unknown argument {token!r}",
+                response={"ok": False, "error": f"unknown argument: {token}"},
+            )
+        return source, output, plain
+
+    def _read_request_yaml(self, source: str) -> dict[str, Any]:
+        if yaml is None:
+            raise RuntimeError("PyYAML required to load YAML")
+        text = sys.stdin.read() if source == "-" else Path(source).read_text(encoding="utf-8")
+        parsed = yaml.safe_load(text)
+        if parsed is None:
+            return {}
+        if not isinstance(parsed, dict):
+            raise RunError(
+                "request must be a YAML mapping",
+                response={"ok": False, "error": "invalid request"},
+            )
+        return parsed
+
+    def _write_response_yaml(
+        self, response: dict[str, Any], destination: str | None, *, plain: bool = False
+    ) -> None:
+        payload = (
+            self._yaml.dump_manifest(response)
+            if plain
+            else self._yaml.dump_fenced(response)
+        )
+        if destination and destination != "-":
+            Path(destination).write_text(payload + "\n", encoding="utf-8")
+        else:
+            print(payload)
+
+
+    def _agent_spec_main(self, argv: list[str]) -> int:
+        if len(argv) < 1:
+            print(
+                "usage: python -m tools agent-spec <spec.py> [--plain]",
+                file=sys.stderr,
+            )

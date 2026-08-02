@@ -1,0 +1,666 @@
+```yaml
+ok: true
+toolset: context_tools.bdd.bdd:Bdd
+action: generate
+result: When done, run validate.
+instructions: "Write all BDD test signatures first (SIGNATURE markers at behavior\
+  \ fidelity, full bodies at development fidelity).\nWhen the target module already\
+  \ exists, scan the production source for every public method and property and verify\
+  \ each has test coverage — add missing signatures for any gap before writing new\
+  \ ones.\nWhen BDD artifacts are complete, call ce().generate() to produce the matching\
+  \ class skeletons.\n\n# Generate\n\n1. Follow **`session_guidance`** and the session\
+  \ tools (`read_context_index`, `record_context_root`, `create_session` when needed).\
+  \ Resolve workspace + tool root, then use the **`active`** resource for `active.path`\
+  \ / `active.folder`.\n2. **MUST — prove-read before asking.** Before any grill/iterate\
+  \ question (and before inventing options or story/module names):\n   - Identify\
+  \ **every relevant context file referenced or implied** by the decision — not one\
+  \ favorite type. Typical set: `{workspace}/.context/context-index.md`, owning `*-segment.md`,\
+  \ `module-context.md`, session grill-answers / sketches / handoff, peer story-context,\
+  \ build-order, and any path the plan or prior answers cite. Include index/overlay\
+  \ only for structure hints; **never** treat mid-epic stub columns as inventory.\n\
+  \   - **Read each of those files with the Read tool** (chunk through large ones).\
+  \ Grep, title lists, memory, or primer-only skims **do not count**.\n   - **Prove\
+  \ it in the question turn:** name the path(s) read and ground options in concrete\
+  \ terms from them. If you cannot cite specifics from the relevant files, you have\
+  \ not read them — go read before asking.\n   - Asking from a skim is a **defect**,\
+  \ same class as dumping a whole artifact in one iterate tick.\n3. **`sources-scoped-to-generated-context`**\
+  \ — Hang `**Sources / context:**` on the node they ground: epic / sub-epic / feature\
+  \ / module, or a lower item (scenario, class, screen, component, …). Root or parent-level\
+  \ Sources are fine when those files apply to the **entire** artifact or subtree.\n\
+  4. Apply all guidance and named rules in each **context** — each bullet is a requirement.\n\
+  5. Match **examples** for shape, depth, and tone.\n6. Fill the **template** scaffold\
+  \ and save the artifact under the session layout from `session_guidance`.\n7. Follow\
+  \ any extra build steps included in your instructions when present.\n8. Run **validate**.\
+  \ If it fails, fix the artifact and **validate** again until it passes.\n\n---\n\
+  \nOpen the workspace session in one step: set path (durable root), ensure the sprint\
+  \ exists (create if missing), load context index if present, record this tool's\
+  \ root when keyed. Follow session_guidance. Scope durable work to path and sprint\
+  \ docs to folder.\n\n# Session Guidance\n\n`Session` tracks three things:\n\n| Name\
+  \ | Meaning | Example |\n|------|---------|---------|\n| **path** | Durable tool\
+  \ root (`active.path`) | `…/sandbox` |\n| **folder** | Sprint folder (`active.folder`)\
+  \ | `…/sandbox/.context/sessions/{name}/` |\n| **context_index** | `{workspace_root}/.context/context-index.md`\
+  \ when present | tool → root map |\n\n## Constructor / run context\n\n- `workspace`\
+  \ — workspace root where `context-index.md` lives (default `\".\"`)\n- `path` —\
+  \ durable tool root\n- `session` — sprint slug under `{path}/.context/sessions/{name}/`\n\
+  \n## One call to open\n\n**`open`** — single action before generate / grill / sketch\
+  \ / iterate / validate:\n\n1. Resolve durable root (`path`)\n2. Ensure sprint exists\
+  \ (load or create)\n3. Load context index if present\n4. Record this tool's root\
+  \ when `context_index_key` is set\n\n```yaml\naction: open   # via self.workspace().open()\
+  \ from BaseContextTool\n```\n\nDo **not** separately chain bind + read_context_index\
+  \ + record_context_root from lifecycle bodies — `open` already does that.\n\n##\
+  \ Layout\n\n- **path** — docs → `{path}/.context/`; code/modules → `{path}/`\n-\
+  \ **folder** — `session.md`, grill-answers, engagement sketches, handoff, `to-fix.log`\n\
+  - **context-index** — `{workspace_root}/.context/context-index.md`\n\n## Root when\
+  \ `path` omitted\n\n1. context-index entry for `context_index_key`\n2. else `{workspace_root}/{default_workspace_folder}`\n\
+  \nResource `active` = Session(path='src', name=None).\n\nOffer and write Context\
+  \ Decision Records (CDRs) sparingly as decisions crystallise during the wrapped\
+  \ action - never batch; never invent decisions.\n\nStep 1 - Read the format once\
+  \ via read_cdr_format. Internalise the three-criteria gate and the minimal template.\n\
+  \nStep 2 - Optionally call list_cdrs(root) so you do not re-record an already-captured\
+  \ decision.\n\nStep 3 - During the session (grill, sketch, or generate), watch for\
+  \ decisions that meet ALL three: hard to reverse, surprising without context, and\
+  \ a real trade-off. If any criterion is missing, skip the CDR.\n\nStep 4 - When\
+  \ a qualifying decision crystallises, offer a CDR briefly (title + one-line gist).\
+  \ If the user accepts, call write_cdr immediately with a kebab slug and content\
+  \ matching CDR-FORMAT.md. Do not batch; do not wait until the end.\n\nStep 5 - Keep\
+  \ CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences\
+  \ only when they add genuine value.\n\n# Contexts\n\nBehavior-driven development\
+  \ turns domain vocabulary into passing tests. Every BDD artifact is an indented\
+  \ hierarchy. Sketch that shape first (`sketch-template.md`).\n\n## Hierarchy shape\
+  \ (required)\n\n```\ndescribe {subject — domain thing, state, or observable condition}\n\
+  \  that {event or condition that sets the subject up}\n    with {narrower condition}\n\
+  \      it should {observable outcome}\n```\n\nRead top-down as a **usage / storytelling\
+  \ sequence**: what the user or system does first, then what is true, then what is\
+  \ observed. Nest by the **real events and conditions** that make the next observation\
+  \ possible — not by package, class role, or test fixture type.\n\n| Line | Names\
+  \ | Never names |\n| --- | --- | --- |\n| **describe** | Subject under observation\
+  \ in plain English (thing, state, condition) | Manager / hub / runner / service\
+  \ / internal class; decorator symbol (`@log`); marker name |\n| **that …** | Past\
+  \ or present event/condition on that subject (`that has been logged`, `that is invoked`)\
+  \ | `when …` |\n| **with …** | Narrower standing condition (`with no session name\
+  \ given`, `with verbose off`) | `when …`; implementation knobs phrased as API flags\
+  \ |\n| **it should …** | One stakeholder-visible outcome | Internals, private fields,\
+  \ call counts on mocks of the subject |\n\n**Pass (storytelling / usage order):**\n\
+  ```\nan action that is annotated with log\n  that is invoked\n    it should record\
+  \ a run event on the session trail\n  that has been logged\n    with no session\
+  \ name given\n      it should use the default session\n    with a given session\
+  \ name\n      it should keep events under that session\n    with verbose off\n \
+  \     it should write a summary line and keep the last payload\n      with full\
+  \ logging requested\n        it should flush the last payload\n    with verbose\
+  \ on\n      it should write payload files for later events\n\nan action that is\
+  \ not annotated\n  that is invoked\n    it should leave the session trail empty\n\
+  ```\n\n**Fail:**\n```\n@log marker                          ← mechanism / symbol,\
+  \ not a subject\nToolsetRunner                        ← manager / internal\na logged\
+  \ tool                        ← splits the same subject; use one action story\n\
+  when no session name is given        ← never \"when\" for state — use \"with …\"\
+  \n```\n\n**Shared Rules:**\n\n- **`observable-behavior`** — Prove what a stakeholder\
+  \ can verify without reading code (return value, state, public effect). Never internals.\n\
+  - **`domain-practice-alignment`** — Describe names must match domain language /\
+  \ model exactly.\n- **`usage-order-behaviors`** — Order describes, contexts, and\
+  \ examples as a **usage story** or operational sequence (what happens first → next).\
+  \ Do not order by implementation layer, package, or internal type.\n- **`describe-is-subject-not-internal`**\
+  \ — A `describe` is a domain subject, state, or observable condition — never a manager,\
+  \ hub, runner, service, or other internal (`SessionLog`, `ToolsetRunner`, …).\n\
+  - **`describe-is-plain-english`** — Full English phrases (e.g. \"an action that\
+  \ is annotated with log\", \"an action that is not annotated\"). Never symbol/mechanism\
+  \ names (`\"@log marker\"`) as the subject.\n- **`state-not-when`** — Never name\
+  \ a nested state with `when`. Use `that …` for events/conditions on the subject\
+  \ and `with …` for standing conditions. Ask: what event or condition must already\
+  \ be true for this observation?\n- **`nest-by-enabling-events`** — Each nested `that`\
+  \ / `with` must be a real precondition or event required for the nested `it should`\
+  \ — not a test-file grouping convenience.\n- **`full-surface-coverage`** — When\
+  \ generating or satisfying tests for a module that already exists, scan the production\
+  \ source for every public method, property, class, and constant. Each must have\
+  \ at least one `it should` covering its observable behavior. Any gap is a violation.\
+  \ Private and underscore-prefixed members are excluded unless they are part of a\
+  \ documented public contract.\n\n---\n\nThis skill operates at **multiple levels\
+  \ of fidelity**. Start from an agreed sketch and deepen toward green tests and production\
+  \ code. Each level **adds** artifacts and **extends** the previous — do not fill\
+  \ in details from a more detailed fidelity. Least detail → most detail below.\n\n\
+  | Fidelity | Output |\n|---|---|\n| **behavior** | describe/it hierarchy with `BDD:\
+  \ SIGNATURE` markers in each `it` |\n| **development** | Implemented tests + production\
+  \ code |\n\n## behavior\n\n**Default format:** Python\n\n**Goal:** map observation\
+  \ to a real test before implementation. Lock the sketched hierarchy as framework\
+  \ `describe` / `it` nesting. Every `it` body is exactly one `BDD: SIGNATURE` marker\
+  \ — nothing else.\n\n- Sketch nesting (subjects → `with`/`that`/events → `it should`)\
+  \ is agreed \n- **Confirm framework** — ask if not stated. Default: Mamba/Python;\
+  \ Jest/TypeScript or JUnit 5/Java when the project uses those.\n- Convert every\
+  \ sketch hierarchy line to its framework equivalent (see Framework syntax).\n- Process\
+  \ in batches of ~18 describe blocks when the hierarchy is large.\n\nFill the **behavior**\
+  \ (SIGNATURE) section of `formats/{format}/bdd-template.*`.\n\n### Framework syntax\n\
+  \n| Construct | Jest (TypeScript) | Mamba (Python) | JUnit 5 (Java) |\n| --- | ---\
+  \ | --- | --- |\n| Top-level concept | `describe('Context', () => {` | `with description('Context'):`\
+  \ | `@Nested class Context` |\n| Nested state/context | `describe('that has…', ()\
+  \ => {` | `with context('that has…'):` | `@Nested class ThatHas…` |\n| Behavior\
+  \ | `it('should …', () => {` | `with it('should …'):` | `@Test void should…()` |\n\
+  | Marker | `// BDD: SIGNATURE` | `# BDD: SIGNATURE` | `// BDD: SIGNATURE` |\n\n\
+  ### Rules\n\n- **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing\
+  \ added, removed, or flattened. Same depth, same `it` count.\n- **`signature-markers`**\
+  \ — Every `it` body is exactly `// BDD: SIGNATURE` or `# BDD: SIGNATURE`.\n- **`no-implementation`**\
+  \ — No assertions, mocks, production imports, helpers, or `beforeEach` / shared\
+  \ setup.\n- **`framework-syntax`** — One confirmed framework throughout. Do not\
+  \ mix Jest and Mamba constructs.\n\n**Pass:**\n```typescript\nit('should apply a\
+  \ percentage discount to eligible items', () => {\n  // BDD: SIGNATURE\n});\n```\n\
+  \n**Fail:** any assertion, mock, import of production code, or helper inside the\
+  \ body.\n\n---\n\n## development\n\n**Default format:** Python\n\n**Goal:** Replace\
+  \ `BDD: SIGNATURE` markers one at a time with it shgould /expect bodies, then minimum\
+  \ production code until green. Inherit the framework from the **behavior** artifactif\
+  \ already completed.\n\n1. **Confirm framework** — inherit from the behavior file.\n\
+  2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report\
+  \ count.\n3. **Identify shared setup** — extract to `beforeEach` / `with before.each:`\
+  \ or a factory when three or more siblings share arrangement.\n4. Pick **one** marker.\
+  \ Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `formats/{format}/bdd-template.*`.\n\
+  5. Run the test — confirm RED for the right reason.\n6. Write the **minimum** production\
+  \ code until GREEN (PRODUCTION CODE section of the same template).\n7. Refactor\
+  \ only while green. Move to the next marker.\n8. Repeat until zero markers remain,\
+  \ then run **validate**.\n\n### Coverage scan (existing code)\n\nWhen generating\
+  \ or satisfying against a module that already exists, read the production source\
+  \ before touching the spec:\n\n1. List every public method, property, class, and\
+  \ constant (exclude `_`-prefixed members unless publicly documented).\n2. Compare\
+  \ against the existing spec to find members with no `it should` entry.\n3. Add `it\
+  \ should` entries (at behavior fidelity) or full test bodies (at development fidelity)\
+  \ for every gap — do not skip any public member.\n4. Only then proceed with RED-GREEN-REFACTOR\
+  \ for the new or updated tests.\n\n### The RED-GREEN-REFACTOR cycle\n\n**RED** —\
+  \ fail for the right reason before production code exists.  \n**GREEN** — least\
+  \ production code that makes this assertion pass.  \n**REFACTOR** — clean up while\
+  \ green. One test, one production change, one green — do not batch all bodies first.\n\
+  \n### Arrange-Act-Assert\n\nLabel Arrange / Act / Assert; one observable outcome\
+  \ per `it` (`observable-behavior` above). Split unrelated expects. Shared construction\
+  \ → `beforeEach` / factory at three sibling dupes.\n\n### Rules\n\n- **`red-then-green`**\
+  \ — Fail for the right reason before production code changes.\n- **`minimum-green`**\
+  \ / **`code-minimalism`** — Least production code that makes this assertion pass.\n\
+  - **`refactor-only-when-green`** — Refactor only while green.\n- **`one-signature-at-a-time`**\
+  \ — One marker → green → next. Do not batch all bodies first.\n- **`one-assertion-per-test`**\
+  \ —  one outcome per `it`. tighly connects `expects`\n- **`layer-isolation`** —\
+  \ Mock only at architecture boundaries; never the subject under test.\n- **`no-remaining-signatures`**\
+  \ — Zero `BDD: SIGNATURE` markers when done.\n- **`full-surface-coverage`** — Before\
+  \ generating or satisfying, scan the production source for all public members. Add\
+  \ `it should` entries for every uncovered public method, property, or class. Complete\
+  \ coverage is required; no public surface may be left untested.\n- **`context-sharing`**\
+  \ — Shared construction in `beforeEach` / factory at three sibling dupes.\n- **`oo-api-design`**\
+  \ — Ask-don't-tell: construct fully; own state on the object; operations on the\
+  \ closest domain concept.\n- **`honors-documented-surface-contracts`** — Public\
+  \ API must match documented surface contracts; if a spec fights the contract, fix\
+  \ the spec.\n- **`roundtrip-parity-is-required`** — Adapter parse/render seams assert\
+  \ `counts(parse(render(canonical))) == counts(canonical)`.\n- **`code-source-of-truth-guard`**\
+  \ — Tests reject unsafe regeneration when generation can overwrite hand-edited code.\n\
+  - **`impl-must-carry-bdd-manifest`** — Impl paired with `*_spec.py` carries `# @toolset-manifest\
+  \ … context_tools.bdd.bdd:Bdd`.\n- **`observable-behavior`** — Assert public outcomes\
+  \ only.\n\n---\n\n## evals/backends-restate-shared-behavior/fail.md\n\n# HIERARCHY:\
+  \ story-graph-ops — Diagrams and Code sections rendered without an abstract subject\n\
+  \n<!--\nViolates: abstract-subject-then-concrete-backends.\n\nEvery concrete backend\
+  \ restates the same structural and reconciliation observations\nthat a single abstract\
+  \ subject (`a diagram Story Map`, `a code Story Map`) would carry\nonce. The behavior\
+  \ is real and state-oriented, but it is duplicated across backends.\n\nAdd a fifth\
+  \ backend (Whimsical, Excalidraw, Kotlin, Rust…) and every observation\nbelow gets\
+  \ copy-pasted again — the specifications will silently drift.\n-->\n\n## Diagrams\n\
+  \na DrawIO Story Map\n  that holds a rendered Story Map with 4 Epics and 3 SubEpics\
+  \ under the first Epic\n    it should contain 4 Epic elements on the Epic row\n\
+  \    every Epic element\n      it should sit at its Epic's row Y coordinate\n\n\
+  \    with a fifth Epic appended\n      it should contain 5 Epic elements on the\
+  \ Epic row\n      the first 4 Epic elements\n        it should be byte-identical\
+  \ to before\n\n    with the first Epic removed\n      it should contain 3 Epic elements\n\
+  \      the SubEpic elements that lived under the removed Epic\n        it should\
+  \ be gone\n\n    with the first Epic renamed\n      the Epic element for the first\
+  \ Epic\n        it should carry the new name\n\na Miro Story Map\n  that holds a\
+  \ rendered Story Map with 4 Epics and 3 SubEpics under the first Epic\n    it should\
+  \ contain 4 Epic elements on the Epic row\n    every Epic element\n      it should\
+  \ sit at its Epic's row Y coordinate\n\n    with a fifth Epic appended\n      it\
+  \ should contain 5 Epic elements on the Epic row\n      the first 4 Epic elements\n\
+  \        it should be unchanged\n\n    with the first Epic removed\n      it should\
+  \ contain 3 Epic elements\n      the SubEpic elements that lived under the removed\
+  \ Epic\n        it should be gone\n\n    with the first Epic renamed\n      the\
+  \ Epic element for the first Epic\n        it should carry the new name\n\n## Code\n\
+  \na TypeScript story-spec Story Map\n  that holds a rendered Story Map with 4 Epics\n\
+  \    every Epic\n      it should produce a folder under the tests root, named after\
+  \ the Epic slug\n\n    with a fifth Epic appended\n      the appended Epic\n   \
+  \     it should produce a new folder under the tests root\n\n    with the first\
+  \ Epic renamed\n      the folder for the first Epic\n        it should carry the\
+  \ new slug\n\na Python acceptance-test Story Map\n  that holds a rendered Story\
+  \ Map with 4 Epics\n    every Epic\n      it should produce a folder under the tests\
+  \ root, named after the Epic slug\n\n    with a fifth Epic appended\n      the appended\
+  \ Epic\n        it should produce a new folder under the tests root\n\n    with\
+  \ the first Epic renamed\n      the folder for the first Epic\n        it should\
+  \ carry the new slug\n\na Java acceptance-test Story Map\n  that holds a rendered\
+  \ Story Map with 4 Epics\n    every Epic\n      it should produce a folder under\
+  \ the tests root, named after the Epic slug\n\n    with a fifth Epic appended\n\
+  \      the appended Epic\n        it should produce a new folder under the tests\
+  \ root\n\n    with the first Epic renamed\n      the folder for the first Epic\n\
+  \        it should carry the new slug\n\n\n## evals/backends-restate-shared-behavior/pass.md\n\
+  \n# HIERARCHY: story-graph-ops — Diagrams and Code with abstract subjects\n\n<!--\n\
+  Passes: abstract-subject-then-concrete-backends.\n\nShared structural and reconciliation\
+  \ observations live once on the abstract\nsubject (`a diagram Story Map`, `a code\
+  \ Story Map`). Concrete backends are thin\nand add only backend-specific proofs\
+  \ — no duplicated shared behavior.\n-->\n\n## Diagrams\n\na diagram Story Map\n\
+  \  that holds a rendered Story Map with 4 Epics and 3 SubEpics under the first Epic\n\
+  \    it should contain 4 Epic elements on the Epic row in sequential order\n   \
+  \ it should contain 3 SubEpic elements on the SubEpic row, directly under the first\
+  \ Epic\n\n    with a fifth Epic appended\n      it should contain 5 Epic elements\
+  \ on the Epic row\n      the first 4 Epic elements\n        it should be unchanged\
+  \ in position and identity\n\n    with the first Epic removed\n      it should contain\
+  \ 3 Epic elements\n      the SubEpic elements that lived under the removed Epic\n\
+  \        it should be gone\n\na DrawIO Story Map\n  <!-- Every \"a diagram Story\
+  \ Map\" behavior applies. Only DrawIO-specific\n       serialization proofs live\
+  \ here. -->\n  that holds a rendered diagram Story Map with 4 Epics\n    every Epic\
+  \ element\n      it should be an mxCell whose style carries the Epic swatch\n  \
+  \  the serialized diagram\n      it should parse as valid draw.io XML\n\n## Code\n\
+  \na code Story Map\n  that holds a rendered Story Map with 4 Epics\n    every Epic\n\
+  \      it should produce a folder under the tests root, named after the Epic slug\n\
+  \n    with a fifth Epic appended\n      the appended Epic\n        it should produce\
+  \ a new folder under the tests root\n\n    with the first Epic renamed\n      the\
+  \ folder for the first Epic\n        it should carry the new slug\n\na TypeScript\
+  \ story-spec Story Map\n  <!-- Every \"a code Story Map\" behavior applies. Only\
+  \ TypeScript-specific\n       spec-data proofs live here. -->\n  that holds a rendered\
+  \ code Story Map with 4 Epics\n    every leaf file\n      it should be named `<sub-epic-slug>-stories.ts`\n\
+  \      it should parse as valid TypeScript and typecheck against the story-types\
+  \ module\n\n\n## evals/leaves-not-state-oriented/fail.md\n\n# HIERARCHY: story-graph-ops\
+  \ (excerpt — Story Model)\n\nStory Model\n  StoryMap\n    should add an Epic to\
+  \ a StoryMap\n    should remove an Epic from a StoryMap\n    should reorder Epics\
+  \ in a StoryMap by sequential order\n    should list every Story in a StoryMap recursively\
+  \ across every Epic and SubEpic\n  Epic\n    should rename an Epic\n    should add\
+  \ a SubEpic under an Epic\n    should remove a SubEpic and its subtree from an Epic\n\
+  \    should reorder SubEpics under an Epic\n    should move a SubEpic to a different\
+  \ Epic\n  SubEpic\n    should rename a SubEpic\n    should nest a SubEpic under\
+  \ another SubEpic\n    should add a Story under a SubEpic\n    should remove a Story\
+  \ from a SubEpic\n\n\n## evals/leaves-not-state-oriented/pass.md\n\n# HIERARCHY:\
+  \ story-graph-ops (excerpt — Story Model)\n\n<!--\nPasses: state-oriented-hierarchy,\
+  \ category-headings-not-subjects.\n\nEvery non-leaf describe is a subject noun phrase\
+  \ or a state elaboration opened\nwith `with` / `that`. Every leaf is `it should\
+  \ …` observing an outside-verifiable\nresult. Organizational scaffolding is a `##`\
+  \ heading, not a describe.\n-->\n\n## Story Model\n\na Story Map\n  it should hold\
+  \ no Epics\n\n  with 4 Epics in sequential order\n    it should hold 4 Epics\n \
+  \   it should list the Epics in sequential order\n\n    with a fifth Epic appended\n\
+  \      it should hold 5 Epics\n      the last Epic in sequential order\n       \
+  \ it should be the appended Epic\n\n    with the first Epic removed\n      it should\
+  \ hold 3 Epics\n      it should discard the SubEpics that lived under the removed\
+  \ Epic\n\n    with the first Epic renamed\n      it should preserve the sequential\
+  \ order of the Epics\n      the first Epic\n        it should carry the new name\n\
+  \n    with the first Epic holding 3 SubEpics\n      the first Epic\n        it should\
+  \ hold 3 SubEpics\n\n      with the first SubEpic moved from the first Epic to the\
+  \ second Epic\n        the first Epic\n          it should hold 2 SubEpics\n   \
+  \     the second Epic\n          it should hold one additional SubEpic\n       \
+  \ the moved SubEpic\n          it should keep its Stories and AcceptanceCriteria\n\
+  \n\n## evals/observations-are-mechanics/fail.md\n\n# HIERARCHY: story-graph-ops\
+  \ (excerpt captured as a failure fixture)\n<!-- Every leaf here observes an internal\
+  \ method call, super chain, or private helper — not a result the reader could verify\
+  \ from outside the implementation. -->\n\na StoryNode\n\n  that has been translated\
+  \ from a source with an added child\n    the target\n      it should hold the new\
+  \ child\n      it should have called its own createChildXxx factory to produce the\
+  \ new child\n      it should have called translateFrom on the new child to fill\
+  \ its fields\n\n  that is reconciling a child collection\n    the reconciliation\n\
+  \      it should match self-children to source-children by name and sequential order\
+  \ via findMatch before creating any new child\n      it should call translateFrom\
+  \ on every matched pair\n      it should process child collection pairs in the order\
+  \ declared by childCollections\n\na DiagramStoryNode\n\n  that has had updateSelf\
+  \ called\n    it should have copied the domain fields from source first via super.updateSelf\n\
+  \    it should have set position and size from the placementRules for its type\n\
+  \    it should have applied the formatting from the formattingRules for its type\n\
+  \na CodeStoryNode\n\n  that has had updateSelf called\n    it should have copied\
+  \ the domain fields from source first via super.updateSelf\n    it should have written\
+  \ the language-agnostic structure to the held LanguageAst\n    the held LanguageAst\n\
+  \      it should never be replaced\n\n\n## evals/observations-are-mechanics/pass.md\n\
+  \n# HIERARCHY: story-graph-ops (excerpt — results, not mechanics)\n\n<!--\nPasses:\
+  \ observations-are-results-not-mechanics, subjects-are-domain-concepts,\nbusiness-readable-language,\
+  \ domain-practice-alignment.\n\nEvery leaf observes an outcome an outsider could\
+  \ verify. Subjects are domain\nconcepts. No super calls, factory names, private\
+  \ helpers, or call-order facts.\n-->\n\n## Story Model\n\na Story Map\n  that holds\
+  \ 4 Epics and 3 SubEpics under the first Epic\n    it should hold 4 Epics\n    the\
+  \ first Epic\n      it should hold 3 SubEpics\n\n    with a fifth Epic appended\n\
+  \      it should hold 5 Epics\n      the last Epic in sequential order\n       \
+  \ it should be the appended Epic\n\n## Documents\n\na Markdown document\n  that\
+  \ holds a rendered Story Map with 4 Epics and 3 SubEpics under the first Epic\n\
+  \    it should contain 4 top-level headings in sequential order\n\n    with the\
+  \ first Epic renamed in the source Story Map and re-rendered\n      the first heading\n\
+  \        it should carry the new name\n\n  that has been edited in place and synced\
+  \ back against a canonical Story Map\n    the returned UpdateReport\n      it should\
+  \ list every add, remove, rename, and reorder applied to the document\n    the reconstructed\
+  \ Story Map\n      it should reflect every edit made to the document\n\n## Diagrams\n\
+  \na diagram Story Map\n  that holds a rendered Story Map with 4 Epics\n    it should\
+  \ contain 4 Epic elements on the Epic row in sequential order\n\n    with the first\
+  \ Epic removed\n      it should contain 3 Epic elements\n      the SubEpic elements\
+  \ that lived under the removed Epic\n        it should be gone\n\n\n## evals/state-oriented-story-map/fail.md\n\
+  \n# HIERARCHY: story-graph-ops (excerpt — Story Model)\n\n<!--\nViolates: state-oriented-hierarchy,\
+  \ category-headings-not-subjects.\n\nDescribes are bare class names; leaves restate\
+  \ operations as if the class were\nthe actor. No subject noun phrase, no state buildup,\
+  \ no observations of state.\n`Story Model` is used as a describe rather than a `##`\
+  \ heading.\n-->\n\nStory Model\n  StoryMap\n    should add an Epic to a StoryMap\n\
+  \    should remove an Epic from a StoryMap\n    should reorder Epics in a StoryMap\
+  \ by sequential order\n    should list every Story in a StoryMap recursively across\
+  \ every Epic and SubEpic\n  Epic\n    should rename an Epic\n    should add a SubEpic\
+  \ under an Epic\n    should remove a SubEpic and its subtree from an Epic\n    should\
+  \ reorder SubEpics under an Epic\n    should move a SubEpic to a different Epic\n\
+  \  SubEpic\n    should rename a SubEpic\n    should nest a SubEpic under another\
+  \ SubEpic\n    should add a Story under a SubEpic\n    should remove a Story from\
+  \ a SubEpic\n\n\n## evals/state-oriented-story-map/pass.md\n\n# HIERARCHY: story-graph-ops\
+  \ (canonical excerpt)\n\n<!--\nThis excerpt is the canonical passing shape. It demonstrates\
+  \ every rule in\nthis skill applied to a single domain:\n\n- state-oriented-hierarchy:\
+  \ every non-leaf describe is a subject noun phrase\n  or a state elaboration opened\
+  \ with `with` / `that`; every leaf is `it should …`.\n- observations-are-results-not-mechanics:\
+  \ leaves observe outcomes an outsider\n  could verify — no super calls, no factory\
+  \ names, no private helper names,\n  no call-order facts.\n- subjects-are-domain-concepts:\
+  \ every top-level describe is a domain concept\n  a domain expert would recognise\
+  \ (\"a Story Map\", \"a Markdown document\",\n  \"a diagram Story Map\", \"a code\
+  \ Story Map\", \"a DrawIO Story Map\",\n  \"a TypeScript story-spec Story Map\"\
+  ). No ast, node, synchronizer,\n  positions, or service-class stereotype.\n- category-headings-not-subjects:\
+  \ organizational scaffolding (Story Model,\n  Documents, Diagrams, Code) is `##`\
+  \ markdown, not describes.\n- abstract-subject-then-concrete-backends: for Diagrams\
+  \ and Code the shared\n  behavior lives on an abstract subject (`a diagram Story\
+  \ Map`, `a code Story Map`);\n  concrete backends are thin and add only backend-specific\
+  \ proofs.\n-->\n\n## Story Model\n\na Story Map\n  it should hold no Epics\n\n \
+  \ with 4 Epics in sequential order\n    it should hold 4 Epics\n    it should list\
+  \ the Epics in sequential order\n\n    with a fifth Epic appended\n      it should\
+  \ hold 5 Epics\n      the last Epic in sequential order\n        it should be the\
+  \ appended Epic\n\n    with the first Epic removed\n      it should hold 3 Epics\n\
+  \      it should discard the SubEpics that lived under the removed Epic\n\n    with\
+  \ the first Epic renamed\n      it should preserve the sequential order of the Epics\n\
+  \      the first Epic\n        it should carry the new name\n\n    with the first\
+  \ Epic holding 3 SubEpics\n      the first Epic\n        it should hold 3 SubEpics\n\
+  \n      with the first SubEpic moved from the first Epic to the second Epic\n  \
+  \      the first Epic\n          it should hold 2 SubEpics\n        the second Epic\n\
+  \          it should hold one additional SubEpic\n        the moved SubEpic\n  \
+  \        it should keep its Stories and AcceptanceCriteria\n\n## Documents\n\na\
+  \ Markdown document\n  that holds a rendered Story Map with 4 Epics and 3 SubEpics\
+  \ under the first Epic\n    it should contain 4 top-level headings in sequential\
+  \ order\n\n    with the first Epic renamed in the source Story Map and re-rendered\n\
+  \      the first heading\n        it should carry the new name\n\n    with the first\
+  \ Epic removed in the source Story Map and re-rendered\n      it should contain\
+  \ 3 top-level headings\n\n  that has been edited in place and synced back against\
+  \ a canonical Story Map\n    the returned UpdateReport\n      it should list every\
+  \ add, remove, rename, and reorder applied to the document\n    the reconstructed\
+  \ Story Map\n      it should reflect every edit made to the document\n\n## Diagrams\n\
+  \na diagram Story Map\n  that holds a rendered Story Map with 4 Epics and 3 SubEpics\
+  \ under the first Epic\n    it should contain 4 Epic elements on the Epic row in\
+  \ sequential order\n    it should contain 3 SubEpic elements on the SubEpic row,\
+  \ directly under the first Epic\n\n    with a fifth Epic appended\n      it should\
+  \ contain 5 Epic elements on the Epic row\n      the first 4 Epic elements\n   \
+  \     it should be unchanged in position and identity\n\n    with the first Epic\
+  \ removed\n      it should contain 3 Epic elements\n      the SubEpic elements that\
+  \ lived under the removed Epic\n        it should be gone\n\na DrawIO Story Map\n\
+  \  <!-- Every \"a diagram Story Map\" behavior applies. Only DrawIO-specific\n \
+  \      serialization proofs live here. -->\n  that holds a rendered diagram Story\
+  \ Map with 4 Epics\n    every Epic element\n      it should be an mxCell whose style\
+  \ carries the Epic swatch\n    the serialized diagram\n      it should parse as\
+  \ valid draw.io XML\n\n## Code\n\na code Story Map\n  that holds a rendered Story\
+  \ Map with 4 Epics and 3 SubEpics under the first Epic\n    every Epic\n      it\
+  \ should produce a folder under the tests root, named after the Epic slug\n\n  \
+  \  with a fifth Epic appended\n      the appended Epic\n        it should produce\
+  \ a new folder under the tests root\n      the folders for the first four Epics\n\
+  \        it should be byte-identical to before\n\n    with the first Epic renamed\n\
+  \      the folder for the first Epic\n        it should carry the new slug\n   \
+  \     its contents\n          it should be byte-identical to before\n\n    with\
+  \ the first Epic holding 3 leaf SubEpics\n      every leaf SubEpic of the first\
+  \ Epic\n        it should produce a sub-folder under the first Epic's folder, named\
+  \ after the SubEpic slug\n        it should produce exactly one leaf file inside\
+  \ its own sub-folder, named after the SubEpic slug\n\n      with the first SubEpic\
+  \ of the first Epic holding 2 Stories\n        the leaf file for the first SubEpic\n\
+  \          it should contain 2 Story blocks\n        every Story\n          it should\
+  \ produce one Story block inside its SubEpic's leaf file, named after the Story\n\
+  \n        with the first Story of the first SubEpic holding 3 AcceptanceCriteria\n\
+  \          the Story block for the first Story\n            it should expose 3 Scenarios\
+  \ (one per AcceptanceCriteria) in the AcceptanceCriteria's declared order\n    \
+  \      every AcceptanceCriteria\n            it should produce one Scenario inside\
+  \ its Story block, holding the AcceptanceCriteria's Gherkin steps in order\n\na\
+  \ TypeScript story-spec Story Map\n  <!-- Every \"a code Story Map\" behavior applies.\
+  \ Only TypeScript-specific\n       spec-data proofs live here. -->\n  that holds\
+  \ a rendered code Story Map with 4 Epics\n    every leaf file\n      it should be\
+  \ named `<sub-epic-slug>-stories.ts`\n      it should parse as valid TypeScript\
+  \ and typecheck against the story-types module\n    every Story block\n      it\
+  \ should be an exported const named after the Story in UPPER_SNAKE_CASE, initialised\
+  \ with `as const`\n    every Scenario property inside a Story block\n      it should\
+  \ be a single-keyed object whose value carries `name` and `steps` fields\n\n\n##\
+  \ evals/subjects-are-code-stereotypes/fail.md\n\n# HIERARCHY: story-graph-ops (excerpt\
+  \ captured as a failure fixture)\n<!-- Every top-level describe here is a code-level\
+  \ class name, not a domain concept. LanguageAst / TypeScriptAst / CodeStoryNode\
+  \ are compiler-implementation stereotypes; RowPositions is a layout helper; MarkdownSynchronizer\
+  \ / TypeScriptSynchronizer are service classes; DiagramStoryNode is an abstract\
+  \ class exposed as a subject instead of the domain concept it represents (a diagram\
+  \ Story Map). The state-oriented and observations-are-results rules can be clean\
+  \ while this rule is still violated. -->\n\na LanguageAst\n\n  that has been asked\
+  \ to parse a raw source string\n    it should populate its internal AST from the\
+  \ source\n\n  that has been asked to generate source code\n    it should produce\
+  \ a raw source string from the internal AST\n\na TypeScriptAst\n\n  that is generating\
+  \ from a StoryNode\n    it should produce a TypeScript interface for the node\n\
+  \    it should produce a describe block for the node\n\na CodeStoryNode\n\n  that\
+  \ has had updateSelf called from a source\n    it should carry the same domain fields\
+  \ as the source\n    the held LanguageAst\n      it should reflect the language-agnostic\
+  \ structure of the node\n\na RowPositions\n\n  that has been constructed for a tree\
+  \ with a maximum SubEpic depth of 2\n    the SubEpic row for depth 0\n      it should\
+  \ sit directly below the Epic row\n    the actor row\n      it should sit directly\
+  \ below the deepest SubEpic row\n\na DiagramStoryNode\n\n  a SubEpic\n    with an\
+  \ Epic parent\n      it should accept the parent\n    with a Story parent\n    \
+  \  it should reject the parent\n\na MarkdownSynchronizer\n  that has synced a canonical\
+  \ Story Map into an existing Markdown document\n    the returned UpdateReport\n\
+  \      it should list every add, remove, rename, reorder, and move applied to the\
+  \ document\n\na TypeScriptSynchronizer\n  that has regenerated the folder from a\
+  \ canonical Story Map\n    the returned UpdateReport\n      it should list every\
+  \ add, remove, rename, reorder, and move applied to the folder\n\n\n## evals/subjects-are-code-stereotypes/pass.md\n\
+  \n# HIERARCHY: story-graph-ops (excerpt — domain-concept subjects)\n\n<!--\nPasses:\
+  \ subjects-are-domain-concepts, domain-practice-alignment.\n\nEvery top-level describe\
+  \ is a domain concept a domain expert would recognise.\nNo LanguageAst, CodeStoryNode,\
+  \ RowPositions, Synchronizer, or other\ncompiler-/service-class stereotypes.\n-->\n\
+  \n## Story Model\n\na Story Map\n  it should hold no Epics\n  with 4 Epics in sequential\
+  \ order\n    it should hold 4 Epics\n\n## Documents\n\na Markdown document\n  that\
+  \ holds a rendered Story Map with 4 Epics\n    it should contain 4 top-level headings\
+  \ in sequential order\n\n## Diagrams\n\na diagram Story Map\n  that holds a rendered\
+  \ Story Map with 4 Epics\n    it should contain 4 Epic elements on the Epic row\n\
+  \na DrawIO Story Map\n  that holds a rendered diagram Story Map with 4 Epics\n \
+  \   every Epic element\n      it should be an mxCell whose style carries the Epic\
+  \ swatch\n\n## Code\n\na code Story Map\n  that holds a rendered Story Map with\
+  \ 4 Epics\n    every Epic\n      it should produce a folder under the tests root,\
+  \ named after the Epic slug\n\na TypeScript story-spec Story Map\n  that holds a\
+  \ rendered code Story Map with 4 Epics\n    every leaf file\n      it should parse\
+  \ as valid TypeScript and typecheck against the story-types module\n\n\n## evals/top-level-describe-is-category-label/fail.md\n\
+  \n# HIERARCHY: story-graph-ops — section labels used as top-level describes\n\n\
+  <!--\nViolates: category-headings-not-subjects.\n\n`Story Model`, `Documents`, `Diagrams`,\
+  \ `Code` are organizational category labels,\nnot domain subjects. Read any one\
+  \ of them in isolation — none names an observable\nthing whose state can be narrowed\
+  \ and observed. They belong as `##` markdown\nheadings, not as top-level describes.\n\
+  \nEverything nested underneath is otherwise well-formed state-oriented BDD, so the\n\
+  other rules cannot catch this — the shape is broken at the top level, before the\n\
+  first real subject describe.\n-->\n\nStory Model\n\n  a Story Map\n    it should\
+  \ hold no Epics\n    with 4 Epics in sequential order\n      it should hold 4 Epics\n\
+  \      with a fifth Epic appended\n        it should hold 5 Epics\n\nDocuments\n\
+  \n  a Markdown document\n    that holds a rendered Story Map with 4 Epics\n    \
+  \  it should contain 4 top-level headings\n\n  a JSON document\n    that holds a\
+  \ rendered Story Map with 4 Epics\n      it should contain 4 Epic entries in declared\
+  \ order\n\nDiagrams\n\n  a diagram Story Map\n    that holds a rendered Story Map\
+  \ with 4 Epics\n      it should contain 4 Epic elements on the Epic row\n      with\
+  \ a fifth Epic appended\n        it should contain 5 Epic elements on the Epic row\n\
+  \nCode\n\n  a code Story Map\n    that holds a rendered Story Map with 4 Epics\n\
+  \      every Epic\n        it should produce a folder under the tests root, named\
+  \ after the Epic slug\n\n\n## evals/top-level-describe-is-category-label/pass.md\n\
+  \n# HIERARCHY: story-graph-ops — categories as markdown headings\n\n<!--\nPasses:\
+  \ category-headings-not-subjects, state-oriented-hierarchy,\ndomain-practice-alignment.\n\
+  \n`Story Model`, `Documents`, `Diagrams`, `Code` are `##` markdown headings.\nEvery\
+  \ top-level describe is a domain-concept subject noun phrase.\n-->\n\n## Story Model\n\
+  \na Story Map\n  it should hold no Epics\n  with 4 Epics in sequential order\n \
+  \   it should hold 4 Epics\n    with a fifth Epic appended\n      it should hold\
+  \ 5 Epics\n\n## Documents\n\na Markdown document\n  that holds a rendered Story\
+  \ Map with 4 Epics\n    it should contain 4 top-level headings\n\na JSON document\n\
+  \  that holds a rendered Story Map with 4 Epics\n    it should contain 4 Epic entries\
+  \ in declared order\n\n## Diagrams\n\na diagram Story Map\n  that holds a rendered\
+  \ Story Map with 4 Epics\n    it should contain 4 Epic elements on the Epic row\n\
+  \    with a fifth Epic appended\n      it should contain 5 Epic elements on the\
+  \ Epic row\n\n## Code\n\na code Story Map\n  that holds a rendered Story Map with\
+  \ 4 Epics\n    every Epic\n      it should produce a folder under the tests root,\
+  \ named after the Epic slug\n\n\n## examples.md\n\n# Examples — BDD fidelities\n\
+  \n## Behavior hierarchy input (prerequisite)\n\nApproved plain-English hierarchy\
+  \ (`character-behavior.md`) used as input to **behavior** fidelity:\n\n```\nCharacter\n\
+  \  that has been created\n    should have initial stats assigned\n    should have\
+  \ zero starting wounds\n  that is in combat\n    should track current wounds\n \
+  \   should apply damage from attacks\n  Attack\n    that has targeted an enemy\n\
+  \      should calculate hit chance using character stats\n      should consume one\
+  \ action from the active turn\n    that has missed\n      should deal no damage\n\
+  \      should still consume one action\n  that has been defeated\n    should be\
+  \ removed from the initiative order\n```\n\n---\n\n## Behavior fidelity — signatures\n\
+  \n### Jest/TypeScript output (`character.test.ts`)\n\n```typescript\ndescribe('Character',\
+  \ () => {\n  describe('that has been created', () => {\n    it('should have initial\
+  \ stats assigned', () => {\n      // BDD: SIGNATURE\n    });\n    it('should have\
+  \ zero starting wounds', () => {\n      // BDD: SIGNATURE\n    });\n  });\n\n  describe('that\
+  \ is in combat', () => {\n    it('should track current wounds', () => {\n      //\
+  \ BDD: SIGNATURE\n    });\n    it('should apply damage from attacks', () => {\n\
+  \      // BDD: SIGNATURE\n    });\n  });\n\n  describe('Attack', () => {\n    describe('that\
+  \ has targeted an enemy', () => {\n      it('should calculate hit chance using character\
+  \ stats', () => {\n        // BDD: SIGNATURE\n      });\n      it('should consume\
+  \ one action from the active turn', () => {\n        // BDD: SIGNATURE\n      });\n\
+  \    });\n\n    describe('that has missed', () => {\n      it('should deal no damage',\
+  \ () => {\n        // BDD: SIGNATURE\n      });\n      it('should still consume\
+  \ one action', () => {\n        // BDD: SIGNATURE\n      });\n    });\n  });\n\n\
+  \  describe('that has been defeated', () => {\n    it('should be removed from the\
+  \ initiative order', () => {\n      // BDD: SIGNATURE\n    });\n  });\n});\n```\n\
+  \n### Mamba/Python output (`character_spec.py`)\n\n```python\nfrom mamba import\
+  \ description, context, it\n\nwith description('Character'):\n    with context('that\
+  \ has been created'):\n        with it('should have initial stats assigned'):\n\
+  \            # BDD: SIGNATURE\n        with it('should have zero starting wounds'):\n\
+  \            # BDD: SIGNATURE\n\n    with context('that is in combat'):\n      \
+  \  with it('should track current wounds'):\n            # BDD: SIGNATURE\n     \
+  \   with it('should apply damage from attacks'):\n            # BDD: SIGNATURE\n\
+  \n    with description('Attack'):\n        with context('that has targeted an enemy'):\n\
+  \            with it('should calculate hit chance using character stats'):\n   \
+  \             # BDD: SIGNATURE\n            with it('should consume one action from\
+  \ the active turn'):\n                # BDD: SIGNATURE\n\n        with context('that\
+  \ has missed'):\n            with it('should deal no damage'):\n               \
+  \ # BDD: SIGNATURE\n            with it('should still consume one action'):\n  \
+  \              # BDD: SIGNATURE\n\n    with context('that has been defeated'):\n\
+  \        with it('should be removed from the initiative order'):\n            #\
+  \ BDD: SIGNATURE\n```\n\n### What to notice\n\n- Behavior hierarchy has 9 `should`\
+  \ lines → signature has 9 `it` blocks. Count matches exactly.\n- 4 nesting levels\
+  \ in scaffold → 4 levels in code.\n- Every body contains `// BDD: SIGNATURE` (Jest)\
+  \ or `# BDD: SIGNATURE` (Mamba) and nothing else.\n- No imports, no assertions,\
+  \ no mocks, no `beforeEach`.\n- `it('should …')` matches the behavior hierarchy\
+  \ text verbatim — no paraphrasing.\n\n### Batch processing for large behavior hierarchies\n\
+  \nWhen a behavior hierarchy has more than ~18 describe blocks, process in batches:\n\
+  \n1. First batch: top-level concept and its first 2-3 state blocks (~18 describes).\n\
+  2. Subsequent batches: remaining state blocks and sub-context_tools.\n3. Confirm\
+  \ after each batch that the hierarchy count matches the behavior hierarchy for that\
+  \ slice.\n\n---\n\n## Development fidelity — tests + code\n\n### Phase 1: Signature\
+  \ → Test implementation\n\n**Input (signature)**\n\n```typescript\ndescribe('Character',\
+  \ () => {\n  describe('that has been created', () => {\n    it('should have initial\
+  \ stats assigned', () => {\n      // BDD: SIGNATURE\n    });\n    it('should have\
+  \ zero starting wounds', () => {\n      // BDD: SIGNATURE\n    });\n  });\n\n  describe('that\
+  \ is in combat', () => {\n    it('should track current wounds', () => {\n      //\
+  \ BDD: SIGNATURE\n    });\n    it('should apply damage from attacks', () => {\n\
+  \      // BDD: SIGNATURE\n    });\n  });\n});\n```\n\n**Output (test implementation\
+  \ — Jest/TypeScript)**\n\n```typescript\nimport { Character } from '../Character';\n\
+  \nfunction defaultStats() {\n  return { strength: 10, agility: 8, endurance: 6 };\n\
+  }\n\ndescribe('Character', () => {\n  describe('that has been created', () => {\n\
+  \    it('should have initial stats assigned', () => {\n      // Arrange\n      const\
+  \ stats = defaultStats();\n      // Act\n      const character = new Character({\
+  \ name: 'Test', stats });\n      // Assert\n      expect(character.stats.strength).toBe(10);\n\
+  \      expect(character.stats.agility).toBe(8);\n    });\n\n    it('should have\
+  \ zero starting wounds', () => {\n      // Arrange / Act\n      const character\
+  \ = new Character({ name: 'Test', stats: defaultStats() });\n      // Assert\n \
+  \     expect(character.wounds).toBe(0);\n    });\n  });\n\n  describe('that is in\
+  \ combat', () => {\n    let character: Character;\n\n    beforeEach(() => {\n  \
+  \    character = new Character({ name: 'Test', stats: defaultStats() });\n    });\n\
+  \n    it('should track current wounds', () => {\n      // Act\n      character.applyDamage(3);\n\
+  \      // Assert\n      expect(character.wounds).toBe(3);\n    });\n\n    it('should\
+  \ apply damage from attacks', () => {\n      // Arrange\n      character.applyDamage(2);\n\
+  \      // Act\n      character.applyDamage(4);\n      // Assert\n      expect(character.wounds).toBe(6);\n\
+  \    });\n  });\n});\n```\n\n### Phase 2: Failing tests → Minimal production code\n\
+  \nTests above are RED — `Character` does not exist.\n\n**Output (minimal production\
+  \ code — TypeScript)**\n\n```typescript\n// Character.ts\n\ninterface Stats {\n\
+  \  strength: number;\n  agility: number;\n  endurance: number;\n}\n\ninterface CharacterProps\
+  \ {\n  name: string;\n  stats: Stats;\n}\n\nexport class Character {\n  readonly\
+  \ name: string;\n  readonly stats: Stats;\n  wounds = 0;\n\n  constructor({ name,\
+  \ stats }: CharacterProps) {\n    this.name = name;\n    this.stats = stats;\n \
+  \ }\n\n  applyDamage(amount: number): void {\n    this.wounds += amount;\n  }\n\
+  }\n```\n\n**What to notice:**\n- Only properties tests assert on: `stats`, `wounds`.\
+  \ No `createdAt`, `id`, etc.\n- Only methods tests call: `applyDamage`. No `heal()`,\
+  \ `die()`, etc.\n- `wounds` starts at `0` because the test asserts `expect(character.wounds).toBe(0)`.\n\
+  - Class used (not function) because `wounds` is mutable state that accumulates across\
+  \ calls.\n\n### Mamba/Python equivalent\n\n**Test implementation**\n\n```python\n\
+  from mamba import description, context, it, before\nfrom expects import equal, expect\n\
+  from character import Character\n\ndef default_stats():\n    return {'strength':\
+  \ 10, 'agility': 8, 'endurance': 6}\n\nwith description('Character'):\n    with\
+  \ context('that has been created'):\n        with it('should have initial stats\
+  \ assigned'):\n            # Arrange / Act\n            character = Character(name='Test',\
+  \ stats=default_stats())\n            # Assert\n            expect(character.stats['strength']).to(equal(10))\n\
+  \            expect(character.stats['agility']).to(equal(8))\n\n        with it('should\
+  \ have zero starting wounds'):\n            # Arrange / Act\n            character\
+  \ = Character(name='Test', stats=default_stats())\n            # Assert\n      \
+  \      expect(character.wounds).to(equal(0))\n\n    with context('that is in combat'):\n\
+  \        with before.each:\n            self.character = Character(name='Test',\
+  \ stats=default_stats())\n\n        with it('should track current wounds'):\n  \
+  \          self.character.apply_damage(3)\n            expect(self.character.wounds).to(equal(3))\n\
+  \n        with it('should apply damage from attacks'):\n            self.character.apply_damage(2)\n\
+  \            self.character.apply_damage(4)\n            expect(self.character.wounds).to(equal(6))\n\
+  ```\n\n**Minimal production code (Python)**\n\n```python\n# character.py\n\nclass\
+  \ Character:\n    def __init__(self, name: str, stats: dict):\n        self.name\
+  \ = name\n        self.stats = stats\n        self.wounds = 0\n\n    def apply_damage(self,\
+  \ amount: int) -> None:\n        self.wounds += amount\n```\n\n### Layer boundary\
+  \ mocking example (service layer)\n\nWhen testing a service that depends on a repository:\n\
+  \n```typescript\nimport { VoucherService } from '../VoucherService';\nimport { VoucherRepository\
+  \ } from '../VoucherRepository';\n\ndescribe('VoucherService', () => {\n  describe('that\
+  \ is creating a voucher', () => {\n    let service: VoucherService;\n    let mockRepo:\
+  \ jest.Mocked<Pick<VoucherRepository, 'save'>>;\n\n    beforeEach(() => {\n    \
+  \  mockRepo = { save: jest.fn().mockResolvedValue(undefined) };\n      service =\
+  \ new VoucherService(mockRepo as VoucherRepository);\n    });\n\n    it('should\
+  \ persist the voucher when input is valid', async () => {\n      // Arrange\n  \
+  \    const input = { code: 'ABC-001', campaignId: 'camp-1' };\n      // Act\n  \
+  \    await service.create(input);\n      // Assert\n      expect(mockRepo.save).toHaveBeenCalledWith(\n\
+  \        expect.objectContaining({ code: 'ABC-001' })\n      );\n    });\n  });\n\
+  });\n```\n\n**Mock is at the boundary** (repository) — the service is fully tested;\
+  \ the repository mock is not the thing under test.\n\n\n\"\"\"\n# @toolset-manifest\
+  \ python -m tools manifest context_tools.bdd.bdd:Bdd\n# Agent reading this file:\
+  \ run line 1 manifest, then python -m tools run -. Follow response.instructions\
+  \ only.\n# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd\n# invoke-check:\
+  \ action validate | toolset: context_tools.bdd.bdd:Bdd\n\"\"\"\n# =============================================================================\n\
+  # BDD Development Template - Mamba/Python Test Implementation\n# =============================================================================\n\
+  # Instructions (for skill maintainers - delete this block when generating):\n#\n\
+  #   1. Replace {DomainEntity} with the class or module under test.\n#   2. Import\
+  \ only the entity under test.\n#   3. Add a factory function for shared test-data\
+  \ objects.\n#   4. Use `with before.each:` for shared object setup when 3+ siblings\
+  \ need it.\n#   5. Each `with it():` body uses # Arrange / # Act / # Assert comments.\n\
+  #   6. One assertion per behavior.\n#   7. Replace `# BDD: SIGNATURE` markers -\
+  \ do not leave any in the final file.\n#   8. Delete this instruction block before\
+  \ committing the file.\n#   9. Keep the edit/check manifest header above - do not\
+  \ strip it.\n# =============================================================================\n\
+  from mamba import description, context, it, before\nfrom expects import equal, be_none,\
+  \ be_true, expect\nfrom {domain_module} import {DomainEntity}\n\n\ndef default_{related_data}()\
+  \ -> dict:\n    \"\"\"Minimal valid test data - populate only fields tests assert\
+  \ on.\"\"\"\n    return {\n        # field: value\n    }\n\n\nwith description('{DomainEntity}'):\n\
+  \    with context('that has been created'):\n        with it('should have {initial\
+  \ property} assigned'):\n            # Arrange / Act\n            entity = {DomainEntity}(**default_{related_data}())\n\
+  \            # Assert\n            expect(entity.{property}).to(equal({expected_value}))\n\
+  \n    with context('that is {active state}'):\n        with before.each:\n     \
+  \       self.entity = {DomainEntity}(**default_{related_data}())\n\n        with\
+  \ it('should {behavior description}'):\n            # Act\n            self.entity.{action}({input})\n\
+  \            # Assert\n            expect(self.entity.{property}).to(equal({expected_value}))\n\
+  \n        with it('should {second behavior}'):\n            # Arrange\n        \
+  \    {local_setup} = {value}\n            # Act\n            self.entity.{action}({local_setup})\n\
+  \            # Assert\n            expect(self.entity.{property}).to(equal({expected_value}))\n\
+  \n\nPrepend the following block verbatim as the very first lines of the file you\
+  \ are writing - before any imports, before any code.\n\nEvery tool call uses this\
+  \ shape - set `tool` and `arguments`, pipe to CLI:\n\n```yaml\ntoolset: context_tools.bdd.bdd:Bdd\n\
+  context:\n  fidelity: behavior\n  format: python\ntool: <tool name>\narguments:\n\
+  \  <if needed>\n```\n\nRun: python -m tools run -\n\nSuggested flow (repeat and\
+  \ reorder as the story needs):\n\n1. tool: ensure_session\n   arguments:\n     name:\
+  \ <value>\n     goal: <value>\n     fidelities: <value>\n     contexts: <value>\n\
+  \     path: <value>\n\n2. tool: read_context_index\n\n3. tool: record_context_root\n\
+  \   arguments:\n     root: <value>\n     note: <value>\n\n4. tool: read_cdr_format\n\
+  \n5. tool: list_cdrs\n\n6. tool: write_cdr\n\n7. tool: generate\n\nRead `resources`\
+  \ from each response before choosing the next tool."
+arguments: {}
+tools:
+- ensure_session
+- read_context_index
+- record_context_root
+- read_cdr_format
+- list_cdrs
+- write_cdr
+- generate
+resources:
+  active:
+    path: src
+    name: null
+    folder: null
+    goal: null
+    fidelities: null
+    contexts: null
+    started: '2026-08-01'
+    ended: null
+    outcome: null
+    handoff: null
+  mode: action
+```

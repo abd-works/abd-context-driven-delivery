@@ -1,6 +1,8 @@
 """BDD spec for Repair kit - action expansion on BaseContextTool hosts."""
 
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +15,7 @@ for _cat in ("primitives", "utilities", "context_tools"):
         sys.path.insert(0, _p)
 
 from expects import be_true, equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
 from primitives.instructions import Instruction
@@ -41,7 +43,7 @@ def _expand(
     toolset_path: str,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return _ActionRunner.instance().run(
+    return _ActionRunner.instance().invoke_action(
         _ActionRunRequest(
             request={"toolset": toolset_path, "context": {}},
             toolset_path=toolset_path,
@@ -139,3 +141,78 @@ with description("Repair on a BaseContextTool host"):
 
         with it("should nest validate prose"):
             expect(_lifecycle("validate") in self.response["instructions"]).to(be_true)
+
+
+with description("write_to_fix tool"):
+    with context("that has a host with a named session"):
+        with before.each:
+            self.tmp_dir = Path(tempfile.mkdtemp())
+            cls = _ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
+            self.host = cls(path=str(self.tmp_dir), session="test")
+            self.log_path = (
+                self.tmp_dir / ".context" / "sessions" / "test" / "to-fix.log"
+            )
+
+        with after.each:
+            shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
+
+        with it("should create to-fix.log when it does not exist"):
+            self.host.write_to_fix(
+                artifact="some/file.md",
+                rule="test-rule",
+                wrong="bad thing happened",
+                original="old",
+                improved="new",
+            )
+            expect(self.log_path.is_file()).to(be_true)
+
+        with it("should write the artifact into the entry"):
+            self.host.write_to_fix(
+                artifact="some/file.md",
+                rule="test-rule",
+                wrong="bad thing happened",
+                original="old",
+                improved="new",
+            )
+            content = self.log_path.read_text(encoding="utf-8")
+            expect("artifact: some/file.md" in content).to(be_true)
+
+        with it("should append a second entry when the log already exists"):
+            self.host.write_to_fix(
+                artifact="a.md", rule="r1", wrong="w1", original="o1", improved="i1"
+            )
+            self.host.write_to_fix(
+                artifact="b.md", rule="r2", wrong="w2", original="o2", improved="i2"
+            )
+            content = self.log_path.read_text(encoding="utf-8")
+            expect(content.count("artifact: ")).to(equal(2))
+
+
+with description("log_fix action on a BaseContextTool host"):
+    with context("log_fix expanded on CarChronicle"):
+        with before.all:
+            cls = _ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
+            self.host = cls()
+            self.response = _expand(
+                self.host,
+                "log_fix",
+                toolset_path=_CAR_CHRONICLE_TOOLSET,
+                arguments={
+                    "artifact": "some/file.md",
+                    "rule": "test-rule",
+                    "wrong": "bad thing happened",
+                    "original": "old",
+                    "improved": "new",
+                },
+            )
+
+        with it("should set action to log_fix"):
+            expect(self.response["action"]).to(equal("log_fix"))
+
+        with it("should name write_to_fix on tools"):
+            expect(self.response["tools"]).to(equal(["write_to_fix"]))
+
+        with it("should inline log_fix prose"):
+            expect(
+                "When the user says **to fix**" in self.response["instructions"]
+            ).to(be_true)

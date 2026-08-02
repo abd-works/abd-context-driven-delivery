@@ -14,7 +14,7 @@ except ImportError:  # pragma: no cover
     yaml = None  # type: ignore
 
 
-def unfence(text: str) -> str:
+def _unfence(text: str) -> str:
     lines = text.strip().splitlines()
     if lines and lines[0].startswith("```"):
         lines = lines[1:]
@@ -23,14 +23,14 @@ def unfence(text: str) -> str:
     return "\n".join(lines)
 
 
-def fenced(body: str, *, lang: str = "yaml") -> str:
+def _fenced(body: str, *, lang: str = "yaml") -> str:
     return f"```{lang}\n{body.rstrip()}\n```"
 
 
 def load_fenced(text: str) -> Any:
     if yaml is None:
         raise RuntimeError("PyYAML required to parse YAML")
-    return yaml.safe_load(unfence(text))
+    return yaml.safe_load(_unfence(text))
 
 
 def _serialize_value(raw_value: Any) -> Any:
@@ -43,7 +43,7 @@ def _serialize_value(raw_value: Any) -> Any:
     return raw_value
 
 
-def dump_manifest(manifest_data: dict[str, Any]) -> str:
+def _dump_manifest(manifest_data: dict[str, Any]) -> str:
     if yaml is None:
         raise RuntimeError("PyYAML required to render YAML")
     return yaml.safe_dump(

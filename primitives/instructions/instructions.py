@@ -193,6 +193,8 @@ class Instruction:
             return True
         if self.text.startswith("#"):
             return True
+        if self.text.startswith("\u00a7 ") or " \u00a7 " in self.text:
+            return True
         path_part, _ = self._split_section()
         if not path_part or "\n" in path_part:
             return False

@@ -20,14 +20,22 @@ The seam is the path from a decorated `@action` method to an expanded run payloa
 
 ## Public API
 
-**`Action`** — named handle for one discovered action (name + callable); contributes its own signature entry to the manifest. `@action` only exposes that surface — it is not the seam itself. Run path is `action:` via Tools/`ToolsetExtensions` (private `_ActionRunner`), not a second public runner type.
+**`@action`** — decorator that marks a toolset method as an orchestration recipe. The body is read as instructions, not executed.
 
-**`ActionValidationError`** — raised when an `@action` body reaches across instances or names unknown members.
+**`@agentic_toolset`** — class decorator parallel to `@toolset`. Use instead of `@toolset` on any class that declares `@action` methods. Merges `AgenticToolset` into the class so the `mode` resource is available.
 
-**`add_action_wrapper` / `require_action`** — compose wrapper chains around actions (e.g. sketch/grill).
+**`AgenticToolset`** — base class added by `@agentic_toolset`. Contributes the `mode` resource (`"action"` by default). Controls how a cross-instance action call — `self.other_agentic_toolset().some_action()` — behaves:
 
-**`AgentWithActions`** — scaffold host that generates toolsets with
- `@action` recipes (generator seam, not the authoring annotation).
+- `"action"` (default) — the callee's full action instructions and tool calls it needs to make is inlined into the caller's instructions. The agent sees the complete recipe.
+- `"tool"` — the cross-instance call is treated like any other tool: the companion action name appears in the caller's expansion `tools` list, but its instructions and inner tools are not inlined. The caller decides when to invoke that action and then receives its internal instructions.
+
+Setting `mode` to any value other than `"action"` or `"tool"` raises `ValueError`.
+
+**`Action`** — named handle for one discovered action (name + callable); contributes its own signature entry to the manifest. Exposes `instructions` (the action's docstring text), `signature_entry` (the manifest dict with `kind`, `tools`, etc.), and `add_to_signature` (writes the entry into a signature dict). `@action` only exposes that surface — it is not the seam itself. Run path is `action:` via Tools/`ToolsetExtensions` (private `_ActionRunner`), not a second public runner type.
+
+**`ActionValidationError`** — raised when an `@action` body reaches across instances or names unknown members. Carries `class_name`, `action_name`, and `lineno` attributes; formats the message as `Class.action[:lineno] - reason`.
+
+**`AgentWithActions`** — scaffold host that generates toolsets with `@action` recipes (generator seam in `agent_with_actions.py`, not the authoring annotation).
 
 ## Dependencies
 
@@ -36,9 +44,3 @@ The seam is the path from a decorated `@action` method to an expanded run payloa
 **primitives** — instruction-slot expansion.
 
 Self-registers with `ToolsetExtensions` on import (`_register` / `_discover_actions` / `_ActionRunner`). Does not own toolset loading or the CLI entrypoint.
-
-## Scan violations
-
-- **deep-module** — cleared.
-- **information-hiding** — cleared (`SignatureEntry` / `ManifestDocument` on `Action`).
-- **complexity-absorption** — cleared (`_ActionExpandRequest` / `_ActionRunRequest` value objects).

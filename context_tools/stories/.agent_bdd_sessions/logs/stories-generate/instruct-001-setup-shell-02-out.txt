@@ -1,0 +1,9 @@
+Set-Content : Cannot bind parameter 'Encoding'. Cannot convert value "utf8NoBOM" to type 
+"Microsoft.PowerShell.Commands.FileSystemCmdletProviderEncoding". Error: "Unable to match the identifier name 
+utf8NoBOM to a valid enumerator name. Specify one of the following enumerator names and try again:
+Unknown, String, Unicode, Byte, BigEndianUnicode, UTF8, UTF7, UTF32, Ascii, Default, Oem, BigEndianUTF32"
+At C:\Users\thoma\AppData\Local\Temp\ps-script-5aba0bb3-8bc4-479a-95e6-e53e803a275d.ps1:99 char:158
++ ... 1 | Set-Content -Path ".tmp-stories-manifest.txt" -Encoding utf8NoBOM
++                                                                 ~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Set-Content], ParameterBindingException
+    + FullyQualifiedErrorId : CannotConvertArgumentNoMessage,Microsoft.PowerShell.Commands.SetContentCommand

@@ -40,7 +40,7 @@ def _expand_action(
     context: dict[str, Any] | None = None,
     arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return _ActionRunner.instance().run(
+    return _ActionRunner.instance().invoke_action(
         _ActionRunRequest(
             request={"toolset": toolset_path, "context": context or {}},
             toolset_path=toolset_path,
@@ -111,8 +111,17 @@ with description("AgentBdd action expansion"):
                     context={"format": "python"},
                 )
 
-            with it("should name scan on tools"):
-                expect(self.response["tools"]).to(equal(["scan"]))
+            with it("should name open session tools then scan"):
+                expect(self.response["tools"]).to(
+                    equal(
+                        [
+                            "ensure_session",
+                            "read_context_index",
+                            "record_context_root",
+                            "scan",
+                        ]
+                    )
+                )
 
             with it("should inline bdd validate prose via nested bdd validate"):
                 validate_prose = _lifecycle_prose("validate")

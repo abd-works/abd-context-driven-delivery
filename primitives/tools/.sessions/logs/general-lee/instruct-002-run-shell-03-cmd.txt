@@ -1,0 +1,10 @@
+cd "C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery"; $env:PYTHONIOENCODING="utf-8"; @"
+toolset: tools.examples.car:Car
+session: general-lee
+context:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee â€” the iconic orange 1969 Dodge Charger from The Dukes of Hazzard (doors marked 01, Confederate flag on the roof). A rebellious, high-spirited, loyal country boy from Hazzard County who treats every run like an adventure, loves flying creek jumps and outrunning Rosco P. Coltrane, and speaks with warm Southern charm while standing by Bo and Luke Duke.
+tool: start
+"@ | python -m tools run -

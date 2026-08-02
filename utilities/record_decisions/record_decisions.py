@@ -14,35 +14,32 @@ _FORMAT_PATH = Path(__file__).parent / "CDR-FORMAT.md"
 _CDR_NAME_RE = re.compile(r"^(\d{4})-")
 
 
-def _cdr_dir(root: str) -> Path:
-    """Resolve the CDR directory under a workspace root (pure)."""
-    return Path(root) / ".context" / "cdr"
-
-
-def _next_cdr_number(cdr_dir: Path) -> int:
-    """Return the next sequential CDR number from existing files (pure)."""
-    if not cdr_dir.is_dir():
-        return 1
-    highest = 0
-    for path in cdr_dir.iterdir():
-        if not path.is_file():
-            continue
-        match = _CDR_NAME_RE.match(path.name)
-        if match:
-            highest = max(highest, int(match.group(1)))
-    return highest + 1
-
-
-def _cdr_path(root: str, slug: str, number: int | None = None) -> Path:
-    """Resolve a CDR path; number defaults to next available (semi-pure)."""
-    cdr_dir = _cdr_dir(root)
-    n = number if number is not None else _next_cdr_number(cdr_dir)
-    return cdr_dir / f"{n:04d}-{slug}.md"
-
-
 @toolset
 class RecordDecisions:
     """Offer CDRs sparingly and persist them under .context/cdr/."""
+
+    def _cdr_dir(self, root: str) -> Path:
+        """Resolve the CDR directory under a workspace root (pure)."""
+        return Path(root) / ".context" / "cdr"
+
+    def _next_cdr_number(self, cdr_dir: Path) -> int:
+        """Return the next sequential CDR number from existing files (pure)."""
+        if not cdr_dir.is_dir():
+            return 1
+        highest = 0
+        for path in cdr_dir.iterdir():
+            if not path.is_file():
+                continue
+            match = _CDR_NAME_RE.match(path.name)
+            if match:
+                highest = max(highest, int(match.group(1)))
+        return highest + 1
+
+    def _cdr_path(self, root: str, slug: str, number: int | None = None) -> Path:
+        """Resolve a CDR path; number defaults to next available (semi-pure)."""
+        cdr_dir = self._cdr_dir(root)
+        n = number if number is not None else self._next_cdr_number(cdr_dir)
+        return cdr_dir / f"{n:04d}-{slug}.md"
 
     @tool
     def read_cdr_format(self) -> str:
@@ -54,7 +51,7 @@ class RecordDecisions:
     def list_cdrs(self, root: str) -> str:
         """List CDR files under {root}/.context/cdr/.
         Returns newline-separated paths sorted by filename; empty string if missing or empty."""
-        cdr_dir = _cdr_dir(root)
+        cdr_dir = self._cdr_dir(root)
         if not cdr_dir.is_dir():
             return ""
         return "\n".join(str(path) for path in sorted(cdr_dir.glob("*.md")))
@@ -66,7 +63,7 @@ class RecordDecisions:
         content: full markdown following CDR-FORMAT.md (title + 1-3 sentence body; optional sections only when valuable).
         slug: kebab-case short name (e.g. 'event-sourced-orders').
         Returns the resolved path. Call immediately when a qualifying decision crystallises - do not batch."""
-        target = _cdr_path(root, slug)
+        target = self._cdr_path(root, slug)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content.strip() + "\n", encoding="utf-8")
         return str(target)

@@ -1,1 +1,14 @@
-python -m tools run -
+$yaml = @"
+toolset: primitives.actions.examples.car:Car
+context:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee
+action: travelTo
+arguments:
+  destination: Hazzard County courthouse
+  conditions: muddy back roads, Sheriff Rosco in pursuit
+"@
+$env:PYTHONIOENCODING="utf-8"
+$yaml | python -m tools run -

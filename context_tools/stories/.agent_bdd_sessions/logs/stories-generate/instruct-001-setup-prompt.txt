@@ -1,0 +1,1 @@
+Run the manifest command from the @toolset-manifest comment at the top of context_tools/stories/stories.py. Show the manifest output.

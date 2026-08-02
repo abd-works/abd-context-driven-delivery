@@ -1,0 +1,40 @@
+response={"ok": False, "error": "tool and action are mutually exclusive"},
+            )
+        if not tool_name and not action_name:
+            raise RunError(
+                "request missing tool or action",
+                response={"ok": False, "error": "request missing tool or action"},
+            )
+        context = self._mapping_field(request, "context", default={})
+        arguments = self._mapping_field(request, "arguments", default={})
+        session = request.get("session")
+        log_control = request.get("log")
+        return _RunRequest(
+            toolset_path=toolset_path,
+            tool_name=tool_name,
+            action_name=action_name,
+            context=context,
+            arguments=arguments,
+            session=str(session) if session is not None else None,
+            log_control=str(log_control) if log_control is not None else None,
+        )
+
+    def _mapping_field(
+        self, request: dict[str, Any], field_name: str, *, default: dict[str, Any]
+    ) -> dict[str, Any]:
+        field_value = request.get(field_name, default)
+        if not isinstance(field_value, dict):
+            raise RunError(
+                f"{field_name} must be a mapping",
+                response={"ok": False, "error": f"invalid {field_name}"},
+            )
+        return field_value
+
+    def _build_instance(self, toolset_cls: type, context: dict[str, Any]) -> Toolset:
+        try:
+            return toolset_cls(**context)
+        except TypeError as exc:
+            raise RunError(
+                f"invalid context for {toolset_cls.manifest_path}: {exc}",
+                response={"ok": False, "error": "invalid context", "detail": str(exc)},
+            ) from exc

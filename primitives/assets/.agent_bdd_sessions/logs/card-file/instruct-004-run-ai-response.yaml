@@ -1,0 +1,34 @@
+ok: true
+toolset: primitives.assets.examples.card_file.card_file:CardFile
+tool: read_card
+result: '# FAQ
+
+
+  ## What is AssetLocator?
+
+
+  `AssetLocator` resolves a label to a file, folder, or markdown section beside the
+
+  host class. Pass the host object and a label string; call `locate()` to get an
+
+  `AssetLocation` describing what was found.
+
+
+  ## What is Asset?
+
+
+  `Asset` wraps an `AssetLocation` and provides `collect()` to read the content
+
+  as a string.
+
+
+  ## What is AssetCollection?
+
+
+  `AssetCollection` wraps a folder-kind location and provides `collect()` (returns
+
+  a `dict` of filename â†’ content) and `merged()` (returns all files concatenated).
+
+  '
+resources:
+  topic: faq

@@ -24,15 +24,15 @@ from agent_bdd.agent_bdd_common import (
     AgentResult,
     JudgeResult,
     RunResponse,
-    ShellCapture,
-    extract_yaml_from_command,
-    fenced_yaml_from_text,
+    _ShellCapture,
+    _extract_yaml_from_command,
+    _fenced_yaml_from_text,
     cli_output_matches_prompt,
-    log_harness,
+    _log_harness,
     looks_like_tools_run_output,
-    parse_judge_result,
-    replay_tools_run,
-    run_yaml_request,
+    _parse_judge_result,
+    _replay_tools_run,
+    _run_yaml_request,
     yaml_from_prompt,
 )
 from agent_bdd import yaml_fence
@@ -42,10 +42,10 @@ _TOOLS_RUN = re.compile(r"(?:python\s+-m\s+tools\s+run|tools\s+run\b)", re.IGNOR
 
 
 def _log(msg: str) -> None:
-    log_harness("agent_cli_bdd", msg)
+    _log_harness("agent_cli_bdd", msg)
 
 
-class ToolAgentBlock:
+class _ToolAgentBlock:
     """One cursor-agent session - multiple instructs share the same chat."""
 
     def __init__(self, workspace: Path, session_file: Path) -> None:
@@ -55,8 +55,8 @@ class ToolAgentBlock:
         self._yaml = yaml_fence
         self._log_dir = session_file.parent / "logs" / session_file.stem
         self._instruct_count = 0
-        self.last_shell_captures: list[ShellCapture] = []
-        self.session_shell_captures: list[ShellCapture] = []
+        self.last_shell_captures: list[_ShellCapture] = []
+        self.session_shell_captures: list[_ShellCapture] = []
 
     def _write_artifact(self, name: str, content: str) -> Path:
         self._log_dir.mkdir(parents=True, exist_ok=True)
@@ -129,14 +129,14 @@ class ToolAgentBlock:
             if cli_output is None:
                 yaml_body = yaml_from_prompt(full_prompt)
                 if yaml_body:
-                    cli_output = run_yaml_request(yaml_body, self._workspace, prefix=prefix)
+                    cli_output = _run_yaml_request(yaml_body, self._workspace, prefix=prefix)
             if cli_output is not None:
                 return self._finalize_run_response(prefix, capture, cli_output)
         if timed_out:
             yaml_body = yaml_from_prompt(full_prompt)
             if yaml_body:
                 try:
-                    cli_output = run_yaml_request(yaml_body, self._workspace, prefix=prefix)
+                    cli_output = _run_yaml_request(yaml_body, self._workspace, prefix=prefix)
                 except AgentHarnessError:
                     cli_output = None
                 else:
@@ -148,7 +148,7 @@ class ToolAgentBlock:
             )
         yaml_body = yaml_from_prompt(full_prompt)
         if yaml_body:
-            cli_output = run_yaml_request(yaml_body, self._workspace, prefix=prefix)
+            cli_output = _run_yaml_request(yaml_body, self._workspace, prefix=prefix)
             return self._finalize_run_response(prefix, None, cli_output)
         raise AgentHarnessError(
             "no python -m tools run output - agent must invoke the toolset CLI",
@@ -175,7 +175,7 @@ class ToolAgentBlock:
             self.session_shell_captures.extend(capture.shell_captures)
         self._write_artifact(
             f"{prefix}-ai-response.yaml",
-            self._yaml.dump_manifest(
+            self._yaml._dump_manifest(
                 {k: v for k, v in {
                     "ok": ai_response.ok,
                     "toolset": ai_response.toolset,
@@ -191,7 +191,7 @@ class ToolAgentBlock:
         )
         return ai_response
 
-    def ai_judge(self, output: str, rubric: str, *, timeout_seconds: int = 60) -> JudgeResult:
+    def ai_judge(self, output: str, rubric: str, *, timeout_seconds: int = 180) -> JudgeResult:
         _log("judge rubric:")
         sys.__stdout__.write(rubric + "\n")
         sys.__stdout__.flush()
@@ -224,7 +224,7 @@ class ToolAgentBlock:
                 stderr=result.stderr,
                 log_dir=self._log_dir,
             )
-        verdict, reason = parse_judge_result(result.text)
+        verdict, reason = _parse_judge_result(result.text)
         self._write_artifact("judge-verdict.txt", f"{verdict}\n\n{reason}\n")
         if verdict == "ERROR":
             raise AgentJudgeError(
@@ -253,13 +253,19 @@ class ToolAgentBlock:
         args = self._build_agent_args(session, prompt)
         narrative: list[str] = []
         raw_lines: list[str] = []
-        shell_captures: list[ShellCapture] = []
+        shell_captures: list[_ShellCapture] = []
         pending_shell_commands: list[str] = []
         stderr_chunks: list[str] = []
         thread_errors: list[str] = []
 
         proc = subprocess.Popen(
-            args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
         )
 
         def _on_stdout() -> None:
@@ -364,16 +370,16 @@ class ToolAgentBlock:
 @dataclass
 class _AgentRunCapture:
     agent_result: AgentResult
-    shell_captures: list[ShellCapture]
+    shell_captures: list[_ShellCapture]
     raw_lines: list[str]
     workspace: Path
 
 
 @contextmanager
-def cli_agent(workspace: Path, session_file: Path) -> Iterator[ToolAgentBlock]:
+def _cli_agent(workspace: Path, session_file: Path) -> Iterator[_ToolAgentBlock]:
     """Establish one cursor-agent session for nested agent-instruct calls."""
-    ToolAgentBlock.assert_authenticated()
-    block = ToolAgentBlock(workspace, session_file)
+    _ToolAgentBlock.assert_authenticated()
+    block = _ToolAgentBlock(workspace, session_file)
     block._session = AgentSession.get_or_create(
         block._session_file, block._workspace, fresh=False
     )
@@ -386,15 +392,15 @@ def _tools_run_output_from_capture(capture: _AgentRunCapture) -> str | None:
             return shell.output
         for candidate in (shell.command, shell.output):
             if _TOOLS_RUN.search(candidate):
-                replayed = replay_tools_run(candidate, capture.workspace)
+                replayed = _replay_tools_run(candidate, capture.workspace)
                 if replayed:
                     return replayed
     for text in (capture.agent_result.text, "".join(capture.raw_lines)):
-        found = fenced_yaml_from_text(text)
+        found = _fenced_yaml_from_text(text)
         if found:
             return found
     for raw in reversed(capture.raw_lines):
-        found = fenced_yaml_from_text(raw)
+        found = _fenced_yaml_from_text(raw)
         if found:
             return found
     return None
@@ -403,7 +409,7 @@ def _tools_run_output_from_capture(capture: _AgentRunCapture) -> str | None:
 def _collect_shell_capture(
     event: dict[str, Any],
     pending_shell_commands: list[str],
-    shell_captures: list[ShellCapture],
+    shell_captures: list[_ShellCapture],
     narrative: list[str],
 ) -> None:
     etype = event.get("type")
@@ -423,7 +429,7 @@ def _collect_shell_capture(
         output = _extract_shell_output(event, event)
         command = pending_shell_commands.pop(0) if pending_shell_commands else ""
         if output:
-            shell_captures.append(ShellCapture(command=command, output=output))
+            shell_captures.append(_ShellCapture(command=command, output=output))
     elif etype == "tool_call":
         subtype = str(event.get("subtype") or event.get("state") or "")
         tool_call = event.get("tool_call") or {}
@@ -445,7 +451,7 @@ def _collect_shell_capture(
             elif pending_shell_commands:
                 pending_shell_commands.pop(0)
             if output:
-                shell_captures.append(ShellCapture(command=command, output=output))
+                shell_captures.append(_ShellCapture(command=command, output=output))
     elif etype == "result":
         text = str(event.get("result", ""))
         if text:

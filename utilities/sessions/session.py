@@ -8,19 +8,24 @@ from __future__ import annotations
 
 from pathlib import Path
 
-__all__ = ["Session", "WorkspaceSession", "docs_dir"]
+__all__ = ["Session", "WorkspaceSession", "SessionPaths", "docs_dir"]
 
 
-def docs_dir(destination: str | Path) -> Path:
-    """Resolve where process docs live for a destination.
+class SessionPaths:
+    """Path helpers for resolving where process docs live relative to a destination."""
 
-    - Sprint folder (``.../.context/sessions/{name}``) -> write flat into that folder
-    - Working area or module root -> ``{destination}/.context/``
-    """
-    dest = Path(destination)
-    if dest.name and dest.parent.name == "sessions":
-        return dest
-    return dest / ".context"
+    @staticmethod
+    def docs_dir(destination: str | Path) -> Path:
+        """Resolve where process docs live for a destination.
+
+        - Sprint folder (``.../.context/sessions/{name}``) -> write flat into that folder
+        - Working area or module root -> ``{destination}/.context/``
+        """
+        dest = Path(destination)
+        if dest.name and dest.parent.name == "sessions":
+            return dest
+        return dest / ".context"
+
 
 
 def __getattr__(name: str):

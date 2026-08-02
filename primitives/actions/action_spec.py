@@ -66,7 +66,7 @@ with description("@action docstring defaults"):
         with before.all:
             cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
             self.host = cls()
-            self.response = _ActionRunner.instance().run(
+            self.response = _ActionRunner.instance().invoke_action(
                 _ActionRunRequest(
                     request={"toolset": _BASE_TOOLSET, "context": {}},
                     toolset_path=_BASE_TOOLSET,

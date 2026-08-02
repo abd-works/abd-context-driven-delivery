@@ -1,4 +1,9 @@
-"""BDD spec for handoff - Handoff toolset helpers and tools."""
+"""BDD spec for utilities/handoff/handoff.py – Handoff toolset.
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""
 
 import json
 import sys
@@ -18,16 +23,10 @@ sys.modules.pop("handoff", None)
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
-from handoff.handoff import (
-    Handoff,
-    _archive_slug,
-    _collect_state,
-    _context_dir,
-    _grill_headings,
-    _handoff_path,
-    _resolve_archive_slug,
-    _summarize_cdd_sketch,
-)
+from handoff.handoff import Handoff
+
+# Module-level helper for pure-function tests
+_h = Handoff()
 
 
 _SAMPLE_CDD = """\
@@ -54,12 +53,12 @@ theme: Place New Order
 """
 
 
-with description("handoff path helpers"):
-    with it("resolves .context under destination"):
-        expect(str(_context_dir("sandbox/play"))).to(equal(str(Path("sandbox/play") / ".context")))
+with description("a handoff archive path"):
+    with it("should resolve .context under destination"):
+        expect(str(_h._context_dir("sandbox/play"))).to(equal(str(Path("sandbox/play") / ".context")))
 
-    with it("resolves dated archive under .context/handoffs"):
-        expect(str(_handoff_path("sandbox/play", "handoff-2026-07-22-modules"))).to(
+    with it("should resolve dated archive under .context/handoffs"):
+        expect(str(_h._handoff_path("sandbox/play", "handoff-2026-07-22-modules"))).to(
             equal(
                 str(
                     Path("sandbox/play")
@@ -70,24 +69,24 @@ with description("handoff path helpers"):
             )
         )
 
-    with it("builds archive slug from date and focus"):
-        expect(_archive_slug("model fidelity", today=date(2026, 7, 22))).to(
+    with it("should build archive slug from date and focus"):
+        expect(_h._archive_slug("model fidelity", today=date(2026, 7, 22))).to(
             equal("handoff-2026-07-22-model-fidelity")
         )
-        expect(_archive_slug("", today=date(2026, 7, 22))).to(equal("handoff-2026-07-22"))
+        expect(_h._archive_slug("", today=date(2026, 7, 22))).to(equal("handoff-2026-07-22"))
 
-    with it("resolves reserved slug handoff into dated archive"):
-        expect(_resolve_archive_slug(slug="handoff", today=date(2026, 7, 22))).to(
+    with it("should resolve a reserved slug into a dated archive"):
+        expect(_h._resolve_archive_slug(slug="handoff", today=date(2026, 7, 22))).to(
             equal("handoff-2026-07-22")
         )
-        expect(_resolve_archive_slug(focus="modules", today=date(2026, 7, 22))).to(
+        expect(_h._resolve_archive_slug(focus="modules", today=date(2026, 7, 22))).to(
             equal("handoff-2026-07-22-modules")
         )
 
 
-with description("_summarize_cdd_sketch"):
-    with it("extracts fidelity, scope, flow, open, done, and log tail"):
-        summary = _summarize_cdd_sketch(_SAMPLE_CDD)
+with description("a CDD sketch summary"):
+    with it("should extract fidelity, scope, flow, open, done, and log tail"):
+        summary = _h._summarize_cdd_sketch(_SAMPLE_CDD)
         expect(summary["fidelity"]).to(equal("explore"))
         expect(summary["scope"]).to(equal("Increment 1 - place order"))
         expect(summary["flow_status"]).to(equal("in-progress"))
@@ -100,33 +99,39 @@ with description("_summarize_cdd_sketch"):
         )
 
 
-with description("_grill_headings"):
-    with it("lists ### headings"):
+with description("a grill-answers heading list"):
+    with it("should list ### headings"):
         text = "# Grill Answers\n\n### First\n\nbody\n\n### Second\n\nmore\n"
-        expect(_grill_headings(text)).to(equal(["First", "Second"]))
+        expect(_h._grill_headings(text)).to(equal(["First", "Second"]))
 
 
-with description("Handoff toolset"):
-    with context("manifest signature"):
-        with it("exposes resolve, collect, write tools and handoff_session action"):
+with description("the Handoff compact action"):
+    with context("that has its manifest loaded"):
+        with it("should expose resolve, collect, write tools and the handoff_session action"):
             sig = Handoff.manifest.signature
             expect(sig["resolve_working_folder"]["kind"]).to(equal("tool"))
             expect(sig["collect_session_state"]["kind"]).to(equal("tool"))
             expect(sig["write_handoff"]["kind"]).to(equal("tool"))
             expect(sig["handoff_session"]["kind"]).to(equal("action"))
 
-    with context("tools"):
+        with it("should orchestrate resolve, collect, and write when compacting a session"):
+            tools = Handoff.manifest.signature["handoff_session"]["tools"]
+            expect(tools).to(contain("resolve_working_folder"))
+            expect(tools).to(contain("collect_session_state"))
+            expect(tools).to(contain("write_handoff"))
+
+    with context("that is asked to resolve, collect, or write"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
             self.destination = self.tmp.name
             self.toolset = Handoff()
 
-        with it("resolve_working_folder creates .context and returns it"):
+        with it("should create .context and return its path when resolving the working folder"):
             path = Path(self.toolset.resolve_working_folder(self.destination))
             expect(path.is_dir()).to(equal(True))
             expect(path.name).to(equal(".context"))
 
-        with it("collect_session_state reports sketches, grill, and cdd summary"):
+        with it("should report sketches, grill headings, and cdd summary when collecting state"):
             context_dir = Path(self.destination) / ".context"
             context_dir.mkdir()
             (context_dir / "ux-sketch.md").write_text("ux draft", encoding="utf-8")
@@ -141,7 +146,7 @@ with description("Handoff toolset"):
             expect(state["cdd"]["fidelity"]).to(equal("explore"))
             expect(any(p.endswith("ux-sketch.md") for p in state["sketches"])).to(equal(True))
 
-        with it("write_handoff persists dated archive under handoffs/ and handoff-latest"):
+        with it("should persist a dated archive under handoffs/ and update handoff-latest when writing"):
             path = Path(
                 self.toolset.write_handoff(
                     self.destination,
@@ -159,7 +164,7 @@ with description("Handoff toolset"):
             expect(latest.parent.name).not_to(equal("handoffs"))
             expect(latest.read_text(encoding="utf-8")).to(contain("Resume here"))
 
-        with it("write_handoff without focus still uses dated archive not handoff.md"):
+        with it("should use a dated archive slug even without focus when writing"):
             path = Path(
                 self.toolset.write_handoff(
                     self.destination,
@@ -169,6 +174,6 @@ with description("Handoff toolset"):
             expect(path.parent.name).to(equal("handoffs"))
             expect(path.name).to(equal(f"handoff-{date.today().isoformat()}.md"))
 
-        with it("_collect_state returns None cdd when sketch missing"):
-            state = _collect_state(self.destination)
+        with it("should return None for cdd when sketch is missing"):
+            state = self.toolset._collect_state(self.destination)
             expect(state["cdd"]).to(equal(None))

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -11,9 +12,9 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
-from agent_bdd.yaml_fence import fenced, load_fenced
+from agent_bdd.yaml_fence import _fenced, load_fenced
 
 _TOOLS_RUN = re.compile(r"(?:python\s+-m\s+tools\s+run|tools\s+run\b)", re.IGNORECASE)
 
@@ -83,6 +84,11 @@ class AgentResult:
     stderr: str
     elapsed_seconds: float
 
+    @property
+    def stdout(self) -> str:
+        """Alias for text — the agent's captured stdout."""
+        return self.text
+
     def ok(self) -> bool:
         return self.exit_code == 0
 
@@ -139,7 +145,7 @@ class RunResponse:
 
 
 @dataclass(frozen=True)
-class ShellCapture:
+class _ShellCapture:
     command: str
     output: str
 
@@ -186,16 +192,18 @@ class AgentSession:
         if not fresh:
             existing = cls.load(session_file)
             if existing is not None:
-                log_harness("cursor_channel", f"session resumed: {existing.chat_id} ({session_file.name})")
+                _log_harness("cursor_channel", f"session resumed: {existing.chat_id} ({session_file.name})")
                 return existing
         exe = cls.launcher()
         if exe is None:
             raise RuntimeError("cursor-agent not found on PATH")
-        log_harness("cursor_channel", f"creating new session for {session_file.name} in {workspace} ...")
+        _log_harness("cursor_channel", f"creating new session for {session_file.name} in {workspace} ...")
         completed = subprocess.run(
             [exe, "create-chat", "--workspace", str(workspace.resolve())],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=60,
         )
         if completed.returncode != 0:
@@ -211,14 +219,14 @@ class AgentSession:
             )
         session = cls(chat_id=match.group(0), session_file=session_file)
         session.save()
-        log_harness("cursor_channel", f"session created: {session.chat_id}")
+        _log_harness("cursor_channel", f"session created: {session.chat_id}")
         return session
 
     def run(self, prompt: str, workspace: Path, *, timeout_seconds: int = 300) -> AgentResult:
         exe = self.launcher()
         if exe is None:
             raise RuntimeError("cursor-agent not found on PATH")
-        log_harness(
+        _log_harness(
             "cursor_channel",
             f"agent run starting (session={self.chat_id[:8]}..., timeout={timeout_seconds}s)",
         )
@@ -266,7 +274,7 @@ class AgentSession:
                             elif btype == "tool_use":
                                 name = block.get("name", "?")
                                 inp = json.dumps(block.get("input", {}))[:120]
-                                log_harness("cursor_channel", f"tool_use: {name}({inp})")
+                                _log_harness("cursor_channel", f"tool_use: {name}({inp})")
                     elif etype == "result":
                         text = event.get("result", "")
                         narrative.append(text)
@@ -287,7 +295,13 @@ class AgentSession:
 
         started = time.perf_counter()
         proc = subprocess.Popen(
-            args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
         )
         threads = [
             threading.Thread(target=_on_stdout, daemon=True),
@@ -299,7 +313,7 @@ class AgentSession:
         try:
             exit_code = proc.wait(timeout=timeout_seconds)
         except subprocess.TimeoutExpired:
-            log_harness("cursor_channel", f"TIMEOUT after {timeout_seconds}s - killing cursor-agent")
+            _log_harness("cursor_channel", f"TIMEOUT after {timeout_seconds}s - killing cursor-agent")
             proc.kill()
             proc.wait()
             raise
@@ -308,7 +322,7 @@ class AgentSession:
 
         elapsed = time.perf_counter() - started
         if thread_errors:
-            log_harness("cursor_channel", f"stream errors: {'; '.join(thread_errors)}")
+            _log_harness("cursor_channel", f"stream errors: {'; '.join(thread_errors)}")
         return AgentResult(
             exit_code=exit_code,
             text="".join(narrative) or "".join(raw_lines),
@@ -317,7 +331,7 @@ class AgentSession:
         )
 
 
-def log_harness(name: str, msg: str) -> None:
+def _log_harness(name: str, msg: str) -> None:
     import time
 
     ts = time.strftime("%H:%M:%S")
@@ -326,22 +340,28 @@ def log_harness(name: str, msg: str) -> None:
 
 
 def looks_like_tools_run_output(text: str) -> bool:
-    if "ok:" not in text:
+    """True when text looks like fenced ``python -m tools run`` stdout (not arbitrary prose)."""
+    has_ok_line = any(line.strip().startswith("ok:") for line in text.splitlines())
+    if not has_ok_line:
         return False
-    return "resources:" in text or "instructions:" in text or "action:" in text
+    return any(
+        line.strip().startswith(prefix)
+        for line in text.splitlines()
+        for prefix in ("resources:", "instructions:", "action:", "tool:")
+    )
 
 
-def fenced_yaml_from_text(text: str) -> str | None:
+def _fenced_yaml_from_text(text: str) -> str | None:
     if "ok:" not in text:
         return None
     for match in re.finditer(r"```(?:yaml)?\s*\n(.*?)```", text, re.DOTALL | re.IGNORECASE):
         block = match.group(1)
         if looks_like_tools_run_output(block):
-            return fenced(block.strip())
+            return _fenced(block.strip())
     return None
 
 
-def extract_yaml_from_command(command: str) -> str | None:
+def _extract_yaml_from_command(command: str) -> str | None:
     powershell = re.search(r'@"\s*\r?\n(.*?)\"@', command, re.DOTALL)
     if powershell:
         return powershell.group(1).strip()
@@ -389,7 +409,7 @@ def _sanitize_yaml_body(body: str) -> str:
     return "\n".join(lines).strip()
 
 
-def expected_run_fields_from_prompt(prompt: str) -> dict[str, str]:
+def _expected_run_fields_from_prompt(prompt: str) -> dict[str, str]:
     body = yaml_from_prompt(prompt)
     if not body:
         return {}
@@ -404,12 +424,14 @@ def expected_run_fields_from_prompt(prompt: str) -> dict[str, str]:
 
 
 def cli_output_matches_prompt(cli_output: str, prompt: str) -> bool:
-    expected = expected_run_fields_from_prompt(prompt)
+    expected = _expected_run_fields_from_prompt(prompt)
     if not expected:
         return True
     try:
         parsed = RunResponse.from_cli_output(cli_output)
-    except AgentHarnessError:
+    except Exception:
+        # Malformed captures (e.g. Python source mistaken for YAML) must not abort
+        # instruct_use_tool — callers fall back to replaying the prompt YAML.
         return False
     if "action" in expected and parsed.action != expected["action"]:
         return False
@@ -418,17 +440,22 @@ def cli_output_matches_prompt(cli_output: str, prompt: str) -> bool:
     return True
 
 
-def run_yaml_request(yaml_body: str, workspace: Path, *, prefix: str = "") -> str:
+def _run_yaml_request(yaml_body: str, workspace: Path, *, prefix: str = "") -> str:
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
     completed = subprocess.run(
         [sys.executable, "-m", "tools", "run", "-"],
         input=yaml_body,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         cwd=workspace,
         check=False,
+        env=env,
     )
-    stdout = completed.stdout.strip()
-    stderr = completed.stderr.strip()
+    stdout = (completed.stdout or "").strip()
+    stderr = (completed.stderr or "").strip()
     if completed.returncode != 0:
         raise AgentHarnessError(
             f"tools run exited {completed.returncode}",
@@ -448,26 +475,26 @@ def run_yaml_request(yaml_body: str, workspace: Path, *, prefix: str = "") -> st
     return stdout
 
 
-def replay_tools_run(command: str, workspace: Path) -> str | None:
+def _replay_tools_run(command: str, workspace: Path) -> str | None:
     if not _TOOLS_RUN.search(command):
         return None
-    yaml_body = extract_yaml_from_command(command)
+    yaml_body = _extract_yaml_from_command(command)
     if not yaml_body:
         return None
     try:
-        return run_yaml_request(yaml_body, workspace)
+        return _run_yaml_request(yaml_body, workspace)
     except AgentHarnessError:
         return None
 
 
-def parse_judge_result(stdout: str) -> tuple[str, str]:
+def _parse_judge_result(stdout: str) -> tuple[str, str]:
     last_pass: tuple[str, str] | None = None
     last_fail: tuple[str, str] | None = None
     for line in reversed(stdout.splitlines()):
         line = line.strip()
         if not line.startswith("{"):
             continue
-        parsed = parse_judge_json(line)
+        parsed = _parse_judge_json(line)
         if parsed is None:
             continue
         verdict, reason = parsed
@@ -480,7 +507,7 @@ def parse_judge_result(stdout: str) -> tuple[str, str]:
         return last_pass
     if last_fail:
         return last_fail
-    embedded = embedded_judge_verdicts(stdout)
+    embedded = _embedded_judge_verdicts(stdout)
     if embedded:
         for verdict, reason in reversed(embedded):
             if verdict == "PASS":
@@ -491,7 +518,7 @@ def parse_judge_result(stdout: str) -> tuple[str, str]:
     return "ERROR", f"no parseable verdict in output:\n{stdout[:500]}"
 
 
-def parse_judge_json(text: str) -> tuple[str, str] | None:
+def _parse_judge_json(text: str) -> tuple[str, str] | None:
     try:
         obj = json.loads(text)
     except json.JSONDecodeError:
@@ -505,7 +532,7 @@ def parse_judge_json(text: str) -> tuple[str, str] | None:
     return verdict, reason
 
 
-def embedded_judge_verdicts(text: str) -> list[tuple[str, str]]:
+def _embedded_judge_verdicts(text: str) -> list[tuple[str, str]]:
     found: list[tuple[str, str]] = []
     decoder = json.JSONDecoder()
     index = 0
@@ -520,7 +547,7 @@ def embedded_judge_verdicts(text: str) -> list[tuple[str, str]]:
         except json.JSONDecodeError:
             index = start + 1
             continue
-        parsed = parse_judge_json(json.dumps(obj))
+        parsed = _parse_judge_json(json.dumps(obj))
         if parsed is not None:
             found.append(parsed)
         index = end
@@ -603,7 +630,7 @@ def _find_marker_command(text: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 @dataclass
-class RunbookStep:
+class _RunbookStep:
     kind: str
     prompt: str | None = None
     save_as: str | None = None
@@ -611,25 +638,35 @@ class RunbookStep:
 
 
 @dataclass
-class RunbookAssertion:
+class _RunbookAssertion:
     description: str
     expression: str
 
 
 @dataclass
-class RunbookJudge:
+class _RunbookJudge:
     description: str
     output: str
     rubric: str
 
 
 @dataclass
-class RunbookScenario:
+class _RunbookScenario:
     name: str
     session: str | None
-    setup: list[RunbookStep] = field(default_factory=list)
-    assertions: list[RunbookAssertion] = field(default_factory=list)
-    judges: list[RunbookJudge] = field(default_factory=list)
+    setup: list[_RunbookStep] = field(default_factory=list)
+    assertions: list[_RunbookAssertion] = field(default_factory=list)
+    judges: list[_RunbookJudge] = field(default_factory=list)
+
+
+class _AgentSpecRunbookDocument(TypedDict):
+    """Serializable agent-spec runbook for CLI / harness consumers."""
+
+    harness: str
+    workspace: str
+    spec_path: str
+    chat_instruction: str | None
+    scenarios: list[dict[str, Any]]
 
 
 @dataclass
@@ -638,9 +675,9 @@ class AgentSpecRunbook:
     workspace: str
     spec_path: str
     chat_instruction: str | None
-    scenarios: list[RunbookScenario]
+    scenarios: list[_RunbookScenario]
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> _AgentSpecRunbookDocument:
         return {
             "harness": self.harness,
             "workspace": self.workspace,
@@ -701,11 +738,11 @@ def build_runbook(spec_path: Path, *, workspace: Path | None = None) -> AgentSpe
 
 def _extract_scenarios(
     tree: ast.Module, manifest: AgentSpecManifest, source: str
-) -> list[RunbookScenario]:
-    scenarios: list[RunbookScenario] = []
+) -> list[_RunbookScenario]:
+    scenarios: list[_RunbookScenario] = []
     current_name = "default"
     current_session = manifest.session
-    setup_steps: list[RunbookStep] = []
+    setup_steps: list[_RunbookStep] = []
     pending_it: str | None = None
 
     for node in ast.walk(tree):
@@ -714,7 +751,7 @@ def _extract_scenarios(
             if context_name:
                 if setup_steps or pending_it:
                     scenarios.append(
-                        RunbookScenario(
+                        _RunbookScenario(
                             name=current_name,
                             session=current_session,
                             setup=list(setup_steps),
@@ -733,7 +770,7 @@ def _extract_scenarios(
                     save_as = _rb_assignment_target(tree, node, source)
                     timeout = _rb_keyword_int(node, "timeout_seconds")
                     setup_steps.append(
-                        RunbookStep(
+                        _RunbookStep(
                             kind=attr,
                             prompt=prompt,
                             save_as=save_as,
@@ -744,12 +781,12 @@ def _extract_scenarios(
                 output = _rb_expression_source(source, node.args[0]) if node.args else ""
                 rubric = _rb_prompt_arg(source, tree.body, node, 1) or ""
                 scenarios.append(
-                    RunbookScenario(
+                    _RunbookScenario(
                         name=current_name,
                         session=current_session,
                         setup=list(setup_steps),
                         judges=[
-                            RunbookJudge(
+                            _RunbookJudge(
                                 description=pending_it or "ai_judge",
                                 output=output,
                                 rubric=rubric,
@@ -764,17 +801,17 @@ def _extract_scenarios(
             desc = pending_it or "assertion"
             expression = _rb_expression_source(source, node)
             if scenarios and scenarios[-1].name == current_name and not scenarios[-1].setup:
-                scenarios[-1].assertions.append(RunbookAssertion(description=desc, expression=expression))
+                scenarios[-1].assertions.append(_RunbookAssertion(description=desc, expression=expression))
             else:
                 scenario = next((s for s in scenarios if s.name == current_name), None)
                 if scenario is None:
-                    scenario = RunbookScenario(
+                    scenario = _RunbookScenario(
                         name=current_name,
                         session=current_session,
                         setup=list(setup_steps),
                     )
                     scenarios.append(scenario)
-                scenario.assertions.append(RunbookAssertion(description=desc, expression=expression))
+                scenario.assertions.append(_RunbookAssertion(description=desc, expression=expression))
             pending_it = None
 
         if isinstance(node, ast.With):
@@ -784,7 +821,7 @@ def _extract_scenarios(
 
     if setup_steps:
         scenarios.append(
-            RunbookScenario(
+            _RunbookScenario(
                 name=current_name,
                 session=current_session,
                 setup=list(setup_steps),
@@ -794,13 +831,13 @@ def _extract_scenarios(
     merged = _rb_merge_scenarios(scenarios)
     if not merged and manifest.session:
         merged = [
-            RunbookScenario(name="default", session=manifest.session, setup=setup_steps),
+            _RunbookScenario(name="default", session=manifest.session, setup=setup_steps),
         ]
     return merged
 
 
-def _rb_merge_scenarios(scenarios: list[RunbookScenario]) -> list[RunbookScenario]:
-    by_name: dict[str, RunbookScenario] = {}
+def _rb_merge_scenarios(scenarios: list[_RunbookScenario]) -> list[_RunbookScenario]:
+    by_name: dict[str, _RunbookScenario] = {}
     for scenario in scenarios:
         existing = by_name.get(scenario.name)
         if existing is None:

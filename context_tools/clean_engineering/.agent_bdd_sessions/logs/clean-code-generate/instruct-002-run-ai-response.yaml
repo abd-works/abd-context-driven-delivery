@@ -1,0 +1,709 @@
+ok: true
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+action: generate
+result: When done, run validate.
+instructions: "# Generate\n\n1. Follow **`session_guidance`** and the session tools\
+  \ (`read_context_index`, `record_context_root`, `create_session` when needed). Resolve\
+  \ workspace + tool root, then use the **`active`** resource for `active.path` /\
+  \ `active.folder`.\n2. **MUST — prove-read before asking.** Before any grill/iterate\
+  \ question (and before inventing options or story/module names):\n   - Identify\
+  \ **every relevant context file referenced or implied** by the decision — not one\
+  \ favorite type. Typical set: `{workspace}/.context/context-index.md`, owning `*-segment.md`,\
+  \ `module-context.md`, session grill-answers / sketches / handoff, peer story-context,\
+  \ build-order, and any path the plan or prior answers cite. Include index/overlay\
+  \ only for structure hints; **never** treat mid-epic stub columns as inventory.\n\
+  \   - **Read each of those files with the Read tool** (chunk through large ones).\
+  \ Grep, title lists, memory, or primer-only skims **do not count**.\n   - **Prove\
+  \ it in the question turn:** name the path(s) read and ground options in concrete\
+  \ terms from them. If you cannot cite specifics from the relevant files, you have\
+  \ not read them — go read before asking.\n   - Asking from a skim is a **defect**,\
+  \ same class as dumping a whole artifact in one iterate tick.\n3. **`sources-scoped-to-generated-context`**\
+  \ — Hang `**Sources / context:**` on the node they ground: epic / sub-epic / feature\
+  \ / module, or a lower item (scenario, class, screen, component, …). Root or parent-level\
+  \ Sources are fine when those files apply to the **entire** artifact or subtree.\n\
+  4. Apply all guidance and named rules in each **context** — each bullet is a requirement.\n\
+  5. Match **examples** for shape, depth, and tone.\n6. Fill the **template** scaffold\
+  \ and save the artifact under the session layout from `session_guidance`.\n7. Follow\
+  \ any extra build steps included in your instructions when present.\n8. Run **validate**.\
+  \ If it fails, fix the artifact and **validate** again until it passes.\n\n---\n\
+  \nOpen the workspace session in one step: set path (durable root), ensure the sprint\
+  \ exists (create if missing), load context index if present, record this tool's\
+  \ root when keyed. Follow session_guidance. Scope durable work to path and sprint\
+  \ docs to folder.\n\n# Session Guidance\n\n`Session` tracks three things:\n\n| Name\
+  \ | Meaning | Example |\n|------|---------|---------|\n| **path** | Durable tool\
+  \ root (`active.path`) | `…/sandbox` |\n| **folder** | Sprint folder (`active.folder`)\
+  \ | `…/sandbox/.context/sessions/{name}/` |\n| **context_index** | `{workspace_root}/.context/context-index.md`\
+  \ when present | tool → root map |\n\n## Constructor / run context\n\n- `workspace`\
+  \ — workspace root where `context-index.md` lives (default `\".\"`)\n- `path` —\
+  \ durable tool root\n- `session` — sprint slug under `{path}/.context/sessions/{name}/`\n\
+  \n## One call to open\n\n**`open`** — single action before generate / grill / sketch\
+  \ / iterate / validate:\n\n1. Resolve durable root (`path`)\n2. Ensure sprint exists\
+  \ (load or create)\n3. Load context index if present\n4. Record this tool's root\
+  \ when `context_index_key` is set\n\n```yaml\naction: open   # via self.workspace().open()\
+  \ from BaseContextTool\n```\n\nDo **not** separately chain bind + read_context_index\
+  \ + record_context_root from lifecycle bodies — `open` already does that.\n\n##\
+  \ Layout\n\n- **path** — docs → `{path}/.context/`; code/modules → `{path}/`\n-\
+  \ **folder** — `session.md`, grill-answers, engagement sketches, handoff, `to-fix.log`\n\
+  - **context-index** — `{workspace_root}/.context/context-index.md`\n\n## Root when\
+  \ `path` omitted\n\n1. context-index entry for `context_index_key`\n2. else `{workspace_root}/{default_workspace_folder}`\n\
+  \nResource `active` = Session(path='src', name=None).\n\nOffer and write Context\
+  \ Decision Records (CDRs) sparingly as decisions crystallise during the wrapped\
+  \ action - never batch; never invent decisions.\n\nStep 1 - Read the format once\
+  \ via read_cdr_format. Internalise the three-criteria gate and the minimal template.\n\
+  \nStep 2 - Optionally call list_cdrs(root) so you do not re-record an already-captured\
+  \ decision.\n\nStep 3 - During the session (grill, sketch, or generate), watch for\
+  \ decisions that meet ALL three: hard to reverse, surprising without context, and\
+  \ a real trade-off. If any criterion is missing, skip the CDR.\n\nStep 4 - When\
+  \ a qualifying decision crystallises, offer a CDR briefly (title + one-line gist).\
+  \ If the user accepts, call write_cdr immediately with a kebab slug and content\
+  \ matching CDR-FORMAT.md. Do not batch; do not wait until the end.\n\nStep 5 - Keep\
+  \ CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences\
+  \ only when they add genuine value.\n\n# Contexts\n\nDeepen OO design from modules\
+  \ toward production code. Each fidelity **adds** artifacts — do not invent detail\
+  \ from a deeper level.\n\n**Progression:** `partition` (action) → **modules** →\
+  \ **model** → **code**.\n\n| Fidelity | Default format | Produce |\n|---|---|---|\n\
+  | **modules** | markdown (+ drawio) | Independent modules, one-way deps, build order,\
+  \ thin seam terms |\n| **model** | python | Empty `I{Class}` contracts + full module-context;\
+  \ stub example factories |\n| **code** | python | `Class(I{Class})` typed contracts\
+  \ → full production implementation |\n\n---\n\n## Language companion (not a fidelity)\n\
+  \n**Language is not invocable** (`context.fidelity: language` is rejected). Natural-language\
+  \ identity is a **companion** that deepens at every stage through code.\n\n- At\
+  \ each fidelity, refresh prose for terms/classes already named at that stage — definition,\
+  \ story bullets, invariants in plain English.\n- Keep identity on the class (or\
+  \ `## ClassName` section); member bullets move onto members as model/code deepen.\n\
+  - Do **not** invent types, method bodies, relationship kinds, or Public API ahead\
+  \ of the active fidelity.\n- Prose lives under `{session}/{module}/` (markdown sections\
+  \ and/or class docstrings) and is updated in place — never a separate language-only\
+  \ generate run.\n\n---\n\n## modules\n\n**Default format:** markdown  \n**Diagram\
+  \ format:** `drawio` (modules view — blue boxes, seam-term bullets, one-way dependency\
+  \ arrows; template `templates/modules.drawio`). Language channels (python/java/…)\
+  \ are for **model** and later — not required here.\n\n**Goal:** Refine **modules**\
+  \ purpose, primary use case, rationale, key terms, and relationship to other modules.\
+  \ Strive for **independent modules with one-way dependencies** and an explicit **build\
+  \ order**. Thin class/term identification only — enough to show independence.\n\n\
+  A **module** is a named structural boundary that groups closely related classes\
+  \ — and optionally smaller modules — into a single cohesive unit. Modules can be\
+  \ composed of other modules; a highly complex and nested module can be thought of\
+  \ as a sub-system.\n\n- Consume the existing `{session}/.context/{subject}-index.md`\
+  \ and partition chunks if they exist — **do not edit** or wipe partitions.\n- Create\
+  \ module structure (`physical-folder` / `nested-physical-folder`) under `{session}/{module}/`.\n\
+  - When nesting, the **parent module** owns shared base classes/terms (e.g. `powers`\
+  \ owns `Effect`). Specializing children use a path under the parent (`powers/attack`)\
+  \ and depend on the parent — not on siblings. Do **not** invent a `parent/base`\
+  \ submodule (e.g. no `powers/effect`) just to hold shared content; that content\
+  \ belongs on the parent. Diagram: path nesting = containment (children drawn inside\
+  \ the parent box).\n- Seed `{session}/{module}/.context/module-context.md` — thin\
+  \ only: **Purpose** (one paragraph), **Seam** (term/class name list), **Dependencies**\
+  \ (one-way module names), optional **Mechanism** note. No full Public API / `I{Class}`\
+  \ yet.\n- Write `{session}/.context/module-build-order.md` (or a **Build order**\
+  \ section on the subject index): topological order from one-way deps. **Cycles are\
+  \ a hard fail** — grill until deps are one-way.\n- Name terms/classes only enough\
+  \ to show independence. Seed **language companion** prose for those names.\n- Seam\
+  \ terms: **one name per concept** (prefer the type name). Do not list singular and\
+  \ plural of the same term (e.g. `Ability` — not `Ability, Abilities`).\n- Do not\
+  \ add types, method bodies, or relationship kinds (composition / aggregation / association).\n\
+  \n**Dependency rules**\n\n- Dependencies are **one-way** (A → B means B is built\
+  \ before A).\n- Children → parent base; never sibling → sibling.\n- Partition's\
+  \ thin Deps column is a hint; **modules** owns the formal graph and build order.\n\
+  \n### Nested modules\n\nWhen several independently implementable modules share a\
+  \ **real common seam** (shared types, cost rules, activation protocol), nest them\
+  \ under a **parent module** rather than flattening siblings or duplicating the base\
+  \ into every child.\n\n| Kind | Owns | Example |\n|------|------|---------|\n| **Parent**\
+  \ | Shared base types/mechanics + optional parent seam; folder that contains children\
+  \ | `powers/` owns shared **Effect** (rank, duration, descriptors, activate protocol)\
+  \ |\n| **Child** | One independently implementable specialization | `powers/attack`,\
+  \ `powers/movement`, `powers/extras` |\n| **Organisational folder only** | No seam\
+  \ — **not** a module | Do not invent empty parents |\n\n**Rules**\n\n- **`nested-physical-folder`**\
+  \ — Child module path is `{parent}/{child}/` (e.g. `powers/attack/`). Each module\
+  \ that is a real seam owns its own folder and `.context/module-context.md`. Parent\
+  \ shared code lives in the **parent** folder (e.g. types at `powers/`), not copy-pasted\
+  \ into every child — do not invent a `powers/effect` submodule for shared base.\n\
+  - **`shared-base-before-siblings`** — If children would duplicate the same mechanics,\
+  \ extract **parent-owned base** types first; children depend on that base through\
+  \ a thin interface.\n- **`nest-when-shared-else-flat`** — Nest under a parent only\
+  \ when there is shared mechanics or a clear sub-system boundary. Independent top-level\
+  \ concepts (`checks`, `character`) stay flat.\n- **`independent-child`** — A child\
+  \ must still pass \"implement with siblings stubbed\"; it may depend on the **parent\
+  \ base**, not on sibling children.\n- **Naming** — Domain nouns; path form `parent/child`\
+  \ in indexes and sketches (`powers/general`, `conflicts/turns`).\n\nExamples: `powers`\
+  \ (owns Effect) + `powers/attack|control|defense|movement|sensory|general` + `powers/extras|flaws`;\
+  \ `conflicts/turns|actions|conditions`; `gear/equipment|headquarters|vehicles`.\n\
+  \n### Module rules\n\n- **`high-cohesion`** — Classes inside a module share a common\
+  \ purpose and operate on the same domain concept. Cross-class relationships within\
+  \ the module are strong and semantic, not incidental.\n- **`low-coupling`** — Modules\
+  \ depend on each other only through well-defined interfaces. Cross-module dependencies\
+  \ are explicit and minimal — no module reaches into another's internals.\n- **`single-boundary`**\
+  \ — Each module is the single source of truth for its domain concept. No other module\
+  \ holds, mutates, or duplicates that concept's state or rules.\n- **`named-seam-and-constraint`**\
+  \ — Every module owns a *seam* — the public surface of classes and operations callers\
+  \ depend on — paired with a *constraint* stating what callers must do or must not\
+  \ do at that boundary. A module is described by what it requires of its callers,\
+  \ not only by what it holds.\n- **`deep-module`** — The seam stays a short named\
+  \ list of classes and operations with substantial functionality behind it (Ousterhout:\
+  \ small interface, large hidden implementation). If internal helpers leak into the\
+  \ seam, encapsulation is overhead without benefit. Scanner heuristic: at most **40%**\
+  \ of top-level symbols may be public (leading underscore for the rest).\n- **`physical-folder`**\
+  \ — Each module occupies its own folder; class files, markdown documents, and other\
+  \ module-level artifacts live in it. Generated code belongs in that folder — not\
+  \ beside the module, not in a flat dump outside it. Nested modules use child folders\
+  \ under the parent (`nested-physical-folder`). Not every folder is a module — chapter\
+  \ or organisational folders may group several modules and must not be treated as\
+  \ one module unless they own `.context/module-context.md`.\n- **`cohesive-file`**\
+  \ — Put a **class family** in one file: the primary type, its subtypes, and tightly\
+  \ connected peers that only make sense together (element + collection, small aggregate\
+  \ + its part). Name the file after the family concept (`abilities.py` for `Ability`\
+  \ + `Abilities`). Split into another file only when a type is independently reused\
+  \ across families or the file becomes a grab-bag of unrelated types. Do not default\
+  \ to one class per file. **Exception:** `{Type}ExampleFactory` (and its `I{Type}ExampleFactory`\
+  \ + `examples` data) always live in a **sibling file** — never in the production\
+  \ family file (see **Example factories**).\n- **`abstraction-focus`** — Module description\
+  \ names *what* the module does at a higher level than the classes inside it; public\
+  \ verbs are caller-facing, not internal steps or storage layouts.\n- **`layer-separation`**\
+  \ — Adjacent modules operate at different abstraction levels; collapse pass-through\
+  \ modules.\n- **`complexity-absorption`** — Push configuration and edge-case handling\
+  \ into the module; callers pass intent, not setup flags.\n- **`information-hiding`**\
+  \ — Volatile implementation choices must not appear in public signatures or return\
+  \ types.\n- **`temporal-independence`** — Every public operation leaves the module\
+  \ in a valid state; avoid order-coupled APIs or document the constraint.\n- **`general-purpose-surface`**\
+  \ — Public interface is not hardcoded to one caller's UI/workflow.\n- **`errors-out-of-existence`**\
+  \ — Prefer total functions / empty states for routine edges; reserve exceptions\
+  \ for real failures.\n\n### Vanilla module vs. mechanism\n\nA module is either a\
+  \ **vanilla module** or a **mechanism**. Most modules are vanilla — they own one\
+  \ domain concept and are instantiated once.\n\nA **mechanism** is a structural pattern\
+  \ the codebase instantiates more than once. It has:\n- **Variation points** — what\
+  \ changes per instance (the parameters of the pattern).\n- **Fixed parts** — what\
+  \ the pattern enforces across all instances (the constants of the pattern).\n\n\
+  Whether a module is a mechanism is stereotyped lightly at **modules** fidelity and\
+  \ made precise at **model** / **code** (variation points and fixed parts listed\
+  \ in the context file). Mechanism identification is optional and exploratory — pursue\
+  \ it when the pattern is genuinely recurring, not as a default.\n\nAt **modules**\
+  \ fidelity, `.context/module-context.md` is thin: Purpose, Seam (term list), Dependencies\
+  \ (one-way), optional Mechanism note — plus `{session}/.context/module-build-order.md`.\
+  \ At **model** fidelity it expands to **Purpose**, **Primary use case**, **Rationale**,\
+  \ **Seam**, **Public API**, and **Dependencies**.\n\n---\n\n## model\n\n**Default\
+  \ format:** Python\n\n**Goal:** Define the public seam as an **`I{Class}`** contract\
+  \ — what the module exposes, why it is shaped that way, and what callers depend\
+  \ on. No production `Class` yet. Expand `module-context.md` fully. Stub example\
+  \ factories.\n\n- Create **`I{Class}` only** for each Public API type — no production\
+  \ `Class` yet. Public properties and operations are **empty interfaces** (Python:\
+  \ `ABC` + `@abstractmethod` / `@property`+`@abstractmethod` + `...`; Java: `interface`;\
+  \ other channels: abstract/empty equivalent). No internals until code.\n- Name the\
+  \ contract `I{Class}` (e.g. `IShoppingCart`). Keep `I{Class}` and its later extender\
+  \ in the **same file** (`cohesive-file`).\n- When the type will be used from Stories\
+  \ examples, stub **`I{Type}ExampleFactory`** (empty) in a **sibling** `{type}_example_factory.{ext}`\
+  \ file with named methods — see **Example factories** below. Complete the factory\
+  \ at **code** fidelity.\n- Expand `.context/module-context.md` (seeded at modules)\
+  \ with **Purpose**, **Primary use case**, **Rationale**, **Seam**, **Public API**,\
+  \ **Dependencies**, optional **Mechanism stereotype**. Nested children list the\
+  \ **parent base** under Dependencies; parents list children as nested modules (not\
+  \ as a flat dump of sibling APIs).\n- Ensure code and context for a module belong\
+  \ only in that module's folder (parent owns shared base; child owns specialization).\n\
+  - Apply **`cohesive-file`**: one file per class family; example factories live in\
+  \ a sibling file (`example-factory-separate-file`).\n- Edit to carry forward language-companion\
+  \ identity into **Purpose**; expand primary use case and rationale at this fidelity.\n\
+  - Edit class docstrings so member bullets move down onto those members; keep everything\
+  \ inside the module folder (`physical-folder`).\n- Refresh the **language companion**\
+  \ for terms now on the Public API — still no typed signatures in prose ahead of\
+  \ code.\n\n### What is a class\n\nA class is a named idea that earns its own identity\
+  \ because it has at least one of: **distinct identity**, **state**, **behavior**,\
+  \ **structure**, or **interactions** that cannot be collapsed into a property, instance,\
+  \ or subtype of something else.\n\nA class knows things (**state**), does things\
+  \ (**behavior**), interacts with other things (**interactions**), has (**relationships**)\
+  \ with other things, can be a sub type of other things (**inheritance**), and can\
+  \ implement (**interfaces**) — finally, it maintains the (**invariants**) that constrain\
+  \ it.\n\n### Responsibilities\n\nFor each responsibility a class owns, ask: *hold\
+  \ something, do something, or both?* A responsibility may be a property, an operation,\
+  \ or **both** — the class holds state *and* exposes an action that works with it.\n\
+  \n### Properties\n\nThe class must remember something across calls. Named as a **noun\
+  \ phrase**: *remaining budget*, *active status*, *target character*. A **property**\
+  \ encapsulates information a class exposes to its callers together with the logic\
+  \ required to access or update it. A property may be **typed** — carries a concrete\
+  \ type like `Person`, `int`, or `Car` or can be untyped.\n\n- **`use-property-not-accessor`**\
+  \ — Use `@property` (or the language equivalent) for read-only computed values;\
+  \ do not use `get_` / `set_` method prefixes.\n\n### Operations\n\nThe class must\
+  \ do something on demand. Named as a **verb phrase**: *charge card*, *reserve seat*,\
+  \ *compute total*. An **operation** is an action a class performs or a result it\
+  \ computes on demand. Operations may be entirely stateless — depending only on their\
+  \ parameters — or work with the class's own state.\n\n- **`keep-operations-single-responsibility`**\
+  \ — Each operation has one reason to change — pure calculation or orchestration,\
+  \ not both. An operation doing two things reveals either a missing operation or\
+  \ a missing class.\n- **`separate-concerns`** — Pure calculation separate from I/O\
+  \ and mutation.\n- **`use-clear-operation-parameters`** — Prefer 0–2 parameters.\
+  \ When more configuration is needed, the extra parameters reveal a missing value\
+  \ object — promote them to a new class and pass that instead.\n\n### Interfaces\
+  \ (`I{Class}`)\n\nThe public seam of a type is a separate **interface** named **`I{Class}`**,\
+  \ introduced at **model** fidelity. Properties and operations on the interface are\
+  \ empty contracts — typed signatures with no body.\n\n| Channel | `I{Class}` form\
+  \ |\n|---------|-----------------|\n| Python | `class IClass(ABC):` with `@abstractmethod`\
+  \ / `@property`+`@abstractmethod` |\n| Java | `public interface IClass` |\n| TypeScript\
+  \ / JavaScript | abstract or empty-method contract equivalent |\n| Markdown | `###\
+  \ **I{Class}**` compact block (public members only) |\n\n**Code** adds `Class` that\
+  \ **extends / implements** `I{Class}` in the **same file**. Public members are filled\
+  \ on `Class`; private members are empty interfaces on `Class` only — never added\
+  \ to `I{Class}`. `I{Class}` stays as the stable seam throughout (including for hand-written\
+  \ test fakes). Existing production types may satisfy `I{Class}` informally without\
+  \ a formal extends clause.\n\nEmpty vs filled is inferred from the member body (`...`\
+  \ / empty vs real implementation) — no extra abstract flag on the model.\n\n\n###\
+  \ Inheritance and subtypes\n\nA **base class** defines the common identity, state,\
+  \ and behavior shared by a family of related things. It owns everything that is\
+  \ true of every member of that family — the responsibilities, rules, and collaborations\
+  \ that do not change regardless of which specific variant you are dealing with.\n\
+  \nA **subtype** is a class that specialises the base by adding or overriding behavior\
+  \ that only applies to it. The subtype inherits everything the base defines and\
+  \ records **only the delta** — inherited responsibilities are not repeated in the\
+  \ subtype. Use a subtype when the distinction changes what the thing *does*, not\
+  \ just what data it carries.\n\n#### Liskov Substitution rule\n\n**Anywhere the\
+  \ base is used, a subtype must work correctly in its place.** If swapping in a subtype\
+  \ breaks or weakens a rule the base guarantees, the subtype is not a true specialisation\
+  \ — it is a different thing that happens to share some behavior.\n\n### Relationships\n\
+  \nRelationship kind and cardinality are added  here. Three kinds, chosen by lifecycle:\n\
+  \n1. **Composition** — owner controls the other's lifecycle. (`Order` composes `OrderLine`.)\n\
+  2. **Aggregation** — collector groups members that can outlive it. (`Playlist` aggregates\
+  \ `Song`.)\n3. **Association** — both sides are independent; they simply use each\
+  \ other. (`Customer` associates with `SupportAgent`.)\n\n\n### Class Rules\n\nBefore\
+  \ promoting a term to its own class, check whether it fits as a **property** (see\
+  \ *Properties*), an **instance** (see *Instances*), or a **subtype** (see *Inheritance\
+  \ and subtypes*). Only when none of those three fit does something deserve its own\
+  \ class.\n\n- **`keep-classes-single-responsibility`** — Each class has **one reason\
+  \ to change**.\n- **`hide-inner-details`** — Expose **behavior** through named methods;\
+  \ callers see what the class does, not how it stores or arranges its information.\n\
+  - **`eliminate-duplication`** — Repeated logic gets one canonical function.\n- **`use-explicit-dependencies`**\
+  \ — Pass every collaborator through the **constructor**; never reach for a global\
+  \ or construct a collaborator inside construction.\n- **`use-intention-revealing-names`**\
+  \ — Every name — class, property, operation, parameter — answers \"why does this\
+  \ exist?\" No abbreviations, no single-letter identifiers outside trivial loop indices.\n\
+  - **`use-consistent-naming`** — One word per concept across the model. Pick one\
+  \ verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`).\n\
+  \n### Example factories (Fake / Isolated / Production **modes**)\n\nWhen a type\
+  \ is used from **Stories** (helpers / scenario setup), the factory lives in a sibling\
+  \ file, separate from the production family:\n\n| File | Contents |\n|---|---|\n\
+  | `{family}.{ext}` | **`I{Type}`** + production **`{Type}`** (+ subtypes / peers)\
+  \ — production family only |\n| `{type}_example_factory.{ext}` | **`I{Type}ExampleFactory`**\
+  \ + **`{Type}ExampleFactory`** + `examples[{example_key}]` |\n\nDo **not** put factory\
+  \ wiring in the production family file. Do **not** generate `Fake{Type}` / `Isolated{Type}`\
+  \ / `Production{Type}` subclasses — those are **usage modes**, not an inheritance\
+  \ tree.\n\n**PATTERN** (see also `sketch-template.md` and templates):\n\n```\n\n\
+  ## evals/eliminate-duplication/faultyAsset.py\n\ndef subtotal(line_items):\n   \
+  \ total = 0\n    for item in line_items:\n        total += item.extended_price\n\
+  \    return total\n\ndef backup_subtotal(line_items):\n    total = 0\n    for item\
+  \ in line_items:\n        total += item.extended_price\n    return total\n\n\n##\
+  \ evals/eliminate-duplication/repairedAsset.py\n\n\"\"\"\n# @toolset-manifest python\
+  \ -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef subtotal(line_items):\n    return sum(item.extended_price for item in\
+  \ line_items)\n\n\n## evals/enforce-encapsulation/faultyAsset.py\n\nclass Cart:\n\
+  \    def __init__(self, owner):\n        self.owner = owner\n\n\n## evals/enforce-encapsulation/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\nclass Cart:\n    def __init__(self, owner):\n        self._owner = owner\n\
+  \n    @property\n    def owner(self):\n        return self._owner\n\n\n## evals/keep-classes-single-responsibility/faultyAsset.py\n\
+  \nclass CartTotal:\n    def subtotal(self, line_items):\n        return sum(item.extended_price\
+  \ for item in line_items)\n\n    def write_audit(self, path, value):\n        with\
+  \ open(path, \"w\") as audit:\n            audit.write(str(value))\n\n    def calculate_average(self,\
+  \ values):\n        return sum(values) / len(values)\n\n\n## evals/keep-classes-single-responsibility/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\nclass CartTotal:\n    def subtotal(self, line_items):\n        return sum(item.extended_price\
+  \ for item in line_items)\n\n\n## evals/keep-functions-single-responsibility/faultyAsset.py\n\
+  \ndef subtotal(line_items):\n    print(\"calculating subtotal\")\n    total = line_items[0].extended_price\
+  \ + line_items[1].extended_price\n    return total\n\n\n## evals/keep-functions-single-responsibility/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef subtotal(line_items):\n    return sum(item.extended_price for item in\
+  \ line_items)\n\n\n## evals/keep-operations-small-focused/faultyAsset.py\n\ndef\
+  \ huge():\n    a = 1\n    b = 2\n    c = 3\n    d = 4\n    e = 5\n    f = 6\n  \
+  \  g = 7\n    h = 8\n    i = 9\n    j = 10\n    k = 11\n    l = 12\n    m = 13\n\
+  \    n = 14\n    o = 15\n    p = 16\n    q = 17\n    r = 18\n    s = 19\n    t =\
+  \ 20\n    u = 21\n    return a + b + c\n\n\n## evals/keep-operations-small-focused/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef small():\n    return 1\n\n\n## evals/maintain-abstraction-levels/faultyAsset.py\n\
+  \ndef orchestrate_checkout(cart, payment_gateway):\n    with open(\"audit.log\"\
+  , \"w\") as audit:\n        audit.write(str(cart.subtotal()))\n    return payment_gateway.charge(cart.subtotal())\n\
+  \n\n## evals/maintain-abstraction-levels/repairedAsset.py\n\n\"\"\"\n# @toolset-manifest\
+  \ python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef orchestrate_checkout(cart, payment_gateway):\n    total = cart.subtotal()\n\
+  \    return payment_gateway.charge(total)\n\n\n## evals/never-swallow-exceptions/faultyAsset.py\n\
+  \ndef load_cart(path):\n    try:\n        return open(path).read()\n    except:\n\
+  \        pass\n\n\n## evals/never-swallow-exceptions/repairedAsset.py\n\n\"\"\"\n\
+  # @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef load_cart(path):\n    try:\n        return open(path).read()\n    except\
+  \ OSError as error:\n        raise RuntimeError(\"cart unavailable\") from error\n\
+  \n\n## evals/provide-meaningful-context/faultyAsset.py\n\ndef apply_tax(subtotal):\n\
+  \    return subtotal * 0.13\n\ndef split_items(item1, item2):\n    return item1,\
+  \ item2\n\n\n## evals/provide-meaningful-context/repairedAsset.py\n\n\"\"\"\n# @toolset-manifest\
+  \ python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\nTAX_RATE = 0.13\n\ndef apply_tax(subtotal):\n    return subtotal * TAX_RATE\n\
+  \n\n## evals/separate-concerns/faultyAsset.py\n\ndef subtotal(line_items):\n   \
+  \ print(\"subtotal\")\n    return sum(item.extended_price for item in line_items)\n\
+  \n\n## evals/separate-concerns/repairedAsset.py\n\n\"\"\"\n# @toolset-manifest python\
+  \ -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef subtotal(line_items):\n    return sum(item.extended_price for item in\
+  \ line_items)\n\n\n## evals/simplify-control-flow/faultyAsset.py\n\ndef checkout(cart):\n\
+  \    if cart:\n        if not cart.is_empty():\n            if cart.has_items():\n\
+  \                if cart.subtotal() > 0:\n                    if cart.owner:\n \
+  \                       return cart.subtotal()\n    return None\n\n\n## evals/simplify-control-flow/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef checkout(cart):\n    if cart.is_empty():\n        return None\n    return\
+  \ cart.subtotal()\n\n\n## evals/stop-writing-useless-comments/faultyAsset.py\n\n\
+  def checkout(cart):\n    # return the subtotal\n    return cart.subtotal()\n\n\n\
+  ## evals/stop-writing-useless-comments/repairedAsset.py\n\n\"\"\"\n# @toolset-manifest\
+  \ python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef checkout(cart):\n    # Loyalty discount applies only after the configured\
+  \ threshold.\n    return cart.subtotal()\n\n\n## evals/use-clear-function-parameters/faultyAsset.py\n\
+  \ndef place_order(cart, payment_gateway, data):\n    return payment_gateway.charge(cart.subtotal())\n\
+  \n\n## evals/use-clear-function-parameters/repairedAsset.py\n\n\"\"\"\n# @toolset-manifest\
+  \ python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef place_order(cart, payment_gateway):\n    return payment_gateway.charge(cart.subtotal())\n\
+  \n\n## evals/use-consistent-naming/faultyAsset.py\n\ndef checkout_total(line_items):\n\
+  \    return sum(item.extended_price for item in line_items)\n\ndef applyDiscount(total):\n\
+  \    return total * 0.9\n\n\n## evals/use-consistent-naming/repairedAsset.py\n\n\
+  \"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef checkout_total(line_items):\n    return sum(item.extended_price for\
+  \ item in line_items)\n\ndef apply_discount(total):\n    return total * 0.9\n\n\n\
+  ## evals/use-domain-language/faultyAsset.py\n\nclass Manager:\n    def process(self):\n\
+  \        return None\n\n\n## evals/use-domain-language/repairedAsset.py\n\n\"\"\"\
+  \n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\nclass Cart:\n    def place_order(self):\n        return Order()\n\n\n##\
+  \ evals/use-exceptions-properly/faultyAsset.py\n\ndef load_cart(path):\n    try:\n\
+  \        return open(path).read()\n    except:\n        pass\n\n\n## evals/use-exceptions-properly/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef load_cart(path):\n    try:\n        return open(path).read()\n    except\
+  \ OSError as error:\n        raise RuntimeError(\"cart unavailable\") from error\n\
+  \n\n## evals/use-explicit-dependencies/faultyAsset.py\n\nclass Cart:\n    def __init__(self):\n\
+  \        self._repository = CartRepository()\n\n\n## evals/use-explicit-dependencies/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\nclass Cart:\n    def __init__(self, repository):\n        self._repository\
+  \ = repository\n\n\n## evals/use-intention-revealing-names/faultyAsset.py\n\ndef\
+  \ checkout_total(to):\n    return to\n\n\n## evals/use-intention-revealing-names/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef checkout_total(line_items):\n    return sum(line_item.extended_price\
+  \ for line_item in line_items)\n\n\n## examples.md\n\n<!-- @toolset-manifest python\
+  \ -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\
+  \ -->\n<!-- Agent reading this file: run line 1 manifest, then python -m tools run\
+  \ -. Follow response.instructions only. -->\n<!-- invoke-edit: action satisfy |\
+  \ toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering -->\n\
+  <!-- invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\
+  \ -->\n\n<!--\n  clean_engineering markdown examples — ShoppingCart domain — unified\
+  \ across all fidelities.\n  Fidelity tags:\n    L  = language companion (prose only;\
+  \ refined every stage — not a fidelity)\n    Mu = modules        (thin terms, one-way\
+  \ deps, build order)\n    Md = model          (typed compact block / I{Class})\n\
+  \    S  = specification (relationship kinds, invariant sentences, interactions)\n\
+  -->\n\n# ShoppingCart                                                    <!-- L\
+  \ -->\n\n---\n\n## Language companion                                          \
+  \   <!-- L -->\n\n*ShoppingCart* is a running tally of what a customer intends to\
+  \ buy in a single shopping session. <!-- L -->\n\n### shopping_cart            \
+  \                                      <!-- L -->\n\n- Belongs to exactly one *Customer*\
+  \ whose identity anchors the cart. <!-- L -->\n- Collects *CartItems* as the customer\
+  \ browses and keeps the running total current. <!-- L -->\n- Accepts an optional\
+  \ *Discount* applied before the total is computed. <!-- L -->\n- **Invariant:**\
+  \ Once checked out, the cart may not be modified.  <!-- L -->\n\n### discount  \
+  \                                                     <!-- L -->\n\n- **Invariant:**\
+  \ A discount may not reduce the total below zero.  <!-- L -->\n\n---\n\n## Modules\
+  \ fidelity                                               <!-- Mu -->\n\n### Module\
+  \ `cart`                                                  <!-- Mu -->\n\n- **Purpose:**\
+  \ Owns the shopping-session tally and checkout gate. <!-- Mu -->\n- **Seam (terms):**\
+  \ ShoppingCart, CartItem, Discount              <!-- Mu -->\n- **Dependencies (one-way):**\
+  \ inventory                           <!-- Mu -->\n\n### Module `inventory`    \
+  \                                         <!-- Mu -->\n\n- **Purpose:** Asserts\
+  \ stock availability at checkout.            <!-- Mu -->\n- **Seam (terms):** Inventory\
+  \                                     <!-- Mu -->\n- **Dependencies (one-way):**\
+  \ *(none)*                            <!-- Mu -->\n\n### Build order           \
+  \                                         <!-- Mu -->\n\n1. `inventory`        \
+  \                                             <!-- Mu -->\n2. `cart`           \
+  \                                               <!-- Mu -->\n\n---\n\n## Model fidelity\
+  \                                                 <!-- Md -->\n\n### **IShoppingCart**\
+  \                                              <!-- Md -->\n\nIShoppingCart(customer:\
+  \ Customer)                                  <!-- Md -->\n------\ncustomer: Customer\
+  \                                                 <!-- Md -->\nitems: list[CartItem]\
+  \                                              <!-- Md -->\ndiscount: Discount |\
+  \ None                                         <!-- Md -->\nchecked_out: bool  \
+  \                                                <!-- Md -->\n\tInvariant: Once\
+  \ true, never reverts to false.                  <!-- Md -->\n----\nadd_item(product:\
+  \ str, quantity: int, unit_price: Decimal): None  <!-- Md -->\n\tInvariant: Cart\
+  \ may not be modified after checkout.           <!-- Md -->\n\tInvariant: Quantity\
+  \ must be at least 1.                       <!-- Md -->\nremove_item(product: str):\
+  \ None                                    <!-- Md -->\n\tInvariant: Cart may not\
+  \ be modified after checkout.           <!-- Md -->\napply_discount(discount: Discount):\
+  \ None                           <!-- Md -->\n\tInvariant: Cart may not be modified\
+  \ after checkout.           <!-- Md -->\ncompute_total(): Decimal              \
+  \                             <!-- Md -->\ncheckout(inventory: Inventory): None\
+  \                               <!-- Md -->\n\tInvariant: May not be called when\
+  \ already checked out.        <!-- Md -->\n- _find_item(product: str): CartItem\
+  \ | None                       <!-- Md -->\n\n### **CartItem**                 \
+  \                                 <!-- Md -->\n\nCartItem(product: str, quantity:\
+  \ int, unit_price: Decimal)        <!-- Md -->\n------\nproduct: str           \
+  \                                            <!-- Md -->\nquantity: int        \
+  \                                              <!-- Md -->\n\tInvariant: quantity\
+  \ >= 1.                                      <!-- Md -->\nunit_price: Decimal  \
+  \                                              <!-- Md -->\n\tInvariant: unit_price\
+  \ >= 0.                                   <!-- Md -->\n----\nline_total(): Decimal\
+  \                                              <!-- Md -->\nupdate_quantity(quantity:\
+  \ int): None                               <!-- Md -->\n\n### **Discount**     \
+  \                                             <!-- Md -->\n\nDiscount(code: str,\
+  \ reduction: Decimal)                            <!-- Md -->\n------\ncode: str\
+  \                                                          <!-- Md -->\nreduction:\
+  \ Decimal                                                 <!-- Md -->\n\tInvariant:\
+  \ reduction > 0.                                      <!-- Md -->\n----\nis_valid(cart:\
+  \ ShoppingCart): bool                                 <!-- Md -->\ncompute_reduction(subtotal:\
+  \ Decimal): Decimal                      <!-- Md -->\n\tInvariant: Total may not\
+  \ be reduced below zero.               <!-- Md -->\n\n---\n\n## Specification fidelity\
+  \                                         <!-- S -->\n\n### **ShoppingCart**   \
+  \                                           <!-- S -->\n\n+ ShoppingCart(customer:\
+  \ Customer)                                 <!-- S -->\n------\n+ << association\
+  \ >> customer: Customer                             <!-- S -->\n+ << composition\
+  \ >> items: list[CartItem]                          <!-- S -->\n+ << association\
+  \ >> discount: Discount | None                      <!-- S -->\n+ checked_out: bool\
+  \                                                <!-- S -->\n\tInvariant: Once true,\
+  \ never reverts to false.                  <!-- S -->\n----\n+ add_item(product:\
+  \ str, quantity: int, unit_price: Decimal): None <!-- S -->\n\tInvariant: Cart may\
+  \ not be modified after checkout.           <!-- S -->\n\tInvariant: Quantity must\
+  \ be at least 1.                       <!-- S -->\n\tInteraction:              \
+  \                                     <!-- S -->\n\t\texisting: CartItem | None\
+  \ = _find_item(product)           <!-- S -->\n\t\tif existing: existing.update_quantity(quantity)\
+  \           <!-- S -->\n\t\telse: items.append(CartItem(product, quantity, unit_price))\
+  \ <!-- S -->\n+ remove_item(product: str): None                                \
+  \  <!-- S -->\n\tInvariant: Cart may not be modified after checkout.           <!--\
+  \ S -->\n+ apply_discount(discount: Discount): None                         <!--\
+  \ S -->\n\tInvariant: Cart may not be modified after checkout.           <!-- S\
+  \ -->\n+ compute_total(): Decimal                                         <!-- S\
+  \ -->\n\tInteraction:                                                   <!-- S -->\n\
+  \t\tsubtotal: Decimal = sum(item.line_total() for item in items) <!-- S -->\n\t\t\
+  return discount.compute_reduction(subtotal) if discount else subtotal <!-- S -->\n\
+  + checkout(inventory: Inventory): None                             <!-- S -->\n\t\
+  Invariant: May not be called when already checked out.        <!-- S -->\n\tInteraction:\
+  \                                                   <!-- S -->\n\t\tinventory.assert_available(items)\
+  \                         <!-- S -->\n\t\tchecked_out = True                   \
+  \                     <!-- S -->\n- _find_item(product: str): CartItem | None  \
+  \                     <!-- S -->\n\n---\n\n### **CartItem**                    \
+  \                              <!-- S -->\n\n+ CartItem(product: str, quantity:\
+  \ int, unit_price: Decimal)      <!-- S -->\n------\n+ product: str            \
+  \                                         <!-- S -->\n+ quantity: int          \
+  \                                          <!-- S -->\n\tInvariant: quantity >=\
+  \ 1.                                      <!-- S -->\n+ unit_price: Decimal    \
+  \                                          <!-- S -->\n\tInvariant: unit_price >=\
+  \ 0.                                   <!-- S -->\n----\n+ line_total(): Decimal\
+  \                                            <!-- S -->\n\tInteraction:        \
+  \                                           <!-- S -->\n\t\treturn quantity * unit_price\
+  \                              <!-- S -->\n+ update_quantity(quantity: int): None\
+  \                             <!-- S -->\n\n---\n\n### **Discount**            \
+  \                                      <!-- S -->\n\n+ Discount(code: str, reduction:\
+  \ Decimal)                         <!-- S -->\n------\n+ code: str             \
+  \                                           <!-- S -->\n+ reduction: Decimal   \
+  \                                            <!-- S -->\n\tInvariant: reduction\
+  \ > 0.                                      <!-- S -->\n----\n+ is_valid(cart: ShoppingCart):\
+  \ bool                               <!-- S -->\n+ compute_reduction(subtotal: Decimal):\
+  \ Decimal                    <!-- S -->\n\tInvariant: Total may not be reduced below\
+  \ zero.               <!-- S -->\n\tInteraction:                               \
+  \                    <!-- S -->\n\t\treduced: Decimal = subtotal - reduction   \
+  \                <!-- S -->\n\t\treturn max(reduced, Decimal(\"0\"))           \
+  \              <!-- S -->\n\n\n## examples.py\n\n# @toolset-manifest python -m tools\
+  \ manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow\
+  \ response.instructions only.\n# invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  # invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  from __future__ import annotations\nfrom abc import ABC, abstractmethod\nfrom decimal\
+  \ import Decimal\n\n\nclass IShoppingCart(ABC):\n    \"\"\"Running tally of what\
+  \ a customer intends to buy in a single shopping session.\"\"\"\n\n    @property\n\
+  \    @abstractmethod\n    def customer(self) -> Customer: ...\n\n    @property\n\
+  \    @abstractmethod\n    def items(self) -> list[CartItem]: ...\n\n    @property\n\
+  \    @abstractmethod\n    def discount(self) -> Discount | None: ...\n\n    @property\n\
+  \    @abstractmethod\n    def checked_out(self) -> bool: ...\n\n    @abstractmethod\n\
+  \    def __init__(self, customer: Customer) -> None: ...\n\n    @abstractmethod\n\
+  \    def add_item(self, product: str, quantity: int, unit_price: Decimal) -> None:\
+  \ ...\n\n    @abstractmethod\n    def remove_item(self, product: str) -> None: ...\n\
+  \n    @abstractmethod\n    def apply_discount(self, discount: Discount) -> None:\
+  \ ...\n\n    @abstractmethod\n    def compute_total(self) -> Decimal: ...\n\n  \
+  \  @abstractmethod\n    def checkout(self, inventory: Inventory) -> None: ...\n\n\
+  \nclass ShoppingCart(IShoppingCart):\n    \"\"\"Running tally of what a customer\
+  \ intends to buy in a single shopping session.\"\"\"\n\n    \"\"\"@association -\
+  \ belongs to exactly one customer whose identity anchors the cart.\"\"\"\n    @property\n\
+  \    def customer(self) -> Customer:\n        return self._customer\n\n    \"\"\"\
+  @composition - collects CartItems as the customer browses; keeps the total current.\"\
+  \"\"\n    @property\n    def items(self) -> list[CartItem]:\n        return self._items\n\
+  \n    \"\"\"@association - optional reduction rule applied before the total is computed.\"\
+  \"\"\n    @property\n    def discount(self) -> Discount | None:\n        return\
+  \ self._discount\n\n    \"\"\"Seals the cart permanently once the customer commits\
+  \ to checkout.\"\"\"\n    # Invariant: once true, never reverts to false.\n    @property\n\
+  \    def checked_out(self) -> bool:\n        return self._checked_out\n\n    def\
+  \ __init__(self, customer: Customer) -> None:\n        self._customer = customer\n\
+  \        self._items: list[CartItem] = []\n        self._discount: Discount | None\
+  \ = None\n        self._checked_out = False\n\n    # region Public operations\n\n\
+  \    \"\"\"Adds a line to the cart; merges quantity if the product is already present.\"\
+  \"\"\n    # Invariant: cart may not be modified after checkout.\n    # Invariant:\
+  \ quantity must be at least 1.\n    def add_item(self, product: str, quantity: int,\
+  \ unit_price: Decimal) -> None:\n        ...\n\n    def remove_item(self, product:\
+  \ str) -> None:\n        ...\n\n    \"\"\"Attaches a reduction rule; replaces any\
+  \ previously applied discount.\"\"\"\n    def apply_discount(self, discount: Discount)\
+  \ -> None:\n        ...\n\n    \"\"\"Sums line totals and applies the discount if\
+  \ one is present.\"\"\"\n    def compute_total(self) -> Decimal:\n        ...\n\n\
+  \    \"\"\"Verifies availability with Inventory, then seals the cart; raises if\
+  \ already checked out.\"\"\"\n    def checkout(self, inventory: Inventory) -> None:\n\
+  \        ...\n\n    # endregion\n\n    # region Private operations (empty until\
+  \ code)\n\n    @abstractmethod\n    def _find_item(self, product: str) -> CartItem\
+  \ | None: ...\n\n    # endregion\n\n    # region Interactions (specification only)\n\
+  \n    @abstractmethod\n    def adding_an_item_merges_if_product_already_present(self)\
+  \ -> None:\n        \"\"\"@interaction\"\"\"\n        ...\n\n    @abstractmethod\n\
+  \    def checkout_verifies_availability_before_sealing(self) -> None:\n        \"\
+  \"\"@interaction\"\"\"\n        ...\n\n    # endregion\n\n\nclass ICartItem(ABC):\n\
+  \    \"\"\"A single product choice inside a ShoppingCart.\"\"\"\n\n    @property\n\
+  \    @abstractmethod\n    def product(self) -> str: ...\n\n    @property\n    @abstractmethod\n\
+  \    def quantity(self) -> int: ...\n\n    @property\n    @abstractmethod\n    def\
+  \ unit_price(self) -> Decimal: ...\n\n    @abstractmethod\n    def __init__(self,\
+  \ product: str, quantity: int, unit_price: Decimal) -> None: ...\n\n    @abstractmethod\n\
+  \    def line_total(self) -> Decimal: ...\n\n    @abstractmethod\n    def update_quantity(self,\
+  \ quantity: int) -> None: ...\n\n\nclass CartItem(ICartItem):\n    \"\"\"A single\
+  \ product choice inside a ShoppingCart.\"\"\"\n\n    # Invariant: quantity is at\
+  \ least one.\n    # Invariant: unit_price is non-negative.\n\n    @property\n  \
+  \  def product(self) -> str:\n        return self._product\n\n    @property\n  \
+  \  def quantity(self) -> int:\n        return self._quantity\n\n    @property\n\
+  \    def unit_price(self) -> Decimal:\n        return self._unit_price\n\n    def\
+  \ __init__(self, product: str, quantity: int, unit_price: Decimal) -> None:\n  \
+  \      self._product = product\n        self._quantity = quantity\n        self._unit_price\
+  \ = unit_price\n\n    def line_total(self) -> Decimal:\n        ...\n\n    def update_quantity(self,\
+  \ quantity: int) -> None:\n        ...\n\n\nclass IDiscount(ABC):\n    \"\"\"A reduction\
+  \ rule a customer applies to a ShoppingCart.\"\"\"\n\n    @property\n    @abstractmethod\n\
+  \    def code(self) -> str: ...\n\n    @property\n    @abstractmethod\n    def reduction(self)\
+  \ -> Decimal: ...\n\n    @abstractmethod\n    def __init__(self, code: str, reduction:\
+  \ Decimal) -> None: ...\n\n    @abstractmethod\n    def is_valid(self, cart: IShoppingCart)\
+  \ -> bool: ...\n\n    @abstractmethod\n    def compute_reduction(self, subtotal:\
+  \ Decimal) -> Decimal: ...\n\n\nclass Discount(IDiscount):\n    \"\"\"A reduction\
+  \ rule a customer applies to a ShoppingCart.\"\"\"\n\n    # Invariant: discount\
+  \ cannot reduce total below zero.\n\n    @property\n    def code(self) -> str:\n\
+  \        return self._code\n\n    @property\n    def reduction(self) -> Decimal:\n\
+  \        return self._reduction\n\n    def __init__(self, code: str, reduction:\
+  \ Decimal) -> None:\n        self._code = code\n        self._reduction = reduction\n\
+  \n    def is_valid(self, cart: IShoppingCart) -> bool:\n        ...\n\n    def compute_reduction(self,\
+  \ subtotal: Decimal) -> Decimal:\n        ...\n\n\n\"\"\"\n# @toolset-manifest python\
+  \ -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow\
+  \ response.instructions only.\n# invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  # invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \nCleanEngineering Python template - two files when Stories-bound:\n\n    {family_slug}.py\
+  \                 - I{Class} + {Class} (+ subtypes)   PRODUCTION\n    {type_slug}_example_factory.py\
+  \   - I{Class}ExampleFactory + factory  SEPARATE\n\nA production file holds the\
+  \ public seam I{Class}, the production Class that\nextends it, subtypes, and tightly\
+  \ connected peers. Not one class per file.\nExample factories are NEVER in that\
+  \ file (example-factory-separate-file).\n\nLayout (physical-folder): write each\
+  \ file under the **module** folder\n(e.g. {module_slug}/{family_slug}.py). Module\
+  \ context:\n{module_slug}/.context/module-context.md.\n\nNaming:\n    File (production)\
+  \  {family_slug}.py\n    File (factory)     {type_slug}_example_factory.py\n   \
+  \ Interface          I{Class}                (public seam; model fidelity)\n   \
+  \ Class              {Class}(I{Class})       (production; specification+)\n    ExampleFactory\
+  \     {Class}ExampleFactory   (plain class; no Loader base; Md+/S+)\n    Modes \
+  \             Fake | Isolated | Production  (factory behavior - not subclasses)\n\
+  \    Property           {owned_property}, ...     (snake_case slots)\n    Operation\
+  \          {operation_name}, ...     (snake_case slots)\n    Params            \
+  \ {param}, {dep}\n    Type slots         {Type}, {ReturnType}\n    Invariant   \
+  \       comment                 (plain-English; not a method)\n    Interaction \
+  \       abstract method at S    (on Class only; dropped at code)\n\nFidelity tags:\n\
+  \    L  = language companion (prose; refined every stage - not a fidelity)\n   \
+  \ Mu = modules       (thin terms, one-way deps, build order - markdown / module-context)\n\
+  \    Md = model         (I{Class} only - empty public props/ops; optional I{Class}ExampleFactory\
+  \ in factory file)\n    S  = specification (Class extends I{Class}; public filled;\
+  \ privates empty on Class;\n                       {Class}ExampleFactory modes in\
+  \ sibling factory file when Stories-bound)\n    C  = code          (fill remaining\
+  \ empties on Class; drop interactions)\n\"\"\"\n\nfrom __future__ import annotations\n\
+  from abc import ABC, abstractmethod\n\n\n# =============================================================================\n\
+  # FILE: {family_slug}.py - production family only (cohesive-file)\n# =============================================================================\n\
+  \n\nclass I{ClassName}(ABC):                                                # Md\n\
+  \    \"\"\"*{ClassName}* is - one sentence: what it is, its unique role.\n    Identity\
+  \ only. No relationship or behavior sentences here.\"\"\"     # L\n\n    # -- Public\
+  \ properties (empty interfaces) --------------------------------\n\n    @property\
+  \                                                           # Md\n    @abstractmethod\
+  \                                                     # Md\n    def {owned_property}(self)\
+  \ -> {Type}: ...                           # Md\n\n    @property               \
+  \                                            # Md\n    @abstractmethod         \
+  \                                            # Md\n    def {plain_property}(self)\
+  \ -> {Type}: ...                           # Md\n\n    # -- Public operations (empty\
+  \ interfaces) --------------------------------\n\n    @abstractmethod          \
+  \                                           # Md\n    def __init__(self, {param}:\
+  \ {Type}) -> None: ...                    # Md\n\n    @abstractmethod          \
+  \                                           # Md\n    def {operation_name}(self,\
+  \ {param}: {Type}) -> {ReturnType}: ...    # Md\n\n    @abstractmethod         \
+  \                                            # Md\n    def {another_operation}(self)\
+  \ -> {ReturnType}: ...                  # Md\n\n\nclass {ClassName}(I{ClassName}):\
+  \                                        # S\n    \"\"\"*{ClassName}* is - one sentence:\
+  \ what it is, its unique role.\"\"\"  # L\n\n    # -- Public properties (filled\
+  \ at specification) -------------------------\n\n    \"\"\"{sentence about this\
+  \ property - what it holds and why.}\n    @composition\"\"\"                   \
+  \                                  # S\n    @property                          \
+  \                                 # S\n    def {owned_property}(self) -> {Type}:\
+  \                               # S\n        ...                               \
+  \                              # S\n\n    \"\"\"{sentence about this plain property.}\"\
+  \"\"                         # L\n    # Invariant: {constraint sentence - the rule\
+  \ in plain English.}    # S\n    @property                                     \
+  \                      # S\n    def {plain_property}(self) -> {Type}:          \
+  \                     # S\n        ...                                         \
+  \                    # S\n\n    # -- Constructor / public operations (filled at\
+  \ specification) -----------\n\n    def __init__(self, {param}: {Type}) -> None:\
+  \                        # S\n        self._{plain_property} = {param}         \
+  \                       # S\n\n    \"\"\"{language bullet for this operation}\"\"\
+  \"                          # L\n    # Invariant: {constraint sentence applicable\
+  \ to this operation.}   # S\n    def {operation_name}(self, {param}: {Type}) ->\
+  \ {ReturnType}:        # S\n        ...                                        \
+  \                     # S / C\n\n    def {another_operation}(self) -> {ReturnType}:\
+  \                      # S\n        \"\"\"{language bullet for this operation}\"\
+  \"\"                      # L\n        ...                                     \
+  \                        # S / C\n\n    # -- Private operations (empty interfaces\
+  \ at S; filled at C) -------------\n\n    \"\"\"{what this helper does}\"\"\"  \
+  \                                     # S\n    @abstractmethod                 \
+  \                                    # S\n    def _{private_helper}(self, {param}:\
+  \ {Type}) -> {ReturnType}: ...   # S\n\n    def _{private_helper}(self, {param}:\
+  \ {Type}) -> {ReturnType}:       # C\n        \"\"\"{what this helper does}\"\"\"\
+  \                                   # S\n        ...                           \
+  \                                  # C\n\n    # -- Interactions (specification only;\
+  \ omit at code) ---------------------\n\n    @abstractmethod                   \
+  \                                  # S\n    def {interaction_summary_as_a_method_name}(self)\
+  \ -> None:           # S\n        \"\"\"@interaction\"\"\"\n        ...\n\n\n# Subtype\
+  \ - delta only; parent members are inherited, not repeated     # Md/S\nclass I{ChildClass}(ABC):\
+  \                                               # Md\n    \"\"\"{delta - what {ChildClass}\
+  \ adds}\"\"\"                              # L\n\n    @abstractmethod          \
+  \                                           # Md\n    def {delta_operation}(self,\
+  \ {param}: {Type}) -> {ReturnType}: ...   # Md\n\n\nclass {ChildClass}({ClassName},\
+  \ I{ChildClass}):                         # S\n    \"\"\"{delta - what {ChildClass}\
+  \ adds or overrides}\"\"\"                 # L\n\n    def {delta_operation}(self,\
+  \ {param}: {Type}) -> {ReturnType}:       # S/C\n        ...                   \
+  \                                          # S/C\n\n\n# =============================================================================\n\
+  # FILE: {type_slug}_example_factory.py - Stories factory (separate file)\n# from\
+  \ .{family_slug} import {ClassName}, I{ClassName}\n# Pattern only - no ExampleLoader\
+  \ base. examples[{example_key}] is a\n# multi-type bundle (not examples[{Type}][...]).\n\
+  # Fake / Isolated / Production are modes - not Fake{ClassName} subclasses.\n# =============================================================================\n\
+  \n\nclass I{ClassName}ExampleFactory(ABC):                                  # Md\n\
+  \    \"\"\"Loads examples[{example_key}] as Fake | Isolated | Production modes.\"\
+  \"\"  # L\n\n    @abstractmethod                                               \
+  \      # Md\n    def load_{example_key}(self, *, mode: str = \"fake\") -> I{ClassName}:\
+  \ ...  # Md\n\n\nclass {ClassName}ExampleFactory(I{ClassName}ExampleFactory):  \
+  \          # S\n    \"\"\"Fake: mock framework + examples; Isolated: {ClassName}(injected\
+  \ mocks);\n    Production: {ClassName}(real collaborators).\"\"\"              \
+  \       # L\n\n    def load_{example_key}(self, *, mode: str = \"fake\") -> I{ClassName}:\
+  \  # S\n        # examples[{example_key}] -> I{ClassName} (+ peer types if needed)\
+  \  # S\n        ...                                                            \
+  \ # S/C\n\n\n\nPrepend the following block verbatim as the very first lines of the\
+  \ file you are writing - before any imports, before any code.\n\nEvery tool call\
+  \ uses this shape - set `tool` and `arguments`, pipe to CLI:\n\n```yaml\ntoolset:\
+  \ context_tools.clean_engineering.clean_engineering:CleanEngineering\ncontext:\n\
+  \  format: python\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python\
+  \ -m tools run -\n\nSuggested flow (repeat and reorder as the story needs):\n\n\
+  1. tool: ensure_session\n   arguments:\n     name: <value>\n     goal: <value>\n\
+  \     fidelities: <value>\n     contexts: <value>\n     path: <value>\n\n2. tool:\
+  \ read_context_index\n\n3. tool: record_context_root\n   arguments:\n     root:\
+  \ <value>\n     note: <value>\n\n4. tool: read_cdr_format\n\n5. tool: list_cdrs\n\
+  \n6. tool: write_cdr\n\nRead `resources` from each response before choosing the\
+  \ next tool."
+tools:
+- ensure_session
+- read_context_index
+- record_context_root
+- read_cdr_format
+- list_cdrs
+- write_cdr
+arguments: {}
+resources:
+  active:
+    path: src
+    name: null
+    folder: null
+    goal: null
+    fidelities: null
+    contexts: null
+    started: '2026-08-01'
+    ended: null
+    outcome: null
+    handoff: null
+  mode: action

@@ -19,7 +19,7 @@ from tools.tool import tool  # noqa: F401
 _FIDELITY_FORMAT_DEFAULTS = {
     "ia": "drawio",
     "mockup": "html",
-        "code": "html",
+    "code": "html",
 }
 
 # Peer channels - same CLI surface; transform moves sideways at one fidelity.

@@ -1,0 +1,22 @@
+The command exited with code 1:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+With no YAML on stdin, `run -` has nothing to dispatch. Pipe a request (for example after manifesting `CarChronicle`) if you want a successful run.The command exited with code 1:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+With no YAML on stdin, `run -` has nothing to dispatch. Pipe a request (for example after manifesting `CarChronicle`) if you want a successful run.The command exited with code 1:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+With no YAML on stdin, `run -` has nothing to dispatch. Pipe a request (for example after manifesting `CarChronicle`) if you want a successful run.

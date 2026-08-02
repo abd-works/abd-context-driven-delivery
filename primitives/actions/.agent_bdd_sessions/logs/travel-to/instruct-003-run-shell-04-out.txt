@@ -1,5 +1,0 @@
-```yaml
-ok: false
-action: travelTo
-error: unknown action
-```

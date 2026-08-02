@@ -14,7 +14,7 @@ _SECRETS_FILE = _PKG_ROOT / "conf" / ".secrets"
 _CATEGORY_DIRS = ("primitives", "utilities", "context_tools")
 
 
-def load_secrets(path: Path | None = None) -> None:
+def _load_secrets(path: Path | None = None) -> None:
     """Load KEY=VALUE lines into os.environ without overwriting existing vars."""
     secrets = path or _SECRETS_FILE
     if not secrets.is_file():
@@ -29,7 +29,7 @@ def load_secrets(path: Path | None = None) -> None:
             os.environ[key] = value
 
 
-def ensure_import_paths() -> None:
+def _ensure_import_paths() -> None:
     """Make repo root and category dirs importable (hybrid nested + flat model)."""
     entries = [str(_REPO_ROOT)]
     entries.extend(str(_REPO_ROOT / name) for name in _CATEGORY_DIRS)
@@ -38,7 +38,7 @@ def ensure_import_paths() -> None:
             sys.path.insert(0, entry)
 
 
-def ensure_hyphenated_import(module_name: str, file_path: Path) -> None:
+def _ensure_hyphenated_import(module_name: str, file_path: Path) -> None:
     """Register a module whose folder uses hyphens instead of underscores."""
     if module_name in sys.modules:
         return
@@ -57,9 +57,9 @@ def ensure_hyphenated_import(module_name: str, file_path: Path) -> None:
     spec.loader.exec_module(module)
 
 
-def configure() -> None:
-    load_secrets()
-    ensure_import_paths()
+def _configure() -> None:
+    _load_secrets()
+    _ensure_import_paths()
 
 
-configure()
+_configure()

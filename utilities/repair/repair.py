@@ -82,10 +82,8 @@ class Repair:
     @action
     def repair(self, asset: str, violation: str) -> str:
         """repair"""
-        self.active
         self.scan()
         self.contexts
         self.examples
         self.templates
-        self.validate()
         return "Repair {{asset}} under {session.path}/ until validate passes."

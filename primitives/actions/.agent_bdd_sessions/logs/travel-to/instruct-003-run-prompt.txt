@@ -1,6 +1,6 @@
 Using shell, run exactly: python -m tools run -
 Pipe this YAML on stdin:
-toolset: agents.example.car:Car
+toolset: primitives.actions.examples.car:Car
 context:
   make: Dodge
   model: Charger

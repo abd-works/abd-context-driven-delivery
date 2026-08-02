@@ -115,223 +115,173 @@ action: {action}
 """
 
 
-def _skill_slug(module_dir_name: str) -> str:
-    return module_dir_name.replace("_", "-")
-
-
-def _command_prefix(module_dir_name: str) -> str:
-    return module_dir_name.split("_")[0]
-
-
-def _command_name(prefix: str, focus_value: str, action: str) -> str:
-    return f"{prefix} {focus_value} {action}"
-
-
-def _toolset_ref(manifest_command: str) -> str:
-    return manifest_command.strip().rsplit(" ", 1)[-1]
-
-
-def _decorator_name(node: ast.expr) -> str | None:
-    if isinstance(node, ast.Name):
-        return node.id
-    if isinstance(node, ast.Attribute):
-        return node.attr
-    if isinstance(node, ast.Call):
-        return _decorator_name(node.func)
-    return None
-
-
-def _decorator_keywords(node: ast.expr) -> dict[str, ast.expr]:
-    if isinstance(node, ast.Call):
-        return {kw.arg: kw.value for kw in node.keywords if kw.arg}
-    return {}
-
-
-def _str_constant(node: ast.expr) -> str | None:
-    if isinstance(node, ast.Constant) and isinstance(node.value, str):
-        return node.value
-    return None
-
-
-def _parse_focus_actions(py_file: Path) -> list[dict[str, str]]:
-    tree = ast.parse(py_file.read_text(encoding="utf-8"))
-    results: list[dict[str, str]] = []
-    for node in tree.body:
-        if not isinstance(node, ast.ClassDef):
-            continue
-        for item in node.body:
-            if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                continue
-            has_action = False
-            focus_group: str | None = None
-            filter_key: str | None = None
-            for dec in item.decorator_list:
-                name = _decorator_name(dec)
-                if name == "action":
-                    has_action = True
-                if name == "focus":
-                    kws = _decorator_keywords(dec)
-                    fg = _str_constant(kws.get("focus")) if "focus" in kws else None
-                    if fg:
-                        focus_group = fg
-                    fk = _str_constant(kws.get("filter_key")) if "filter_key" in kws else None
-                    if fk:
-                        filter_key = fk
-            if has_action and focus_group:
-                results.append({
-                    "action": item.name,
-                    "focus_group": focus_group,
-                    "filter_key": filter_key or _default_filter_key(focus_group),
-                })
-    return results
-
-
-def _list_focus_values(module_dir: Path, focus_group: str) -> list[str]:
-    """List filter values under a focus group - subdirs first, then legacy *.md stems."""
-    group_dir = module_dir / focus_group
-    if not group_dir.is_dir():
-        return []
-    values = {
-        p.name
-        for p in group_dir.iterdir()
-        if p.is_dir() and not p.name.startswith((".", "_"))
-    }
-    values.update(p.stem for p in group_dir.glob("*.md") if p.is_file())
-    return sorted(values)
-
-
-def _stale_focus_skill_slugs(command_prefix: str, focus_values: list[str]) -> list[str]:
-    return [f"{command_prefix}-{value}" for value in focus_values]
-
-
-def _is_self_manifest(py_file: Path, manifest_command: str) -> bool:
-    """Return True only if the manifest command refers to this file's own module."""
-    try:
-        module_class = manifest_command.strip().rsplit(" ", 1)[-1]
-        module_path = module_class.split(":")[0]
-        parts = module_path.split(".")
-        search_roots = [_REPO_ROOT] + [
-            _REPO_ROOT / name for name in ("primitives", "utilities", "context_tools")
-        ]
-        for root in search_roots:
-            search = root
-            for part in parts[:-1]:
-                hyphenated = part.replace("_", "-")
-                candidate_dir = search / hyphenated
-                search = candidate_dir if candidate_dir.is_dir() else search / part
-            candidate = search / f"{parts[-1]}.py"
-            if candidate.resolve() == py_file.resolve():
-                return True
-    except Exception:
-        pass
-    return False
-
-
-def _merge_hooks(existing: dict, new: dict) -> dict:
-    """Merge new hooks config into existing without duplicating commands."""
-    result = dict(existing)
-    existing_hooks: dict = dict(result.get("hooks", {}))
-    for event, entries in new.get("hooks", {}).items():
-        if event not in existing_hooks:
-            existing_hooks[event] = list(entries)
-        else:
-            present_cmds = {e.get("command") for e in existing_hooks[event]}
-            for entry in entries:
-                if entry.get("command") not in present_cmds:
-                    existing_hooks[event] = existing_hooks[event] + [entry]
-    result["hooks"] = existing_hooks
-    return result
-
-
-def _should_skip(path: Path) -> bool:
-    try:
-        relative = path.relative_to(_REPO_ROOT)
-    except ValueError:
-        return True
-    if len(relative.parts) > 3:
-        return True
-    for part in relative.parts:
-        if part in _SKIP_DIRS or part.startswith("_"):
-            return True
-    name = path.name
-    return name.endswith(("_spec.py", "_agent_spec.py", "_ground_truth.py"))
-
-
-def _enrich_toolset_entry(entry: dict) -> dict:
-    py_file = Path(entry["file_path"])
-    module_dir = py_file.parent
-    focus_actions = _parse_focus_actions(py_file)
-    shortcuts: list[dict] = []
-    prefix = _command_prefix(entry["module_dir"])
-    for fa in focus_actions:
-        values = _list_focus_values(module_dir, fa["focus_group"])
-        for value in values:
-            shortcuts.append({
-                "action": fa["action"],
-                "focus_group": fa["focus_group"],
-                "filter_key": fa["filter_key"],
-                "focus_value": value,
-                "command_name": _command_name(prefix, value, fa["action"]),
-            })
-    enriched = dict(entry)
-    enriched["skill_slug"] = _skill_slug(entry["module_dir"])
-    enriched["command_prefix"] = prefix
-    enriched["toolset_ref"] = _toolset_ref(entry["manifest_command"])
-    enriched["focus_shortcuts"] = shortcuts
-    enriched["stale_focus_skill_slugs"] = _stale_focus_skill_slugs(
-        prefix,
-        sorted({s["focus_value"] for s in shortcuts}),
-    )
-    return enriched
-
-
 @toolset
 class AgentSkills:
     """Deploy workspace toolsets - one skill per toolset."""
 
-    @staticmethod
-    def _skill_slug(module_dir_name: str) -> str:
-        return _skill_slug(module_dir_name)
+    # ------------------------------------------------------------------ #
+    # Private helpers                                                      #
+    # ------------------------------------------------------------------ #
 
-    @staticmethod
-    def _command_prefix(module_dir_name: str) -> str:
-        return _command_prefix(module_dir_name)
+    def _skill_slug(self, module_dir_name: str) -> str:
+        return module_dir_name.replace("_", "-")
 
-    @staticmethod
-    def _command_name(prefix: str, focus_value: str, action: str) -> str:
-        return _command_name(prefix, focus_value, action)
+    def _command_prefix(self, module_dir_name: str) -> str:
+        return module_dir_name.split("_")[0]
 
-    @staticmethod
-    def _toolset_ref(manifest_command: str) -> str:
-        return _toolset_ref(manifest_command)
+    def _command_name(self, prefix: str, focus_value: str, action: str) -> str:
+        return f"{prefix} {focus_value} {action}"
 
-    @staticmethod
-    def _parse_focus_actions(py_file: Path) -> list[dict[str, str]]:
-        return _parse_focus_actions(py_file)
+    def _toolset_ref(self, manifest_command: str) -> str:
+        return manifest_command.strip().rsplit(" ", 1)[-1]
 
-    @staticmethod
-    def _list_focus_values(module_dir: Path, focus_group: str) -> list[str]:
-        return _list_focus_values(module_dir, focus_group)
+    def _decorator_name(self, node: ast.expr) -> str | None:
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            return node.attr
+        if isinstance(node, ast.Call):
+            return self._decorator_name(node.func)
+        return None
 
-    @staticmethod
-    def _stale_focus_skill_slugs(command_prefix: str, focus_values: list[str]) -> list[str]:
-        return _stale_focus_skill_slugs(command_prefix, focus_values)
+    def _decorator_keywords(self, node: ast.expr) -> dict[str, ast.expr]:
+        if isinstance(node, ast.Call):
+            return {kw.arg: kw.value for kw in node.keywords if kw.arg}
+        return {}
 
-    @staticmethod
-    def _is_self_manifest(py_file: Path, manifest_command: str) -> bool:
-        return _is_self_manifest(py_file, manifest_command)
+    def _str_constant(self, node: ast.expr) -> str | None:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        return None
 
-    @staticmethod
-    def _merge_hooks(existing: dict, new: dict) -> dict:
-        return _merge_hooks(existing, new)
+    def _parse_focus_actions(self, py_file: Path) -> list[dict[str, str]]:
+        tree = ast.parse(py_file.read_text(encoding="utf-8"))
+        results: list[dict[str, str]] = []
+        for node in tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            for item in node.body:
+                if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                has_action = False
+                focus_group: str | None = None
+                filter_key: str | None = None
+                for dec in item.decorator_list:
+                    name = self._decorator_name(dec)
+                    if name == "action":
+                        has_action = True
+                    if name == "focus":
+                        kws = self._decorator_keywords(dec)
+                        fg = self._str_constant(kws.get("focus")) if "focus" in kws else None
+                        if fg:
+                            focus_group = fg
+                        fk = self._str_constant(kws.get("filter_key")) if "filter_key" in kws else None
+                        if fk:
+                            filter_key = fk
+                if has_action and focus_group:
+                    results.append({
+                        "action": item.name,
+                        "focus_group": focus_group,
+                        "filter_key": filter_key or _default_filter_key(focus_group),
+                    })
+        return results
 
-    @staticmethod
-    def _should_skip(path: Path) -> bool:
-        return _should_skip(path)
+    def _list_focus_values(self, module_dir: Path, focus_group: str) -> list[str]:
+        """List filter values under a focus group - subdirs first, then legacy *.md stems."""
+        group_dir = module_dir / focus_group
+        if not group_dir.is_dir():
+            return []
+        values = {
+            p.name
+            for p in group_dir.iterdir()
+            if p.is_dir() and not p.name.startswith((".", "_"))
+        }
+        values.update(p.stem for p in group_dir.glob("*.md") if p.is_file())
+        return sorted(values)
 
-    @staticmethod
-    def _enrich_toolset_entry(entry: dict) -> dict:
-        return _enrich_toolset_entry(entry)
+    def _stale_focus_skill_slugs(self, command_prefix: str, focus_values: list[str]) -> list[str]:
+        return [f"{command_prefix}-{value}" for value in focus_values]
+
+    def _is_self_manifest(self, py_file: Path, manifest_command: str) -> bool:
+        """Return True only if the manifest command refers to this file's own module."""
+        try:
+            module_class = manifest_command.strip().rsplit(" ", 1)[-1]
+            module_path = module_class.split(":")[0]
+            parts = module_path.split(".")
+            search_roots = [_REPO_ROOT] + [
+                _REPO_ROOT / name for name in ("primitives", "utilities", "context_tools")
+            ]
+            for root in search_roots:
+                search = root
+                for part in parts[:-1]:
+                    hyphenated = part.replace("_", "-")
+                    candidate_dir = search / hyphenated
+                    search = candidate_dir if candidate_dir.is_dir() else search / part
+                candidate = search / f"{parts[-1]}.py"
+                if candidate.resolve() == py_file.resolve():
+                    return True
+        except Exception:
+            pass
+        return False
+
+    def _merge_hooks(self, existing: dict, new: dict) -> dict:
+        """Merge new hooks config into existing without duplicating commands."""
+        result = dict(existing)
+        existing_hooks: dict = dict(result.get("hooks", {}))
+        for event, entries in new.get("hooks", {}).items():
+            if event not in existing_hooks:
+                existing_hooks[event] = list(entries)
+            else:
+                present_cmds = {e.get("command") for e in existing_hooks[event]}
+                for entry in entries:
+                    if entry.get("command") not in present_cmds:
+                        existing_hooks[event] = existing_hooks[event] + [entry]
+        result["hooks"] = existing_hooks
+        return result
+
+    def _should_skip(self, path: Path) -> bool:
+        try:
+            relative = path.relative_to(_REPO_ROOT)
+        except ValueError:
+            return True
+        if len(relative.parts) > 3:
+            return True
+        for part in relative.parts:
+            if part in _SKIP_DIRS or part.startswith("_"):
+                return True
+        name = path.name
+        return name.endswith(("_spec.py", "_agent_spec.py", "_ground_truth.py"))
+
+    def _enrich_toolset_entry(self, entry: dict) -> dict:
+        py_file = Path(entry["file_path"])
+        module_dir = py_file.parent
+        focus_actions = self._parse_focus_actions(py_file)
+        shortcuts: list[dict] = []
+        prefix = self._command_prefix(entry["module_dir"])
+        for fa in focus_actions:
+            values = self._list_focus_values(module_dir, fa["focus_group"])
+            for value in values:
+                shortcuts.append({
+                    "action": fa["action"],
+                    "focus_group": fa["focus_group"],
+                    "filter_key": fa["filter_key"],
+                    "focus_value": value,
+                    "command_name": self._command_name(prefix, value, fa["action"]),
+                })
+        enriched = dict(entry)
+        enriched["skill_slug"] = self._skill_slug(entry["module_dir"])
+        enriched["command_prefix"] = prefix
+        enriched["toolset_ref"] = self._toolset_ref(entry["manifest_command"])
+        enriched["focus_shortcuts"] = shortcuts
+        enriched["stale_focus_skill_slugs"] = self._stale_focus_skill_slugs(
+            prefix,
+            sorted({s["focus_value"] for s in shortcuts}),
+        )
+        return enriched
+
+    # ------------------------------------------------------------------ #
+    # Tools                                                                #
+    # ------------------------------------------------------------------ #
 
     @tool
     def scan_toolsets(self) -> str:
@@ -342,7 +292,7 @@ class AgentSkills:
         results: list[dict] = []
         seen: set[str] = set()
         for py_file in sorted(_REPO_ROOT.rglob("*.py")):
-            if _should_skip(py_file):
+            if self._should_skip(py_file):
                 continue
             try:
                 header = read_toolset_header(py_file)
@@ -350,7 +300,7 @@ class AgentSkills:
                 continue
             if "{" in header.manifest_command:
                 continue
-            if not _is_self_manifest(py_file, header.manifest_command):
+            if not self._is_self_manifest(py_file, header.manifest_command):
                 continue
             module_dir = py_file.parent.name
             if module_dir in seen:
@@ -369,7 +319,7 @@ class AgentSkills:
                 "description": module_doc,
                 "file_path": str(py_file),
             }
-            results.append(_enrich_toolset_entry(entry))
+            results.append(self._enrich_toolset_entry(entry))
         return json.dumps(results, indent=2)
 
     @tool
@@ -394,7 +344,7 @@ class AgentSkills:
             skill_slug=skill_slug,
             class_name=class_name,
             manifest_command=manifest_command,
-            toolset_ref=_toolset_ref(manifest_command),
+            toolset_ref=self._toolset_ref(manifest_command),
             description=safe_description,
         )
         skill_md.write_text(content, encoding="utf-8")
@@ -504,7 +454,7 @@ class AgentSkills:
             target = _REPO_ROOT / ".cursor" / "hooks.json"
             target.parent.mkdir(parents=True, exist_ok=True)
             existing = json.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
-            merged = _merge_hooks(existing, gate_config)
+            merged = self._merge_hooks(existing, gate_config)
             target.write_text(json.dumps(merged, indent=2), encoding="utf-8")
             return str(target)
         else:

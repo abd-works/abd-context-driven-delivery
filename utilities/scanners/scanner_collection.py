@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .scanner import Scanner, filter_scan_files
+from .scanner import Scanner
 from .violation import Violation
 
 
@@ -78,7 +78,7 @@ class ScannerCollection:
 
     def run(self, root: Path, files: list[Path]) -> ScannerReport:
         discovered = self.discover()
-        files = filter_scan_files(files)
+        files = Scanner.filter_scan_files(files)
         violations: list[Violation] = []
         for slug, scanner_class in discovered.items():
             scanner = scanner_class(slug)

@@ -1,0 +1,16 @@
+You are an AI judge.
+Evaluate OUTPUT against RUBRIC.
+Reply with ONLY one JSON object on one line - no markdown, no code fences, no commentary.
+The JSON must have keys verdict (PASS or FAIL) and reason (one sentence).
+
+--- RUBRIC ---
+The merged cards include an intro welcome and mention the cards subfolder.
+
+--- OUTPUT ---
+## intro.md
+
+# Intro
+
+Welcome to the card file. This card lives in the `cards/` subfolder and is
+returned by `read_all` along with every other card in that folder.
+

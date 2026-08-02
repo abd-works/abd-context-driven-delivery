@@ -2,8 +2,9 @@
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
 # invoke-new: action generate | context.fidelity discovery
-# invoke-edit: action satisfy | toolset: context_tools.base.base_context_tool:BaseContextTool
-# invoke-check: action validate | toolset: context_tools.base.base_context_tool:BaseContextTool
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """BaseContextTool - composer + artifact lifecycle; shared face for every concrete domain.
 
 Non-primitive kits are held and called through providers
@@ -23,15 +24,16 @@ from grill_context.grill_context import GrillContext
 from iterate.iterate import Iterator
 from partition_pipeline.partition_pipeline import PartitionPipeline
 from primitives.actions.action import _ActionRunner
+from primitives.actions.action import AgenticToolset
 from primitives.actions.action import action
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from record_decisions.record_decisions import RecordDecisions
 from repair.repair import Repair
 from scanners.scan import Scan
+from sessions.session_log import log
 from sessions.workspace_session import Session
 from sketch.sketch import Sketcher
-from tools.tool import Toolset
 from tools.tool import resource
 from tools.tool import tool
 
@@ -39,7 +41,7 @@ from tools.tool import tool
 class BaseContextTool(
     PartitionPipeline,
     Repair,
-    Toolset,
+    AgenticToolset,
 ):
     """# Instructions"""
 
@@ -224,6 +226,7 @@ class BaseContextTool(
         """"""
         return ""
 
+    @log
     @action
     def generate(self) -> str:
         self.workspace().open()

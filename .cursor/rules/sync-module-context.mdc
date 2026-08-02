@@ -1,0 +1,42 @@
+---
+description: After changing code, check for a sibling .context/module-context.md and update it when the changes are significant.
+globs: abd-context-driven-delivery/**/*.py
+alwaysApply: false
+---
+
+# Keep module-context.md in sync with code changes
+
+When you edit or generate any code file, check whether a `.context/module-context.md` exists in the **same directory** as that file.
+
+## If a module-context.md is found
+
+Read it first, then ask: do the code changes affect anything that is already documented there?
+
+Update the file **only if** the answer is yes and the change is significant — for example:
+
+- The public API changes (new methods, renamed methods, removed methods, changed signatures).
+- The seam description no longer matches how inputs flow to outputs.
+- A stated dependency is added, removed, or renamed.
+- The purpose or primary use case shifts meaningfully.
+- A scan-violation status changes (cleared, added, or resolved differently).
+
+Do **not** add new sections or document things outside the existing scope of the file. The module-context.md is scoped — extend it only along dimensions it already covers.
+
+## If no module-context.md exists
+
+Note the gap in a comment to the user, but do not create one. File creation is a deliberate act that should be done explicitly.
+
+## What counts as significant
+
+Renaming a local variable, fixing a typo, or adjusting whitespace is not significant. Changing what a public method does, adding a new collaborator dependency, or altering the seam contract is significant.
+
+## Example
+
+```
+# Editing: primitives/actions/action.py
+# Check:   primitives/actions/.context/module-context.md  ← read this
+
+# Code added a new public class AgentWithActions
+# → Update "Public API" section in module-context.md to mention it
+# → Do NOT add a "Testing" section — it is not in scope
+```

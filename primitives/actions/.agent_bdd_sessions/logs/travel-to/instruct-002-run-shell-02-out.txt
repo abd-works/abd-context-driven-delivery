@@ -1,100 +1,58 @@
-@classmethod
-    def set_instance(cls, runner: ToolsetRunner | None) -> None:
-        cls._instance = runner
+Your General Lee is ready â€” engine running.
 
-    def run_request(self, request: dict[str, Any]) -> dict[str, Any]:
-        parsed = self._parse_run_request(request)
-        toolset_cls = self._loader.load(str(parsed.toolset_path))
-        instance = self._build_instance(toolset_cls, parsed.context)
-        if parsed.action_name:
-            return self._run_action(request, parsed, instance)
-        return self._run_tool(request, parsed, instance)
+```yaml
+ok: true
+toolset: tools.example.car:Car
+tool: start
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee â€” a rebellious, high-spirited orange 1969 Dodge Charger
+    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
+    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
+    every Hazzard adventure.
+  running: true
+```
 
-    def _run_tool(
-        self,
-        request: dict[str, Any],
-        parsed: "_RunRequest",
-        instance: Toolset,
-    ) -> dict[str, Any]:
-        result = self._invoke_tool(instance, str(parsed.tool_name), parsed.arguments)
-        return self._build_tool_response(request, parsed.toolset_path, parsed.tool_name, instance, result)
+**General Lee** â€” 1969 Dodge Charger, orange with the flag on the roof. Rebellious, high-spirited, fiercely loyal country boy who lives for creek jumps, outrunning Sheriff Rosco, and riding with Bo and Luke through every Hazzard adventure.
 
-    def _run_action(
-        self,
-        request: dict[str, Any],
-        parsed: "_RunRequest",
-        instance: Toolset,
-    ) -> dict[str, Any]:
-        from agents.runner import ActionRunner
+Want to take him for a spin? You can `drive`, `accelerate`, or have him `speak` in character.Your General Lee is ready â€” engine running.
 
-        return ActionRunner.instance().run(
-            request,
-            toolset_path=parsed.toolset_path,
-            action_name=parsed.action_name,
-            context=parsed.context,
-            arguments=parsed.arguments,
-            instance=instance,
-        )
+```yaml
+ok: true
+toolset: tools.example.car:Car
+tool: start
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee â€” a rebellious, high-spirited orange 1969 Dodge Charger
+    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
+    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
+    every Hazzard adventure.
+  running: true
+```
 
-    def _parse_run_request(self, request: dict[str, Any]) -> "_RunRequest":
-        if not isinstance(request, dict):
-            raise RunError("request must be a YAML mapping", response={"ok": False, "error": "invalid request"})
-        toolset_path = request.get("toolset")
-        if not toolset_path:
-            raise RunError("request missing toolset", response={"ok": False, "error": "request missing toolset"})
-        tool_name = request.get("tool")
-        action_name = request.get("action")
-        if tool_name and action_name:
-            raise RunError(
-                "request must use tool or action, not both",
-                response={"ok": False, "error": "tool and action are mutually exclusive"},
-            )
-        if not tool_name and not action_name:
-            raise RunError(
-                "request missing tool or action",
-                response={"ok": False, "error": "request missing tool or action"},
-            )
-        context = self._mapping_field(request, "context", default={})
-        arguments = self._mapping_field(request, "arguments", default={})
-        return _RunRequest(
-            toolset_path=toolset_path,
-            tool_name=tool_name,
-            action_name=action_name,
-            context=context,
-            arguments=arguments,
-        )
+**General Lee** â€” 1969 Dodge Charger, orange with the flag on the roof. Rebellious, high-spirited, fiercely loyal country boy who lives for creek jumps, outrunning Sheriff Rosco, and riding with Bo and Luke through every Hazzard adventure.
 
-    def _mapping_field(
-        self, request: dict[str, Any], field_name: str, *, default: dict[str, Any]
-    ) -> dict[str, Any]:
-        field_value = request.get(field_name, default)
-        if not isinstance(field_value, dict):
-            raise RunError(
-                f"{field_name} must be a mapping",
-                response={"ok": False, "error": f"invalid {field_name}"},
-            )
-        return field_value
+Want to take him for a spin? You can `drive`, `accelerate`, or have him `speak` in character.Your General Lee is ready â€” engine running.
 
-    def _build_instance(self, toolset_cls: type, context: dict[str, Any]) -> Toolset:
-        try:
-            return toolset_cls(**context)
-        except TypeError as exc:
-            raise RunError(
-                f"invalid context for {toolset_cls.manifest_path}: {exc}",
-                response={"ok": False, "error": "invalid context", "detail": str(exc)},
-            ) from exc
+```yaml
+ok: true
+toolset: tools.example.car:Car
+tool: start
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: General Lee â€” a rebellious, high-spirited orange 1969 Dodge Charger
+    with the Confederate flag on the roof. Fiercely loyal country boy who lives for
+    jumping creeks, outrunning Sheriff Rosco, and standing by Bo and Luke Duke through
+    every Hazzard adventure.
+  running: true
+```
 
-    def _invoke_tool(self, instance: Toolset, tool_name: str, arguments: dict[str, Any]) -> Any:
-        if tool_name not in instance.tools:
-            raise RunError(
-                f"unknown tool {tool_name!r}",
-                response={"ok": False, "tool": tool_name, "error": "unknown tool"},
-            )
-        tool = instance.tools[tool_name]
-        self._validate_arguments(tool, arguments)
-        return getattr(instance, tool_name)(**arguments)
+**General Lee** â€” 1969 Dodge Charger, orange with the flag on the roof. Rebellious, high-spirited, fiercely loyal country boy who lives for creek jumps, outrunning Sheriff Rosco, and riding with Bo and Luke through every Hazzard adventure.
 
-    def _validate_arguments(self, tool: Tool, arguments: dict[str, Any]) -> None:
-        reader = SignatureReader.instance()
-        schema = reader.input_schema(tool.callable)
-        missing = [name for name in schema.get("required", []) if name not in arguments]
+Want to take him for a spin? You can `drive`, `accelerate`, or have him `speak` in character.

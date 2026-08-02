@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from expects import be_true, contain, equal, expect
+from expects import be_none, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -14,7 +14,7 @@ for _cat in ("primitives", "utilities", "context_tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from scanners import ScannerCollection
+from scanners import ScannerCollection, ScannerReport, Violation
 
 
 _CLEAN_CODE_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"
@@ -39,3 +39,35 @@ with description("ScannerCollection"):
             template = _CLEAN_CODE_DIR / "clean_engineering.py"
             report = self.collection.run(_REPO_ROOT, [template])
             expect(report.to_dict()["ok"] in (True, False)).to(be_true)
+
+        with it("should return the scanner class for a known slug when get is called"):
+            slug = sorted(self.discovered.keys())[0]
+            scanner_cls = self.collection.get(slug)
+            expect(scanner_cls is not None).to(be_true)
+
+        with it("should return None for an unknown slug when get is called"):
+            result = self.collection.get("no-such-rule-xyz-99999")
+            expect(result).to(be_none)
+
+
+with description("ScannerReport"):
+    with context("a report that has violations"):
+        with before.each:
+            v = Violation("rule", "msg", location="f.py", line=1)
+            self.report = ScannerReport(violations=[v], rules=["rule"])
+
+        with it("should mark ok as False in to_dict when violations are present"):
+            d = self.report.to_dict()
+            expect(d["ok"]).to(equal(False))
+
+        with it("should include the violation entries in to_dict"):
+            d = self.report.to_dict()
+            expect(len(d["violations"])).to(equal(1))
+
+    with context("a report that has no violations"):
+        with before.each:
+            self.report = ScannerReport(violations=[], rules=[])
+
+        with it("should mark ok as True in to_dict when no violations are present"):
+            d = self.report.to_dict()
+            expect(d["ok"]).to(equal(True))

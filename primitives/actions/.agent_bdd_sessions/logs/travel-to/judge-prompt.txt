@@ -1,22 +1,40 @@
 You are an AI judge.
 Evaluate OUTPUT against RUBRIC.
-Reply with ONLY one JSON object on one line — no markdown, no code fences, no commentary.
+Reply with ONLY one JSON object on one line - no markdown, no code fences, no commentary.
 The JSON must have keys verdict (PASS or FAIL) and reason (one sentence).
 
 --- RUBRIC ---
-The story should feature General Lee traveling to Hazzard County with personality, action, and at least one line of dialogue.
+The story features General Lee traveling to Hazzard County with personality, action, and at least one line of dialogue.
 
 --- OUTPUT ---
-General Lee fired up on the back roads outside Hazzard, orange paint flashing through sheets of mud as Bo and Luke pointed him toward the county courthouse. Sheriff Rosco P. Coltrane was right on their tail — siren wailing, cruiser sliding in the ruts — but the Charger ate the muddy curves like they were paved.
+Exploring how `tools run` works and locating the General Lee example.
+Exploring how `tools run` works and locating the General Lee example.
+Running `start`, then `speak`, with General Lee context via `python -m tools run -`.
+Running `start`, then `speak`, with General Lee context via `python -m tools run -`.
+### Tool runs
 
-Through creek beds and pine-lined bends, General Lee kept his wheels spinning and his horn blaring. Rosco took a bad line in a deep patch and spun sideways, throwing up a wall of brown spray while the Dukes shot past laughing. One final leap over a rain-swollen ditch, a four-wheel drift onto Main Street, and General Lee rolled up to the courthouse steps with mud on his fenders and victory in his engine.
+**`start`** — Engine on. General Lee reports as a 1969 Dodge Charger (`running: true`).
 
-> **Dodge Charger says:** "Yee-haw! Hold on tight, boys — Rosco's got mud in his eyes and we got a courthouse to reach!"General Lee fired up on the back roads outside Hazzard, orange paint flashing through sheets of mud as Bo and Luke pointed him toward the county courthouse. Sheriff Rosco P. Coltrane was right on their tail — siren wailing, cruiser sliding in the ruts — but the Charger ate the muddy curves like they were paved.
+**`speak`** — Dodge Charger says: *"Hold on, cousin — Rosco's siren's wailin' but this orange Charger ain't stoppin' till we're up the courthouse steps, mud or no mud!"*
 
-Through creek beds and pine-lined bends, General Lee kept his wheels spinning and his horn blaring. Rosco took a bad line in a deep patch and spun sideways, throwing up a wall of brown spray while the Dukes shot past laughing. One final leap over a rain-swollen ditch, a four-wheel drift onto Main Street, and General Lee rolled up to the courthouse steps with mud on his fenders and victory in his engine.
+### Adventure summary
 
-> **Dodge Charger says:** "Yee-haw! Hold on tight, boys — Rosco's got mud in his eyes and we got a courthouse to reach!"General Lee fired up on the back roads outside Hazzard, orange paint flashing through sheets of mud as Bo and Luke pointed him toward the county courthouse. Sheriff Rosco P. Coltrane was right on their tail — siren wailing, cruiser sliding in the ruts — but the Charger ate the muddy curves like they were paved.
+General Lee fired up on a back road headed for the Hazzard County courthouse while Rosco P. Coltrane closed in behind the siren. The run turned into a muddy slog—tires throwing red clay, the Charger sliding but never quitting—while Rosco chased hard on the same rutted lane. With the engine roaring and Rosco still in the mirror, the car called out in full Duke-country voice that the courthouse steps were the only finish line, mud be damned. The story ends with that defiant line over the engine: courthouse bound, Rosco in pursuit, and General Lee treating the whole mess like another Hazzard adventure.### Tool runs
 
-Through creek beds and pine-lined bends, General Lee kept his wheels spinning and his horn blaring. Rosco took a bad line in a deep patch and spun sideways, throwing up a wall of brown spray while the Dukes shot past laughing. One final leap over a rain-swollen ditch, a four-wheel drift onto Main Street, and General Lee rolled up to the courthouse steps with mud on his fenders and victory in his engine.
+**`start`** — Engine on. General Lee reports as a 1969 Dodge Charger (`running: true`).
 
-> **Dodge Charger says:** "Yee-haw! Hold on tight, boys — Rosco's got mud in his eyes and we got a courthouse to reach!"
+**`speak`** — Dodge Charger says: *"Hold on, cousin — Rosco's siren's wailin' but this orange Charger ain't stoppin' till we're up the courthouse steps, mud or no mud!"*
+
+### Adventure summary
+
+General Lee fired up on a back road headed for the Hazzard County courthouse while Rosco P. Coltrane closed in behind the siren. The run turned into a muddy slog—tires throwing red clay, the Charger sliding but never quitting—while Rosco chased hard on the same rutted lane. With the engine roaring and Rosco still in the mirror, the car called out in full Duke-country voice that the courthouse steps were the only finish line, mud be damned. The story ends with that defiant line over the engine: courthouse bound, Rosco in pursuit, and General Lee treating the whole mess like another Hazzard adventure.Exploring how `tools run` works and locating the General Lee example.
+Running `start`, then `speak`, with General Lee context via `python -m tools run -`.
+### Tool runs
+
+**`start`** — Engine on. General Lee reports as a 1969 Dodge Charger (`running: true`).
+
+**`speak`** — Dodge Charger says: *"Hold on, cousin — Rosco's siren's wailin' but this orange Charger ain't stoppin' till we're up the courthouse steps, mud or no mud!"*
+
+### Adventure summary
+
+General Lee fired up on a back road headed for the Hazzard County courthouse while Rosco P. Coltrane closed in behind the siren. The run turned into a muddy slog—tires throwing red clay, the Charger sliding but never quitting—while Rosco chased hard on the same rutted lane. With the engine roaring and Rosco still in the mirror, the car called out in full Duke-country voice that the courthouse steps were the only finish line, mud be damned. The story ends with that defiant line over the engine: courthouse bound, Rosco in pursuit, and General Lee treating the whole mess like another Hazzard adventure.

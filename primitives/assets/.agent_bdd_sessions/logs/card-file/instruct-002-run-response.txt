@@ -1,0 +1,28 @@
+Ran `python -m tools run -` from the repo root.
+
+Exit code: **1**
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+Stdin had no YAML request. Per `card_file.py`, the intended flow is manifest first, then pipe whatever the manifest response tells you into `python -m tools run -`.Ran `python -m tools run -` from the repo root.
+
+Exit code: **1**
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+Stdin had no YAML request. Per `card_file.py`, the intended flow is manifest first, then pipe whatever the manifest response tells you into `python -m tools run -`.Ran `python -m tools run -` from the repo root.
+
+Exit code: **1**
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+Stdin had no YAML request. Per `card_file.py`, the intended flow is manifest first, then pipe whatever the manifest response tells you into `python -m tools run -`.

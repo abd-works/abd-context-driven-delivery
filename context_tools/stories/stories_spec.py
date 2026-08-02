@@ -1,21 +1,22 @@
-"""BDD spec for Stories generator - fidelity defaults, transform, context_tools."""
+"""BDD spec for Stories generator - fidelity defaults, transform, diagnostic, contexts."""
 
 import sys
 from pathlib import Path
 
-from expects import be_true, equal, expect, raise_error
-from mamba import before, context, description, it
-
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools"):
+for _cat in ("context_tools", "primitives", "utilities"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import context_tools  # noqa: F401 - generator package on path
+from expects import be_a, be_true, equal, expect, raise_error
+from mamba import before, context, description, it
+
 from context_tools.stories.stories import Stories
+from primitives.actions.action import _ActionExpander
+from utilities.diagnose.diagnose import Diagnose
 
 _SAMPLE_MARKDOWN = """\
 (E) Manage Customer Orders
@@ -25,8 +26,14 @@ _SAMPLE_MARKDOWN = """\
 """
 
 
-with description("Stories fidelity and format defaults"):
-    with context("Stories constructed with fidelity discovery"):
+def _expanded(stories, action_name):
+    func = getattr(type(stories), action_name)
+    body = _ActionExpander.instance().parse_body(func, stories)
+    return "\n".join(body.prose_parts)
+
+
+with description("Stories"):
+    with context("that is constructed with fidelity discovery"):
         with before.each:
             self.stories = Stories(fidelity="discovery")
 
@@ -36,7 +43,7 @@ with description("Stories fidelity and format defaults"):
         with it("should retain fidelity discovery"):
             expect(self.stories.fidelity).to(equal("discovery"))
 
-    with context("Stories constructed with fidelity exploration"):
+    with context("that is constructed with fidelity exploration"):
         with before.each:
             self.stories = Stories(fidelity="exploration")
 
@@ -46,27 +53,45 @@ with description("Stories fidelity and format defaults"):
         with it("should retain fidelity exploration"):
             expect(self.stories.fidelity).to(equal("exploration"))
 
-    with context("Stories constructed with fidelity specification"):
-        with it("should default format to python"):
-            expect(Stories(fidelity="specification").format).to(equal("python"))
-
-    with context("Stories constructed with fidelity engineering"):
+    with context("that is constructed with fidelity engineering"):
         with it("should default format to python"):
             expect(Stories(fidelity="engineering").format).to(equal("python"))
 
-    with context("Stories constructed with an unsupported fidelity"):
+    with context("that is constructed with an unsupported fidelity"):
         with it("should raise ValueError"):
+            expect(lambda: Stories(fidelity="specification")).to(raise_error(ValueError))
+
+        with it("should raise ValueError for unknown names"):
             expect(lambda: Stories(fidelity="nope")).to(raise_error(ValueError))
 
-    with context("Stories constructed with an unsupported format"):
+    with context("that is constructed with an unsupported format"):
         with it("should raise ValueError"):
             expect(lambda: Stories(fidelity="discovery", format="yaml")).to(
                 raise_error(ValueError)
             )
 
+    with context("that provides a Diagnose companion"):
+        with it("should return a Diagnose instance from diagnostic"):
+            expect(Stories().diagnostic()).to(be_a(Diagnose))
 
-with description("Stories transform tool"):
-    with context("transform from markdown to python"):
+    with context("whose satisfy action is expanded"):
+        with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):
+            prose = _expanded(Stories(), "satisfy")
+            expect("diagnostic().diagnose()" in prose).to(be_true)
+
+        with it("should list diagnose as a tool step without inlining the six phases"):
+            stories = Stories()
+            body = _ActionExpander.instance().parse_body(type(stories).satisfy, stories)
+            expect("diagnose" in body.tool_steps).to(be_true)
+            prose = "\n".join(body.prose_parts)
+            expect("Phase 1 - Build a feedback loop" in prose).to(equal(False))
+
+    with context("whose iterate action is expanded"):
+        with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):
+            prose = _expanded(Stories(), "iterate")
+            expect("diagnostic().diagnose()" in prose).to(be_true)
+
+    with context("whose transform tool converts markdown to python"):
         with before.each:
             self.stories = Stories(fidelity="discovery")
             self.result = self.stories.transform(
@@ -88,9 +113,7 @@ with description("Stories transform tool"):
                 expect(isinstance(path, str)).to(be_true)
                 expect(isinstance(text, str)).to(be_true)
 
-
-with description("Stories contexts instruction"):
-    with context("the contexts slot is expanded"):
+    with context("whose contexts slot is expanded"):
         with before.each:
             self.stories = Stories(fidelity="discovery")
             self.contexts = self.stories.contexts().expand()

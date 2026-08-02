@@ -28,13 +28,12 @@ a class
         it should include a resource entry for every marked property
         it should carry a machine-readable typed signature for retrieving the current values of all marked properties
     with agent()
-      agent-instruct("read tools/examples/car.py from the workspace")
-      agent-instruct("create a car based on the general lee from the Dukes of Hazzard")
-        it should parse the fenced CLI yaml into ai-response
-        ai-response.make should contain Dodge
-        ai-response.model should contain Charger
-        ai-response.year should be 1969
-        ai-judge on ai-response.personality should find a rebellious, high-spirited, and loyal country boy
+      agent-instruct("read primitives/tools/examples/car.py from the workspace")
+      tools run start (General Lee context) then speak
+        it should parse start into ok resources (Dodge / Charger / 1969 / running)
+        it should parse speak into a says-line result
+        ai-judge on personality should find a rebellious, high-spirited, and loyal country boy
+      helpers: agent_bdd.spec_helpers (run_toolset, expect_ok_tool, …)
 
 ## Example in code
 

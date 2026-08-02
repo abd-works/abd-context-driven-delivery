@@ -17,7 +17,7 @@ Constraint: do not emit Fake/Isolated/Production subclasses of `I{Type}`. Build 
 - `IType`
 - `ICart`
 - `IProduct`
-- `ICartExampleFactory.cart_with_items() -> (ICart, IProduct)`
+- `ICartExampleFactory.cart_with_items(mode="fake") -> (ICart, IProduct)`
 
 **Layout:** Pattern docs in this module; generated app code uses two files per type — `{family}.{ext}` (production) and `{type}_example_factory.{ext}` (factory + examples).
 

@@ -20,18 +20,18 @@ from agent_bdd.agent_bdd_common import (
     JudgeResult,
     RUN_PROMPT_SUFFIX,
     RunResponse,
-    ShellCapture,
-    fenced_yaml_from_text,
+    _ShellCapture,
+    _fenced_yaml_from_text,
     cli_output_matches_prompt,
-    log_harness,
-    parse_judge_result,
-    run_yaml_request,
+    _log_harness,
+    _parse_judge_result,
+    _run_yaml_request,
     yaml_from_prompt,
 )
 from agent_bdd import yaml_fence
 
 
-class ChatAgentBlock:
+class _ChatAgentBlock:
     """Agent session backed by inbox files for Cursor chat subagents."""
 
     def __init__(self, workspace: Path, session_file: Path) -> None:
@@ -40,8 +40,8 @@ class ChatAgentBlock:
         self._yaml = yaml_fence
         self._log_dir = session_file.parent / "logs" / session_file.stem
         self._instruct_count = 0
-        self.last_shell_captures: list[ShellCapture] = []
-        self.session_shell_captures: list[ShellCapture] = []
+        self.last_shell_captures: list[_ShellCapture] = []
+        self.session_shell_captures: list[_ShellCapture] = []
 
     def _write_artifact(self, name: str, content: str) -> Path:
         self._log_dir.mkdir(parents=True, exist_ok=True)
@@ -59,7 +59,7 @@ class ChatAgentBlock:
 
     def instruct(self, prompt: str, *, timeout_seconds: int = 300) -> AgentResult:
         prefix = self._next_instruct_prefix("setup")
-        log_harness("agent_chat_bdd", f"{prefix} prompt: {prompt[:120]}{'...' if len(prompt) > 120 else ''}")
+        _log_harness("agent_chat_bdd", f"{prefix} prompt: {prompt[:120]}{'...' if len(prompt) > 120 else ''}")
         self._write_artifact(f"{prefix}-prompt.txt", prompt)
         stdout = self._wait_for_inbox(prefix, prompt, timeout_seconds=timeout_seconds)
         self._write_artifact(f"{prefix}-response.txt", stdout)
@@ -68,17 +68,17 @@ class ChatAgentBlock:
     def instruct_use_tool(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
         full_prompt = prompt.rstrip() + RUN_PROMPT_SUFFIX
         prefix = self._next_instruct_prefix("run")
-        log_harness("agent_chat_bdd", f"{prefix} prompt: {full_prompt[:120]}{'...' if len(full_prompt) > 120 else ''}")
+        _log_harness("agent_chat_bdd", f"{prefix} prompt: {full_prompt[:120]}{'...' if len(full_prompt) > 120 else ''}")
         self._write_artifact(f"{prefix}-prompt.txt", full_prompt)
         stdout = self._wait_for_inbox(prefix, full_prompt, timeout_seconds=timeout_seconds)
         self._write_artifact(f"{prefix}-response.txt", stdout)
-        cli_output = fenced_yaml_from_text(stdout)
+        cli_output = _fenced_yaml_from_text(stdout)
         if cli_output is not None and not cli_output_matches_prompt(cli_output, full_prompt):
             cli_output = None
         if cli_output is None:
             yaml_body = yaml_from_prompt(full_prompt)
             if yaml_body:
-                cli_output = run_yaml_request(yaml_body, self._workspace, prefix=prefix)
+                cli_output = _run_yaml_request(yaml_body, self._workspace, prefix=prefix)
         if cli_output is None:
             raise AgentHarnessError(
                 "no python -m tools run output - chat runner must return fenced YAML",
@@ -92,8 +92,8 @@ class ChatAgentBlock:
         """Back-compat alias for ``instruct_use_tool``."""
         return self.instruct_use_tool(prompt, timeout_seconds=timeout_seconds)
 
-    def ai_judge(self, output: str, rubric: str, *, timeout_seconds: int = 60) -> JudgeResult:
-        log_harness("agent_chat_bdd", "judge rubric:")
+    def ai_judge(self, output: str, rubric: str, *, timeout_seconds: int = 180) -> JudgeResult:
+        _log_harness("agent_chat_bdd", "judge rubric:")
         sys.__stdout__.write(rubric + "\n")
         sys.__stdout__.flush()
         self._write_artifact("judge-rubric.txt", rubric)
@@ -103,10 +103,10 @@ class ChatAgentBlock:
         launch_prompt = JUDGE_LAUNCH.format(path=task_path.relative_to(self._workspace).as_posix())
         self._write_artifact("judge-launch.txt", launch_prompt)
         judge_session = self._session_file.with_name(f"{self._session_file.stem}-judge.json")
-        judge_block = ChatAgentBlock(self._workspace, judge_session)
+        judge_block = _ChatAgentBlock(self._workspace, judge_session)
         judge_stdout = judge_block._wait_for_inbox("judge", launch_prompt, timeout_seconds=timeout_seconds)
         self._write_artifact("judge-response.txt", judge_stdout)
-        verdict, reason = parse_judge_result(judge_stdout)
+        verdict, reason = _parse_judge_result(judge_stdout)
         self._write_artifact("judge-verdict.txt", f"{verdict}\n\n{reason}\n")
         if verdict == "ERROR":
             raise AgentJudgeError(
@@ -115,7 +115,7 @@ class ChatAgentBlock:
                 stdout=judge_stdout,
                 log_dir=self._log_dir,
             )
-        log_harness("agent_chat_bdd", f"judge verdict: {verdict} - {reason}")
+        _log_harness("agent_chat_bdd", f"judge verdict: {verdict} - {reason}")
         return JudgeResult(verdict=verdict, reason=reason, elapsed_seconds=0.0)
 
     def _finalize_run_response(self, prefix: str, cli_output: str) -> RunResponse:
@@ -123,7 +123,7 @@ class ChatAgentBlock:
         ai_response = RunResponse.from_cli_output(cli_output)
         self._write_artifact(
             f"{prefix}-ai-response.yaml",
-            self._yaml.dump_manifest(
+            self._yaml._dump_manifest(
                 {k: v for k, v in {
                     "ok": ai_response.ok,
                     "toolset": ai_response.toolset,
@@ -153,7 +153,7 @@ class ChatAgentBlock:
             f"Write agent response to:\n{response_path}\n",
             encoding="utf-8",
         )
-        log_harness("agent_chat_bdd", f"inbox ready: {ready_path}")
+        _log_harness("agent_chat_bdd", f"inbox ready: {ready_path}")
         deadline = time.monotonic() + timeout_seconds
         while time.monotonic() < deadline:
             if response_path.is_file():
@@ -169,7 +169,7 @@ class ChatAgentBlock:
 
 
 @contextmanager
-def agent(workspace: Path, session_file: Path) -> Iterator[ChatAgentBlock]:
+def _chat_agent(workspace: Path, session_file: Path) -> Iterator[_ChatAgentBlock]:
     """Establish one in-chat agent session backed by inbox files."""
-    block = ChatAgentBlock(workspace, session_file)
+    block = _ChatAgentBlock(workspace, session_file)
     yield block

@@ -1,0 +1,115 @@
+```yaml
+ok: true
+toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
+action: repair
+result: Repair context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md
+  under {session.path}/ until validate passes.
+instructions: "# Repair\n\nIterate until **validate** passes on `context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md`.\
+  \ The violation signal is:\n\n```\nScanner use-driving-voice - chronicle reads like\
+  \ a spec sheet\n```\n\nThat text may be a scanner report, a user complaint, or both\
+  \ together. The loop\nfixes **why the generator produced the violation** — not the\
+  \ artifact in isolation.\nNever proceed without a verifiable error signal from **scan**\
+  \ or **validate**.\n\nRead the **`active`** resource first. `context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md`\
+  \ and repaired outputs live under\nthat root (docs → `{session.path}/.context/`;\
+  \ code → `{session.path}/{module}/`). Do not\nrepair into a divergent folder.\n\n\
+  Run this loop inline in the current session.\n\n---\n\n## When scan is clean but\
+  \ the violation is a user complaint\n\nThe tools do not see the problem yet. Edit\
+  \ the relevant scanner under\n`scanners/` or `formats/{format}/scanners/` until\
+  \ **scan** reports a failure on\n`context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md`\
+  \ that matches the complaint. Re-run **scan** after each scanner edit.\n\nDo not\
+  \ proceed to root-cause analysis until **scan** fails on `context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md`.\n\
+  \n---\n\n## 1. Open an example folder\n\nCreate a descriptive folder under the domain\
+  \ examples tree and copy the broken\noutput before any fixes:\n\n```\n<domain>/examples/<descriptive-folder>/\n\
+  \  faultyAsset          ← copy of context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md\
+  \ when there is one file\n  faultyAssets/        ← when more than one file (same\
+  \ layout as context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md)\n\
+  \  runs/1/run.md\n```\n\nUse a folder name that describes the violation class (e.g.\n\
+  `inheritance-crosses-class`). If that folder already exists from a prior session,\n\
+  pick a new descriptive name or suffix (`-2`, `-3`, …).\n\nWhen `context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md`\
+  \ is multiple files, use `faultyAssets/` instead of a single\n`faultyAsset` file.\
+  \ Mirror the same paths inside that folder.\n\n---\n\n## 2. Write run.md\n\nCreate\
+  \ `runs/<n>/run.md` for each attempt. Include, for every definitive\nviolation:\n\
+  \n| Field | Content |\n|-------|---------|\n| Rule | context slug |\n| Location\
+  \ | file, section, or element |\n| Violated element | the specific thing that failed\
+  \ |\n| Scanner / check | the scanner that detected it |\n| Root cause | why the\
+  \ generator produced it |\n| Fix applied | what changed to resolve it |\n\nNon-blocking\
+  \ warnings may be listed separately but do not block the loop.\n\n---\n\n## 3. Root\
+  \ cause\n\nUse **contexts**, **examples**, and **template** to determine why the\
+  \ generator\nproduced the violation. Review context bullets, worked samples, and\
+  \ file shape.\n\n---\n\n## 4. Fix the generator\n\nApply a **surgical** change to\
+  \ the generator — contexts, examples, template,\naction prose, or scanners — so\
+  \ the violation does not recur. Touch only what\nroot cause implicates; do not rebuild\
+  \ from spec.\n\nRe-run **generate** (or the steps that produced `context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md`)\
+  \ and write the output\nback to `context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md`.\
+  \ Do not hand-edit `context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md`\
+  \ to greenwash the scanners while\nleaving the generator broken.\n\nIf the domain\
+  \ has `reference/repair-tips.md`, read it before writing fix code.\nSave every generator\
+  \ change in `runs/<n>/run.md`.\n\n---\n\n## 5. Validate and repeat\n\nRun **validate**\
+  \ on `context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md`\
+  \ after regenerating from the fixed generator. The\nreport names the failing scanner\
+  \ when scan finds violations.\n\nIf violations remain, increment to `runs/<n+1>/run.md`\
+  \ and repeat from **Step 2**.\n\n---\n\n## 6. Capture the pass fixture — once validate\
+  \ passes\n\nSave the final clean output beside the original failure:\n\n```\n<domain>/examples/<descriptive-folder>/\n\
+  \  faultyAsset          ← or faultyAssets/ when more than one file\n  repairedAsset\
+  \        ← or repairedAssets/ when more than one file\n```\n\nOnly the **original\
+  \ failure** and **final clean output after generator fix** are\nkept as fixtures.\
+  \ Delete `runs/` when the repair is done — working notes only\nduring the loop.\n\
+  \n---\n\n## 7. Run regression across repair history\n\nRe-run **scan** on every\
+  \ captured example pair under\n`<domain>/examples/*/`:\n\n- Every `faultyAsset`\
+  \ or file under `faultyAssets/` must still **violate**\n- Every `repairedAsset`\
+  \ or file under `repairedAssets/` must still be **clean**\n\nThe folder structure\
+  \ is the registry — no separate cases file.\n\n---\n\n# Validate\n\nTake the persona\
+  \ of a **critical judge** — do not edit the artifact.\n\n1. Follow **`session_guidance`**.\
+  \ Scope judgment to artifacts under `session.path` / the session layout.\n2. Use\
+  \ **contexts** as the rubric — report pass/fail per named context and named rule\
+  \ with brief evidence.\n3. Call **`scan`** on the session-rooted paths under review.\n\
+  4. Do not fix. Report failures for fixing, then **validate** again when ready.\n\
+  \n---\n\n\n# Contexts\n\n## Driving voice\n\nThe chronicle is told from the car's\
+  \ perspective — personality, quirks, and reactions to weather and traffic.\n\n-\
+  \ **`use-driving-voice`** — First-person from the car; name the driver indirectly;\
+  \ no passive trip summaries.\n\n## Trip logging\n\nEach entry covers one outing\
+  \ with date, route summary, odometer delta, and a short narrative beat.\n\n- **`record-mileage`**\
+  \ — Include start/end mileage or miles driven as a number on every entry.\n- **`name-the-route`**\
+  \ — State origin and destination in plain language, not GPS coordinates.\n\n---\n\
+  \n## examples.md\n\n# Driving history examples\n\n## Rainy commute — 2024-03-12\n\
+  \nI carried Alex from Maple Street to the office loop — twelve soggy miles. Wipers\
+  \ beat in triple time; I liked the rhythm. Odometer: 41,220 → 41,232.\n\n## Weekend\
+  \ lake run — 2024-03-16\n\nSun on my hood, windows down after the pass. Home to\
+  \ Cedar Lake and back — forty-eight lazy miles. Odometer: 41,232 → 41,280.\n\n\n\
+  ## use-driving-voice-spec-sheet/faultyAsset\n\n## Trip log entry\n\nRoute: Hazzard\
+  \ County garage to courthouse\nDistance: 6 miles\nOdometer start: 41288\nOdometer\
+  \ end: 41294\nDriver: Bo\nNotes: County trip completed. Vehicle performed as expected.\n\
+  \n\n## use-driving-voice-spec-sheet/repairedAsset\n\n## 2026-07-11\n\n**Route:**\
+  \ Hazzard County garage → Hazzard County courthouse  \n**Miles:** 6  \n**Odometer:**\
+  \ 41,288 → 41,294\n\nI woke to Bo turning the key — courthouse run, and I never\
+  \ treat six county miles like an errand. Dust kicked up behind us, sun warmed my\
+  \ hood, and the gravel sang under my tires all the way into town. He kept one hand\
+  \ easy on the wheel; I kept my General Lee heart loud and loyal until we rolled\
+  \ up to the courthouse steps.\n\n\n# Driving log template\n\n## {date}\n\n**Route:**\
+  \ {origin} → {destination}  \n**Miles:** {miles_driven}  \n**Odometer:** {odometer_start}\
+  \ → {odometer_end}\n\n{ narrative paragraph in the car's voice }\n\n\nEvery tool\
+  \ call uses this shape - set `tool` and `arguments`, pipe to CLI:\n\n```yaml\ntoolset:\
+  \ context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n\
+  context:\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m tools\
+  \ run -\n\nSuggested flow (repeat and reorder as the story needs):\n\n1. tool: scan\n\
+  \   arguments:\n     paths: <value>\n\nRead `resources` from each response before\
+  \ choosing the next tool."
+arguments:
+  asset: context_tools/create_context_tool/examples/car_chronicle/output/driving-log.md
+  violation: Scanner use-driving-voice - chronicle reads like a spec sheet
+tools:
+- scan
+resources:
+  active:
+    path: .
+    name: null
+    folder: null
+    goal: null
+    fidelities: null
+    contexts: null
+    started: '2026-08-01'
+    ended: null
+    outcome: null
+    handoff: null
+  mode: action
+```

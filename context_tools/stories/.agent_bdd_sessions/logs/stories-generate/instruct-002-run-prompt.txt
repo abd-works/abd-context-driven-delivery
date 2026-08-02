@@ -1,0 +1,10 @@
+Using shell, run exactly: python -m tools run -
+Pipe this YAML on stdin:
+toolset: context_tools.stories.stories:Stories
+context:
+  fidelity: discovery
+  format: markdown
+action: generate
+Return the complete fenced YAML stdout from the CLI.
+
+IMPORTANT: Invoke python -m tools run via shell. Return the complete fenced YAML stdout from the CLI. Do not summarize.

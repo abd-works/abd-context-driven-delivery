@@ -29,7 +29,7 @@ def _expand_action(
     *,
     toolset_path: str,
 ) -> dict[str, Any]:
-    return _ActionRunner.instance().run(
+    return _ActionRunner.instance().invoke_action(
         _ActionRunRequest(
             request={"toolset": toolset_path, "context": {}},
             toolset_path=toolset_path,
@@ -65,6 +65,35 @@ with description("CreateContextTool meta generator"):
         self.generator = _load_create()
         self.meta_concepts = _load_meta_concepts()
         self.template = _load_scaffold_templates()
+
+    with context("that has been created"):
+        with it("should key the context index as create_context_tool"):
+            expect(type(self.generator).context_index_key).to(
+                equal("create_context_tool")
+            )
+
+        with it("should default the workspace folder to the repo root"):
+            expect(type(self.generator).default_workspace_folder).to(equal("."))
+
+        with it("should resolve module_dir to the create_context_tool package"):
+            expect(self.generator.module_dir).to(equal(_CREATE_DIR.resolve()))
+
+        with it(
+            "should expose generate, validate, satisfy, repair, partition, index, and segment"
+        ):
+            for name in (
+                "generate",
+                "validate",
+                "satisfy",
+                "repair",
+                "partition",
+                "index",
+                "segment",
+            ):
+                expect(name in self.generator.actions).to(equal(True))
+
+        with it("should expose scan as a host tool"):
+            expect("scan" in self.generator.tools).to(equal(True))
 
     with context("generate expands meta face"):
         with before.each:

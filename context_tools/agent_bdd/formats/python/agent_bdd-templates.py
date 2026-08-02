@@ -8,41 +8,46 @@
 #   {SessionName}     stem for .agent_bdd_sessions/<name>.json
 #   {Description}     top-level describe label (e.g. "a CarChronicle generator")
 #   {ScenarioLabel}   context label (e.g. "with agent and generate action")
-#   {SetupPrompt}     natural-language instruct to prime state
+#   {SetupPath}       workspace-relative path the agent should read first
 #   {ExpectedKeyword} substring the response.instructions must contain
 #   {JudgeRubric}     one sentence describing PASS criteria
 # =============================================================================
 
-from pathlib import Path
-
-from expects import be_true, equal, expect
+from expects import be_true, expect
 from mamba import context, description, it
 
-from agent_bdd import agent, ai_judge, instruct, instruct_use_tool
+from agent_bdd import (
+    agent,
+    ai_judge,
+    expect_instructions_contain,
+    expect_ok_action,
+    follow_instructions,
+    read_workspace,
+    repo_root_from,
+    run_toolset,
+    sessions_dir,
+)
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
-_SESSIONS = Path(__file__).resolve().parents[2] / ".agent_bdd_sessions"
-
-_RUN_YAML = """\
-toolset: {ToolsetPath}
-action: {ActionName}
-"""
+_REPO_ROOT = repo_root_from(__file__, parents=4)
+_SESSIONS = sessions_dir(__file__)
 
 with description("{Description}"):
     with context("{ScenarioLabel}"):
         with it("drives {ActionName} and asserts inline"):
             with agent(_REPO_ROOT, _SESSIONS / "{SessionName}.json"):
-                instruct("{SetupPrompt}")
+                read_workspace("{SetupPath}")
 
-                response = instruct_use_tool(
-                    "Using shell, run exactly: python -m tools run -\n"
-                    "Pipe this YAML on stdin:\n"
-                    f"{_RUN_YAML}\n"
-                    "Return the complete fenced YAML stdout from the CLI.",
+                response = run_toolset(
+                    toolset="{ToolsetPath}",
+                    action="{ActionName}",
                     timeout_seconds=180,
                 )
-                expect(response.ok).to(be_true)
-                expect(response.action).to(equal("{ActionName}"))
-                expect("{ExpectedKeyword}".lower() in str(response.instructions).lower()).to(be_true)
+                expect_ok_action(response, "{ActionName}")
+                expect_instructions_contain(response, "{ExpectedKeyword}")
 
-                ai_judge(str(response.instructions), "{JudgeRubric}")
+                artifact = follow_instructions(
+                    "Follow the {ActionName} instructions and produce the artifact.",
+                    timeout_seconds=300,
+                ).text
+                expect(len(artifact) > 0).to(be_true)
+                ai_judge(artifact, "{JudgeRubric}")

@@ -1,0 +1,788 @@
+```yaml
+ok: true
+toolset: context_tools.stories.stories:Stories
+action: generate
+result: When done, run validate.
+instructions: "# Generate\n\n1. Follow **`session_guidance`** and the session tools\
+  \ (`read_context_index`, `record_context_root`, `create_session` when needed). Resolve\
+  \ workspace + tool root, then use the **`active`** resource for `active.path` /\
+  \ `active.folder`.\n2. **MUST — prove-read before asking.** Before any grill/iterate\
+  \ question (and before inventing options or story/module names):\n   - Identify\
+  \ **every relevant context file referenced or implied** by the decision — not one\
+  \ favorite type. Typical set: `{workspace}/.context/context-index.md`, owning `*-segment.md`,\
+  \ `module-context.md`, session grill-answers / sketches / handoff, peer story-context,\
+  \ build-order, and any path the plan or prior answers cite. Include index/overlay\
+  \ only for structure hints; **never** treat mid-epic stub columns as inventory.\n\
+  \   - **Read each of those files with the Read tool** (chunk through large ones).\
+  \ Grep, title lists, memory, or primer-only skims **do not count**.\n   - **Prove\
+  \ it in the question turn:** name the path(s) read and ground options in concrete\
+  \ terms from them. If you cannot cite specifics from the relevant files, you have\
+  \ not read them — go read before asking.\n   - Asking from a skim is a **defect**,\
+  \ same class as dumping a whole artifact in one iterate tick.\n3. **`sources-scoped-to-generated-context`**\
+  \ — Hang `**Sources / context:**` on the node they ground: epic / sub-epic / feature\
+  \ / module, or a lower item (scenario, class, screen, component, …). Root or parent-level\
+  \ Sources are fine when those files apply to the **entire** artifact or subtree.\n\
+  4. Apply all guidance and named rules in each **context** — each bullet is a requirement.\n\
+  5. Match **examples** for shape, depth, and tone.\n6. Fill the **template** scaffold\
+  \ and save the artifact under the session layout from `session_guidance`.\n7. Follow\
+  \ any extra build steps included in your instructions when present.\n8. Run **validate**.\
+  \ If it fails, fix the artifact and **validate** again until it passes.\n\n---\n\
+  \n# Generate\n\n1. Confirm fidelity and format (defaults above).\n2. Read this file\
+  \ — shared rules + active fidelity.\n3. **MUST** follow base `generate` step 2:\
+  \ before any grill/iterate question, prove-read every relevant referenced context\
+  \ for that decision (segments, module-context, grill-answers, story-context, build-order,\
+  \ cited paths, …). Index mid-epic stubs are not inventory. Apply `read-all-source-context-in-full`.\n\
+  4. Use peer actions when useful (`grill`, `sketch`, `iterate`; `sketch-template.md`).\n\
+  5. Fill templates for the active fidelity.\n6. Run **validate**.\n\nOpen the workspace\
+  \ session in one step: set path (durable root), ensure the sprint exists (create\
+  \ if missing), load context index if present, record this tool's root when keyed.\
+  \ Follow session_guidance. Scope durable work to path and sprint docs to folder.\n\
+  \n# Session Guidance\n\n`Session` tracks three things:\n\n| Name | Meaning | Example\
+  \ |\n|------|---------|---------|\n| **path** | Durable tool root (`active.path`)\
+  \ | `…/sandbox` |\n| **folder** | Sprint folder (`active.folder`) | `…/sandbox/.context/sessions/{name}/`\
+  \ |\n| **context_index** | `{workspace_root}/.context/context-index.md` when present\
+  \ | tool → root map |\n\n## Constructor / run context\n\n- `workspace` — workspace\
+  \ root where `context-index.md` lives (default `\".\"`)\n- `path` — durable tool\
+  \ root\n- `session` — sprint slug under `{path}/.context/sessions/{name}/`\n\n##\
+  \ One call to open\n\n**`open`** — single action before generate / grill / sketch\
+  \ / iterate / validate:\n\n1. Resolve durable root (`path`)\n2. Ensure sprint exists\
+  \ (load or create)\n3. Load context index if present\n4. Record this tool's root\
+  \ when `context_index_key` is set\n\n```yaml\naction: open   # via self.workspace().open()\
+  \ from BaseContextTool\n```\n\nDo **not** separately chain bind + read_context_index\
+  \ + record_context_root from lifecycle bodies — `open` already does that.\n\n##\
+  \ Layout\n\n- **path** — docs → `{path}/.context/`; code/modules → `{path}/`\n-\
+  \ **folder** — `session.md`, grill-answers, engagement sketches, handoff, `to-fix.log`\n\
+  - **context-index** — `{workspace_root}/.context/context-index.md`\n\n## Root when\
+  \ `path` omitted\n\n1. context-index entry for `context_index_key`\n2. else `{workspace_root}/{default_workspace_folder}`\n\
+  \nResource `active` = Session(path='tests', name=None).\n\nOffer and write Context\
+  \ Decision Records (CDRs) sparingly as decisions crystallise during the wrapped\
+  \ action - never batch; never invent decisions.\n\nStep 1 - Read the format once\
+  \ via read_cdr_format. Internalise the three-criteria gate and the minimal template.\n\
+  \nStep 2 - Optionally call list_cdrs(root) so you do not re-record an already-captured\
+  \ decision.\n\nStep 3 - During the session (grill, sketch, or generate), watch for\
+  \ decisions that meet ALL three: hard to reverse, surprising without context, and\
+  \ a real trade-off. If any criterion is missing, skip the CDR.\n\nStep 4 - When\
+  \ a qualifying decision crystallises, offer a CDR briefly (title + one-line gist).\
+  \ If the user accepts, call write_cdr immediately with a kebab slug and content\
+  \ matching CDR-FORMAT.md. Do not batch; do not wait until the end.\n\nStep 5 - Keep\
+  \ CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences\
+  \ only when they add genuine value.\n\n# Contexts\n\nMap stakeholder and system\
+  \ interactions as behaviours that deliver a solution. Deepen fidelity; never invent\
+  \ detail from a deeper level.\n\nInteractions fit into a hierarchy: a `StoryMap`\
+  \ of `Epic` → nestable `SubEpic` → `Story`. Each story is `Scenario`s with discrete\
+  \ steps; backgrounds and scenarios carry examples (from CE `{Type}ExampleFactory`\
+  \ when available — never invent rows in story files).\n\n| Fidelity | Default Format\
+  \ | Produce |\n|---|---|---|\n| **discovery** | markdown | Story map + thin-slice\
+  \ |\n| **exploration** | python | One main-flow scenario per story (fake + public\
+  \ seam); optional variations |\n| **engineering** | python | `*_spec` + `*_spec.{tier}`\
+  \ |\n\n**Templates** live under `templates/` per format. **Scanners** read the canonical\
+  \ model only — never language syntax.\n\n---\n\n## Shared rules\n\n- **`verb-noun-format`**\
+  \ — Name Epic / SubEpic / Story verb–noun; actor is metadata; base verb form.\n\
+  - **`four-to-nine-children`** — 4–9 direct children (warn at 3/10; error ≤2 or ≥11).\n\
+  - **`behavioral-observable-outcomes`** — Name and Then in domain-observable terms;\
+  \ never internals.\n- **`branch-on-mechanical-uniqueness`** — Explore context relentlessly\
+  \ for distinct mechanics. Branch on mechanical uniqueness, dstinct mechanics in\
+  \ requirements require *distinct stories* for each mechanic. Different requirement\
+  \ entries with same mechanic is *one story only with different examples or scenarios*.\
+  \ Collapsing real mechanical variation, as well as mindlessly turning requirements\
+  \ into long lists of stories are **defect**\n- **`vocabulary-traces-to-domain-source`**\
+  \ — Trace terms to domain language / model when present.\n- **`artifacts-mirror-story-hierarchy`**\
+  \ — Mirror Epic → SubEpic → Story on disk.\n- **`right-size-story-nodes`** — One\
+  \ demonstrable interaction per story.\n- **`read-all-source-context-in-full`** —\
+  \ Before locking hierarchy **and before any grill/iterate question about a seam**,\
+  \ prove-read **every relevant referenced context** for that decision: owning `*-segment.md`,\
+  \ `module-context.md`, session sketches / grill-answers / handoff, peer story-context,\
+  \ build-order, and any path the plan or prior answers cite. Index / mid-epic stub\
+  \ columns are structure hints only — **not** story inventory. Grep or primer-only\
+  \ skims do not count; cite concrete terms from the files read in the question turn.\
+  \ Also re-read these rules. Do not thin from titles or memory!\n\n---\n\n## discovery\n\
+  \n**Format:** markdown · **Produce:** named stories under activities + thin-slice\
+  \ order.\n\n**Do:**\n1. Build the map: verb–noun stories under each activity; assign\
+  \ actors.\n2. Slice vertically — increments named for stakeholder-visible capability;\
+  \ copy story names **verbatim** from the map.\n3. Mark spine vs optional; never\
+  \ slice horizontally (“finish epic A then B”).\n4. Fill `templates/md/story-map.md`\
+  \ and `templates/md/thin-slice.md` (optional `.context/story-context.md` per activity\
+  \ folder).\n5. Keep unmapped work in the **sketch** as `* approx N–M …`; drop approx\
+  \ as stories get named.\n\n**Rules:** `story-map-shape` / `story-map-discipline`\
+  \ · `thin-slice-shape` / `thin-slice-increment-shape` / `thin-slice-ordering` ·\
+  \ `story-name-exact-match` · apply `branch-on-mechanical-uniqueness` and `read-all-source-context-in-full`\
+  \ while grilling and sketching.\n\n---\n\n## exploration\n\n**Format:** python ·\
+  \ **Produce:** one runnable main-flow scenario per story — fake + public seam. No\
+  \ tier specs yet.\n\n**Stories vs BDD:** Stories = acceptance (e2e / tier). BDD\
+  \ = object-level tests.\n\n**Layout:** Epic / nested SubEpic / Story = folders;\
+  \ optional `.context/story-context.md` per folder.\n\n```\n{epic}/\n  {epic}-helper.{ext}\
+  \       # → {Type}ExampleFactory\n  {story}/\n    {story}_story.{ext}     # GWT;\
+  \ mode \"fake\" when entry\n```\n\n| File | Role |\n|---|---|\n| `*_story.{ext}`\
+  \ | Runnable GWT; **fake** `I{Type}` via helpers → factory; assert **public interface**\
+  \ only |\n\n**Do:**\n1. Export `create{Story}Story(mode)` registering `story` /\
+  \ `scenario` / `given` / `when` / `then`.\n2. Run the story entry with `mode: \"\
+  fake\"`.\n3. Route steps: helper → `{Type}ExampleFactory.load…({ mode })`.\n4. Assert\
+  \ **Then** only on the public seam of `I{Type}` — no private fields, no hand-rolled\
+  \ Fakes.\n5. Pull values from `examples[{example_key}]` — no story-local example\
+  \ tables.\n6. Fill `templates/py|js/…/{story}_story.*` (md walk-through: `templates/md/scenario-main-flow.md`\
+  \ if documenting only).\n7. **Optional — variation scenarios (off by default).**\
+  \ In the same `*_story.{ext}`, add alternate / error / boundary scenarios and shared\
+  \ backgrounds only when **one of these is true**:\n   - The main-flow scenario already\
+  \ exists in the story file, **or**\n   - Explicitly asked for.\n   Apply the scenario\
+  \ rules below to any variation added here. Do not add variations before the main\
+  \ flow is confirmed.\n\n**Rules (main-flow and any optional variations):**\n- **`scenarios-shape`**\
+  \ / **`scenario-step-quality`** — Given / When / Then; domain-observable steps.\n\
+  - **`factory-backed-examples`** — Values in `{Type}ExampleFactory`; steps may name\
+  \ the method or returned object.\n- **`assert-public-interface`** — Then reads only\
+  \ the public seam of `I{Type}` (+ peers).\n- **`scenario-coverage`** — Cover important\
+  \ variations, not only happy path (when optional step 7 is active).\n- **`real-data-over-invented-values`**\
+  \ — Factory examples trace to domain / evidence.\n- **`atomic-deltas-over-repetition`**\
+  \ — State the delta; do not copy-paste walls.\n- **`alternate-actor-emphasis`**\
+  \ — Call out alternate actors when the path changes.\n- **`factory-objects-in-scenarios`**\
+  \ — Obtain objects via helpers → `{Type}ExampleFactory.{method}` (fake mode).\n\
+  - **`variations-after-main-flow`** — Never add alternate / boundary scenarios before\
+  \ the main-flow scenario exists and is confirmed.\n\n---\n\n## engineering\n\n**Format:**\
+  \ python · **Produce:** write-once tier specs that re-run the same scenarios. Prefer\
+  \ RED until behaviour exists; drive green with minimum production code.\n\n| File\
+  \ | Role |\n|---|---|\n| `{story}_story.*` | Tier-neutral GWT; entry runs **fake**\
+  \ (owned at explore/spec) |\n| `{story}_spec.*` | Isolated — real `{Type}` + injected\
+  \ mocks; `create{Story}Story(\"isolated\")` |\n| `{story}_spec.{tier}.*` | Same\
+  \ scenarios; named tier (e.g. `…_spec.production.js`) |\n\n**Do:**\n1. Confirm language/framework\
+  \ (default pytest / `node --test`).\n2. Scaffold `*_spec` (isolated) and/or `*_spec.{tier}`\
+  \ if missing — never overwrite existing bodies; each calls the shared story fn with\
+  \ matching mode.\n3. Keep fake in the story file only; isolated = `{Type}` + injected\
+  \ mocks; other tiers via `*_spec.{tier}`.\n4. RED → GREEN → REFACTOR one scenario\
+  \ at a time.\n5. After **2 consecutive fix failures** — stop; call `diagnostic().diagnose()`\
+  \ before a third fix.\n6. Run **validate**.\n\n**Rules:** `tests-shape` · `tests-implement-specification`\
+  \ · `tier-bodies-implemented` · `assertions-against-real-behavior` · `scenarios-tied-to-runtime`\
+  \ · `bug-fix-test-first` · `tier-factory-kind` (call story with `isolated` or named\
+  \ tier — never invent Fake subclasses in tier bodies).\n\n---\n\n## Example factories\
+  \ (Clean Engineering)\n\nLink to CE factories; do not invent Fakes or story-local\
+  \ example tables.\n\n| Artifact | Emit |\n|---|---|\n| Epic helper | Import `{Type}ExampleFactory`;\
+  \ `given*` → `load*({ mode })` |\n| Story (explore/spec) | GWT; `mode: \"fake\"\
+  `; assert public `I{Type}` |\n| Tier spec | Same story fn; `mode: \"isolated\"`\
+  \ \\| `\"production\"` |\n\n**Chain:** steps → helper → `load…({ mode })` → `I{Type}`\
+  \ (+ peers) → assert public seam.\n\n**Modes:** `fake` = mock/stub + `examples[{key}]`\
+  \ · `isolated` = `new {Type}(...mocks)` · `production` = `new {Type}(...real)`.\n\
+  \nDeclare on the model: `Epic.example_factories` / `SubEpic.example_factories`.\
+  \ Normalize via `code/example_factories.py`.\n\n**Rules:** `helpers-import-factories`\
+  \ · `examples-multi-type-bundle` · `stories-do-not-own-ce-types` · `no-story-local-example-tables`.\n\
+  \n---\n\n## examples.md\n\n# Stories examples\n\nReference trees under this folder.\
+  \ Prefer generating fresh trees via\n`Stories.transform` / `generate` at the active\
+  \ fidelity rather than copying\nthese verbatim when the hybrid layout differs.\n\
+  \n## Markdown (`md/`) — discovery documents\n\n| Path | What it shows |\n|---|---|\n\
+  | `md/story-map.md` | Discovery story map (verb–noun + actor before `-->`) |\n|\
+  \ `md/thin-slice.md` | Vertical increments referencing map story names |\n| `md/scenario-main-flow.md`\
+  \ | Main-flow scenario narrative |\n| `md/scenario-outline.md` | Scenario outline\
+  \ + examples table |\n| `md/scenario-inline.md` | Inline-examples scenario style\
+  \ |\n\n## Python (`py/`) — exploration / specification / engineering layout\n\n\
+  | Path | What it shows |\n|---|---|\n| `py/manage-customer-orders/` | Acceptance\
+  \ layout for one epic (story-spec leaf files + shared runner/types) |\n| `py/manage-customer-orders/*/*/*_stories.py`\
+  \ | Regeneratable story-spec constants (`story`, `actor`, scenarios) |\n| `py/manage-customer-orders/story_runner.py`\
+  \ | Runner that binds scenarios to tier implementations |\n| `py/manage-customer-orders/story_types.py`\
+  \ | Shared story/scenario type shapes |\n\nPrefer the hybrid leaf-file + tier shape\
+  \ from the code formatter over any legacy dict-only layout when they disagree.\n\
+  \n\n## md/scenario-inline.md\n\n---\nfidelity: [specification]\nartifact: [story-scenarios]\n\
+  format: md\nexample-of: scenario-inline\n---\n\n<!-- Worked example — plain scenario\
+  \ with real domain values inline. -->\n<!-- Shows the shape templates/md/scenario-inline.md\
+  \ produces once filled in. -->\n\n## Story: Apply For a Payment Product Agreement\n\
+  \n**Story type:** user\n\n### Domain terms\n\n- *Customer* — account holder applying\
+  \ for the agreement\n- *DDA Account* — demand deposit account; must be valid and\
+  \ eligible\n- *Payment Product Agreement* — contract under review after submission\n\
+  - *Owner* — named responsible party on the agreement\n- *Contact Details* — email\
+  \ or phone used to notify the **Owner**\n\n## Behaviors\n\n### Scenario 1: Agreement\
+  \ submitted with valid DDA Account and Owner\n\n*Given* a **Customer** *Jane Doe*\
+  \ exists  \n  *And* that **Customer** *Jane Doe* has a valid **DDA Account** *DDA-001*\
+  \  \n*When* the **Customer** *Jane Doe* applies for a **Payment Product Agreement**\
+  \  \n    using **DDA Account** *DDA-001*  \n    with **Owner** *John Doe*  \n  \
+  \    that has **Contact Details** *john@acme.com*  \n*Then* the **Payment Product\
+  \ Agreement** is submitted for review  \n  *And* the **Owner** *John Doe* is notified\
+  \ at *john@acme.com*  \n\n### Scenario 2: Agreement rejected when DDA Account is\
+  \ invalid\n\n*Given* a **Customer** *Jane Doe* exists  \n  *And* that **Customer**\
+  \ *Jane Doe* has **DDA Account** *DDA-999* with status *Invalid*  \n*When* the **Customer**\
+  \ *Jane Doe* applies for a **Payment Product Agreement**  \n    using **DDA Account**\
+  \ *DDA-999*  \n*Then* the **Payment Product Agreement** is *rejected*  \n  *And*\
+  \ **Customer** *Jane Doe* is notified that the **DDA Account** is *not eligible*\
+  \  \n\n### Evidence\n\n| Scenario | Source (document / system) | Location |\n| ---\
+  \ | --- | --- |\n| Scenario 1 | *Payment Product Requirements* | §\"Application\
+  \ flow\", p. 12 |\n| Scenario 2 | *Payment Product Requirements* | §\"Rejection\
+  \ cases\", p. 14 |\n\n\n## md/scenario-main-flow.md\n\n---\nfidelity: [exploration]\n\
+  artifact: [story-scenarios]\nformat: md\nexample-of: scenario-main-flow\n---\n\n\
+  # Acceptance Criteria — Example\n\nWorked example using the same **Manage Customer\
+  \ Orders** domain as the shaping-level story-map-example.md.\n\nBelow is one story\
+  \ in full so agents can read a single complete pattern.\n\n---\n\n## Story: Browse\
+  \ Product Catalog\n\n**Story type:** user\n\n### Domain terms\n\n- *Product Catalog*\
+  \ — browsable list of products available to order\n- *Category* — grouping used\
+  \ to narrow what the customer sees\n- *Product Detail* — name, description, price,\
+  \ and image for one product\n- *Out Of Stock* — product not available to add to\
+  \ an order right now\n\n### Acceptance criteria\n\n1. **WHEN** the customer opens\
+  \ the *Product Catalog*\n   **THEN** the system displays available products grouped\
+  \ by *Category*\n   **AND** each row shows at least product name and price\n   **Evidence:**\
+  \ Order Management Workshop — whiteboard \"Place order\" flow, 2026-03-15, sticky\
+  \ \"browse by category\"\n\n2. **WHEN** the customer selects a *Category*\n   **THEN**\
+  \ the *Product Catalog* lists only products in that *Category*\n   **Evidence:**\
+  \ Order Management Workshop — same session, \"filter catalog by category\"\n\n3.\
+  \ **WHEN** the customer selects a product from the *Product Catalog*\n   **THEN**\
+  \ the system shows *Product Detail* for that product\n   **Evidence:** Order Management\
+  \ Workshop — \"click through to product detail\"\n\n4. **WHEN** a product is *Out\
+  \ Of Stock*\n   **THEN** the *Product Catalog* and *Product Detail* show that the\
+  \ product cannot be added to an order\n   **BUT** the customer can still browse\
+  \ other products\n   **Evidence:** Order Management Workshop — \"don't block browsing\
+  \ when one SKU is gone\"\n\n## What to notice\n\n- Stories match **verb-noun** names\
+  \ from the story map; actor is in **Story type**, not the title\n- **Domain terms**\
+  \ are defined before AC; the same *italic* terms appear in the criteria\n- **when\
+  \ / then / and / but** — negatives use **but**; no **given** in AC\n- Each AC is\
+  \ a **delta** or distinct case — general browse flow once, then category, detail,\
+  \ and out-of-stock paths\n- **Evidence** cites a concrete source even for workshop-derived\
+  \ discovery\n\n---\n\n## Same story in `*-stories.ts` code format\n\n```typescript\n\
+  import type { Step, AcceptanceCriterion, Background } from '../../story-types'\n\
+  \nexport const BROWSE_PRODUCT_CATALOG = {\n  story: `Browse Product Catalog`,\n\
+  \  actor: `Customer`,\n\n  acceptance_criteria: [\n    [\n      { when: `the *customer*\
+  \ opens the **Product Catalog**` },\n      { then: `the system displays available\
+  \ products grouped by **Category**` },\n      { and:  `each row shows at least product\
+  \ name and price` },\n    ],\n    [\n      { when: `the *customer* selects a **Category**`\
+  \ },\n      { then: `the **Product Catalog** lists only products in that **Category**`\
+  \ },\n    ],\n    [\n      { when: `the *customer* selects a product from the **Product\
+  \ Catalog**` },\n      { then: `the system shows **Product Detail** for that product`\
+  \ },\n    ],\n    [\n      { when: `a product is **Out Of Stock**` },\n      { then:\
+  \ `the **Product Catalog** and **Product Detail** show the product cannot be added`\
+  \ },\n      { but:  `the *customer* can still browse other products` },\n    ],\n\
+  \  ] as const satisfies readonly AcceptanceCriterion[],\n\n  domain_terms: ['Product\
+  \ Catalog', 'Category', 'Product Detail', 'Out Of Stock'] as const,\n  evidence:\
+  \ [\n    'Order Management Workshop — whiteboard \"Place order\" flow, 2026-03-15',\n\
+  \    'Order Management Workshop — \"filter catalog by category\"',\n    'Order Management\
+  \ Workshop — \"click through to product detail\"',\n    'Order Management Workshop\
+  \ — \"don\\'t block browsing when one SKU is gone\"',\n  ] as const,\n\n  customerOpensProductCatalogSystemDisplays:\
+  \ {\n    name: `customer opens product catalog system displays`,\n    steps: [\n\
+  \      { when: `the *customer* opens the **Product Catalog**` },\n      { then:\
+  \ `the system displays available products grouped by **Category**` },\n      { and:\
+  \  `each row shows at least product name and price` },\n    ] as const satisfies\
+  \ readonly Step[],\n  },\n\n  customerSelectsCategoryProductCatalogLists: {\n  \
+  \  name: `customer selects category product catalog lists`,\n    steps: [\n    \
+  \  { when: `the *customer* selects a **Category**` },\n      { then: `the **Product\
+  \ Catalog** lists only products in that **Category**` },\n    ] as const satisfies\
+  \ readonly Step[],\n  },\n\n  customerSelectsProductProductDetail: {\n    name:\
+  \ `customer selects product product detail`,\n    steps: [\n      { when: `the *customer*\
+  \ selects a product from the **Product Catalog**` },\n      { then: `the system\
+  \ shows **Product Detail** for that product` },\n    ] as const satisfies readonly\
+  \ Step[],\n  },\n\n  productOutOfStockProductCatalogShows: {\n    name: `product\
+  \ out of stock product catalog shows`,\n    steps: [\n      { when: `a product is\
+  \ **Out Of Stock**` },\n      { then: `the **Product Catalog** and **Product Detail**\
+  \ show the product cannot be added` },\n      { but:  `the *customer* can still\
+  \ browse other products` },\n    ] as const satisfies readonly Step[],\n  },\n\n\
+  } as const\n```\n\nThe `acceptance_criteria` array and the named scenario objects\
+  \ contain **identical steps** — the criteria drive what the scenarios test.\n\n\n\
+  ## md/scenario-outline.md\n\n---\nfidelity: [specification]\nartifact: [story-scenarios]\n\
+  format: md\nexample-of: scenario-outline\n---\n\n<!-- Worked example — Scenario\
+  \ Outline with normalized Examples tables. -->\n<!-- Shows the shape templates/md/scenario-outline.md\
+  \ produces once filled in. -->\n\n## Story: Submit Payment and Validate Against\
+  \ Account Limit\n\n**Story type:** user\n\n### Domain terms\n\n- *Account* — enterprise\
+  \ sub-account with an activation status\n- *Transactional Limit* — maximum amount\
+  \ rule attached to an **Account**\n- *Wire Payment* — payment request submitted\
+  \ by the user\n- *Payment Amount* — value entered for the **Wire Payment**\n- *Validation\
+  \ Status* — outcome after limit check (*successful* or *rejected*)\n\n### Examples\n\
+  \n#### Account:\n\n| scenario      | enterprise_name | account_name       | activation_status\
+  \ |\n|---------------|-----------------|--------------------|-------------------|\n\
+  | Scenario 1    | Acme Corp       | Acme Operating     | Active            |\n|\
+  \ Scenario 2    | Acme Corp       | Acme Payroll       | Active            |\n\n\
+  #### Transactional Limit:\n\n| scenario      | account_name       | limit_name \
+  \ | max_amount   | currency |\n|---------------|--------------------|-------------|--------------|----------|\n\
+  | Scenario 1    | Acme Operating     | daily_wire  | 500000.00    | USD      |\n\
+  | Scenario 2    | Acme Payroll       | weekly_wire | 2000000.00   | USD      |\n\
+  \n#### Wire Payment:\n\n| scenario      | amount      | currency | formatted_display\
+  \ | validation_status |\n|---------------|-------------|----------|-------------------|-------------------|\n\
+  | Scenario 1    | 10000.00    | USD      | $10,000.00        | successful      \
+  \  |\n| Scenario 2    | 500000.01   | USD      | $500,000.01       | rejected  \
+  \        |\n\n### Background\n\n*Given* a **User** {user_name} is logged into ChannelOne\
+  \ 2.0  \n  *And* that **User** {user_name} is representing **Enterprise** {enterprise_name}\
+  \  \n\n### Behaviors\n\n#### Scenario Outline 1: Submit Payment and Validate Against\
+  \ Account Limit\n\n#### Steps\n\n*Given* an **Account** {account_name} with **Activation\
+  \ Status** {activation_status}  \n  *And* the **Transactional Limit** for that **Account**\
+  \ is {max_amount} {currency}  \n*When* the **User** enters a **Payment Amount**\
+  \ of {amount} {currency}  \n*Then* the **Wire Payment** is marked as {validation_status}\
+  \  \n  *And* a **Report** is sent with formatted display {formatted_display}  \n\
+  \n### Evidence\n\n| Scenario | Source (document / system) | Location |\n| --- |\
+  \ --- | --- |\n| Scenario 1 | *Order Management Workshop* | Whiteboard \"submit\
+  \ flow\", 2026-03-15 |\n| Scenario 2 | *API Spec* v2 | p. 8, §\"Limit exceeded\"\
+  \ |\n\n\n## md/story-map.md\n\n---\nfidelity: [shaping, discovery]\nartifact: [story-map]\n\
+  format: md\nexample-of: story-map\n---\n\n# Story Mapping — Example\n\n## Example\
+  \ story map\n\n(E) Manage Customer Orders\n    (E) Place New Order\n        (S)\
+  \ Customer --> Browse Product Catalog\n        (S) Customer --> Add Item To Cart\n\
+  \        (S) Customer --> Enter Shipping Address\n        (S) Customer --> Select\
+  \ Delivery Option\n        (S) Customer --> Submit Order\n    (E) Track Order Status\n\
+  \        (S) Customer --> View Current Order Status\n        (S) System --> Send\
+  \ Shipment Notification\n    (E) Cancel Order\n        (S) Customer --> Request\
+  \ Order Cancellation\n        (S) System --> Process Cancellation Refund\n\n## What\
+  \ to notice\n\n- Epic names are **verb–noun**, no actor in the name\n- Actor goes\
+  \ before `-->`, not in the story name\n- Each story is one observable behavior —\
+  \ not a task or feature\n- Sub-epics group stories into coherent flows\n\n\n## md/thin-slice.md\n\
+  \n---\nfidelity: [discovery]\nartifact: [thin-slice]\nformat: md\nexample-of: thin-slice\n\
+  ---\n\n# Thin slicing — PawPlace incremental backlog\n\n## Product / context\n\n\
+  **Product:** PawPlace — online pet store with in-store adoption visits.\n\n**Slicing\
+  \ intent (by value, store-first):** Each increment must put a working capability\
+  \ in the hands of a real store. Earlier increments deliberately leave out polish,\
+  \ payment depth, accounts, pets, returns, and marketing so that a store gets a usable\
+  \ product on day one and revenue and learning compound with each release. *Pet appointments*\
+  \ — the adoption side — are explicitly held back until the e-commerce spine is real.\n\
+  \n**Spine vs optional:** The mandatory commerce spine is **catalog → store → cart\
+  \ → pay → fulfill**. Pets, accounts, multi-vendor payments, returns, marketing,\
+  \ reviews, and admin polish are real work but **not** required for the smallest\
+  \ store-supporting slice; they ride later increments.\n\n## Increments\n\n### Increment\
+  \ 1: `Walk-in driver — find the store, see what's in stock`\n\n**Outcome:** A customer\
+  \ can find their nearest *store*, browse the *product catalog*, see *real-time stock\
+  \ availability* for a product at that store, and walk in to ask for it. Drives foot\
+  \ traffic with zero checkout, payment, or accounts infrastructure. Store gets value\
+  \ on day one.\n\n**Slicing notes:** Single payment-free, account-free vertical slice.\
+  \ Manual stock updates by staff via a bare-bones admin form. Categories only — no\
+  \ keyword search yet. No cart, no checkout, no notifications. Validates the *catalog*\
+  \ data model, the *store* + geo model, the *stock availability* contract, and that\
+  \ customers find this useful enough to walk in. Risk validated: real customer traffic\
+  \ to real stores.\n\n**Stories in this increment** *(order reflects flow within\
+  \ the slice):*\n\n- *View Store Map*\n- *View Store List*\n- *Calculate Distance\
+  \ to Store*\n- *View Product Details*\n- *Display Real-Time Stock Availability*\n\
+  - *Update Product Stock Levels*\n\n### Increment 2: `Click-and-collect — buy online,\
+  \ pick up at the store`\n\n**Outcome:** A customer can put products in a *shopping\
+  \ cart*, pay online with a card, and pick the order up at a chosen *store*. The\
+  \ store gets online revenue without anyone solving home-delivery logistics. Single\
+  \ payment vendor (StripeWave) so the integration is real but bounded.\n\n**Slicing\
+  \ notes:** *Guest checkout* only — no accounts yet. Single payment vendor. Confirmation\
+  \ email from a static template. No shipping address, no delivery option fan-out\
+  \ — pickup is the only fulfillment path. Manual pick-prep by store staff. Validates\
+  \ the riskiest payment integration on a real card-present journey end-to-end.\n\n\
+  **Stories in this increment:**\n\n- *Add Product to Cart*\n- *Update Cart Quantity*\n\
+  - *Remove Product from Cart*\n- *Select Click-and-Collect Store*\n- *Check Out as\
+  \ Guest*\n- *Enter Billing Address*\n- *Select Payment Method*\n- *Process Card\
+  \ Payment via StripeWave*\n- *Confirm Order and Send Confirmation Email*\n- *Prepare\
+  \ Click-and-Collect Orders for Pickup*\n- *Fulfill Click-and-Collect Order*\n\n\
+  ### Increment 3: `Ship to home — full standard-delivery e-commerce`\n\n**Outcome:**\
+  \ A customer can complete the same purchase journey but have it **shipped** to a\
+  \ delivery address. Standard delivery only. Now the store reaches customers outside\
+  \ its catchment.\n\n**Slicing notes:** Still *guest checkout*, still StripeWave-only.\
+  \ Standard delivery only — defer express and same-day. Manual shipping label creation\
+  \ by staff. Validates the order lifecycle past pickup: shipping notifications, tracking,\
+  \ and an order-status view.\n\n**Stories in this increment:**\n\n- *Enter Shipping\
+  \ Address*\n- *Select Delivery Option*\n- *View and Process Incoming Orders*\n-\
+  \ *Send Shipping Notification with Tracking Number*\n- *Track Order Status*\n\n\n\
+  ## py/manage-customer-orders/cancel-order/process-cancellation-refund/process_cancellation_refund_stories.py\n\
+  \n\"\"\"Story data - regeneratable. Do not add logic or imports.\"\"\"\n\nfrom __future__\
+  \ import annotations\n\nfrom typing import Final\n\n\nPROCESS_CANCELLATION_REFUND:\
+  \ Final = {\n    \"story\":        \"Process Cancellation Refund\",\n    \"actor\"\
+  :        \"System\",\n    \"domain_terms\": (\"Cancellation\", \"Refund\", \"Refund\
+  \ Amount\", \"Payment Method\"),\n    \"evidence\":     (),\n}\n\n\n## py/manage-customer-orders/cancel-order/request-order-cancellation/request_order_cancellation_stories.py\n\
+  \n\"\"\"Story data - regeneratable. Do not add logic or imports.\"\"\"\n\nfrom __future__\
+  \ import annotations\n\nfrom typing import Final\n\n\nREQUEST_ORDER_CANCELLATION:\
+  \ Final = {\n    \"story\":        \"Request Order Cancellation\",\n    \"actor\"\
+  :        \"Customer\",\n    \"domain_terms\": (\"Order\", \"Cancellation Request\"\
+  , \"Cancellation Reason\", \"Order Status\"),\n    \"evidence\":     (\"Cancellation\
+  \ policy doc v2 #3\", \"Customer support call review 2026-05-18\"),\n\n    \"cancellation_accepted_before_shipment\"\
+  : {\n        \"name\":         \"cancellation accepted while the order is still\
+  \ placed\",\n        \"given\": (\n            \"an Order \\\"ORD-4200080\\\" in\
+  \ status placed\",\n        ),\n        \"interactions\": (\n            {\n   \
+  \             \"when\": (\n                    \"the Customer submits a Cancellation\
+  \ Request with reason \\\"changed mind\\\"\",\n                ),\n            \
+  \    \"then\": (\n                    \"the Order status changes to cancelled\"\
+  ,\n                    \"And the Cancellation Request records reason \\\"changed\
+  \ mind\\\"\",\n                ),\n            },\n        ),\n    },\n\n    \"\
+  cancellation_rejected_after_shipment\": {\n        \"name\":         \"cancellation\
+  \ rejected once the shipment is on the way\",\n        \"given\": (\n          \
+  \  \"an Order \\\"ORD-4200081\\\" in status shipped\",\n        ),\n        \"interactions\"\
+  : (\n            {\n                \"when\": (\n                    \"the Customer\
+  \ submits a Cancellation Request\",\n                ),\n                \"then\"\
+  : (\n                    \"the Cancellation Request is rejected\",\n           \
+  \         \"But the Order remains in status shipped\",\n                ),\n   \
+  \         },\n        ),\n    },\n}\n\n\n## py/manage-customer-orders/conftest.py\n\
+  \n\"\"\"Test-root conftest - adds this folder to sys.path.\"\"\"\n\nfrom __future__\
+  \ import annotations\n\nimport sys\nfrom pathlib import Path\n\n_HERE = Path(__file__).resolve().parent\n\
+  if str(_HERE) not in sys.path:\n    sys.path.insert(0, str(_HERE))\n\n\n## py/manage-customer-orders/manage_customer_orders_helper.py\n\
+  \n\"\"\"Epic-level helper for the Manage Customer Orders code examples.\n\nKept\
+  \ as a snake_case module because Python's import system does not accept\nhyphens\
+  \ in module names. This is the single naming exception in the code\nfamily - every\
+  \ other file and folder uses kebab-case (matching story slugs).\n\nThe helper collects\
+  \ shared type aliases and background factories that the\nper-story `<slug>-stories.py`\
+  \ files can reuse. When those files are loaded\nby hand (via importlib) rather than\
+  \ by `import` they still work; the epic\nhelper is the one module tests / adapters\
+  \ can import directly by name.\n\nSee: `context_tools/stories/src/formats/code/architecture-context.md`\n\
+  \"\"\"\nfrom __future__ import annotations\n\nfrom typing import Literal, TypedDict,\
+  \ Union\n\n\nclass Given(TypedDict):\n    given: str\n\n\nclass When(TypedDict):\n\
+  \    when: str\n\n\nclass Then(TypedDict):\n    then: str\n\n\nclass And(TypedDict):\n\
+  \    and_: str  # `and` is a Python keyword; adapter maps this back to \"and\"\n\
+  \n\nclass But(TypedDict):\n    but: str\n\n\nStep = Union[Given, When, Then, And,\
+  \ But]\nBackground = tuple[Given, ...]\n\n\nStoryStatus = Literal[\"stub\", \"exploration\"\
+  , \"specification\", \"engineering\"]\n\n\ndef default_background(customer_handle:\
+  \ str = \"alex.morgan\") -> Background:\n    \"\"\"Standard Background reused across\
+  \ most stories in this epic.\"\"\"\n    return (\n        {\"given\": f'a Customer\
+  \ \"{customer_handle}\" is signed in with a populated Cart'},\n    )\n\n\n## py/manage-customer-orders/place-new-order/add-item-to-cart/add_item_to_cart_stories.py\n\
+  \n\"\"\"Story data - regeneratable. Do not add logic or imports.\"\"\"\n\nfrom __future__\
+  \ import annotations\n\nfrom typing import Final\n\n\nADD_ITEM_TO_CART: Final =\
+  \ {\n    \"story\":        \"Add Item To Cart\",\n    \"actor\":        \"Customer\"\
+  ,\n    \"domain_terms\": (\"Cart\", \"Product\", \"Cart Item\", \"Quantity\"),\n\
+  \    \"evidence\":     (),\n}\n\n\n## py/manage-customer-orders/place-new-order/browse-product-catalog/browse_product_catalog_stories.py\n\
+  \n\"\"\"Story data - regeneratable. Do not add logic or imports.\"\"\"\n\nfrom __future__\
+  \ import annotations\n\nfrom typing import Final\n\n\nBROWSE_PRODUCT_CATALOG: Final\
+  \ = {\n    \"story\":        \"Browse Product Catalog\",\n    \"actor\":       \
+  \ \"Customer\",\n    \"domain_terms\": (\"Product Catalog\", \"Product\", \"Category\"\
+  ),\n    \"evidence\":     (),\n}\n\n\n## py/manage-customer-orders/place-new-order/enter-shipping-address/enter_shipping_address_stories.py\n\
+  \n\"\"\"Story data - regeneratable. Do not add logic or imports.\"\"\"\n\nfrom __future__\
+  \ import annotations\n\nfrom typing import Final\n\n\nENTER_SHIPPING_ADDRESS: Final\
+  \ = {\n    \"story\":        \"Enter Shipping Address\",\n    \"actor\":       \
+  \ \"Customer\",\n    \"domain_terms\": (\"Shipping Address\", \"Address Line\",\
+  \ \"Postal Code\", \"Country\"),\n    \"evidence\":     (),\n}\n\n\n## py/manage-customer-orders/place-new-order/select-delivery-option/select_delivery_option_stories.py\n\
+  \n\"\"\"Story data - regeneratable. Do not add logic or imports.\"\"\"\n\nfrom __future__\
+  \ import annotations\n\nfrom typing import Final\n\n\nSELECT_DELIVERY_OPTION: Final\
+  \ = {\n    \"story\":        \"Select Delivery Option\",\n    \"actor\":       \
+  \ \"Customer\",\n    \"domain_terms\": (\"Delivery Option\", \"Delivery Speed\"\
+  , \"Delivery Fee\", \"Estimated Arrival\"),\n    \"evidence\":     (),\n}\n\n\n\
+  ## py/manage-customer-orders/place-new-order/submit-order/submit_order_stories.py\n\
+  \n\"\"\"Story data - regeneratable. Do not add logic or imports.\"\"\"\n\nfrom __future__\
+  \ import annotations\n\nfrom typing import Final\n\n\nSUBMIT_ORDER_MAIN_FLOW: Final\
+  \ = {\n    \"story\":        \"Submit Order\",\n    \"actor\":        \"Customer\"\
+  ,\n    \"domain_terms\": (\"Order\", \"Cart\", \"Payment Method\", \"Order Confirmation\"\
+  , \"Order Number\"),\n    \"evidence\":     (\"Checkout workshop 2026-05-04 - happy-path\
+  \ wall walk\",),\n\n    \"main_flow\": {\n        \"name\":         \"order submitted\
+  \ with valid cart and payment\",\n        \"given\": (\n            \"a Cart with\
+  \ three Items totalling 149.98 USD\",\n            \"And a Payment Method on file\
+  \ \\\"Visa ending 4242\\\"\",\n        ),\n        \"interactions\": (\n       \
+  \     {\n                \"when\": (\n                    \"the Customer confirms\
+  \ and submits the Order\",\n                ),\n                \"then\": (\n  \
+  \                  \"an Order Confirmation is issued with an Order Number\",\n \
+  \                   \"And the Cart is emptied\",\n                ),\n         \
+  \   },\n        ),\n    },\n}\n\nSUBMIT_ORDER: Final = {\n    \"story\":       \
+  \ \"Submit Order\",\n    \"actor\":        \"Customer\",\n    \"domain_terms\":\
+  \ (\"Order\", \"Cart\", \"Payment Method\", \"Order Number\", \"Order Status\"),\n\
+  \    \"evidence\":     (\"Checkout workshop 2026-05-04 - happy-path wall walk\"\
+  , \"API spec v3 - POST /orders #\\\"submission errors\\\"\"),\n\n    \"submission_succeeds\"\
+  : {\n        \"name\":         \"order accepted for a valid cart and payment method\"\
+  ,\n        \"given\": (\n            \"a Cart \\\"CART-9001\\\" containing 3 Items\
+  \ totalling 149.98 USD\",\n            \"And a Payment Method *\\\"Visa ****4242\\\
+  \" with status authorised*\",\n        ),\n        \"interactions\": (\n       \
+  \     {\n                \"when\": (\n                    \"the Customer submits\
+  \ the Order\",\n                ),\n                \"then\": (\n              \
+  \      \"an Order is created with status placed\",\n                    \"And an\
+  \ Order Number matching pattern ORD-\\\\d{7} is returned\",\n                ),\n\
+  \            },\n        ),\n    },\n\n    \"submission_rejected_for_declined_card\"\
+  : {\n        \"name\":         \"order rejected when payment method is declined\"\
+  ,\n        \"given\": (\n            \"a Cart \\\"CART-9002\\\" totalling 89.50\
+  \ USD\",\n            \"And a Payment Method *\\\"MasterCard ****5150\\\" in status\
+  \ declined*\",\n        ),\n        \"interactions\": (\n            {\n       \
+  \         \"when\": (\n                    \"the Customer submits the Order\",\n\
+  \                ),\n                \"then\": (\n                    \"the Order\
+  \ is rejected with reason payment_declined\",\n                    \"But the Cart\
+  \ contents are preserved for retry\",\n                ),\n            },\n    \
+  \    ),\n    },\n}\n\nSUBMIT_ORDER_OUTLINE: Final = {\n    \"story\":        \"\
+  Submit Order - outline\",\n    \"actor\":        \"Customer\",\n    \"domain_terms\"\
+  : (\"Order\", \"Payment Method\", \"Order Status\"),\n    \"evidence\":     (\"\
+  API spec v3 - POST /orders #\\\"submission errors\\\"\",),\n\n    \"outline\": {\n\
+  \        \"name\":         \"submission result varies with payment method status\"\
+  ,\n        \"given\": (\n            \"a Cart {cart_id} totalling {cart_total} {currency}\"\
+  ,\n            \"And a Payment Method {payment_method} in status {payment_status}\"\
+  ,\n        ),\n        \"interactions\": (\n            {\n                \"when\"\
+  : (\n                    \"the Customer submits the Order\",\n                ),\n\
+  \                \"then\": (\n                    \"the Order status is set to {order_status}\"\
+  ,\n                ),\n            },\n        ),\n    },\n}\n\n\n## py/manage-customer-orders/story-context.md\n\
+  \n# Manage Customer Orders\n\n**Status:** partially expanded\n\n**Stories in scope:**\n\
+  - *Place New Order*\n- *Track Order Status*\n- *Cancel Order*\n\n**Context / notes:**\
+  \ Epic-root aggregate for the Python code-example tree that mirrors `examples/md/story-map.md`\
+  \ and `examples/ts/manage-customer-orders/`. Story data is pure data (dicts and\
+  \ tuples) so a code adapter can read it without importing a test framework. Folder\
+  \ names follow the kebab-case slug convention used across the code family; the epic\
+  \ helper is the sole snake_case exception because Python's import system does not\
+  \ accept hyphens in module names — see `context_tools/stories/src/formats/code/architecture-context.md`.\n\
+  \n\n## py/manage-customer-orders/story_runner.py\n\n\"\"\"Generic scenario runner\
+  \ - the ONLY test-framework glue.\n\nEvery tier reuses this function; tier files\
+  \ just wire a Story constant, a\nscenario key, and a factory that produces the tier's\
+  \ `TierImpl`. The runner:\n\n1. Validates that every step string in the scenario\
+  \ has a matching key in\n   `tier.given` / `tier.when` / `tier.then` - missing keys\
+  \ fail with the\n   exact string and phase, so the author knows what's unimplemented.\n\
+  2. Walks `given`, then each interaction's `when` steps, then dispatches one\n  \
+  \ pytest test per `then` step (so each observable outcome is its own row).\n3. Runs\
+  \ `cleanup` after every scenario, even on failure.\n\nSync and async step bodies\
+  \ both work - the runner awaits when needed.\n\"\"\"\n\nfrom __future__ import annotations\n\
+  \nimport asyncio\nimport inspect\nfrom typing import Callable, Dict\n\nimport pytest\n\
+  \nfrom story_types import Scenario, StepFn, Story, TierImpl\n\n\ndef _maybe_await(result:\
+  \ object) -> None:\n    if inspect.isawaitable(result):\n        asyncio.get_event_loop().run_until_complete(result)\
+  \  # type: ignore[arg-type]\n\n\ndef _dispatch(step: str, table: Dict[str, StepFn],\
+  \ phase: str) -> None:\n    fn = table.get(step)\n    if fn is None:\n        raise\
+  \ KeyError(\n            f\"Tier is missing a {phase!r} implementation for step\
+  \ {step!r}. \"\n            f\"Add it to `tier.{phase}[{step!r}]`.\"\n        )\n\
+  \    _maybe_await(fn())\n\n\ndef _label(kw: str, index: int, step: str) -> str:\n\
+  \    return f\"{kw} {step}\" if index == 0 else step\n\n\ndef run_scenario(\n  \
+  \  story_name: str,\n    scenario: Scenario,\n    make_tier: Callable[[], TierImpl],\n\
+  ) -> None:\n    \"\"\"Emit one pytest class per scenario; one `test_*` method per\
+  \ `then` step.\n\n    Call from a tier test file at module scope; pytest discovers\
+  \ the emitted\n    class automatically.\n    \"\"\"\n    tier_holder: Dict[str,\
+  \ TierImpl] = {}\n\n    def setup_class() -> None:\n        tier = make_tier()\n\
+  \        tier_holder[\"tier\"] = tier\n        for step in scenario[\"given\"]:\n\
+  \            _dispatch(step, tier[\"given\"], \"given\")\n        for interaction\
+  \ in scenario[\"interactions\"]:\n            for step in interaction[\"when\"]:\n\
+  \                _dispatch(step, tier[\"when\"], \"when\")\n\n    def teardown_class()\
+  \ -> None:\n        tier = tier_holder.get(\"tier\")\n        if tier is not None:\n\
+  \            _maybe_await(tier[\"cleanup\"]())\n\n    methods: Dict[str, Callable[...,\
+  \ None]] = {}\n    for interaction_index, interaction in enumerate(scenario[\"interactions\"\
+  ]):\n        for then_index, step in enumerate(interaction[\"then\"]):\n       \
+  \     method_name = f\"test_then_{interaction_index}_{then_index}\"\n          \
+  \  step_value = step\n\n            def _method(self, _step: str = step_value) ->\
+  \ None:  # noqa: ANN001\n                _dispatch(_step, tier_holder[\"tier\"][\"\
+  then\"], \"then\")\n\n            _method.__doc__ = _label(\"Then\", then_index,\
+  \ step_value)\n            methods[method_name] = _method\n\n    cls = type(\n \
+  \       f\"Test_{_slug(scenario['name'])}\",\n        (object,),\n        {\n  \
+  \          \"setup_class\": staticmethod(setup_class),\n            \"teardown_class\"\
+  : staticmethod(teardown_class),\n            **methods,\n        },\n    )\n\n \
+  \   # Attach the class to the caller's module so pytest discovers it.\n    frame\
+  \ = inspect.stack()[1].frame\n    caller_globals = frame.f_globals\n    caller_globals[cls.__name__]\
+  \ = cls\n    cls.__module__ = caller_globals.get(\"__name__\", cls.__module__)\n\
+  \n\ndef _slug(name: str) -> str:\n    out = []\n    prev_alnum = False\n    for\
+  \ ch in name:\n        if ch.isalnum():\n            out.append(ch)\n          \
+  \  prev_alnum = True\n        else:\n            if prev_alnum:\n              \
+  \  out.append(\"_\")\n            prev_alnum = False\n    return \"\".join(out).strip(\"\
+  _\") or \"scenario\"\n\n\n## py/manage-customer-orders/story_types.py\n\n\"\"\"\
+  Story types for Python spec-files.\n\nPython's type system is dynamic - we can't\
+  \ produce a compile-time analogue of\nTypeScript's `TierImpl<S>`. Instead the runner\
+  \ does runtime step-key\nassertions (see `story_runner.py`): every step string in\
+  \ a scenario must\nresolve to a callable in `tier.given` / `tier.when` / `tier.then`;\
+  \ missing\nkeys fail the run with a clear message.\n\nThe Story shape mirrors the\
+  \ TS reference architecture:\n\n    STORY: Story = {\n        \"story\": \"Submit\
+  \ Order\",\n        \"actor\": \"Customer\",\n        \"domain_terms\": (\"Order\"\
+  , \"Cart\"),\n        \"evidence\": (\"Checkout workshop 2026-05-04\",),\n\n   \
+  \     \"scenario_key\": {\n            \"name\": \"order accepted for a valid cart\
+  \ and payment\",\n            \"given\": (\"a Cart CART-9001 containing 3 Items\
+  \ totalling 149.98 USD\",),\n            \"interactions\": (\n                {\n\
+  \                    \"when\": (\"the Customer submits the Order\",),\n        \
+  \            \"then\": (\"an Order is created with status placed\",),\n        \
+  \        },\n            ),\n        },\n    }\n\n`given`, and every `when` / `then`\
+  \ inside an interaction, is a tuple of\nplain-prose step strings. First step of\
+  \ each phase is unprefixed; continuation\nsteps carry their own `\"And \"` / `\"\
+  But \"` prefix inside the string, and the\ntier's `given` / `when` / `then` dicts\
+  \ use the SAME string as the dispatch key.\n\"\"\"\n\nfrom __future__ import annotations\n\
+  \nfrom typing import Any, Awaitable, Callable, Dict, Tuple, TypedDict, Union\n\n\
+  \nStepFn = Callable[[], Union[None, Awaitable[None]]]\n\"\"\"One step body. May\
+  \ be sync or async - the runner awaits either.\"\"\"\n\n\nclass Interaction(TypedDict):\n\
+  \    \"\"\"A when-then block within a scenario.\"\"\"\n\n    when: Tuple[str, ...]\n\
+  \    then: Tuple[str, ...]\n\n\nclass Scenario(TypedDict):\n    \"\"\"A behaviour\
+  \ walk-through under a story.\"\"\"\n\n    name: str\n    given: Tuple[str, ...]\n\
+  \    interactions: Tuple[Interaction, ...]\n\n\n# `Story` is a Story metadata dict\
+  \ merged with one Scenario per key. Python\n# can't statically enforce the union\
+  \ like TS, so this is documented as a\n# convention: unknown extra keys are treated\
+  \ as Scenario values by the runner.\nStory = Dict[str, Any]\n\n\nclass TierImpl(TypedDict):\n\
+  \    \"\"\"Tier contract - dispatch tables plus a cleanup hook.\n\n    `given` /\
+  \ `when` / `then` are dicts keyed by the EXACT step strings from\n    the scenario.\
+  \ `cleanup` runs after every scenario, regardless of outcome.\n    \"\"\"\n\n  \
+  \  given: Dict[str, StepFn]\n    when: Dict[str, StepFn]\n    then: Dict[str, StepFn]\n\
+  \    cleanup: StepFn\n\n\n## py/manage-customer-orders/track-order-status/send-shipment-notification/send_shipment_notification_stories.py\n\
+  \n\"\"\"Story data - regeneratable. Do not add logic or imports.\"\"\"\n\nfrom __future__\
+  \ import annotations\n\nfrom typing import Final\n\n\nSEND_SHIPMENT_NOTIFICATION:\
+  \ Final = {\n    \"story\":        \"Send Shipment Notification\",\n    \"actor\"\
+  :        \"System\",\n    \"domain_terms\": (\"Shipment\", \"Shipment Notification\"\
+  , \"Tracking Number\", \"Notification Channel\"),\n    \"evidence\":     (),\n}\n\
+  \n\n## py/manage-customer-orders/track-order-status/view-current-order-status/view_current_order_status_stories.py\n\
+  \n\"\"\"Story data - regeneratable. Do not add logic or imports.\"\"\"\n\nfrom __future__\
+  \ import annotations\n\nfrom typing import Final\n\n\nVIEW_CURRENT_ORDER_STATUS_MAIN_FLOW:\
+  \ Final = {\n    \"story\":        \"View Current Order Status\",\n    \"actor\"\
+  :        \"Customer\",\n    \"domain_terms\": (\"Order\", \"Order Status\", \"Timeline\
+  \ Event\"),\n    \"evidence\":     (\"Order tracking discovery session 2026-05-11\"\
+  ,),\n\n    \"main_flow\": {\n        \"name\":         \"customer sees the latest\
+  \ status of a placed order\",\n        \"given\": (\n            \"an Order \\\"\
+  ORD-4200077\\\" in status placed\",\n            \"And a Timeline Event \\\"payment\
+  \ authorised\\\" recorded 10 minutes ago\",\n        ),\n        \"interactions\"\
+  : (\n            {\n                \"when\": (\n                    \"the Customer\
+  \ opens the order detail view\",\n                ),\n                \"then\":\
+  \ (\n                    \"the Order status placed is displayed prominently\",\n\
+  \                    \"And the Timeline shows the payment-authorised event\",\n\
+  \                ),\n            },\n        ),\n    },\n}\n\n\n## java/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{StoryVerbNoun}Story.java\n\
+  \n/** Story: {Story Verb-Noun} (tier-neutral). AI fills method bodies. */\npublic\
+  \ class {StoryVerbNoun}Story {\n  public static void create(String mode) {\n   \
+  \ mainFlow(mode);\n  }\n\n  static void mainFlow(String mode) {\n    // GIVEN /\
+  \ WHEN / THEN — helper → ExampleFactory; assert public interface\n  }\n\n  public\
+  \ static void main(String[] args) {\n    create(\"fake\");\n  }\n}\n\n\n## java/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{StoryVerbNoun}StorySpec.java\n\
+  \n/** Isolated objects — same story. */\npublic class {StoryVerbNoun}StorySpec {\n\
+  \  @org.junit.jupiter.api.Test\n  void runStory() {\n    {StoryVerbNoun}Story.create(\"\
+  isolated\");\n  }\n}\n\n\n## js/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_spec.js\n\
+  \n/**\n * ---\n * fidelity: [engineering]\n * artifact: [isolated-spec]\n * format:\
+  \ js\n * ---\n *\n * Isolated objects — same story, ExampleFactory builds {Type}\
+  \ with injected deps.\n *\n * Run:  node --test …/{story_verb_noun}_spec.js\n */\n\
+  \nimport { describe } from \"node:test\";\nimport { create{StoryVerbNoun}Story }\
+  \ from \"./{story_verb_noun}_story.js\";\n\ndescribe(\"tier: isolated\", () => {\n\
+  \  create{StoryVerbNoun}Story(\"isolated\");\n});\n\n\n## js/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_spec.production.js\n\
+  \n/**\n * ---\n * fidelity: [engineering]\n * artifact: [tier-spec]\n * format:\
+  \ js\n * ---\n *\n * Tier: production — same story, ExampleFactory builds {Type}\
+  \ with real collaborators.\n *\n * Run:  node --test …/{story_verb_noun}_spec.production.js\n\
+  \ */\n\nimport { describe } from \"node:test\";\nimport { create{StoryVerbNoun}Story\
+  \ } from \"./{story_verb_noun}_story.js\";\n\ndescribe(\"tier: production\", ()\
+  \ => {\n  create{StoryVerbNoun}Story(\"production\");\n});\n\n\n## js/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_story.js\n\
+  \n/**\n * ---\n * fidelity: [exploration, specification]\n * artifact: [story-file]\n\
+  \ * format: js\n * ---\n *\n * Story: {Story Verb-Noun} (tier-neutral).\n * Wired\
+  \ to ExampleFactory fakes — not a tier test.\n * Assert the public interface of\
+  \ I{Type} only.\n *\n * Run:  node --test …/{story_verb_noun}_story.js\n * Specs:\
+  \ {story_verb_noun}_spec.js (isolated); {story_verb_noun}_spec.{tier}.js (other\
+  \ tiers)\n */\n\nimport assert from \"node:assert/strict\";\nimport path from \"\
+  node:path\";\nimport { fileURLToPath } from \"node:url\";\nimport { ManageCharacterSheetHelper\
+  \ as EpicHelper } from \"../../{epic-verb-noun}-helper.js\";\nimport { scenario,\
+  \ story } from \"../../../story-test.js\";\n\nconst helper = new EpicHelper();\n\
+  \n/**\n * Shared scenarios. Story file runs with mode \"fake\".\n * Tier specs call\
+  \ this with \"isolated\" | \"production\".\n */\nexport function create{StoryVerbNoun}Story(mode)\
+  \ {\n  story(\"{Story Verb-Noun}\", () => {\n    scenario(\"{main-flow outcome name}\"\
+  , ({ given, when, then }) => {\n      let subject;\n\n      given(\"a domain object\
+  \ from the ExampleFactory\", () => {\n        // helper.given…({ mode }) — fake\
+  \ I{Type}; values from examples[{example_key}]\n        subject = null;\n      });\n\
+  \n      when(\"the Actor exercises a public operation\", () => {\n        // public\
+  \ seam only\n      });\n\n      then(\"an observable outcome is visible on the public\
+  \ interface\", () => {\n        assert.ok(subject);\n      });\n    });\n  });\n\
+  }\n\nconst thisFile = fileURLToPath(import.meta.url);\nconst entry = process.argv[1]\
+  \ && path.resolve(process.argv[1]);\nif (entry && path.resolve(thisFile) === entry)\
+  \ {\n  create{StoryVerbNoun}Story(\"fake\");\n}\n\n\n## md/components/evidence-table.md\n\
+  \n---\nfidelity: [exploration, specification]\nartifact: [story-scenarios]\nformat:\
+  \ md\nsection: footer\n---\n\n### Evidence\n\n| Scenario | Source (document / system)\
+  \ | Location |\n| --- | --- | --- |\n| Scenario 1 | `<source>` | `<location>` |\n\
+  \n\n## md/components/story-header.md\n\n---\nfidelity: [exploration, specification]\n\
+  artifact: [story-scenarios]\nformat: md\nsection: header\n---\n## Story: `<Verb–Noun\
+  \ Title>`\n\n**Story type:** user | system | technical\n\n**Sources / context:**\
+  \ `<pointer to domain source, AC, or conversation>`\n\n### Domain terms\n\n- *`<ConceptA>`*\
+  \ — `<plain-language gloss>`\n- *`<ConceptB>`* — `<plain-language gloss>`\n\n> In\
+  \ steps: bold domain concepts (`**<Concept>**`); italic concrete values (`*<value>*`).\n\
+  \n\n## md/scenario-inline.md\n\n---\nfidelity: [specification]\nartifact: [story-scenarios]\n\
+  format: md\nsection: body\n---\n\n## Behaviors\n\n> In steps: bold domain concepts\
+  \ (`**<Concept>**`); italic concrete values (`*<value>*`).\n\n### Scenario 1: `<outcome-oriented\
+  \ scenario name>`\n\n*Given* a **`<ConceptA>`** *`<value>`*  \n  *And* that **`<ConceptA>`**\
+  \ *`<value>`* has a **`<ConceptB>`** *`<value>`*  \n*When* the **`<ConceptA>`**\
+  \ *`<value>`* `<triggering action>`  \n    using **`<ConceptB>`** *`<value>`*  \n\
+  *Then* the **`<observed concept>`** is `<observable outcome>`  \n  *And* the **`<related\
+  \ concept>`** is `<additional outcome>`  \n  *But* no **`<concept>`** is `<what\
+  \ does not happen>`\n\n### Scenario 2: `<alternate outcome-oriented scenario name>`\n\
+  \n*Given* `<alternate setup state>`  \n*When* `<alternate triggering action>`  \n\
+  *Then* `<alternate observable outcome>`  \n  *And* `<additional outcome>`\n\n\n\
+  ## md/scenario-main-flow.md\n\n---\nfidelity: [exploration]\nartifact: [story-scenarios]\n\
+  format: md\nsection: body\n---\n\n### Domain terms\n\n- *`<Concept>`* — `<plain-language\
+  \ gloss>`\n\n> In steps: bold domain concepts (`**<Concept>**`); italic concrete\
+  \ values (`*<value>*`).\n\n## Behaviors\n\n### Scenario Outline: `<main-flow outcome\
+  \ name>`\n\n*Given* a **`<Concept>`** from `helper.given<Concept…>({ mode: \"fake\"\
+  \ })`  \n  *And* that **`<Concept>`** {`<concept_field>`}  \n*When* the **`<Actor>`**\
+  \ `<triggering action>`  \n*Then* `<observable outcome on the public interface of\
+  \ I{Concept}>`  \n  *And* `<additional observable outcome>`\n\n### Examples\n\n\
+  | scenario   | `<concept_field>` | `<result_field>` |\n|------------|-------------------|------------------|\n\
+  | Scenario 1 | `<value>`         | `<value>`        |\n\n> Examples table documents\
+  \ the representative row. Code loads the same values from ExampleFactory (AI fills\
+  \ stubs).\n\n\n## md/scenario-outline.md\n\n---\nfidelity: [specification]\nartifact:\
+  \ [story-scenarios]\nformat: md\nsection: body\n---\n\n### Domain terms\n\n- *`<ConceptA>`*\
+  \ — `<plain-language gloss>`\n- *`<ConceptB>`* — `<plain-language gloss>`\n\n> In\
+  \ steps: bold domain concepts (`**<Concept>**`); italic concrete values (`*<value>*`).\n\
+  \n### Evidence\n\n| Source | Note |\n|--------|------|\n| `<pointer>` | `<why it\
+  \ matters>` |\n\n### Background\n\n*Given* a **`<ConceptX>`** from `helper.given<ConceptX…>({\
+  \ mode: \"fake\" })`  \n  *And* that **`<ConceptX>`** exposes `<public property\
+  \ / operation>`  \n\n---\n\n### Behaviors\n\n#### Scenario Outline: `<outcome-oriented\
+  \ name>`\n\n*Given* a **`<ConceptA>`** with {`<field_1>`}  \n  *And* the **`<ConceptB>`**\
+  \ for that **`<ConceptA>`** is {`<field_2>`}  \n*When* the **`<Actor>`** `<action>`\
+  \  \n*Then* the **`<result concept>`** `<outcome>` is visible on the public interface\
+  \  \n  *And* a **`<related concept>`** shows {`<field_3>`}\n\n### Examples\n\n|\
+  \ scenario   | `<field_1>` | `<field_2>` | `<field_3>` |\n|------------|-------------|-------------|-------------|\n\
+  | Scenario 1 | `<value>`   | `<value>`   | `<value>`   |\n| Scenario 2 | `<value>`\
+  \   | `<value>`   | `<value>`   |\n\n> Markdown keeps examples tables for documentation.\
+  \ Code wires values via `{Type}ExampleFactory` (AI fills helper/story method bodies).\
+  \ Do not copy inventable `examples: [{ … }]` literals into code story files.\n\n\
+  #### Scenario: `<variation — delta from main flow>`\n\n*Given* … (only the delta\
+  \ from the main flow)  \n*When* …  \n*Then* …\n\n\n## md/story-context.md\n\n---\n\
+  fidelity: [shaping, discovery, exploration, specification, engineering]\nartifact:\
+  \ [story-map]\n---\n\n# `<Epic / Sub-Epic Verb–Noun>`\n\n**Status:** `<not yet expanded\
+  \ | partially expanded | fully expanded>`\n\n**Stories in scope:**\n- *`<Story Verb–Noun>`*\n\
+  - *`<Story Verb–Noun>`*\n\n**Context / notes:** `<anything the folder structure\
+  \ cannot express — domain constraints, dependencies, open questions>`\n\n\n## md/story-map.md\n\
+  \n---\nfidelity: [discovery]\nartifact: [story-map]\nformat: md\nsection: body\n\
+  ---\n\n<!-- Discovery fidelity — every sub-epic decomposed to named stories.\n \
+  \    Shaping outline maps use templates/md/story-map-outline.md instead.\n     Do\
+  \ not wrap epic, sub-epic, story, or actor names in backticks. -->\n\n# Story Map\
+  \ — Product / Feature Name\n\n**Sources / context:** context files used\n\n---\n\
+  \n(E) Epic Verb–Noun\n    (E) Sub-Epic Verb–Noun\n        (S) Actor --> Story Verb–Noun\n\
+  \        (S) Actor --> Story Verb–Noun\n    (E) Sub-Epic Verb–Noun\n        (S)\
+  \ Actor --> Story Verb–Noun\n\n---\n\n## Scope boundary\n\n**In scope:** what is\
+  \ included\n**Out of scope:** what is explicitly excluded\n\n---\n\n## Thin slices\n\
+  \n### Increment 1: Marketable outcome\n\n**Outcome:** What users or the business\
+  \ can do after this ships\n\n**Stories:**\n- Story Verb–Noun\n- Story Verb–Noun\n\
+  \n\n## md/thin-slice.md\n\n---\nfidelity: [discovery]\nartifact: [thin-slice]\n\
+  format: md\nsection: body\n---\n\n# Thin slicing — `<Product / Feature Name>` incremental\
+  \ backlog\n\n## Product / context\n\n**Product:** `<one-line product / feature description>`\n\
+  \n**Slicing intent:** `<why these slices in this order — value logic, learning goals,\
+  \ risk gates>`\n\n**Spine vs optional:** `<the mandatory sequential flow for core\
+  \ value>` sits on the spine. `<alternate channels, enhancements, non-happy-path\
+  \ depth>` are real work but not required for the smallest marketable slice.\n\n\
+  ## Increments\n\n### Increment 1: `<Marketable outcome name>`\n\n**Outcome:** `<one\
+  \ line — what users or the business can do after this ships>`\n\n**Slicing notes:**\
+  \ `<manual steps, stubs, single channel, reduced NFRs, which slicing dimension was\
+  \ used>`\n\n**Stories in this increment** *(order reflects flow within the slice):*\n\
+  \n- *`<First story verb-noun>`*\n- *`<Second story verb-noun>`*\n- *`<Third story\
+  \ verb-noun>`*\n\n### Increment 2: `<Next marketable outcome>`\n\n**Outcome:** `<capability\
+  \ after this increment>`\n\n**Slicing notes:** `<optional>`\n\n**Stories in this\
+  \ increment:**\n\n- *`<Story verb-noun>`*\n- *`<Story verb-noun>`*\n\n\n## py/{epic-verb-noun}/story-context.md\n\
+  \n# `<Epic / Sub-Epic Verb-Noun>`\n\n**Status:** not yet expanded\n\n**Stories in\
+  \ scope:**\n- `<Story Verb-Noun>`\n- `<Story Verb-Noun>`\n\n\n\n## py/{epic-verb-noun}/{sub-epic-verb-noun}/story-context.md\n\
+  \n# `<Epic / Sub-Epic Verb-Noun>`\n\n**Status:** not yet expanded\n\n**Stories in\
+  \ scope:**\n- `<Story Verb-Noun>`\n- `<Story Verb-Noun>`\n\n\n\n## py/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_spec.production.py\n\
+  \n# ---\n# fidelity: [engineering]\n# artifact: [tier-spec]\n# format: py\n# ---\n\
+  #\n# Tier: production - same story, ExampleFactory builds {Type} with real collaborators.\n\
+  \n\"\"\"Production tier spec for `{Story Name}`.\"\"\"\n\nfrom __future__ import\
+  \ annotations\n\nfrom {story_verb_noun}_story import create_{story_verb_noun}_story\n\
+  \ncreate_{story_verb_noun}_story(\"production\")\n\n\n## py/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_spec.py.tpl\n\
+  \n# ---\n# fidelity: [engineering]\n# artifact: [isolated-spec]\n# format: py\n\
+  # ---\n#\n# Isolated objects — same story, ExampleFactory builds {Type} with injected\
+  \ deps.\n\n\"\"\"Isolated spec for `{Story Name}`.\"\"\"\n\nfrom __future__ import\
+  \ annotations\n\nfrom {story_verb_noun}_story import create_{story_verb_noun}_story\n\
+  \ncreate_{story_verb_noun}_story(\"isolated\")\n\n\n## py/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_story.py\n\
+  \n# ---\n# fidelity: [exploration, specification]\n# artifact: [story-file]\n# format:\
+  \ py\n# section: leaf-story-file\n# ---\n#\n# Runnable story (explore/spec). Wired\
+  \ to ExampleFactory fakes.\n# Assert the public interface of I{Type} only.\n#\n\
+  #   Folder tree      -> {epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/\n\
+  #   Story file       -> {story_verb_noun}_story.py\n#   Isolated spec    -> {story_verb_noun}_spec.py\
+  \          (engineering)\n#   Tier spec        -> {story_verb_noun}_spec.{tier}.py\
+  \   (engineering)\n#\n# Concrete values live in {Type}ExampleFactory - do not invent\
+  \ example tables here.\n\n\"\"\"Story tests for `{Story Name}` - fake mode when\
+  \ collected as the entry module.\"\"\"\n\nfrom __future__ import annotations\n\n\
+  from {epic_verb_noun}_helper import {EpicVerbNoun}Helper\n\nhelper = {EpicVerbNoun}Helper()\n\
+  \n\ndef create_{story_verb_noun}_story(mode: str = \"fake\") -> None:\n    \"\"\"\
+  Register scenarios. Story entry uses fake; tier specs pass isolated|production.\"\
+  \"\"\n\n    def test_main_flow_observable_outcome() -> None:\n        # given -\
+  \ helper.given_...(mode=mode) -> fake I{Type} from ExampleFactory\n        bundle\
+  \ = helper  # replace with real given_* call\n        _ = bundle\n\n        # when\
+  \ - exercise public operations on I{Type}\n        ...\n\n        # then - assert\
+  \ public interface only (no private fields)\n        assert True  # replace with\
+  \ public-seam assertion\n\n\n# Collect when this module is the pytest entry (not\
+  \ when a tier imports the function)\ncreate_{story_verb_noun}_story(\"fake\")\n\n\
+  \n## ts/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_spec.ts\n\
+  \n/** Isolated objects — same story. */\nimport { create{StoryVerbNoun}Story } from\
+  \ \"./{story_verb_noun}_story\";\n\ndescribe(\"tier: isolated\", () => {\n  create{StoryVerbNoun}Story(\"\
+  isolated\");\n});\n\n\n## ts/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_story.ts\n\
+  \n/**\n * Story: {Story Verb-Noun} (tier-neutral).\n * Specs: {story_verb_noun}_spec.ts\
+  \ (isolated); {story_verb_noun}_spec.{tier}.ts\n */\n\nimport { scenario, story\
+  \ } from \"../../../story-test\";\nimport { EpicVerbNounHelper } from \"../../{epic-verb-noun}-helper\"\
+  ;\n\nconst helper = new EpicVerbNounHelper();\n\nexport function create{StoryVerbNoun}Story(mode:\
+  \ string): void {\n  story(\"{Story Verb-Noun}\", () => {\n    scenario(\"{main-flow\
+  \ outcome}\", ({ given, when, then }) => {\n      given(\"a domain object from the\
+  \ ExampleFactory\", () => {\n        // helper.given…({ mode }) — AI fills\n   \
+  \   });\n      when(\"the Actor exercises a public operation\", () => {\n      \
+  \  // AI fills\n      });\n      then(\"an observable outcome is visible on the\
+  \ public interface\", () => {\n        // AI fills\n      });\n    });\n  });\n\
+  }\n\ncreate{StoryVerbNoun}Story(\"fake\");\n\n\nPrepend the following block verbatim\
+  \ as the very first lines of the file you are writing - before any imports, before\
+  \ any code.\n\nEvery tool call uses this shape - set `tool` and `arguments`, pipe\
+  \ to CLI:\n\n```yaml\ntoolset: context_tools.stories.stories:Stories\ncontext:\n\
+  \  fidelity: discovery\n  format: markdown\ntool: <tool name>\narguments:\n  <if\
+  \ needed>\n```\n\nRun: python -m tools run -\n\nSuggested flow (repeat and reorder\
+  \ as the story needs):\n\n1. tool: ensure_session\n   arguments:\n     name: <value>\n\
+  \     goal: <value>\n     fidelities: <value>\n     contexts: <value>\n     path:\
+  \ <value>\n\n2. tool: read_context_index\n\n3. tool: record_context_root\n   arguments:\n\
+  \     root: <value>\n     note: <value>\n\n4. tool: read_cdr_format\n\n5. tool:\
+  \ list_cdrs\n\n6. tool: write_cdr\n\nRead `resources` from each response before\
+  \ choosing the next tool."
+arguments: {}
+tools:
+- ensure_session
+- read_context_index
+- record_context_root
+- read_cdr_format
+- list_cdrs
+- write_cdr
+resources:
+  active:
+    path: tests
+    name: null
+    folder: null
+    goal: null
+    fidelities: null
+    contexts: null
+    started: '2026-08-01'
+    ended: null
+    outcome: null
+    handoff: null
+  mode: action
+```

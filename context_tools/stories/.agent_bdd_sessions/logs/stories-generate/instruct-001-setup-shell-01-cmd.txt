@@ -1,0 +1,1 @@
+$env:PYTHONIOENCODING="utf-8"; python -m tools manifest context_tools.stories.stories:Stories

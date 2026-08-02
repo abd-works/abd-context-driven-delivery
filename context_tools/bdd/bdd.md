@@ -59,6 +59,7 @@ when no session name is given        ← never "when" for state — use "with �
 - **`describe-is-plain-english`** — Full English phrases (e.g. "an action that is annotated with log", "an action that is not annotated"). Never symbol/mechanism names (`"@log marker"`) as the subject.
 - **`state-not-when`** — Never name a nested state with `when`. Use `that …` for events/conditions on the subject and `with …` for standing conditions. Ask: what event or condition must already be true for this observation?
 - **`nest-by-enabling-events`** — Each nested `that` / `with` must be a real precondition or event required for the nested `it should` — not a test-file grouping convenience.
+- **`full-surface-coverage`** — When generating or satisfying tests for a module that already exists, scan the production source for every public method, property, class, and constant. Each must have at least one `it should` covering its observable behavior. Any gap is a violation. Private and underscore-prefixed members are excluded unless they are part of a documented public contract.
 
 ---
 
@@ -124,9 +125,14 @@ it('should apply a percentage discount to eligible items', () => {
 7. Refactor only while green. Move to the next marker.
 8. Repeat until zero markers remain, then run **validate**.
 
-### Diagnose
+### Coverage scan (existing code)
 
-If a test fails after **2 consecutive fix attempts** — stop. Read `diagnose.md` immediately. Do not attempt a third fix without a hypothesis.
+When generating or satisfying against a module that already exists, read the production source before touching the spec:
+
+1. List every public method, property, class, and constant (exclude `_`-prefixed members unless publicly documented).
+2. Compare against the existing spec to find members with no `it should` entry.
+3. Add `it should` entries (at behavior fidelity) or full test bodies (at development fidelity) for every gap — do not skip any public member.
+4. Only then proceed with RED-GREEN-REFACTOR for the new or updated tests.
 
 ### The RED-GREEN-REFACTOR cycle
 
@@ -147,6 +153,7 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 - **`one-assertion-per-test`** —  one outcome per `it`. tighly connects `expects`
 - **`layer-isolation`** — Mock only at architecture boundaries; never the subject under test.
 - **`no-remaining-signatures`** — Zero `BDD: SIGNATURE` markers when done.
+- **`full-surface-coverage`** — Before generating or satisfying, scan the production source for all public members. Add `it should` entries for every uncovered public method, property, or class. Complete coverage is required; no public surface may be left untested.
 - **`context-sharing`** — Shared construction in `beforeEach` / factory at three sibling dupes.
 - **`oo-api-design`** — Ask-don't-tell: construct fully; own state on the object; operations on the closest domain concept.
 - **`honors-documented-surface-contracts`** — Public API must match documented surface contracts; if a spec fights the contract, fix the spec.
@@ -157,10 +164,3 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 
 ---
 
-# Generate
-
-1. Confirm fidelity (`behavior` → `development`) and format (defaults: both → python).
-2. Read § Contexts — shared rules and the active fidelity (including its Rules).
-3. Use peer actions when useful (`grill`, `sketch`, `iterate` on the Context; `sketch-template.md`): follow **Hierarchy shape** — usage-order subjects → `that`/`with` enabling events → `it should` → public call surface → novel internals only at development. Declare fidelity once at the top of the sketch; **do not** annotate lines with `# b` / `# d`. No manager/hub/`when`/mechanism describes.
-4. Fill `formats/{format}/bdd-template.*` for the active fidelity.
-5. Run **validate**.

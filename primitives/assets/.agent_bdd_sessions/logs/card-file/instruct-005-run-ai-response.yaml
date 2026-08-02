@@ -1,0 +1,16 @@
+ok: true
+toolset: primitives.assets.examples.card_file.card_file:CardFile
+tool: read_all
+result: '## intro.md
+
+
+  # Intro
+
+
+  Welcome to the card file. This card lives in the `cards/` subfolder and is
+
+  returned by `read_all` along with every other card in that folder.
+
+  '
+resources:
+  topic: quick-start
