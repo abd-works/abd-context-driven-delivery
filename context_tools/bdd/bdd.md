@@ -70,6 +70,13 @@ This skill operates at **multiple levels of fidelity**. Start from an agreed ske
 | **behavior** | describe/it hierarchy with `BDD: SIGNATURE` markers in each `it` |
 | **development** | Implemented tests + production code |
 
+## scaffold
+
+**Produce:** thin subject index — domain things, states, or observable conditions (top-level `describe`s); subject + candidate \	hat\/`with` + TODOs. Not full `it should` suites.
+
+Key rules: `state-not-when` — nest by the state or condition that enables an observation, never by a `when` trigger; est-by-enabling-events\ — sub-groupings are conditions that unlock further behavior, not implementation steps.
+
+
 ## behavior
 
 **Default format:** Python

@@ -6,6 +6,7 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 | Fidelity | Default Format | Produce |
 |---|---|---|
+| **scaffold** | markdown | Thin epic index (artifact names + candidate story stubs) |
 | **story_map** | markdown | Story map + thin-slice |
 | **scenarios** | python | Main-flow scenarios per story (single or multiple); optional variations; fake + public seam |
 | **acceptance_tests** | python | `*_spec` + `*_spec.{tier}` — CE runs alongside to produce matching production code |
@@ -26,6 +27,13 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 - **`read-all-source-context-in-full`** — Before locking hierarchy **and before any grill/iterate question about a seam**, prove-read **every relevant referenced context** for that decision: owning `*-segment.md`, `module-context.md`, session sketches / grill-answers / handoff, peer story-context, build-order, and any path the plan or prior answers cite. Index / mid-epic stub columns are structure hints only — **not** story inventory. Grep or primer-only skims do not count; cite concrete terms from the files read in the question turn. Also re-read these rules. Do not thin from titles or memory!
 
 ---
+
+
+## scaffold
+
+**Produce:** thin epic index — verb–noun epics + mid-level grounding story stubs (`StoryMap` → `Epic` → `SubEpic` → `Story` → `Scenario`).
+
+Key rules: \ranch-on-mechanical-uniqueness\ — split on distinct mechanics, not catalog/requirements rows; ead-all-source-context-in-full\ — read segments in full before grouping.
 
 ## discovery
 

@@ -19,6 +19,7 @@ sandbox/<epic>/
 
 | Fidelity | Artifact |
 |---|---|
+| **scaffold** | Thin screen index (screen names in domain/user language + interactions/transitions list) |
 | **ia** | One drawio under `.context/` — built via the **drawio-ux CLI**. |
 | **mockup** | One HTML per concrete user goal at the epic or sub-epic folder (tight-knit screen set — not one file per screen, not one mega-file for a whole epic unless that *is* the goal). |
 
@@ -68,6 +69,13 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 - **`story-domain-js-imported`** — At mockup+, when context_tools/stories/domain exist, JS modules are present (transform if needed) and imported by the html surface.
 
 ---
+
+
+## scaffold
+
+**Produce:** thin screen index — screens (domain/user language) + interactions and transitions (list only).
+
+Key rules: 	ab-states-are-separate-screens — each distinct tab or alternate state is its own screen entry; screen-names-use-domain-terms — name screens in user/domain language, never technical or chapter labels; screen-story-budget — one screen per coherent user goal.
 
 ## ia
 
