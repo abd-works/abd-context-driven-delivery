@@ -1,0 +1,143 @@
+You are an AI judge.
+Evaluate OUTPUT against RUBRIC.
+Reply with ONLY one JSON object on one line - no markdown, no code fences, no commentary.
+The JSON must have keys verdict (PASS or FAIL) and reason (one sentence).
+
+--- RUBRIC ---
+The result must look like a JSON array where each element has a 'path' and a 'kind' field ('context-named' or 'context-folder'). Pass if the structure is present and at least one entry is visible.
+
+--- OUTPUT ---
+[
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\grill-answer-write-judge.json",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\grill-answer-write.json",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\grill-write-judge.json",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\grill-write.json",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\instruct-001-run-ai-response.yaml",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\instruct-001-run-cli-output.yaml",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\instruct-001-run-prompt.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\instruct-001-run-response.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\instruct-001-run-shell-01-cmd.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\instruct-001-run-shell-01-out.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\judge-launch.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\judge-output.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\judge-prompt.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\judge-response.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\judge-rubric.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\judge-verdict.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-write\\instruct-001-run-ai-response.yaml",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-write\\instruct-001-run-cli-output.yaml",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-write\\instruct-001-run-prompt.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-write\\instruct-001-run-response.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-write\\instruct-001-run-shell-01-cmd.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-write\\instruct-001-run-shell-01-out.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-write\\judge-launch.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-write\\judge-output.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-write\\judge-prompt.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-write\\judge-response.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-write\\judge-rubric.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-write\\judge-verdict.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\module-context.md",
+    "kind": "context-named"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\.context\\sessions\\satisfy\\session.md",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\grill_context.py",
+    "kind": "context-named"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\grill_context_agent_spec.py",
+    "kind": "context-named"
+  },
+  {
+    "path": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\utilities\\grill_context\\grill_context_spec.py",
+    "kind": "context-named"
+  }
+]

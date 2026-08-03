@@ -8,7 +8,6 @@ Each fidelity below is the whole story for that level. Call clean_engineering at
 
 | Fidelity | clean_engineering |
 |---|---|
-| **scaffold** | **scaffold** |
 | **bounded_context** | **modules** |
 | **building_blocks** | **model** |
 | **code** | **code** |
@@ -17,11 +16,6 @@ Each fidelity below is the whole story for that level. Call clean_engineering at
 # Contexts
 
 
-## scaffold
-
-**Produce:** thin bounded context index — context name + candidate aggregates + short ubiquitous-language note (`DomainMap` → `BoundedContext` → `Aggregate` → `BuildingBlock`).
-
-Key rules: `language-is-context-scoped` — a term’s meaning is only valid inside the context that defines it; the same word in two contexts is two different concepts.
 
 ## bounded_context
 
@@ -108,6 +102,16 @@ Honour aggregate boundaries from bounded_context; do not redraw by relatedness. 
 - Call clean_engineering at **code**.
 
 ---
+
+# Scaffold
+
+**Produce:** thin bounded context index — context name + candidate aggregates + short ubiquitous-language note (`DomainMap` → `BoundedContext` → `Aggregate` → `BuildingBlock`).
+
+Key rules: `language-is-context-scoped` — a term’s meaning is only valid inside the context that defines it; the same word in two contexts is two different concepts.
+
+---
+
+
 # Generate
 
 1. Confirm fidelity (`bounded_context` → `building_blocks` → `code`) and format.

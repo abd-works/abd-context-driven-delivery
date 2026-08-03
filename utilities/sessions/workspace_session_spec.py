@@ -110,8 +110,8 @@ with description("WorkspaceSession on a BaseContextTool host"):
         with it("should expand kit tool instructions from workspace_session.md"):
             from sessions.workspace_session import Session
 
-            tools = _discover_tools(self.host.workspace())
-            expect(isinstance(self.host.workspace(), Session)).to(be_true)
+            tools = _discover_tools(self.host.workspace)
+            expect(isinstance(self.host.workspace, Session)).to(be_true)
             expect(tools["create_session"].instructions.startswith("# Create Session")).to(
                 be_true
             )

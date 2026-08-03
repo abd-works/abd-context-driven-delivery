@@ -1,0 +1,3 @@
+PASS
+
+The entry includes a ### heading and a concrete explanation of recursive scanning, .context/ paths, and skipping __pycache__ and underscore-prefixed paths.

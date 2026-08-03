@@ -250,16 +250,47 @@ def instruction(
         if override:
             wrapped = target
         else:
-            @functools.wraps(target)
-            def wrapped(instance: Any) -> Any:
-                # Read attrs at call time so @focus (applied outside) can set them.
-                return Instruction.ref(
-                    instance,
-                    getattr(wrapped, "_instruction_label", resolved_label),
-                    collection=getattr(wrapped, "_instruction_collection", collection),
-                    group=getattr(wrapped, "_instruction_group", group),
-                    filter_key=getattr(wrapped, "_instruction_filter_key", filter_key),
-                )
+            # Parameterised instruction: method has params beyond 'self'.
+            # Resolves the .md from the defining file's directory (not self.module_dir),
+            # then substitutes {{param_name}} — auto-expanding any Instruction values.
+            _sig = inspect.signature(target)
+            _extra_params = [p for p in _sig.parameters if p != "self"]
+            if _extra_params:
+                try:
+                    _kit_dir: Path | None = Path(inspect.getfile(target)).resolve().parent
+                except (TypeError, OSError):
+                    _kit_dir = None
+
+                @functools.wraps(target)
+                def wrapped(instance: Any, *args: Any, **kwargs: Any) -> str:  # type: ignore[misc]
+                    lbl = getattr(wrapped, "_instruction_label", resolved_label)
+                    content = (
+                        Instruction(lbl, _kit_dir).expand()
+                        if _kit_dir is not None
+                        else Instruction.ref(instance, lbl).expand()
+                    )
+                    bound = _sig.bind(instance, *args, **kwargs)
+                    bound.apply_defaults()
+                    for k, v in bound.arguments.items():
+                        if k == "self":
+                            continue
+                        if isinstance(v, Instruction):
+                            v = v.expand()
+                        elif not isinstance(v, str):
+                            v = str(v) if v is not None else ""
+                        content = content.replace("{{" + k + "}}", v)
+                    return content
+            else:
+                @functools.wraps(target)
+                def wrapped(instance: Any) -> Any:
+                    # Read attrs at call time so @focus (applied outside) can set them.
+                    return Instruction.ref(
+                        instance,
+                        getattr(wrapped, "_instruction_label", resolved_label),
+                        collection=getattr(wrapped, "_instruction_collection", collection),
+                        group=getattr(wrapped, "_instruction_group", group),
+                        filter_key=getattr(wrapped, "_instruction_filter_key", filter_key),
+                    )
 
         wrapped._is_instruction_slot = True  # type: ignore[attr-defined]
         wrapped._instruction_label = resolved_label  # type: ignore[attr-defined]
@@ -319,7 +350,7 @@ def _is_framework_action(action_name: str) -> bool:
 
 
 def _kit_markdown(module_dir: Path) -> Path | None:
-    """``{slug}.md`` beside a kit package (``workspace_session.md``, ``partition_pipeline.md``, ...)."""
+    """``{slug}.md`` beside a kit package (``workspace_session.md``, ``partition.md``, ...)."""
     for slug in _slug_variants(module_dir.name):
         candidate = module_dir / f"{slug}.md"
         if candidate.is_file():

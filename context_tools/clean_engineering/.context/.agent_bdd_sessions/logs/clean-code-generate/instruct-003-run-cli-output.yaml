@@ -31,13 +31,13 @@ instructions: "# Validate\n\nTake the persona of a **critical judge** — do not
   2. else `{workspace_root}/{default_workspace_folder}`\n\nResource `active` = Session(path='src',\
   \ name=None).\n\n# Contexts\n\nDeepen OO design from modules toward production code.\
   \ Each fidelity **adds** artifacts — do not invent detail from a deeper level.\n\
-  \n**Progression:** `partition` (action) → **modules** → **model** → **code**.\n\n\
-  | Fidelity | Default format | Produce |\n|---|---|---|\n| **modules** | markdown\
-  \ (+ drawio) | Independent modules, one-way deps, build order, thin seam terms |\n\
-  | **model** | python | Empty `I{Class}` contracts + full module-context; stub example\
-  \ factories |\n| **code** | python | `Class(I{Class})` typed contracts → full production\
-  \ implementation |\n\n---\n\n## Language companion (not a fidelity)\n\n**Language\
-  \ is not invocable** (`context.fidelity: language` is rejected). Natural-language\
+  \n**Progression:** `partition` (action) → **scaffold** → **modules** → **model**\
+  \ → **code**.\n\n| Fidelity | Default format | Produce |\n|---|---|---|\n| **modules**\
+  \ | markdown (+ drawio) | Independent modules, one-way deps, build order, thin seam\
+  \ terms |\n| **model** | python | Empty `I{Class}` contracts + full module-context;\
+  \ stub example factories |\n| **code** | python | `Class(I{Class})` typed contracts\
+  \ → full production implementation |\n\n---\n\n## Language companion (not a fidelity)\n\
+  \n**Language is not invocable** (`context.fidelity: language` is rejected). Natural-language\
   \ identity is a **companion** that deepens at every stage through code.\n\n- At\
   \ each fidelity, refresh prose for terms/classes already named at that stage — definition,\
   \ story bullets, invariants in plain English.\n- Keep identity on the class (or\
@@ -253,12 +253,12 @@ instructions: "# Validate\n\nTake the persona of a **critical judge** — do not
   \ + **`{Type}ExampleFactory`** + `examples[{example_key}]` |\n\nDo **not** put factory\
   \ wiring in the production family file. Do **not** generate `Fake{Type}` / `Isolated{Type}`\
   \ / `Production{Type}` subclasses — those are **usage modes**, not an inheritance\
-  \ tree.\n\n**PATTERN** (see also `sketch-template.md` and templates):\n\n```\n\n\
-  Every tool call uses this shape - set `tool` and `arguments`, pipe to CLI:\n\n```yaml\n\
-  toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\ncontext:\n\
-  \  format: python\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python\
-  \ -m tools run -\n\nSuggested flow (repeat and reorder as the story needs):\n\n\
-  1. tool: ensure_session\n   arguments:\n     name: <value>\n     goal: <value>\n\
+  \ tree.\n\n**PATTERN** (see also `templates/clean_engineering-sketch.md` and templates):\n\
+  \n```\n\nEvery tool call uses this shape - set `tool` and `arguments`, pipe to CLI:\n\
+  \n```yaml\ntoolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  context:\n  format: python\ntool: <tool name>\narguments:\n  <if needed>\n```\n\n\
+  Run: python -m tools run -\n\nSuggested flow (repeat and reorder as the story needs):\n\
+  \n1. tool: ensure_session\n   arguments:\n     name: <value>\n     goal: <value>\n\
   \     fidelities: <value>\n     contexts: <value>\n     path: <value>\n\n2. tool:\
   \ read_context_index\n\n3. tool: record_context_root\n   arguments:\n     root:\
   \ <value>\n     note: <value>\n\n4. tool: scan\n   arguments:\n     paths: <value>\n\
@@ -277,7 +277,7 @@ resources:
     goal: null
     fidelities: null
     contexts: null
-    started: '2026-08-02'
+    started: '2026-08-03'
     ended: null
     outcome: null
     handoff: null

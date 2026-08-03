@@ -1,28 +1,22 @@
-The command finished with exit code 1. Output:
+Exit code **1**:
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-That usually means `python -m tools run -` read from stdin and got no toolset request (nothing piped, or empty input). The car example expects a manifest or run payload on stdin first—for example after `python -m tools manifest …`.
-
-If you want this to succeed, say what to pipe in (manifest YAML, file path, or a full one-liner) and I can run it again.The command finished with exit code 1. Output:
+Stdin was empty, so there was no `toolset` in the request. Pipe a YAML run request into `python -m tools run -` when you want a tool to execute.Exit code **1**:
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-That usually means `python -m tools run -` read from stdin and got no toolset request (nothing piped, or empty input). The car example expects a manifest or run payload on stdin first—for example after `python -m tools manifest …`.
-
-If you want this to succeed, say what to pipe in (manifest YAML, file path, or a full one-liner) and I can run it again.The command finished with exit code 1. Output:
+Stdin was empty, so there was no `toolset` in the request. Pipe a YAML run request into `python -m tools run -` when you want a tool to execute.Exit code **1**:
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-That usually means `python -m tools run -` read from stdin and got no toolset request (nothing piped, or empty input). The car example expects a manifest or run payload on stdin first—for example after `python -m tools manifest …`.
-
-If you want this to succeed, say what to pipe in (manifest YAML, file path, or a full one-liner) and I can run it again.
+Stdin was empty, so there was no `toolset` in the request. Pipe a YAML run request into `python -m tools run -` when you want a tool to execute.

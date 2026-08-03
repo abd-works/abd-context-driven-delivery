@@ -11,7 +11,7 @@ resources:
     goal: null
     fidelities: null
     contexts: null
-    started: '2026-08-01'
+    started: '2026-08-03'
     ended: null
     outcome: null
     handoff: null

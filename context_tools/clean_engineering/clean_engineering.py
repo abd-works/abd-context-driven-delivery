@@ -47,24 +47,8 @@ class CleanEngineering(BaseContextTool):
 
     default_workspace_folder: str = "src"
     context_index_key: str = "clean_engineering"
-    def _partition_params(self) -> dict[str, str]:
-        return {
-            "lens_name": "CE",
-            "index_columns": "Module / Chunk / Role / Deps",
-            "primary_artifact": "Module",
-            "secondary_artifact": "seams and thin dependency notes",
-            "artifact_naming_rule": "domain noun or path",
-            "skim_focus": "independently implementable seams",
-            "partition_done_checks": (
-                "- [ ] Every module row is an independently implementable domain-noun seam (path OK).\n"
-                "- [ ] `one-way-deps` applied — shared mechanics appear once under a parent base, not copy-pasted into siblings.\n"
-                "- [ ] Nested children depend on **parent base**, not on sibling children.\n"
-                "- [ ] Each module row states rough public API and thin deps (hints only — modules generate formalizes).\n"
-                "- [ ] No flat megamodule that should be a nest."
-            ),
-        }
-
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+
 
     fidelities = {
         BaseContextTool.DISCOVERY: "modules",

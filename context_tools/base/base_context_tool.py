@@ -7,8 +7,8 @@
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """BaseContextTool - composer + artifact lifecycle; shared face for every concrete domain.
 
-Non-primitive kits are held and called through providers
-(``self.workspace().…``, ``self.scanner().…``, …) — not MI-as-self and not
+Non-primitive kits are held as plain instance attributes and called through
+them (``self.workspace.…``, ``self.scanner.…``, …) — not MI-as-self and not
 ``@`` chain decorators. Domains subclass this class directly.
 ``@action`` / ``@instruction`` / ``@tool`` stay (primitives only). Host
 ``@tool`` / ``@resource`` wrappers forward to kits so agents can still invoke
@@ -23,7 +23,7 @@ from typing import ClassVar
 
 from grill_context.grill_context import GrillContext
 from iterate.iterate import Iterator
-from partition_pipeline.partition_pipeline import PartitionPipeline
+from partition.partition import Partition
 from primitives.actions.action import _ActionRunner
 from primitives.actions.action import AgenticToolset
 from primitives.actions.action import action
@@ -39,85 +39,8 @@ from tools.tool import resource
 from tools.tool import tool
 
 
-# ---------------------------------------------------------------------------
-# Fidelity method generator — called from __init_subclass__ when a subclass
-# declares a ``fidelities`` class dict.  Plain Python methods (not @action);
-# each one calls ``_set_fidelity`` then delegates to the named lifecycle action.
-# ---------------------------------------------------------------------------
-
-def _generate_fidelity_methods(cls: type) -> None:
-    """Add generate_{f}, validate_{f}, satisfy_{f} for every fidelity in cls.fidelities."""
-    fidelity_names: set[str] = set(cls.fidelities.values())  # type: ignore[union-attr]
-    for action_name in ("generate", "validate", "satisfy"):
-        for fidelity_name in fidelity_names:
-            method_name = f"{action_name}_{fidelity_name}"
-            if not hasattr(cls, method_name):
-                def _make(act: str, fid: str):
-                    def _fidelity_method(self):
-                        self._set_fidelity(fid)
-                        return getattr(self, act)()
-                    _fidelity_method.__name__ = f"{act}_{fid}"
-                    _fidelity_method.__qualname__ = f"{cls.__qualname__}.{act}_{fid}"
-                    return _fidelity_method
-                setattr(cls, method_name, _make(action_name, fidelity_name))
-
-
 class BaseContextTool(AgenticToolset):
     """# Instructions"""
-
-    # -- PartitionPipeline (composed, not inherited) -------------------------
-    # Methods are bound from the kit's own function objects so that
-    # inspect.getfile still resolves to utilities/partition_pipeline/ for prose.
-    partition_guidance = PartitionPipeline.__dict__["partition_guidance"]
-    verify_segment_completeness = PartitionPipeline.__dict__["verify_segment_completeness"]
-    _segment_for = PartitionPipeline.__dict__["_segment_for"]
-    _read_partition_index = PartitionPipeline.__dict__["_read_partition_index"]
-    index = PartitionPipeline.__dict__["index"]
-    segment = PartitionPipeline.__dict__["segment"]
-    partition = PartitionPipeline.__dict__["partition"]
-
-    # -- Repair (composed, not inherited) ------------------------------------
-    # Same principle — prose lookup stays in utilities/repair/.
-    write_to_fix = Repair.__dict__["write_to_fix"]
-    log_fix = Repair.__dict__["log_fix"]
-    repair = Repair.__dict__["repair"]
-
-    # ------------------------------------------------------------------
-    # Stage constants — shared vocabulary for CDD delivery stages.
-    # Subclasses use these as keys in their ``fidelities`` class dict.
-    # ------------------------------------------------------------------
-    SHAPING:   ClassVar[str] = "shaping"
-    DISCOVERY: ClassVar[str] = "discovery"
-    SPEC:      ClassVar[str] = "spec"
-    ENGINEER:  ClassVar[str] = "engineer"
-
-    # ------------------------------------------------------------------
-    # fidelities — ordered mapping of stage constant → this tool's
-    # fidelity name for that stage.  Subclasses declare this as a plain
-    # class-level dict; __init_subclass__ auto-generates lifecycle methods
-    # from it.  None means "not declared" (base class default).
-    # ------------------------------------------------------------------
-    fidelities: ClassVar[dict[str, str] | None] = None
-
-    # ------------------------------------------------------------------
-    # _fidelity_format_defaults — fidelity_name → default format string.
-    # Subclasses shadow this with their own dict so that _set_fidelity
-    # can update self.format when the fidelity changes.
-    # ------------------------------------------------------------------
-    _fidelity_format_defaults: ClassVar[dict[str, str]] = {}
-
-    default_workspace_folder: str = "."
-    context_index_key: str = ""
-
-    def __init_subclass__(cls, **kwargs) -> None:
-        super().__init_subclass__(**kwargs)
-        cls._is_context = True  # type: ignore[attr-defined]
-        cls._is_toolset = True  # type: ignore[attr-defined]
-        _ActionRunner.instance().validate_toolset(cls)
-        # Auto-generate generate_{f} / validate_{f} / satisfy_{f} whenever
-        # a subclass declares a ``fidelities`` class dict.
-        if "fidelities" in cls.__dict__ and isinstance(cls.__dict__["fidelities"], dict):
-            _generate_fidelity_methods(cls)
 
     def __init__(
         self,
@@ -128,20 +51,66 @@ class BaseContextTool(AgenticToolset):
     ) -> None:
         super().__init__()
         self.format = format
-        self._ws_path = path
-        self._ws_session_name = session
-        self._ws_workspace = workspace
-        self._workspace_kit: Session | None = None
-        self._scanner_kit: Scan | None = None
-        self._sketcher_kit: Sketcher | None = None
-        self._grill_kit: GrillContext | None = None
-        self._iterator_kit: Iterator | None = None
-        self._decisions_kit: RecordDecisions | None = None
+        self._raw_path = path
+        self.workspace = Session(
+            format=self.format,
+            path=path,
+            session=session,
+            workspace=workspace,
+            context_index_key=getattr(type(self), "context_index_key", ""),
+            default_workspace_folder=getattr(
+                type(self), "default_workspace_folder", "."
+            ),
+        )
+        self.scanner = Scan()
+        self.sketcher = Sketcher(agent_dir=str(self.module_dir))
+        self.grill_context = GrillContext()
+        self.iterator = Iterator()
+        self.decisions = RecordDecisions()
+        self.partitioner = Partition()
+        self.repairer = Repair(workspace=self.workspace)
 
-    @property
-    def module_dir(self) -> Path:
-        return Path(inspect.getfile(type(self))).resolve().parent
 
+    #  -- Stage / Fidelity ----------------
+    SHAPING:   ClassVar[str] = "shaping"
+    DISCOVERY: ClassVar[str] = "discovery"
+    SPEC:      ClassVar[str] = "spec"
+    ENGINEER:  ClassVar[str] = "engineer"
+ 
+    fidelities: ClassVar[dict[str, str] | None] = None
+    _fidelity_format_defaults: ClassVar[dict[str, str]] = {}
+
+    def __init_subclass__(cls, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+        cls._is_context = True  # type: ignore[attr-defined]
+        cls._is_toolset = True  # type: ignore[attr-defined]
+        _ActionRunner.instance().validate_toolset(cls)
+        # Auto-generate generate_{f} / validate_{f} / satisfy_{f} whenever
+        # a subclass declares a ``fidelities`` class dict.
+        if "fidelities" in cls.__dict__ and isinstance(cls.__dict__["fidelities"], dict):
+            cls._generate_fidelity_methods()
+
+    @classmethod
+    def _generate_fidelity_methods(cls) -> None:
+        """Add generate_{f}, validate_{f}, satisfy_{f} for every fidelity in cls.fidelities.
+
+        Plain Python methods (not @action); each one calls ``_set_fidelity``
+        then delegates to the named lifecycle action.
+        """
+        fidelity_names: set[str] = set(cls.fidelities.values())  # type: ignore[union-attr]
+        for action_name in ("generate", "validate", "satisfy"):
+            for fidelity_name in fidelity_names:
+                method_name = f"{action_name}_{fidelity_name}"
+                if not hasattr(cls, method_name):
+                    def _make(act: str, fid: str):
+                        def _fidelity_method(self):
+                            self._set_fidelity(fid)
+                            return getattr(self, act)()
+                        _fidelity_method.__name__ = f"{act}_{fid}"
+                        _fidelity_method.__qualname__ = f"{cls.__qualname__}.{act}_{fid}"
+                        return _fidelity_method
+                    setattr(cls, method_name, _make(action_name, fidelity_name))
+    
     def _set_fidelity(self, fidelity_name: str) -> None:
         """Update self.fidelity and resolve the matching default format.
 
@@ -156,69 +125,34 @@ class BaseContextTool(AgenticToolset):
         if fidelity_name in defaults:
             self.format = defaults[fidelity_name]
 
-    # -- Kit providers (real instances, not self) ----------------------------
-
-    def workspace(self) -> Session:
-        if self._workspace_kit is None:
-            self._workspace_kit = Session(
-                format=self.format,
-                path=self._ws_path,
-                session=self._ws_session_name,
-                workspace=self._ws_workspace,
-                context_index_key=getattr(type(self), "context_index_key", ""),
-                default_workspace_folder=getattr(
-                    type(self), "default_workspace_folder", "."
-                ),
-            )
-        return self._workspace_kit
-
-    def scanner(self) -> Scan:
-        if self._scanner_kit is None:
-            self._scanner_kit = Scan()
-        return self._scanner_kit
-
-    def sketcher(self) -> Sketcher:
-        if self._sketcher_kit is None:
-            self._sketcher_kit = Sketcher(agent_dir=str(self.module_dir))
-        return self._sketcher_kit
-
-    def grill_context(self) -> GrillContext:
-        if self._grill_kit is None:
-            self._grill_kit = GrillContext()
-        return self._grill_kit
-
-    def iterator(self) -> Iterator:
-        if self._iterator_kit is None:
-            self._iterator_kit = Iterator()
-        return self._iterator_kit
-
-    def decisions(self) -> RecordDecisions:
-        if self._decisions_kit is None:
-            self._decisions_kit = RecordDecisions()
-        return self._decisions_kit
-
+    # -- workspace  ----------------
+    default_workspace_folder: str = "."
+    context_index_key: str = ""
+    
+    @property
+    def module_dir(self) -> Path:
+        return Path(inspect.getfile(type(self))).resolve().parent
+   
     @property
     @resource
     def active(self) -> Session:
         """The current workspace session — exposes the session as a host resource."""
-        return self.workspace()
+        return self.workspace
 
     @instruction(override=True)
     def session_guidance(self) -> Instruction:
         """Delegate to Session — prose lives in workspace_session.md."""
-        return Instruction.ref(self.workspace(), "session_guidance")
-
-    # -- Host tool face → workspace / scanner (plain forward) ----------------
+        return Instruction.ref(self.workspace, "session_guidance")
 
     @tool
     def read_context_index(self) -> str:
         """read_context_index"""
-        return self.workspace().read_context_index()
+        return self.workspace.read_context_index()
 
     @tool
     def record_context_root(self, root: str = "", note: str = "") -> str:
         """record_context_root"""
-        return self.workspace().record_context_root(root=root, note=note)
+        return self.workspace.record_context_root(root=root, note=note)
 
     @tool
     def ensure_session(
@@ -230,7 +164,7 @@ class BaseContextTool(AgenticToolset):
         path: str = "",
     ) -> str:
         """ensure_session"""
-        return self.workspace().ensure_session(
+        return self.workspace.ensure_session(
             name=name,
             goal=goal,
             fidelities=fidelities,
@@ -248,7 +182,7 @@ class BaseContextTool(AgenticToolset):
         path: str = "",
     ) -> str:
         """create_session"""
-        return self.workspace().create_session(
+        return self.workspace.create_session(
             name=name,
             goal=goal,
             fidelities=fidelities,
@@ -259,15 +193,9 @@ class BaseContextTool(AgenticToolset):
     @tool
     def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:
         """close_session"""
-        return self.workspace().close_session(outcome=outcome, handoff=handoff)
-
-    @tool
-    def scan(self, paths: list[str]) -> str:
-        """scan"""
-        return self.scanner().scan(paths)
+        return self.workspace.close_session(outcome=outcome, handoff=handoff)
 
     # -- Instructions --------------------------------------------------------
-
     @instruction
     def contexts(self) -> Instruction: ...
 
@@ -277,7 +205,60 @@ class BaseContextTool(AgenticToolset):
     @instruction
     def templates(self) -> Instruction: ...
 
-    # -- Lifecycle actions (linear bodies) -----------------------------------
+    @instruction
+    def scaffold(self) -> Instruction: ...
+
+    # -- Lifecycle actions  -----------------------------------
+    @action
+    def partition(
+        self,
+        context: str,
+        mode: str = "one_go",
+        out_root: str | None = None,
+    ) -> str:
+        """partition"""
+        self.active
+        self.session_guidance
+        self.contexts
+        self.partitioner.partition(
+            context, mode, out_root, slug=self.domain_slug, scaffold=self.scaffold
+        )
+        return (
+            "Partition of {{context}} finished (mode {{mode}}); "
+            "docs under {session.path}/.context/. "
+            "Hard fail if any new chunk fails named-entry completeness."
+        )
+
+    @action
+    def grill(self) -> str:
+        """Grill then generate - pure grill loop, then the host generate body."""
+        self.workspace.open()
+        self.decisions.record_decisions_session()
+        self.grill_context.grill_with_context()
+        self.generate()
+        return "Grill complete; generate instructions applied."
+
+    @action
+    def sketch(self) -> str:
+        """Sketch then generate - grill + sketch cadence, then the host generate body."""
+        self.workspace.open()
+        self.decisions.record_decisions_session()
+        """Sketch under session.folder; pass agent_dir={{self.module_dir}} to find_template."""
+        self.sketcher.sketch_session()
+        self.generate()
+        return "Sketch complete; generate instructions applied."
+
+    @log
+    @action
+    def generate(self) -> str:
+        self.workspace.open()
+        self.decisions.record_decisions_session()
+        self.contexts
+        self.examples
+        self.templates
+        self.generate_output()
+        self.add_generate_header_to_generated()
+        return "When done, run validate."
 
     @action
     def add_generate_header_to_generated(self) -> str:
@@ -298,71 +279,76 @@ class BaseContextTool(AgenticToolset):
         """"""
         return ""
 
-    @log
-    @action
-    def generate(self) -> str:
-        self.workspace().open()
-        self.decisions().record_decisions_session()
-        self.contexts
-        self.examples
-        self.templates
-        self.generate_output()
-        self.add_generate_header_to_generated()
-        return "When done, run validate."
-
-    @action
-    def grill(self) -> str:
-        """Grill then generate - pure grill loop, then the host generate body."""
-        self.workspace().open()
-        self.decisions().record_decisions_session()
-        self.grill_context().grill_with_context()
-        self.generate()
-        return "Grill complete; generate instructions applied."
-
-    @action
-    def sketch(self) -> str:
-        """Sketch then generate - grill + sketch cadence, then the host generate body."""
-        self.workspace().open()
-        self.decisions().record_decisions_session()
-        """Sketch under session.folder; pass agent_dir={{self.module_dir}} to find_template."""
-        self.sketcher().sketch_session()
-        self.generate()
-        return "Sketch complete; generate instructions applied."
-
-    @action
-    def iterate(self) -> str:
-        """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
-        self.workspace().open()
-        self.decisions().record_decisions_session()
-        self.iterator().iterate_session()
-        self.generate()
-        return "Iterate complete; generate instructions applied."
-
-    @action
-    def validate(self) -> str:
-        self.workspace().open()
-        self.contexts
-        self.scanner().scan()
-        return "Validation report for artifacts under {session.path}/."
-
     @action
     def document(self, paths: list[str]) -> str:
-        self.workspace().open()
+        self.workspace.open()
         self.contexts
         self.templates
-        self.scanner().scan(paths)
+        self.scanner.scan(paths)
         self.generate_output()
         self.add_generate_header_to_generated()
         return "Document existing state under {session.path}/ - violations flagged, none corrected."
 
     @action
+    def iterate(self) -> str:
+        """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
+        self.workspace.open()
+        self.decisions.record_decisions_session()
+        self.iterator.iterate_session()
+        self.generate()
+        return "Iterate complete; generate instructions applied."
+
+    @action
+    def validate(self) -> str:
+        self.workspace.open()
+        self.contexts
+        self.scanner.scan()
+        return "Validation report for artifacts under {session.path}/."
+
+    @tool
+    def scan(self, paths: list[str]) -> str:
+        """scan"""
+        return self.scanner.scan(paths)
+
+    @action
     def satisfy(self) -> str:
-        self.workspace().open()
-        self.decisions().record_decisions_session()
+        self.workspace.open()
+        self.decisions.record_decisions_session()
         self.contexts
         self.templates
         return "When done, run validate on artifacts under {session.path}/."
-
+    
+    @action
+    def repair(self, asset: str, violation: str) -> str:
+        """repair"""
+        self.scan()
+        self.contexts
+        self.examples
+        self.templates
+        self.repairer.repair(asset, violation)
+        return "Repair {{asset}} under {session.path}/ until validate passes."
+    
+    @tool
+    def log_fix(
+        self,
+        artifact: str,
+        rule: str,
+        wrong: str,
+        original: str,
+        improved: str,
+        status: str = "fixed",
+        when: str = "",
+    ) -> str:
+        """log_fix"""
+        return self.repairer.log_fix(
+            artifact=artifact,
+            rule=rule,
+            wrong=wrong,
+            original=original,
+            improved=improved,
+            status=status,
+            when=when,
+        )
 
 BaseContextTool._is_context = True  # type: ignore[attr-defined]
 BaseContextTool._is_toolset = True  # type: ignore[attr-defined]

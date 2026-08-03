@@ -6,7 +6,7 @@
 
 Peer-kit expansion lives with the kits:
 - ``utilities/sessions/workspace_session_spec.py``
-- ``utilities/partition_pipeline/partition_pipeline_spec.py``
+- ``utilities/partition/partition_spec.py``
 - ``utilities/repair/repair_spec.py``
 
 Meta generator face (scaffold templates / create_context_tool.md) lives in
@@ -359,38 +359,38 @@ with description("BaseContextTool public host face"):
     with it("should default context_index_key to empty"):
         expect(type(self.host).context_index_key).to(equal(""))
 
-    with it("should return a Session from workspace"):
+    with it("should hold a Session as workspace"):
         from sessions.workspace_session import Session
 
-        expect(isinstance(self.host.workspace(), Session)).to(be_true)
+        expect(isinstance(self.host.workspace, Session)).to(be_true)
 
-    with it("should return a Scan from scanner"):
+    with it("should hold a Scan as scanner"):
         from scanners.scan import Scan
 
-        expect(isinstance(self.host.scanner(), Scan)).to(be_true)
+        expect(isinstance(self.host.scanner, Scan)).to(be_true)
 
-    with it("should return a Sketcher from sketcher"):
+    with it("should hold a Sketcher as sketcher"):
         from sketch.sketch import Sketcher
 
-        expect(isinstance(self.host.sketcher(), Sketcher)).to(be_true)
+        expect(isinstance(self.host.sketcher, Sketcher)).to(be_true)
 
-    with it("should return a GrillContext from grill_context"):
+    with it("should hold a GrillContext as grill_context"):
         from grill_context.grill_context import GrillContext
 
-        expect(isinstance(self.host.grill_context(), GrillContext)).to(be_true)
+        expect(isinstance(self.host.grill_context, GrillContext)).to(be_true)
 
-    with it("should return an Iterator from iterator"):
+    with it("should hold an Iterator as iterator"):
         from iterate.iterate import Iterator
 
-        expect(isinstance(self.host.iterator(), Iterator)).to(be_true)
+        expect(isinstance(self.host.iterator, Iterator)).to(be_true)
 
-    with it("should return RecordDecisions from decisions"):
+    with it("should hold RecordDecisions as decisions"):
         from record_decisions.record_decisions import RecordDecisions
 
-        expect(isinstance(self.host.decisions(), RecordDecisions)).to(be_true)
+        expect(isinstance(self.host.decisions, RecordDecisions)).to(be_true)
 
     with it("should expose active as the workspace Session"):
-        expect(self.host.active).to(equal(self.host.workspace()))
+        expect(self.host.active).to(equal(self.host.workspace))
 
     with it("should delegate session_guidance to the workspace kit"):
         guidance = self.host.session_guidance()

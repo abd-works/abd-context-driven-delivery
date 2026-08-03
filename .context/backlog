@@ -12,23 +12,24 @@ UX
 
 
 grill-me
-fidelity
+fidelity *
 document
 partition   *
 scoped source ref
 log-fix
--session and //context
+sessions and context
 simple log_fix 
 module dependency graph
-
-
-tools / actions /
+tools
+actions 
+iterative story testing
+partition refactor
 
 -----
 
 reviewing
 ------------
-session
+
 
 
 ---------
@@ -36,26 +37,27 @@ session
 developing
 
 ----------
-fidelity - base conncept 3 only
-iterative story testing
-partition refactor
+
+
+
 
 backlog
 ----------------
-UX templates suck
-grill expansionsee below 
-stroy to ce algnment, story disc to detailed
-
-
-consolidate handoff and session logs
-repair, log, and exampels, evals
+repair, log, and examples evals
 hook notifications and debugging
 
 patterns and frameworks
+
+
+UX templates suck
+grill expansion below 
+
+
+
+
+stroy to ce algnment, story disc to detailed
+consolidate handoff and session logs
 session plan
-
-
-
 
 checklist
 know extension points for solutions- ai automatically flexes along these points

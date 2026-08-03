@@ -45,7 +45,7 @@ instructions: "# Generate\n\n1. Follow **`session_guidance`** and the session to
   \ — single action before generate / grill / sketch / iterate / validate:\n\n1. Resolve\
   \ durable root (`path`)\n2. Ensure sprint exists (load or create)\n3. Load context\
   \ index if present\n4. Record this tool's root when `context_index_key` is set\n\
-  \n```yaml\naction: open   # via self.workspace().open() from BaseContextTool\n```\n\
+  \n```yaml\naction: open   # via self.workspace.open() from BaseContextTool\n```\n\
   \nDo **not** separately chain bind + read_context_index + record_context_root from\
   \ lifecycle bodies — `open` already does that.\n\n## Layout\n\n- **path** — docs\
   \ → `{path}/.context/`; code/modules → `{path}/`\n- **folder** — `session.md`, grill-answers,\
@@ -114,7 +114,7 @@ resources:
     goal: null
     fidelities: null
     contexts: null
-    started: '2026-08-01'
+    started: '2026-08-03'
     ended: null
     outcome: null
     handoff: null

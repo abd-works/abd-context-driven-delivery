@@ -140,15 +140,15 @@ with description("an asset"):
 
 
 with description("an asset collection"):
-    with context("with a folder-kind location pointing at the bdd formats folder"):
+    with context("with a folder-kind location pointing at the bdd templates folder"):
         with before.each:
             from primitives.assets import AssetCollection
             from primitives.assets import AssetLocation
 
-            location = AssetLocation("folder", _BDD_DIR, "bdd", folder=_BDD_DIR / "formats")
+            location = AssetLocation("folder", _BDD_DIR, "bdd", folder=_BDD_DIR / "templates")
             self.collection = AssetCollection(location)
 
-        with it("should collect a non-empty dict of format files"):
+        with it("should collect a non-empty dict of template files"):
             result = self.collection.collect()
             expect(len(result) > 0).to(equal(True))
 

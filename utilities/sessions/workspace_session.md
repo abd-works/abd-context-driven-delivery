@@ -24,7 +24,7 @@
 4. Record this tool's root when `context_index_key` is set
 
 ```yaml
-action: open   # via self.workspace().open() from BaseContextTool
+action: open   # via self.workspace.open() from BaseContextTool
 ```
 
 Do **not** separately chain bind + read_context_index + record_context_root from lifecycle bodies — `open` already does that.

@@ -1,0 +1,1 @@
+The grill-answers file must contain a ### heading followed by a body that makes a specific, grounded claim about how the tool works. It should mention paths, skipping, or recursion in concrete terms. Pass if the entry is substantive and not a vague placeholder.

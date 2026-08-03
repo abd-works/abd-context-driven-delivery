@@ -1,31 +1,25 @@
-Exploring how `tools run` works and locating the General Lee example.
-Exploring how `tools run` works and locating the General Lee example.
-Running `start`, then `speak`, with General Lee context via `python -m tools run -`.
-Running `start`, then `speak`, with General Lee context via `python -m tools run -`.
 ### Tool runs
 
-**`start`** — Engine on. General Lee reports as a 1969 Dodge Charger (`running: true`).
+**start** — `ok: true`, engine running on the 1969 Dodge Charger (General Lee personality).
 
-**`speak`** — Dodge Charger says: *"Hold on, cousin — Rosco's siren's wailin' but this orange Charger ain't stoppin' till we're up the courthouse steps, mud or no mud!"*
-
-### Adventure summary
-
-General Lee fired up on a back road headed for the Hazzard County courthouse while Rosco P. Coltrane closed in behind the siren. The run turned into a muddy slog—tires throwing red clay, the Charger sliding but never quitting—while Rosco chased hard on the same rutted lane. With the engine roaring and Rosco still in the mirror, the car called out in full Duke-country voice that the courthouse steps were the only finish line, mud be damned. The story ends with that defiant line over the engine: courthouse bound, Rosco in pursuit, and General Lee treating the whole mess like another Hazzard adventure.### Tool runs
-
-**`start`** — Engine on. General Lee reports as a 1969 Dodge Charger (`running: true`).
-
-**`speak`** — Dodge Charger says: *"Hold on, cousin — Rosco's siren's wailin' but this orange Charger ain't stoppin' till we're up the courthouse steps, mud or no mud!"*
+**speak** — Dodge Charger says: *"Keep her steady, Luke — Rosco's eatin' ditch mud while we nail them courthouse steps!"*
 
 ### Adventure summary
 
-General Lee fired up on a back road headed for the Hazzard County courthouse while Rosco P. Coltrane closed in behind the siren. The run turned into a muddy slog—tires throwing red clay, the Charger sliding but never quitting—while Rosco chased hard on the same rutted lane. With the engine roaring and Rosco still in the mirror, the car called out in full Duke-country voice that the courthouse steps were the only finish line, mud be damned. The story ends with that defiant line over the engine: courthouse bound, Rosco in pursuit, and General Lee treating the whole mess like another Hazzard adventure.Exploring how `tools run` works and locating the General Lee example.
-Running `start`, then `speak`, with General Lee context via `python -m tools run -`.
-### Tool runs
+General Lee comes alive on a rain-soaked Hazzard back road, bound for the county courthouse with Rosco P. Coltrane on their tail. The chase turns into a mud fight: the Charger digs through the clay and throws a rooster tail, while Rosco’s cruiser slides and bogs in the ditch trying to keep pace. The siren fades behind them as General Lee keeps the throttle honest and the square in sight. Over the engine, the car urges Luke to hold the line—Rosco is stuck in the mess while they close on the courthouse steps. Same old county story: muddy road, hot pursuit, and General Lee riding rebel luck straight to town.### Tool runs
 
-**`start`** — Engine on. General Lee reports as a 1969 Dodge Charger (`running: true`).
+**start** — `ok: true`, engine running on the 1969 Dodge Charger (General Lee personality).
 
-**`speak`** — Dodge Charger says: *"Hold on, cousin — Rosco's siren's wailin' but this orange Charger ain't stoppin' till we're up the courthouse steps, mud or no mud!"*
+**speak** — Dodge Charger says: *"Keep her steady, Luke — Rosco's eatin' ditch mud while we nail them courthouse steps!"*
 
 ### Adventure summary
 
-General Lee fired up on a back road headed for the Hazzard County courthouse while Rosco P. Coltrane closed in behind the siren. The run turned into a muddy slog—tires throwing red clay, the Charger sliding but never quitting—while Rosco chased hard on the same rutted lane. With the engine roaring and Rosco still in the mirror, the car called out in full Duke-country voice that the courthouse steps were the only finish line, mud be damned. The story ends with that defiant line over the engine: courthouse bound, Rosco in pursuit, and General Lee treating the whole mess like another Hazzard adventure.
+General Lee comes alive on a rain-soaked Hazzard back road, bound for the county courthouse with Rosco P. Coltrane on their tail. The chase turns into a mud fight: the Charger digs through the clay and throws a rooster tail, while Rosco’s cruiser slides and bogs in the ditch trying to keep pace. The siren fades behind them as General Lee keeps the throttle honest and the square in sight. Over the engine, the car urges Luke to hold the line—Rosco is stuck in the mess while they close on the courthouse steps. Same old county story: muddy road, hot pursuit, and General Lee riding rebel luck straight to town.### Tool runs
+
+**start** — `ok: true`, engine running on the 1969 Dodge Charger (General Lee personality).
+
+**speak** — Dodge Charger says: *"Keep her steady, Luke — Rosco's eatin' ditch mud while we nail them courthouse steps!"*
+
+### Adventure summary
+
+General Lee comes alive on a rain-soaked Hazzard back road, bound for the county courthouse with Rosco P. Coltrane on their tail. The chase turns into a mud fight: the Charger digs through the clay and throws a rooster tail, while Rosco’s cruiser slides and bogs in the ditch trying to keep pace. The siren fades behind them as General Lee keeps the throttle honest and the square in sight. Over the engine, the car urges Luke to hold the line—Rosco is stuck in the mess while they close on the courthouse steps. Same old county story: muddy road, hot pursuit, and General Lee riding rebel luck straight to town.

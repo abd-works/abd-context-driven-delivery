@@ -1,1 +1,1 @@
-Read primitives/actions/.agent_bdd_sessions/logs/travel-to/judge-prompt.txt and follow it exactly. Reply with only one JSON line as specified in that file.
+Read primitives/actions/.context/.agent_bdd_sessions/logs/travel-to/judge-prompt.txt and follow it exactly. Reply with only one JSON line as specified in that file.

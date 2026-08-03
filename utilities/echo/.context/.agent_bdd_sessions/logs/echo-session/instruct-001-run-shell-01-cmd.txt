@@ -1,0 +1,1 @@
+cd "C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery"; $env:PYTHONIOENCODING="utf-8"; python -m tools run -

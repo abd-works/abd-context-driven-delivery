@@ -1,0 +1,9 @@
+cd "C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery"; $env:PYTHONIOENCODING="utf-8"; @"
+toolset: tools.examples.car:Car
+context:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: A rebellious, high-spirited, loyal country boy from Hazzard County who loves muddy back roads and outrunning Rosco P. Coltrane.
+tool: start
+"@ | python -m tools run -

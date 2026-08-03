@@ -1,0 +1,22 @@
+Ran `python -m tools run -`.
+
+Exit code **1**:
+
+```yaml
+ok: false
+error: request missing toolset
+```Ran `python -m tools run -`.
+
+Exit code **1**:
+
+```yaml
+ok: false
+error: request missing toolset
+```Ran `python -m tools run -`.
+
+Exit code **1**:
+
+```yaml
+ok: false
+error: request missing toolset
+```

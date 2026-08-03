@@ -69,18 +69,8 @@ class Stories(BaseContextTool):
 
     default_workspace_folder: str = "tests"
     context_index_key: str = "stories"
-    def _partition_params(self) -> dict[str, str]:
-        return {
-            "lens_name": "Stories",
-            "index_columns": "Epic / Mid-epic",
-            "primary_artifact": "Epic",
-            "secondary_artifact": "grounding stories",
-            "artifact_naming_rule": "verb–noun",
-            "skim_focus": "activities and capabilities stakeholders care about",
-            "partition_done_checks": "- [ ] `branch-on-mechanical-uniqueness` applied — epic and story names are verb–noun, stakeholder-observable outcomes.",
-        }
-
     _fidelity_format_defaults = _FIDELITY_FORMAT_DEFAULTS
+
 
     fidelities = {
         BaseContextTool.DISCOVERY: "story_map",
@@ -125,9 +115,9 @@ class Stories(BaseContextTool):
 
         instance = CleanEngineering(
             fidelity="code",
-            path=self._ws_path,
-            session=self._ws_session_name,
-            workspace=self._ws_workspace,
+            path=self._raw_path,
+            session=self.workspace.name,
+            workspace=self.workspace.workspace_root,
         )
         instance.mode = "tool"
         return instance

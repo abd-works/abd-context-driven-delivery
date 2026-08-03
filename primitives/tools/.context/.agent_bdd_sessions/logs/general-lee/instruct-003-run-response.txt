@@ -1,34 +1,28 @@
-Ran from `abd-context-driven-delivery` with UTF-8 I/O set for the tools module.
+Ran `python -m tools run -` from the repo root.
 
-Exit code: **1**
-
-Output:
+Exit code **1**:
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-With no YAML on stdin, `run -` has no `toolset` (and usually no `tool`) to execute. Pipe a request into the same command when you want a real run.Ran from `abd-context-driven-delivery` with UTF-8 I/O set for the tools module.
+Nothing was on stdin, so the runner had no YAML request.Ran `python -m tools run -` from the repo root.
 
-Exit code: **1**
-
-Output:
+Exit code **1**:
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-With no YAML on stdin, `run -` has no `toolset` (and usually no `tool`) to execute. Pipe a request into the same command when you want a real run.Ran from `abd-context-driven-delivery` with UTF-8 I/O set for the tools module.
+Nothing was on stdin, so the runner had no YAML request.Ran `python -m tools run -` from the repo root.
 
-Exit code: **1**
-
-Output:
+Exit code **1**:
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-With no YAML on stdin, `run -` has no `toolset` (and usually no `tool`) to execute. Pipe a request into the same command when you want a real run.
+Nothing was on stdin, so the runner had no YAML request.

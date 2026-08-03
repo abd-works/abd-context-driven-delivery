@@ -13,14 +13,6 @@ python -m tools run -
 ```yaml
 ok: false
 error: request missing toolset
-```
-
-With no YAML on stdin, `run -` has nothing to parse. Pipe a request, for example:
-
-```powershell
-@"
-toolset: context_tools.stories.stories:Stories
-"@ | python -m tools run -
 ```Command:
 
 ```powershell
@@ -36,14 +28,6 @@ python -m tools run -
 ```yaml
 ok: false
 error: request missing toolset
-```
-
-With no YAML on stdin, `run -` has nothing to parse. Pipe a request, for example:
-
-```powershell
-@"
-toolset: context_tools.stories.stories:Stories
-"@ | python -m tools run -
 ```Command:
 
 ```powershell
@@ -59,12 +43,4 @@ python -m tools run -
 ```yaml
 ok: false
 error: request missing toolset
-```
-
-With no YAML on stdin, `run -` has nothing to parse. Pipe a request, for example:
-
-```powershell
-@"
-toolset: context_tools.stories.stories:Stories
-"@ | python -m tools run -
 ```

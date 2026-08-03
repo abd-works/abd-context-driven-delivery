@@ -1,0 +1,10 @@
+Using shell, run exactly: python -m tools run -
+Pipe this YAML on stdin:
+toolset: utilities.record_decisions.record_decisions:RecordDecisions
+tool: write_cdr
+arguments:
+  root: 'C:\Users\thoma\AppData\Local\Temp\tmp12r0bq8e'
+  slug: 'use-yaml-for-tool-requests'
+  content: |\n    # Use YAML for tool requests\n    \n    We chose YAML over JSON for tool request files because it is human-readable and supports multi-line strings without escaping.\nReturn the complete fenced YAML stdout from the CLI.
+
+IMPORTANT: Invoke python -m tools run via shell. Return the complete fenced YAML stdout from the CLI. Do not summarize.

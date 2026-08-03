@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 from context_tools.base.base_context_tool import BaseContextTool
 from primitives.actions.action import action
+from primitives.instructions import instruction
 from primitives.tools.tool import tool  # noqa: F401
 
 if TYPE_CHECKING:
@@ -63,22 +64,8 @@ class Bdd(BaseContextTool):
 
     default_workspace_folder: str = "src"
     context_index_key: str = "bdd"
-    def _partition_params(self) -> dict[str, str]:
-        return {
-            "lens_name": "BDD",
-            "index_columns": "Subject / `that`·`with`",
-            "primary_artifact": "Subject",
-            "secondary_artifact": "`that` / `with` candidates",
-            "artifact_naming_rule": "usage order",
-            "skim_focus": "observable domain behaviors",
-            "partition_done_checks": (
-                "- [ ] Subjects are plain-English domain observables — no internals/`@…`.\n"
-                "- [ ] `state-not-when` applied — order is a usage story; nest hints use `that`/`with`, never `when`.\n"
-                "- [ ] Subject count ≠ chapter / major-heading / top-level-type count (mirrored TOC = hard fail)."
-            ),
-        }
-
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+
 
     fidelities = {
         BaseContextTool.DISCOVERY: "modules",
@@ -109,9 +96,9 @@ class Bdd(BaseContextTool):
 
         instance = CleanEngineering(
             fidelity=_CE_FIDELITY.get(self.fidelity, "modules"),
-            path=self._ws_path,
-            session=self._ws_session_name,
-            workspace=self._ws_workspace,
+            path=self._raw_path,
+            session=self.workspace.name,
+            workspace=self.workspace.workspace_root,
         )
         instance.mode = "tool"
         return instance

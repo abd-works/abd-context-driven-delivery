@@ -62,16 +62,6 @@ class Ddd(BaseContextTool):
 
     default_workspace_folder: str = "src"
     context_index_key: str = "ddd"
-    def _partition_params(self) -> dict[str, str]:
-        return {
-            "lens_name": "DDD",
-            "index_columns": "Bounded Context / Ubiquitous Language",
-            "primary_artifact": "Bounded Context",
-            "secondary_artifact": "candidate aggregates and a ubiquitous-language note",
-            "artifact_naming_rule": "domain noun",
-            "skim_focus": "language boundaries — where a term shifts meaning or belongs to a different team",
-            "partition_done_checks": "- [ ] `language-is-context-scoped` applied — context names are domain nouns anchored to a language boundary, not chapter titles.",
-        }
 
     def __init__(
         self,
@@ -110,9 +100,9 @@ class Ddd(BaseContextTool):
         instance = CleanEngineering(
             fidelity=_CE_FIDELITY.get(self.fidelity, "modules"),
             format=self.format,
-            path=self._ws_path,
-            session=self._ws_session_name,
-            workspace=self._ws_workspace,
+            path=self._raw_path,
+            session=self.workspace.name,
+            workspace=self.workspace.workspace_root,
         )
         instance.mode = "tool"
         return instance

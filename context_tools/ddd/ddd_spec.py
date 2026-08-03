@@ -90,12 +90,12 @@ with description("a Ddd toolset"):
         with context("with a path set"):
             with it("should carry the same path to the CE companion"):
                 ce = Ddd(fidelity="bounded_context", path="context_tools/ddd").ce()
-                expect(ce._ws_path).to(equal("context_tools/ddd"))
+                expect(ce._raw_path).to(equal("context_tools/ddd"))
 
         with context("with a session set"):
             with it("should carry the same session name to the CE companion"):
                 ce = Ddd(fidelity="code", session="satisfy").ce()
-                expect(ce._ws_session_name).to(equal("satisfy"))
+                expect(ce.workspace.name).to(equal("satisfy"))
 
         with it("should return a companion with mode set to tool"):
             ce = Ddd().ce()

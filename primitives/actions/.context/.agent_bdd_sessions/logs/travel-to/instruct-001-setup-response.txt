@@ -1,8 +1,6 @@
-File missing from the working tree (git shows it deleted). Checking git history for its contents.
-File missing from the working tree (git shows it deleted). Checking git history for its contents.
-`primitives/actions/examples/car.py` is not in your working tree (git lists it as deleted). Below is the version from `HEAD` on `main`.
+`primitives/actions/examples/car.py` is not in the workspace. The actions Car example is at `primitives/actions/examples/car/car.py`:
 
-```python
+```1:106:primitives/actions/examples/car/car.py
 # @toolset-manifest python -m tools manifest primitives.actions.examples.car:Car
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
@@ -89,7 +87,6 @@ class Car:
         if not self._running:
             return f"{self._make} {self._model} cannot decelerate - engine is off"
         self._speed = max(0.0, self._speed - amount)
-        self._speed = max(0.0, self._speed - amount)
         return f"Decelerated to {self._speed:.0f} mph"
 
     @tool
@@ -109,20 +106,9 @@ class Car:
         """Speak at intervals that make the story more interesting."""
         self.speak()
         return f"Instructions for traveling to {destination}"
-```
+````primitives/actions/examples/car.py` is not in the workspace. The actions Car example is at `primitives/actions/examples/car/car.py`:
 
-Wait - I accidentally duplicated a line in decelerate when copying. Let me check the git output again - the original only had one `self._speed = max(0.0, self._speed - amount)` line. I need to fix my response for the user.
-
-Also the travelTo method calls self.accelerate(), self.decelerate(), self.stop(), self.speak() without required arguments - that's intentional stub/skeleton for the action pattern (instructions in docstrings).
-
-I'll give the user accurate content without the duplicate line.
-`primitives/actions/examples/car.py` is not on disk in your workspace (git shows it deleted). The content below is from the last committed version (`HEAD`).
-
-It defines a `Car` `@toolset` with `@resource` properties (`make`, `model`, `year`, `personality`, `running`) and `@tool` methods (`start`, `stop`, `drive`, `accelerate`, `decelerate`, `speak`). The `@action` `travelTo(destination, conditions)` is a skeleton: docstrings hold templated instructions (`{{self.make}}`, `{{destination}}`, etc.), and the body calls tools without real arguments so agents follow manifest/run instructions instead of executing this Python literally.
-
-Note: there is a live file at `primitives/actions/examples/car/car.py` if your refactor moved the example into a package folder. I can read that file next if you want a comparison with this deleted path.`primitives/actions/examples/car.py` is not in your working tree (git lists it as deleted). Below is the version from `HEAD` on `main`.
-
-```python
+```1:106:primitives/actions/examples/car/car.py
 # @toolset-manifest python -m tools manifest primitives.actions.examples.car:Car
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
@@ -209,7 +195,6 @@ class Car:
         if not self._running:
             return f"{self._make} {self._model} cannot decelerate - engine is off"
         self._speed = max(0.0, self._speed - amount)
-        self._speed = max(0.0, self._speed - amount)
         return f"Decelerated to {self._speed:.0f} mph"
 
     @tool
@@ -229,21 +214,9 @@ class Car:
         """Speak at intervals that make the story more interesting."""
         self.speak()
         return f"Instructions for traveling to {destination}"
-```
+````primitives/actions/examples/car.py` is not in the workspace. The actions Car example is at `primitives/actions/examples/car/car.py`:
 
-Wait - I accidentally duplicated a line in decelerate when copying. Let me check the git output again - the original only had one `self._speed = max(0.0, self._speed - amount)` line. I need to fix my response for the user.
-
-Also the travelTo method calls self.accelerate(), self.decelerate(), self.stop(), self.speak() without required arguments - that's intentional stub/skeleton for the action pattern (instructions in docstrings).
-
-I'll give the user accurate content without the duplicate line.
-`primitives/actions/examples/car.py` is not on disk in your workspace (git shows it deleted). The content below is from the last committed version (`HEAD`).
-
-It defines a `Car` `@toolset` with `@resource` properties (`make`, `model`, `year`, `personality`, `running`) and `@tool` methods (`start`, `stop`, `drive`, `accelerate`, `decelerate`, `speak`). The `@action` `travelTo(destination, conditions)` is a skeleton: docstrings hold templated instructions (`{{self.make}}`, `{{destination}}`, etc.), and the body calls tools without real arguments so agents follow manifest/run instructions instead of executing this Python literally.
-
-Note: there is a live file at `primitives/actions/examples/car/car.py` if your refactor moved the example into a package folder. I can read that file next if you want a comparison with this deleted path.File missing from the working tree (git shows it deleted). Checking git history for its contents.
-`primitives/actions/examples/car.py` is not in your working tree (git lists it as deleted). Below is the version from `HEAD` on `main`.
-
-```python
+```1:106:primitives/actions/examples/car/car.py
 # @toolset-manifest python -m tools manifest primitives.actions.examples.car:Car
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
@@ -330,7 +303,6 @@ class Car:
         if not self._running:
             return f"{self._make} {self._model} cannot decelerate - engine is off"
         self._speed = max(0.0, self._speed - amount)
-        self._speed = max(0.0, self._speed - amount)
         return f"Decelerated to {self._speed:.0f} mph"
 
     @tool
@@ -351,14 +323,3 @@ class Car:
         self.speak()
         return f"Instructions for traveling to {destination}"
 ```
-
-Wait - I accidentally duplicated a line in decelerate when copying. Let me check the git output again - the original only had one `self._speed = max(0.0, self._speed - amount)` line. I need to fix my response for the user.
-
-Also the travelTo method calls self.accelerate(), self.decelerate(), self.stop(), self.speak() without required arguments - that's intentional stub/skeleton for the action pattern (instructions in docstrings).
-
-I'll give the user accurate content without the duplicate line.
-`primitives/actions/examples/car.py` is not on disk in your workspace (git shows it deleted). The content below is from the last committed version (`HEAD`).
-
-It defines a `Car` `@toolset` with `@resource` properties (`make`, `model`, `year`, `personality`, `running`) and `@tool` methods (`start`, `stop`, `drive`, `accelerate`, `decelerate`, `speak`). The `@action` `travelTo(destination, conditions)` is a skeleton: docstrings hold templated instructions (`{{self.make}}`, `{{destination}}`, etc.), and the body calls tools without real arguments so agents follow manifest/run instructions instead of executing this Python literally.
-
-Note: there is a live file at `primitives/actions/examples/car/car.py` if your refactor moved the example into a package folder. I can read that file next if you want a comparison with this deleted path.

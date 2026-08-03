@@ -1,6 +1,6 @@
-The path you gave no longer exists. The file is now at `context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py`. Contents:
+`context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
 
-```1:20:context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py
+```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
 # @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
@@ -23,9 +23,9 @@ class CarChronicle(BaseContextTool):
 
 ```
 
-Same minimal `CarChronicle` stub as before: manifest/BDD header comments, `# Instructions` docstring placeholder, constructor forwarding to `BaseContextTool`. Line 1 still references the module id `context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle` even though the file lives under `.context/examples/`.The path you gave no longer exists. The file is now at `context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py`. Contents:
+Unchanged: manifest/BDD header comments, `# Instructions` docstring stub, and a constructor that only calls `super().__init__(path=path, session=session)`.`context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
 
-```1:20:context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py
+```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
 # @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
@@ -48,9 +48,9 @@ class CarChronicle(BaseContextTool):
 
 ```
 
-Same minimal `CarChronicle` stub as before: manifest/BDD header comments, `# Instructions` docstring placeholder, constructor forwarding to `BaseContextTool`. Line 1 still references the module id `context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle` even though the file lives under `.context/examples/`.The path you gave no longer exists. The file is now at `context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py`. Contents:
+Unchanged: manifest/BDD header comments, `# Instructions` docstring stub, and a constructor that only calls `super().__init__(path=path, session=session)`.`context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
 
-```1:20:context_tools/create_context_tool/.context/examples/car_chronicle/car_chronicle.py
+```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
 # @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
@@ -73,4 +73,4 @@ class CarChronicle(BaseContextTool):
 
 ```
 
-Same minimal `CarChronicle` stub as before: manifest/BDD header comments, `# Instructions` docstring placeholder, constructor forwarding to `BaseContextTool`. Line 1 still references the module id `context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle` even though the file lives under `.context/examples/`.
+Unchanged: manifest/BDD header comments, `# Instructions` docstring stub, and a constructor that only calls `super().__init__(path=path, session=session)`.

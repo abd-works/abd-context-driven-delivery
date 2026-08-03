@@ -50,6 +50,28 @@ class _ModeFixture:
 
 
 @agentic_toolset
+class _SelfCallAgent:
+    """Toolset whose own action calls another action on itself (same instance)."""
+
+    @_tool
+    def polish(self) -> str:
+        """Polish the work product."""
+        return "polished"
+
+    @action
+    def prepare(self) -> str:
+        """SELF_PREPARE_MARKER: prepare the work carefully."""
+        self.polish()
+        return "prepared"
+
+    @action
+    def finish(self) -> str:
+        """SELF_FINISH_MARKER: may invoke prepare()."""
+        self.prepare()
+        return "finished"
+
+
+@agentic_toolset
 class _CalleeAgent:
     """Companion agentic toolset invoked across instances."""
 
@@ -80,6 +102,29 @@ class _CallerAgent:
     def orchestrate(self) -> str:
         """CALLER_ORCHESTRATE_MARKER: may invoke helper().prepare()."""
         self.helper().prepare()
+        return "orchestrated"
+
+
+@agentic_toolset
+class _PropertyCallerAgent:
+    """Caller that reaches a companion via a plain property, not a zero-arg method.
+
+    ``self.helper.prepare()`` — the provider reference (``self.helper``) is a
+    bare attribute; the call boundary is ``.prepare()``, the actual action.
+    """
+
+    def __init__(self, helper: _CalleeAgent | None = None) -> None:
+        self._helper = helper if helper is not None else _CalleeAgent()
+        super().__init__()
+
+    @property
+    def helper(self) -> _CalleeAgent:
+        return self._helper
+
+    @action
+    def orchestrate(self) -> str:
+        """CALLER_ORCHESTRATE_MARKER: may invoke helper.prepare()."""
+        self.helper.prepare()
         return "orchestrated"
 
 
@@ -321,6 +366,94 @@ with description("AgenticToolset"):
                 expect("prepare" in self.body.tool_steps).to(be_true)
 
             with it("should not expose the companion's inner tools until that action runs"):
+                expect("polish" in self.body.tool_steps).to(equal(False))
+
+    with context("when a caller reaches a companion via a plain property (not a method call)"):
+        with context("and the companion mode is action"):
+            with before.each:
+                self.callee = _CalleeAgent()
+                self.callee.mode = "action"
+                self.caller = _PropertyCallerAgent(self.callee)
+                self.body = _ActionExpander.instance().parse_body(
+                    _PropertyCallerAgent.orchestrate, self.caller
+                )
+                self.joined = "\n".join(self.body.prose_parts)
+
+            with it("should keep the caller's own instructions"):
+                expect("CALLER_ORCHESTRATE_MARKER" in self.joined).to(be_true)
+
+            with it("should inline the companion action's instructions"):
+                expect("CALLEE_PREPARE_MARKER" in self.joined).to(be_true)
+
+            with it("should include the companion's inner tools in the expansion"):
+                expect("polish" in self.body.tool_steps).to(be_true)
+
+            with it("should not list the companion action itself as a deferred tool"):
+                expect("prepare" in self.body.tool_steps).to(equal(False))
+
+        with context("and the companion mode is tool"):
+            with before.each:
+                self.callee = _CalleeAgent()
+                self.callee.mode = "tool"
+                self.caller = _PropertyCallerAgent(self.callee)
+                self.body = _ActionExpander.instance().parse_body(
+                    _PropertyCallerAgent.orchestrate, self.caller
+                )
+                self.joined = "\n".join(self.body.prose_parts)
+
+            with it("should keep the caller's own instructions"):
+                expect("CALLER_ORCHESTRATE_MARKER" in self.joined).to(be_true)
+
+            with it("should not inline the companion action's instructions"):
+                expect("CALLEE_PREPARE_MARKER" in self.joined).to(equal(False))
+
+            with it("should list the companion action in the expansion tools"):
+                expect("prepare" in self.body.tool_steps).to(be_true)
+
+            with it("should not expose the companion's inner tools until that action runs"):
+                expect("polish" in self.body.tool_steps).to(equal(False))
+
+    with context("when a toolset instance's own action calls another action on itself"):
+        with context("and its own mode is action"):
+            with before.each:
+                self.instance = _SelfCallAgent()
+                self.instance.mode = "action"
+                self.body = _ActionExpander.instance().parse_body(
+                    _SelfCallAgent.finish, self.instance
+                )
+                self.joined = "\n".join(self.body.prose_parts)
+
+            with it("should keep the caller's own instructions"):
+                expect("SELF_FINISH_MARKER" in self.joined).to(be_true)
+
+            with it("should inline the nested self-action's instructions"):
+                expect("SELF_PREPARE_MARKER" in self.joined).to(be_true)
+
+            with it("should include the nested action's inner tools in the expansion"):
+                expect("polish" in self.body.tool_steps).to(be_true)
+
+            with it("should not list the nested action itself as a deferred tool"):
+                expect("prepare" in self.body.tool_steps).to(equal(False))
+
+        with context("and its own mode is tool"):
+            with before.each:
+                self.instance = _SelfCallAgent()
+                self.instance.mode = "tool"
+                self.body = _ActionExpander.instance().parse_body(
+                    _SelfCallAgent.finish, self.instance
+                )
+                self.joined = "\n".join(self.body.prose_parts)
+
+            with it("should keep the caller's own instructions"):
+                expect("SELF_FINISH_MARKER" in self.joined).to(be_true)
+
+            with it("should not inline the nested self-action's instructions"):
+                expect("SELF_PREPARE_MARKER" in self.joined).to(equal(False))
+
+            with it("should list the nested action in the expansion tools"):
+                expect("prepare" in self.body.tool_steps).to(be_true)
+
+            with it("should not expose the nested action's inner tools until that action runs"):
                 expect("polish" in self.body.tool_steps).to(equal(False))
 
 

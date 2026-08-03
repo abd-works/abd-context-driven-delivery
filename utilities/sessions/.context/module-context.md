@@ -6,7 +6,7 @@ Named sprint + workspace kit (`Session` in `workspace_session.py`), append-only 
 
 ## Primary use case
 
-BaseContextTool holds a composed `Session` via `workspace()` and calls **`self.workspace().open()`** once at the start of lifecycle actions. That opens path + folder + context index together.
+BaseContextTool holds a composed `Session` as the plain attribute `workspace` and calls **`self.workspace.open()`** once at the start of lifecycle actions. That opens path + folder + context index together.
 
 ## Layout
 

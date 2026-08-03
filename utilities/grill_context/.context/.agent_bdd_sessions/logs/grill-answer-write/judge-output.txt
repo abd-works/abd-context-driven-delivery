@@ -1,0 +1,6 @@
+# Grill Answers
+
+### How explore_context_files discovers files
+
+It scans recursively for files whose name contains context or that live inside a .context/ subfolder, skipping __pycache__ and private underscore-prefixed paths.
+

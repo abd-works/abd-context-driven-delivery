@@ -79,7 +79,7 @@ with description("CreateContextTool meta generator"):
             expect(self.generator.module_dir).to(equal(_CREATE_DIR.resolve()))
 
         with it(
-            "should expose generate, validate, satisfy, repair, partition, index, and segment"
+            "should expose generate, validate, satisfy, repair, and partition"
         ):
             for name in (
                 "generate",
@@ -87,13 +87,15 @@ with description("CreateContextTool meta generator"):
                 "satisfy",
                 "repair",
                 "partition",
-                "index",
-                "segment",
             ):
                 expect(name in self.generator.actions).to(equal(True))
 
         with it("should expose scan as a host tool"):
             expect("scan" in self.generator.tools).to(equal(True))
+
+        with it("should expose index and segment as tools on the partitioner"):
+            for name in ("index", "segment"):
+                expect(name in self.generator.partitioner.tools).to(equal(True))
 
     with context("generate expands meta face"):
         with before.each:

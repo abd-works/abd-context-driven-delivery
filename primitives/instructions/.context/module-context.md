@@ -8,6 +8,20 @@
 
 Declare a method on a `@toolset` class and mark it `@instruction`. When an `@action` that calls the slot expands, the system resolves the label to a markdown file, a folder of assets, or a section heading inside `{slug}.md`, and injects that content into the AI's instructions. The method body is always `...`; the decorator replaces it with a slot.
 
+## Requirement — `module_dir`
+
+**Any class that declares an `@instruction` (or is ever passed as a `host` to `Instruction.ref`) must define a `module_dir` property:**
+
+```python
+@property
+def module_dir(self) -> Path:
+    return Path(inspect.getfile(type(self))).resolve().parent
+```
+
+`AssetLocator.locate()` (`primitives/assets/assets.py`) reads this via `getattr(self._host, "module_dir", Path("."))`. Without the property, that silently falls back to `Path(".")` — the process's current working directory, not the class's own folder — and every markdown/section/folder lookup resolves against the wrong location (or a path that never existed). This fails silently or with a confusing `FileNotFoundError` far from the real cause; there is no validation that catches a missing `module_dir` at class-definition time.
+
+Classes with no `@instruction` slots do not need this property.
+
 Three resolution forms exist — chosen automatically by the locator in order of priority:
 
 | Priority | What matches | Resolved as |
@@ -45,7 +59,7 @@ The seam is the path from a labeled `@instruction` slot to expanded text:
 
 **Constraint:** An unresolvable label expands to empty string without raising. Validate slot resolution with `_instruction_ref_resolves(instance, label)`.
 
-**`override=True` instructions:** When `@instruction(override=True)` is used, the method body runs as normal Python and returns a plain `str`. That str is treated identically — appended to `prose_parts` and substituted at step 5. This is how `partition_guidance()` in `partition_pipeline.py` injects `{{self.domain_slug}}`: the method assembles the string, returns it, and the action expander resolves the placeholder against the live instance.
+**`override=True` instructions:** When `@instruction(override=True)` is used, the method body runs as normal Python and returns a plain `str`. That str is treated identically — appended to `prose_parts` and substituted at step 5. `session_guidance()` in `context_tools/base/base_context_tool.py` uses this to delegate to `Session.session_guidance` (`Instruction.ref(self.workspace, "session_guidance")`).
 
 ## Public API
 

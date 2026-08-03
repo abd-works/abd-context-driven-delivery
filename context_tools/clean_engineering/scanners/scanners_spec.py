@@ -10,7 +10,7 @@ from scanners import ScannerCollection
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _CE_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"
-_EVALS_ROOT = _CE_DIR / "evals" / "engineering"
+_EVALS_ROOT = _CE_DIR / "examples" / "evals"
 _DISCOVERED = ScannerCollection(_CE_DIR).discover()
 
 

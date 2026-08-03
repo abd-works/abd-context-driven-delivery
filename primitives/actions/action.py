@@ -153,10 +153,14 @@ class AgenticToolset(Toolset):
     Inherit from this instead of Toolset when your class uses @action.
     Use @agentic_toolset as the class decorator (parallel to @toolset).
 
+    mode lives on the callee, not the caller — it governs every call into this
+    instance's actions, whether the call is ``self.action()`` (same instance)
+    or ``self.other_agentic_toolset().action()`` (cross-instance).
+
     mode values
     -----------
-    action  (default) — cross-instance action calls expand inline into the caller's instructions.
-    tool    — list the companion action in tools (like a tool call); do not inline its body.
+    action  (default) — calls into this instance's actions expand inline into the caller's instructions.
+    tool    — list the called action in tools (like a tool call); defer its body instead of inlining it.
     """
 
     _mode: str = "action"
@@ -164,7 +168,7 @@ class AgenticToolset(Toolset):
     @property
     @resource
     def mode(self) -> str:
-        """Execution mode for cross-instance @action calls.
+        """Execution mode for @action calls into this instance (self or cross-instance).
         action = expand inline; tool = list action in tools, defer its body."""
         return self._mode
 
@@ -234,19 +238,64 @@ def _self_member_name(node: ast.AST) -> str | None:
 
 
 def _cross_instance_call(node: ast.AST) -> tuple[str, str] | None:
+    """Match ``self.<provider>().<member>()`` or ``self.<provider>.<member>()``.
+
+    The call boundary is the *member* being invoked (the actual tool/action) —
+    getting to the provider instance is just a reference and may be either a
+    zero-arg method call or a plain attribute/property access.
+    """
     if not isinstance(node, ast.Call):
         return None
     if not isinstance(node.func, ast.Attribute):
         return None
     member = node.func.attr
-    provider_call = node.func.value
-    if not isinstance(provider_call, ast.Call):
+    provider_node = node.func.value
+    provider_attr = provider_node.func if isinstance(provider_node, ast.Call) else provider_node
+    if not isinstance(provider_attr, ast.Attribute):
         return None
-    if not isinstance(provider_call.func, ast.Attribute):
+    if not isinstance(provider_attr.value, ast.Name) or provider_attr.value.id != "self":
         return None
-    if not isinstance(provider_call.func.value, ast.Name) or provider_call.func.value.id != "self":
-        return None
-    return provider_call.func.attr, member
+    return provider_attr.attr, member
+
+
+class _ActionBodyScanner(ast.NodeVisitor):
+    """Visits an @action body, checking only step-level ``self.*`` references.
+
+    A call *boundary* (``self.<member>()``, or a cross-instance
+    ``self.<provider>().<member>()``) is a step and must resolve to an allowed
+    name. Once a boundary is recognised, its arguments are not descended into —
+    they are plain data (e.g. ``slug=self.domain_slug``), not further steps.
+    """
+
+    def __init__(self, scan_req: "_ScanRequest") -> None:
+        self._req = scan_req
+
+    def _check_member(self, member_name: str, node: ast.AST) -> None:
+        req = self._req
+        if member_name in req.allowed_names or member_name in req.all_providers:
+            return
+        raise ActionValidationError(
+            f"self.{member_name} is not a @tool, @instruction, @action, or @resource",
+            class_name=req.class_name,
+            action_name=req.action_name,
+            lineno=req.base_line + node.lineno - 1,
+        )
+
+    def visit_Call(self, node: ast.Call) -> None:
+        if _cross_instance_call(node) is not None:
+            return  # cross-instance call boundary; member checked at expansion time
+        member_name = _self_member_name(node)
+        if member_name is not None:
+            self._check_member(member_name, node)
+            return  # arguments are data, not steps - do not descend into them
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        member_name = _self_member_name(node)
+        if member_name is not None:
+            self._check_member(member_name, node)
+            return
+        self.generic_visit(node)
 
 
 class _ActionValidator:
@@ -305,21 +354,15 @@ class _ActionValidator:
             self.validate_action(toolset_cls.__name__, name, member, allowed)
 
     def _scan_action_body(self, scan_req: _ScanRequest) -> None:
-        """Walk the body and raise ActionValidationError for any disallowed member access."""
-        for node in ast.walk(scan_req.body):
-            if _cross_instance_call(node) is not None:
-                continue
-            member_name = _self_member_name(node)
-            if member_name is None:
-                continue
-            if member_name in scan_req.allowed_names or member_name in scan_req.all_providers:
-                continue
-            raise ActionValidationError(
-                f"self.{member_name} is not a @tool, @instruction, @action, or @resource",
-                class_name=scan_req.class_name,
-                action_name=scan_req.action_name,
-                lineno=scan_req.base_line + node.lineno - 1,
-            )
+        """Walk the body and raise ActionValidationError for any disallowed member access.
+
+        Only call *boundaries* (``self.<member>()`` and cross-instance calls) are
+        validated as steps — call *arguments* are data, evaluated for real once the
+        action runs, not a separate step the agent needs to resolve. So a value like
+        ``self.domain_slug`` passed as ``slug=self.domain_slug`` is never itself
+        required to be a @tool / @instruction / @action / @resource.
+        """
+        _ActionBodyScanner(scan_req).visit(scan_req.body)
 
     def validate_action(
         self,
@@ -745,14 +788,16 @@ class _ActionExpander:
         text = f"Resource `{member}` = {resource_value!r}."
         acc.add_text(text + '\n\n' + doc if doc else text)
 
-    def _expand_cross_action(
+    def _expand_action_call(
         self, member: str, target_instance: Any, visited: "frozenset[tuple[str, str]]",
         acc: _ProseAccumulator,
     ) -> None:
-        """Expand a cross-instance action call into acc, unless mode=tool.
+        """Expand an action call (self or cross-instance) into acc, unless mode=tool.
 
-        mode=tool lists the companion action as a tool step so the agent can
-        invoke it later; inner tools stay inside that deferred expansion.
+        ``mode`` lives on the *callee* (``target_instance``), not the caller, so
+        it governs every call to that instance's actions — self calls included.
+        mode=tool lists the action as a deferred tool step so the agent invokes
+        it as its own step later; inner tools stay inside that deferred expansion.
         """
         if getattr(target_instance, "mode", "action") == "tool":
             acc.tool_steps.append(member)
@@ -796,6 +841,21 @@ class _ActionExpander:
         func = getattr(toolset_cls, member, None)
         return callable(func) and getattr(func, "_is_sub_agent", False)
 
+    @staticmethod
+    def _resolve_provider(instance: Any, provider_name: str) -> Any:
+        """Resolve ``self.<provider_name>`` to the companion instance it refers to.
+
+        A provider reference just gets you to the instance that owns the tool
+        or action being called next (the outer call in the source) — it is
+        not itself the call boundary. It may be spelled either way:
+        a zero-arg method (``self.workspace()``) or a property/plain
+        attribute that already holds the built instance (``self.workspace``).
+        """
+        raw = getattr(instance, provider_name)
+        if getattr(type(raw), "_is_toolset", False):
+            return raw
+        return raw() if callable(raw) else raw
+
     def _walk_cross_instance_statement(
         self, expr_node: ast.AST, ctx: _WalkContext, acc: _ProseAccumulator
     ) -> bool:
@@ -808,11 +868,11 @@ class _ActionExpander:
         cross = _cross_instance_call(expr_node)
         if not cross:
             return False
-        provider_method, member = cross
-        target_instance = getattr(ctx.instance, provider_method)()
+        provider_name, member = cross
+        target_instance = self._resolve_provider(ctx.instance, provider_name)
         target_cls = type(target_instance)
         if member in _action_slot_names(target_cls):
-            self._expand_cross_action(member, target_instance, ctx.visited, acc)
+            self._expand_action_call(member, target_instance, ctx.visited, acc)
         elif member in self._validator._tool_names(target_cls) or self._is_sub_agent_tool(
             target_cls, member
         ):
@@ -823,7 +883,7 @@ class _ActionExpander:
         """Handle ``self.<member>`` references: actions, instructions, tools, and resources."""
         if member in ctx.slots.action_slots:
             if member != ctx.current_action:
-                self._walk_nested_action(member, ctx.instance, ctx.visited, acc)
+                self._expand_action_call(member, ctx.instance, ctx.visited, acc)
             return
         if member in ctx.slots.instruction_slots:
             acc.add_text(_inline(ctx.instance, member))

@@ -1,3 +1,3 @@
 PASS
 
-The output states the same rebellious, high-spirited, and loyal country boy personality required by the rubric.
+The output matches the rubric's rebellious, high-spirited, and loyal country boy personality exactly.

@@ -1,10 +1,10 @@
-Here is the current contents of `primitives/assets/examples/card_file/card_file.py`:
+Here is `primitives/assets/examples/card_file/card_file.py`:
 
 ```1:58:primitives/assets/examples/card_file/card_file.py
 # @toolset-manifest python -m tools manifest primitives.assets.examples.card_file:CardFile
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Example showing AssetLocator and Asset â€” load named markdown cards from local files."""
+"""Example showing AssetLocator and Asset — load named markdown cards from local files."""
 from __future__ import annotations
 
 import inspect
@@ -28,7 +28,7 @@ class CardFile:
 
     @property
     def module_dir(self) -> Path:
-        """Directory of this module â€” AssetLocator resolves card files relative to here."""
+        """Directory of this module — AssetLocator resolves card files relative to here."""
         return Path(inspect.getfile(type(self))).resolve().parent
 
     @property
@@ -61,13 +61,13 @@ class CardFile:
         return f"Topic set to: {label}"
 ```
 
-The header tells agents to manifest via line 1, then run `python -m tools run -` and follow only `response.instructions`, not to infer behavior from this Python alone. The `CardFile` toolset wires `AssetLocator`, `Asset`, and `AssetCollection` to local markdown cards (`read_card`, merged `cards/`, and `set_topic` on the default `topic`).Here is the current contents of `primitives/assets/examples/card_file/card_file.py`:
+The `CardFile` toolset loads markdown cards via `AssetLocator` / `Asset` / `AssetCollection`, exposes `read_card`, `read_all`, and `set_topic`, and keeps default `topic` as a `@resource`. The header comments tell agents to run the line 1 manifest, then `python -m tools run -`, and follow only `response.instructions`.Here is `primitives/assets/examples/card_file/card_file.py`:
 
 ```1:58:primitives/assets/examples/card_file/card_file.py
 # @toolset-manifest python -m tools manifest primitives.assets.examples.card_file:CardFile
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Example showing AssetLocator and Asset â€” load named markdown cards from local files."""
+"""Example showing AssetLocator and Asset — load named markdown cards from local files."""
 from __future__ import annotations
 
 import inspect
@@ -91,7 +91,7 @@ class CardFile:
 
     @property
     def module_dir(self) -> Path:
-        """Directory of this module â€” AssetLocator resolves card files relative to here."""
+        """Directory of this module — AssetLocator resolves card files relative to here."""
         return Path(inspect.getfile(type(self))).resolve().parent
 
     @property
@@ -124,13 +124,13 @@ class CardFile:
         return f"Topic set to: {label}"
 ```
 
-The header tells agents to manifest via line 1, then run `python -m tools run -` and follow only `response.instructions`, not to infer behavior from this Python alone. The `CardFile` toolset wires `AssetLocator`, `Asset`, and `AssetCollection` to local markdown cards (`read_card`, merged `cards/`, and `set_topic` on the default `topic`).Here is the current contents of `primitives/assets/examples/card_file/card_file.py`:
+The `CardFile` toolset loads markdown cards via `AssetLocator` / `Asset` / `AssetCollection`, exposes `read_card`, `read_all`, and `set_topic`, and keeps default `topic` as a `@resource`. The header comments tell agents to run the line 1 manifest, then `python -m tools run -`, and follow only `response.instructions`.Here is `primitives/assets/examples/card_file/card_file.py`:
 
 ```1:58:primitives/assets/examples/card_file/card_file.py
 # @toolset-manifest python -m tools manifest primitives.assets.examples.card_file:CardFile
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Example showing AssetLocator and Asset â€” load named markdown cards from local files."""
+"""Example showing AssetLocator and Asset — load named markdown cards from local files."""
 from __future__ import annotations
 
 import inspect
@@ -154,7 +154,7 @@ class CardFile:
 
     @property
     def module_dir(self) -> Path:
-        """Directory of this module â€” AssetLocator resolves card files relative to here."""
+        """Directory of this module — AssetLocator resolves card files relative to here."""
         return Path(inspect.getfile(type(self))).resolve().parent
 
     @property
@@ -187,4 +187,4 @@ class CardFile:
         return f"Topic set to: {label}"
 ```
 
-The header tells agents to manifest via line 1, then run `python -m tools run -` and follow only `response.instructions`, not to infer behavior from this Python alone. The `CardFile` toolset wires `AssetLocator`, `Asset`, and `AssetCollection` to local markdown cards (`read_card`, merged `cards/`, and `set_topic` on the default `topic`).
+The `CardFile` toolset loads markdown cards via `AssetLocator` / `Asset` / `AssetCollection`, exposes `read_card`, `read_all`, and `set_topic`, and keeps default `topic` as a `@resource`. The header comments tell agents to run the line 1 manifest, then `python -m tools run -`, and follow only `response.instructions`.

@@ -1,12 +1,14 @@
-Command (repo root, with `PYTHONIOENCODING=utf-8` for this repo):
+Command:
 
 ```powershell
 python -m tools manifest context_tools.stories.stories:Stories
 ```
 
+(`PYTHONIOENCODING=utf-8` was set in the shell per repo rules.)
+
 **Exit code:** 0
 
-**Output** (CLI wraps YAML in a `` ```yaml `` fence; middle truncated here):
+**Output:**
 
 ```yaml
 ---
@@ -36,7 +38,53 @@ signature:
       workspace: str | None
   close_session:
     kind: tool
-    ...
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  log_fix:
+    kind: tool
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      improved: str
+      status: str
+      when: str
+    returns: str
+  read_context_index:
+    kind: tool
+    returns: str
+  record_context_root:
+    kind: tool
+    parameters:
+      root: str
+      note: str
+    returns: str
+  scan:
+    kind: tool
+    parameters:
+      paths: list[str]
+    returns: str
   transform:
     kind: tool
     instructions: "Parse content from source_format into the canonical StoryMap, then\
@@ -44,20 +92,93 @@ signature:
       \ format move at the same fidelity.\n        At acceptance_tests fidelity: after\
       \ transforming story artifacts, call ce().transform() or ce().generate() to\
       \ produce matching production class code alongside the spec output."
-    ...
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: dict
+  active:
+    kind: resource
+    type: Session
+  mode:
+    kind: resource
+    type: str
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing - before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: '# Document ...'
+    parameters:
+      paths: list[str]
+    returns: str
   generate:
     kind: action
     tools: []
     instructions: "Generate story artifacts at the current fidelity.\n        At story_map\
       \ fidelity: write the story map and thin-slice only.\n        At scenarios fidelity:\
-      \ write main-flow scenarios ... At acceptance_tests fidelity:\ write *_spec ... call ce().generate() ..."
-    ...
+      \ write main-flow scenarios (single or multiple per story) with optional variations;\
+      \ use ExampleFactory fakes where available.\n        At acceptance_tests fidelity:\
+      \ write *_spec and *_spec.{tier} acceptance test files. When spec files are\
+      \ written, call ce().generate() to produce or update the matching production\
+      \ class implementations and wire any supporting code changes."
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  grill:
+    kind: action
+    tools:
+    - generate
+    instructions: Grill then generate - pure grill loop, then the host generate body.
+    returns: str
   iterate:
     kind: action
     tools: []
-    instructions: "Iterate then generate ... At acceptance_tests fidelity: after each spec cycle, call\
-      \ ce().iterate() ..."
-    ...
+    instructions: "Iterate then generate - grill + formal generate/validate/one-fix\
+      \ ticks.\n        At acceptance_tests fidelity: after each spec cycle, call\
+      \ ce().iterate() to wire the minimum production code until GREEN.\n        If\
+      \ the same acceptance scenario is still RED after 2 consecutive fix attempts\
+      \ — stop guessing. Call diagnostic().diagnose() before a third fix ..."
+    returns: str
+  partition:
+    kind: action
+    tools: []
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools:
+    - scan
+    parameters:
+      asset: str
+      violation: str
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Find and fix every problem in the story artifacts under the session\
+      \ root.\n        If the same acceptance scenario is still RED after 2 consecutive\
+      \ fix attempts — stop guessing. Call diagnostic().diagnose() before a third\
+      \ fix ..."
+    returns: str
+  sketch:
+    kind: action
+    tools:
+    - generate
+    instructions: Sketch then generate - grill + sketch cadence, then the host generate
+      body.
+    returns: str
   validate:
     kind: action
     tools: []
@@ -66,15 +187,17 @@ signature:
 ---
 ```
 
-The run emitted the full manifest (session tools, `scan`, `transform`, partition/index/segment actions, `repair`, `satisfy`, etc.). Re-run the same command in your terminal to see every line without truncation.Command (repo root, with `PYTHONIOENCODING=utf-8` for this repo):
+The run printed the full manifest; I shortened `document` and parts of `iterate` / `satisfy` / `validate` in this reply only. Your terminal has the complete text, including the full `document` and `validate` instruction blocks.Command:
 
 ```powershell
 python -m tools manifest context_tools.stories.stories:Stories
 ```
 
+(`PYTHONIOENCODING=utf-8` was set in the shell per repo rules.)
+
 **Exit code:** 0
 
-**Output** (CLI wraps YAML in a `` ```yaml `` fence; middle truncated here):
+**Output:**
 
 ```yaml
 ---
@@ -104,7 +227,53 @@ signature:
       workspace: str | None
   close_session:
     kind: tool
-    ...
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  log_fix:
+    kind: tool
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      improved: str
+      status: str
+      when: str
+    returns: str
+  read_context_index:
+    kind: tool
+    returns: str
+  record_context_root:
+    kind: tool
+    parameters:
+      root: str
+      note: str
+    returns: str
+  scan:
+    kind: tool
+    parameters:
+      paths: list[str]
+    returns: str
   transform:
     kind: tool
     instructions: "Parse content from source_format into the canonical StoryMap, then\
@@ -112,20 +281,93 @@ signature:
       \ format move at the same fidelity.\n        At acceptance_tests fidelity: after\
       \ transforming story artifacts, call ce().transform() or ce().generate() to\
       \ produce matching production class code alongside the spec output."
-    ...
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: dict
+  active:
+    kind: resource
+    type: Session
+  mode:
+    kind: resource
+    type: str
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing - before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: '# Document ...'
+    parameters:
+      paths: list[str]
+    returns: str
   generate:
     kind: action
     tools: []
     instructions: "Generate story artifacts at the current fidelity.\n        At story_map\
       \ fidelity: write the story map and thin-slice only.\n        At scenarios fidelity:\
-      \ write main-flow scenarios ... At acceptance_tests fidelity:\ write *_spec ... call ce().generate() ..."
-    ...
+      \ write main-flow scenarios (single or multiple per story) with optional variations;\
+      \ use ExampleFactory fakes where available.\n        At acceptance_tests fidelity:\
+      \ write *_spec and *_spec.{tier} acceptance test files. When spec files are\
+      \ written, call ce().generate() to produce or update the matching production\
+      \ class implementations and wire any supporting code changes."
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  grill:
+    kind: action
+    tools:
+    - generate
+    instructions: Grill then generate - pure grill loop, then the host generate body.
+    returns: str
   iterate:
     kind: action
     tools: []
-    instructions: "Iterate then generate ... At acceptance_tests fidelity: after each spec cycle, call\
-      \ ce().iterate() ..."
-    ...
+    instructions: "Iterate then generate - grill + formal generate/validate/one-fix\
+      \ ticks.\n        At acceptance_tests fidelity: after each spec cycle, call\
+      \ ce().iterate() to wire the minimum production code until GREEN.\n        If\
+      \ the same acceptance scenario is still RED after 2 consecutive fix attempts\
+      \ — stop guessing. Call diagnostic().diagnose() before a third fix ..."
+    returns: str
+  partition:
+    kind: action
+    tools: []
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools:
+    - scan
+    parameters:
+      asset: str
+      violation: str
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Find and fix every problem in the story artifacts under the session\
+      \ root.\n        If the same acceptance scenario is still RED after 2 consecutive\
+      \ fix attempts — stop guessing. Call diagnostic().diagnose() before a third\
+      \ fix ..."
+    returns: str
+  sketch:
+    kind: action
+    tools:
+    - generate
+    instructions: Sketch then generate - grill + sketch cadence, then the host generate
+      body.
+    returns: str
   validate:
     kind: action
     tools: []
@@ -134,15 +376,17 @@ signature:
 ---
 ```
 
-The run emitted the full manifest (session tools, `scan`, `transform`, partition/index/segment actions, `repair`, `satisfy`, etc.). Re-run the same command in your terminal to see every line without truncation.Command (repo root, with `PYTHONIOENCODING=utf-8` for this repo):
+The run printed the full manifest; I shortened `document` and parts of `iterate` / `satisfy` / `validate` in this reply only. Your terminal has the complete text, including the full `document` and `validate` instruction blocks.Command:
 
 ```powershell
 python -m tools manifest context_tools.stories.stories:Stories
 ```
 
+(`PYTHONIOENCODING=utf-8` was set in the shell per repo rules.)
+
 **Exit code:** 0
 
-**Output** (CLI wraps YAML in a `` ```yaml `` fence; middle truncated here):
+**Output:**
 
 ```yaml
 ---
@@ -172,7 +416,53 @@ signature:
       workspace: str | None
   close_session:
     kind: tool
-    ...
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  log_fix:
+    kind: tool
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      improved: str
+      status: str
+      when: str
+    returns: str
+  read_context_index:
+    kind: tool
+    returns: str
+  record_context_root:
+    kind: tool
+    parameters:
+      root: str
+      note: str
+    returns: str
+  scan:
+    kind: tool
+    parameters:
+      paths: list[str]
+    returns: str
   transform:
     kind: tool
     instructions: "Parse content from source_format into the canonical StoryMap, then\
@@ -180,20 +470,93 @@ signature:
       \ format move at the same fidelity.\n        At acceptance_tests fidelity: after\
       \ transforming story artifacts, call ce().transform() or ce().generate() to\
       \ produce matching production class code alongside the spec output."
-    ...
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: dict
+  active:
+    kind: resource
+    type: Session
+  mode:
+    kind: resource
+    type: str
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing - before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: '# Document ...'
+    parameters:
+      paths: list[str]
+    returns: str
   generate:
     kind: action
     tools: []
     instructions: "Generate story artifacts at the current fidelity.\n        At story_map\
       \ fidelity: write the story map and thin-slice only.\n        At scenarios fidelity:\
-      \ write main-flow scenarios ... At acceptance_tests fidelity:\ write *_spec ... call ce().generate() ..."
-    ...
+      \ write main-flow scenarios (single or multiple per story) with optional variations;\
+      \ use ExampleFactory fakes where available.\n        At acceptance_tests fidelity:\
+      \ write *_spec and *_spec.{tier} acceptance test files. When spec files are\
+      \ written, call ce().generate() to produce or update the matching production\
+      \ class implementations and wire any supporting code changes."
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  grill:
+    kind: action
+    tools:
+    - generate
+    instructions: Grill then generate - pure grill loop, then the host generate body.
+    returns: str
   iterate:
     kind: action
     tools: []
-    instructions: "Iterate then generate ... At acceptance_tests fidelity: after each spec cycle, call\
-      \ ce().iterate() ..."
-    ...
+    instructions: "Iterate then generate - grill + formal generate/validate/one-fix\
+      \ ticks.\n        At acceptance_tests fidelity: after each spec cycle, call\
+      \ ce().iterate() to wire the minimum production code until GREEN.\n        If\
+      \ the same acceptance scenario is still RED after 2 consecutive fix attempts\
+      \ — stop guessing. Call diagnostic().diagnose() before a third fix ..."
+    returns: str
+  partition:
+    kind: action
+    tools: []
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools:
+    - scan
+    parameters:
+      asset: str
+      violation: str
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Find and fix every problem in the story artifacts under the session\
+      \ root.\n        If the same acceptance scenario is still RED after 2 consecutive\
+      \ fix attempts — stop guessing. Call diagnostic().diagnose() before a third\
+      \ fix ..."
+    returns: str
+  sketch:
+    kind: action
+    tools:
+    - generate
+    instructions: Sketch then generate - grill + sketch cadence, then the host generate
+      body.
+    returns: str
   validate:
     kind: action
     tools: []
@@ -202,4 +565,4 @@ signature:
 ---
 ```
 
-The run emitted the full manifest (session tools, `scan`, `transform`, partition/index/segment actions, `repair`, `satisfy`, etc.). Re-run the same command in your terminal to see every line without truncation.
+The run printed the full manifest; I shortened `document` and parts of `iterate` / `satisfy` / `validate` in this reply only. Your terminal has the complete text, including the full `document` and `validate` instruction blocks.

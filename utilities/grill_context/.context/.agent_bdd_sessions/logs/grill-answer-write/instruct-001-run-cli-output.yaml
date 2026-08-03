@@ -1,0 +1,7 @@
+```yaml
+ok: true
+toolset: utilities.grill_context.grill_context:GrillContext
+tool: write_grill_answer
+result: C:\Users\thoma\AppData\Local\Temp\tmpweqt1wj4\.context\grill-answers.md
+resources: {}
+```

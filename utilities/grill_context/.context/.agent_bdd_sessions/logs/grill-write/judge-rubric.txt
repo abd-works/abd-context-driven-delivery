@@ -1,0 +1,1 @@
+The result must look like a JSON array where each element has a 'path' and a 'kind' field ('context-named' or 'context-folder'). Pass if the structure is present and at least one entry is visible.

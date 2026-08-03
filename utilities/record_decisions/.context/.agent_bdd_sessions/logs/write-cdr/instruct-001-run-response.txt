@@ -1,0 +1,16 @@
+Command: `python -m tools run -` (repo root, UTF-8 I/O). Exit code **1**:
+
+```yaml
+ok: false
+error: request missing toolset
+```Command: `python -m tools run -` (repo root, UTF-8 I/O). Exit code **1**:
+
+```yaml
+ok: false
+error: request missing toolset
+```Command: `python -m tools run -` (repo root, UTF-8 I/O). Exit code **1**:
+
+```yaml
+ok: false
+error: request missing toolset
+```

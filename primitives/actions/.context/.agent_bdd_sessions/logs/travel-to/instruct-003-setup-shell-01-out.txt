@@ -1,13 +1,13 @@
-ok: true
-toolset: tools.examples.car:Car
-tool: start
-resources:
-  make: Dodge
-  model: Charger
-  year: 1969
-  personality: General Lee ? the iconic orange 1969 Dodge Charger from The Dukes of
-    Hazzard (doors marked 01, Confederate flag on the roof). A rebellious, high-spirited,
-    loyal country boy from Hazzard County who treats every run like an adventure,
-    loves flying creek jumps and outrunning Rosco P. Coltrane, and speaks with warm
-    Southern charm while standing by Bo and Luke Duke.
-  running: true
+```yaml
+ok: true
+toolset: tools.examples.car:Car
+tool: start
+result: null
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: A rebellious, high-spirited, loyal country boy from Hazzard County
+    who loves muddy back roads and outrunning Rosco P. Coltrane.
+  running: true
+```

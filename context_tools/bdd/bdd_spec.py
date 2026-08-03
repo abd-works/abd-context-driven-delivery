@@ -75,12 +75,12 @@ with description("a Bdd toolset"):
         with context("with a path set"):
             with it("should carry the same path to the CE companion"):
                 ce = Bdd(fidelity="behavior", path="context_tools/bdd").ce()
-                expect(ce._ws_path).to(equal("context_tools/bdd"))
+                expect(ce._raw_path).to(equal("context_tools/bdd"))
 
         with context("with a session set"):
             with it("should carry the same session name to the CE companion"):
                 ce = Bdd(fidelity="development", session="satisfy").ce()
-                expect(ce._ws_session_name).to(equal("satisfy"))
+                expect(ce.workspace.name).to(equal("satisfy"))
 
         with it("should return a companion with mode set to tool"):
             ce = Bdd().ce()

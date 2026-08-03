@@ -17,12 +17,6 @@ sandbox/<epic>/
     ux-context.md                          <- optional notes/invariants
 ```
 
-| Fidelity | Artifact |
-|---|---|
-| **scaffold** | Thin screen index (screen names in domain/user language + interactions/transitions list) |
-| **ia** | One drawio under `.context/` — built via the **drawio-ux CLI**. |
-| **mockup** | One HTML per concrete user goal at the epic or sub-epic folder (tight-knit screen set — not one file per screen, not one mega-file for a whole epic unless that *is* the goal). |
-
 Sketch/context MD stay in `.context/` (same pattern as other generators). Story / object-model JS stay where Stories / CE emit them; HTML imports those modules.
 
 **Stories + object model:** `UxMap.story_references` / `object_references` store **paths** to Stories / Clean Engineering JS artifacts. If missing, run that generator’s `transform` to `javascript`. Mockup/spec HTML imports those paths.
@@ -51,7 +45,7 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 | Fidelity | Default format | Output |
 |---|---|---|
 | **ia** | drawio | Site map + per-screen regions/nav (html optional via transform) |
-| **mockup** | html | Wired greybox screens (html+js); drawio remains a peer channel; optional brand layer; honest stub catalogue |
+| **mockup** | html | Wired greybox screens (html+js); one HTML per concrete user goal (not one file per screen, not one mega-file per epic); drawio remains a peer channel; optional brand layer; honest stub catalogue |
 | **code** | html (or host FE stack) | Real frontend — production UI wired to real backend; not Story Demo / greybox alone |
 
 **Templates (AI generate):** drawio + html under `templates/`. Markdown context template optional. Other formats via channels / `transform`.
@@ -70,12 +64,6 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 
 ---
 
-
-## scaffold
-
-**Produce:** thin screen index — screens (domain/user language) + interactions and transitions (list only).
-
-Key rules: 	ab-states-are-separate-screens — each distinct tab or alternate state is its own screen entry; screen-names-use-domain-terms — name screens in user/domain language, never technical or chapter labels; screen-story-budget — one screen per coherent user goal.
 
 ## ia
 
@@ -108,7 +96,7 @@ Key rules: 	ab-states-are-separate-screens — each distinct tab or alternate st
    - `story_steps` — `[{ kind, label }, …]` matching story step text exactly
    - Interactive lists: `control_type: bound-list`, shared `item_story_steps` When (not per-row labels), `set_input` for the pick key; stories use `input(...)` / `session(...)`
 4. Prefer **model → `HtmlUxMap.render`** (fills `mockup_shell.html`). AI should not rebuild a one-off shell; fill screens/controls on the model.
-5. Shell layout is fixed: product mockup **LEFT** (`#story-demo-frame`); explorer **RIGHT** (Play next / Reset / step tree). `data-goto` still navigates between product screens.
+5. Shell layout is fixed: product mockup **LEFT** (`#story-demo-frame`); explorer **RIGHT** (`#explorer-frame` — Play next / Reset / step tree). `data-goto` still navigates between product screens.
 6. Story modules must export `create{Story}Story(mode)` loadable in the browser for Play (no `node:test` import on that path — use story-test-core / a demo export if needed).
 7. Optional context md for notes not visible on screen.
 8. **Optional — branding (off by default).** Apply a css / design-tokens / brand layer only when **one of these is true**:
@@ -150,21 +138,8 @@ Key rules: 	ab-states-are-separate-screens — each distinct tab or alternate st
 - **`real-backend-wired`** — Client talks to real services/persistence (CE **code**); no silent Fake path as the only path.
 - **`upstream-decisions-carried`** — Layout and domain terms from earlier fidelities stay authoritative.
 
----
+# Scaffold
 
-# Generate
+A scaffold produces a thin screen index — screens (domain/user language) + interactions and transitions (list only).
 
-1. Confirm fidelity (`ia` → `code`) and format (defaults above).
-2. Read § Contexts — shared rules and the active fidelity (including its Rules).
-3. Use peer actions when useful (`grill`, `sketch`, `iterate`; `templates/ux-sketch.md`):
-   - **Site map on top** (connection tree).
-   - **Screen boxes** show controls/states as glyphs — not `type=` / `state=` labels.
-   - **Key under each screen** for glyph meanings and interactions.
-   - **No margin fidelity tags** (`<-i` / `<-m` / `<-s`) — declare fidelity once at the top.
-4. Ensure story/domain JS when mockup+ needs them (`ensure_javascript` / Stories·CE `transform`).
-5. Fill templates for the active fidelity:
-   - **ia** — `.context/information-architecture.drawio` (drawio-ux CLI).
-   - **sketch / context** — `.context/ux-sketch.md`, optional `.context/ux-context.md`.
-   - **mockup+** — put screens/controls on `UxMap` (use `StoryDemoControl` where GWT-bound); render via HTML channel / `mockup_shell.html` to `<user-goal>.html`; keep `ux-map.json` beside it when useful.
-6. Confirm generated HTML has `#story-demo-frame`, `#explorer-frame`, and `mount-generated-mockup.js`.
-7. Run **validate**.
+Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate state is its own screen entry; `screen-names-use-domain-terms` — name screens in user/domain language, never technical or chapter labels; `screen-story-budget` — one screen per coherent user goal.

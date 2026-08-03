@@ -18,6 +18,16 @@ Mark a toolset method with `@action`. On import, Actions registers with `Toolset
 
 The seam is the path from a decorated `@action` method to an expanded run payload: discover actions on a toolset, validate the body, expand docstring/instruction slots and tool steps, then return instructions plus the tool list for the AI to interpret. The constraint on callers is that action bodies only reference tools and instruction slots that exist on the same toolset instance — expansion fails with `ActionValidationError` when the body reaches across instances or names unknown members. The AI—not the expander—decides which listed tools or further actions to call.
 
+### Never executed — `@action` bodies are read, not run
+
+**`@action` method bodies never execute as Python.** They are parsed once via `ast` and walked statically to produce instruction text + a tool list. Every statement in an `@action` body — `self.foo()`, `self.bar(x, y)`, a bare string, a `return "..."` — is *source text being read*, not code being run. Arguments written in an `@action` body (`self.index(context, out_root)`) are never passed anywhere; they exist only so the source reads naturally. This is why `self.verify_segment_completeness()` with zero arguments inside an `@action` body is completely fine even though the real method requires `segment_path` — the call is never made.
+
+**Exception: when the callee's `mode` resource is `"tool"`, the call into that instance's action is *not* walked/inlined right now** (see `mode` under `AgenticToolset` in Public API). It is simply added to the caller's `tools` list by name — same bucket as a real `@tool` step — and expansion stops there. The agent must invoke that action on its own, separately, later (still never executing it as Python — it gets statically walked *then*, at its own top-level `invoke_action` call). So a `mode="tool"` action behaves, from the calling `@action`'s point of view, exactly like a `@tool`: deferred, name-only, no inlined instructions, no argument-passing. `mode` lives on the callee and applies uniformly whether the call is same-instance (`self.some_action()`) or cross-instance (`self.other.some_action()`).
+
+**By contrast, `@tool` method bodies always execute as real Python, on demand, when the agent invokes that tool by name.** A `@tool`'s body runs exactly like any other method the moment `python -m tools run -` dispatches to it — real arguments, real return value, real side effects.
+
+So: if you're staring at code inside an `@action` and asking "what happens when this runs?" — stop, that question doesn't apply. Ask instead "what instructions/tool-list does this produce when *statically walked*?" If you're staring at a `@tool` body, the opposite is true: read it exactly like normal Python, because that's what it is.
+
 ### Substitution — where `{{...}}` placeholders resolve
 
 Every prose part (string literals in `@action` bodies, text loaded from `@instruction` file/section slots, and text returned by `@instruction(override=True)` methods) is passed through `_ActionExpander._substitute()` as the **last step** of `_build_instructions()`. This is the single substitution point.
@@ -36,10 +46,10 @@ Every prose part (string literals in `@action` bodies, text loaded from `@instru
 
 **`@agentic_toolset`** — class decorator parallel to `@toolset`. Use instead of `@toolset` on any class that declares `@action` methods. Merges `AgenticToolset` into the class so the `mode` resource is available.
 
-**`AgenticToolset`** — base class added by `@agentic_toolset`. Contributes the `mode` resource (`"action"` by default). Controls how a cross-instance action call — `self.other_agentic_toolset().some_action()` — behaves:
+**`AgenticToolset`** — base class added by `@agentic_toolset`. Contributes the `mode` resource (`"action"` by default). `mode` lives on the **callee**, not the caller, so it governs every call into that instance's actions — same-instance (`self.some_action()`) and cross-instance (`self.other_agentic_toolset().some_action()`) alike:
 
 - `"action"` (default) — the callee's full action instructions and tool calls it needs to make is inlined into the caller's instructions. The agent sees the complete recipe.
-- `"tool"` — the cross-instance call is treated like any other tool: the companion action name appears in the caller's expansion `tools` list, but its instructions and inner tools are not inlined. The caller decides when to invoke that action and then receives its internal instructions.
+- `"tool"` — the call is treated like any other tool: the called action's name appears in the caller's expansion `tools` list, but its instructions and inner tools are not inlined. The caller decides when to invoke that action and then receives its internal instructions. Because mode is checked on every call into that instance, a `"tool"`-mode instance whose own actions call further same-instance actions produces a chain of separate deferred steps instead of one inlined block.
 
 Setting `mode` to any value other than `"action"` or `"tool"` raises `ValueError`.
 

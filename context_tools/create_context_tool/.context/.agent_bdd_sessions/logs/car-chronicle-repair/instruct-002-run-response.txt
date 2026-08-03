@@ -5,18 +5,18 @@ ok: false
 error: request missing toolset
 ```
 
-Nothing was on stdin, so the runner had no `toolset` in the request. Pipe YAML into `-` (or redirect a request file) when you want it to execute something.The command exited with code 1:
+Nothing was on stdin, so the runner had no `toolset` in the request.The command exited with code 1:
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-Nothing was on stdin, so the runner had no `toolset` in the request. Pipe YAML into `-` (or redirect a request file) when you want it to execute something.The command exited with code 1:
+Nothing was on stdin, so the runner had no `toolset` in the request.The command exited with code 1:
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-Nothing was on stdin, so the runner had no `toolset` in the request. Pipe YAML into `-` (or redirect a request file) when you want it to execute something.
+Nothing was on stdin, so the runner had no `toolset` in the request.

@@ -13,7 +13,9 @@ ok: false
 error: request missing toolset
 ```
 
-`-` reads the run request from stdin. With nothing piped in, there is no `toolset`, so the CLI rejects the request. Pipe YAML into it, for example after manifesting `CarChronicle`:
+`-` means the CLI reads the run request from **stdin**. With nothing piped in, there is no `toolset`, so the run fails.
+
+Pipe a YAML request when you are ready, for example:
 
 ```powershell
 $env:PYTHONIOENCODING="utf-8"; @"
@@ -35,7 +37,9 @@ ok: false
 error: request missing toolset
 ```
 
-`-` reads the run request from stdin. With nothing piped in, there is no `toolset`, so the CLI rejects the request. Pipe YAML into it, for example after manifesting `CarChronicle`:
+`-` means the CLI reads the run request from **stdin**. With nothing piped in, there is no `toolset`, so the run fails.
+
+Pipe a YAML request when you are ready, for example:
 
 ```powershell
 $env:PYTHONIOENCODING="utf-8"; @"
@@ -57,7 +61,9 @@ ok: false
 error: request missing toolset
 ```
 
-`-` reads the run request from stdin. With nothing piped in, there is no `toolset`, so the CLI rejects the request. Pipe YAML into it, for example after manifesting `CarChronicle`:
+`-` means the CLI reads the run request from **stdin**. With nothing piped in, there is no `toolset`, so the run fails.
+
+Pipe a YAML request when you are ready, for example:
 
 ```powershell
 $env:PYTHONIOENCODING="utf-8"; @"

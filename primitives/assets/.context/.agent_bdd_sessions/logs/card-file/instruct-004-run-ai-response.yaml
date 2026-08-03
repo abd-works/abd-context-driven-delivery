@@ -27,7 +27,7 @@ result: '# FAQ
 
   `AssetCollection` wraps a folder-kind location and provides `collect()` (returns
 
-  a `dict` of filename â†’ content) and `merged()` (returns all files concatenated).
+  a `dict` of filename → content) and `merged()` (returns all files concatenated).
 
   '
 resources:

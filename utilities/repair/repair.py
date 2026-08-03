@@ -1,18 +1,27 @@
-"""Repair kit - record failures; when repairing, fix root cause."""
+"""Repair kit - record failures to to-fix.log; root-cause repair loop.
+
+Real toolset (not a mixin). Hosts get a real instance as a plain attribute
+(``self.repairer``), so a cross-instance call like ``self.repairer.repair(...)``
+expands inline as instruction text — same pattern as ``self.partitioner``.
+"""
 
 from __future__ import annotations
 
 from datetime import date
 
-from primitives.actions.action import action
+from primitives.actions.action import action, agentic_toolset
 from tools.tool import tool
 
 
+@agentic_toolset
 class Repair:
-    """log_fix records; repair fixes root cause. Same kit."""
+    """Records to-fix entries and runs the root-cause repair loop."""
+
+    def __init__(self, workspace) -> None:
+        self.workspace = workspace
 
     @tool
-    def write_to_fix(
+    def log_fix(
         self,
         artifact: str,
         rule: str,
@@ -23,11 +32,11 @@ class Repair:
         when: str = "",
     ) -> str:
         """Append one entry to ``{session.folder}/to-fix.log``."""
-        folder = self.workspace().folder
+        folder = self.workspace.folder
         path = folder / "to-fix.log"
         folder.mkdir(parents=True, exist_ok=True)
         if not path.is_file():
-            sprint = self.workspace().name or "session"
+            sprint = self.workspace.name or "session"
             path.write_text(
                 f"# to-fix.log - {sprint} sprint\n"
                 "# Log omissions/errors here. Each entry:\n"
@@ -62,28 +71,6 @@ class Repair:
         return str(path.resolve())
 
     @action
-    def log_fix(
-        self,
-        artifact: str = "",
-        rule: str = "",
-        wrong: str = "",
-        original: str = "",
-        improved: str = "",
-        status: str = "fixed",
-    ) -> str:
-        """log_fix"""
-        self.active
-        self.write_to_fix()
-        return (
-            "After correcting the failure, entry is in {session.folder}/to-fix.log "
-            "({{artifact}} / {{rule}})."
-        )
-
-    @action
     def repair(self, asset: str, violation: str) -> str:
         """repair"""
-        self.scan()
-        self.contexts
-        self.examples
-        self.templates
         return "Repair {{asset}} under {session.path}/ until validate passes."

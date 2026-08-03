@@ -1,7 +1,1 @@
-Completed successfully (exit code 0).
-
-The Bdd manifest printed to stdout as fenced YAML (`type: bdd`, capabilities `tool` / `agent`, full `signature` with tools and actions). The capture truncated the middle of the output; your terminal shows the full document. I prefixed the run with `PYTHONIOENCODING=utf-8` per repo rules for `python -m tools`.Completed successfully (exit code 0).
-
-The Bdd manifest printed to stdout as fenced YAML (`type: bdd`, capabilities `tool` / `agent`, full `signature` with tools and actions). The capture truncated the middle of the output; your terminal shows the full document. I prefixed the run with `PYTHONIOENCODING=utf-8` per repo rules for `python -m tools`.Completed successfully (exit code 0).
-
-The Bdd manifest printed to stdout as fenced YAML (`type: bdd`, capabilities `tool` / `agent`, full `signature` with tools and actions). The capture truncated the middle of the output; your terminal shows the full document. I prefixed the run with `PYTHONIOENCODING=utf-8` per repo rules for `python -m tools`.
+Completed successfully (exit code 0). The Bdd manifest was printed to stdout as fenced YAML (`type: bdd`, capabilities `tool` / `agent`, full `signature`). I set `PYTHONIOENCODING=utf-8` before running the command, per repo rules.Completed successfully (exit code 0). The Bdd manifest was printed to stdout as fenced YAML (`type: bdd`, capabilities `tool` / `agent`, full `signature`). I set `PYTHONIOENCODING=utf-8` before running the command, per repo rules.Completed successfully (exit code 0). The Bdd manifest was printed to stdout as fenced YAML (`type: bdd`, capabilities `tool` / `agent`, full `signature`). I set `PYTHONIOENCODING=utf-8` before running the command, per repo rules.

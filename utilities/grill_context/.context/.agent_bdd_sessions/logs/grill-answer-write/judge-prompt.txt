@@ -1,0 +1,16 @@
+You are an AI judge.
+Evaluate OUTPUT against RUBRIC.
+Reply with ONLY one JSON object on one line - no markdown, no code fences, no commentary.
+The JSON must have keys verdict (PASS or FAIL) and reason (one sentence).
+
+--- RUBRIC ---
+The grill-answers file must contain a ### heading followed by a body that makes a specific, grounded claim about how the tool works. It should mention paths, skipping, or recursion in concrete terms. Pass if the entry is substantive and not a vague placeholder.
+
+--- OUTPUT ---
+# Grill Answers
+
+### How explore_context_files discovers files
+
+It scans recursively for files whose name contains context or that live inside a .context/ subfolder, skipping __pycache__ and private underscore-prefixed paths.
+
+
