@@ -74,10 +74,27 @@ with description("Stories"):
         with it("should return a Diagnose instance from diagnostic"):
             expect(Stories().diagnostic()).to(be_a(Diagnose))
 
+    with context("that provides a CleanEngineering companion via ce()"):
+        with it("should pass a code format through to the companion"):
+            stories = Stories(fidelity="acceptance_tests", format="typescript")
+            expect(stories.ce().format).to(equal("typescript"))
+
+        with it("should pass python through unchanged"):
+            stories = Stories(fidelity="acceptance_tests", format="python")
+            expect(stories.ce().format).to(equal("python"))
+
+        with it("should fall back to CE's own default for a non-code format"):
+            stories = Stories(fidelity="story_map", format="markdown")
+            expect(stories.ce().format).to(equal("python"))
+
     with context("whose satisfy action is expanded"):
         with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):
             prose = _expanded(Stories(), "satisfy")
             expect("diagnostic().diagnose()" in prose).to(be_true)
+
+        with it("should tell the agent to call ce().satisfy() to keep production GREEN"):
+            prose = _expanded(Stories(), "satisfy")
+            expect("ce().satisfy()" in prose).to(be_true)
 
         with it("should list diagnose as a tool step without inlining the six phases"):
             stories = Stories()

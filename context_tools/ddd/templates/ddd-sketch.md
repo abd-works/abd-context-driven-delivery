@@ -53,12 +53,12 @@ fidelity: building_blocks
 
 ---
 
-## code
+## tactics
 
 Architecture + which seams get real adapters.
 
 ```
-fidelity: code
+fidelity: tactics
 
 architecture: {{from context | asked | default node+json}}
   repos: {{Root}}Repository → {{persistence}}

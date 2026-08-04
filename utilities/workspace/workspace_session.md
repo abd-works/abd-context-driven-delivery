@@ -32,7 +32,7 @@ Do **not** separately chain bind + read_context_index + record_context_root from
 ## Layout
 
 - **path** — docs → `{path}/.context/`; code/modules → `{path}/`
-- **folder** — `session.md`, grill-answers, engagement sketches, handoff, `to-fix.log`
+- **folder** — `session.md`, grill-answers, engagement sketches, handoff, `mistakes.log`
 - **context-index** — `{workspace_root}/.context/context-index.md`
 
 ## Root when `path` omitted

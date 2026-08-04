@@ -1,6 +1,6 @@
 ---
 name: ux
-description: "UX generator - multi-fidelity IA, mockups, specs, and production frontend (code)."
+description: "UX generator - multi-fidelity IA, mockups, specs, and production frontend (front_end_code)."
 disable-model-invocation: true
 ---
 

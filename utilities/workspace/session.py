@@ -1,6 +1,6 @@
 """docs_dir and lazy ``Session`` re-export (kit lives in ``workspace_session``).
 
-``Session`` is loaded lazily so ``from sessions import log`` does not pull
+``Session`` is loaded lazily so ``from workspace import log`` does not pull
 ``@action`` / ``@tool`` during the primitives bootstrap cycle.
 """
 
@@ -30,7 +30,7 @@ class SessionPaths:
 
 def __getattr__(name: str):
     if name in ("Session", "WorkspaceSession"):
-        from sessions.workspace_session import Session, WorkspaceSession
+        from workspace.workspace_session import Session, WorkspaceSession
 
         return Session if name == "Session" else WorkspaceSession
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

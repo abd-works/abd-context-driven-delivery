@@ -9,7 +9,7 @@ from pathlib import Path
 
 from primitives.actions.action import action
 from tools.tool import tool, toolset
-from sessions import docs_dir
+from workspace import docs_dir
 
 
 @toolset

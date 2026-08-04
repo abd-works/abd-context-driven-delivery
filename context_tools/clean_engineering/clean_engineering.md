@@ -172,6 +172,27 @@ Relationship kind and cardinality are added  here. Three kinds, chosen by lifecy
 2. **Aggregation** — collector groups members that can outlive it. (`Playlist` aggregates `Song`.)
 3. **Association** — both sides are independent; they simply use each other. (`Customer` associates with `SupportAgent`.)
 
+### Interactions (optional at this fidelity)
+
+An **interaction** is one class's operation calling another class's operation — who talks to whom, and about what. You **may** name interactions at **model** fidelity to capture collaboration/sequencing intent early; naming none is equally valid — this is optional, not a required artifact for reaching model.
+
+Reuse the exact notation from `templates/{tool}-sketch.md`'s **Notation**/**Interaction rules** — do not invent a parallel bullet convention:
+
+Do **not** invent `- **Interaction:** calls {Other}.{operation}` or use `- **Invariant:** …` as the sketch/model collaboration marker — that is a parallel symbol set. Sketch/`## model` interactions and notes use `->` / `//` only. Language companion's `- **Invariant:** … <!-- L -->` and Spec's indented `Interaction:` / `Invariant:` labels are different surfaces; neither replaces the sketch notation.
+
+- Nest `-> {collaborator}.{operation}` directly under the calling operation — a real call on a held property, peer, or `super`. No parameters, no body, just the receiver and the operation (or `x = {collaborator}.{attribute}` for a field read).
+- Nest `// …` under the same operation for any invariant or sequencing note — including looping/conditionals around the call (e.g. `// once per {item} in {collection}`). Control flow is a `//` note, never folded into the `->` line.
+- `-> ClassName` alone (pointing at a type, not an operation) is not an interaction.
+- Naming an interaction here does **not** add a method to `I{Class}` or `Class` — it stays prose (or class-docstring bullet) until **code**.
+- At **code** fidelity, any interaction named here becomes a real `@interaction` abstract stub method on `Class` (not on `I{Class}`) — see `## code` Phase 1 — and is dropped once implemented in Phase 2.
+
+### Invariants (optional at this fidelity)
+
+An **invariant** is a rule that must hold for every valid instance of the class, regardless of which operation last ran. You **may** state invariants at **model** fidelity in plain English; leaving them unstated is equally valid — this is optional, not a required artifact for reaching model.
+
+- State a class-level invariant (one that holds regardless of which operation ran, not tied to one call) the same way: a `// …` line, on the class rather than nested under one operation (e.g. `// remaining budget never goes negative`).
+- An invariant named here is prose only — it does not gate any method body until **code**.
+- At **code** fidelity, any invariant named here gets pinned down as a **comment** (not an enforcement method) on `Class` — see `## code` Phase 1 and Phase 2.
 
 ### Class Rules
 
@@ -183,6 +204,9 @@ Before promoting a term to its own class, check whether it fits as a **property*
 - **`use-explicit-dependencies`** — Pass every collaborator through the **constructor**; never reach for a global or construct a collaborator inside construction.
 - **`use-intention-revealing-names`** — Every name — class, property, operation, parameter — answers "why does this exist?" No abbreviations, no single-letter identifiers outside trivial loop indices.
 - **`use-consistent-naming`** — One word per concept across the model. Pick one verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`).
+- **`reuse-existing-not-invent-parallel`** — When a class wraps or renders an existing type, name it after that type (`CatalogContextTool` wraps `BaseContextTool`; `CatalogAction` wraps `Action`). Do not invent a parallel domain noun for the same concept — especially not a retired synonym the project has already replaced (Foundry **Practice** → CDD **context tool**). Explicit old→new mapping rows (and overview lines that *state* the replacement) are allowed; live class names, constructor args, and row/registry/toolset labels are not.
+- **`reuse-established-notation-not-a-parallel-one`** — Interactions/invariants at sketch and `## model` reuse `->` / `//`; never invent a bold-bullet parallel (`- **Interaction:**` / `- **Invariant:**` as collaboration markers). Language companion `- **Invariant:** <!-- L -->` and Spec indented labels are different surfaces.
+- **`do-not-invent-parallel-object-models`** — Do not invent a parallel object model when existing objects already carry the data a new requirement needs. Wrap or extend the live hierarchy instead; do not scrape the same information into a second `*Model` / `*Entry` (or similar) family.
 
 ### Example factories (Fake / Isolated / Production **modes**)
 
@@ -244,8 +268,8 @@ A vertical is not at **code** fidelity while it still depends on a mockup / Stor
 ### Phase 1 — typed contracts
 
 - Add `Class(I{Class})` (Java: `implements I{Class}`) in the **same file** as `I{Class}`. Do **not** fill out `I{Class}` or add private members to it.
-- On `Class`: implement public properties and operations; add private properties/operations as **empty interfaces** (`...` / `@abstractmethod`); add each relationship with its **kind** (composition / aggregation / association) and **cardinality** (e.g. `1..*`, `0..1`); invariants as **comments** (not methods).
-- Interactions: `@interaction` abstract methods on `Class` (not on `I{Class}`).
+- On `Class`: implement public properties and operations; add private properties/operations as **empty interfaces** (`...` / `@abstractmethod`); add each relationship with its **kind** (composition / aggregation / association) and **cardinality** (e.g. `1..*`, `0..1`); invariants as **comments** (not methods) — formalizing any named at `## model` § Invariants, or newly introduced here.
+- Interactions: `@interaction` abstract methods on `Class` (not on `I{Class}`) — formalizing any named at `## model` § Interactions, or newly introduced here.
 - Complete `{Type}ExampleFactory` — fill in Fake, Isolated, and Production modes per the **Example factories** pattern in `## model`.
 - Add context sections: **Participants**, **Public API**, **Internal design**, **Domain separation**, optional **Mechanism** (variation points / fixed parts).
 - Edit the same `.context/module-context.md` — do not create parallel context files.

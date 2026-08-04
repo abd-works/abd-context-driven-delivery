@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 _FIDELITY_FORMAT_DEFAULTS = {
     "story_map": "markdown",
-    "scenarios": "python",
+    "scenarios": "markdown",
     "acceptance_tests": "python",
 }
 
@@ -110,11 +110,16 @@ class Stories(BaseContextTool):
     def ce(self) -> "BaseContextTool":
         """CleanEngineering companion at code fidelity — used at acceptance_tests fidelity
         to generate or update matching production class implementations after writing specs.
-        Invoke as a tool (not inlined into stories generate)."""
+        Invoke as a tool (not inlined into stories generate). Passes this Stories instance's
+        own format through to CleanEngineering when CE recognizes it as a code channel
+        (typescript, java, javascript, python) - e.g. format="typescript" here means the
+        companion writes TypeScript, not CE's unrelated Python default."""
         from context_tools.clean_engineering.clean_engineering import CleanEngineering
 
+        ce_format = self.format if self.format in _CODE_FORMATS else None
         instance = CleanEngineering(
             fidelity="code",
+            format=ce_format,
             path=self._raw_path,
             session=self.workspace.name,
             workspace=self.workspace.workspace_root,
@@ -148,8 +153,10 @@ class Stories(BaseContextTool):
     @action
     def satisfy(self) -> str:
         """Find and fix every problem in the story artifacts under the session root.
+        At acceptance_tests fidelity: after fixing specs, call ce().satisfy() to keep matching production implementations GREEN.
         If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails)."""
         super().satisfy()
+        self.ce().satisfy()
         self.diagnostic().diagnose()
         return "When done, run validate on artifacts under {session.path}/."
 

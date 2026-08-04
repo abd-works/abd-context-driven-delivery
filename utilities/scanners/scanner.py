@@ -20,6 +20,10 @@ SKIP_DIR_NAMES = frozenset(
     }
 )
 
+# repair.md fixtures live under examples/ by design — keep them scannable.
+_REPAIR_FIXTURE_NAMES = frozenset({"faultyasset", "repairedasset"})
+_REPAIR_FIXTURE_DIRS = frozenset({"faultyassets", "repairedassets"})
+
 
 class Scanner(ABC):
     """Scan a named rule over files under *root*."""
@@ -29,8 +33,19 @@ class Scanner(ABC):
 
     @staticmethod
     def is_skipped_path(path: Path) -> bool:
-        """True when *path* sits under a skipped directory name (e.g. ``examples/``)."""
-        return any(part in SKIP_DIR_NAMES for part in Path(path).parts)
+        """True when *path* sits under a skipped directory name (e.g. ``examples/``).
+
+        Repair fixtures (``faultyAsset`` / ``repairedAsset``, any extension -
+        ``faultyAsset.py``, ``faultyAsset.md``, ... - or files under
+        ``faultyAssets/`` / ``repairedAssets/``) are never skipped — they live
+        under ``examples/`` by design and must remain scannable for regression.
+        """
+        p = Path(path)
+        if p.stem.lower() in _REPAIR_FIXTURE_NAMES:
+            return False
+        if any(part.lower() in _REPAIR_FIXTURE_DIRS for part in p.parts):
+            return False
+        return any(part in SKIP_DIR_NAMES for part in p.parts)
 
     @staticmethod
     def filter_scan_files(files: list[Path]) -> list[Path]:

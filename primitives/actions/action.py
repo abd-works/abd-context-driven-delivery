@@ -161,6 +161,10 @@ class AgenticToolset(Toolset):
     -----------
     action  (default) — calls into this instance's actions expand inline into the caller's instructions.
     tool    — list the called action in tools (like a tool call); defer its body instead of inlining it.
+
+    Same-instance recipes may assign ``self.mode = "tool"`` (or ``"action"``) in an
+    ``@action`` body; the expander applies that flip for later nested calls in the
+    same walk and restores the prior mode afterward.
     """
 
     _mode: str = "action"
@@ -909,8 +913,34 @@ class _ActionExpander:
         )
         acc.merge(nested_prose, nested_tools)
 
+    @staticmethod
+    def _mode_assign_value(statement: "ast.stmt") -> str | None:
+        """Return the mode string from ``self.mode = "tool"|"action"``, else None.
+
+        Action bodies are walked, not executed — this is the one assignment the
+        expander applies so a same-instance nested action can be deferred without
+        spinning up a second copy of the toolset just to flip mode.
+        """
+        if not isinstance(statement, ast.Assign) or len(statement.targets) != 1:
+            return None
+        target = statement.targets[0]
+        if not (
+            isinstance(target, ast.Attribute)
+            and isinstance(target.value, ast.Name)
+            and target.value.id == "self"
+            and target.attr == "mode"
+        ):
+            return None
+        if isinstance(statement.value, ast.Constant) and isinstance(statement.value.value, str):
+            return statement.value.value
+        return None
+
     def _dispatch_statement(self, statement: "ast.stmt", ctx: _WalkContext, acc: _ProseAccumulator) -> None:
         """Route one non-skip statement to the appropriate walk handler."""
+        mode_value = self._mode_assign_value(statement)
+        if mode_value is not None:
+            ctx.instance.mode = mode_value
+            return
         if isinstance(statement, ast.For):
             self._walk_for_each_statement(statement, ctx, acc)
             return
@@ -951,12 +981,20 @@ class _ActionExpander:
             defining_class=defining_class, slots=self._build_body_slots(type(instance)),
         )
         acc = _ProseAccumulator()
-        self._add_docstring_prose(function_def, ctx, acc)
-        if self._is_empty_action_body(function_def):
-            self._walk_super_statement(ctx, acc)
-        else:
-            self._walk_statements(function_def, ctx, acc)
-        return acc.prose, acc.tool_steps
+        # ``self.mode = ...`` in the body flips mode for later nested calls in
+        # this walk only — restore so a shared kit instance is not left in tool
+        # mode for the next top-level expand (e.g. improve then repair).
+        saved_mode = getattr(instance, "mode", None)
+        try:
+            self._add_docstring_prose(function_def, ctx, acc)
+            if self._is_empty_action_body(function_def):
+                self._walk_super_statement(ctx, acc)
+            else:
+                self._walk_statements(function_def, ctx, acc)
+            return acc.prose, acc.tool_steps
+        finally:
+            if saved_mode is not None and hasattr(type(instance), "mode"):
+                instance.mode = saved_mode
 
     def _make_build_request(
         self, body: _ActionBody, request: _ActionExpandRequest, parameter_names: set[str]
@@ -986,7 +1024,7 @@ class _ActionExpander:
 
     def _should_log_expansion(self, request: _ActionExpandRequest) -> bool:
         """Return True when the expansion should be recorded in the session log."""
-        from sessions import is_logged, member_is_logged
+        from workspace import is_logged, member_is_logged
 
         action_name = request.action_func.__name__
         if request.instance is not None:
@@ -1009,7 +1047,7 @@ class _ActionExpander:
     def _log_expansion(self, request: _ActionExpandRequest, tool_steps: tuple[str, ...]) -> None:
         if not self._should_log_expansion(request):
             return
-        from sessions import SessionLog, summarize_mapping
+        from workspace import SessionLog, summarize_mapping
         action_name = request.action_func.__name__
         SessionLog.instance().append(
             kind="expansion", toolset=request.toolset_path, name=action_name,
@@ -1180,7 +1218,7 @@ def agentic_toolset(cls: type) -> type:
             "do not subclass Toolset or AgenticToolset directly"
         )
     merged = _build_merged_agentic_class(cls)
-    from sessions import inherit_annotations_from_bases
+    from workspace import inherit_annotations_from_bases
     from tools.extensions import ToolsetExtensions
 
     inherit_annotations_from_bases(merged)

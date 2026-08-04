@@ -72,6 +72,29 @@ class _SelfCallAgent:
 
 
 @agentic_toolset
+class _BodyModeFlipAgent:
+    """Same-instance nesting that flips mode mid-body instead of cloning itself."""
+
+    @_tool
+    def polish(self) -> str:
+        """Polish the work product."""
+        return "polished"
+
+    @action
+    def prepare(self) -> str:
+        """SELF_PREPARE_MARKER: prepare the work carefully."""
+        self.polish()
+        return "prepared"
+
+    @action
+    def finish(self) -> str:
+        """SELF_FINISH_MARKER: defer prepare via mid-body mode flip."""
+        self.mode = "tool"
+        self.prepare()
+        return "finished"
+
+
+@agentic_toolset
 class _CalleeAgent:
     """Companion agentic toolset invoked across instances."""
 
@@ -455,6 +478,26 @@ with description("AgenticToolset"):
 
             with it("should not expose the nested action's inner tools until that action runs"):
                 expect("polish" in self.body.tool_steps).to(equal(False))
+
+    with context("when a toolset flips self.mode mid-body before a nested self-action"):
+        with before.each:
+            self.instance = _BodyModeFlipAgent()
+            self.body = _ActionExpander.instance().parse_body(
+                _BodyModeFlipAgent.finish, self.instance
+            )
+            self.joined = "\n".join(self.body.prose_parts)
+
+        with it("should keep the caller's own instructions"):
+            expect("SELF_FINISH_MARKER" in self.joined).to(be_true)
+
+        with it("should not inline the nested self-action's instructions"):
+            expect("SELF_PREPARE_MARKER" in self.joined).to(equal(False))
+
+        with it("should list the nested action in the expansion tools"):
+            expect("prepare" in self.body.tool_steps).to(be_true)
+
+        with it("should restore mode to action after the walk"):
+            expect(self.instance.mode).to(equal("action"))
 
 
 with description("ActionValidationError"):

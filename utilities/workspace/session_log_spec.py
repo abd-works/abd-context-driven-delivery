@@ -18,7 +18,7 @@ from expects import be_false, be_true, equal, expect
 from mamba import before, context, description, it
 
 from tools.examples.logged_probe import LoggedProbe
-from sessions import SessionLog, is_logged, member_is_logged
+from workspace import SessionLog, is_logged, member_is_logged
 from tools.tool import _ToolsetRunner
 
 

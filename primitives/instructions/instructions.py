@@ -340,7 +340,8 @@ _FRAMEWORK_ACTIONS = frozenset(
         "index",
         "segment",
         "document",
-        "log_fix",
+        "log_mistake",
+        "log_correction",
     }
 )
 
@@ -355,7 +356,7 @@ def _kit_markdown(module_dir: Path) -> Path | None:
         candidate = module_dir / f"{slug}.md"
         if candidate.is_file():
             return candidate
-    # Class-named prose beside the package (e.g. sessions/workspace_session.md)
+    # Class-named prose beside the package (e.g. workspace/workspace_session.md)
     for path in sorted(module_dir.glob("*_session.md")):
         if path.is_file():
             return path

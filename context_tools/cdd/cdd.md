@@ -36,8 +36,8 @@ Grill and sketch work **much finer** inside that scope. Do not invent detail fro
 |---|---|---|---|---|---|
 | **discovery** | discovery | bounded_context | ia | modules | — |
 | **explore** | exploration | building_blocks | mockup | model | **behavior** |
-| **spec** | exploration | code | mockup | code | **development** |
-| **engineer** | engineering | code | — | code | **development** |
+| **spec** | exploration | tactics | mockup | code | **development** |
+| **engineer** | engineering | tactics | — | code | **development** |
 
 UX has no engineering fidelity — production UI follows stories + clean_engineering at **engineer**, honouring the UX spec from **spec**.
 

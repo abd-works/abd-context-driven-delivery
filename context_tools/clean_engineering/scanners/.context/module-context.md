@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Rule scanners that validate Clean Engineering concepts against module folders and production source, reading the class-model language channels rather than ad-hoc regex on raw text.
+Rule scanners that validate Clean Engineering concepts against module folders and production source, reading the class-model language channels rather than ad-hoc regex on raw text. A few process rules also scan markdown design artifacts (sketch / model notation, naming vocabulary).
 
 ## Seam
 
@@ -10,7 +10,7 @@ Rule scanners that validate Clean Engineering concepts against module folders an
 
 ## Public API
 
-`CodeScanner`, `ModuleScanner`, and concrete rule scanners (function size, SRP, encapsulation, domain language, missing module context, prefer class operations, …).
+`CodeScanner`, `ModuleScanner`, and concrete rule scanners (function size, SRP, encapsulation, domain language, missing module context, prefer class operations, reuse-established-notation, reuse-existing-not-invent-parallel, do-not-invent-parallel-object-models, …).
 
 ## Dependencies
 

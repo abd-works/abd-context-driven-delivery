@@ -23,14 +23,14 @@ if TYPE_CHECKING:
 _FIDELITY_FORMAT_DEFAULTS = {
     "bounded_context": "markdown",
     "building_blocks": "markdown",
-    "code": "python",
+    "tactics": "python",
 }
 
 # DDD fidelity -> clean_engineering fidelity (CE owns OO ladder; DDD overlays domain/strategic).
 _CE_FIDELITY = {
     "bounded_context": "modules",
     "building_blocks": "model",
-    "code": "code",
+    "tactics": "code",
 }
 
 _SUPPORTED_FORMATS = frozenset(
@@ -57,7 +57,7 @@ class Ddd(BaseContextTool):
     fidelities = {
         BaseContextTool.DISCOVERY: "bounded_context",
         BaseContextTool.SPEC:      "building_blocks",
-        BaseContextTool.ENGINEER:  "code",
+        BaseContextTool.ENGINEER:  "tactics",
     }
 
     default_workspace_folder: str = "src"

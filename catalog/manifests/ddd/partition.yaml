@@ -1,0 +1,12 @@
+toolset: context_tools.ddd.ddd:Ddd
+context:
+  fidelity: <fidelity>
+  format: null
+  path: null
+  session: null
+  workspace: null
+action: partition
+arguments:
+  context: <context>
+  mode: <mode>
+  out_root: null

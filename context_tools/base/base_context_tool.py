@@ -32,8 +32,9 @@ from primitives.instructions import instruction
 from record_decisions.record_decisions import RecordDecisions
 from repair.repair import Repair
 from scanners.scan import Scan
-from sessions.session_log import log
-from sessions.workspace_session import Session
+from sub_agent.sub_agent import sub_agent
+from workspace.session_log import log
+from workspace.workspace_session import Session
 from sketch.sketch import Sketcher
 from tools.tool import resource
 from tools.tool import tool
@@ -68,7 +69,7 @@ class BaseContextTool(AgenticToolset):
         self.iterator = Iterator()
         self.decisions = RecordDecisions()
         self.partitioner = Partition()
-        self.repairer = Repair(workspace=self.workspace)
+        self.repairer = Repair(workspace=self.workspace, scanner=self.scanner)
 
 
     #  -- Stage / Fidelity ----------------
@@ -318,6 +319,7 @@ class BaseContextTool(AgenticToolset):
         self.templates
         return "When done, run validate on artifacts under {session.path}/."
     
+    @sub_agent
     @action
     def repair(self, asset: str, violation: str) -> str:
         """repair"""
@@ -329,26 +331,50 @@ class BaseContextTool(AgenticToolset):
         return "Repair {{asset}} under {session.path}/ until validate passes."
     
     @tool
-    def log_fix(
+    def log_mistake(
         self,
         artifact: str,
         rule: str,
         wrong: str,
         original: str,
-        improved: str,
-        status: str = "fixed",
         when: str = "",
     ) -> str:
-        """log_fix"""
-        return self.repairer.log_fix(
+        """log_mistake"""
+        return self.repairer.log_mistake(
             artifact=artifact,
             rule=rule,
             wrong=wrong,
             original=original,
-            improved=improved,
-            status=status,
             when=when,
+            tool=type(self).__name__,
+            fidelity=getattr(self, "fidelity", "") or "",
         )
+
+    @tool
+    def log_correction(self, entry_id: str, improved: str, status: str = "fixed") -> str:
+        """log_correction"""
+        return self.repairer.log_correction(entry_id, improved, status)
+
+    @action
+    def improve(self) -> str:
+        """improve"""
+        self.contexts
+        self.examples
+        self.templates
+        self.repairer.improve()
+        return "Read the roadmap above for log_mistake -> log_correction -> repair -> regression -> archive."
+
+    @sub_agent
+    @tool
+    def verify_regression(self, examples_root: str) -> str:
+        """verify_regression"""
+        return self.repairer.verify_regression(examples_root)
+
+    @sub_agent
+    @tool
+    def archive_mistakes(self, repo_root: str) -> str:
+        """archive_mistakes"""
+        return self.repairer.archive_mistakes(repo_root)
 
 BaseContextTool._is_context = True  # type: ignore[attr-defined]
 BaseContextTool._is_toolset = True  # type: ignore[attr-defined]

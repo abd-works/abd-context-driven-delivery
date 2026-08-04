@@ -4,13 +4,13 @@
 
 **Primary use case:** Author or repair bounded-context maps and building-block stereotypes, then hand off to CleanEngineering at the mapped fidelity for OO deepen / code.
 
-**Rationale:** Keep domain language and context maps in DDD fidelities (`bounded_context` → `building_blocks` → `code`) while reusing CE for modules/model/code work through `ce()`.
+**Rationale:** Keep domain language and context maps in DDD fidelities (`bounded_context` → `building_blocks` → `tactics`) while reusing CE for modules/model/code work through `ce()`.
 
 ## Seam
 
 `Ddd` is the seam: construct at a DDD fidelity, expand lifecycle actions, and transform sideways via CE channels.
 
-Constraint: do not restate CleanEngineering class/module analysis in DDD artifacts — call `ce()` at the mapped fidelity instead. Constraint: do not invent detail from a deeper DDD fidelity than the active one. Fidelity map: bounded_context→modules, building_blocks→model, code→code.
+Constraint: do not restate CleanEngineering class/module analysis in DDD artifacts — call `ce()` at the mapped fidelity instead. Constraint: do not invent detail from a deeper DDD fidelity than the active one. Fidelity map: bounded_context→modules, building_blocks→model, tactics→code.
 
 ## Public API
 

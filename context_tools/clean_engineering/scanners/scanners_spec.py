@@ -14,28 +14,28 @@ _EVALS_ROOT = _CE_DIR / "examples" / "evals"
 _DISCOVERED = ScannerCollection(_CE_DIR).discover()
 
 
-def _fixture_source(rule: str, name: str) -> str:
-    path = _EVALS_ROOT / rule / f"{name}.py"
+def _fixture_source(rule: str, name: str, ext: str = ".py") -> str:
+    path = _EVALS_ROOT / rule / f"{name}{ext}"
     return path.read_text(encoding="utf-8")
 
 
-def _scan_source(scanner_class, rule, source):
+def _scan_source(scanner_class, rule, source, suffix: str = ".py"):
     temp_dir = tempfile.TemporaryDirectory()
     root = Path(temp_dir.name)
-    file_path = root / "example.py"
+    file_path = root / f"example{suffix}"
     file_path.write_text(source.strip() + "\n", encoding="utf-8")
     scanner = scanner_class(rule)
     return scanner.scan(root, [file_path])
 
 
-def _assert_scanner_examples(rule):
+def _assert_scanner_examples(rule, ext: str = ".py"):
     scanner_class = _DISCOVERED[rule]
-    pass_source = _fixture_source(rule, "repairedAsset")
-    fail_source = _fixture_source(rule, "faultyAsset")
+    pass_source = _fixture_source(rule, "repairedAsset", ext)
+    fail_source = _fixture_source(rule, "faultyAsset", ext)
     expect(bool(pass_source.strip())).to(be_true)
     expect(bool(fail_source.strip())).to(be_true)
-    pass_violations = _scan_source(scanner_class, rule, pass_source)
-    fail_violations = _scan_source(scanner_class, rule, fail_source)
+    pass_violations = _scan_source(scanner_class, rule, pass_source, ext)
+    fail_violations = _scan_source(scanner_class, rule, fail_source, ext)
     expect(len(pass_violations)).to(equal(0))
     expect(len(fail_violations) >= 1).to(be_true)
     for violation in fail_violations:
@@ -110,3 +110,17 @@ with description("Clean Code python scanners"):
     with context("stop-writing-useless-comments"):
         with it("should keep faultyAsset violating and repairedAsset clean"):
             _assert_scanner_examples("stop-writing-useless-comments")
+
+    with context("reuse-existing-not-invent-parallel"):
+        with it("should keep faultyAsset violating and repairedAsset clean"):
+            _assert_scanner_examples("reuse-existing-not-invent-parallel")
+
+    with context("reuse-established-notation-not-a-parallel-one"):
+        with it("should keep faultyAsset.md violating and repairedAsset.md clean"):
+            _assert_scanner_examples(
+                "reuse-established-notation-not-a-parallel-one", ext=".md"
+            )
+
+    with context("do-not-invent-parallel-object-models"):
+        with it("should keep faultyAsset violating and repairedAsset clean"):
+            _assert_scanner_examples("do-not-invent-parallel-object-models")

@@ -2,7 +2,7 @@
 
 Apply **DDD** — bounded contexts, aggregates, building blocks — on top of **clean_engineering**.
 
-**`clean_engineering`** owns OO structure (modules → model → specification → code; language is a companion). Do not restate class/module analysis here. DDD starts at **bounded_context**: context maps, aggregates, then stereotypes and code.
+**`clean_engineering`** owns OO structure (modules → model → specification → code; language is a companion). Do not restate class/module analysis here. DDD starts at **bounded_context**: context maps, aggregates, then stereotypes and tactics.
 
 Each fidelity below is the whole story for that level. Call clean_engineering at the mapped fidelity. Do not fill details from a more detailed fidelity.
 
@@ -10,7 +10,7 @@ Each fidelity below is the whole story for that level. Call clean_engineering at
 |---|---|
 | **bounded_context** | **modules** |
 | **building_blocks** | **model** |
-| **code** | **code** |
+| **tactics** | **code** |
 
 ---
 # Contexts
@@ -77,7 +77,7 @@ Honour aggregate boundaries from bounded_context; do not redraw by relatedness. 
 
 **Input traps:** identity by habit; aggregate redrawn by relatedness; VO as Entity; Service as dump; silent consistency.
 
-**Produce:** Update `bounded-context-map.md` — CE compact blocks + stereotypes under each owning context (`templates/bounded-context-template.md`). Call clean_engineering at **specification**. No tables, brokers, frameworks, or REST endpoints here — infrastructure at **code**.
+**Produce:** Update `bounded-context-map.md` — CE compact blocks + stereotypes under each owning context (`templates/bounded-context-template.md`). Call clean_engineering at **specification**. No tables, brokers, frameworks, or REST endpoints here — infrastructure at **tactics**.
 
 **Rules:**
 
@@ -89,7 +89,7 @@ Honour aggregate boundaries from bounded_context; do not redraw by relatedness. 
 
 ---
 
-## code
+## tactics
 
 **Default format:** Python
 
@@ -114,9 +114,9 @@ Key rules: `language-is-context-scoped` — a term’s meaning is only valid ins
 
 # Generate
 
-1. Confirm fidelity (`bounded_context` → `building_blocks` → `code`) and format.
+1. Confirm fidelity (`bounded_context` → `building_blocks` → `tactics`) and format.
 2. Read the active fidelity section above (including its Rules). Do not re-author CE OO theory.
 3. Use peer actions when useful (`grill`, `sketch`, `iterate`; `templates/ddd-sketch.md`).
-4. Fill / deepen `bounded-context-map.md`; at **code**, resolve architecture first.
+4. Fill / deepen `bounded-context-map.md`; at **tactics**, resolve architecture first.
 5. Call clean_engineering at the mapped fidelity (`generate_output`).
 6. Run **validate**.

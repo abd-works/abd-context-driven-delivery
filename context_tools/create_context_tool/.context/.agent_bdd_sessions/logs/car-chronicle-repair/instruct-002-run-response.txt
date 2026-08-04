@@ -5,18 +5,18 @@ ok: false
 error: request missing toolset
 ```
 
-Nothing was on stdin, so the runner had no `toolset` in the request.The command exited with code 1:
+Stdin was empty, so `run -` had no YAML request (no `toolset`) to process.The command exited with code 1:
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-Nothing was on stdin, so the runner had no `toolset` in the request.The command exited with code 1:
+Stdin was empty, so `run -` had no YAML request (no `toolset`) to process.The command exited with code 1:
 
 ```yaml
 ok: false
 error: request missing toolset
 ```
 
-Nothing was on stdin, so the runner had no `toolset` in the request.
+Stdin was empty, so `run -` had no YAML request (no `toolset`) to process.

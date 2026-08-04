@@ -103,13 +103,13 @@ with description("a CDD orchestrator"):
                 for t in Cdd(fidelity="engineer").context_tools()
             ]
 
-        with it("should include Ux at code and Bdd at development"):
+        with it("should include Ux at front_end_code and Bdd at development"):
             expect(self.pairs).to(
                 equal(
                     [
-                        (Ddd, "code"),
+                        (Ddd, "tactics"),
                         (Stories, "acceptance_tests"),
-                        (Ux, "code"),
+                        (Ux, "front_end_code"),
                         (CleanEngineering, "code"),
                         (Bdd, "development"),
                     ]

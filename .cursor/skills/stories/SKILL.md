@@ -1,6 +1,6 @@
 ---
 name: stories
-description: "Stories generator - multi-fidelity story maps and acceptance tests."
+description: "Stories generator - multi-fidelity story maps, scenarios, and acceptance tests."
 disable-model-invocation: true
 ---
 

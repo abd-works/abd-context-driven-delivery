@@ -4,7 +4,7 @@
 # invoke-new: action generate | context.fidelity ia
 # invoke-edit: action satisfy | toolset: context_tools.ux.ux:Ux
 # invoke-check: action validate | toolset: context_tools.ux.ux:Ux
-"""UX generator - multi-fidelity IA, mockups, specs, and production frontend (code)."""
+"""UX generator - multi-fidelity IA, mockups, specs, and production frontend (front_end_code)."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from tools.tool import tool  # noqa: F401
 _FIDELITY_FORMAT_DEFAULTS = {
     "ia": "drawio",
     "mockup": "html",
-    "code": "html",
+    "front_end_code": "html",
 }
 
 # Peer channels - same CLI surface; transform moves sideways at one fidelity.
@@ -53,7 +53,7 @@ class Ux(BaseContextTool):
     fidelities = {
         BaseContextTool.DISCOVERY: "ia",
         BaseContextTool.SPEC:      "mockup",
-        BaseContextTool.ENGINEER:  "code",
+        BaseContextTool.ENGINEER:  "front_end_code",
     }
 
     def __init__(

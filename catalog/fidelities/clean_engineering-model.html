@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.__foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
+</script>
+<title>model — Clean Engineering</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../commons/site.css?v=foundry-33">
+<link rel="stylesheet" href="../commons/foundry-catalog.css?v=cdd-12">
+<link rel="stylesheet" href="../commons/cdd-board.css?v=cdd-12">
+
+<script src="../commons/catalog-nav.js?v=foundry-10"></script>
+</head>
+<body data-nav-prefix="../" data-nav-current="fidelities" data-nav-site-base="https://abd.works/">
+<main id="main-content">
+
+
+
+<div class="wrap">
+<div class="foundry-kanban-shell" id="kanban-shell">
+<section class="foundry-kanban-surface foundry-skills-expanded catalog-kanban-embed foundry-kanban-surface--cdd-always-expanded" id="catalog-kanban" aria-label="CDD catalog board" data-cdd-always-expanded="1" data-cdd-no-stage-filter="1" data-initial-family="clean_engineering" data-initial-stage="spec">
+
+  <div class="foundry-travel-ring" id="travel-ring" aria-hidden="true"></div>
+  <div class="foundry-cdd-panel" id="foundry-guide">
+    <div class="foundry-cdd-panel__head">
+      <button type="button" class="foundry-cdd-btn" id="cdd-toggle" aria-label="Start Context-Driven Delivery overview">Context-driven delivery</button>
+      <span class="foundry-cdd-panel__tag" id="guide-tag">Click for overview</span>
+    </div>
+    <div class="foundry-cdd-intro" id="cdd-intro">
+      <p class="foundry-cdd-intro__line1">Speed is not governed by coding speed. It is governed by <strong>coordination cost</strong> and <strong>cognitive load</strong>.</p>
+      <p class="foundry-cdd-intro__line2"><strong>Context-Driven Delivery</strong> is the practice that turns organizational knowledge into executable, machine-readable context AI can generate from accurately.</p>
+    </div>
+    <div class="foundry-guide__body" id="guide-text" aria-live="polite"></div>
+  </div>
+
+  <div class="foundry-board-grid foundry-board-grid--cdd" id="board">
+    <div class="foundry-practice-col" aria-label="Context tools"><a class="kb-ticket aad-skill aad-fam-delivery foundry-practice-col__card foundry-practice-col__card--header foundry-practice-col__cdd-head foundry-perspective-label foundry-perspective-label--cdd" data-perspective="cdd" href="../context-tools/cdd.html">context-driven-delivery</a><button type="button" class="kb-ticket aad-skill aad-fam-sdd foundry-practice-col__card foundry-perspective-label foundry-family-toggle foundry-perspective-label--sdd" data-family="stories" data-perspective="sdd" aria-pressed="false">stories</button><button type="button" class="kb-ticket aad-skill aad-fam-arc foundry-practice-col__card foundry-perspective-label foundry-family-toggle foundry-perspective-label--arc" data-family="clean_engineering" data-perspective="arc" aria-pressed="false">clean-engineering</button><button type="button" class="kb-ticket aad-skill aad-fam-uxd foundry-practice-col__card foundry-perspective-label foundry-family-toggle foundry-perspective-label--uxd" data-family="ux" data-perspective="uxd" aria-pressed="false">user-experience</button><button type="button" class="kb-ticket aad-skill aad-fam-sdd foundry-practice-col__card foundry-perspective-label foundry-family-toggle foundry-perspective-label--bdd" data-family="bdd" data-perspective="bdd" aria-pressed="false">behavior-driven-development</button><button type="button" class="kb-ticket aad-skill aad-fam-ddd foundry-practice-col__card foundry-perspective-label foundry-family-toggle foundry-perspective-label--ddd" data-family="ddd" data-perspective="ddd" aria-pressed="false">domain-driven-design</button></div>
+    <div class="kb-col" data-id="col-discovery" data-stage="discovery"><a class="kb-col-head" href="../fidelities/cdd-discovery.html"><div class="kb-col-head-row"><span class="kb-col-scope-shape-wrap"><span class="kb-col-scope-shape kb-col-scope-shape--solution" title="Whole solution — wide / shallow — outcomes · scope · boundaries" aria-label="Whole solution. wide / shallow. outcomes, scope, boundaries"></span><span class="kb-col-shape-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">Whole solution</span><span class="kb-col-shape-tooltip__width">wide / shallow</span><span class="kb-col-shape-tooltip__bullets">outcomes · scope · boundaries</span></span></span><span class="kb-col-head-title"><span>discovery</span></span></div></a><div class="aad-skill-row aad-fam-sdd" data-family="stories"><a class="kb-ticket aad-skill aad-fam-sdd" data-stage="discovery" data-perspective="sdd" href="../fidelities/stories-story_map.html"><span class="kb-skill-tooltip-wrap">story-map<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">story-map</span></span></span></a></div><div class="aad-skill-row aad-fam-arc" data-family="clean_engineering"><a class="kb-ticket aad-skill aad-fam-arc" data-stage="discovery" data-perspective="arc" href="../fidelities/clean_engineering-modules.html"><span class="kb-skill-tooltip-wrap">modules<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">modules</span></span></span></a></div><div class="aad-skill-row aad-fam-uxd" data-family="ux"><a class="kb-ticket aad-skill aad-fam-uxd" data-stage="discovery" data-perspective="uxd" href="../fidelities/ux-ia.html"><span class="kb-skill-tooltip-wrap">information-architecture<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">information-architecture</span></span></span></a></div><div class="aad-skill-row aad-fam-sdd aad-skill-row--empty" data-family="bdd"></div><div class="aad-skill-row aad-fam-ddd" data-family="ddd"><a class="kb-ticket aad-skill aad-fam-ddd" data-stage="discovery" data-perspective="ddd" href="../fidelities/ddd-bounded_context.html"><span class="kb-skill-tooltip-wrap">bounded-context<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">bounded-context</span></span></span></a></div></div><div class="kb-col active" data-id="col-spec" data-stage="spec"><a class="kb-col-head kb-col-head--current" href="../fidelities/cdd-spec.html"><div class="kb-col-head-row"><span class="kb-col-scope-shape-wrap"><span class="kb-col-scope-shape kb-col-scope-shape--sprint" title="Sprint — narrow / deeper — behaviour · design · logic" aria-label="Sprint. narrow / deeper. behaviour, design, logic"></span><span class="kb-col-shape-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">Sprint</span><span class="kb-col-shape-tooltip__width">narrow / deeper</span><span class="kb-col-shape-tooltip__bullets">behaviour · design · logic</span></span></span><span class="kb-col-head-title"><span>specification</span></span></div></a><div class="aad-skill-row aad-fam-sdd" data-family="stories"><a class="kb-ticket aad-skill aad-fam-sdd" data-stage="spec" data-perspective="sdd" href="../fidelities/stories-scenarios.html"><span class="kb-skill-tooltip-wrap">scenarios<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">scenarios</span></span></span></a></div><div class="aad-skill-row aad-fam-arc" data-family="clean_engineering"><a class="kb-ticket aad-skill aad-fam-arc kb-ticket--current" data-stage="spec" data-perspective="arc" href="../fidelities/clean_engineering-model.html"><span class="kb-skill-tooltip-wrap">model<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">model</span></span></span></a></div><div class="aad-skill-row aad-fam-uxd" data-family="ux"><a class="kb-ticket aad-skill aad-fam-uxd" data-stage="spec" data-perspective="uxd" href="../fidelities/ux-mockup.html"><span class="kb-skill-tooltip-wrap">mockup<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">mockup</span></span></span></a></div><div class="aad-skill-row aad-fam-sdd" data-family="bdd"><a class="kb-ticket aad-skill aad-fam-sdd" data-stage="spec" data-perspective="bdd" href="../fidelities/bdd-behavior.html"><span class="kb-skill-tooltip-wrap">behavior<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">behavior</span></span></span></a></div><div class="aad-skill-row aad-fam-ddd" data-family="ddd"><a class="kb-ticket aad-skill aad-fam-ddd" data-stage="spec" data-perspective="ddd" href="../fidelities/ddd-building_blocks.html"><span class="kb-skill-tooltip-wrap">building-blocks<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">building-blocks</span></span></span></a></div></div><div class="kb-col" data-id="col-engineer" data-stage="engineer"><a class="kb-col-head" href="../fidelities/cdd-engineer.html"><div class="kb-col-head-row"><span class="kb-col-scope-shape-wrap"><span class="kb-col-scope-shape kb-col-scope-shape--story" title="Story — narrowest / deep — tests · code · interface" aria-label="Story. narrowest / deep. tests, code, interface"></span><span class="kb-col-shape-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">Story</span><span class="kb-col-shape-tooltip__width">narrowest / deep</span><span class="kb-col-shape-tooltip__bullets">tests · code · interface</span></span></span><span class="kb-col-head-title"><span>engineering</span></span></div></a><div class="aad-skill-row aad-fam-sdd" data-family="stories"><a class="kb-ticket aad-skill aad-fam-sdd" data-stage="engineer" data-perspective="sdd" href="../fidelities/stories-acceptance_tests.html"><span class="kb-skill-tooltip-wrap">acceptance-tests<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">acceptance-tests</span></span></span></a></div><div class="aad-skill-row aad-fam-arc" data-family="clean_engineering"><a class="kb-ticket aad-skill aad-fam-arc" data-stage="engineer" data-perspective="arc" href="../fidelities/clean_engineering-code.html"><span class="kb-skill-tooltip-wrap">code<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">code</span></span></span></a></div><div class="aad-skill-row aad-fam-uxd" data-family="ux"><a class="kb-ticket aad-skill aad-fam-uxd" data-stage="engineer" data-perspective="uxd" href="../fidelities/ux-front_end_code.html"><span class="kb-skill-tooltip-wrap">front-end-code<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">front-end-code</span></span></span></a></div><div class="aad-skill-row aad-fam-sdd" data-family="bdd"><a class="kb-ticket aad-skill aad-fam-sdd" data-stage="engineer" data-perspective="bdd" href="../fidelities/bdd-development.html"><span class="kb-skill-tooltip-wrap">development<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">development</span></span></span></a></div><div class="aad-skill-row aad-fam-ddd" data-family="ddd"><a class="kb-ticket aad-skill aad-fam-ddd" data-stage="engineer" data-perspective="ddd" href="../fidelities/ddd-tactics.html"><span class="kb-skill-tooltip-wrap">tactics<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">tactics</span></span></span></a></div></div>
+  </div>
+  <div class="kanban-stage-questions kanban-stage-questions--foundry kanban-stage-questions--cdd" data-id="stage-questions"><div class="kanban-stage-questions__spacer" aria-hidden="true"></div><a class="kanban-stage-questions__cell" data-stage="discovery" href="../fidelities/cdd-discovery.html"><ul class="kanban-stage-questions__list"><li class="kanban-stage-questions__item">system interactions</li><li class="kanban-stage-questions__item">modules</li><li class="kanban-stage-questions__item">user navigation</li><li class="kanban-stage-questions__item">Boundaries</li></ul></a><a class="kanban-stage-questions__cell" data-stage="spec" href="../fidelities/cdd-spec.html"><ul class="kanban-stage-questions__list"><li class="kanban-stage-questions__item">behavior</li><li class="kanban-stage-questions__item">model</li><li class="kanban-stage-questions__item">mockups</li><li class="kanban-stage-questions__item">building blocks</li></ul></a><a class="kanban-stage-questions__cell" data-stage="engineer" href="../fidelities/cdd-engineer.html"><ul class="kanban-stage-questions__list"><li class="kanban-stage-questions__item">tests</li><li class="kanban-stage-questions__item">code</li><li class="kanban-stage-questions__item">Interface</li><li class="kanban-stage-questions__item">architecture code</li></ul></a></div>
+  <div class="foundry-skills-extra">
+    <div class="foundry-skills-extra__inner">
+      <div class="aad-delivery-crosscut-stack" data-id="crosscut">
+        <section class="aad-delivery-crosscut-section aad-delivery-crosscut-section--supporting is-filter-visible">
+          <h3 class="aad-delivery-crosscut-section-title">Actions</h3>
+          <div class="aad-delivery-crosscut-section-body">
+            <div class="aad-delivery-crosscut-row aad-crosscut-tier--practice is-filter-visible" data-crosscut-group="kanban" data-family="kanban">
+              <span class="aad-delivery-crosscut-row-label aad-delivery-crosscut-row-label--spacer" aria-hidden="true"></span>
+              <div class="aad-delivery-crosscut-skills is-skills-visible"><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/partition.html"><span class="kb-skill-tooltip-wrap">partition<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">partition</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/grill.html"><span class="kb-skill-tooltip-wrap">grill<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">grill</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/sketch.html"><span class="kb-skill-tooltip-wrap">sketch<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">sketch</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/generate.html"><span class="kb-skill-tooltip-wrap">generate<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">generate</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/document.html"><span class="kb-skill-tooltip-wrap">document<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">document</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/iterate.html"><span class="kb-skill-tooltip-wrap">iterate<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">iterate</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/validate.html"><span class="kb-skill-tooltip-wrap">validate<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">validate</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/satisfy.html"><span class="kb-skill-tooltip-wrap">satisfy<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">satisfy</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/repair.html"><span class="kb-skill-tooltip-wrap">repair<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">repair</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/improve.html"><span class="kb-skill-tooltip-wrap">improve<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">improve</span></span></span></a></div>
+            </div>
+          </div>
+        </section>
+        <section class="aad-delivery-crosscut-section aad-delivery-crosscut-section--foundational is-filter-visible">
+          <h3 class="aad-delivery-crosscut-section-title">Utilities</h3>
+          <div class="aad-delivery-crosscut-section-body">
+            <div class="aad-delivery-crosscut-row aad-crosscut-tier--foundational is-filter-visible" data-crosscut-group="utilities">
+              <span class="aad-delivery-crosscut-row-label aad-delivery-crosscut-row-label--spacer" aria-hidden="true"></span>
+              <div class="aad-delivery-crosscut-skills is-skills-visible"><a class="kb-ticket aad-skill aad-fam-foundational" href="../utilities/deploy_agent_skills.html"><span class="kb-skill-tooltip-wrap">deploy-agent-skills<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">deploy-agent-skills</span></span></span></a><a class="kb-ticket aad-skill aad-fam-foundational" href="../utilities/diagnose.html"><span class="kb-skill-tooltip-wrap">diagnose<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">diagnose</span></span></span></a><a class="kb-ticket aad-skill aad-fam-foundational" href="../utilities/handoff.html"><span class="kb-skill-tooltip-wrap">handoff<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">handoff</span></span></span></a><a class="kb-ticket aad-skill aad-fam-foundational" href="../utilities/workspace.html"><span class="kb-skill-tooltip-wrap">workspace<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">workspace</span></span></span></a><a class="kb-ticket aad-skill aad-fam-foundational" href="../utilities/sub_agent.html"><span class="kb-skill-tooltip-wrap">sub-agent<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">sub-agent</span></span></span></a></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+</div>
+
+<div class="catalog-body">
+<div class="wrap skill-detail-page">
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Clean Engineering · fidelity</p><h1 class="page-headline">model</h1></header>
+<section class="install-block fidelity-invoke" aria-labelledby="fidelity-invoke-heading"><h2 id="fidelity-invoke-heading">Chat invoke</h2><pre class="install-snippet"><code>/clean-engineering &lt;action&gt; model — e.g. /clean-engineering generate model</code></pre><p class="install-hint">&lt;action&gt; is one of: <a href="../actions/partition.html">partition</a>, <a href="../actions/grill.html">grill</a>, <a href="../actions/sketch.html">sketch</a>, <a href="../actions/generate.html">generate</a>, <a href="../actions/document.html">document</a>, <a href="../actions/iterate.html">iterate</a>, <a href="../actions/validate.html">validate</a>, <a href="../actions/satisfy.html">satisfy</a>, <a href="../actions/repair.html">repair</a>, <a href="../actions/improve.html">improve</a></p><p class="install-source"><a href="../manifests/clean_engineering/model.yaml" id="raw-manifest">Raw manifest format →</a></p></section>
+<section class="install-block fidelity-guidance" data-fidelity="model" aria-label="Fidelity guidance"><h2>Overview</h2>
+<p>Deepen OO design from modules toward production code. Each fidelity <strong>adds</strong> artifacts — do not invent detail from a deeper level.</p>
+<p><strong>Progression:</strong> <code>partition</code> (action) → <strong>scaffold</strong> → <strong>modules</strong> → <strong>model</strong> → <strong>code</strong>.</p>
+<hr>
+<h2>model</h2>
+<p><strong>Default format:</strong> Python</p>
+<p><strong>Goal:</strong> Define the public seam as an <strong><code>I{Class}</code></strong> contract — what the module exposes, why it is shaped that way, and what callers depend on. No production <code>Class</code> yet. Expand <code>module-context.md</code> fully. Stub example factories.</p>
+<ul>
+<li>Create <strong><code>I{Class}</code> only</strong> for each Public API type — no production <code>Class</code> yet. Public properties and operations are <strong>empty interfaces</strong> (Python: <code>ABC</code> + <code>@abstractmethod</code> / <code>@property</code>+<code>@abstractmethod</code> + <code>...</code>; Java: <code>interface</code>; other channels: abstract/empty equivalent). No internals until code.</li>
+<li>Name the contract <code>I{Class}</code> (e.g. <code>IShoppingCart</code>). Keep <code>I{Class}</code> and its later extender in the <strong>same file</strong> (<code>cohesive-file</code>).</li>
+<li>When the type will be used from Stories examples, stub <strong><code>I{Type}ExampleFactory</code></strong> (empty) in a <strong>sibling</strong> <code>{type}_example_factory.{ext}</code> file with named methods — see <strong>Example factories</strong> below. Complete the factory at <strong>code</strong> fidelity.</li>
+<li>Expand <code>.context/module-context.md</code> (seeded at modules) with <strong>Purpose</strong>, <strong>Primary use case</strong>, <strong>Rationale</strong>, <strong>Seam</strong>, <strong>Public API</strong>, <strong>Dependencies</strong>, optional <strong>Mechanism stereotype</strong>. Nested children list the <strong>parent base</strong> under Dependencies; parents list children as nested modules (not as a flat dump of sibling APIs).</li>
+<li>Ensure code and context for a module belong only in that module&#x27;s folder (parent owns shared base; child owns specialization).</li>
+<li>Apply <strong><code>cohesive-file</code></strong>: one file per class family; example factories live in a sibling file (<code>example-factory-separate-file</code>).</li>
+<li>Edit to carry forward language-companion identity into <strong>Purpose</strong>; expand primary use case and rationale at this fidelity.</li>
+<li>Edit class docstrings so member bullets move down onto those members; keep everything inside the module folder (<code>physical-folder</code>).</li>
+<li>Refresh the <strong>language companion</strong> for terms now on the Public API — still no typed signatures in prose ahead of code.</li>
+</ul>
+<h3>What is a class</h3>
+<p>A class is a named idea that earns its own identity because it has at least one of: <strong>distinct identity</strong>, <strong>state</strong>, <strong>behavior</strong>, <strong>structure</strong>, or <strong>interactions</strong> that cannot be collapsed into a property, instance, or subtype of something else.</p>
+<p>A class knows things (<strong>state</strong>), does things (<strong>behavior</strong>), interacts with other things (<strong>interactions</strong>), has (<strong>relationships</strong>) with other things, can be a sub type of other things (<strong>inheritance</strong>), and can implement (<strong>interfaces</strong>) — finally, it maintains the (<strong>invariants</strong>) that constrain it.</p>
+<h3>Responsibilities</h3>
+<p>For each responsibility a class owns, ask: <em>hold something, do something, or both?</em> A responsibility may be a property, an operation, or <strong>both</strong> — the class holds state <em>and</em> exposes an action that works with it.</p>
+<h3>Properties</h3>
+<p>The class must remember something across calls. Named as a <strong>noun phrase</strong>: <em>remaining budget</em>, <em>active status</em>, <em>target character</em>. A <strong>property</strong> encapsulates information a class exposes to its callers together with the logic required to access or update it. A property may be <strong>typed</strong> — carries a concrete type like <code>Person</code>, <code>int</code>, or <code>Car</code> or can be untyped.</p>
+<ul>
+<li><strong><code>use-property-not-accessor</code></strong> — Use <code>@property</code> (or the language equivalent) for read-only computed values; do not use <code>get_</code> / <code>set_</code> method prefixes.</li>
+</ul>
+<h3>Operations</h3>
+<p>The class must do something on demand. Named as a <strong>verb phrase</strong>: <em>charge card</em>, <em>reserve seat</em>, <em>compute total</em>. An <strong>operation</strong> is an action a class performs or a result it computes on demand. Operations may be entirely stateless — depending only on their parameters — or work with the class&#x27;s own state.</p>
+<ul>
+<li><strong><code>keep-operations-single-responsibility</code></strong> — Each operation has one reason to change — pure calculation or orchestration, not both. An operation doing two things reveals either a missing operation or a missing class.</li>
+<li><strong><code>separate-concerns</code></strong> — Pure calculation separate from I/O and mutation.</li>
+<li><strong><code>use-clear-operation-parameters</code></strong> — Prefer 0–2 parameters. When more configuration is needed, the extra parameters reveal a missing value object — promote them to a new class and pass that instead.</li>
+</ul>
+<h3>Interfaces (<code>I{Class}</code>)</h3>
+<p>The public seam of a type is a separate <strong>interface</strong> named <strong><code>I{Class}</code></strong>, introduced at <strong>model</strong> fidelity. Properties and operations on the interface are empty contracts — typed signatures with no body.</p>
+<p><strong>Code</strong> adds <code>Class</code> that <strong>extends / implements</strong> <code>I{Class}</code> in the <strong>same file</strong>. Public members are filled on <code>Class</code>; private members are empty interfaces on <code>Class</code> only — never added to <code>I{Class}</code>. <code>I{Class}</code> stays as the stable seam throughout (including for hand-written test fakes). Existing production types may satisfy <code>I{Class}</code> informally without a formal extends clause.</p>
+<p>Empty vs filled is inferred from the member body (<code>...</code> / empty vs real implementation) — no extra abstract flag on the model.</p>
+<h3>Inheritance and subtypes</h3>
+<p>A <strong>base class</strong> defines the common identity, state, and behavior shared by a family of related things. It owns everything that is true of every member of that family — the responsibilities, rules, and collaborations that do not change regardless of which specific variant you are dealing with.</p>
+<p>A <strong>subtype</strong> is a class that specialises the base by adding or overriding behavior that only applies to it. The subtype inherits everything the base defines and records <strong>only the delta</strong> — inherited responsibilities are not repeated in the subtype. Use a subtype when the distinction changes what the thing <em>does</em>, not just what data it carries.</p>
+<h4>Liskov Substitution rule</h4>
+<p><strong>Anywhere the base is used, a subtype must work correctly in its place.</strong> If swapping in a subtype breaks or weakens a rule the base guarantees, the subtype is not a true specialisation — it is a different thing that happens to share some behavior.</p>
+<h3>Relationships</h3>
+<p>Relationship kind and cardinality are added  here. Three kinds, chosen by lifecycle:</p>
+<ol>
+<li><strong>Composition</strong> — owner controls the other&#x27;s lifecycle. (<code>Order</code> composes <code>OrderLine</code>.)</li>
+<li><strong>Aggregation</strong> — collector groups members that can outlive it. (<code>Playlist</code> aggregates <code>Song</code>.)</li>
+<li><strong>Association</strong> — both sides are independent; they simply use each other. (<code>Customer</code> associates with <code>SupportAgent</code>.)</li>
+</ol>
+<h3>Interactions (optional at this fidelity)</h3>
+<p>An <strong>interaction</strong> is one class&#x27;s operation calling another class&#x27;s operation — who talks to whom, and about what. You <strong>may</strong> name interactions at <strong>model</strong> fidelity to capture collaboration/sequencing intent early; naming none is equally valid — this is optional, not a required artifact for reaching model.</p>
+<p>Reuse the exact notation from <code>templates/{tool}-sketch.md</code>&#x27;s <strong>Notation</strong>/<strong>Interaction rules</strong> — do not invent a parallel bullet convention:</p>
+<p>Do <strong>not</strong> invent <code>- <strong>Interaction:</strong> calls {Other}.{operation}</code> or use <code>- <strong>Invariant:</strong> …</code> as the sketch/model collaboration marker — that is a parallel symbol set. Sketch/<code>## model</code> interactions and notes use <code>-&gt;</code> / <code>//</code> only. Language companion&#x27;s <code>- <strong>Invariant:</strong> … &lt;!-- L --&gt;</code> and Spec&#x27;s indented <code>Interaction:</code> / <code>Invariant:</code> labels are different surfaces; neither replaces the sketch notation.</p>
+<ul>
+<li>Nest <code>-&gt; {collaborator}.{operation}</code> directly under the calling operation — a real call on a held property, peer, or <code>super</code>. No parameters, no body, just the receiver and the operation (or <code>x = {collaborator}.{attribute}</code> for a field read).</li>
+<li>Nest <code>// …</code> under the same operation for any invariant or sequencing note — including looping/conditionals around the call (e.g. <code>// once per {item} in {collection}</code>). Control flow is a <code>//</code> note, never folded into the <code>-&gt;</code> line.</li>
+<li><code>-&gt; ClassName</code> alone (pointing at a type, not an operation) is not an interaction.</li>
+<li>Naming an interaction here does <strong>not</strong> add a method to <code>I{Class}</code> or <code>Class</code> — it stays prose (or class-docstring bullet) until <strong>code</strong>.</li>
+<li>At <strong>code</strong> fidelity, any interaction named here becomes a real <code>@interaction</code> abstract stub method on <code>Class</code> (not on <code>I{Class}</code>) — see <code>## code</code> Phase 1 — and is dropped once implemented in Phase 2.</li>
+</ul>
+<h3>Invariants (optional at this fidelity)</h3>
+<p>An <strong>invariant</strong> is a rule that must hold for every valid instance of the class, regardless of which operation last ran. You <strong>may</strong> state invariants at <strong>model</strong> fidelity in plain English; leaving them unstated is equally valid — this is optional, not a required artifact for reaching model.</p>
+<ul>
+<li>State a class-level invariant (one that holds regardless of which operation ran, not tied to one call) the same way: a <code>// …</code> line, on the class rather than nested under one operation (e.g. <code>// remaining budget never goes negative</code>).</li>
+<li>An invariant named here is prose only — it does not gate any method body until <strong>code</strong>.</li>
+<li>At <strong>code</strong> fidelity, any invariant named here gets pinned down as a <strong>comment</strong> (not an enforcement method) on <code>Class</code> — see <code>## code</code> Phase 1 and Phase 2.</li>
+</ul>
+<h3>Class Rules</h3>
+<p>Before promoting a term to its own class, check whether it fits as a <strong>property</strong> (see <em>Properties</em>), an <strong>instance</strong> (see <em>Instances</em>), or a <strong>subtype</strong> (see <em>Inheritance and subtypes</em>). Only when none of those three fit does something deserve its own class.</p>
+<ul>
+<li><strong><code>keep-classes-single-responsibility</code></strong> — Each class has <strong>one reason to change</strong>.</li>
+<li><strong><code>hide-inner-details</code></strong> — Expose <strong>behavior</strong> through named methods; callers see what the class does, not how it stores or arranges its information.</li>
+<li><strong><code>eliminate-duplication</code></strong> — Repeated logic gets one canonical function.</li>
+<li><strong><code>use-explicit-dependencies</code></strong> — Pass every collaborator through the <strong>constructor</strong>; never reach for a global or construct a collaborator inside construction.</li>
+<li><strong><code>use-intention-revealing-names</code></strong> — Every name — class, property, operation, parameter — answers &quot;why does this exist?&quot; No abbreviations, no single-letter identifiers outside trivial loop indices.</li>
+<li><strong><code>use-consistent-naming</code></strong> — One word per concept across the model. Pick one verb and use it everywhere (<code>fetch_</code>, not a mix of <code>fetch_</code>, <code>get_</code>, and <code>retrieve_</code>).</li>
+<li><strong><code>reuse-existing-not-invent-parallel</code></strong> — When a class wraps or renders an existing type, name it after that type (<code>CatalogContextTool</code> wraps <code>BaseContextTool</code>; <code>CatalogAction</code> wraps <code>Action</code>). Do not invent a parallel domain noun for the same concept — especially not a retired synonym the project has already replaced (Foundry <strong>Practice</strong> → CDD <strong>context tool</strong>). Explicit old→new mapping rows (and overview lines that <em>state</em> the replacement) are allowed; live class names, constructor args, and row/registry/toolset labels are not.</li>
+<li><strong><code>reuse-established-notation-not-a-parallel-one</code></strong> — Interactions/invariants at sketch and <code>## model</code> reuse <code>-&gt;</code> / <code>//</code>; never invent a bold-bullet parallel (<code>- <strong>Interaction:</strong></code> / <code>- <strong>Invariant:</strong></code> as collaboration markers). Language companion <code>- <strong>Invariant:</strong> &lt;!-- L --&gt;</code> and Spec indented labels are different surfaces.</li>
+<li><strong><code>do-not-invent-parallel-object-models</code></strong> — Do not invent a parallel object model when existing objects already carry the data a new requirement needs. Wrap or extend the live hierarchy instead; do not scrape the same information into a second <code><em>Model</code> / <code></em>Entry</code> (or similar) family.</li>
+</ul>
+<h3>Example factories (Fake / Isolated / Production <strong>modes</strong>)</h3>
+<p>When a type is used from <strong>Stories</strong> (helpers / scenario setup), the factory lives in a sibling file, separate from the production family:</p>
+<p>Do <strong>not</strong> put factory wiring in the production family file. Do <strong>not</strong> generate <code>Fake{Type}</code> / <code>Isolated{Type}</code> / <code>Production{Type}</code> subclasses — those are <strong>usage modes</strong>, not an inheritance tree.</p>
+<p><strong>PATTERN</strong> (see also <code>templates/clean_engineering-sketch.md</code> and templates):</p>
+<pre><code></code></pre></section>
+<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>python</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/8c1da4c4f7a50b991d622745ff471d0a56865742/context_tools/clean_engineering/templates/clean_engineering-templates.py">templates/clean_engineering-templates.py</a></p><pre class="code-fence"><code class="language-py">&quot;&quot;&quot;
+# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+# invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+
+CleanEngineering Python template - two files when Stories-bound:
+
+    {family_slug}.py                 - I{Class} + {Class} (+ subtypes)   PRODUCTION
+    {type_slug}_example_factory.py   - I{Class}ExampleFactory + factory  SEPARATE
+
+A production file holds the public seam I{Class}, the production Class that
+extends it, subtypes, and tightly connected peers. Not one class per file.
+Example factories are NEVER in that file (example-factory-separate-file).
+
+Layout (physical-folder): write each file under the **module** folder
+(e.g. {module_slug}/{family_slug}.py). Module context:
+{module_slug}/.context/module-context.md.
+
+Naming:
+    File (production)  {family_slug}.py
+    File (factory)     {type_slug}_example_factory.py
+    Interface          I{Class}                (public seam; model fidelity)
+    Class              {Class}(I{Class})       (production; specification+)
+    ExampleFactory     {Class}ExampleFactory   (plain class; no Loader base; Md+/S+)
+    Modes              Fake | Isolated | Production  (factory behavior - not subclasses)
+    Property           {owned_property}, ...     (snake_case slots)
+    Operation          {operation_name}, ...     (snake_case slots)
+    Params             {param}, {dep}
+    Type slots         {Type}, {ReturnType}
+    Invariant          comment                 (plain-English; not a method)
+    Interaction        abstract method at S    (on Class only; dropped at code)
+
+Fidelity tags:
+    L  = language companion (prose; refined every stage - not a fidelity)
+    Mu = modules       (thin terms, one-way deps, build order - markdown / module-context)
+    Md = model         (I{Class} only - empty public props/ops; optional I{Class}ExampleFactory in factory file)
+    S  = specification (Class extends I{Class}; public filled; privates empty on Class;
+                       {Class}ExampleFactory modes in sibling factory file when Stories-bound)
+    C  = code          (fill remaining empties on Class; drop interactions)
+&quot;&quot;&quot;
+
+from __future__ import annotations
+from abc import ABC, abstractmethod
+
+
+# =============================================================================
+# FILE: {family_slug}.py - production family only (cohesive-file)
+# =============================================================================
+
+
+class I{ClassName}(ABC):                                                # Md
+    &quot;&quot;&quot;*{ClassName}* is - one sentence: what it is, its unique role.
+    Identity only. No relationship or behavior sentences here.&quot;&quot;&quot;     # L
+
+    # -- Public properties (empty interfaces) --------------------------------
+
+    @property                                                           # Md
+    @abstractmethod                                                     # Md
+    def {owned_property}(self) -&gt; {Type}: ...                           # Md
+
+    @property                                                           # Md
+    @abstractmethod                                                     # Md
+    def {plain_property}(self) -&gt; {Type}: ...                           # Md
+
+    # -- Public operations (empty interfaces) --------------------------------
+
+    @abstractmethod                                                     # Md
+    def __init__(self, {param}: {Type}) -&gt; None: ...                    # Md
+
+    @abstractmethod                                                     # Md
+    def {operation_name}(self, {param}: {Type}) -&gt; {ReturnType}: ...    # Md
+
+    @abstractmethod                                                     # Md
+    def {another_operation}(self) -&gt; {ReturnType}: ...                  # Md
+
+
+class {ClassName}(I{ClassName}):                                        # S
+    &quot;&quot;&quot;*{ClassName}* is - one sentence: what it is, its unique role.&quot;&quot;&quot;  # L
+
+    # -- Public properties (filled at specification) -------------------------
+
+    &quot;&quot;&quot;{sentence about this property - what it holds and why.}
+    @composition&quot;&quot;&quot;                                                     # S
+    @property                                                           # S
+    def {owned_property}(self) -&gt; {Type}:                               # S
+        ...                                                             # S
+
+    &quot;&quot;&quot;{sentence about this plain property.}&quot;&quot;&quot;                         # L
+    # Invariant: {constraint sentence - the rule in plain English.}    # S
+    @property                                                           # S
+    def {plain_property}(self) -&gt; {Type}:                               # S
+        ...                                                             # S
+
+    # -- Constructor / public operations (filled at specification) -----------
+
+    def __init__(self, {param}: {Type}) -&gt; None:                        # S
+        self._{plain_property} = {param}                                # S
+
+    &quot;&quot;&quot;{language bullet for this operation}&quot;&quot;&quot;                          # L
+    # Invariant: {constraint sentence applicable to this operation.}   # S
+    def {operation_name}(self, {param}: {Type}) -&gt; {ReturnType}:        # S
+        ...                                                             # S / C
+
+    def {another_operation}(self) -&gt; {ReturnType}:                      # S
+        &quot;&quot;&quot;{language bullet for this operation}&quot;&quot;&quot;                      # L
+        ...                                                             # S / C
+
+    # -- Private operations (empty interfaces at S; filled at C) -------------
+
+    &quot;&quot;&quot;{what this helper does}&quot;&quot;&quot;                                       # S
+    @abstractmethod                                                     # S
+    def _{private_helper}(self, {param}: {Type}) -&gt; {ReturnType}: ...   # S
+
+    def _{private_helper}(self, {param}: {Type}) -&gt; {ReturnType}:       # C
+        &quot;&quot;&quot;{what this helper does}&quot;&quot;&quot;                                   # S
+        ...                                                             # C
+
+    # -- Interactions (specification only; omit at code) ---------------------
+
+    @abstractmethod                                                     # S
+    def {interaction_summary_as_a_method_name}(self) -&gt; None:           # S
+        &quot;&quot;&quot;@interaction&quot;&quot;&quot;
+        ...
+
+
+# Subtype - delta only; parent members are inherited, not repeated     # Md/S
+class I{ChildClass}(ABC):                                               # Md
+    &quot;&quot;&quot;{delta - what {ChildClass} adds}&quot;&quot;&quot;                              # L
+
+    @abstractmethod                                                     # Md
+    def {delta_operation}(self, {param}: {Type}) -&gt; {ReturnType}: ...   # Md
+
+
+class {ChildClass}({ClassName}, I{ChildClass}):                         # S
+    &quot;&quot;&quot;{delta - what {ChildClass} adds or overrides}&quot;&quot;&quot;                 # L
+
+    def {delta_operation}(self, {param}: {Type}) -&gt; {ReturnType}:       # S/C
+        ...                                                             # S/C
+
+
+# =============================================================================
+# FILE: {type_slug}_example_factory.py - Stories factory (separate file)
+# from .{family_slug} import {ClassName}, I{ClassName}
+# Pattern only - no ExampleLoader base. examples[{example_key}] is a
+# multi-type bundle (not examples[{Type}][...]).
+# Fake / Isolated / Production are modes - not Fake{ClassName} subclasses.
+# =============================================================================
+
+
+class I{ClassName}ExampleFactory(ABC):                                  # Md
+    &quot;&quot;&quot;Loads examples[{example_key}] as Fake | Isolated | Production modes.&quot;&quot;&quot;  # L
+
+    @abstractmethod                                                     # Md
+    def load_{example_key}(self, *, mode: str = &quot;fake&quot;) -&gt; I{ClassName}: ...  # Md
+
+
+class {ClassName}ExampleFactory(I{ClassName}ExampleFactory):            # S
+    &quot;&quot;&quot;Fake: mock framework + examples; Isolated: {ClassName}(injected mocks);
+    Production: {ClassName}(real collaborators).&quot;&quot;&quot;                     # L
+
+    def load_{example_key}(self, *, mode: str = &quot;fake&quot;) -&gt; I{ClassName}:  # S
+        # examples[{example_key}] -&gt; I{ClassName} (+ peer types if needed)  # S
+        ...                                                             # S/C
+
+</code></pre></section>
+<section class="skill-cr-single illustrated-example"><h2>Illustrated example</h2><p>No illustrated example configured yet.</p></section>
+
+</div>
+</div>
+</main>
+<script src="../commons/catalog-foundry-tour.js?v=cdd-12"></script>
+<script src="../commons/catalog-foundry-skill-nav.js?v=cdd-12"></script>
+</body>
+</html>

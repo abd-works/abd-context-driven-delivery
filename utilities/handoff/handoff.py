@@ -12,7 +12,7 @@ import json
 from datetime import date
 from pathlib import Path
 
-from sessions import Session, docs_dir
+from workspace import Session, docs_dir
 from primitives.actions.action import action
 from tools.tool import tool, toolset
 

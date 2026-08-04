@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.__foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
+</script>
+<title>Context tools — CDD Catalog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="commons/site.css?v=foundry-33">
+<link rel="stylesheet" href="commons/foundry-catalog.css?v=cdd-12">
+<link rel="stylesheet" href="commons/cdd-board.css?v=cdd-12">
+
+<script src="commons/catalog-nav.js?v=foundry-10"></script>
+</head>
+<body data-nav-prefix="" data-nav-current="context-tools" data-nav-site-base="https://abd.works/">
+<main id="main-content">
+
+
+<div class="page-hero page-hero--foundry">
+  <div class="wrap">
+    <table class="page-hero__table" role="presentation">
+      <tr>
+        <td class="page-hero__cell page-hero__cell--title">
+          <h1 class="page-headline">Context tools</h1>
+          <p class="body-lead">Every context tool in the catalog</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+
+<div class="catalog-body">
+<div class="wrap">
+<div class="cap-grid"><a class="cap-card" href="context-tools/cdd.html"><p class="cap-card__title">Context-driven delivery</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Context-driven delivery</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="context-tools/stories.html"><p class="cap-card__title">Stories</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Stories</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="context-tools/clean_engineering.html"><p class="cap-card__title">Clean Engineering</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Clean Engineering</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="context-tools/ux.html"><p class="cap-card__title">User Experience</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">User Experience</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="context-tools/bdd.html"><p class="cap-card__title">Behavior-Driven Development</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Behavior-Driven Development</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="context-tools/ddd.html"><p class="cap-card__title">Domain-Driven Design</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Domain-Driven Design</p><p class="cap-card__more">Open →</p></a></div><div hidden><article class="context-tool-page" data-tool="Context-driven delivery">
+  <header><span class="badge">Context-driven delivery</span></header>
+  <div class="purpose-html"><p><strong>CDD</strong> (context-driven delivery) orchestrates practice contexts across delivery stages:</p>
+<p>&gt; <strong>Sketch labels</strong> are the user-facing names used when confirming active perspectives. &quot;Modules&quot; is preferred over &quot;clean_engineering&quot; in any AskQuestion prompt — it names the design concern, not the tool.</p>
+<p>CDD does <strong>not</strong> restate child rules. It picks <strong>stage + context(s)</strong>, sketches one engagement file, then pipes each row&#x27;s <code>run</code> message to <code>tools run</code>.</p>
+<p><strong>Defaults:</strong> grill + sketch first. AI decides <strong>order</strong> and which lenses to run. One sketch file steers themes, flow, and the action trail.</p>
+<hr>
+<h1>Contexts</h1></div>
+</article><article class="context-tool-page" data-tool="Stories">
+  <header><span class="badge">Stories</span></header>
+  <div class="purpose-html"><p>Map stakeholder and system interactions as behaviours that deliver a solution.</p>
+<p>Interactions fit into a hierarchy: a <code>StoryMap</code> of <code>Epic</code> → nestable <code>SubEpic</code> → <code>Story</code>. Each story is <code>Scenario</code>s with discrete steps; backgrounds and scenarios carry examples.</p>
+<p><strong>Templates</strong> live under <code>templates/</code> per format. <strong>Scanners</strong> read the canonical model only — never language syntax.</p>
+<hr></div>
+  <section class="fidelities cap-grid"><a class="cap-card fidelity-card" href="../fidelities/stories-story_map.html"><p class="cap-card__title">story-map</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a><a class="cap-card fidelity-card" href="../fidelities/stories-scenarios.html"><p class="cap-card__title">scenarios</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a><a class="cap-card fidelity-card" href="../fidelities/stories-acceptance_tests.html"><p class="cap-card__title">acceptance-tests</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a></section>
+</article><article class="context-tool-page" data-tool="Clean Engineering">
+  <header><span class="badge">Clean Engineering</span></header>
+  <div class="purpose-html"><p>Deepen OO design from modules toward production code. Each fidelity <strong>adds</strong> artifacts — do not invent detail from a deeper level.</p>
+<p><strong>Progression:</strong> <code>partition</code> (action) → <strong>scaffold</strong> → <strong>modules</strong> → <strong>model</strong> → <strong>code</strong>.</p>
+<hr></div>
+  <section class="fidelities cap-grid"><a class="cap-card fidelity-card" href="../fidelities/clean_engineering-modules.html"><p class="cap-card__title">modules</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a><a class="cap-card fidelity-card" href="../fidelities/clean_engineering-model.html"><p class="cap-card__title">model</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a><a class="cap-card fidelity-card" href="../fidelities/clean_engineering-code.html"><p class="cap-card__title">code</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a></section>
+</article><article class="context-tool-page" data-tool="User Experience">
+  <header><span class="badge">User Experience</span></header>
+  <div class="purpose-html"><p>UX looks at the product through user navigatin and information architecture, from layout and transitions to more formal screens, regions, and controls — how users see and act on the solution — mapped at increasing fidelity.</p>
+<p><strong>Canonical model</strong> (reuse, do not reinvent): <code>UxMap</code> → <code>Screen</code> → <code>Region</code> → <code>Control</code> → <code>Interaction</code>, plus <code>Transition</code>, <code>ContentType</code>, <code>NavComponent</code> on the map. Optional <code>UxContext</code> holds notes/invariants not visible on screens.</p>
+<p><strong>Layout (mirror Stories; colocated):</strong></p>
+<pre><code>sandbox/&lt;epic&gt;/
+  ux-map.json                              &lt;- canonical model (optional peer)
+  &lt;user-goal&gt;.html                        &lt;- mockup+ (one file per concrete user goal)
+  &lt;sub-epic&gt;/…_stories.py|.js
+  .context/
+    information-architecture.drawio        &lt;- ia (drawio-ux CLI: Detailed IA + Site Map)
+    ux-sketch.md                           &lt;- scratch sketch
+    ux-context.md                          &lt;- optional notes/invariants</code></pre>
+<p>Sketch/context MD stay in <code>.context/</code> (same pattern as other generators). Story / object-model JS stay where Stories / CE emit them; HTML imports those modules.</p>
+<p><strong>Stories + object model:</strong> <code>UxMap.story_references</code> / <code>object_references</code> store <strong>paths</strong> to Stories / Clean Engineering JS artifacts. If missing, run that generator’s <code>transform</code> to <code>javascript</code>. Mockup/spec HTML imports those paths.</p>
+<p><strong>Story Demo shell (mockup+):</strong> Generated HTML uses <code>templates/html/mockup_shell.html</code> — product screens <strong>LEFT</strong>, story explorer <strong>RIGHT</strong>. <code>story-demo/mount-generated-mockup.js</code> loads <code>create{Story}Story</code> exports, runs <code>PlayDualRunner</code>, and paints the explorer. Serve from <strong>repo root</strong> so <code>/context_tools/...</code> imports resolve.</p>
+<p><strong>Worked example:</strong> <code>context_tools/ux/examples/manage-customer-orders/</code> (Place New Order mockup + stories + shopping_cart domain) — general UX output sample that happens to run in the Story Demo shell.</p>
+<p><strong>One control model:</strong> <code>ux_model.Control</code> is vanilla. Controls that bind to GWT steps are <code>StoryDemoControl</code> (<code>bound_field</code> + <code>story_steps</code>) — HTML emits <code>data-bound-field</code> / <code>data-story-steps</code>. Do <strong>not</strong> invent a second page/control model in freehand HTML.</p>
+<p><strong>Interactive (domain-agnostic):</strong> <code>StoryDemoControl</code> may also carry <code>set_input</code>, <code>item_story_steps</code>, <code>item_value</code>, <code>item_label</code>. Emit:</p>
+<ul>
+<li><code>number</code> / <code>quantity</code> → <code>data-input-field</code></li>
+<li><code>bound-list</code> / <code>list-host</code> → <code>data-bound-list</code> + <code>data-bound-field</code> (expose path) + optional <code>data-item-story-steps</code> / <code>data-set-input</code>  </li>
+</ul>
+<p>Do <strong>not</strong> bake product words (catalog, cart) into the template — those are bound_field paths / story language only.</p>
+<p><strong>Markdown:</strong> optional context only (thinking, invariants, interaction notes). Primary path is <strong>drawio (IA) → html (mockup/spec)</strong>.</p>
+<p><strong>Layouts:</strong> catalog in <code>ux_model/layouts.py</code> (layout id → named slots). Use <code>Screen.apply_layout</code> to set layout and seed empty regions.</p>
+<p><strong>Channels:</strong> drawio, html, markdown, json — peer parse/render; <code>transform</code> moves sideways at the same fidelity. One <code>html</code> channel deepens by fidelity (js interactions → optional brand layer + honest stubs at <strong>mockup</strong> → real frontend at <strong>front_end_code</strong>; host FE stacks welcome at <strong>front_end_code</strong>).</p>
+<hr>
+<p>This skill operates at <strong>multiple levels of fidelity</strong>. Start from grill + sketch and deepen. Each level <strong>adds</strong> artifacts — do not invent detail from a deeper fidelity.</p>
+<p><strong>Templates (AI generate):</strong> drawio + html under <code>templates/</code>. Markdown context template optional. Other formats via channels / <code>transform</code>.</p>
+<p><strong>Cross-format scanners:</strong> channels parse into the canonical model; scanners read model fields only — never file syntax.</p>
+<hr></div>
+  <section class="fidelities cap-grid"><a class="cap-card fidelity-card" href="../fidelities/ux-ia.html"><p class="cap-card__title">information-architecture</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a><a class="cap-card fidelity-card" href="../fidelities/ux-mockup.html"><p class="cap-card__title">mockup</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a><a class="cap-card fidelity-card" href="../fidelities/ux-front_end_code.html"><p class="cap-card__title">front-end-code</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a></section>
+</article><article class="context-tool-page" data-tool="Behavior-Driven Development">
+  <header><span class="badge">Behavior-Driven Development</span></header>
+  <div class="purpose-html"><p>Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (<code>templates/bdd-sketch.md</code>).</p></div>
+  <section class="fidelities cap-grid"><a class="cap-card fidelity-card" href="../fidelities/bdd-modules.html"><p class="cap-card__title">modules</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a><a class="cap-card fidelity-card" href="../fidelities/bdd-behavior.html"><p class="cap-card__title">behavior</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a><a class="cap-card fidelity-card" href="../fidelities/bdd-development.html"><p class="cap-card__title">development</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a></section>
+</article><article class="context-tool-page" data-tool="Domain-Driven Design">
+  <header><span class="badge">Domain-Driven Design</span></header>
+  <div class="purpose-html"><p>Apply <strong>DDD</strong> — bounded contexts, aggregates, building blocks — on top of <strong>clean_engineering</strong>.</p>
+<p><strong><code>clean_engineering</code></strong> owns OO structure (modules → model → specification → code; language is a companion). Do not restate class/module analysis here. DDD starts at <strong>bounded_context</strong>: context maps, aggregates, then stereotypes and tactics.</p>
+<p>Each fidelity below is the whole story for that level. Call clean_engineering at the mapped fidelity. Do not fill details from a more detailed fidelity.</p>
+<hr>
+<h1>Contexts</h1></div>
+  <section class="fidelities cap-grid"><a class="cap-card fidelity-card" href="../fidelities/ddd-bounded_context.html"><p class="cap-card__title">bounded-context</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a><a class="cap-card fidelity-card" href="../fidelities/ddd-building_blocks.html"><p class="cap-card__title">building-blocks</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a><a class="cap-card fidelity-card" href="../fidelities/ddd-tactics.html"><p class="cap-card__title">tactics</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a></section>
+</article></div>
+</div>
+</div>
+</main>
+<script src="commons/catalog-foundry-tour.js?v=cdd-12"></script>
+<script src="commons/catalog-foundry-skill-nav.js?v=cdd-12"></script>
+</body>
+</html>

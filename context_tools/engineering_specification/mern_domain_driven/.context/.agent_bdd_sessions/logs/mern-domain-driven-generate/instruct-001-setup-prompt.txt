@@ -1,0 +1,2 @@
+Using shell, run exactly: python -m tools manifest context_tools.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven
+Return the complete manifest stdout (full fenced YAML; do not summarize).

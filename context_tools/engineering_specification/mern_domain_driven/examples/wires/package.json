@@ -1,0 +1,31 @@
+{
+  "name": "@wirepay/wires",
+  "version": "1.0.0",
+  "exports": {
+    ".": "./WirePaymentView.tsx",
+    "./app": "./app.ts",
+    "./recipients": "./recipients/recipients.ts",
+    "./recipients/recipient-server": "./recipients/recipient-server.ts",
+    "./recipients/recipient-client": "./recipients/recipient-client.tsx"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:server": "tsx serve.ts",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "cors": "^2.8.0",
+    "express": "^4.19.0",
+    "mongodb": "^6.7.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "tsx": "^4.0.0",
+    "vite": "^6.0.0"
+  }
+}

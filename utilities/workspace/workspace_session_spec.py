@@ -108,7 +108,7 @@ with description("WorkspaceSession on a BaseContextTool host"):
             ).to(be_true)
 
         with it("should expand kit tool instructions from workspace_session.md"):
-            from sessions.workspace_session import Session
+            from workspace.workspace_session import Session
 
             tools = _discover_tools(self.host.workspace)
             expect(isinstance(self.host.workspace, Session)).to(be_true)
@@ -160,8 +160,8 @@ with description("WorkspaceSession on a BaseContextTool host"):
 with description("a Session with a name and path"):
     with before.each:
         self.tmp = Path(tempfile.mkdtemp(prefix="session_props_"))
-        from sessions.workspace_session import Session
-        from sessions.session_log import SessionLog
+        from workspace.workspace_session import Session
+        from workspace.session_log import SessionLog
         SessionLog.set_instance(None)
         self.session = Session(path=str(self.tmp), name="my-sprint")
 
@@ -185,7 +185,7 @@ with description("a Session with a name and path"):
 
     with it("should return a dict with all fields via to_dict"):
         # Arrange
-        from sessions.workspace_session import Session
+        from workspace.workspace_session import Session
         s = Session(path=str(self.tmp), name="sprint-1", goal="ship it",
                     fidelities="behavior", contexts="bdd")
         # Act
@@ -200,7 +200,7 @@ with description("a Session with a name and path"):
 
 with description("a Session without a name"):
     with it("should raise ValueError when folder is accessed"):
-        from sessions.workspace_session import Session
+        from workspace.workspace_session import Session
         s = Session(path=".")
         # Act / Assert
         raised = False
@@ -215,7 +215,7 @@ with description("a Session that is loaded"):
     with context("with no existing session.md"):
         with it("should return a Session with path and name set and no goal"):
             import tempfile
-            from sessions.workspace_session import Session
+            from workspace.workspace_session import Session
             tmp = Path(tempfile.mkdtemp(prefix="session_load_"))
             # Act
             s = Session.load(str(tmp), "no-file")
@@ -227,7 +227,7 @@ with description("a Session that is loaded"):
     with context("with an existing session.md"):
         with it("should return a Session with fields parsed from the file"):
             import tempfile
-            from sessions.workspace_session import Session
+            from workspace.workspace_session import Session
             tmp = Path(tempfile.mkdtemp(prefix="session_load_existing_"))
             s = Session(path=str(tmp), name="loaded-sprint", goal="test goal",
                         fidelities="development")
@@ -242,7 +242,7 @@ with description("a Session that is loaded"):
 with description("a Session that is started"):
     with it("should create the session.md file at the sprint folder path"):
         import tempfile
-        from sessions.workspace_session import Session
+        from workspace.workspace_session import Session
         tmp = Path(tempfile.mkdtemp(prefix="session_started_"))
         s = Session(path=str(tmp), name="start-test", goal="build feature")
         # Act
@@ -256,7 +256,7 @@ with description("a Session that is started"):
 with description("a Session that is closed"):
     with it("should write an End section with outcome into session.md"):
         import tempfile
-        from sessions.workspace_session import Session
+        from workspace.workspace_session import Session
         tmp = Path(tempfile.mkdtemp(prefix="session_closed_"))
         s = Session(path=str(tmp), name="close-test")
         s.ensure_started()
@@ -270,8 +270,8 @@ with description("a Session that is closed"):
 
 with description("a Session tool"):
     with before.each:
-        from sessions.workspace_session import Session
-        from sessions.session_log import SessionLog
+        from workspace.workspace_session import Session
+        from workspace.session_log import SessionLog
         SessionLog.set_instance(None)
         self.tmp = Path(tempfile.mkdtemp(prefix="session_tool_"))
         self.session = Session(path=str(self.tmp))
@@ -306,8 +306,8 @@ with description("a Session tool"):
     with context("read_context_index"):
         with it("should return a missing message when no context-index.md exists"):
             # Arrange: session with workspace pointing at an empty tmp dir
-            from sessions.workspace_session import Session
-            from sessions.session_log import SessionLog
+            from workspace.workspace_session import Session
+            from workspace.session_log import SessionLog
             SessionLog.set_instance(None)
             fresh_tmp = Path(tempfile.mkdtemp(prefix="session_read_idx_"))
             session = Session(path=str(fresh_tmp), workspace=str(fresh_tmp))
@@ -319,9 +319,9 @@ with description("a Session tool"):
         with context("when a context-index.md exists"):
             with it("should return the file contents"):
                 # Arrange
-                from sessions.workspace_session import Session
-                from sessions.session_log import SessionLog
-                from sessions.context_index import ContextIndex
+                from workspace.workspace_session import Session
+                from workspace.session_log import SessionLog
+                from workspace.context_index import ContextIndex
                 SessionLog.set_instance(None)
                 idx_tmp = Path(tempfile.mkdtemp(prefix="session_read_idx_exist_"))
                 ContextIndex.upsert_entry(str(idx_tmp), "mytool", "fixtures/my-tool")
@@ -341,13 +341,13 @@ with description("a Session tool"):
 
 with description("docs_dir"):
     with it("should return a sprint folder unchanged when the parent is 'sessions'"):
-        from sessions.session import SessionPaths
+        from workspace.session import SessionPaths
         sprint = Path("/work/.context/sessions/my-sprint")
         # Act / Assert
         expect(SessionPaths.docs_dir(sprint)).to(equal(sprint))
 
     with it("should return path/.context for a working area path"):
-        from sessions.session import SessionPaths
+        from workspace.session import SessionPaths
         working = Path("/work/sandbox")
         # Act / Assert
         expect(SessionPaths.docs_dir(working)).to(equal(working / ".context"))

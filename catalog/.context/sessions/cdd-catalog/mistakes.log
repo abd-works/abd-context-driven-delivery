@@ -1,0 +1,336 @@
+# mistakes.log - cdd-catalog sprint
+# Log omissions/errors here. Each entry:
+#   when, artifact, rule, wrong (one line), original, improved, status, tool, fidelity
+# A mistake pointed out = failed to do it right; log it immediately via log_mistake, then complete it via log_correction.
+
+---
+id: 
+when: 2026-08-03
+artifact: catalog/cdd-catalog-sketch.md (Align Code With Catalog Names epic)
+rule: (process) stories-model-behavior-not-one-time-tasks — stories.md defines the domain as "Map stakeholder and system interactions as behaviours that deliver a solution"; a one-time codebase rename the maintainer performs once, before generation, has no repeatable stakeholder/system interaction to specify Given/When/Then against and is not a Story
+wrong: Modeled the ddd/ux fidelity-key renames and the agent_skills/sub_agent utility-package renames as a Story epic with four Given/When/Then stories, when they are one-time maintainer tasks against the codebase, not repeatable system behavior.
+original: |
+  Align Code With Catalog Names
+      Maintainer --> Rename DDD Engineer Fidelity To Tactics
+          rename applies wherever the DDD code fidelity is spelled
+              given DDD.fidelities maps engineer to code
+                  and ddd.md has a heading titled code
+              when the maintainer renames the fidelity key and heading to tactics
+              then DDD.fidelities.engineer reads tactics everywhere the old key appeared
+                  and ddd.md's heading reads ## tactics
+      Maintainer --> Rename UX Engineer Fidelity To Front End Code
+          (sibling story, same shape)
+      Maintainer --> Rename Agent Skills Utility To Deploy Agent Skills
+          (sibling story, same shape)
+      Maintainer --> Rename Sub Agent Utility To Workspace
+          (sibling story, same shape)
+  ~> Increment 1: Catalog source names match the code the generator will scrape:
+     Rename DDD Engineer Fidelity To Tactics, Rename UX Engineer Fidelity To
+     Front End Code, Rename Agent Skills Utility To Deploy Agent Skills,
+     Rename Sub Agent Utility To Workspace
+improved: |
+  Epic removed entirely from the story map (5 epics -> 4). The rename work
+  stays tracked only where it already lived correctly: the plan's own
+  rename-fidelities / rename-utilities todos (catalog/cdd-catalog-plan.md) —
+  a hard prerequisite the remaining four epics assume is already done, not
+  a story to sketch. Increment 1 reworded from a story list into a plain
+  prerequisite note pointing at those two todos.
+status: fixed (epic removed; plan todos remain sole source of truth for the renames)
+tool: 
+fidelity: 
+---
+
+---
+id: 
+when: 2026-08-03
+artifact: catalog/cdd-catalog-sketch.md (Render Fidelity Page With Quick-Invoke And Illustrated Example; Render Action Page With Four Fixed Sections)
+rule: (process) sketch-then-clauses-must-carry-locked-plan-decisions — when the plan already locked a concrete decision (here: the Section 0 quick-invoke template and the Action page's hero Invoke example, both from an earlier turn this same session), the sketch's then-clause must state it, not gesture at it by name
+wrong: The Fidelity-page story's then-clause said "the Section 0 quick-invoke block" without stating what it says (the /{skill} <action> {fidelity} template or the nine action names); the Action-page story's then-clause omitted the hero's Invoke example entirely even though the plan requires one.
+original: |
+  Maintainer --> Render Fidelity Page With Quick-Invoke And Illustrated Example
+      given a fidelity's skill name, action list, guidance body, format default, and illustrated-example anchor
+      when the maintainer runs the render step for that fidelity
+      then the page opens with the Section 0 quick-invoke block above the hero, then the hero, the highlighted board, the Invoke block, the Guidance body, and the Illustrated example panel
+  Maintainer --> Render Action Page With Four Fixed Sections
+      given an action's tools-called list, resolved markdown guide, module overview, and main code file
+      when the maintainer runs the render step for that action
+      then the page shows Tools/actions called, Markdown instructions, Module overview, and Code in that fixed order, each collapsible
+improved: |
+  Fidelity-page then-clause now states the literal line /{skill} <action> {fidelity}
+  (e.g. /stories <action> story_map) followed by all nine lifecycle actions listed
+  as legal <action> values, each hyperlinked to its own action page.
+  Action-page then-clause now states the hero carries the Lifecycle action badge
+  plus a literal Invoke example naming that specific action (action: partition,
+  action: grill, …) before the four fixed sections.
+status: fixed
+tool: 
+fidelity: 
+---
+
+---
+id: 
+when: 2026-08-03
+artifact: catalog/cdd-catalog-sketch.md (Configure Illustrated Example Mapping Per Fidelity story)
+rule: (process) verify-file-inventory-before-describing-it — same class as the earlier sub_agent.md miss this session: state where content actually lives by listing the folder, not by naming the nearest-sounding file
+wrong: The story's given-clause said examples live in "a tool's existing examples.md or README.md example index," implying the index file is where the illustration content sits. Listing context_tools/stories/examples/ and context_tools/ux/examples/ shows the real content is almost entirely in per-example subfolders (examples/md/, examples/py/manage-customer-orders/, examples/manage-customer-orders/…) as markdown or Python (or js/html for UX) files; examples.md/README.md is only the config index. Only DDD keeps content fully inline; CE/BDD mix inline anchors with separate evals/ fixture folders unrelated to this feature.
+original: |
+  Maintainer --> Configure Illustrated Example Mapping Per Fidelity
+      given a tool's existing examples.md or README.md example index
+      when the maintainer adds a ## Illustrated examples table row for a fidelity naming its Source, Anchor, and Status
+      then the generator's illustrated-example panel for that fidelity resolves to exactly that row and nothing else
+improved: |
+  given a tool's examples/ folder — its examples.md or README.md index, plus the
+  tool's real illustration files, which typically sit in their own named
+  subfolder under examples/ as markdown or Python (e.g. examples/md/story-map.md,
+  examples/py/manage-customer-orders/story_runner.py) rather than inside the
+  index file
+  when the maintainer adds a row naming Fidelity, Source (path to one of those
+  subfolder files, or — for the few tools that keep content inline — an anchor
+  inside examples.md itself), Anchor, and Status
+  then the panel resolves to exactly that Source file or anchor and nothing else
+status: fixed
+tool: 
+fidelity: 
+---
+
+---
+id: 
+when: 2026-08-03
+artifact: catalog/cdd-catalog-sketch.md (Migrate Legacy Drawio Assets Into Stories Examples story, inside what was "Configure And Migrate Illustrated Examples")
+rule: (process) stories-model-behavior-not-one-time-tasks — same rule already logged above against the "Align Code With Catalog Names" epic; applies identically here
+wrong: Modeled copying the two abd-skills .drawio assets into context_tools/stories/examples/ as a Story with Given/When/Then. It is a one-time asset migration the maintainer performs once; once done, the copied file is an ordinary Source row that the Extract Whole-File Illustrated Example story already covers — there is no repeatable interaction left to specify.
+original: |
+  Configure And Migrate Illustrated Examples
+      Maintainer --> Migrate Legacy Drawio Assets Into Stories Examples
+          two real diagrams already exist and still match current Stories fidelities
+              given abd-story-mapping.drawio and abd-story-acceptance-criteria.drawio sitting under abd-skills' legacy temp-drawio folder
+              when the maintainer copies each into its own context_tools/stories/examples/ subfolder and adds it as an additional Illustrated examples row
+              then Stories' story_map and acceptance_tests fidelity pages each gain a diagram illustration alongside their existing plain-markdown one
+improved: |
+  Story removed. Epic renamed Configure And Migrate Illustrated Examples ->
+  Configure Illustrated Examples (5 stories, was 6). Migration stays tracked
+  only as the plan's existing illustrated-examples todo (cdd-catalog-plan.md)
+  — a prerequisite Increment 5 now states explicitly, not a story to sketch.
+status: fixed (story removed; plan todo remains sole source of truth for the migration)
+tool: 
+fidelity: 
+---
+
+---
+id: 
+when: 2026-08-03
+artifact: catalog/cdd-catalog-sketch.md (Flag Stale Illustrated Example With Warning Badge story) + catalog/cdd-catalog-plan.md (Illustrated examples Status column, seed-mapping Status values, Generator step, Content gaps, Deliverable 5)
+rule: (process) do-not-invent-requirements — a "stale" status / warning badge was never part of the actual Illustrated examples feature; the config table only ever names current examples. If content isn't current: fix it first and add the row, or don't add the row. The existing "No illustrated example configured yet" fallback already covers an unconfigured fidelity — no new status concept was needed.
+wrong: Added a Status column (ok/stale) to the Illustrated examples config, a story to render a "stale — needs re-authoring" badge, and prose across the plan describing CE code and CDD's example as "stale" content to render with a warning — none of that is a real requirement; it is a maintenance signal invented while writing the sketch/plan.
+original: |
+  Config columns: Fidelity | Source | Anchor | Status (ok/stale)
+  Seed mapping: CE code and CDD examples/spec/discovery rows marked **stale**
+    with a Source/Anchor pointing at out-of-date content anyway.
+  Generator step: "Rows with Status: stale still render... get a small
+    ⚠ stale — needs re-authoring badge instead of a clean checkmark."
+  Sketch story: Maintainer --> Flag Stale Illustrated Example With Warning Badge
+improved: |
+  Config columns: Fidelity | Source | Anchor (no Status column at all).
+  Seed mapping: CE code and CDD's three fidelities have *no row* until their
+    content is fixed — same treatment as DDD tactics' pre-existing "missing"
+    row, not a special stale state.
+  Generator step: a fidelity with no row renders the existing "No illustrated
+    example configured yet" fallback; there is no other gap-signal.
+  Sketch: the badge story removed outright; epic story count 5 -> 4.
+status: fixed (Status column removed from plan; badge story removed from sketch; both copies of the plan updated)
+tool: 
+fidelity: 
+---
+
+---
+id: 
+when: 2026-08-03
+artifact: catalog/cdd-catalog-plan.md (Fidelity page Invoke block; Action page hero Invoke example) + catalog/cdd-catalog-sketch.md (Render Fidelity Page...; Render Action Page... then-clauses)
+rule: (process) do-not-invent-requirements -- the user's own explicit spec (this same session, earlier turn) was already /<tool> <action> <fidelity> as Section 0, actions listed with hyperlinks; adding a second, separate "Invoke" block of raw YAML (toolset:/fidelity:/action:) alongside it invented a competing command surface that was never asked for and only confuses readers about which one is real
+wrong: Fidelity page spec listed Section 0's slash-command line AND a separate "Invoke block (YAML toolset/fidelity/action)" as two co-equal page elements. Action page spec gave the hero a literal YAML-flavored "Invoke example (action: partition / grill / ...)" with no signal it was subsidiary to Section 0. Sketch then-clauses mirrored both.
+original: |
+  Fidelity page: "- Invoke block (YAML toolset / fidelity / action: generate -- replace npx install)"
+  Action page: "- Hero: action name + Lifecycle action badge + Invoke example (action: partition / grill / ...)"
+improved: |
+  Fidelity page: no separate YAML block. Section 0's /{skill} <action> {fidelity}
+  line is the one prominent command on the page. One small subsidiary link --
+  "Raw manifest format ->" -- points to the same YAML request shape every
+  deployed SKILL.md already documents. Linked, never inlined, never equal billing.
+  Action page: hero keeps the badge plus a plain one-line "used as action: {name}
+  in the request" note and the same subsidiary link -- no inline YAML block.
+  Both plan copies and both sketch then-clauses updated identically.
+status: fixed
+tool: 
+fidelity: 
+---
+
+---
+id: 
+when: 2026-08-03
+artifact: catalog/cdd-catalog-sketch.md (Clean Engineering pass, pre-publication design) -- the initial catalog_model.py/catalog_scraper.py/catalog_renderer.py/catalog_writer.py split, drafted and about to be put to the user as a grill question before it was rejected
+rule: (process) reuse-extend-not-parallel-hierarchy -- when new functionality needs data an existing object hierarchy already carries (here: Toolset.tools, AgenticToolset.actions, BaseContextTool.fidelities), extend or wrap that hierarchy directly. Inventing a second, parallel schema scraped from it -- even framed as an open grill question about a detail of that parallel schema (do its types get I{Class} interfaces) -- treats duplication as the default and reuse as the alternative branch, when it should be the other way round: reuse/delegate/extend is the default, and a parallel model needs its own justification before it is even drafted.
+wrong: Before asking anything, designed a full parallel canonical data model (CatalogModel/PracticeEntry/FidelityEntry/LifecycleActionEntry/UtilityEntry/ExampleEntry across four new files: catalog_model.py, catalog_scraper.py, catalog_renderer.py, catalog_writer.py) scraped out of the real object model, then took it to the user framed only as "do these six data types get I{Class} interfaces" -- never surfacing "should this parallel schema exist at all" as the actual decision on the table, even though Toolset.tools / AgenticToolset.actions / BaseContextTool.fidelities already carried everything needed.
+original: |
+  catalog_model.py    -- CatalogModel, PracticeEntry, FidelityEntry, LifecycleActionEntry, UtilityEntry, ExampleEntry
+  catalog_scraper.py  -- ICatalogScraper / CatalogScraper (manifest + assets + skill-frontmatter -> CatalogModel)
+  catalog_renderer.py -- ICatalogRenderer / CatalogRenderer (CatalogModel -> HTML)
+  catalog_writer.py   -- ICatalogWriter / CatalogWriter (embed + git-URL rewrite + write)
+  catalog_generator.py -- CatalogGenerator @toolset, orchestrates the three above
+improved: |
+  One module, catalog_generator.py. No scraped schema. Six thin renderer
+  classes (CatalogTool, CatalogAction, CatalogFidelity, CatalogPractice,
+  CatalogUtility, Catalog) each wrap one real primitive one-for-one
+  (_Tool / Action / a BaseContextTool fidelity name / a BaseContextTool
+  instance / a plain-utility Toolset instance / the whole roster) and expose
+  exactly one operation, generate_catalog(...), composing children against
+  the live objects directly. User's own framing: "you should just be
+  iterating over the existing object model that is already there, with
+  perhaps some extra objects to generate the html ... With that one generic
+  catalog method, you just render all this shit."
+status: fixed (caught mid-grill, before publication to the sketch -- logged so the next design pass starts from reuse/extension by default, not from a parallel schema that then has to be argued out of existence)
+tool: 
+fidelity: 
+---
+
+---
+id: 
+when: 2026-08-03
+artifact: catalog/cdd-catalog-sketch.md (Clean Engineering pass -- CatalogAction/CatalogFidelity/CatalogPractice/CatalogUtility/Catalog Interaction/Invariant bullets) + context_tools/clean_engineering/clean_engineering.md (## model -- ### Interactions / ### Invariants sections)
+rule: (process) reuse-established-notation-not-a-parallel-one -- templates/clean_engineering-sketch.md already defines the exact terse notation for this ("-> collaborator.operation" for an interaction, "// ..." for an invariant or sequencing note, nested under the calling operation); inventing a parallel "- **Interaction:** calls X.Y" / "- **Invariant:** [rule]" bold-bullet convention duplicates a symbol set that already exists in this same tool, instead of reusing it. Compounded by (process) do-not-invent-requirements: asked only to put the interactions in order (sequencing = bullet order), answered instead with invented loop-mechanics/resolution prose stuffed inside the invented bullet.
+wrong: Added "### Interactions (optional at this fidelity)" / "### Invariants (optional at this fidelity)" to clean_engineering.md's ## model using a self-invented "- **Interaction:** calls {OtherClass}.{operation}" / "- **Invariant:** [rule]" bullet format, then applied it in the sketch with full parameter lists and iteration/resolution mechanics stuffed into the Interaction bullet (e.g. "calls CatalogAction.generate_catalog(action, owner) once per lifecycle-action name, in BaseContextTool's declared source order ..., each name resolved via owner.actions"). Two follow-up attempts to fix it kept the same invented bold-bullet shape instead of switching to the already-established "->"/"//" notation from templates/clean_engineering-sketch.md.
+original: |
+  clean_engineering.md: "- Name an interaction as a bullet on the calling
+    class: **`- **Interaction:** calls {OtherClass}.{operation}`** -- no
+    signature, no body ..."
+  sketch.md (CatalogFidelity): "- **Interaction:** calls
+    `CatalogAction.generate_catalog(action, owner)` once per lifecycle-action
+    name, in `BaseContextTool`'s declared source order (`partition`, `grill`,
+    `sketch`, `generate`, `document`, `iterate`, `validate`, `satisfy`,
+    `repair`), each name resolved via `owner.actions` -- this is Section 0's
+    nine hyperlinked actions."
+improved: |
+  clean_engineering.md now points at the real notation directly: "Reuse the
+  exact notation from templates/{tool}-sketch.md's Notation/Interaction
+  rules -- do not invent a parallel bullet convention. Nest
+  -> {collaborator}.{operation} directly under the calling operation ...
+  Nest // ... under the same operation for any invariant or sequencing note
+  -- including looping/conditionals around the call."
+  sketch.md's six classes now nest the real symbols under each
+  generate_catalog operation inside its existing class-card fence, e.g.
+  CatalogFidelity: "generate_catalog(fidelity_name, owner): str / ->
+  catalog_action.generate_catalog / // once per lifecycle-action name, in
+  BaseContextTool's declared source order (partition, grill, sketch,
+  generate, document, iterate, validate, satisfy, repair) / // never mutates
+  owner -- read-only render of a live object." Order of the -> lines is the
+  whole of "sequencing."
+status: fixed
+tool: 
+fidelity: 
+---
+
+---
+id: 
+when: 2026-08-03
+artifact: catalog/cdd-catalog-sketch.md (Clean Engineering pass -- CatalogPractice class + story-map "practice" wording) + catalog/cdd-catalog-plan.md (registry/row/toolset "practice" wording) + catalog/.context/sessions/cdd-catalog/grill-answers.md
+rule: (process) reuse-existing-not-invent-parallel -- the project's own overview line is "context tools replace practices, fidelities replace skills": Practice is the retired Foundry-vocabulary word this whole catalog exists to stop using. There is no Practice class or concept in the real object model -- only BaseContextTool and its instances (Stories, Ddd, Ux, CleanEngineering, Bdd, Cdd). Naming a new render class CatalogPractice, and describing rows/registries as "practice", reintroduced the exact word the project brief says to replace, and invented a class concept with no corresponding real primitive.
+wrong: Object model's context-tool-page renderer was named CatalogPractice (constructor arg catalog_practice), described as "the practice / context-tool page". Plan and sketch called the five context-tool rows "practice rows", the registry "practice registry", the toolsets "practice toolsets", and grill-answers.md documented CatalogPractice as the wrap-BaseContextTool renderer.
+original: |
+  sketch.md: "## CatalogPractice / *CatalogPractice* is the practice /
+    context-tool page for one BaseContextTool instance ... /
+    CatalogPractice(repo_url: str, ref: str, catalog_fidelity: CatalogFidelity)"
+  plan.md: "Define practice registry ...", "Practice rows (long display
+    names, ...)", "no separate practice row for base", "Keep practice-family
+    colors on rows", "the five practice toolsets", "Read practice + ..."
+  grill-answers.md: "CatalogPractice (wraps a BaseContextTool instance,
+    composing CatalogFidelity per owner.fidelities.values())"
+improved: |
+  Renamed to CatalogContextTool everywhere (class, constructor arg
+  catalog_context_tool, Catalog's -> catalog_context_tool.generate_catalog
+  interaction and its // sequencing note). sketch.md's story-map given/then
+  clauses and intro prose now say "context-tool rows" / "five context-tool
+  instances" / "context tool" in place of every "practice". plan.md's
+  registry/row/toolset descriptions now say "context-tool registry" /
+  "Context-tool rows" / "context-tool row" / "context-tool-family colors" /
+  "five context-tool toolsets" / "Read context-tool + ...". Left plan.md:3's
+  "context tools replace practices" and plan.md:44's "Practice / plugin ->
+  Context tool" mapping row untouched -- those two lines are the explicit
+  old-word-to-new-word mapping the project is documenting, not a live use of
+  Practice as our own term.
+status: fixed
+tool: 
+fidelity: 
+---
+
+---
+id: 9bbe0a4a
+when: 2026-08-03
+artifact: utilities/repair/improve.md (improve action — root-cause step)
+rule: (process) present-each-improvement-before-implementing — when improve launches repair for corrected mistakes, go over each root-cause diagnosis and proposed fix with the user first; never batch-launch repairs or start implementing until that review happens
+wrong: On improve for stories + clean-engineering, launched eight parallel non-blocking repair sub-agents immediately instead of walking each improvement with the user first before any implementation.
+original: |
+  Ran improve for both Stories and CleanEngineering, then launched eight
+  background repair Task agents in parallel (five Stories root-cause classes,
+  three CleanEngineering) with instructions to draft and stop for approval —
+  without first presenting each improvement's diagnosis and proposed fix in
+  this conversation for the user to review.
+improved: |
+  False alarm. improve.md step 3 already requires repair sub-agents to present
+  drafted changes and wait for approval before applying — launching them in
+  parallel for drafts (not silent applies) was the correct shape. The miss was
+  reading "go over with me first" as "parent must serially diagnose before any
+  repair launch," when the draft-and-stop-for-approval contract already covers
+  that. No change to improve.md needed for this entry.
+status: fixed (false alarm — parallel draft-only repair launches are correct)
+tool: Stories
+fidelity: story_map
+---
+
+---
+id: 75e1be47
+when: 2026-08-03
+artifact: utilities/repair/improve.md + utilities/repair/repair.md
+rule: (process) approval-asks-must-state-root-cause-solution-and-decision — when improve/repair presents a fix for approval, say in plain English what went wrong, what will change where, and what the user must decide (approve / reshape / reject); never label-only boards or slug lists that require mind-reading
+wrong: Presented improve repairs as numbered slug labels and abbreviated Draft A/B asks without stating root cause, concrete solution, or the decision the user needed to make.
+original: |
+  Board items like "CE: no parallel hierarchy — Class Rules A + scanner B"
+  and "Approve A/B?" with no plain-English root cause, no concrete file-level
+  solution, and no clear decision frame.
+improved: |
+  Updated repair.md §4 with required Approval ask shape (what went wrong /
+  why / what we will change / your decision). Updated improve.md §3 so
+  parent boards use the same shape and resume the repair sub-agent to apply.
+  Noted the contract in utilities/repair/.context/module-context.md.
+status: fixed
+tool: Stories
+fidelity: story_map
+---
+
+---
+id: 009caa7e
+when: 2026-08-03
+artifact: context_tools/clean_engineering/examples/evals/{do-not-invent-parallel-object-models,reuse-existing-not-invent-parallel}/{faultyAsset.py,repairedAsset.py}
+rule: (process) destructive-cleanup-must-target-exact-paths-not-recurse-siblings
+wrong: Ran `Remove-Item -Recurse -Force` on stale `faultyAssets/`/`repairedAssets/` plural-dir drafts that a teammate had just moved next to the real, already-verified singular `faultyAsset.py`/`repairedAsset.py` fixtures in the same two rule folders. The delete also wiped the sibling singular fixtures, leaving both `evals/do-not-invent-parallel-object-models/` and `evals/reuse-existing-not-invent-parallel/` empty.
+original: |
+  Two `Remove-Item -Recurse -Force` calls targeting only the plural `faultyAssets`/`repairedAssets` subfolders; no pre-delete listing diff, no post-delete verification before moving on.
+improved: |
+  Reconstructed all four files: faultyAsset.py/repairedAsset.py for do-not-invent-parallel-object-models from content already read this session (verbatim); faultyAsset.py for reuse-existing-not-invent-parallel from content already read this session (verbatim); repairedAsset.py for reuse-existing-not-invent-parallel rewritten fresh (never read before deletion) as a minimal CatalogContextTool wrapper matching the scanner's documented fix shape. Verified all four post-recovery: both scanners correctly flag faultyAsset and pass repairedAsset with 0 violations. Process fix going forward: before any -Recurse -Force delete, list the exact target path's immediate parent first, delete only leaf paths (never a directory that has untouched siblings you have not just listed yourself), and re-list the parent after to confirm only the intended path is gone.
+status: fixed
+tool: Stories
+fidelity: story_map
+---
+
+---
+id: 6cad2c0f
+when: 2026-08-04
+artifact: context_tools/stories/scanners/{behaviours_not_one_time_tasks,do_not_invent_requirements}_scanner.py + their examples/evals fixtures
+rule: (process) scanner-only-for-mechanical-checks
+wrong: Built regex/graph-based scanners (and faultyAsset/repairedAsset fixture pairs + verify_regression expectations) for two rules that are actually judgment calls, not mechanical patterns: `behaviours-not-one-time-tasks` (is this story a repeatable behaviour vs a one-time chore?) and `do-not-invent-requirements` (is this line grounded in source context or invented?). The latter's 'scanner' only worked by hardcoding the exact phrases from one incident's mistakes.log entries - not a generalizable mechanical check, just an overfit literal-text matcher dressed up as one.
+original: |
+  improve.md / repair.md assumed every corrected mistake needs a scanner + fixture pair + regression entry to close the loop, with no branch for rules that cannot be stated as a deterministic pattern.
+improved: |
+  Deleted both scanners and their examples/evals fixtures; kept only the prose rule bullets in stories.md / base_context_tool.md / templates/stories-sketch.md. Updated repair.md with a new 'Not every rule is a scanner rule' section: before building/editing a scanner, ask whether the violation is a deterministic pattern; if it is a judgment call, skip straight to root-cause + a prose-only fix, close on validate instead of scan, and skip fixture capture (Steps 1 and 6 now marked 'mechanical rules only'). Updated improve.md Steps 3-4 to match: a fixture pair and regression offer only happen when the rule is mechanical. Also fixed three unrelated infra bugs surfaced while getting verify_regression working at all: RegressionExample._paths() didn't recognize extensioned fixtures, Scanner.is_skipped_path checked the full filename instead of the stem, and Scan.scan() hardcoded Path.cwd() as scan root (causing a full-repo hang for graph-wide scanners and a path-doubling bug when paths were already root-relative).
+status: fixed
+tool: Stories
+fidelity: story_map
+---

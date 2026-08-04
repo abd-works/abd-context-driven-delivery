@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>repair — raw request format</title>
+<style>
+body{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0f1115;color:#e8eaed;padding:2rem;line-height:1.45;}
+h1{color:#f97316;font-size:1.25rem;}
+h2{margin-top:2rem;font-size:1rem;color:#fb923c;}
+pre{background:#1a1d24;padding:1rem;overflow:auto;border-radius:6px;}
+a{color:#fb923c;}
+p{color:#9aa0a6;}
+</style>
+</head>
+<body>
+<h1>action: repair</h1>
+<p>Request YAML for <code>python -m tools run</code>, built from each context tool&rsquo;s live manifest signature (<code>Cls.manifest</code> / <code>python -m tools manifest</code>).</p>
+<section>
+<h2>Context-driven delivery</h2>
+<p class="install-source"><a href="../cdd/repair.yaml">cdd/repair.yaml</a></p>
+<pre><code>toolset: context_tools.cdd.cdd:Cdd
+context:
+  fidelity: &lt;fidelity&gt;
+  format: null
+  path: null
+  session: null
+action: repair
+arguments:
+  asset: &lt;asset&gt;
+  violation: &lt;violation&gt;
+</code></pre>
+</section>
+<section>
+<h2>Stories</h2>
+<p class="install-source"><a href="../stories/repair.yaml">stories/repair.yaml</a></p>
+<pre><code>toolset: context_tools.stories.stories:Stories
+context:
+  fidelity: &lt;fidelity&gt;
+  format: null
+  path: null
+  session: null
+  workspace: null
+action: repair
+arguments:
+  asset: &lt;asset&gt;
+  violation: &lt;violation&gt;
+</code></pre>
+</section>
+<section>
+<h2>Clean Engineering</h2>
+<p class="install-source"><a href="../clean_engineering/repair.yaml">clean_engineering/repair.yaml</a></p>
+<pre><code>toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: &lt;fidelity&gt;
+  format: null
+  path: null
+  session: null
+  workspace: null
+action: repair
+arguments:
+  asset: &lt;asset&gt;
+  violation: &lt;violation&gt;
+</code></pre>
+</section>
+<section>
+<h2>User Experience</h2>
+<p class="install-source"><a href="../ux/repair.yaml">ux/repair.yaml</a></p>
+<pre><code>toolset: context_tools.ux.ux:Ux
+context:
+  fidelity: &lt;fidelity&gt;
+  format: null
+  path: null
+  session: null
+  workspace: null
+action: repair
+arguments:
+  asset: &lt;asset&gt;
+  violation: &lt;violation&gt;
+</code></pre>
+</section>
+<section>
+<h2>Behavior-Driven Development</h2>
+<p class="install-source"><a href="../bdd/repair.yaml">bdd/repair.yaml</a></p>
+<pre><code>toolset: context_tools.bdd.bdd:Bdd
+context:
+  fidelity: &lt;fidelity&gt;
+  format: null
+  path: null
+  session: null
+  workspace: null
+action: repair
+</code></pre>
+</section>
+<section>
+<h2>Domain-Driven Design</h2>
+<p class="install-source"><a href="../ddd/repair.yaml">ddd/repair.yaml</a></p>
+<pre><code>toolset: context_tools.ddd.ddd:Ddd
+context:
+  fidelity: &lt;fidelity&gt;
+  format: null
+  path: null
+  session: null
+  workspace: null
+action: repair
+arguments:
+  asset: &lt;asset&gt;
+  violation: &lt;violation&gt;
+</code></pre>
+</section>
+</body>
+</html>

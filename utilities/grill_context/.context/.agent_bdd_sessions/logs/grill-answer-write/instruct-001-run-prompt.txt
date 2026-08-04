@@ -3,7 +3,7 @@ Pipe this YAML on stdin:
 toolset: utilities.grill_context.grill_context:GrillContext
 tool: write_grill_answer
 arguments:
-  root: 'C:\Users\thoma\AppData\Local\Temp\tmp77f46z1y'
+  root: 'C:\Users\thoma\AppData\Local\Temp\tmpkogsm7vz'
   heading: 'How explore_context_files discovers files'
   body: 'It scans recursively for files whose name contains context or that live inside a .context/ subfolder, skipping __pycache__ and private underscore-prefixed paths.'
 Return the complete fenced YAML stdout from the CLI.

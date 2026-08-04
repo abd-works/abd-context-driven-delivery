@@ -23,7 +23,7 @@ class CarChronicle(BaseContextTool):
 
 ```
 
-Unchanged: manifest/BDD header comments, `# Instructions` docstring stub, and a constructor that only calls `super().__init__(path=path, session=session)`.`context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
+Header comments define the manifest path, agent workflow (`manifest` then `run -`), and BDD invoke lines. The class is a thin `BaseContextTool` subclass with a `# Instructions` docstring placeholder and no logic beyond forwarding `path` and `session` to the base constructor.`context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
 
 ```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
 # @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
@@ -48,7 +48,7 @@ class CarChronicle(BaseContextTool):
 
 ```
 
-Unchanged: manifest/BDD header comments, `# Instructions` docstring stub, and a constructor that only calls `super().__init__(path=path, session=session)`.`context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
+Header comments define the manifest path, agent workflow (`manifest` then `run -`), and BDD invoke lines. The class is a thin `BaseContextTool` subclass with a `# Instructions` docstring placeholder and no logic beyond forwarding `path` and `session` to the base constructor.`context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py`:
 
 ```1:20:context_tools/create_context_tool/examples/car_chronicle/car_chronicle.py
 # @toolset-manifest python -m tools manifest context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle
@@ -73,4 +73,4 @@ class CarChronicle(BaseContextTool):
 
 ```
 
-Unchanged: manifest/BDD header comments, `# Instructions` docstring stub, and a constructor that only calls `super().__init__(path=path, session=session)`.
+Header comments define the manifest path, agent workflow (`manifest` then `run -`), and BDD invoke lines. The class is a thin `BaseContextTool` subclass with a `# Instructions` docstring placeholder and no logic beyond forwarding `path` and `session` to the base constructor.

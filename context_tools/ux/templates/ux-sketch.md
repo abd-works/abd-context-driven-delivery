@@ -2,7 +2,7 @@
 
 Sketch the **site map first** (connection tree), then **screen boxes** that show what the user sees. Control types and states are drawn as glyphs inside the box — not written as `type=` / `state=` labels. Put a **key under each screen** for glyph meanings and interaction notes.
 
-**Order:** site map (`ia`) → screen boxes with regions / rows / verb rows (`ia`) → visual controls + states inside boxes (`mockup`) → brand/stub notes in key (`specification`) → real frontend / backend wiring (`code`, usually outside this sketch).
+**Order:** site map (`ia`) → screen boxes with regions / rows / verb rows (`ia`) → visual controls + states inside boxes (`mockup`) → brand/stub notes in key (`specification`) → real frontend / backend wiring (`front_end_code`, usually outside this sketch).
 
 **Do not annotate sketch lines.** No `<-i` / `<-m` / `<-s` (or any margin fidelity tags). Declare fidelity once at the top of the file. Mockup wiring lives in HTML — do not litter the ASCII with “this line is mockup” markers.
 
@@ -15,7 +15,7 @@ Sketch the **site map first** (connection tree), then **screen boxes** that show
 ## Template
 
 ```
-Fidelity: ia | mockup | specification | code
+Fidelity: ia | mockup | specification | front_end_code
 
 ═══════════════════════════════════════════════════════════
   SITE MAP

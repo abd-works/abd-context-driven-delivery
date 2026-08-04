@@ -51,6 +51,8 @@ Every prose part (string literals in `@action` bodies, text loaded from `@instru
 - `"action"` (default) — the callee's full action instructions and tool calls it needs to make is inlined into the caller's instructions. The agent sees the complete recipe.
 - `"tool"` — the call is treated like any other tool: the called action's name appears in the caller's expansion `tools` list, but its instructions and inner tools are not inlined. The caller decides when to invoke that action and then receives its internal instructions. Because mode is checked on every call into that instance, a `"tool"`-mode instance whose own actions call further same-instance actions produces a chain of separate deferred steps instead of one inlined block.
 
+Same-instance recipes can flip mode mid-body with `self.mode = "tool"` (or `"action"`). The expander applies that assignment for subsequent nested calls in the same walk, then restores the prior mode when the walk finishes — so a shared kit instance is not left stuck in tool mode. That is how one toolset defers a nested self-action without constructing a second copy of itself.
+
 Setting `mode` to any value other than `"action"` or `"tool"` raises `ValueError`.
 
 **`Action`** — named handle for one discovered action (name + callable); contributes its own signature entry to the manifest. Exposes `instructions` (the action's docstring text), `signature_entry` (the manifest dict with `kind`, `tools`, etc.), and `add_to_signature` (writes the entry into a signature dict). `@action` only exposes that surface — it is not the seam itself. Run path is `action:` via Tools/`ToolsetExtensions` (private `_ActionRunner`), not a second public runner type.

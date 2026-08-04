@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.__foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
+</script>
+<title>mockup — User Experience</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../commons/site.css?v=foundry-33">
+<link rel="stylesheet" href="../commons/foundry-catalog.css?v=cdd-12">
+<link rel="stylesheet" href="../commons/cdd-board.css?v=cdd-12">
+
+<script src="../commons/catalog-nav.js?v=foundry-10"></script>
+</head>
+<body data-nav-prefix="../" data-nav-current="fidelities" data-nav-site-base="https://abd.works/">
+<main id="main-content">
+
+
+
+<div class="wrap">
+<div class="foundry-kanban-shell" id="kanban-shell">
+<section class="foundry-kanban-surface foundry-skills-expanded catalog-kanban-embed foundry-kanban-surface--cdd-always-expanded" id="catalog-kanban" aria-label="CDD catalog board" data-cdd-always-expanded="1" data-cdd-no-stage-filter="1" data-initial-family="ux" data-initial-stage="spec">
+
+  <div class="foundry-travel-ring" id="travel-ring" aria-hidden="true"></div>
+  <div class="foundry-cdd-panel" id="foundry-guide">
+    <div class="foundry-cdd-panel__head">
+      <button type="button" class="foundry-cdd-btn" id="cdd-toggle" aria-label="Start Context-Driven Delivery overview">Context-driven delivery</button>
+      <span class="foundry-cdd-panel__tag" id="guide-tag">Click for overview</span>
+    </div>
+    <div class="foundry-cdd-intro" id="cdd-intro">
+      <p class="foundry-cdd-intro__line1">Speed is not governed by coding speed. It is governed by <strong>coordination cost</strong> and <strong>cognitive load</strong>.</p>
+      <p class="foundry-cdd-intro__line2"><strong>Context-Driven Delivery</strong> is the practice that turns organizational knowledge into executable, machine-readable context AI can generate from accurately.</p>
+    </div>
+    <div class="foundry-guide__body" id="guide-text" aria-live="polite"></div>
+  </div>
+
+  <div class="foundry-board-grid foundry-board-grid--cdd" id="board">
+    <div class="foundry-practice-col" aria-label="Context tools"><a class="kb-ticket aad-skill aad-fam-delivery foundry-practice-col__card foundry-practice-col__card--header foundry-practice-col__cdd-head foundry-perspective-label foundry-perspective-label--cdd" data-perspective="cdd" href="../context-tools/cdd.html">context-driven-delivery</a><button type="button" class="kb-ticket aad-skill aad-fam-sdd foundry-practice-col__card foundry-perspective-label foundry-family-toggle foundry-perspective-label--sdd" data-family="stories" data-perspective="sdd" aria-pressed="false">stories</button><button type="button" class="kb-ticket aad-skill aad-fam-arc foundry-practice-col__card foundry-perspective-label foundry-family-toggle foundry-perspective-label--arc" data-family="clean_engineering" data-perspective="arc" aria-pressed="false">clean-engineering</button><button type="button" class="kb-ticket aad-skill aad-fam-uxd foundry-practice-col__card foundry-perspective-label foundry-family-toggle foundry-perspective-label--uxd" data-family="ux" data-perspective="uxd" aria-pressed="false">user-experience</button><button type="button" class="kb-ticket aad-skill aad-fam-sdd foundry-practice-col__card foundry-perspective-label foundry-family-toggle foundry-perspective-label--bdd" data-family="bdd" data-perspective="bdd" aria-pressed="false">behavior-driven-development</button><button type="button" class="kb-ticket aad-skill aad-fam-ddd foundry-practice-col__card foundry-perspective-label foundry-family-toggle foundry-perspective-label--ddd" data-family="ddd" data-perspective="ddd" aria-pressed="false">domain-driven-design</button></div>
+    <div class="kb-col" data-id="col-discovery" data-stage="discovery"><a class="kb-col-head" href="../fidelities/cdd-discovery.html"><div class="kb-col-head-row"><span class="kb-col-scope-shape-wrap"><span class="kb-col-scope-shape kb-col-scope-shape--solution" title="Whole solution — wide / shallow — outcomes · scope · boundaries" aria-label="Whole solution. wide / shallow. outcomes, scope, boundaries"></span><span class="kb-col-shape-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">Whole solution</span><span class="kb-col-shape-tooltip__width">wide / shallow</span><span class="kb-col-shape-tooltip__bullets">outcomes · scope · boundaries</span></span></span><span class="kb-col-head-title"><span>discovery</span></span></div></a><div class="aad-skill-row aad-fam-sdd" data-family="stories"><a class="kb-ticket aad-skill aad-fam-sdd" data-stage="discovery" data-perspective="sdd" href="../fidelities/stories-story_map.html"><span class="kb-skill-tooltip-wrap">story-map<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">story-map</span></span></span></a></div><div class="aad-skill-row aad-fam-arc" data-family="clean_engineering"><a class="kb-ticket aad-skill aad-fam-arc" data-stage="discovery" data-perspective="arc" href="../fidelities/clean_engineering-modules.html"><span class="kb-skill-tooltip-wrap">modules<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">modules</span></span></span></a></div><div class="aad-skill-row aad-fam-uxd" data-family="ux"><a class="kb-ticket aad-skill aad-fam-uxd" data-stage="discovery" data-perspective="uxd" href="../fidelities/ux-ia.html"><span class="kb-skill-tooltip-wrap">information-architecture<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">information-architecture</span></span></span></a></div><div class="aad-skill-row aad-fam-sdd aad-skill-row--empty" data-family="bdd"></div><div class="aad-skill-row aad-fam-ddd" data-family="ddd"><a class="kb-ticket aad-skill aad-fam-ddd" data-stage="discovery" data-perspective="ddd" href="../fidelities/ddd-bounded_context.html"><span class="kb-skill-tooltip-wrap">bounded-context<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">bounded-context</span></span></span></a></div></div><div class="kb-col active" data-id="col-spec" data-stage="spec"><a class="kb-col-head kb-col-head--current" href="../fidelities/cdd-spec.html"><div class="kb-col-head-row"><span class="kb-col-scope-shape-wrap"><span class="kb-col-scope-shape kb-col-scope-shape--sprint" title="Sprint — narrow / deeper — behaviour · design · logic" aria-label="Sprint. narrow / deeper. behaviour, design, logic"></span><span class="kb-col-shape-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">Sprint</span><span class="kb-col-shape-tooltip__width">narrow / deeper</span><span class="kb-col-shape-tooltip__bullets">behaviour · design · logic</span></span></span><span class="kb-col-head-title"><span>specification</span></span></div></a><div class="aad-skill-row aad-fam-sdd" data-family="stories"><a class="kb-ticket aad-skill aad-fam-sdd" data-stage="spec" data-perspective="sdd" href="../fidelities/stories-scenarios.html"><span class="kb-skill-tooltip-wrap">scenarios<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">scenarios</span></span></span></a></div><div class="aad-skill-row aad-fam-arc" data-family="clean_engineering"><a class="kb-ticket aad-skill aad-fam-arc" data-stage="spec" data-perspective="arc" href="../fidelities/clean_engineering-model.html"><span class="kb-skill-tooltip-wrap">model<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">model</span></span></span></a></div><div class="aad-skill-row aad-fam-uxd" data-family="ux"><a class="kb-ticket aad-skill aad-fam-uxd kb-ticket--current" data-stage="spec" data-perspective="uxd" href="../fidelities/ux-mockup.html"><span class="kb-skill-tooltip-wrap">mockup<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">mockup</span></span></span></a></div><div class="aad-skill-row aad-fam-sdd" data-family="bdd"><a class="kb-ticket aad-skill aad-fam-sdd" data-stage="spec" data-perspective="bdd" href="../fidelities/bdd-behavior.html"><span class="kb-skill-tooltip-wrap">behavior<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">behavior</span></span></span></a></div><div class="aad-skill-row aad-fam-ddd" data-family="ddd"><a class="kb-ticket aad-skill aad-fam-ddd" data-stage="spec" data-perspective="ddd" href="../fidelities/ddd-building_blocks.html"><span class="kb-skill-tooltip-wrap">building-blocks<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">building-blocks</span></span></span></a></div></div><div class="kb-col" data-id="col-engineer" data-stage="engineer"><a class="kb-col-head" href="../fidelities/cdd-engineer.html"><div class="kb-col-head-row"><span class="kb-col-scope-shape-wrap"><span class="kb-col-scope-shape kb-col-scope-shape--story" title="Story — narrowest / deep — tests · code · interface" aria-label="Story. narrowest / deep. tests, code, interface"></span><span class="kb-col-shape-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">Story</span><span class="kb-col-shape-tooltip__width">narrowest / deep</span><span class="kb-col-shape-tooltip__bullets">tests · code · interface</span></span></span><span class="kb-col-head-title"><span>engineering</span></span></div></a><div class="aad-skill-row aad-fam-sdd" data-family="stories"><a class="kb-ticket aad-skill aad-fam-sdd" data-stage="engineer" data-perspective="sdd" href="../fidelities/stories-acceptance_tests.html"><span class="kb-skill-tooltip-wrap">acceptance-tests<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">acceptance-tests</span></span></span></a></div><div class="aad-skill-row aad-fam-arc" data-family="clean_engineering"><a class="kb-ticket aad-skill aad-fam-arc" data-stage="engineer" data-perspective="arc" href="../fidelities/clean_engineering-code.html"><span class="kb-skill-tooltip-wrap">code<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">code</span></span></span></a></div><div class="aad-skill-row aad-fam-uxd" data-family="ux"><a class="kb-ticket aad-skill aad-fam-uxd" data-stage="engineer" data-perspective="uxd" href="../fidelities/ux-front_end_code.html"><span class="kb-skill-tooltip-wrap">front-end-code<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">front-end-code</span></span></span></a></div><div class="aad-skill-row aad-fam-sdd" data-family="bdd"><a class="kb-ticket aad-skill aad-fam-sdd" data-stage="engineer" data-perspective="bdd" href="../fidelities/bdd-development.html"><span class="kb-skill-tooltip-wrap">development<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">development</span></span></span></a></div><div class="aad-skill-row aad-fam-ddd" data-family="ddd"><a class="kb-ticket aad-skill aad-fam-ddd" data-stage="engineer" data-perspective="ddd" href="../fidelities/ddd-tactics.html"><span class="kb-skill-tooltip-wrap">tactics<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">tactics</span></span></span></a></div></div>
+  </div>
+  <div class="kanban-stage-questions kanban-stage-questions--foundry kanban-stage-questions--cdd" data-id="stage-questions"><div class="kanban-stage-questions__spacer" aria-hidden="true"></div><a class="kanban-stage-questions__cell" data-stage="discovery" href="../fidelities/cdd-discovery.html"><ul class="kanban-stage-questions__list"><li class="kanban-stage-questions__item">system interactions</li><li class="kanban-stage-questions__item">modules</li><li class="kanban-stage-questions__item">user navigation</li><li class="kanban-stage-questions__item">Boundaries</li></ul></a><a class="kanban-stage-questions__cell" data-stage="spec" href="../fidelities/cdd-spec.html"><ul class="kanban-stage-questions__list"><li class="kanban-stage-questions__item">behavior</li><li class="kanban-stage-questions__item">model</li><li class="kanban-stage-questions__item">mockups</li><li class="kanban-stage-questions__item">building blocks</li></ul></a><a class="kanban-stage-questions__cell" data-stage="engineer" href="../fidelities/cdd-engineer.html"><ul class="kanban-stage-questions__list"><li class="kanban-stage-questions__item">tests</li><li class="kanban-stage-questions__item">code</li><li class="kanban-stage-questions__item">Interface</li><li class="kanban-stage-questions__item">architecture code</li></ul></a></div>
+  <div class="foundry-skills-extra">
+    <div class="foundry-skills-extra__inner">
+      <div class="aad-delivery-crosscut-stack" data-id="crosscut">
+        <section class="aad-delivery-crosscut-section aad-delivery-crosscut-section--supporting is-filter-visible">
+          <h3 class="aad-delivery-crosscut-section-title">Actions</h3>
+          <div class="aad-delivery-crosscut-section-body">
+            <div class="aad-delivery-crosscut-row aad-crosscut-tier--practice is-filter-visible" data-crosscut-group="kanban" data-family="kanban">
+              <span class="aad-delivery-crosscut-row-label aad-delivery-crosscut-row-label--spacer" aria-hidden="true"></span>
+              <div class="aad-delivery-crosscut-skills is-skills-visible"><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/partition.html"><span class="kb-skill-tooltip-wrap">partition<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">partition</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/grill.html"><span class="kb-skill-tooltip-wrap">grill<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">grill</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/sketch.html"><span class="kb-skill-tooltip-wrap">sketch<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">sketch</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/generate.html"><span class="kb-skill-tooltip-wrap">generate<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">generate</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/document.html"><span class="kb-skill-tooltip-wrap">document<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">document</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/iterate.html"><span class="kb-skill-tooltip-wrap">iterate<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">iterate</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/validate.html"><span class="kb-skill-tooltip-wrap">validate<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">validate</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/satisfy.html"><span class="kb-skill-tooltip-wrap">satisfy<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">satisfy</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/repair.html"><span class="kb-skill-tooltip-wrap">repair<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">repair</span></span></span></a><a class="kb-ticket aad-skill aad-fam-supporting" href="../actions/improve.html"><span class="kb-skill-tooltip-wrap">improve<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">improve</span></span></span></a></div>
+            </div>
+          </div>
+        </section>
+        <section class="aad-delivery-crosscut-section aad-delivery-crosscut-section--foundational is-filter-visible">
+          <h3 class="aad-delivery-crosscut-section-title">Utilities</h3>
+          <div class="aad-delivery-crosscut-section-body">
+            <div class="aad-delivery-crosscut-row aad-crosscut-tier--foundational is-filter-visible" data-crosscut-group="utilities">
+              <span class="aad-delivery-crosscut-row-label aad-delivery-crosscut-row-label--spacer" aria-hidden="true"></span>
+              <div class="aad-delivery-crosscut-skills is-skills-visible"><a class="kb-ticket aad-skill aad-fam-foundational" href="../utilities/deploy_agent_skills.html"><span class="kb-skill-tooltip-wrap">deploy-agent-skills<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">deploy-agent-skills</span></span></span></a><a class="kb-ticket aad-skill aad-fam-foundational" href="../utilities/diagnose.html"><span class="kb-skill-tooltip-wrap">diagnose<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">diagnose</span></span></span></a><a class="kb-ticket aad-skill aad-fam-foundational" href="../utilities/handoff.html"><span class="kb-skill-tooltip-wrap">handoff<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">handoff</span></span></span></a><a class="kb-ticket aad-skill aad-fam-foundational" href="../utilities/workspace.html"><span class="kb-skill-tooltip-wrap">workspace<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">workspace</span></span></span></a><a class="kb-ticket aad-skill aad-fam-foundational" href="../utilities/sub_agent.html"><span class="kb-skill-tooltip-wrap">sub-agent<span class="kb-col-shape-tooltip kb-skill-tooltip" role="tooltip"><span class="kb-col-shape-tooltip__name">sub-agent</span></span></span></a></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+</div>
+
+<div class="catalog-body">
+<div class="wrap skill-detail-page">
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">User Experience · fidelity</p><h1 class="page-headline">mockup</h1></header>
+<section class="install-block fidelity-invoke" aria-labelledby="fidelity-invoke-heading"><h2 id="fidelity-invoke-heading">Chat invoke</h2><pre class="install-snippet"><code>/ux &lt;action&gt; mockup — e.g. /ux generate mockup</code></pre><p class="install-hint">&lt;action&gt; is one of: <a href="../actions/partition.html">partition</a>, <a href="../actions/grill.html">grill</a>, <a href="../actions/sketch.html">sketch</a>, <a href="../actions/generate.html">generate</a>, <a href="../actions/document.html">document</a>, <a href="../actions/iterate.html">iterate</a>, <a href="../actions/validate.html">validate</a>, <a href="../actions/satisfy.html">satisfy</a>, <a href="../actions/repair.html">repair</a>, <a href="../actions/improve.html">improve</a></p><p class="install-source"><a href="../manifests/ux/mockup.yaml" id="raw-manifest">Raw manifest format →</a></p></section>
+<section class="install-block fidelity-guidance" data-fidelity="mockup" aria-label="Fidelity guidance"><h2>Overview</h2>
+<p>UX looks at the product through user navigatin and information architecture, from layout and transitions to more formal screens, regions, and controls — how users see and act on the solution — mapped at increasing fidelity.</p>
+<p><strong>Canonical model</strong> (reuse, do not reinvent): <code>UxMap</code> → <code>Screen</code> → <code>Region</code> → <code>Control</code> → <code>Interaction</code>, plus <code>Transition</code>, <code>ContentType</code>, <code>NavComponent</code> on the map. Optional <code>UxContext</code> holds notes/invariants not visible on screens.</p>
+<p><strong>Layout (mirror Stories; colocated):</strong></p>
+<pre><code>sandbox/&lt;epic&gt;/
+  ux-map.json                              &lt;- canonical model (optional peer)
+  &lt;user-goal&gt;.html                        &lt;- mockup+ (one file per concrete user goal)
+  &lt;sub-epic&gt;/…_stories.py|.js
+  .context/
+    information-architecture.drawio        &lt;- ia (drawio-ux CLI: Detailed IA + Site Map)
+    ux-sketch.md                           &lt;- scratch sketch
+    ux-context.md                          &lt;- optional notes/invariants</code></pre>
+<p>Sketch/context MD stay in <code>.context/</code> (same pattern as other generators). Story / object-model JS stay where Stories / CE emit them; HTML imports those modules.</p>
+<p><strong>Stories + object model:</strong> <code>UxMap.story_references</code> / <code>object_references</code> store <strong>paths</strong> to Stories / Clean Engineering JS artifacts. If missing, run that generator’s <code>transform</code> to <code>javascript</code>. Mockup/spec HTML imports those paths.</p>
+<p><strong>Story Demo shell (mockup+):</strong> Generated HTML uses <code>templates/html/mockup_shell.html</code> — product screens <strong>LEFT</strong>, story explorer <strong>RIGHT</strong>. <code>story-demo/mount-generated-mockup.js</code> loads <code>create{Story}Story</code> exports, runs <code>PlayDualRunner</code>, and paints the explorer. Serve from <strong>repo root</strong> so <code>/context_tools/...</code> imports resolve.</p>
+<p><strong>Worked example:</strong> <code>context_tools/ux/examples/manage-customer-orders/</code> (Place New Order mockup + stories + shopping_cart domain) — general UX output sample that happens to run in the Story Demo shell.</p>
+<p><strong>One control model:</strong> <code>ux_model.Control</code> is vanilla. Controls that bind to GWT steps are <code>StoryDemoControl</code> (<code>bound_field</code> + <code>story_steps</code>) — HTML emits <code>data-bound-field</code> / <code>data-story-steps</code>. Do <strong>not</strong> invent a second page/control model in freehand HTML.</p>
+<p><strong>Interactive (domain-agnostic):</strong> <code>StoryDemoControl</code> may also carry <code>set_input</code>, <code>item_story_steps</code>, <code>item_value</code>, <code>item_label</code>. Emit:</p>
+<ul>
+<li><code>number</code> / <code>quantity</code> → <code>data-input-field</code></li>
+<li><code>bound-list</code> / <code>list-host</code> → <code>data-bound-list</code> + <code>data-bound-field</code> (expose path) + optional <code>data-item-story-steps</code> / <code>data-set-input</code>  </li>
+</ul>
+<p>Do <strong>not</strong> bake product words (catalog, cart) into the template — those are bound_field paths / story language only.</p>
+<p><strong>Markdown:</strong> optional context only (thinking, invariants, interaction notes). Primary path is <strong>drawio (IA) → html (mockup/spec)</strong>.</p>
+<p><strong>Layouts:</strong> catalog in <code>ux_model/layouts.py</code> (layout id → named slots). Use <code>Screen.apply_layout</code> to set layout and seed empty regions.</p>
+<p><strong>Channels:</strong> drawio, html, markdown, json — peer parse/render; <code>transform</code> moves sideways at the same fidelity. One <code>html</code> channel deepens by fidelity (js interactions → optional brand layer + honest stubs at <strong>mockup</strong> → real frontend at <strong>front_end_code</strong>; host FE stacks welcome at <strong>front_end_code</strong>).</p>
+<hr>
+<p>This skill operates at <strong>multiple levels of fidelity</strong>. Start from grill + sketch and deepen. Each level <strong>adds</strong> artifacts — do not invent detail from a deeper fidelity.</p>
+<p><strong>Templates (AI generate):</strong> drawio + html under <code>templates/</code>. Markdown context template optional. Other formats via channels / <code>transform</code>.</p>
+<p><strong>Cross-format scanners:</strong> channels parse into the canonical model; scanners read model fields only — never file syntax.</p>
+<hr>
+<h2>mockup</h2>
+<p><strong>Default format:</strong> html</p>
+<p><strong>Goal:</strong> Lock controls and key interactions as runnable html+js (greybox) inside the <strong>Story Demo shell</strong>. Drawio peer channel still available.</p>
+<ol>
+<li>Ensure story/domain JS via Stories / CE <code>transform</code> when missing (<code>ensure_javascript</code>).</li>
+<li>Deepen regions with typed controls, states, and interactions.</li>
+<li>For each control that participates in a story Given/When/Then (emphasize in Play, or run When in Interactive), use <strong><code>StoryDemoControl</code></strong> with:</li>
+</ol>
+<ul>
+<li><code>bound_field</code> — expose() path to display (or list array path on <code>bound-list</code>)</li>
+<li><code>story_steps</code> — <code>[{ kind, label }, …]</code> matching story step text exactly</li>
+<li>Interactive lists: <code>control_type: bound-list</code>, shared <code>item_story_steps</code> When (not per-row labels), <code>set_input</code> for the pick key; stories use <code>input(...)</code> / <code>session(...)</code></li>
+</ul>
+<ol>
+<li>Prefer <strong>model → <code>HtmlUxMap.render</code></strong> (fills <code>mockup_shell.html</code>). AI should not rebuild a one-off shell; fill screens/controls on the model.</li>
+<li>Shell layout is fixed: product mockup <strong>LEFT</strong> (<code>#story-demo-frame</code>); explorer <strong>RIGHT</strong> (<code>#explorer-frame</code> — Play next / Reset / step tree). <code>data-goto</code> still navigates between product screens.</li>
+<li>Story modules must export <code>create{Story}Story(mode)</code> loadable in the browser for Play (no <code>node:test</code> import on that path — use story-test-core / a demo export if needed).</li>
+<li>Optional context md for notes not visible on screen.</li>
+<li><strong>Optional — branding (off by default).</strong> Apply a css / design-tokens / brand layer only when <strong>one of these is true</strong>:</li>
+</ol>
+<ul>
+<li>The user explicitly asks for brand at this step, or</li>
+<li>Brand/css tokens already exist somewhere in the workspace (check before deciding).</li>
+</ul>
+<p>Do not invent brand. When active: add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to <strong>front_end_code</strong> automatically — do not re-apply.</p>
+<h3>Rules</h3>
+<ul>
+<li><strong><code>controls-match-interaction-decisions</code></strong> — Exact control types; no invented affordances.</li>
+<li><strong><code>story-domain-js-imported</code></strong> — Import real modules; do not invent a UX-only adapter shape.</li>
+<li><strong><code>key-interactions-wired</code></strong> — Nav/tabs via <code>data-goto</code> / interactions; story tracing via Story Demo mount (not bespoke product stubs).</li>
+<li><strong><code>story-demo-control-for-gwt</code></strong> — GWT-bound controls are <code>StoryDemoControl</code> in the model so HTML gets <code>data-story-steps</code>.</li>
+<li><strong><code>shell-from-template</code></strong> — Use <code>mockup_shell.html</code> / render channel; do not drop the explorer when generating screens.</li>
+<li><strong><code>brand-is-opt-in</code></strong> — Do not add css / design tokens / brand unless asked or pre-existing. Greybox is the default output.</li>
+</ul>
+<ol>
+<li>Document every faked behaviour explicitly — list all stubs; no silent pretence of production services.</li>
+</ol>
+<ul>
+<li><strong><code>stub-catalogue-honest</code></strong> — Every faked behaviour is listed in the html or a companion context note.</li>
+</ul>
+<hr></section>
+<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>html</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/8c1da4c4f7a50b991d622745ff471d0a56865742/context_tools/ux/templates/html/mockup.html">templates/html/mockup.html</a></p><pre class="code-fence"><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;!--
+  AI mockup template (Story Demo shell).
+  Prefer filling the model + HtmlUxMap.render (uses mockup_shell.html).
+  When authoring HTML directly, keep this split: product LEFT + explorer RIGHT.
+
+  Controls that participate in a story step MUST be StoryDemoControl in the model, which emits:
+    data-bound-field=&quot;…&quot;
+    data-story-steps=&#x27;[{&quot;kind&quot;:&quot;when&quot;,&quot;label&quot;:&quot;…&quot;}]&#x27;
+  Serve from repo root. mount-generated-mockup.js collects create{Story}Story exports.
+--&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;utf-8&quot; /&gt;
+  &lt;title&gt;UX — {{SCOPE}}&lt;/title&gt;
+  &lt;style&gt;
+    body { margin: 0; font-family: ui-monospace, Consolas, monospace; }
+    #shell { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
+    #story-demo-frame { border-right: 1px solid #ccc; padding: 1rem; }
+    #explorer-frame { padding: 1rem; }
+    .control.emphasized { outline: 2px solid #2563eb; }
+    .control.tinted { background: #fecaca; }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body data-story-demo-shell&gt;
+  &lt;header&gt;
+    &lt;span data-story-demo-mode&gt;Play&lt;/span&gt;
+    &lt;button type=&quot;button&quot; data-set-mode=&quot;Play&quot;&gt;Play&lt;/button&gt;
+    &lt;button type=&quot;button&quot; data-set-mode=&quot;Interactive&quot;&gt;Interactive&lt;/button&gt;
+  &lt;/header&gt;
+  &lt;div id=&quot;shell&quot;&gt;
+    &lt;section id=&quot;story-demo-frame&quot;&gt;
+      &lt;main id=&quot;mockup&quot;&gt;
+        &lt;!-- screens / regions / controls — emit data-story-steps on StoryDemoControls --&gt;
+      &lt;/main&gt;
+    &lt;/section&gt;
+    &lt;section id=&quot;explorer-frame&quot;&gt;
+      &lt;button type=&quot;button&quot; data-reset&gt;Reset&lt;/button&gt;
+      &lt;ul data-explorer-tree&gt;&lt;/ul&gt;
+      &lt;button type=&quot;button&quot; data-play-next&gt;Play next&lt;/button&gt;
+      &lt;p data-explorer-message hidden&gt;&lt;/p&gt;
+      &lt;p data-story-demo-status&gt;&lt;/p&gt;
+      &lt;footer id=&quot;stories&quot;&gt;&lt;ul&gt;&lt;!-- story names --&gt;&lt;/ul&gt;&lt;/footer&gt;
+    &lt;/section&gt;
+  &lt;/div&gt;
+  &lt;script type=&quot;module&quot; src=&quot;{{STORY_MODULE}}&quot; data-ux-story-ref&gt;&lt;/script&gt;
+  &lt;script type=&quot;module&quot; src=&quot;{{DOMAIN_MODULE}}&quot; data-ux-object-ref&gt;&lt;/script&gt;
+  &lt;script type=&quot;module&quot; src=&quot;/context_tools/ux/story-demo/mount-generated-mockup.js&quot;&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre></section>
+<section class="skill-cr-single illustrated-example"><h2>Illustrated example</h2><p>No illustrated example configured yet.</p></section>
+
+</div>
+</div>
+</main>
+<script src="../commons/catalog-foundry-tour.js?v=cdd-12"></script>
+<script src="../commons/catalog-foundry-skill-nav.js?v=cdd-12"></script>
+</body>
+</html>

@@ -19,7 +19,7 @@ sys.modules.pop("sessions", None)
 from expects import be_false, be_true, equal, expect
 from mamba import before, context, description, it
 
-from sessions import is_logged
+from workspace import is_logged
 from tools.examples.logged_probe import LoggedProbe
 
 

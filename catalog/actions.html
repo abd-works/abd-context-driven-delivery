@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.__foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
+</script>
+<title>Actions — CDD Catalog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="commons/site.css?v=foundry-33">
+<link rel="stylesheet" href="commons/foundry-catalog.css?v=cdd-12">
+<link rel="stylesheet" href="commons/cdd-board.css?v=cdd-12">
+
+<script src="commons/catalog-nav.js?v=foundry-10"></script>
+</head>
+<body data-nav-prefix="" data-nav-current="actions" data-nav-site-base="https://abd.works/">
+<main id="main-content">
+
+
+<div class="page-hero page-hero--foundry">
+  <div class="wrap">
+    <table class="page-hero__table" role="presentation">
+      <tr>
+        <td class="page-hero__cell page-hero__cell--title">
+          <h1 class="page-headline">Actions</h1>
+          <p class="body-lead">Lifecycle actions</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+
+<div class="catalog-body">
+<div class="wrap">
+<div class="cap-grid"><a class="cap-card" href="actions/partition.html"><p class="cap-card__title">partition</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Lifecycle action</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="actions/grill.html"><p class="cap-card__title">grill</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Lifecycle action</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="actions/sketch.html"><p class="cap-card__title">sketch</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Lifecycle action</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="actions/generate.html"><p class="cap-card__title">generate</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Lifecycle action</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="actions/document.html"><p class="cap-card__title">document</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Lifecycle action</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="actions/iterate.html"><p class="cap-card__title">iterate</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Lifecycle action</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="actions/validate.html"><p class="cap-card__title">validate</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Lifecycle action</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="actions/satisfy.html"><p class="cap-card__title">satisfy</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Lifecycle action</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="actions/repair.html"><p class="cap-card__title">repair</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Lifecycle action</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="actions/improve.html"><p class="cap-card__title">improve</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Lifecycle action</p><p class="cap-card__more">Open →</p></a></div><div hidden><header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">partition</h1></header>
+<section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>partition</code> in the request</p><p class="install-source"><a href="../manifests/actions/partition.html" id="raw-manifest">Raw manifest format →</a></p></section>
+<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><p>Calls nothing else directly.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><h1>Partition</h1>
+<p>Reads source material, builds an index of what matters for this context tool, extracts the relevant passages as chunk files, and checks that nothing was missed.</p>
+<p>Read <code>partition_guidance.md</code> before indexing — it references <code>{slug}.md § Scaffold</code> and <code>{slug}.md § Contexts</code> for what to look for. If those don&#x27;t exist, use the user&#x27;s description or the surrounding material.</p>
+<p><strong>Parameters</strong></p>
+<ul>
+<li><code>context</code> — path to the source material (markdown and/or code).</li>
+<li><code>mode</code> — <code>one_go</code> (default) | <code>pause</code> | <code>index_only</code>.</li>
+<li><code>out_root</code> — where to write output. Defaults to the current session folder. Set this only when you need a second distinct partition rooted somewhere else.</li>
+</ul>
+<p><strong>Output</strong></p>
+<ul>
+<li>Index → <code>{session.path}/.context/{subject}-index.md</code></li>
+<li>Chunks → <code>{session.path}/{artifact}/.context/{artifact}-segment.md</code> (folder name = the top-level artifact defined in <code>{slug}.md § Scaffold</code>)</li>
+</ul>
+<p><code>{subject}</code> = the source file or folder name (e.g. <code>HeroesHandbook.md</code> → <code>HeroesHandbook-index.md</code>). Not the context tool name.</p>
+<hr>
+<h1>Step 1 — Index</h1>
+<p>Build or update an index of what&#x27;s in the source material.</p>
+<ol>
+<li>Read the source.</li>
+<li>If <code>{subject}-index.md</code> already exists, <strong>open it and add to it — do not replace it.</strong> See <strong>Multi-pass</strong> below.</li>
+<li>Read <code>partition_guidance.md</code> (filled in with <code>{slug}.md § Contexts</code> and <code>§ Scaffold</code>). The things the context tool cares about — epics, subjects, screens, modules — <strong>must</strong> appear as entries in the index. Ignoring them or just copying the source&#x27;s headings as entries is a hard fail.</li>
+<li>Let the context tool determine the structure, not the source&#x27;s table of contents. Source chapters and files tell you where the material lives — they don&#x27;t decide what the entries are.</li>
+<li><strong>Anti-mirror check:</strong> if your entry count matches the number of top-level headings or chapters in the source, you&#x27;ve mirrored it. Regroup before writing.</li>
+<li>Write the index to <code>{session.path}/.context/{subject}-index.md</code> (or <code>{out_root}/.context/{subject}-index.md</code> when <code>out_root</code> is set). All context tools write to the same index file — not one file each. Each tool adds its own columns. Keep it shallow: one entry per epic, module, screen, or subject — not full stories or APIs. <strong>See the example at the bottom of this file for the expected structure and column order.</strong></li>
+<li>Do <strong>not</strong> write chunk files yet — that happens in Step 2.</li>
+<li><strong>Config</strong> — Some sources use ALL-CAPS labels like <code>NAME</code>, <code>COST</code>, or <code>DESCRIPTION</code> as column headers inside entries, not as entry names themselves. Without telling the tool about these, the completeness check in Step 3 will treat them as missing entries and fail. If your source has this pattern, add a <code>## Config</code> section to the index:</li>
+</ol>
+<pre><code class="language-markdown">## Config
+
+&lt;!-- partition-config
+non-entry-headers:
+  - NAME
+  - COST
+  - DESCRIPTION
+short-body-pattern: \bRANKS?\b|\bPOINT
+min-body-chars: 120
+--&gt;</code></pre>
+<ul>
+<li><code>non-entry-headers</code> — ALL-CAPS lines that are column labels inside entries, not entry names</li>
+<li><code>short-body-pattern</code> — regex; entries with short bodies still count when this matches</li>
+<li><code>min-body-chars</code> — minimum body length to count as a complete entry (default 120)</li>
+</ul>
+<p><strong>Next step by mode:</strong></p>
+<ul>
+<li><code>one_go</code> — continue to Step 2.</li>
+<li><code>pause</code> — stop here; wait for the user.</li>
+<li><code>index_only</code> — stop here; do not extract chunks.</li>
+</ul>
+<hr>
+<h1>Step 2 — Segment</h1>
+<p>Copy the relevant passages from the source into chunk files. <strong>Skip for <code>pause</code> / <code>index_only</code> modes.</strong></p>
+<p><strong>Additive rule (hard):</strong> see <strong>Multi-pass</strong> below. Never delete or rewrite existing chunk files. Only create new ones for passages not yet covered. Starting over requires an explicit user request.</p>
+<ol>
+<li>Read <code>{session.path}/.context/{subject}-index.md</code>.</li>
+<li>If the needed passages are already chunked, skip extraction and make sure the index links to those existing files.</li>
+<li>Open the source. Use <code>partition_guidance.md</code> only to decide which passages still need a chunk file — do not start writing code or expanding the design.</li>
+<li>For each new chunk, write it under the path from the index entry. The folder name comes from the top-level artifact defined in <code>{slug}.md § Scaffold</code> — an epic, subject, screen, module, or bounded context, depending on which tool you&#x27;re running:</li>
+</ol>
+<ul>
+<li>Default: <code>{session.path}/{artifact}/.context/{artifact}-segment.md</code></li>
+<li>e.g. <code>checks</code> → <code>checks/.context/checks-segment.md</code></li>
+<li>e.g. <code>powers/attack</code> → <code>powers/attack/.context/attack-segment.md</code> (create parent folders as needed)</li>
+<li>When a later context tool adds chunks, use the same naming rules and never overwrite an existing chunk.</li>
+</ul>
+<ol>
+<li><strong>Copy the actual text word for word.</strong> Do not paraphrase, summarize, or sketch APIs. A short header with the source location is fine; the rest must be the original text.</li>
+<li>If the same passage covers multiple index entries, either copy it into each chunk or (better) link multiple entries to the same chunk file.</li>
+<li>Create the artifact folder (according to top level artifacts as named in <code>{slug}.md § Scaffold</code>) and its <code>.context/</code> subfolder as needed. Do not write code, APIs, or design notes here — only the chunk file.</li>
+<li>TODOs for unclear or missing passages are fine. Do not replace missing text with invented content.</li>
+<li><strong>Update the index</strong> so every entry that has a chunk file links to it. Keep all existing columns. Fail if a working link was removed or a required chunk file is missing.</li>
+</ol>
+<hr>
+<h1>Step 3 — Verify</h1>
+<p>Call <code>verify_segment_completeness</code> on any chunk that covers a list of named entries — things like powers, items, rules, or abilities where accidentally skipping one would leave a gap in the work downstream.</p>
+<ul>
+<li>List expected entry names in the chunk (<code>&lt;!-- expected-entries … --&gt;</code>) or pass them as <code>expected_names</code>.</li>
+<li>Layout noise configuration belongs in the <code>&lt;!-- partition-config --&gt;</code> block in the index — not hardcoded in the tool.</li>
+<li><strong>A chunk that covers the right length of text can still be missing entries.</strong> Completeness failure is a hard fail — fix the chunk before running the context tool&#x27;s generate step.</li>
+<li>After verification, update the index so every entry with a chunk links to it.</li>
+</ul>
+<hr>
+<h2>Multi-pass / multi-context — ADD, do not replace</h2>
+<p>Running partition again with a different context tool adds to what&#x27;s already there. It never wipes it.</p>
+<h3>Hard fails</h3>
+<h3>What a later pass does</h3>
+<ol>
+<li>If <code>{subject}-index.md</code> or chunk files already exist, you&#x27;re adding to them — not starting over.</li>
+<li>Read <code>{slug}.md § Contexts</code> to understand what the new context tool cares about (epics, screens, subjects, modules, …).</li>
+<li>Add columns for the new context tool. Link each new entry to the chunk files that already exist. One chunk may serve multiple entries; one entry may span multiple chunks. Keep all existing columns and links.</li>
+<li>Go to Step 2 only for passages not yet covered by an existing chunk.</li>
+<li>When done: existing chunk links still work; new columns are filled in; nothing was removed.</li>
+</ol>
+<h3>Example — three passes on the same index</h3>
+<p>Each pass adds to the index without touching existing chunks.</p>
+<p><strong>After CE (pass 1):</strong> CE scaffold produces a thin module index — module path, chunk file, rough seam terms, and thin deps. Nested folders show parent/child relationships naturally (<code>loans/processing</code> depends on <code>loans</code>).</p>
+<p><strong>After Stories (pass 2):</strong> Stories scaffold produces a thin epic index — verb–noun epics + mid-level story stubs. It adds an <code>Epic</code> column to the main table and a separate overlay mapping each epic to the chunks that cover it (because one epic typically spans multiple modules).</p>
+<p><strong>Stories overlay</strong></p>
+<p><strong>After UX (pass 3):</strong> UX scaffold produces a thin screen index — screens in domain/user language, interactions, and transitions. It adds a <code>Screen</code> column to the main table and a separate overlay. One chunk can feed more than one screen (<code>loans</code> feeds both <code>Loan Desk</code> and <code>My Loans</code>).</p>
+<p><strong>UX overlay</strong></p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>PartitionPipeline</h1>
+<p><strong>Purpose:</strong> Thin, additive partition of source corpora into index + verbatim segments, with named-entry completeness on catalog chunks.</p>
+<p><strong>Primary use case:</strong> Call <code>partition</code> / <code>index</code> / <code>segment</code>; hard-fail new catalog chunks via <code>verify_segment_completeness</code>.</p>
+<p><strong>Rationale:</strong> Durable artifacts are resources — <code>PartitionIndex</code> (root index + project config) and <code>Segment</code> / <code>SegmentEntry</code> (chunks). Project-specific completeness knobs live in the index config block, never hardcoded in the kit.</p>
+<p><strong>Seam:</strong> <code>PartitionPipeline</code>, <code>PartitionIndex</code>, <code>Segment</code>, <code>SegmentEntry</code></p>
+<p><strong>Constraint:</strong> Do not treat span length alone as completeness PASS. Do not hardcode corpus/project header lists in kit code — put them in <code>{subject}-index.md</code> <code>&lt;!-- partition-config --&gt;</code>. Later lenses must add to the shared index/chunks — they must not wipe or re-chunk existing segments.</p>
+<h2>Public API</h2>
+<ul>
+<li><code>PartitionPipeline</code> — <code>partition</code>, <code>index</code>, <code>segment</code>, <code>verify_segment_completeness</code>, <code>partition_guidance</code></li>
+<li><code>PartitionIndex</code> — props: <code>path</code>, <code>text</code>, <code>completeness</code>; ops: <code>from_text</code>, <code>resolve_near</code></li>
+<li><code>SegmentCompletenessConfig</code> — <code>min_body_chars</code>, <code>non_entry_headers</code>, <code>short_body_pattern</code> (from index <code>&lt;!-- partition-config --&gt;</code>)</li>
+<li><code>Segment</code> — props: <code>path</code>, <code>text</code>, <code>config</code>, <code>expected_names</code>, <code>has_expected_names</code>, <code>is_complete</code>; ops: <code>from_text</code>, <code>entries</code>, <code>completeness_report</code></li>
+<li><code>SegmentEntry</code> — props: <code>name</code>, <code>body</code>, <code>body_chars</code>, <code>status</code>, <code>is_complete</code></li>
+</ul>
+<p><strong>Dependencies:</strong> (none)</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">grill</h1></header>
+<section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>grill</code> in the request</p><p class="install-source"><a href="../manifests/actions/grill.html" id="raw-manifest">Raw manifest format →</a></p></section>
+<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><ul><li><a href="actions/generate.html">generate</a></li></ul></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><p>No dedicated guide - see module overview below.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>grill_context — module context</h1>
+<h2>Purpose</h2>
+<p><code>GrillContext</code> drives the codebase-aware interview loop used by sketch, iterate, and any other stage that needs to ground design decisions in existing context files. It scans a directory tree for context-named files and <code>.context/</code> folders, reads them on demand, and persists each resolved insight immediately to <code>grill-answers.md</code> under the session folder. The <code>grill_with_context</code> action enforces a strict prove-read gate: options are never presented until the relevant context files have been read and cited.</p>
+<h2>Seam</h2>
+<p><code>GrillContext</code></p>
+<h2>Dependencies</h2>
+<p><code>primitives.actions</code>, <code>tools.tool</code>, <code>sessions</code></p>
+<h2>Mechanism</h2>
+<p>Prove-read gate — every question turn must name the context file(s) read and ground options in concrete terms from them before asking; skimming titles or relying on memory is treated as a defect.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">sketch</h1></header>
+<section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>sketch</code> in the request</p><p class="install-source"><a href="../manifests/actions/sketch.html" id="raw-manifest">Raw manifest format →</a></p></section>
+<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><ul><li><a href="actions/generate.html">generate</a></li></ul></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><h1>Sketch</h1>
+<p>Rough, informal artifacts produced through an interactive grill loop, kept alongside a formal artifact until a higher-fidelity generation supersedes them.</p>
+<h2>Purpose of sketching</h2>
+<ul>
+<li><strong>Surface the shape before commitment</strong> — force the design tree into view so unresolved branches are visible to both agent and user.</li>
+<li><strong>Reason in the open</strong> — every recommendation is sketched with its &quot;why&quot;, so the user can push back on the reasoning, not just the result.</li>
+<li><strong>Shared understanding</strong> — the sketch is the working record of what has been agreed on so far; downstream fidelity levels inherit that agreement instead of re-negotiating it.</li>
+<li><strong>Cheap to change</strong> — because it is rough and interactive, corrections happen while the cost of moving is low; the formal artifact never has to absorb a wrong shape.</li>
+</ul>
+<h2>What sketching is</h2>
+<ul>
+<li>A <strong>sketch-and-explain loop with the user</strong> — walk down each branch of the design tree, sketching your recommended shape and explaining the reasoning, one branch at a time. The user reacts; you refine. </li>
+<li>A <strong>scratch artifact</strong> that survives across fidelity levels until absorbed by a formal one.</li>
+</ul>
+<h2>What sketching is not</h2>
+<ul>
+<li>Not a replacement for formal generation. A sketch always precedes or accompanies a formal artifact; it does not replace it.</li>
+<li>Not chat-only — always presented interactively <strong>and</strong> persisted via <code>save_sketch</code> on the first draft and every refinement.</li>
+<li><strong>Not a margin-annotation exercise.</strong> Do not tag sketch lines with fidelity markers (<code>&lt;-i</code>, <code>&lt;-m</code>, <code>&lt;-s</code>, or similar). If fidelity matters, declare it once at the top of the sketch. The body is the shape — not a legend of which line belongs to which fidelity.</li>
+</ul>
+<h2>Loop</h2>
+<ol>
+<li><strong>Locate a template</strong> — tiered discovery (see below).</li>
+<li><strong>Draft</strong> — rough shape inspired by the template.</li>
+<li><strong>Present and persist</strong> — show the sketch in chat with a short explanation, then <strong>immediately</strong> <code>save_sketch</code> to <code>{destination}/.context/{slug}-sketch.md</code>. A sketch that exists only in chat is a defect; the file is the working record.</li>
+<li><strong>Extend the next branch</strong> — pick the next unresolved branch of the design tree, sketch your recommended shape for it into the artifact, and explain why in one or two lines. One branch at a time. Wait for feedback.</li>
+<li><strong>Refine and overwrite</strong> — regenerate the sketch showing what changed, then <strong>immediately</strong> <code>save_sketch</code> again (same path). Do not batch saves; do not wait until the session ends.</li>
+<li><strong>Repeat</strong> 4–5 until either the user says done, or every branch of the design tree has been sketched and reasoned out. Ask a question only when a branch genuinely cannot be resolved by sketching a recommendation.</li>
+</ol>
+<h3>Sketch cadence — question budget before first sketch</h3>
+<p><strong>Sketch early. A sketch with placeholders beats one more question.</strong></p>
+<p>If you reach 3 questions without having shown any shape: stop, draft what you know, mark gaps with <code>?</code>, then ask. Do not ask a fourth question before the first sketch exists.</p>
+<h2>When asking a question (grill inside sketch)</h2>
+<p>Bare option lists are not allowed. The user must be able to decide from the concepts in play — not from intuition about unlabeled choices.</p>
+<p>For every question:</p>
+<ol>
+<li><strong>Frame</strong> — name the sketch branch, restate what is already agreed in the sketch, and ground the decision in the active practice concepts (e.g. for clean_engineering modules: high-cohesion, low-coupling, named-seam-and-constraint, deep-module, complexity-absorption; for OOAD: class vs property vs operation, composition/aggregation/association, single responsibility). Pull those concepts from the wrapped agent&#x27;s material / fidelity docs, not from generic advice.</li>
+<li><strong>Options with rationale</strong> — 3–5 choices; recommended first; each option gets one short concept-tied rationale (what it does to the seam, ownership, or coupling). End with &quot;Other / I&#x27;ll specify.&quot;</li>
+<li><strong>One question</strong> — wait for the answer, then regenerate the sketch showing exactly what changed.</li>
+</ol>
+<p><strong>Always use the AskQuestion tool</strong> — never list options as plain chat text. One tool call = one question:</p>
+<pre><code>AskQuestion:
+  title: &quot;Grill — {theme name}&quot;
+  question: &quot;{single focused question with framing}&quot;
+  options:
+    - {option a — rationale}        # recommended first
+    - {option b — rationale}
+    - {option c — rationale}
+    - Other / I&#x27;ll specify</code></pre>
+<p>Question shape (frame + options) comes from <code>grill_with_context</code>, which <code>@sketch</code> pulls in explicitly. This section owns sketch show/persist cadence only.</p>
+<h2>Template discovery (tiered)</h2>
+<ol>
+<li><strong>Session context</strong> — templates or examples the caller passed in at invocation time. Owned by the current session. Highest priority: a user pasting an example in chat immediately shapes the sketch.</li>
+<li><strong>Convention (wrapped agent&#x27;s own template)</strong> — <code>{agent_dir}/templates/<em>-sketch.</em></code> inside the wrapped agent&#x27;s <code>templates/</code> folder (e.g. <code>bdd/templates/bdd-sketch.md</code>). Owned by whoever wrote that agent; lets each agent shape its own sketches without touching the sketch toolset.</li>
+<li><strong>Default (built-in fallback)</strong> — <code>sketch/templates/sketch-template.md</code> shipped inside the sketch toolset itself. Owned by this toolset; used only when nobody upstream supplied a template.</li>
+</ol>
+<p>If none of the above yield a template, the sketcher invents a shape for the domain at hand — explicitly a fallback, not a design target.</p>
+<h2>Persistence lifecycle</h2>
+<ul>
+<li><strong>Session-rooted paths:</strong> when chained from a Context generator, read the host <strong><code>active</code></strong> resource.</li>
+<li>Engagement docs/diagrams → <code>destination = session</code> → <code>{session}/.context/{slug}-sketch.md</code></li>
+<li>Module sketch → <code>destination = {session}/{module}</code> → <code>{session}/{module}/.context/{slug}-sketch.md</code></li>
+<li>Generated code for that module → <code>{session}/{module}/</code> (not under <code>.context/</code>)</li>
+<li>Sketches live at <code>{destination}/.context/{slug}-sketch.md</code>.</li>
+<li><code>.context/</code> is created inside the destination if it does not already exist.</li>
+<li><strong>Hard rule:</strong> call <code>save_sketch</code> as soon as the first interim draft exists; overwrite on every regeneration. Never defer persistence to the end of the grill.</li>
+<li>They persist until a formal artifact absorbs their content.</li>
+<li>Retirement is manual for now — remove the sketch when the formal artifact fully captures its intent.</li>
+</ul>
+<h2>Multi-lens sketching (CDD and similar orchestrators)</h2>
+<p>When sketching across multiple lenses (Stories / DDD / UX / Modules / BDD):</p>
+<h3>Rules</h3>
+<ul>
+<li><strong><code>confirm-lenses-before-sketch</code></strong> — <strong>Hard gate.</strong> Before any scaffold or sketch, use AskQuestion (allow_multiple: true) to confirm which lenses are active. Present them by sketch label. Do not proceed until confirmed. All active lenses are recommended by default; user removes out-of-scope ones.</li>
+<li><strong><code>grill-before-theme-detail</code></strong> — <strong>Hard gate.</strong> Before writing any non-scaffold content for a theme, run at least one grill round on that theme&#x27;s open questions. The session-level lens confirmation does NOT substitute for this per-theme grill.</li>
+<li><strong><code>one-sketch-per-engagement</code></strong> — One sketch file per engagement. Deepening fidelity updates <code>fidelity:</code> at the top and deepens blocks in place. Never create a new file for a new fidelity level.</li>
+<li><strong><code>scaffold-before-detail</code></strong> — A scaffold pass is required when the ask is greenfield, spans multiple themes/epics/modules, or no whole-design scaffold exists. Not required for a single narrow theme in an already-scaffolded design. Mark every scaffold line <code>&lt; scaffold</code>. Never scaffold and detail in the same pass.</li>
+<li><strong><code>scaffold-per-epic-not-mega-block</code></strong> — One <code>=========</code> theme block per epic (or sub-epic for large systems). Do not group all epics into a single mega-theme block.</li>
+<li><strong><code>detail-updates-scaffold-in-place</code></strong> — When detailing a theme, update scaffold lines within the existing <code>=========</code> block. Remove <code>&lt; scaffold</code> from filled lines. Never create a second parallel block for the same epic — one epic = one theme block for its lifetime.</li>
+<li><strong><code>lens-from-child-template</code></strong> — Every lens block body must use that lens&#x27;s own sketch notation (from child <code>sketch_template</code>). No free prose inside <code>stories:</code> / <code>ddd:</code> / <code>ux:</code> / <code>ce:</code> / <code>bdd:</code>. Use <code>* approx …</code> or omit the block if the content is not yet known.</li>
+</ul>
+<h3>Scaffold level by lens</h3>
+<h3>Common mistakes (multi-lens)</h3>
+<ul>
+<li>❌ Skipping the lens confirmation gate before scaffold or sketch</li>
+<li>❌ Skipping the per-theme grill — lens confirmation does not substitute for it</li>
+<li>❌ Creating a new sketch file when moving to a deeper fidelity — deepen in place</li>
+<li>❌ Creating a new theme block when detailing — update scaffold lines in the existing block</li>
+<li>❌ Grouping all epics into one mega-theme block — one block per epic</li>
+<li>❌ Scaffolding and detailing in the same pass</li>
+<li>❌ Scaffolding one lens only when other active lenses also need a whole-system map</li>
+<li>❌ Leaving scaffold lines without the <code>&lt; scaffold</code> marker</li>
+<li>❌ Writing free prose inside lens blocks — child notation only</li>
+<li>❌ Working multiple themes at once — finish one, then move to the next</li>
+</ul>
+<hr>
+<h2>Composition — how sketch chains with other actions</h2>
+<p><code>@sketch</code> <strong>explicitly calls</strong> <code>grill_with_context</code>, then chains <code>sketch_session</code>. Expansion order:</p>
+<pre><code>grill_with_context  ← pure Q-loop (no sketch advice)
+sketch_session      ← template + save_sketch cadence
+base action body    ← e.g. Context.sketch → self.generate()</code></pre>
+<p>Base <code>Context</code> exposes peer entry points: <code>generate</code> (plain), <code>grill</code>, <code>sketch</code>, <code>iterate</code>. Domains inherit them; do not re-decorate domain <code>generate</code> with <code>@sketch</code> / <code>@grill_with_context</code>.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>sketch — module context</h1>
+<h2>Purpose</h2>
+<p><code>Sketcher</code> produces a rough, persisted draft of a formal artifact through an interactive grill loop before any generate step runs. It locates a sketch template via tiered discovery (caller-supplied → agent-dir convention → built-in default), writes interim <code>{slug}-sketch.md</code> files to the session docs dir after every two or three grill answers, and overwrites the same path on each refinement. Leaving a sketch only in chat is treated as a defect; the file under the docs dir is the working record.</p>
+<h2>Seam</h2>
+<p><code>Sketcher</code></p>
+<h2>Dependencies</h2>
+<p><code>grill_context.grill_context</code>, <code>primitives.actions</code>, <code>tools.tool</code>, <code>sessions</code></p>
+<h2>Mechanism</h2>
+<p>Persist-on-draft cadence — <code>save_sketch</code> is called immediately on the first draft and again after every subsequent pair of grill answers; <code>find_template</code> uses tiered discovery so host toolsets can supply a domain-specific template alongside their module.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">generate</h1></header>
+<section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>generate</code> in the request</p><p class="install-source"><a href="../manifests/actions/generate.html" id="raw-manifest">Raw manifest format →</a></p></section>
+<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><ul><li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/8c1da4c4f7a50b991d622745ff471d0a56865742/context_tools/base/base_context_tool.py#L278-L281">generate_output</a> <span class="tag">(tool, no page)</span></li><li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/8c1da4c4f7a50b991d622745ff471d0a56865742/context_tools/base/base_context_tool.py#L264-L276">add_generate_header_to_generated</a> <span class="tag">(tool, no page)</span></li></ul></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><p>No dedicated guide - see module overview below.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>BaseContextTool (composer + lifecycle)</h1>
+<p><strong>Purpose:</strong> Shared base for every concrete context domain — partition/repair peers + generate/validate/satisfy/document (+ grill/sketch/iterate). Domains subclass it directly.</p>
+<p><strong>Primary use case:</strong> Subclass once per domain toolset; call kit providers and lifecycle actions from the host face without composing Session/Scan yourself.</p>
+<p><strong>Rationale:</strong> One composer owns session open, kit wiring, and lifecycle prose expansion so domains stay thin subclasses.</p>
+<h2>Seam</h2>
+<p><code>BaseContextTool</code> is the seam: domains subclass it and call <code>workspace()</code> / <code>scanner()</code> / lifecycle actions. The constraint is that providers return real kit instances (<code>Session(...)</code>, <code>Scan()</code>, …) — never <code>self</code> — and lifecycle bodies call through those providers. Host <code>@tool</code> / <code>@resource</code> methods are thin forwards for agent CLI. <code>@action</code> / <code>@instruction</code> / <code>@tool</code> remain (primitives only). Scaffolding new domains is CreateContextTool.</p>
+<h2>Public API</h2>
+<ul>
+<li><code>module_dir</code> — package folder for the concrete subclass</li>
+<li>Stage constants: <code>SHAPING</code>, <code>DISCOVERY</code>, <code>SPEC</code>, <code>ENGINEER</code></li>
+<li><code>fidelities: ClassVar[dict[str, str] | None]</code> — subclasses declare stage → fidelity_name mapping; triggers auto-generated lifecycle methods</li>
+<li><code>_set_fidelity(fidelity_name)</code> — updates <code>self.fidelity</code> and <code>self.format</code> at runtime</li>
+<li>Kit providers: <code>workspace()</code>, <code>scanner()</code>, <code>sketcher()</code>, <code>grill_context()</code>, <code>iterator()</code>, <code>decisions()</code></li>
+<li>Forwarded session/scan tools: <code>ensure_session</code>, <code>create_session</code>, <code>close_session</code>, <code>read_context_index</code>, <code>record_context_root</code>, <code>scan</code></li>
+<li>Resource <code>active</code>; instruction <code>session_guidance</code></li>
+<li>Class knobs: <code>default_workspace_folder</code>, <code>context_index_key</code></li>
+<li>Lifecycle actions: <code>generate</code>, <code>validate</code>, <code>satisfy</code>, <code>document</code>, <code>grill</code>, <code>sketch</code>, <code>iterate</code>, <code>generate_output</code>, <code>add_generate_header_to_generated</code></li>
+</ul>
+<h2>Dependencies</h2>
+<p>Session (composed via <code>workspace()</code>), Scan (composed instances); Sketcher, GrillContext, Iterator, RecordDecisions (composed); PartitionPipeline, Repair (methods injected by explicit binding — not MI; prose lookup stays in their source dirs)</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">document</h1></header>
+<section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>document</code> in the request</p><p class="install-source"><a href="../manifests/actions/document.html" id="raw-manifest">Raw manifest format →</a></p></section>
+<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><ul><li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/8c1da4c4f7a50b991d622745ff471d0a56865742/context_tools/base/base_context_tool.py#L278-L281">generate_output</a> <span class="tag">(tool, no page)</span></li><li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/8c1da4c4f7a50b991d622745ff471d0a56865742/context_tools/base/base_context_tool.py#L264-L276">add_generate_header_to_generated</a> <span class="tag">(tool, no page)</span></li></ul></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><p>No dedicated guide - see module overview below.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>BaseContextTool (composer + lifecycle)</h1>
+<p><strong>Purpose:</strong> Shared base for every concrete context domain — partition/repair peers + generate/validate/satisfy/document (+ grill/sketch/iterate). Domains subclass it directly.</p>
+<p><strong>Primary use case:</strong> Subclass once per domain toolset; call kit providers and lifecycle actions from the host face without composing Session/Scan yourself.</p>
+<p><strong>Rationale:</strong> One composer owns session open, kit wiring, and lifecycle prose expansion so domains stay thin subclasses.</p>
+<h2>Seam</h2>
+<p><code>BaseContextTool</code> is the seam: domains subclass it and call <code>workspace()</code> / <code>scanner()</code> / lifecycle actions. The constraint is that providers return real kit instances (<code>Session(...)</code>, <code>Scan()</code>, …) — never <code>self</code> — and lifecycle bodies call through those providers. Host <code>@tool</code> / <code>@resource</code> methods are thin forwards for agent CLI. <code>@action</code> / <code>@instruction</code> / <code>@tool</code> remain (primitives only). Scaffolding new domains is CreateContextTool.</p>
+<h2>Public API</h2>
+<ul>
+<li><code>module_dir</code> — package folder for the concrete subclass</li>
+<li>Stage constants: <code>SHAPING</code>, <code>DISCOVERY</code>, <code>SPEC</code>, <code>ENGINEER</code></li>
+<li><code>fidelities: ClassVar[dict[str, str] | None]</code> — subclasses declare stage → fidelity_name mapping; triggers auto-generated lifecycle methods</li>
+<li><code>_set_fidelity(fidelity_name)</code> — updates <code>self.fidelity</code> and <code>self.format</code> at runtime</li>
+<li>Kit providers: <code>workspace()</code>, <code>scanner()</code>, <code>sketcher()</code>, <code>grill_context()</code>, <code>iterator()</code>, <code>decisions()</code></li>
+<li>Forwarded session/scan tools: <code>ensure_session</code>, <code>create_session</code>, <code>close_session</code>, <code>read_context_index</code>, <code>record_context_root</code>, <code>scan</code></li>
+<li>Resource <code>active</code>; instruction <code>session_guidance</code></li>
+<li>Class knobs: <code>default_workspace_folder</code>, <code>context_index_key</code></li>
+<li>Lifecycle actions: <code>generate</code>, <code>validate</code>, <code>satisfy</code>, <code>document</code>, <code>grill</code>, <code>sketch</code>, <code>iterate</code>, <code>generate_output</code>, <code>add_generate_header_to_generated</code></li>
+</ul>
+<h2>Dependencies</h2>
+<p>Session (composed via <code>workspace()</code>), Scan (composed instances); Sketcher, GrillContext, Iterator, RecordDecisions (composed); PartitionPipeline, Repair (methods injected by explicit binding — not MI; prose lookup stays in their source dirs)</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">iterate</h1></header>
+<section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>iterate</code> in the request</p><p class="install-source"><a href="../manifests/actions/iterate.html" id="raw-manifest">Raw manifest format →</a></p></section>
+<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><ul><li><a href="actions/generate.html">generate</a></li></ul></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><p>No dedicated guide - see module overview below.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>iterate — module context</h1>
+<h2>Purpose</h2>
+<p><code>Iterator</code> enforces a disciplined grill-then-generate loop over formal output, producing only one small, scanner-validated slice per tick. It wraps <code>GrillContext.grill_with_context</code> and applies a hard gate before each generate step: the last two or three grill answers must name a concrete slice boundary grounded in a prove-read of the relevant context files. After each generate, it runs validate and applies one fix pass before returning to the grill. Dumping a whole artifact in a single tick is explicitly a defect.</p>
+<h2>Seam</h2>
+<p><code>Iterator</code></p>
+<h2>Dependencies</h2>
+<p><code>grill_context.grill_context</code>, <code>primitives.actions</code>, <code>tools.tool</code></p>
+<h2>Mechanism</h2>
+<p>Tick discipline — each cycle is grill → mark_iterate_tick → generate one slice → validate → one fix pass → stop; the loop never chains ticks or pre-authors output while grilling.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">validate</h1></header>
+<section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>validate</code> in the request</p><p class="install-source"><a href="../manifests/actions/validate.html" id="raw-manifest">Raw manifest format →</a></p></section>
+<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><p>Calls nothing else directly.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><p>No dedicated guide - see module overview below.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>BaseContextTool (composer + lifecycle)</h1>
+<p><strong>Purpose:</strong> Shared base for every concrete context domain — partition/repair peers + generate/validate/satisfy/document (+ grill/sketch/iterate). Domains subclass it directly.</p>
+<p><strong>Primary use case:</strong> Subclass once per domain toolset; call kit providers and lifecycle actions from the host face without composing Session/Scan yourself.</p>
+<p><strong>Rationale:</strong> One composer owns session open, kit wiring, and lifecycle prose expansion so domains stay thin subclasses.</p>
+<h2>Seam</h2>
+<p><code>BaseContextTool</code> is the seam: domains subclass it and call <code>workspace()</code> / <code>scanner()</code> / lifecycle actions. The constraint is that providers return real kit instances (<code>Session(...)</code>, <code>Scan()</code>, …) — never <code>self</code> — and lifecycle bodies call through those providers. Host <code>@tool</code> / <code>@resource</code> methods are thin forwards for agent CLI. <code>@action</code> / <code>@instruction</code> / <code>@tool</code> remain (primitives only). Scaffolding new domains is CreateContextTool.</p>
+<h2>Public API</h2>
+<ul>
+<li><code>module_dir</code> — package folder for the concrete subclass</li>
+<li>Stage constants: <code>SHAPING</code>, <code>DISCOVERY</code>, <code>SPEC</code>, <code>ENGINEER</code></li>
+<li><code>fidelities: ClassVar[dict[str, str] | None]</code> — subclasses declare stage → fidelity_name mapping; triggers auto-generated lifecycle methods</li>
+<li><code>_set_fidelity(fidelity_name)</code> — updates <code>self.fidelity</code> and <code>self.format</code> at runtime</li>
+<li>Kit providers: <code>workspace()</code>, <code>scanner()</code>, <code>sketcher()</code>, <code>grill_context()</code>, <code>iterator()</code>, <code>decisions()</code></li>
+<li>Forwarded session/scan tools: <code>ensure_session</code>, <code>create_session</code>, <code>close_session</code>, <code>read_context_index</code>, <code>record_context_root</code>, <code>scan</code></li>
+<li>Resource <code>active</code>; instruction <code>session_guidance</code></li>
+<li>Class knobs: <code>default_workspace_folder</code>, <code>context_index_key</code></li>
+<li>Lifecycle actions: <code>generate</code>, <code>validate</code>, <code>satisfy</code>, <code>document</code>, <code>grill</code>, <code>sketch</code>, <code>iterate</code>, <code>generate_output</code>, <code>add_generate_header_to_generated</code></li>
+</ul>
+<h2>Dependencies</h2>
+<p>Session (composed via <code>workspace()</code>), Scan (composed instances); Sketcher, GrillContext, Iterator, RecordDecisions (composed); PartitionPipeline, Repair (methods injected by explicit binding — not MI; prose lookup stays in their source dirs)</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">satisfy</h1></header>
+<section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>satisfy</code> in the request</p><p class="install-source"><a href="../manifests/actions/satisfy.html" id="raw-manifest">Raw manifest format →</a></p></section>
+<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><p>Calls nothing else directly.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><p>No dedicated guide - see module overview below.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>BaseContextTool (composer + lifecycle)</h1>
+<p><strong>Purpose:</strong> Shared base for every concrete context domain — partition/repair peers + generate/validate/satisfy/document (+ grill/sketch/iterate). Domains subclass it directly.</p>
+<p><strong>Primary use case:</strong> Subclass once per domain toolset; call kit providers and lifecycle actions from the host face without composing Session/Scan yourself.</p>
+<p><strong>Rationale:</strong> One composer owns session open, kit wiring, and lifecycle prose expansion so domains stay thin subclasses.</p>
+<h2>Seam</h2>
+<p><code>BaseContextTool</code> is the seam: domains subclass it and call <code>workspace()</code> / <code>scanner()</code> / lifecycle actions. The constraint is that providers return real kit instances (<code>Session(...)</code>, <code>Scan()</code>, …) — never <code>self</code> — and lifecycle bodies call through those providers. Host <code>@tool</code> / <code>@resource</code> methods are thin forwards for agent CLI. <code>@action</code> / <code>@instruction</code> / <code>@tool</code> remain (primitives only). Scaffolding new domains is CreateContextTool.</p>
+<h2>Public API</h2>
+<ul>
+<li><code>module_dir</code> — package folder for the concrete subclass</li>
+<li>Stage constants: <code>SHAPING</code>, <code>DISCOVERY</code>, <code>SPEC</code>, <code>ENGINEER</code></li>
+<li><code>fidelities: ClassVar[dict[str, str] | None]</code> — subclasses declare stage → fidelity_name mapping; triggers auto-generated lifecycle methods</li>
+<li><code>_set_fidelity(fidelity_name)</code> — updates <code>self.fidelity</code> and <code>self.format</code> at runtime</li>
+<li>Kit providers: <code>workspace()</code>, <code>scanner()</code>, <code>sketcher()</code>, <code>grill_context()</code>, <code>iterator()</code>, <code>decisions()</code></li>
+<li>Forwarded session/scan tools: <code>ensure_session</code>, <code>create_session</code>, <code>close_session</code>, <code>read_context_index</code>, <code>record_context_root</code>, <code>scan</code></li>
+<li>Resource <code>active</code>; instruction <code>session_guidance</code></li>
+<li>Class knobs: <code>default_workspace_folder</code>, <code>context_index_key</code></li>
+<li>Lifecycle actions: <code>generate</code>, <code>validate</code>, <code>satisfy</code>, <code>document</code>, <code>grill</code>, <code>sketch</code>, <code>iterate</code>, <code>generate_output</code>, <code>add_generate_header_to_generated</code></li>
+</ul>
+<h2>Dependencies</h2>
+<p>Session (composed via <code>workspace()</code>), Scan (composed instances); Sketcher, GrillContext, Iterator, RecordDecisions (composed); PartitionPipeline, Repair (methods injected by explicit binding — not MI; prose lookup stays in their source dirs)</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">repair</h1></header>
+<section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>repair</code> in the request</p><p class="install-source"><a href="../manifests/actions/repair.html" id="raw-manifest">Raw manifest format →</a></p></section>
+<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><ul><li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/8c1da4c4f7a50b991d622745ff471d0a56865742/context_tools/base/base_context_tool.py#L309-L312">scan</a> <span class="tag">(tool, no page)</span></li></ul></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><h1>Repair</h1>
+<p>Iterate until <strong>validate</strong> passes on <code>{{asset}}</code>. The violation signal is:</p>
+<pre><code>{{violation}}</code></pre>
+<p>That text may be a scanner report, a user complaint, or both together. The loop fixes <strong>why the context tool produced the violation</strong> — not the artifact in isolation. Never proceed without a verifiable error signal from <strong>scan</strong> or <strong>validate</strong>.</p>
+<p>Read the <strong><code>active</code></strong> resource first. <code>{{asset}}</code> and repaired outputs live under that root (docs → <code>{session.path}/.context/</code>; code → <code>{session.path}/{module}/</code>). Do not repair into a divergent folder.</p>
+<p>Run this loop in the current session when invoked directly. When launched from <code>improve</code> as a non-blocking background sub-agent, this text is the sub-agent&#x27;s own instructions — run the loop there instead, and report back once <strong>validate</strong> passes.</p>
+<p><strong>Log first.</strong> If this violation has not already been recorded via <code>log_mistake</code> (directly, or via <code>improve</code> before this loop started), call <code>log_mistake</code> now, and call <code>log_correction</code> once this loop&#x27;s fix lands. This loop assumes the mistake is already logged — it does not log it for you.</p>
+<hr>
+<h2>Not every rule is a scanner rule</h2>
+<p>A scanner only makes sense when the violation is <strong>mechanical</strong> - a specific text pattern, a missing structural element, something a deterministic check can find. Plenty of rules are not that: they are judgment calls (is this story actually a repeatable behaviour? is this the right level of abstraction?) that a reader has to weigh, not a regex has to match. Forcing a scanner onto a judgment-call rule produces a brittle check that is technically green while proving nothing.</p>
+<p>Before building or editing a scanner, ask: can this violation be stated as a deterministic pattern someone else&#x27;s content might also hit? If yes, continue below. If no - it is a prose/judgment rule - skip straight to <strong>Step 3 (Root cause)</strong> and <strong>Step 4 (Fix)</strong> with a <strong>prose-only</strong> change (a rule bullet, a clarifying example, sharper guidance in the context tool&#x27;s <code>.md</code>). Close that loop with <strong>validate</strong> (critical-judge review) instead of <strong>scan</strong>, and skip Steps 1 and 6 below entirely - there is no fixture pair to capture when there is nothing mechanical to check.</p>
+<h2>When scan is clean but a mechanical violation is a user complaint</h2>
+<p>The tools do not see the problem yet. Edit the relevant scanner under <code>scanners/</code> or <code>formats/{format}/scanners/</code> until <strong>scan</strong> reports a failure on <code>{{asset}}</code> that matches the complaint. Re-run <strong>scan</strong> after each scanner edit.</p>
+<p>Do not proceed to root-cause analysis until <strong>scan</strong> fails on <code>{{asset}}</code> - unless this is a prose/judgment rule per the section above, in which case <strong>validate</strong> is the signal instead.</p>
+<hr>
+<h2>1. Open an example folder — mechanical rules only</h2>
+<p>Skip this step entirely for a prose/judgment rule (see above) — there is no scanner to prove a fixture against. Otherwise, create a descriptive folder under the domain examples tree and copy the broken output before any fixes:</p>
+<pre><code>&lt;domain&gt;/examples/&lt;descriptive-folder&gt;/
+  faultyAsset          ← copy of {{asset}} when there is one file
+  faultyAssets/        ← when more than one file (same layout as {{asset}})
+  runs/1/run.md</code></pre>
+<p>Use a folder name that describes the violation class (e.g. <code>inheritance-crosses-class</code>). If that folder already exists from a prior session, pick a new descriptive name or suffix (<code>-2</code>, <code>-3</code>, …).</p>
+<p>When <code>{{asset}}</code> is multiple files, use <code>faultyAssets/</code> instead of a single <code>faultyAsset</code> file. Mirror the same paths inside that folder.</p>
+<hr>
+<h2>2. Write run.md</h2>
+<p>Create <code>runs/&lt;n&gt;/run.md</code> for each attempt. Include, for every definitive violation:</p>
+<p>Non-blocking warnings may be listed separately but do not block the loop.</p>
+<hr>
+<h2>3. Root cause</h2>
+<p>Use <strong>contexts</strong>, <strong>examples</strong>, and <strong>template</strong> to determine why the context tool produced the violation. Review context bullets, worked samples, and file shape. If those three do not explain it, the root cause may sit one layer down, in a shared utility or primitive the context tool depends on (<code>utilities/</code>, <code>primitives/</code>) — trace the call into there before concluding.</p>
+<hr>
+<h2>4. Fix the root cause</h2>
+<p>Draft a <strong>surgical</strong> change wherever root cause actually lives:</p>
+<ul>
+<li>Usually the context tool itself — its contexts, examples, template, action</li>
+</ul>
+<p>prose, or scanners.</p>
+<ul>
+<li>Occasionally a shared utility or primitive it depends on, when root cause</li>
+</ul>
+<p>traces down into one of those instead.</p>
+<p>Touch only what root cause implicates; do not rebuild from spec.</p>
+<p><strong>Present the drafted change to the user and wait for approval before applying it.</strong> Never apply a root-cause-level fix silently, even when the cause is obvious.</p>
+<h3>Approval ask (required shape — no mind-reading)</h3>
+<p>Every approval ask — the repair sub-agent&#x27;s return, and any parent summary of it — MUST include all four, in plain English. Slug labels, &quot;Draft A/B&quot;, or &quot;approve?&quot; alone are a defect.</p>
+<ol>
+<li><strong>What went wrong</strong> — the concrete mistake in the artifact (one or two</li>
+</ol>
+<p>sentences a reader who was not in the session can follow).</p>
+<ol>
+<li><strong>Why</strong> — what was missing or wrong in the context tool (or utility /</li>
+</ol>
+<p>primitive) that let it happen — the root cause, not a restatement of (1).</p>
+<ol>
+<li><strong>What we will change</strong> — the surgical fix: which files, what rule /</li>
+</ol>
+<p>scanner / template / prose lands, and what that stops next time. Name paths; do not hide the solution behind a process-slug.</p>
+<ol>
+<li><strong>Your decision</strong> — exactly what the user should answer, e.g. &quot;Approve</li>
+</ol>
+<p>applying these changes?&quot;, &quot;Approve with X dropped?&quot;, or &quot;Reshape Y?&quot;. Offer reshape / reject, not only yes.</p>
+<p>Do not proceed to apply until the user answers that decision.</p>
+<p>Once approved, re-run <strong>generate</strong> (or the steps that produced <code>{{asset}}</code>) and write the output back to <code>{{asset}}</code>. Do not hand-edit <code>{{asset}}</code> to greenwash the scanners while leaving the underlying context tool (or utility/ primitive) broken.</p>
+<p>If the domain has <code>reference/repair-tips.md</code>, read it before writing fix code. Save every fix in <code>runs/&lt;n&gt;/run.md</code>.</p>
+<hr>
+<h2>5. Validate and repeat</h2>
+<p>Run <strong>validate</strong> on <code>{{asset}}</code> after regenerating from the fixed context tool (or utility/primitive). The report names the failing scanner when scan finds violations.</p>
+<p>If violations remain, increment to <code>runs/&lt;n+1&gt;/run.md</code> and repeat from <strong>Step 2</strong>.</p>
+<hr>
+<h2>6. Capture the pass fixture — mechanical rules only, once validate passes</h2>
+<p>Skip this step for a prose/judgment rule — closing on <strong>validate</strong> in Step 5 is the end of that loop. Otherwise, save the final clean output beside the original failure:</p>
+<pre><code>&lt;domain&gt;/examples/&lt;descriptive-folder&gt;/
+  faultyAsset          ← or faultyAssets/ when more than one file
+  repairedAsset        ← or repairedAssets/ when more than one file</code></pre>
+<p>Only the <strong>original failure</strong> and <strong>final clean output after the fix</strong> are kept as fixtures. Delete <code>runs/</code> when the repair is done — working notes only during the loop.</p>
+<hr>
+<h2>7. Run regression across repair history</h2>
+<p>Offer <strong><code>verify_regression</code></strong> as a non-blocking background sub-agent scoped to this tool&#x27;s own <code>&lt;domain&gt;/examples/</code> folder (never repo-wide) whenever there is a growing fixture history to re-check. It re-scans every captured pair directly under <code>examples/</code>:</p>
+<ul>
+<li>Every <code>faultyAsset</code> or file under <code>faultyAssets/</code> must still <strong>violate</strong></li>
+<li>Every <code>repairedAsset</code> or file under <code>repairedAssets/</code> must still be <strong>clean</strong></li>
+</ul>
+<p>The folder structure is the registry — no separate cases file. Once this sprint&#x27;s fixes are settled, offer <strong><code>archive_mistakes</code></strong> — also a non-blocking background sub-agent — to move the closed mistakes.log out of the session folder.</p>
+<hr>
+<h1>Validate</h1>
+<p>Take the persona of a <strong>critical judge</strong> — do not edit the artifact.</p>
+<ol>
+<li>Follow <strong><code>session_guidance</code></strong>. Scope judgment to artifacts under <code>session.path</code> / the session layout.</li>
+<li>Use <strong>contexts</strong> as the rubric — report pass/fail per named context and named rule with brief evidence.</li>
+<li>Call <strong><code>scan</code></strong> on the session-rooted paths under review.</li>
+<li>Do not fix. Report failures for fixing, then <strong>validate</strong> again when ready.</li>
+</ol>
+<hr></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>Repair</h1>
+<p><strong>Purpose:</strong> Record a mistake the moment it&#x27;s spotted (<code>log_mistake</code>) and complete it once fixed (<code>log_correction</code>); when repairing, fix root cause (<code>repair</code>); orchestrate the whole mistake-to-eval loop from one action (<code>improve</code>); check regression across a tool&#x27;s own examples (<code>verify_regression</code>); archive a closed mistakes.log (<code>archive_mistakes</code>). <code>repair</code>, <code>verify_regression</code>, and <code>archive_mistakes</code> are all <code>@sub_agent</code> — the calling agent launches each as a non-blocking background task rather than running it inline; they stay directly callable in plain Python (tests, scripts) since <code>@sub_agent</code> only changes agent-facing discovery, not the underlying method.</p>
+<p><strong>Seam:</strong> <code>Repair</code>, <code>MistakeEntry</code>, <code>MistakeLog</code>, <code>RegressionExample</code>, <code>RegressionReport</code></p>
+<h2>Public API</h2>
+<ul>
+<li><code>Repair</code> — <code>log_mistake</code>, <code>log_correction</code>, <code>repair</code> (<code>@sub_agent @action</code>),</li>
+</ul>
+<p><code>improve</code>, <code>verify_regression</code> (<code>@sub_agent @tool</code>), <code>archive_mistakes</code> (<code>@sub_agent @tool</code>). Inside <code>improve()</code>, <code>self.mode = &quot;tool&quot;</code> then <code>self.repair(...)</code> lists <code>repair</code> as a deferred tool step instead of eagerly inlining the whole root-cause loop. A direct top-level <code>repair()</code> call (e.g. via <code>BaseContextTool.repair()</code> -&gt; <code>self.repairer.repair(...)</code>) keeps the default <code>mode=&quot;action&quot;</code> and still inlines the full loop.</p>
+<ul>
+<li><code>MistakeEntry</code> — props: <code>entry_id</code>, <code>artifact</code>, <code>rule</code>, <code>wrong</code>, <code>original</code>,</li>
+</ul>
+<p><code>improved</code>, <code>status</code>, <code>when</code>, <code>tool</code>, <code>fidelity</code> (<code>entry_id</code> correlates a <code>log_mistake</code> call to its later <code>log_correction</code> — several can stay open at once; <code>tool</code>/<code>fidelity</code> name whichever context tool/fidelity produced the entry; auto-injected by the calling host, never supplied by the agent); ops: <code>render</code></p>
+<ul>
+<li><code>MistakeLog</code> — props: <code>path</code>; ops: <code>append</code>, <code>complete</code> (rewrites the log in</li>
+</ul>
+<p>place to fill in <code>improved</code>/<code>status</code> on the entry matching <code>entry_id</code> — never appends a second entry for the same mistake), <code>parse</code>, <code>distinct_tags</code>, <code>archive</code> (moves — never copies — to <code>.context/archive/repairs/{tool}-{fidelity}-{date}.log</code> under a <code>repo_root</code>; falls back to the session name, independently per tool/fidelity, when entries disagree)</p>
+<ul>
+<li><code>RegressionExample</code> — props: <code>folder</code>, <code>faulty_paths</code>, <code>repaired_paths</code>, <code>rule</code></li>
+</ul>
+<p>(the rule slug this example exercises — the folder name by default, or a <code>rule.txt</code> sidecar when two folders deliberately share one scanner); ops: <code>verify</code> (faulty paths must still violate that one rule; repaired paths must still be clean of it — unrelated rules firing on an intentionally-narrow fixture snippet do not fail the check). Only exists for <strong>mechanical</strong> rules — a judgment-call rule closes on a prose-only fix with no scanner, no fixture pair, and nothing here to regress (see <code>repair.md</code> § &quot;Not every rule is a scanner rule&quot;).</p>
+<ul>
+<li><code>RegressionReport</code> — props: <code>examples_root</code>, <code>results</code>; ops: <code>verify_examples</code>,</li>
+</ul>
+<p><code>summary</code> (scoped to one tool&#x27;s own <code>examples_root</code> — never repo-wide)</p>
+<p><strong>Dependencies:</strong> <code>scanners.Scan</code> (regression re-scans faultyAsset/repairedAsset pairs); <code>sub_agent.sub_agent</code> (marks <code>repair</code>, <code>verify_regression</code>, and <code>archive_mistakes</code> as non-blocking launches); <code>primitives.actions.action</code>&#x27;s <code>mode</code> resource (<code>self.mode = &quot;tool&quot;</code> inside <code>improve</code> defers the nested <code>repair</code> call)</p>
+<p><strong>Mechanism:</strong> Concrete mergeable class (one test tier — no separate interface) composing four domain classes, same split as <code>PartitionPipeline</code>. <code>log_mistake</code> and <code>log_correction</code> are two calls, not one, so the mistake is durably recorded the instant it&#x27;s pointed out — never deferred until a fix exists. Approval asks from <code>repair</code> / <code>improve</code> (see <code>repair.md</code> § Approval ask, <code>improve.md</code> § 3) must state what went wrong, why, what will change, and the user&#x27;s decision — never slug-only boards; the parent resumes the repair sub-agent to apply after approval.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">improve</h1></header>
+<section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>improve</code> in the request</p><p class="install-source"><a href="../manifests/actions/improve.html" id="raw-manifest">Raw manifest format →</a></p></section>
+<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><p>Calls nothing else directly.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><h1>Improve</h1>
+<p>The full mistake-to-eval loop in one action, so it resurfaces every time a mistake gets logged in this session — never a hook, never a separate reminder mechanism.</p>
+<hr>
+<h2>1. Log the mistake, the moment it&#x27;s spotted</h2>
+<p>Call <strong><code>log_mistake</code></strong> the moment a mistake is pointed out — before any fix exists. Pass <code>artifact</code>/<code>rule</code>/<code>wrong</code>/<code>original</code> for the faulty state as it stands right now. <code>tool</code>/<code>fidelity</code> are auto-injected by the host from its own class name and <code>self.fidelity</code>; never pass them yourself and never ask the user for them. It returns an <code>entry_id</code> — hold onto it; that id is how this mistake gets matched to its correction later, even with several mistakes open at once. Do not wait for the fix to log this.</p>
+<hr>
+<h2>2. Log the correction, once the fix lands</h2>
+<p>Once the fix is actually applied, call <strong><code>log_correction</code></strong> with that same <code>entry_id</code> and the <code>improved</code> output. This completes the open entry — never start a fresh one for the same mistake. When several mistakes are in flight, track each one&#x27;s <code>entry_id</code> explicitly; nothing here assumes only one is open at a time.</p>
+<hr>
+<h2>3. Root-cause and fix it — only when asked</h2>
+<p>This never runs on its own. When the user asks to improve the tool itself (not just this one artifact), work through <code>{session.folder}/mistakes.log</code>: for each corrected mistake whose root cause has not been fixed yet, launch <strong><code>repair</code></strong> as a non-blocking background sub-agent with <code>asset</code>/<code>violation</code> for that entry — never run its full loop synchronously in this session. That loop (see <code>repair.md</code>, sent verbatim as the sub-agent&#x27;s instructions) root-causes against <strong>contexts</strong> / <strong>examples</strong> / <strong>template</strong> and drafts a <strong>surgical</strong> change wherever root cause actually lives — usually the context tool itself (context, example, template, action prose, or scanner), occasionally a shared utility or primitive it depends on when root cause traces down into one of those instead.</p>
+<p>The sub-agent presents the drafted change and must wait for approval before applying it; never apply a root-cause fix silently. <strong>When the parent surfaces drafts or a board of open repairs, each item MUST use the same approval shape as <code>repair.md</code> § &quot;Approval ask&quot;</strong> — what went wrong, why (root cause), what we will change (concrete files/behavior), and the decision the user must make (approve / reshape / reject). Slug-only boards (&quot;CE: no parallel hierarchy — Draft A/B?&quot;) are a defect; the user must not have to reverse-engineer the proposal. After the user approves, <strong>resume that repair sub-agent to apply</strong> — do not run the apply loop in the parent <code>improve</code> session.</p>
+<p>Once approved and <strong>validate</strong> passes, <code>repair</code> captures the <code>faultyAsset</code>/<code>repairedAsset</code> fixture pair - <strong>but only when the rule is mechanical</strong> (a scanner can deterministically detect it). A judgment-call rule (is this the right abstraction? is this actually a repeatable behaviour?) closes on a <strong>prose-only</strong> fix instead — a rule bullet or sharper guidance in the context tool&#x27;s <code>.md</code> — with no scanner, no fixture pair, and nothing to regress. Do not force a scanner onto a rule that is inherently a judgment call just to make this loop&#x27;s shape uniform; that produces a check that is green without proving anything. Do not skip straight to fixture capture without a verified violation signal from <strong>scan</strong> or <strong>validate</strong>, whichever applies.</p>
+<hr>
+<h2>4. Offer regression, non-blocking — only when a fixture pair exists</h2>
+<p>A prose-only fix (no scanner, no fixture pair) has nothing to regress — skip this step for that entry. After a fresh fixture pair lands, ask the user whether to launch <strong><code>verify_regression</code></strong> as a non-blocking background sub-agent scoped to this tool&#x27;s own <code>examples/</code> tree, never repo-wide. It re-scans every existing <code>faultyAsset</code>/<code>repairedAsset</code> pair and reports pass/fail without blocking further work in this session. A fresh fixture must never shrink the safety net silently.</p>
+<hr>
+<h2>5. Offer to archive, once satisfied</h2>
+<p>When the user is done with this sprint&#x27;s mistakes log, offer <strong><code>archive_mistakes</code></strong> — also a non-blocking background sub-agent. It moves — never copies — <code>{session.folder}/mistakes.log</code> to <code>{repo_root}/.context/archive/repairs/{tool}-{fidelity}-{date}.log</code>, tagged from whatever tool/fidelity produced the entries (falling back to the session name when entries disagree). Exactly one durable copy should exist once this returns.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>Repair</h1>
+<p><strong>Purpose:</strong> Record a mistake the moment it&#x27;s spotted (<code>log_mistake</code>) and complete it once fixed (<code>log_correction</code>); when repairing, fix root cause (<code>repair</code>); orchestrate the whole mistake-to-eval loop from one action (<code>improve</code>); check regression across a tool&#x27;s own examples (<code>verify_regression</code>); archive a closed mistakes.log (<code>archive_mistakes</code>). <code>repair</code>, <code>verify_regression</code>, and <code>archive_mistakes</code> are all <code>@sub_agent</code> — the calling agent launches each as a non-blocking background task rather than running it inline; they stay directly callable in plain Python (tests, scripts) since <code>@sub_agent</code> only changes agent-facing discovery, not the underlying method.</p>
+<p><strong>Seam:</strong> <code>Repair</code>, <code>MistakeEntry</code>, <code>MistakeLog</code>, <code>RegressionExample</code>, <code>RegressionReport</code></p>
+<h2>Public API</h2>
+<ul>
+<li><code>Repair</code> — <code>log_mistake</code>, <code>log_correction</code>, <code>repair</code> (<code>@sub_agent @action</code>),</li>
+</ul>
+<p><code>improve</code>, <code>verify_regression</code> (<code>@sub_agent @tool</code>), <code>archive_mistakes</code> (<code>@sub_agent @tool</code>). Inside <code>improve()</code>, <code>self.mode = &quot;tool&quot;</code> then <code>self.repair(...)</code> lists <code>repair</code> as a deferred tool step instead of eagerly inlining the whole root-cause loop. A direct top-level <code>repair()</code> call (e.g. via <code>BaseContextTool.repair()</code> -&gt; <code>self.repairer.repair(...)</code>) keeps the default <code>mode=&quot;action&quot;</code> and still inlines the full loop.</p>
+<ul>
+<li><code>MistakeEntry</code> — props: <code>entry_id</code>, <code>artifact</code>, <code>rule</code>, <code>wrong</code>, <code>original</code>,</li>
+</ul>
+<p><code>improved</code>, <code>status</code>, <code>when</code>, <code>tool</code>, <code>fidelity</code> (<code>entry_id</code> correlates a <code>log_mistake</code> call to its later <code>log_correction</code> — several can stay open at once; <code>tool</code>/<code>fidelity</code> name whichever context tool/fidelity produced the entry; auto-injected by the calling host, never supplied by the agent); ops: <code>render</code></p>
+<ul>
+<li><code>MistakeLog</code> — props: <code>path</code>; ops: <code>append</code>, <code>complete</code> (rewrites the log in</li>
+</ul>
+<p>place to fill in <code>improved</code>/<code>status</code> on the entry matching <code>entry_id</code> — never appends a second entry for the same mistake), <code>parse</code>, <code>distinct_tags</code>, <code>archive</code> (moves — never copies — to <code>.context/archive/repairs/{tool}-{fidelity}-{date}.log</code> under a <code>repo_root</code>; falls back to the session name, independently per tool/fidelity, when entries disagree)</p>
+<ul>
+<li><code>RegressionExample</code> — props: <code>folder</code>, <code>faulty_paths</code>, <code>repaired_paths</code>, <code>rule</code></li>
+</ul>
+<p>(the rule slug this example exercises — the folder name by default, or a <code>rule.txt</code> sidecar when two folders deliberately share one scanner); ops: <code>verify</code> (faulty paths must still violate that one rule; repaired paths must still be clean of it — unrelated rules firing on an intentionally-narrow fixture snippet do not fail the check). Only exists for <strong>mechanical</strong> rules — a judgment-call rule closes on a prose-only fix with no scanner, no fixture pair, and nothing here to regress (see <code>repair.md</code> § &quot;Not every rule is a scanner rule&quot;).</p>
+<ul>
+<li><code>RegressionReport</code> — props: <code>examples_root</code>, <code>results</code>; ops: <code>verify_examples</code>,</li>
+</ul>
+<p><code>summary</code> (scoped to one tool&#x27;s own <code>examples_root</code> — never repo-wide)</p>
+<p><strong>Dependencies:</strong> <code>scanners.Scan</code> (regression re-scans faultyAsset/repairedAsset pairs); <code>sub_agent.sub_agent</code> (marks <code>repair</code>, <code>verify_regression</code>, and <code>archive_mistakes</code> as non-blocking launches); <code>primitives.actions.action</code>&#x27;s <code>mode</code> resource (<code>self.mode = &quot;tool&quot;</code> inside <code>improve</code> defers the nested <code>repair</code> call)</p>
+<p><strong>Mechanism:</strong> Concrete mergeable class (one test tier — no separate interface) composing four domain classes, same split as <code>PartitionPipeline</code>. <code>log_mistake</code> and <code>log_correction</code> are two calls, not one, so the mistake is durably recorded the instant it&#x27;s pointed out — never deferred until a fix exists. Approval asks from <code>repair</code> / <code>improve</code> (see <code>repair.md</code> § Approval ask, <code>improve.md</code> § 3) must state what went wrong, why, what will change, and the user&#x27;s decision — never slug-only boards; the parent resumes the repair sub-agent to apply after approval.</p></section>
+</div>
+</div>
+</div>
+</main>
+<script src="commons/catalog-foundry-tour.js?v=cdd-12"></script>
+<script src="commons/catalog-foundry-skill-nav.js?v=cdd-12"></script>
+</body>
+</html>

@@ -5,7 +5,7 @@
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 
 Peer-kit expansion lives with the kits:
-- ``utilities/sessions/workspace_session_spec.py``
+- ``utilities/workspace/workspace_session_spec.py``
 - ``utilities/partition/partition_spec.py``
 - ``utilities/repair/repair_spec.py``
 
@@ -360,7 +360,7 @@ with description("BaseContextTool public host face"):
         expect(type(self.host).context_index_key).to(equal(""))
 
     with it("should hold a Session as workspace"):
-        from sessions.workspace_session import Session
+        from workspace.workspace_session import Session
 
         expect(isinstance(self.host.workspace, Session)).to(be_true)
 
@@ -407,6 +407,117 @@ with description("BaseContextTool public host face"):
         header = self.host.add_generate_header_to_generated()
         expect("@toolset-manifest" in header).to(be_true)
         expect("invoke-edit: action satisfy" in header).to(be_true)
+
+
+# ---------------------------------------------------------------------------
+# Repair-to-eval loop: log_mistake/log_correction auto-injection, improve,
+# regression, archive
+# ---------------------------------------------------------------------------
+
+with description("BaseContextTool.log_mistake tool/fidelity auto-injection"):
+    with before.each:
+        import shutil
+        import tempfile
+
+        self.tmp_dir = Path(tempfile.mkdtemp())
+        self.host = Stories(fidelity="story_map", path=str(self.tmp_dir), session="test")
+        self.log_path = self.tmp_dir / ".context" / "sessions" / "test" / "mistakes.log"
+        self._shutil = shutil
+
+    with it("should tag the entry with the host class name and current fidelity"):
+        self.host.log_mistake(
+            artifact="some/file.md",
+            rule="test-rule",
+            wrong="bad thing happened",
+            original="old",
+        )
+        content = self.log_path.read_text(encoding="utf-8")
+        expect("tool: Stories" in content).to(be_true)
+        expect("fidelity: story_map" in content).to(be_true)
+        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
+
+    with it("should re-tag with the fidelity in effect at call time, not construction time"):
+        self.host._set_fidelity("scenarios")
+        self.host.log_mistake(
+            artifact="some/file.md",
+            rule="test-rule",
+            wrong="bad thing happened",
+            original="old",
+        )
+        content = self.log_path.read_text(encoding="utf-8")
+        expect("fidelity: scenarios" in content).to(be_true)
+        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
+
+    with it("should complete the entry via log_correction, forwarded to the repairer"):
+        entry_id = self.host.log_mistake(
+            artifact="some/file.md",
+            rule="test-rule",
+            wrong="bad thing happened",
+            original="old",
+        )
+        self.host.log_correction(entry_id=entry_id, improved="new")
+        content = self.log_path.read_text(encoding="utf-8")
+        expect("status: fixed" in content).to(be_true)
+        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
+
+
+with description("BaseContextTool.improve action"):
+    with before.all:
+        cls = _ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
+        self.host = cls()
+        self.response = _ActionRunner.instance().invoke_action(
+            _ActionRunRequest(
+                request={"toolset": _CAR_CHRONICLE_TOOLSET, "context": {}},
+                toolset_path=_CAR_CHRONICLE_TOOLSET,
+                action_name="improve",
+                context={},
+                arguments={},
+                instance=self.host,
+            )
+        )
+
+    with it("should set action to improve"):
+        expect(self.response["action"]).to(equal("improve"))
+
+    with it("should inline the improve.md roadmap via the repairer"):
+        instructions = self.response["instructions"]
+        expect("Log the mistake, the moment it's spotted" in instructions).to(be_true)
+        expect("Offer to archive, once satisfied" in instructions).to(be_true)
+
+
+with description("BaseContextTool regression and archive forwarding"):
+    with before.each:
+        import shutil
+        import tempfile
+
+        self.tmp_dir = Path(tempfile.mkdtemp())
+        self.host = Stories(fidelity="story_map", path=str(self.tmp_dir), session="test")
+        self._shutil = shutil
+
+    with it("should forward verify_regression to the repairer"):
+        examples_root = self.tmp_dir / "empty-examples"
+        summary = self.host.verify_regression(str(examples_root))
+        expect(f"No regression examples found under {examples_root}." in summary).to(be_true)
+        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
+
+    with it("should forward archive_mistakes to the repairer"):
+        entry_id = self.host.log_mistake(
+            artifact="a.md", rule="r1", wrong="w1", original="o1"
+        )
+        self.host.log_correction(entry_id=entry_id, improved="i1")
+        repo_root = self.tmp_dir / "repo"
+        destination = self.host.archive_mistakes(str(repo_root))
+        expect(Path(destination).is_file()).to(be_true)
+        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
+
+    with it("should discover repair, verify_regression, and archive_mistakes as non-blocking sub-agents on the host"):
+        from sub_agent.sub_agent import discover_sub_agent_tools
+
+        discovered = discover_sub_agent_tools(self.host)
+        for name in ("repair", "verify_regression", "archive_mistakes"):
+            expect(name in discovered).to(be_true)
+            expect(discovered[name].signature_entry["kind"]).to(equal("sub_agent"))
+        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
@@ -460,7 +571,7 @@ with description("BaseContextTool.fidelities class variable"):
             expect(Ddd.fidelities[BaseContextTool.SPEC]).to(equal("building_blocks"))
 
         with it("should map ENGINEER to code"):
-            expect(Ddd.fidelities[BaseContextTool.ENGINEER]).to(equal("code"))
+            expect(Ddd.fidelities[BaseContextTool.ENGINEER]).to(equal("tactics"))
 
     with context("on Ux"):
         with it("should map DISCOVERY to ia"):
@@ -470,7 +581,7 @@ with description("BaseContextTool.fidelities class variable"):
             expect(Ux.fidelities[BaseContextTool.SPEC]).to(equal("mockup"))
 
         with it("should map ENGINEER to code"):
-            expect(Ux.fidelities[BaseContextTool.ENGINEER]).to(equal("code"))
+            expect(Ux.fidelities[BaseContextTool.ENGINEER]).to(equal("front_end_code"))
 
     with context("on CleanEngineering"):
         with it("should map DISCOVERY to modules"):

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.__foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
+</script>
+<title>add_generate_header_to_generated — lifecycle action</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../commons/site.css?v=foundry-33">
+<link rel="stylesheet" href="../commons/foundry-catalog.css?v=cdd-1">
+<link rel="stylesheet" href="../commons/cdd-board.css?v=cdd-1">
+
+<script src="../commons/catalog-nav.js?v=foundry-10"></script>
+</head>
+<body data-nav-prefix="../" data-nav-current="actions" data-nav-site-base="">
+<main id="main-content">
+<div class="page-hero page-hero--foundry">
+  <div class="wrap">
+    <table class="page-hero__table" role="presentation">
+      <tr>
+        <td class="page-hero__cell page-hero__cell--title">
+          <h1 class="page-headline">add_generate_header_to_generated</h1>
+          <p class="body-lead">Lifecycle action</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<div class="catalog-body">
+<div class="wrap">
+<article class="action-page" data-action="add_generate_header_to_generated">
+  <header><span class="badge">Lifecycle action</span><p>used as action: add_generate_header_to_generated in the request</p><a class="raw-manifest" href="https://github.com/abd-works/abd-context-driven-delivery/blob/8c1da4c4f7a50b991d622745ff471d0a56865742/context_tools/base/base.py">Raw manifest format &rarr;</a></header>
+  <section class="tools-called"><h2>Tools / actions called</h2><details open><summary>Show calls</summary>
+<p>Calls nothing else directly.</p>
+</details></section>
+  <section class="markdown-instructions"><h2>Markdown instructions</h2><details><summary>Show guide</summary>
+<p>No dedicated guide - see module overview below.</p>
+</details></section>
+  <section class="module-overview"><h2>Module overview</h2><details><summary>Show overview</summary>
+<pre class="code-fence"><code class="language-markdown"># BaseContextTool (composer + lifecycle)
+
+**Purpose:** Shared base for every concrete context domain — partition/repair peers + generate/validate/satisfy/document (+ grill/sketch/iterate). Domains subclass it directly.
+
+**Primary use case:** Subclass once per domain toolset; call kit providers and lifecycle actions from the host face without composing Session/Scan yourself.
+
+**Rationale:** One composer owns session open, kit wiring, and lifecycle prose expansion so domains stay thin subclasses.
+
+## Seam
+
+`BaseContextTool` is the seam: domains subclass it and call `workspace()` / `scanner()` / lifecycle actions. The constraint is that providers return real kit instances (`Session(...)`, `Scan()`, …) — never `self` — and lifecycle bodies call through those providers. Host `@tool` / `@resource` methods are thin forwards for agent CLI. `@action` / `@instruction` / `@tool` remain (primitives only). Scaffolding new domains is CreateContextTool.
+
+## Public API
+
+- `module_dir` — package folder for the concrete subclass
+- Stage constants: `SHAPING`, `DISCOVERY`, `SPEC`, `ENGINEER`
+- `fidelities: ClassVar[dict[str, str] | None]` — subclasses declare stage → fidelity_name mapping; triggers auto-generated lifecycle methods
+- `_set_fidelity(fidelity_name)` — updates `self.fidelity` and `self.format` at runtime
+- Kit providers: `workspace()`, `scanner()`, `sketcher()`, `grill_context()`, `iterator()`, `decisions()`
+- Forwarded session/scan tools: `ensure_session`, `create_session`, `close_session`, `read_context_index`, `record_context_root`, `scan`
+- Resource `active`; instruction `session_guidance`
+- Class knobs: `default_workspace_folder`, `context_index_key`
+- Lifecycle actions: `generate`, `validate`, `satisfy`, `document`, `grill`, `sketch`, `iterate`, `generate_output`, `add_generate_header_to_generated`
+
+## Dependencies
+
+Session (composed via `workspace()`), Scan (composed instances); Sketcher, GrillContext, Iterator, RecordDecisions (composed); PartitionPipeline, Repair (methods injected by explicit binding — not MI; prose lookup stays in their source dirs)
+</code></pre>
+</details></section>
+  <section class="code"><h2>Code</h2><details><summary>Show code</summary>
+<pre class="code-fence"><code class="language-python"># @toolset-manifest python -m tools manifest context_tools.base.base_context_tool:BaseContextTool
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
+# invoke-new: action generate | context.fidelity discovery
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+&quot;&quot;&quot;BaseContextTool - composer + artifact lifecycle; shared face for every concrete domain.
+
+Non-primitive kits are held as plain instance attributes and called through
+them (``self.workspace.…``, ``self.scanner.…``, …) — not MI-as-self and not
+``@`` chain decorators. Domains subclass this class directly.
+``@action`` / ``@instruction`` / ``@tool`` stay (primitives only). Host
+``@tool`` / ``@resource`` wrappers forward to kits so agents can still invoke
+them on the domain toolset.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import inspect
+from pathlib import Path
+from typing import ClassVar
+
+from grill_context.grill_context import GrillContext
+from iterate.iterate import Iterator
+from partition.partition import Partition
+from primitives.actions.action import _ActionRunner
+from primitives.actions.action import AgenticToolset
+from primitives.actions.action import action
+from primitives.instructions import Instruction
+from primitives.instructions import instruction
+from record_decisions.record_decisions import RecordDecisions
+from repair.repair import Repair
+from scanners.scan import Scan
+from sub_agent.sub_agent import sub_agent
+from workspace.session_log import log
+from workspace.workspace_session import Session
+from sketch.sketch import Sketcher
+from tools.tool import resource
+from tools.tool import tool
+
+
+class BaseContextTool(AgenticToolset):
+    &quot;&quot;&quot;# Instructions&quot;&quot;&quot;
+
+    def __init__(
+        self,
+        format: str | None = None,
+        path: str | None = None,
+        session: str | None = None,
+        workspace: str | None = None,
+    ) -&gt; None:
+        super().__init__()
+        self.format = format
+        self._raw_path = path
+        self.workspace = Session(
+            format=self.format,
+            path=path,
+            session=session,
+            workspace=workspace,
+            context_index_key=getattr(type(self), &quot;context_index_key&quot;, &quot;&quot;),
+            default_workspace_folder=getattr(
+                type(self), &quot;default_workspace_folder&quot;, &quot;.&quot;
+            ),
+        )
+        self.scanner = Scan()
+        self.sketcher = Sketcher(agent_dir=str(self.module_dir))
+        self.grill_context = GrillContext()
+        self.iterator = Iterator()
+        self.decisions = RecordDecisions()
+        self.partitioner = Partition()
+        self.repairer = Repair(workspace=self.workspace, scanner=self.scanner)
+
+
+    #  -- Stage / Fidelity ----------------
+    SHAPING:   ClassVar[str] = &quot;shaping&quot;
+    DISCOVERY: ClassVar[str] = &quot;discovery&quot;
+    SPEC:      ClassVar[str] = &quot;spec&quot;
+    ENGINEER:  ClassVar[str] = &quot;engineer&quot;
+ 
+    fidelities: ClassVar[dict[str, str] | None] = None
+    _fidelity_format_defaults: ClassVar[dict[str, str]] = {}
+
+    def __init_subclass__(cls, **kwargs) -&gt; None:
+        super().__init_subclass__(**kwargs)
+        cls._is_context = True  # type: ignore[attr-defined]
+        cls._is_toolset = True  # type: ignore[attr-defined]
+        _ActionRunner.instance().validate_toolset(cls)
+        # Auto-generate generate_{f} / validate_{f} / satisfy_{f} whenever
+        # a subclass declares a ``fidelities`` class dict.
+        if &quot;fidelities&quot; in cls.__dict__ and isinstance(cls.__dict__[&quot;fidelities&quot;], dict):
+            cls._generate_fidelity_methods()
+
+    @classmethod
+    def _generate_fidelity_methods(cls) -&gt; None:
+        &quot;&quot;&quot;Add generate_{f}, validate_{f}, satisfy_{f} for every fidelity in cls.fidelities.
+
+        Plain Python methods (not @action); each one calls ``_set_fidelity``
+        then delegates to the named lifecycle action.
+        &quot;&quot;&quot;
+        fidelity_names: set[str] = set(cls.fidelities.values())  # type: ignore[union-attr]
+        for action_name in (&quot;generate&quot;, &quot;validate&quot;, &quot;satisfy&quot;):
+            for fidelity_name in fidelity_names:
+                method_name = f&quot;{action_name}_{fidelity_name}&quot;
+                if not hasattr(cls, method_name):
+                    def _make(act: str, fid: str):
+                        def _fidelity_method(self):
+                            self._set_fidelity(fid)
+                            return getattr(self, act)()
+                        _fidelity_method.__name__ = f&quot;{act}_{fid}&quot;
+                        _fidelity_method.__qualname__ = f&quot;{cls.__qualname__}.{act}_{fid}&quot;
+                        return _fidelity_method
+                    setattr(cls, method_name, _make(action_name, fidelity_name))
+    
+    def _set_fidelity(self, fidelity_name: str) -&gt; None:
+        &quot;&quot;&quot;Update self.fidelity and resolve the matching default format.
+
+        Used by generated fidelity methods (generate_{f}, validate_{f}, …) to
+        switch fidelity at runtime without reconstructing the toolset instance.
+        Format is only updated when fidelity_name appears in the subclass&#x27;s
+        ``_fidelity_format_defaults`` class dict; otherwise self.format is
+        left unchanged.
+        &quot;&quot;&quot;
+        self.fidelity = fidelity_name
+        defaults: dict[str, str] = getattr(type(self), &quot;_fidelity_format_defaults&quot;, {})
+        if fidelity_name in defaults:
+            self.format = defaults[fidelity_name]
+
+    # -- workspace  ----------------
+    default_workspace_folder: str = &quot;.&quot;
+    context_index_key: str = &quot;&quot;
+    
+    @property
+    def module_dir(self) -&gt; Path:
+        return Path(inspect.getfile(type(self))).resolve().parent
+   
+    @property
+    @resource
+    def active(self) -&gt; Session:
+        &quot;&quot;&quot;The current workspace session — exposes the session as a host resource.&quot;&quot;&quot;
+        return self.workspace
+
+    @instruction(override=True)
+    def session_guidance(self) -&gt; Instruction:
+        &quot;&quot;&quot;Delegate to Session — prose lives in workspace_session.md.&quot;&quot;&quot;
+        return Instruction.ref(self.workspace, &quot;session_guidance&quot;)
+
+    @tool
+    def read_context_index(self) -&gt; str:
+        &quot;&quot;&quot;read_context_index&quot;&quot;&quot;
+        return self.workspace.read_context_index()
+
+    @tool
+    def record_context_root(self, root: str = &quot;&quot;, note: str = &quot;&quot;) -&gt; str:
+        &quot;&quot;&quot;record_context_root&quot;&quot;&quot;
+        return self.workspace.record_context_root(root=root, note=note)
+
+    @tool
+    def ensure_session(
+        self,
+        name: str = &quot;&quot;,
+        goal: str = &quot;&quot;,
+        fidelities: str = &quot;&quot;,
+        contexts: str = &quot;&quot;,
+        path: str = &quot;&quot;,
+    ) -&gt; str:
+        &quot;&quot;&quot;ensure_session&quot;&quot;&quot;
+        return self.workspace.ensure_session(
+            name=name,
+            goal=goal,
+            fidelities=fidelities,
+            contexts=contexts,
+            path=path,
+        )
+
+    @tool
+    def create_session(
+        self,
+        name: str,
+        goal: str = &quot;&quot;,
+        fidelities: str = &quot;&quot;,
+        contexts: str = &quot;&quot;,
+        path: str = &quot;&quot;,
+    ) -&gt; str:
+        &quot;&quot;&quot;create_session&quot;&quot;&quot;
+        return self.workspace.create_session(
+            name=name,
+            goal=goal,
+            fidelities=fidelities,
+            contexts=contexts,
+            path=path,
+        )
+
+    @tool
+    def close_session(self, outcome: str = &quot;&quot;, handoff: str = &quot;handoff.md&quot;) -&gt; str:
+        &quot;&quot;&quot;close_session&quot;&quot;&quot;
+        return self.workspace.close_session(outcome=outcome, handoff=handoff)
+
+    # -- Instructions --------------------------------------------------------
+    @instruction
+    def contexts(self) -&gt; Instruction: ...
+
+    @instruction
+    def examples(self) -&gt; Instruction: ...
+
+    @instruction
+    def templates(self) -&gt; Instruction: ...
+
+    @instruction
+    def scaffold(self) -&gt; Instruction: ...
+
+    # -- Lifecycle actions  -----------------------------------
+    @action
+    def partition(
+        self,
+        context: str,
+        mode: str = &quot;one_go&quot;,
+        out_root: str | None = None,
+    ) -&gt; str:
+        &quot;&quot;&quot;partition&quot;&quot;&quot;
+        self.active
+        self.session_guidance
+        self.contexts
+        self.partitioner.partition(
+            context, mode, out_root, slug=self.domain_slug, scaffold=self.scaffold
+        )
+        return (
+            &quot;Partition of {{context}} finished (mode {{mode}}); &quot;
+            &quot;docs under {session.path}/.context/. &quot;
+            &quot;Hard fail if any new chunk fails named-entry completeness.&quot;
+        )
+
+    @action
+    def grill(self) -&gt; str:
+        &quot;&quot;&quot;Grill then generate - pure grill loop, then the host generate body.&quot;&quot;&quot;
+        self.workspace.open()
+        self.decisions.record_decisions_session()
+        self.grill_context.grill_with_context()
+        self.generate()
+        return &quot;Grill complete; generate instructions applied.&quot;
+
+    @action
+    def sketch(self) -&gt; str:
+        &quot;&quot;&quot;Sketch then generate - grill + sketch cadence, then the host generate body.&quot;&quot;&quot;
+        self.workspace.open()
+        self.decisions.record_decisions_session()
+        &quot;&quot;&quot;Sketch under session.folder; pass agent_dir={{self.module_dir}} to find_template.&quot;&quot;&quot;
+        self.sketcher.sketch_session()
+        self.generate()
+        return &quot;Sketch complete; generate instructions applied.&quot;
+
+    @log
+    @action
+    def generate(self) -&gt; str:
+        self.workspace.open()
+        self.decisions.record_decisions_session()
+        self.contexts
+        self.examples
+        self.templates
+        self.generate_output()
+        self.add_generate_header_to_generated()
+        return &quot;When done, run validate.&quot;
+
+    @action
+    def add_generate_header_to_generated(self) -&gt; str:
+        &quot;&quot;&quot;Prepend the following block verbatim as the very first lines of the file you are writing - before any imports, before any code.&quot;&quot;&quot;
+        cls = type(self)
+        return (
+            &#x27;&quot;&quot;&quot;\n&#x27;
+            f&quot;# @toolset-manifest {cls.manifest_command}\n&quot;
+            &quot;# Agent reading this file: run line 1 manifest, then python -m tools run -. &quot;
+            &quot;Follow response.instructions only.\n&quot;
+            f&quot;# invoke-edit: action satisfy | toolset: {cls.manifest_path}\n&quot;
+            f&quot;# invoke-check: action validate | toolset: {cls.manifest_path}\n&quot;
+            &#x27;&quot;&quot;&quot;\n&#x27;
+        )
+
+    @action
+    def generate_output(self) -&gt; str:
+        &quot;&quot;&quot;&quot;&quot;&quot;
+        return &quot;&quot;
+
+    @action
+    def document(self, paths: list[str]) -&gt; str:
+        self.workspace.open()
+        self.contexts
+        self.templates
+        self.scanner.scan(paths)
+        self.generate_output()
+        self.add_generate_header_to_generated()
+        return &quot;Document existing state under {session.path}/ - violations flagged, none corrected.&quot;
+
+    @action
+    def iterate(self) -&gt; str:
+        &quot;&quot;&quot;Iterate then generate - grill + formal generate/validate/one-fix ticks.&quot;&quot;&quot;
+        self.workspace.open()
+        self.decisions.record_decisions_session()
+        self.iterator.iterate_session()
+        self.generate()
+        return &quot;Iterate complete; generate instructions applied.&quot;
+
+    @action
+    def validate(self) -&gt; str:
+        self.workspace.open()
+        self.contexts
+        self.scanner.scan()
+        return &quot;Validation report for artifacts under {session.path}/.&quot;
+
+    @tool
+    def scan(self, paths: list[str]) -&gt; str:
+        &quot;&quot;&quot;scan&quot;&quot;&quot;
+        return self.scanner.scan(paths)
+
+    @action
+    def satisfy(self) -&gt; str:
+        self.workspace.open()
+        self.decisions.record_decisions_session()
+        self.contexts
+        self.templates
+        return &quot;When done, run validate on artifacts under {session.path}/.&quot;
+    
+    @sub_agent
+    @action
+    def repair(self, asset: str, violation: str) -&gt; str:
+        &quot;&quot;&quot;repair&quot;&quot;&quot;
+        self.scan()
+        self.contexts
+        self.examples
+        self.templates
+        self.repairer.repair(asset, violation)
+        return &quot;Repair {{asset}} under {session.path}/ until validate passes.&quot;
+    
+    @tool
+    def log_mistake(
+        self,
+        artifact: str,
+        rule: str,
+        wrong: str,
+        original: str,
+        when: str = &quot;&quot;,
+    ) -&gt; str:
+        &quot;&quot;&quot;log_mistake&quot;&quot;&quot;
+        return self.repairer.log_mistake(
+            artifact=artifact,
+            rule=rule,
+            wrong=wrong,
+            original=original,
+            when=when,
+            tool=type(self).__name__,
+            fidelity=getattr(self, &quot;fidelity&quot;, &quot;&quot;) or &quot;&quot;,
+        )
+
+    @tool
+    def log_correction(self, entry_id: str, improved: str, status: str = &quot;fixed&quot;) -&gt; str:
+        &quot;&quot;&quot;log_correction&quot;&quot;&quot;
+        return self.repairer.log_correction(entry_id, improved, status)
+
+    @action
+    def improve(self) -&gt; str:
+        &quot;&quot;&quot;improve&quot;&quot;&quot;
+        self.contexts
+        self.examples
+        self.templates
+        self.repairer.improve()
+        return &quot;Read the roadmap above for log_mistake -&gt; log_correction -&gt; repair -&gt; regression -&gt; archive.&quot;
+
+    @sub_agent
+    @tool
+    def verify_regression(self, examples_root: str) -&gt; str:
+        &quot;&quot;&quot;verify_regression&quot;&quot;&quot;
+        return self.repairer.verify_regression(examples_root)
+
+    @sub_agent
+    @tool
+    def archive_mistakes(self, repo_root: str) -&gt; str:
+        &quot;&quot;&quot;archive_mistakes&quot;&quot;&quot;
+        return self.repairer.archive_mistakes(repo_root)
+
+BaseContextTool._is_context = True  # type: ignore[attr-defined]
+BaseContextTool._is_toolset = True  # type: ignore[attr-defined]
+_ActionRunner.instance().validate_toolset(BaseContextTool)
+</code></pre>
+</details></section>
+</article>
+</div>
+</div>
+</main>
+<script src="../commons/catalog-foundry-tour.js?v=foundry-36"></script>
+<script src="../commons/catalog-foundry-skill-nav.js?v=foundry-29"></script>
+</body>
+</html>

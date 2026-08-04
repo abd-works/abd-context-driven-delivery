@@ -51,9 +51,9 @@ with description("Ux fidelity and format defaults"):
         with it("should retain fidelity mockup"):
             expect(self.ux.fidelity).to(equal("mockup"))
 
-    with context("Ux constructed with fidelity code"):
+    with context("Ux constructed with fidelity front_end_code"):
         with it("should default format to html"):
-            expect(Ux(fidelity="code").format).to(equal("html"))
+            expect(Ux(fidelity="front_end_code").format).to(equal("html"))
 
     with context("Ux constructed with an unsupported fidelity"):
         with it("should raise ValueError"):

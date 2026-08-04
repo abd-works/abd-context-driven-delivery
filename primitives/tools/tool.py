@@ -350,7 +350,7 @@ class _ToolsetRunner:
         cls._instance = runner
 
     def run_request(self, request: RunRequestDocument) -> RunResponseDocument:
-        from sessions import SessionLog, member_is_logged, summarize_mapping
+        from workspace import SessionLog, member_is_logged, summarize_mapping
 
         parsed = self._parse_run_request(request)
         slog = SessionLog.instance()
@@ -719,7 +719,7 @@ def resource(func: Callable[..., Any]) -> Callable[..., Any]:
 
 
 # Re-export - authors mark tools/actions with @log from tools.tool or sessions
-from sessions import log as log  # noqa: E402
+from workspace import log as log  # noqa: E402
 
 
 def _discover_tools(instance: Toolset) -> dict[str, _Tool]:
@@ -766,7 +766,7 @@ def toolset(cls: type) -> type:
     merged.__module__ = cls.__module__
     merged.__qualname__ = cls.__qualname__
     merged._is_toolset = True  # type: ignore[attr-defined]
-    from sessions import inherit_annotations_from_bases
+    from workspace import inherit_annotations_from_bases
     from tools.extensions import ToolsetExtensions
 
     inherit_annotations_from_bases(merged)

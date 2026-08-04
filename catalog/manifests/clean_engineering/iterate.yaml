@@ -1,0 +1,8 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: <fidelity>
+  format: null
+  path: null
+  session: null
+  workspace: null
+action: iterate

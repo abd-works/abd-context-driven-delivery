@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from primitives.actions.action import action
-from sessions import log
+from workspace import log
 from tools.tool import tool, toolset
 
 

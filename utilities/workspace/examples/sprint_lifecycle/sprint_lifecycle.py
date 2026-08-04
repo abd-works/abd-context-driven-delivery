@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sessions.workspace_session import Session
+from workspace.workspace_session import Session
 
 
 class SprintLifecycle(Session):

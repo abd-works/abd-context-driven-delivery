@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.__foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
+</script>
+<title>Utilities — CDD Catalog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="commons/site.css?v=foundry-33">
+<link rel="stylesheet" href="commons/foundry-catalog.css?v=cdd-12">
+<link rel="stylesheet" href="commons/cdd-board.css?v=cdd-12">
+
+<script src="commons/catalog-nav.js?v=foundry-10"></script>
+</head>
+<body data-nav-prefix="" data-nav-current="utilities" data-nav-site-base="https://abd.works/">
+<main id="main-content">
+
+
+<div class="page-hero page-hero--foundry">
+  <div class="wrap">
+    <table class="page-hero__table" role="presentation">
+      <tr>
+        <td class="page-hero__cell page-hero__cell--title">
+          <h1 class="page-headline">Utilities</h1>
+          <p class="body-lead">Foundational utilities</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+
+<div class="catalog-body">
+<div class="wrap">
+<div class="cap-grid"><a class="cap-card" href="utilities/deploy_agent_skills.html"><p class="cap-card__title">deploy_agent_skills</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/diagnose.html"><p class="cap-card__title">diagnose</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/handoff.html"><p class="cap-card__title">handoff</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/workspace.html"><p class="cap-card__title">workspace</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/sub_agent.html"><p class="cap-card__title">sub_agent</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a></div><div hidden><header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">deploy_agent_skills</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>agent_skills — module context</h1>
+<h2>Purpose</h2>
+<p>Scans the workspace for Python toolset files and deploys each as a IDE skill shim. For every discovered toolset it writes a <code>SKILL.md</code> file (under <code>.cursor/skills/</code> or <code>.github/skills/</code> depending on IDE), removes stale shortcuts, and merges the manifest-gate hook into the IDE hooks config. A saved deploy-state file lets subsequent runs re-deploy without re-asking for parameters.</p>
+<h2>Seam</h2>
+<p><code>AgentSkills</code></p>
+<h2>Dependencies</h2>
+<p><code>primitives.actions</code>, <code>tools.tool</code>, <code>tools.toolset_header</code>, <code>focus._decorator</code></p>
+<h2>Mechanism</h2>
+<p>Static-analysis pass over each toolset&#x27;s source file (<code>ast.parse</code>) extracts <code>@focus</code>-decorated action names and their focus-group subdirectories, producing per-focus shortcut descriptors that drive shim generation and stale-slug cleanup.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">diagnose</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>diagnose — module context</h1>
+<h2>Purpose</h2>
+<p>Provides a disciplined, phase-sequenced bug-hunting loop as a <code>@sub_agent</code> tool. Hosts (BDD, Stories) call <code>diagnostic().diagnose()</code> from <code>satisfy</code> / <code>iterate</code> so the six phases stay on the tool — they are not inlined into surrounding action markdown.</p>
+<h2>Seam</h2>
+<p><code>Diagnose.diagnose</code> (<code>kind: sub_agent</code>, <code>launch: non_blocking</code>)</p>
+<h2>Dependencies</h2>
+<p><code>sub_agent.sub_agent</code>, <code>tools.tool</code></p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">handoff</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>handoff — module context</h1>
+<h2>Purpose</h2>
+<p>Compacts the current agent session into a structured handoff document so a fresh agent can resume without re-reading the full chat. <code>Handoff</code> collects generator state, grilling progress, and CDD sketch summaries from the session folder, then writes two files: a date-stamped archive under <code>handoffs/</code> and a stable <code>handoff-latest.md</code> pointer at the docs root. When the destination is a named sprint under <code>sessions/</code>, it also closes the <code>Session</code> record.</p>
+<h2>Seam</h2>
+<p><code>Handoff</code></p>
+<h2>Dependencies</h2>
+<p><code>sessions</code>, <code>primitives.actions</code>, <code>tools.tool</code></p>
+<h2>Mechanism</h2>
+<p><code>collect_session_state</code> assembles live state from the working folder (sketches, named artifacts, CDD sketch summary, grill-answer headings) and returns it as JSON. <code>write_handoff</code> resolves the archive slug (<code>handoff-YYYY-MM-DD[-focus]</code>), persists content to both the archive and latest paths, and optionally closes the sprint session.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">workspace</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>workspace — module context</h1>
+<h2>Purpose</h2>
+<p>Named sprint + workspace kit (<code>Session</code> in <code>workspace_session.py</code>), append-only <code>@log</code> events (<code>SessionLog</code>), and <code>context-index.md</code> helpers. (<code>WorkspaceSession</code> is a back-compat alias for <code>Session</code>.)</p>
+<h2>Primary use case</h2>
+<p>BaseContextTool holds a composed <code>Session</code> as the plain attribute <code>workspace</code> and calls <strong><code>self.workspace.open()</code></strong> once at the start of lifecycle actions. That opens path + folder + context index together.</p>
+<h2>Layout</h2>
+<pre><code>{path}/                                 # durable tool root (session.path)
+  .context/
+    sessions/{name}/                    # folder (session.folder)
+      session.md
+      logs/
+      …
+
+{workspace_root}/.context/context-index.md</code></pre>
+<h2>Public API</h2>
+<ul>
+<li><code>Session</code> — sprint record + kit: <code>path</code>, <code>folder</code>, <code>context_index</code>; <code>load</code> / <code>ensure_started</code> / <code>close</code>; action <strong><code>open</code></strong>; tools <code>ensure_session</code> / <code>create_session</code> / <code>close_session</code> / <code>read_context_index</code> / <code>record_context_root</code></li>
+<li>Prose: <strong><code>workspace_session.md</code></strong> (<code># Session Guidance</code> and tool sections) — resolved via normal <code>@instruction</code> / tool docstring lookup (<code>domain_slug = workspace_session</code>)</li>
+<li><code>docs_dir</code> / <code>SessionPaths.docs_dir</code> (in <code>session.py</code>), <code>SessionLog</code>, <code>@log</code>, <code>ContextIndex</code> helpers</li>
+</ul>
+<h2>Dependencies</h2>
+<p>stdlib (+ optional yaml); <code>tools.tool</code>; consumed by <code>context_tools.base.base_context_tool</code></p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">sub_agent</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>sub_agent — module context</h1>
+<h2>Purpose</h2>
+<p><code>sub_agent</code> provides the <code>@sub_agent</code> decorator and <code>SubAgentTool</code> dataclass that together mark a toolset method as a non-blocking background sub-agent launch. When the decorator is applied on top of <code>@tool</code>, it sets <code>_is_sub_agent = True</code> and suppresses <code>_is_tool</code> so the standard tool-discovery path skips it; <code>discover_sub_agent_tools</code> picks it up instead and produces <code>SubAgentTool</code> objects whose <code>signature_entry</code> renders as <code>kind: sub_agent / launch: non_blocking</code> in the manifest.</p>
+<h2>Seam</h2>
+<p><code>SubAgentTool</code>, <code>sub_agent</code>, <code>discover_sub_agent_tools</code></p>
+<h2>Dependencies</h2>
+<p><code>tools.tool</code></p>
+<h2>Mechanism</h2>
+<p>Decorator stacking — <code>@tool</code> runs first to capture the signature; <code>@sub_agent</code> then flips the routing flags so the method surfaces in the manifest with sub-agent semantics rather than inline-tool semantics.</p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
+</div>
+</div>
+</div>
+</main>
+<script src="commons/catalog-foundry-tour.js?v=cdd-12"></script>
+<script src="commons/catalog-foundry-skill-nav.js?v=cdd-12"></script>
+</body>
+</html>

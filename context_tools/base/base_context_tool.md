@@ -10,6 +10,7 @@
    - **Read each of those files with the Read tool** (chunk through large ones). Grep, title lists, memory, or primer-only skims **do not count**.
    - **Prove it in the question turn:** name the path(s) read and ground options in concrete terms from them. If you cannot cite specifics from the relevant files, you have not read them — go read before asking.
    - Asking from a skim is a **defect**, same class as dumping a whole artifact in one iterate tick.
+2b. **`do-not-invent-requirements`** — Do not invent requirements, status/maintenance signals, or competing command surfaces absent from source / the ask. Prefer the existing gap/fallback (or the already-specified invoke surface) over minting a new state or a second co-equal how-to-call block.
 3. **`sources-scoped-to-generated-context`** — Hang `**Sources / context:**` on the node they ground: epic / sub-epic / feature / module, or a lower item (scenario, class, screen, component, …). Root or parent-level Sources are fine when those files apply to the **entire** artifact or subtree.
 4. Apply all guidance and named rules in each **context** — each bullet is a requirement.
 5. Match **examples** for shape, depth, and tone.

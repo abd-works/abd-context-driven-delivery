@@ -1,4 +1,4 @@
-# Ux (IA / mockup / code generator)
+# Ux (IA / mockup / front_end_code generator)
 
 **Purpose:** Multi-fidelity UX generator — information architecture, mockups, and production frontend — via peer channels (drawio, html, markdown, json).
 

@@ -1,4 +1,4 @@
-# sessions — module context
+# workspace — module context
 
 ## Purpose
 

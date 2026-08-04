@@ -1,0 +1,8 @@
+toolset: context_tools.stories.stories:Stories
+context:
+  fidelity: scenarios
+  format: null
+  path: null
+  session: null
+  workspace: null
+action: generate

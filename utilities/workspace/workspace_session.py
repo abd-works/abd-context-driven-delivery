@@ -9,11 +9,11 @@ from pathlib import Path
 from primitives.actions.action import action
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from sessions.context_index import ContextIndex
-from sessions.session import SessionPaths
+from workspace.context_index import ContextIndex
+from workspace.session import SessionPaths
 from tools.tool import resource, tool
 
-# Re-export for ``from sessions.workspace_session import SessionPaths.docs_dir``
+# Re-export for ``from workspace.workspace_session import SessionPaths.docs_dir``
 __all__ = ["Session", "WorkspaceSession", "SessionPaths.docs_dir"]
 
 
@@ -99,7 +99,7 @@ class Session:
 
     def _bind_session_log(self) -> None:
         if self.name:
-            from sessions.session_log import SessionLog
+            from workspace.session_log import SessionLog
 
             SessionLog.instance().bind(self)
 

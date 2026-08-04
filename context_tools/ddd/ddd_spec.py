@@ -54,9 +54,9 @@ with description("a Ddd toolset"):
             with it("should default to markdown format"):
                 expect(Ddd(fidelity="building_blocks").format).to(equal("markdown"))
 
-        with context("with code fidelity"):
+        with context("with tactics fidelity"):
             with it("should default to python format"):
-                expect(Ddd(fidelity="code").format).to(equal("python"))
+                expect(Ddd(fidelity="tactics").format).to(equal("python"))
 
         with context("with an unsupported fidelity"):
             with it("should raise ValueError"):
@@ -81,9 +81,9 @@ with description("a Ddd toolset"):
                 expect(ce).to(be_a(CleanEngineering))
                 expect(ce.fidelity).to(equal("model"))
 
-        with context("with code fidelity"):
+        with context("with tactics fidelity"):
             with it("should return a CleanEngineering instance at code fidelity"):
-                ce = Ddd(fidelity="code").ce()
+                ce = Ddd(fidelity="tactics").ce()
                 expect(ce).to(be_a(CleanEngineering))
                 expect(ce.fidelity).to(equal("code"))
 
@@ -94,7 +94,7 @@ with description("a Ddd toolset"):
 
         with context("with a session set"):
             with it("should carry the same session name to the CE companion"):
-                ce = Ddd(fidelity="code", session="satisfy").ce()
+                ce = Ddd(fidelity="tactics", session="satisfy").ce()
                 expect(ce.workspace.name).to(equal("satisfy"))
 
         with it("should return a companion with mode set to tool"):

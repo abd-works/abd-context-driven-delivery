@@ -13,7 +13,7 @@ from pathlib import Path
 from grill_context.grill_context import GrillContext
 from primitives.actions.action import action
 from tools.tool import tool, toolset
-from sessions import docs_dir
+from workspace import docs_dir
 
 
 _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"

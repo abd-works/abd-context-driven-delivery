@@ -103,6 +103,26 @@ with description("Scanner.is_skipped_path"):
         with it("should return False for a normal source file"):
             expect(Scanner.is_skipped_path(Path("src/module/foo.py"))).to(be_false)
 
+    with context("a repair fixture under examples/"):
+        with it("should return False for faultyAsset under examples/"):
+            expect(
+                Scanner.is_skipped_path(
+                    Path("context_tools/stories/examples/invented-stale-status/faultyAsset")
+                )
+            ).to(be_false)
+
+        with it("should return False for repairedAsset under examples/"):
+            expect(
+                Scanner.is_skipped_path(
+                    Path("examples/invented-competing-command-surface/repairedAsset")
+                )
+            ).to(be_false)
+
+        with it("should still skip non-fixture files under examples/"):
+            expect(
+                Scanner.is_skipped_path(Path("examples/md/story-map.md"))
+            ).to(be_true)
+
 
 with description("ScannerRunner.violations_exit_code"):
     with context("a violations list that is empty"):

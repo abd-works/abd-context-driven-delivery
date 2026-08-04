@@ -36,7 +36,7 @@ Do **not** bake product words (catalog, cart) into the template — those are bo
 
 **Layouts:** catalog in `ux_model/layouts.py` (layout id → named slots). Use `Screen.apply_layout` to set layout and seed empty regions.
 
-**Channels:** drawio, html, markdown, json — peer parse/render; `transform` moves sideways at the same fidelity. One `html` channel deepens by fidelity (js interactions → optional brand layer + honest stubs at **mockup** → real frontend at **code**; host FE stacks welcome at **code**).
+**Channels:** drawio, html, markdown, json — peer parse/render; `transform` moves sideways at the same fidelity. One `html` channel deepens by fidelity (js interactions → optional brand layer + honest stubs at **mockup** → real frontend at **front_end_code**; host FE stacks welcome at **front_end_code**).
 
 ---
 
@@ -46,7 +46,7 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 |---|---|---|
 | **ia** | drawio | Site map + per-screen regions/nav (html optional via transform) |
 | **mockup** | html | Wired greybox screens (html+js); one HTML per concrete user goal (not one file per screen, not one mega-file per epic); drawio remains a peer channel; optional brand layer; honest stub catalogue |
-| **code** | html (or host FE stack) | Real frontend — production UI wired to real backend; not Story Demo / greybox alone |
+| **front_end_code** | html (or host FE stack) | Real frontend — production UI wired to real backend; not Story Demo / greybox alone |
 
 **Templates (AI generate):** drawio + html under `templates/`. Markdown context template optional. Other formats via channels / `transform`.
 
@@ -102,7 +102,7 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 8. **Optional — branding (off by default).** Apply a css / design-tokens / brand layer only when **one of these is true**:
    - The user explicitly asks for brand at this step, or
    - Brand/css tokens already exist somewhere in the workspace (check before deciding).
-   Do not invent brand. When active: add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to **code** automatically — do not re-apply.
+   Do not invent brand. When active: add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to **front_end_code** automatically — do not re-apply.
 
 ### Rules
 
@@ -117,11 +117,7 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 
 ---
 
-## code
-
-**Default format:** html
-
-## code
+## front_end_code
 
 **Default format:** html (or the host app’s frontend stack)
 

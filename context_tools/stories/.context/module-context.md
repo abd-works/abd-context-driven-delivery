@@ -8,4 +8,4 @@
 
 **Dependencies:** `BaseContextTool`; format channel classes under `document` / `diagram` / `code`; `utilities.diagnose.Diagnose` (via `diagnostic()`)
 
-**Mechanism:** `satisfy` / `iterate` call `super()` then `diagnostic().diagnose()` so the shared six-phase loop stays on Diagnose (not inlined). Format moves go through peer `parse` / `render` on channel StoryMaps.
+**Mechanism:** `generate` / `iterate` / `satisfy` call `super()` then `ce()` (CleanEngineering companion) so acceptance_tests keep matching production code in sync; `satisfy` / `iterate` also call `diagnostic().diagnose()` so the shared six-phase loop stays on Diagnose (not inlined). Format moves go through peer `parse` / `render` on channel StoryMaps.

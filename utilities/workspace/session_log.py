@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 if TYPE_CHECKING:
-    from sessions.workspace_session import Session
+    from workspace.workspace_session import Session
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -122,7 +122,7 @@ class SessionLog(ISessionLog):
 
     @staticmethod
     def _session_cls():
-        from sessions.workspace_session import Session
+        from workspace.workspace_session import Session
 
         return Session
 

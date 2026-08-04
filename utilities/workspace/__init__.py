@@ -1,12 +1,12 @@
 """Session model (named sprints + workspace kit), logging, and binding.
 
-``Session`` / ``WorkspaceSession`` load lazily so ``from sessions import log``
+``Session`` / ``WorkspaceSession`` load lazily so ``from workspace import log``
 does not re-enter ``primitives.actions.action`` while that module is still importing.
 """
 
-from sessions.session import SessionPaths
+from workspace.session import SessionPaths
 docs_dir = SessionPaths.docs_dir
-from sessions.session_log import (
+from workspace.session_log import (
     ISessionLog,
     SessionLog,
     inherit_annotations,
@@ -34,7 +34,7 @@ __all__ = [
 
 def __getattr__(name: str):
     if name in ("Session", "WorkspaceSession"):
-        from sessions.workspace_session import Session, WorkspaceSession
+        from workspace.workspace_session import Session, WorkspaceSession
 
         return Session if name == "Session" else WorkspaceSession
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
