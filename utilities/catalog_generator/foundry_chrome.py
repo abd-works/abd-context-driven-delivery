@@ -201,10 +201,10 @@ def page_shell(
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{commons_prefix}site.css?v=foundry-33">
-<link rel="stylesheet" href="{commons_prefix}foundry-catalog.css?v=cdd-12">
-<link rel="stylesheet" href="{commons_prefix}cdd-board.css?v=cdd-12">
+<link rel="stylesheet" href="{commons_prefix}foundry-catalog.css?v=cdd-13">
+<link rel="stylesheet" href="{commons_prefix}cdd-board.css?v=cdd-13">
 {extra_head}
-<script src="{commons_prefix}catalog-nav.js?v=foundry-10"></script>
+<script src="{commons_prefix}catalog-nav.js?v=foundry-11"></script>
 </head>
 <body data-nav-prefix="{html.escape(nav_prefix)}" data-nav-current="{html.escape(nav_current)}" data-nav-site-base="{html.escape(site_base)}">
 <main id="main-content">
@@ -217,8 +217,8 @@ def page_shell(
 </div>
 </div>
 </main>
-<script src="{commons_prefix}catalog-foundry-tour.js?v=cdd-12"></script>
-<script src="{commons_prefix}catalog-foundry-skill-nav.js?v=cdd-12"></script>
+<script src="{commons_prefix}catalog-foundry-tour.js?v=cdd-13"></script>
+<script src="{commons_prefix}catalog-foundry-skill-nav.js?v=cdd-13"></script>
 </body>
 </html>
 """

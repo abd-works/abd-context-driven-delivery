@@ -209,8 +209,19 @@ with description("Render Hub Board With Actions And Utilities Rows"):
             expect("action: partition" in partition_page).to(be_true)
             expect("context_tools.stories.stories:Stories" in partition_page).to(be_true)
 
-        with it("carries a regen-command note (plan's regen-docs todo)"):
-            expect("generate_cdd_catalog" in self.index_html).to(be_true)
+        with it("does not ship a maintainer regen-command note on the public hub"):
+            expect("generate_cdd_catalog" in self.index_html).to(equal(False))
+            expect("regen-note" in self.index_html).to(equal(False))
+
+        with it("shows Install steps under the board with repo URL and agent_skills deploy"):
+            expect("catalog-install-heading" in self.index_html).to(be_true)
+            expect("https://github.com/org/repo" in self.index_html or _REPO_URL in self.index_html).to(be_true)
+            expect("agent_skills/agent_skills.py" in self.index_html).to(be_true)
+            expect("Deploy Tools as Skills" in self.index_html).to(be_true)
+            expect("deploy_tools_as_skills" in self.index_html).to(be_true)
+            utilities_at = self.index_html.find("Utilities</h3>")
+            install_at = self.index_html.find("catalog-install-heading")
+            expect(utilities_at < install_at).to(be_true)
 
 
 with description("Render Flat Grid Pages"):

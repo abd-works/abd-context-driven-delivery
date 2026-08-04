@@ -11,10 +11,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="commons/site.css?v=foundry-33">
-<link rel="stylesheet" href="commons/foundry-catalog.css?v=cdd-12">
-<link rel="stylesheet" href="commons/cdd-board.css?v=cdd-12">
+<link rel="stylesheet" href="commons/foundry-catalog.css?v=cdd-13">
+<link rel="stylesheet" href="commons/cdd-board.css?v=cdd-13">
 
-<script src="commons/catalog-nav.js?v=foundry-10"></script>
+<script src="commons/catalog-nav.js?v=foundry-11"></script>
 </head>
 <body data-nav-prefix="" data-nav-current="hub" data-nav-site-base="https://abd.works/">
 <main id="main-content">
@@ -86,11 +86,12 @@
 
 <div class="catalog-body">
 <div class="wrap">
-<footer class="regen-note">Regenerate this catalog with <code>python -m utilities.catalog_generator.generate_cdd_catalog</code> (defaults: <code>--out catalog --repo-url https://github.com/abd-works/abd-context-driven-delivery --ref &lt;current HEAD&gt;</code>)</footer>
+<section class="install-block catalog-install" aria-labelledby="catalog-install-heading"><h2 id="catalog-install-heading">Install</h2><ol><li>Get the repository: <a href="https://github.com/abd-works/abd-context-driven-delivery" target="_blank" rel="noopener noreferrer">https://github.com/abd-works/abd-context-driven-delivery</a>.</li><li>Add it to your project (clone into the workspace or add it as a sibling checkout the agent can see).</li><li>Drop <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/99e466ee89549a00a7e14582e440fc3d35f5fc64/utilities/agent_skills/agent_skills.py" target="_blank" rel="noopener noreferrer"><code>utilities/agent_skills/agent_skills.py</code></a> into the chat and ask the agent to run <strong>Deploy Tools as Skills</strong> (action <code>deploy_tools_as_skills</code>). That deploys each context tool as an IDE skill shim.</li></ol></section>
+
 </div>
 </div>
 </main>
-<script src="commons/catalog-foundry-tour.js?v=cdd-12"></script>
-<script src="commons/catalog-foundry-skill-nav.js?v=cdd-12"></script>
+<script src="commons/catalog-foundry-tour.js?v=cdd-13"></script>
+<script src="commons/catalog-foundry-skill-nav.js?v=cdd-13"></script>
 </body>
 </html>

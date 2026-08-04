@@ -1474,12 +1474,32 @@ class Catalog:
             write_page(self.out_root, f"utilities/{entry.display_name}.html", page)
 
         # -- hub --
+        import html as html_mod
+
         board = render_hub_board(board_tools, action_dicts, utility_dicts)
+        agent_skills_href = git_blob_url(
+            self.repo_url,
+            self.ref,
+            _REPO_ROOT / "utilities" / "agent_skills" / "agent_skills.py",
+        )
         hub_body = (
-            '<footer class="regen-note">Regenerate this catalog with '
-            "<code>python -m utilities.catalog_generator.generate_cdd_catalog</code> "
-            f"(defaults: <code>--out catalog --repo-url {self.repo_url} --ref &lt;current HEAD&gt;</code>)"
-            "</footer>"
+            '<section class="install-block catalog-install" aria-labelledby="catalog-install-heading">'
+            '<h2 id="catalog-install-heading">Install</h2>'
+            "<ol>"
+            "<li>Get the repository: "
+            f'<a href="{html_mod.escape(self.repo_url)}" target="_blank" rel="noopener noreferrer">'
+            f"{html_mod.escape(self.repo_url)}</a>.</li>"
+            "<li>Add it to your project (clone into the workspace or add it as a sibling "
+            "checkout the agent can see).</li>"
+            "<li>Drop "
+            f'<a href="{html_mod.escape(agent_skills_href)}" target="_blank" rel="noopener noreferrer">'
+            "<code>utilities/agent_skills/agent_skills.py</code></a> "
+            "into the chat and ask the agent to run "
+            "<strong>Deploy Tools as Skills</strong> "
+            "(action <code>deploy_tools_as_skills</code>). "
+            "That deploys each context tool as an IDE skill shim.</li>"
+            "</ol>"
+            "</section>\n"
         )
         hub = page_shell(
             title="The ABD Foundry — Context Driven Delivery",

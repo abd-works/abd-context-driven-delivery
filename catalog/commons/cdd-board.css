@@ -314,12 +314,19 @@ html[data-abd-theme="engineering"] .fidelity-detail-header .page-headline {
   margin-bottom: 8px;
 }
 
-.regen-note {
-  margin-top: 48px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border, #DDD8CF);
-  font-size: 12px;
-  color: var(--muted, #595A61);
+.catalog-body .catalog-install {
+  margin: 28px auto 0;
+  max-width: 1100px;
+}
+
+.catalog-body .catalog-install ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.catalog-body .catalog-install li {
+  margin: 0.4rem 0;
+  line-height: 1.45;
 }
 
 .section-0 {
