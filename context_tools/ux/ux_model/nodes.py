@@ -285,18 +285,15 @@ class Screen(UxNode):
         self.regions.append(region)
         self._renumber(self.regions)
 
-    def apply_layout(self, layout_id: str, *, seed_regions: bool = True) -> None:
-        """Set layout from the thin catalog; optionally seed empty regions from slots."""
-        from .layouts import resolve_layout
+    def apply_layout(self, layout_id: str) -> None:
+        """Set the layout id (free text - e.g. one of specifications/generic/*).
 
-        template = resolve_layout(layout_id)
-        if template is None:
-            self.layout = (layout_id or "").strip()
-            return
-        self.layout = template.id
-        if seed_regions and not self.regions:
-            for index, slot in enumerate(template.slots):
-                self.append_region(Region(slot, index, slot))
+        Look at the matching `specifications/generic/<layout_id>.md` (or a
+        branded sibling folder under `specifications/`, e.g. `abd-works/`)
+        for that layout's slots and append real `Region`s yourself; this no
+        longer auto-seeds placeholder regions from a hardcoded catalog.
+        """
+        self.layout = (layout_id or "").strip()
 
     def attach_story_name(self, story_name: str) -> None:
         if story_name and story_name not in self.story_names:

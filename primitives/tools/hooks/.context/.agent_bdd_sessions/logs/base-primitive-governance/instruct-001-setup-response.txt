@@ -1,0 +1,1657 @@
+# Read tool response (verbatim)
+
+## File contents (`primitives/assets/assets.py`, lines 1–211)
+
+```python
+"""Asset location and collection for instruction expansion.
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Literal
+
+from primitives.instructions import (
+    _FORMAT_TEMPLATE_EXT,
+    _active_resource,
+    _path_for_templates,
+    _slug_variants,
+)
+
+LocationKind = Literal["file", "folder", "section"]
+
+
+@dataclass(frozen=True)
+class AssetLocation:
+    kind: LocationKind
+    module_dir: Path
+    domain_slug: str
+    path: Path | None = None
+    folder: Path | None = None
+    section_file: Path | None = None
+    section_heading: str | None = None
+
+
+class AssetLocator:
+    def __init__(
+        self,
+        host: Any,
+        label: str,
+        *,
+        group: str | None = None,
+        filter_key: str | None = None,
+    ) -> None:
+        self._host = host
+        self._label = label
+        self._group = group
+        self._filter_key = filter_key
+
+    def locate(self) -> AssetLocation:
+        module_dir = Path(getattr(self._host, "module_dir", Path(".")))
+        domain_slug = getattr(self._host, "domain_slug", getattr(self._host, "toolset_name", module_dir.name))
+        filter_value = _active_resource(self._host, self._filter_key) if self._filter_key else None
+        if self._label == "templates":
+            # Prefer host.format so py/js/md template files are selected by channel.
+            active_format = filter_value or _active_resource(self._host, "format")
+            located = self._locate_templates(module_dir, domain_slug, active_format)
+            if located.path is not None and located.path.is_file():
+                return located
+            # Meta scaffold pack (e.g. context_tools/base/templates/) when no format artifact exists.
+            meta = module_dir / "templates"
+            if meta.is_dir():
+                return AssetLocation("folder", module_dir, domain_slug, folder=meta.resolve())
+        # Same lookup with or without a filter: optional group -> filter subfolder -> label.
+        search_root = self._search_root(module_dir, filter_value)
+        return self._locate_under(search_root, module_dir, domain_slug)
+
+    def _search_root(self, module_dir: Path, filter_value: str | None) -> Path:
+        """Resolve module_dir[/group][/filter_value].
+
+        filter_value selects a subdirectory under the group (e.g. fidelities/language/).
+        If that directory is missing but a single file stem matches, use the group folder
+        and let label lookup find `{filter_value}.*` only when the label equals the stem -
+        otherwise prefer the directory layout.
+        """
+        root = module_dir
+        if self._group:
+            root = root / self._group
+        if not filter_value:
+            return root
+        as_dir = root / filter_value
+        if as_dir.is_dir():
+            return as_dir
+        return root
+
+    def _locate_under(self, search_root: Path, module_dir: Path, domain_slug: str) -> AssetLocation:
+        folder = search_root / self._label
+        if folder.is_dir():
+            return AssetLocation("folder", module_dir, domain_slug, folder=folder.resolve())
+        for name in (self._label, f"{self._label}.md"):
+            candidate = search_root / name
+            if candidate.is_file():
+                return AssetLocation("file", module_dir, domain_slug, path=candidate.resolve())
+        first = self._first_extension_match(search_root)
+        if first:
+            return AssetLocation("file", module_dir, domain_slug, path=first.resolve())
+        section_file = self._canonical_domain_md(module_dir, search_root, domain_slug)
+        return AssetLocation(
+            "section",
+            module_dir,
+            domain_slug,
+            section_file=section_file.resolve(),
+            section_heading=self._label.replace("_", " ").replace("-", " ").title(),
+        )
+
+    def _first_extension_match(self, search_root: Path) -> Path | None:
+        """Return the first file matching `{label}.*` in search_root, or None."""
+        if not search_root.is_dir():
+            return None
+        matches = sorted(c for c in search_root.glob(f"{self._label}.*") if c.is_file())
+        return matches[0] if matches else None
+
+    def _canonical_domain_md(self, module_dir: Path, search_root: Path, domain_slug: str) -> Path:
+        for root in (module_dir, search_root):
+            for slug in _slug_variants(domain_slug):
+                candidate = root / f"{slug}.md"
+                if candidate.is_file():
+                    return candidate
+        return module_dir / f"{domain_slug}.md"
+
+    def _locate_templates(self, module_dir: Path, domain_slug: str, active_format: str | None) -> AssetLocation:
+        stems = self._template_stems(domain_slug)
+        located = self._locate_in_shared_templates(module_dir, stems, active_format, domain_slug)
+        if located is not None:
+            return located
+        located = self._locate_in_format_dir(module_dir, stems, active_format, domain_slug)
+        if located is not None:
+            return located
+        located = self._locate_by_stem_glob(module_dir, stems, domain_slug)
+        if located is not None:
+            return located
+        relative = _path_for_templates(module_dir, domain_slug, active_format)
+        return AssetLocation("file", module_dir, domain_slug, path=(module_dir / relative).resolve())
+
+    def _template_stems(self, domain_slug: str) -> list[str]:
+        return [
+            f"{slug}-{suffix}"
+            for slug in _slug_variants(domain_slug)
+            for suffix in ("templates", "template")
+        ]
+
+    def _locate_in_shared_templates(
+        self, module_dir: Path, stems: list[str], active_format: str | None, domain_slug: str
+    ) -> AssetLocation | None:
+        shared = module_dir / "templates"
+        if not shared.is_dir():
+            return None
+        ext = _FORMAT_TEMPLATE_EXT.get(active_format or "", "")
+        if ext:
+            for stem in stems:
+                path = shared / f"{stem}{ext}"
+                if path.is_file():
+                    return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        return AssetLocation("folder", module_dir, domain_slug, folder=shared.resolve())
+
+    def _locate_in_format_dir(
+        self, module_dir: Path, stems: list[str], active_format: str | None, domain_slug: str
+    ) -> AssetLocation | None:
+        if not active_format:
+            return None
+        format_dir = module_dir / "formats" / active_format
+        if not format_dir.is_dir():
+            return None
+        for stem in stems:
+            for path in sorted(format_dir.glob(f"{stem}.*")):
+                return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        return None
+
+    def _locate_by_stem_glob(
+        self, module_dir: Path, stems: list[str], domain_slug: str
+    ) -> AssetLocation | None:
+        for stem in stems:
+            for path in sorted(module_dir.glob(f"{stem}.*")):
+                return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        return None
+
+
+class Asset:
+    def __init__(self, location: AssetLocation) -> None:
+        self._location = location
+
+    @property
+    def location(self) -> AssetLocation:
+        return self._location
+
+    def collect(self) -> str:
+        from .markdown_extractor import _extract_single
+
+        return _extract_single(self._location)
+
+
+class AssetCollection:
+    def __init__(self, location: AssetLocation) -> None:
+        self._location = location
+        self.collection: dict[str, str] = {}
+
+    @property
+    def location(self) -> AssetLocation:
+        return self._location
+
+    def collect(self) -> dict[str, str]:
+        from .markdown_extractor import _extract_collection
+
+        self.collection = _extract_collection(self._location)
+        return self.collection
+
+    def merged(self) -> str:
+        from .markdown_extractor import _merge_collection
+
+        if not self.collection:
+            self.collect()
+        return _merge_collection(self.collection)
+```
+
+---
+
+## Text after file contents: “The following cursor rule files are relevant to the files you just read:”
+
+### Rule: `deploy-after-changes.mdc`
+
+```
+# Re-deploy skills after changes
+
+When you finish changing any `.py` or `.md` file under `abd-context-driven-delivery/`, run `deploy_again` to refresh the deployed IDE skill shims.
+
+## How to run it
+
+Write the request file and invoke it from the `abd-context-driven-delivery` directory:
+
+```powershell
+Set-Content -Path "_req.yaml" -Value "toolset: AgentSkills`ntool: deploy_again"
+$env:PYTHONIOENCODING="utf-8"; python -m tools run _req.yaml
+Remove-Item "_req.yaml"
+```
+
+Or inline with stdin using PowerShell here-string:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: AgentSkills
+tool: deploy_again
+"@ | python -m tools run -
+```
+
+Run this from:
+```
+c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+```
+
+## When to run it
+
+Run once after a session of changes is complete — not after every individual file edit. The goal is to keep the deployed skill shims in sync with the latest toolset definitions.
+
+## When to skip it
+
+Skip if the changes were only to test files (`_spec.py`), context files (`.context/`), or documentation that has no effect on toolset manifests or skill shims.
+```
+
+Path given: `C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\.cursor\rules\deploy-after-changes.mdc`
+
+### Rule: `sync-module-context.mdc`
+
+```
+# Keep module-context.md in sync with code changes
+
+When you edit or generate any code file, check whether a `.context/module-context.md` exists in the **same directory** as that file.
+
+## If a module-context.md is found
+
+Read it first, then ask: do the code changes affect anything that is already documented there?
+
+Update the file **only if** the answer is yes and the change is significant — for example:
+
+- The public API changes (new methods, renamed methods, removed methods, changed signatures).
+- The seam description no longer matches how inputs flow to outputs.
+- A stated dependency is added, removed, or renamed.
+- The purpose or primary use case shifts meaningfully.
+- A scan-violation status changes (cleared, added, or resolved differently).
+
+Do **not** add new sections or document things outside the existing scope of the file. The module-context.md is scoped — extend it only along dimensions it already covers.
+
+## What counts as significant
+
+Renaming a local variable, fixing a typo, or adjusting whitespace is not significant. Changing what a public method does, adding a new collaborator dependency, or altering the seam contract is significant.
+
+## Example
+
+```
+# Editing: primitives/actions/action.py
+# Check:   primitives/actions/.context/module-context.md  ← read this
+
+# Code added a new public class AgentWithActions
+# → Update "Public API" section in module-context.md to mention it
+# → Do NOT add a "Testing" section — it is not in scope
+```
+
+Consider these rules if they affect your changes.
+```
+
+Path given: `C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\.cursor\rules\sync-module-context.mdc`
+
+Closing line after rules: `Consider these rules if they affect your changes.`
+
+---
+
+## `system_reminder` (verbatim)
+
+```
+MANIFEST GATE - C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\primitives\assets\assets.py
+Header executed. Follow response.instructions only - do not author from source.
+
+  # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+  # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+  # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+
+Manifest output (injected automatically):
+```yaml
+---
+type: bdd
+capabilities:
+- tool
+- agent
+signature:
+  instructions: "# Instructions\n\n    Depends on CleanEngineering (lazy import in\
+    \ ce() and transform to avoid circular imports at\n    module load time)."
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest context_tools.bdd.bdd:Bdd
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      fidelity: str
+      format: str | None
+      path: str | None
+      session: str | None
+      workspace: str | None
+  close_session:
+    kind: tool
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  log_correction:
+    kind: tool
+    parameters:
+      entry_id: str
+      improved: str
+      status: str
+    returns: str
+  log_mistake:
+    kind: tool
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      when: str
+    returns: str
+  read_context_index:
+    kind: tool
+    returns: str
+  record_context_root:
+    kind: tool
+    parameters:
+      root: str
+      note: str
+    returns: str
+  scan:
+    kind: tool
+    parameters:
+      paths: list[str]
+    returns: str
+  transform:
+    kind: tool
+    instructions: "Sideways format conversion at the same fidelity.\n        Delegates\
+      \ to clean_engineering.transform until BDD has its own channel model."
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: TransformResult
+  active:
+    kind: resource
+    type: Session
+  mode:
+    kind: resource
+    type: str
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing - before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: '# Document
+
+
+      Take the persona of a **neutral observer** — describe what exists, do not prescribe
+      what should exist.
+
+
+      1. Follow **`session_guidance`**. Observe and write under the session layout.
+
+      2. Read the **contexts** to understand the vocabulary and structure of the domain.
+
+      3. Fill the **template** scaffold with observed content — describe current state
+      only.
+
+      4. Do not apply, suggest, or imply rules or best practices in the generated
+      output.
+
+      5. Call **`scan`** and append all violations to the document as-is — flag them,
+      do not correct them.
+
+      6. Save the artifact under the session layout from `session_guidance`.'
+    parameters:
+      paths: list[str]
+    returns: str
+  generate:
+    kind: action
+    tools: []
+    instructions: "At modules fidelity: delegate entirely to ce().generate() — no\
+      \ BDD spec file is written at this stage. Use this to bootstrap CE class structure\
+      \ before writing tests.\n        At behavior fidelity: write all BDD test signatures\
+      \ (SIGNATURE markers).\n        At development fidelity: write full test bodies\
+      \ and production code.\n        When the target module already exists, scan\
+      \ the production source for every public method and property and verify each\
+      \ has test coverage — add missing signatures for any gap before writing new\
+      \ ones.\n        BDD tests must conform to CE class structure: describe/it hierarchies\
+      \ must map onto public CE interfaces and operations.\n        When BDD artifacts\
+      \ are complete, call ce().generate() to produce the matching class skeletons."
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  grill:
+    kind: action
+    tools: []
+    instructions: "Run the BDD grill loop to surface assumptions and gaps.\n     \
+      \   When BDD grill is complete, call ce().grill() to do the same for the matching\
+      \ classes."
+    returns: str
+  improve:
+    kind: action
+    tools: []
+    returns: str
+  iterate:
+    kind: action
+    tools: []
+    instructions: "Iterate one BDD cycle: write one test, confirm it is RED, then\
+      \ call ce().iterate() to build the minimum production code until GREEN. Repeat\
+      \ — one test, one production change, one GREEN — until all tests pass.\n   \
+      \     If the same test is still RED after 2 consecutive fix attempts — stop\
+      \ guessing. Call diagnostic().diagnose() before a third fix (wrong exception,\
+      \ wrong line, shifting failure mode, or a re-read of the code that does not\
+      \ explain the failure)."
+    returns: str
+  partition:
+    kind: action
+    tools: []
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools: []
+    instructions: "Repair the BDD artifact that is failing or malformed.\n       \
+      \ When the BDD artifact is clean, call ce().repair() to repair the matching\
+      \ class artifact."
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Scan the production source for every public method and property;\
+      \ flag any with no corresponding test as a coverage gap. Fix every BDD violation\
+      \ and coverage gap — confirm each failing test is RED for the right reason.\n\
+      \        When BDD violations and coverage gaps are resolved, call ce().satisfy()\
+      \ to build or fix the minimum production code until GREEN. One test, one production\
+      \ change, one GREEN — repeat until validate passes.\n        If the same test\
+      \ is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose()\
+      \ before a third fix (wrong exception, wrong line, shifting failure mode, or\
+      \ a re-read of the code that does not explain the failure)."
+    returns: str
+  sketch:
+    kind: action
+    tools: []
+    instructions: "Sketch the BDD hierarchy at the current fidelity.\n        When\
+      \ BDD sketch is complete, call ce().sketch() to sketch the matching classes."
+    returns: str
+  validate:
+    kind: action
+    tools: []
+    instructions: "Validate all BDD artifacts at the current fidelity.\n        When\
+      \ BDD validation passes, call ce().validate() to validate the matching class\
+      \ artifacts."
+    returns: str
+  archive_mistakes:
+    kind: sub_agent
+    launch: non_blocking
+    parameters:
+      repo_root: str
+    returns: str
+  verify_regression:
+    kind: sub_agent
+    launch: non_blocking
+    parameters:
+      examples_root: str
+    returns: str
+---
+```
+```
+
+---
+
+## Other fields
+
+- **agent_message:** none in the read response.
+- **File was not edited** (per your request).# Read tool response (verbatim)
+
+## File contents (`primitives/assets/assets.py`, lines 1–211)
+
+```python
+"""Asset location and collection for instruction expansion.
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Literal
+
+from primitives.instructions import (
+    _FORMAT_TEMPLATE_EXT,
+    _active_resource,
+    _path_for_templates,
+    _slug_variants,
+)
+
+LocationKind = Literal["file", "folder", "section"]
+
+
+@dataclass(frozen=True)
+class AssetLocation:
+    kind: LocationKind
+    module_dir: Path
+    domain_slug: str
+    path: Path | None = None
+    folder: Path | None = None
+    section_file: Path | None = None
+    section_heading: str | None = None
+
+
+class AssetLocator:
+    def __init__(
+        self,
+        host: Any,
+        label: str,
+        *,
+        group: str | None = None,
+        filter_key: str | None = None,
+    ) -> None:
+        self._host = host
+        self._label = label
+        self._group = group
+        self._filter_key = filter_key
+
+    def locate(self) -> AssetLocation:
+        module_dir = Path(getattr(self._host, "module_dir", Path(".")))
+        domain_slug = getattr(self._host, "domain_slug", getattr(self._host, "toolset_name", module_dir.name))
+        filter_value = _active_resource(self._host, self._filter_key) if self._filter_key else None
+        if self._label == "templates":
+            # Prefer host.format so py/js/md template files are selected by channel.
+            active_format = filter_value or _active_resource(self._host, "format")
+            located = self._locate_templates(module_dir, domain_slug, active_format)
+            if located.path is not None and located.path.is_file():
+                return located
+            # Meta scaffold pack (e.g. context_tools/base/templates/) when no format artifact exists.
+            meta = module_dir / "templates"
+            if meta.is_dir():
+                return AssetLocation("folder", module_dir, domain_slug, folder=meta.resolve())
+        # Same lookup with or without a filter: optional group -> filter subfolder -> label.
+        search_root = self._search_root(module_dir, filter_value)
+        return self._locate_under(search_root, module_dir, domain_slug)
+
+    def _search_root(self, module_dir: Path, filter_value: str | None) -> Path:
+        """Resolve module_dir[/group][/filter_value].
+
+        filter_value selects a subdirectory under the group (e.g. fidelities/language/).
+        If that directory is missing but a single file stem matches, use the group folder
+        and let label lookup find `{filter_value}.*` only when the label equals the stem -
+        otherwise prefer the directory layout.
+        """
+        root = module_dir
+        if self._group:
+            root = root / self._group
+        if not filter_value:
+            return root
+        as_dir = root / filter_value
+        if as_dir.is_dir():
+            return as_dir
+        return root
+
+    def _locate_under(self, search_root: Path, module_dir: Path, domain_slug: str) -> AssetLocation:
+        folder = search_root / self._label
+        if folder.is_dir():
+            return AssetLocation("folder", module_dir, domain_slug, folder=folder.resolve())
+        for name in (self._label, f"{self._label}.md"):
+            candidate = search_root / name
+            if candidate.is_file():
+                return AssetLocation("file", module_dir, domain_slug, path=candidate.resolve())
+        first = self._first_extension_match(search_root)
+        if first:
+            return AssetLocation("file", module_dir, domain_slug, path=first.resolve())
+        section_file = self._canonical_domain_md(module_dir, search_root, domain_slug)
+        return AssetLocation(
+            "section",
+            module_dir,
+            domain_slug,
+            section_file=section_file.resolve(),
+            section_heading=self._label.replace("_", " ").replace("-", " ").title(),
+        )
+
+    def _first_extension_match(self, search_root: Path) -> Path | None:
+        """Return the first file matching `{label}.*` in search_root, or None."""
+        if not search_root.is_dir():
+            return None
+        matches = sorted(c for c in search_root.glob(f"{self._label}.*") if c.is_file())
+        return matches[0] if matches else None
+
+    def _canonical_domain_md(self, module_dir: Path, search_root: Path, domain_slug: str) -> Path:
+        for root in (module_dir, search_root):
+            for slug in _slug_variants(domain_slug):
+                candidate = root / f"{slug}.md"
+                if candidate.is_file():
+                    return candidate
+        return module_dir / f"{domain_slug}.md"
+
+    def _locate_templates(self, module_dir: Path, domain_slug: str, active_format: str | None) -> AssetLocation:
+        stems = self._template_stems(domain_slug)
+        located = self._locate_in_shared_templates(module_dir, stems, active_format, domain_slug)
+        if located is not None:
+            return located
+        located = self._locate_in_format_dir(module_dir, stems, active_format, domain_slug)
+        if located is not None:
+            return located
+        located = self._locate_by_stem_glob(module_dir, stems, domain_slug)
+        if located is not None:
+            return located
+        relative = _path_for_templates(module_dir, domain_slug, active_format)
+        return AssetLocation("file", module_dir, domain_slug, path=(module_dir / relative).resolve())
+
+    def _template_stems(self, domain_slug: str) -> list[str]:
+        return [
+            f"{slug}-{suffix}"
+            for slug in _slug_variants(domain_slug)
+            for suffix in ("templates", "template")
+        ]
+
+    def _locate_in_shared_templates(
+        self, module_dir: Path, stems: list[str], active_format: str | None, domain_slug: str
+    ) -> AssetLocation | None:
+        shared = module_dir / "templates"
+        if not shared.is_dir():
+            return None
+        ext = _FORMAT_TEMPLATE_EXT.get(active_format or "", "")
+        if ext:
+            for stem in stems:
+                path = shared / f"{stem}{ext}"
+                if path.is_file():
+                    return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        return AssetLocation("folder", module_dir, domain_slug, folder=shared.resolve())
+
+    def _locate_in_format_dir(
+        self, module_dir: Path, stems: list[str], active_format: str | None, domain_slug: str
+    ) -> AssetLocation | None:
+        if not active_format:
+            return None
+        format_dir = module_dir / "formats" / active_format
+        if not format_dir.is_dir():
+            return None
+        for stem in stems:
+            for path in sorted(format_dir.glob(f"{stem}.*")):
+                return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        return None
+
+    def _locate_by_stem_glob(
+        self, module_dir: Path, stems: list[str], domain_slug: str
+    ) -> AssetLocation | None:
+        for stem in stems:
+            for path in sorted(module_dir.glob(f"{stem}.*")):
+                return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        return None
+
+
+class Asset:
+    def __init__(self, location: AssetLocation) -> None:
+        self._location = location
+
+    @property
+    def location(self) -> AssetLocation:
+        return self._location
+
+    def collect(self) -> str:
+        from .markdown_extractor import _extract_single
+
+        return _extract_single(self._location)
+
+
+class AssetCollection:
+    def __init__(self, location: AssetLocation) -> None:
+        self._location = location
+        self.collection: dict[str, str] = {}
+
+    @property
+    def location(self) -> AssetLocation:
+        return self._location
+
+    def collect(self) -> dict[str, str]:
+        from .markdown_extractor import _extract_collection
+
+        self.collection = _extract_collection(self._location)
+        return self.collection
+
+    def merged(self) -> str:
+        from .markdown_extractor import _merge_collection
+
+        if not self.collection:
+            self.collect()
+        return _merge_collection(self.collection)
+```
+
+---
+
+## Text after file contents: “The following cursor rule files are relevant to the files you just read:”
+
+### Rule: `deploy-after-changes.mdc`
+
+```
+# Re-deploy skills after changes
+
+When you finish changing any `.py` or `.md` file under `abd-context-driven-delivery/`, run `deploy_again` to refresh the deployed IDE skill shims.
+
+## How to run it
+
+Write the request file and invoke it from the `abd-context-driven-delivery` directory:
+
+```powershell
+Set-Content -Path "_req.yaml" -Value "toolset: AgentSkills`ntool: deploy_again"
+$env:PYTHONIOENCODING="utf-8"; python -m tools run _req.yaml
+Remove-Item "_req.yaml"
+```
+
+Or inline with stdin using PowerShell here-string:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: AgentSkills
+tool: deploy_again
+"@ | python -m tools run -
+```
+
+Run this from:
+```
+c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+```
+
+## When to run it
+
+Run once after a session of changes is complete — not after every individual file edit. The goal is to keep the deployed skill shims in sync with the latest toolset definitions.
+
+## When to skip it
+
+Skip if the changes were only to test files (`_spec.py`), context files (`.context/`), or documentation that has no effect on toolset manifests or skill shims.
+```
+
+Path given: `C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\.cursor\rules\deploy-after-changes.mdc`
+
+### Rule: `sync-module-context.mdc`
+
+```
+# Keep module-context.md in sync with code changes
+
+When you edit or generate any code file, check whether a `.context/module-context.md` exists in the **same directory** as that file.
+
+## If a module-context.md is found
+
+Read it first, then ask: do the code changes affect anything that is already documented there?
+
+Update the file **only if** the answer is yes and the change is significant — for example:
+
+- The public API changes (new methods, renamed methods, removed methods, changed signatures).
+- The seam description no longer matches how inputs flow to outputs.
+- A stated dependency is added, removed, or renamed.
+- The purpose or primary use case shifts meaningfully.
+- A scan-violation status changes (cleared, added, or resolved differently).
+
+Do **not** add new sections or document things outside the existing scope of the file. The module-context.md is scoped — extend it only along dimensions it already covers.
+
+## What counts as significant
+
+Renaming a local variable, fixing a typo, or adjusting whitespace is not significant. Changing what a public method does, adding a new collaborator dependency, or altering the seam contract is significant.
+
+## Example
+
+```
+# Editing: primitives/actions/action.py
+# Check:   primitives/actions/.context/module-context.md  ← read this
+
+# Code added a new public class AgentWithActions
+# → Update "Public API" section in module-context.md to mention it
+# → Do NOT add a "Testing" section — it is not in scope
+```
+
+Consider these rules if they affect your changes.
+```
+
+Path given: `C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\.cursor\rules\sync-module-context.mdc`
+
+Closing line after rules: `Consider these rules if they affect your changes.`
+
+---
+
+## `system_reminder` (verbatim)
+
+```
+MANIFEST GATE - C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\primitives\assets\assets.py
+Header executed. Follow response.instructions only - do not author from source.
+
+  # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+  # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+  # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+
+Manifest output (injected automatically):
+```yaml
+---
+type: bdd
+capabilities:
+- tool
+- agent
+signature:
+  instructions: "# Instructions\n\n    Depends on CleanEngineering (lazy import in\
+    \ ce() and transform to avoid circular imports at\n    module load time)."
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest context_tools.bdd.bdd:Bdd
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      fidelity: str
+      format: str | None
+      path: str | None
+      session: str | None
+      workspace: str | None
+  close_session:
+    kind: tool
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  log_correction:
+    kind: tool
+    parameters:
+      entry_id: str
+      improved: str
+      status: str
+    returns: str
+  log_mistake:
+    kind: tool
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      when: str
+    returns: str
+  read_context_index:
+    kind: tool
+    returns: str
+  record_context_root:
+    kind: tool
+    parameters:
+      root: str
+      note: str
+    returns: str
+  scan:
+    kind: tool
+    parameters:
+      paths: list[str]
+    returns: str
+  transform:
+    kind: tool
+    instructions: "Sideways format conversion at the same fidelity.\n        Delegates\
+      \ to clean_engineering.transform until BDD has its own channel model."
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: TransformResult
+  active:
+    kind: resource
+    type: Session
+  mode:
+    kind: resource
+    type: str
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing - before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: '# Document
+
+
+      Take the persona of a **neutral observer** — describe what exists, do not prescribe
+      what should exist.
+
+
+      1. Follow **`session_guidance`**. Observe and write under the session layout.
+
+      2. Read the **contexts** to understand the vocabulary and structure of the domain.
+
+      3. Fill the **template** scaffold with observed content — describe current state
+      only.
+
+      4. Do not apply, suggest, or imply rules or best practices in the generated
+      output.
+
+      5. Call **`scan`** and append all violations to the document as-is — flag them,
+      do not correct them.
+
+      6. Save the artifact under the session layout from `session_guidance`.'
+    parameters:
+      paths: list[str]
+    returns: str
+  generate:
+    kind: action
+    tools: []
+    instructions: "At modules fidelity: delegate entirely to ce().generate() — no\
+      \ BDD spec file is written at this stage. Use this to bootstrap CE class structure\
+      \ before writing tests.\n        At behavior fidelity: write all BDD test signatures\
+      \ (SIGNATURE markers).\n        At development fidelity: write full test bodies\
+      \ and production code.\n        When the target module already exists, scan\
+      \ the production source for every public method and property and verify each\
+      \ has test coverage — add missing signatures for any gap before writing new\
+      \ ones.\n        BDD tests must conform to CE class structure: describe/it hierarchies\
+      \ must map onto public CE interfaces and operations.\n        When BDD artifacts\
+      \ are complete, call ce().generate() to produce the matching class skeletons."
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  grill:
+    kind: action
+    tools: []
+    instructions: "Run the BDD grill loop to surface assumptions and gaps.\n     \
+      \   When BDD grill is complete, call ce().grill() to do the same for the matching\
+      \ classes."
+    returns: str
+  improve:
+    kind: action
+    tools: []
+    returns: str
+  iterate:
+    kind: action
+    tools: []
+    instructions: "Iterate one BDD cycle: write one test, confirm it is RED, then\
+      \ call ce().iterate() to build the minimum production code until GREEN. Repeat\
+      \ — one test, one production change, one GREEN — until all tests pass.\n   \
+      \     If the same test is still RED after 2 consecutive fix attempts — stop\
+      \ guessing. Call diagnostic().diagnose() before a third fix (wrong exception,\
+      \ wrong line, shifting failure mode, or a re-read of the code that does not\
+      \ explain the failure)."
+    returns: str
+  partition:
+    kind: action
+    tools: []
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools: []
+    instructions: "Repair the BDD artifact that is failing or malformed.\n       \
+      \ When the BDD artifact is clean, call ce().repair() to repair the matching\
+      \ class artifact."
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Scan the production source for every public method and property;\
+      \ flag any with no corresponding test as a coverage gap. Fix every BDD violation\
+      \ and coverage gap — confirm each failing test is RED for the right reason.\n\
+      \        When BDD violations and coverage gaps are resolved, call ce().satisfy()\
+      \ to build or fix the minimum production code until GREEN. One test, one production\
+      \ change, one GREEN — repeat until validate passes.\n        If the same test\
+      \ is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose()\
+      \ before a third fix (wrong exception, wrong line, shifting failure mode, or\
+      \ a re-read of the code that does not explain the failure)."
+    returns: str
+  sketch:
+    kind: action
+    tools: []
+    instructions: "Sketch the BDD hierarchy at the current fidelity.\n        When\
+      \ BDD sketch is complete, call ce().sketch() to sketch the matching classes."
+    returns: str
+  validate:
+    kind: action
+    tools: []
+    instructions: "Validate all BDD artifacts at the current fidelity.\n        When\
+      \ BDD validation passes, call ce().validate() to validate the matching class\
+      \ artifacts."
+    returns: str
+  archive_mistakes:
+    kind: sub_agent
+    launch: non_blocking
+    parameters:
+      repo_root: str
+    returns: str
+  verify_regression:
+    kind: sub_agent
+    launch: non_blocking
+    parameters:
+      examples_root: str
+    returns: str
+---
+```
+```
+
+---
+
+## Other fields
+
+- **agent_message:** none in the read response.
+- **File was not edited** (per your request).# Read tool response (verbatim)
+
+## File contents (`primitives/assets/assets.py`, lines 1–211)
+
+```python
+"""Asset location and collection for instruction expansion.
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Literal
+
+from primitives.instructions import (
+    _FORMAT_TEMPLATE_EXT,
+    _active_resource,
+    _path_for_templates,
+    _slug_variants,
+)
+
+LocationKind = Literal["file", "folder", "section"]
+
+
+@dataclass(frozen=True)
+class AssetLocation:
+    kind: LocationKind
+    module_dir: Path
+    domain_slug: str
+    path: Path | None = None
+    folder: Path | None = None
+    section_file: Path | None = None
+    section_heading: str | None = None
+
+
+class AssetLocator:
+    def __init__(
+        self,
+        host: Any,
+        label: str,
+        *,
+        group: str | None = None,
+        filter_key: str | None = None,
+    ) -> None:
+        self._host = host
+        self._label = label
+        self._group = group
+        self._filter_key = filter_key
+
+    def locate(self) -> AssetLocation:
+        module_dir = Path(getattr(self._host, "module_dir", Path(".")))
+        domain_slug = getattr(self._host, "domain_slug", getattr(self._host, "toolset_name", module_dir.name))
+        filter_value = _active_resource(self._host, self._filter_key) if self._filter_key else None
+        if self._label == "templates":
+            # Prefer host.format so py/js/md template files are selected by channel.
+            active_format = filter_value or _active_resource(self._host, "format")
+            located = self._locate_templates(module_dir, domain_slug, active_format)
+            if located.path is not None and located.path.is_file():
+                return located
+            # Meta scaffold pack (e.g. context_tools/base/templates/) when no format artifact exists.
+            meta = module_dir / "templates"
+            if meta.is_dir():
+                return AssetLocation("folder", module_dir, domain_slug, folder=meta.resolve())
+        # Same lookup with or without a filter: optional group -> filter subfolder -> label.
+        search_root = self._search_root(module_dir, filter_value)
+        return self._locate_under(search_root, module_dir, domain_slug)
+
+    def _search_root(self, module_dir: Path, filter_value: str | None) -> Path:
+        """Resolve module_dir[/group][/filter_value].
+
+        filter_value selects a subdirectory under the group (e.g. fidelities/language/).
+        If that directory is missing but a single file stem matches, use the group folder
+        and let label lookup find `{filter_value}.*` only when the label equals the stem -
+        otherwise prefer the directory layout.
+        """
+        root = module_dir
+        if self._group:
+            root = root / self._group
+        if not filter_value:
+            return root
+        as_dir = root / filter_value
+        if as_dir.is_dir():
+            return as_dir
+        return root
+
+    def _locate_under(self, search_root: Path, module_dir: Path, domain_slug: str) -> AssetLocation:
+        folder = search_root / self._label
+        if folder.is_dir():
+            return AssetLocation("folder", module_dir, domain_slug, folder=folder.resolve())
+        for name in (self._label, f"{self._label}.md"):
+            candidate = search_root / name
+            if candidate.is_file():
+                return AssetLocation("file", module_dir, domain_slug, path=candidate.resolve())
+        first = self._first_extension_match(search_root)
+        if first:
+            return AssetLocation("file", module_dir, domain_slug, path=first.resolve())
+        section_file = self._canonical_domain_md(module_dir, search_root, domain_slug)
+        return AssetLocation(
+            "section",
+            module_dir,
+            domain_slug,
+            section_file=section_file.resolve(),
+            section_heading=self._label.replace("_", " ").replace("-", " ").title(),
+        )
+
+    def _first_extension_match(self, search_root: Path) -> Path | None:
+        """Return the first file matching `{label}.*` in search_root, or None."""
+        if not search_root.is_dir():
+            return None
+        matches = sorted(c for c in search_root.glob(f"{self._label}.*") if c.is_file())
+        return matches[0] if matches else None
+
+    def _canonical_domain_md(self, module_dir: Path, search_root: Path, domain_slug: str) -> Path:
+        for root in (module_dir, search_root):
+            for slug in _slug_variants(domain_slug):
+                candidate = root / f"{slug}.md"
+                if candidate.is_file():
+                    return candidate
+        return module_dir / f"{domain_slug}.md"
+
+    def _locate_templates(self, module_dir: Path, domain_slug: str, active_format: str | None) -> AssetLocation:
+        stems = self._template_stems(domain_slug)
+        located = self._locate_in_shared_templates(module_dir, stems, active_format, domain_slug)
+        if located is not None:
+            return located
+        located = self._locate_in_format_dir(module_dir, stems, active_format, domain_slug)
+        if located is not None:
+            return located
+        located = self._locate_by_stem_glob(module_dir, stems, domain_slug)
+        if located is not None:
+            return located
+        relative = _path_for_templates(module_dir, domain_slug, active_format)
+        return AssetLocation("file", module_dir, domain_slug, path=(module_dir / relative).resolve())
+
+    def _template_stems(self, domain_slug: str) -> list[str]:
+        return [
+            f"{slug}-{suffix}"
+            for slug in _slug_variants(domain_slug)
+            for suffix in ("templates", "template")
+        ]
+
+    def _locate_in_shared_templates(
+        self, module_dir: Path, stems: list[str], active_format: str | None, domain_slug: str
+    ) -> AssetLocation | None:
+        shared = module_dir / "templates"
+        if not shared.is_dir():
+            return None
+        ext = _FORMAT_TEMPLATE_EXT.get(active_format or "", "")
+        if ext:
+            for stem in stems:
+                path = shared / f"{stem}{ext}"
+                if path.is_file():
+                    return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        return AssetLocation("folder", module_dir, domain_slug, folder=shared.resolve())
+
+    def _locate_in_format_dir(
+        self, module_dir: Path, stems: list[str], active_format: str | None, domain_slug: str
+    ) -> AssetLocation | None:
+        if not active_format:
+            return None
+        format_dir = module_dir / "formats" / active_format
+        if not format_dir.is_dir():
+            return None
+        for stem in stems:
+            for path in sorted(format_dir.glob(f"{stem}.*")):
+                return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        return None
+
+    def _locate_by_stem_glob(
+        self, module_dir: Path, stems: list[str], domain_slug: str
+    ) -> AssetLocation | None:
+        for stem in stems:
+            for path in sorted(module_dir.glob(f"{stem}.*")):
+                return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        return None
+
+
+class Asset:
+    def __init__(self, location: AssetLocation) -> None:
+        self._location = location
+
+    @property
+    def location(self) -> AssetLocation:
+        return self._location
+
+    def collect(self) -> str:
+        from .markdown_extractor import _extract_single
+
+        return _extract_single(self._location)
+
+
+class AssetCollection:
+    def __init__(self, location: AssetLocation) -> None:
+        self._location = location
+        self.collection: dict[str, str] = {}
+
+    @property
+    def location(self) -> AssetLocation:
+        return self._location
+
+    def collect(self) -> dict[str, str]:
+        from .markdown_extractor import _extract_collection
+
+        self.collection = _extract_collection(self._location)
+        return self.collection
+
+    def merged(self) -> str:
+        from .markdown_extractor import _merge_collection
+
+        if not self.collection:
+            self.collect()
+        return _merge_collection(self.collection)
+```
+
+---
+
+## Text after file contents: “The following cursor rule files are relevant to the files you just read:”
+
+### Rule: `deploy-after-changes.mdc`
+
+```
+# Re-deploy skills after changes
+
+When you finish changing any `.py` or `.md` file under `abd-context-driven-delivery/`, run `deploy_again` to refresh the deployed IDE skill shims.
+
+## How to run it
+
+Write the request file and invoke it from the `abd-context-driven-delivery` directory:
+
+```powershell
+Set-Content -Path "_req.yaml" -Value "toolset: AgentSkills`ntool: deploy_again"
+$env:PYTHONIOENCODING="utf-8"; python -m tools run _req.yaml
+Remove-Item "_req.yaml"
+```
+
+Or inline with stdin using PowerShell here-string:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: AgentSkills
+tool: deploy_again
+"@ | python -m tools run -
+```
+
+Run this from:
+```
+c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+```
+
+## When to run it
+
+Run once after a session of changes is complete — not after every individual file edit. The goal is to keep the deployed skill shims in sync with the latest toolset definitions.
+
+## When to skip it
+
+Skip if the changes were only to test files (`_spec.py`), context files (`.context/`), or documentation that has no effect on toolset manifests or skill shims.
+```
+
+Path given: `C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\.cursor\rules\deploy-after-changes.mdc`
+
+### Rule: `sync-module-context.mdc`
+
+```
+# Keep module-context.md in sync with code changes
+
+When you edit or generate any code file, check whether a `.context/module-context.md` exists in the **same directory** as that file.
+
+## If a module-context.md is found
+
+Read it first, then ask: do the code changes affect anything that is already documented there?
+
+Update the file **only if** the answer is yes and the change is significant — for example:
+
+- The public API changes (new methods, renamed methods, removed methods, changed signatures).
+- The seam description no longer matches how inputs flow to outputs.
+- A stated dependency is added, removed, or renamed.
+- The purpose or primary use case shifts meaningfully.
+- A scan-violation status changes (cleared, added, or resolved differently).
+
+Do **not** add new sections or document things outside the existing scope of the file. The module-context.md is scoped — extend it only along dimensions it already covers.
+
+## What counts as significant
+
+Renaming a local variable, fixing a typo, or adjusting whitespace is not significant. Changing what a public method does, adding a new collaborator dependency, or altering the seam contract is significant.
+
+## Example
+
+```
+# Editing: primitives/actions/action.py
+# Check:   primitives/actions/.context/module-context.md  ← read this
+
+# Code added a new public class AgentWithActions
+# → Update "Public API" section in module-context.md to mention it
+# → Do NOT add a "Testing" section — it is not in scope
+```
+
+Consider these rules if they affect your changes.
+```
+
+Path given: `C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\.cursor\rules\sync-module-context.mdc`
+
+Closing line after rules: `Consider these rules if they affect your changes.`
+
+---
+
+## `system_reminder` (verbatim)
+
+```
+MANIFEST GATE - C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\primitives\assets\assets.py
+Header executed. Follow response.instructions only - do not author from source.
+
+  # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+  # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+  # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+
+Manifest output (injected automatically):
+```yaml
+---
+type: bdd
+capabilities:
+- tool
+- agent
+signature:
+  instructions: "# Instructions\n\n    Depends on CleanEngineering (lazy import in\
+    \ ce() and transform to avoid circular imports at\n    module load time)."
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest context_tools.bdd.bdd:Bdd
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      fidelity: str
+      format: str | None
+      path: str | None
+      session: str | None
+      workspace: str | None
+  close_session:
+    kind: tool
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  log_correction:
+    kind: tool
+    parameters:
+      entry_id: str
+      improved: str
+      status: str
+    returns: str
+  log_mistake:
+    kind: tool
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      when: str
+    returns: str
+  read_context_index:
+    kind: tool
+    returns: str
+  record_context_root:
+    kind: tool
+    parameters:
+      root: str
+      note: str
+    returns: str
+  scan:
+    kind: tool
+    parameters:
+      paths: list[str]
+    returns: str
+  transform:
+    kind: tool
+    instructions: "Sideways format conversion at the same fidelity.\n        Delegates\
+      \ to clean_engineering.transform until BDD has its own channel model."
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: TransformResult
+  active:
+    kind: resource
+    type: Session
+  mode:
+    kind: resource
+    type: str
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing - before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: '# Document
+
+
+      Take the persona of a **neutral observer** — describe what exists, do not prescribe
+      what should exist.
+
+
+      1. Follow **`session_guidance`**. Observe and write under the session layout.
+
+      2. Read the **contexts** to understand the vocabulary and structure of the domain.
+
+      3. Fill the **template** scaffold with observed content — describe current state
+      only.
+
+      4. Do not apply, suggest, or imply rules or best practices in the generated
+      output.
+
+      5. Call **`scan`** and append all violations to the document as-is — flag them,
+      do not correct them.
+
+      6. Save the artifact under the session layout from `session_guidance`.'
+    parameters:
+      paths: list[str]
+    returns: str
+  generate:
+    kind: action
+    tools: []
+    instructions: "At modules fidelity: delegate entirely to ce().generate() — no\
+      \ BDD spec file is written at this stage. Use this to bootstrap CE class structure\
+      \ before writing tests.\n        At behavior fidelity: write all BDD test signatures\
+      \ (SIGNATURE markers).\n        At development fidelity: write full test bodies\
+      \ and production code.\n        When the target module already exists, scan\
+      \ the production source for every public method and property and verify each\
+      \ has test coverage — add missing signatures for any gap before writing new\
+      \ ones.\n        BDD tests must conform to CE class structure: describe/it hierarchies\
+      \ must map onto public CE interfaces and operations.\n        When BDD artifacts\
+      \ are complete, call ce().generate() to produce the matching class skeletons."
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  grill:
+    kind: action
+    tools: []
+    instructions: "Run the BDD grill loop to surface assumptions and gaps.\n     \
+      \   When BDD grill is complete, call ce().grill() to do the same for the matching\
+      \ classes."
+    returns: str
+  improve:
+    kind: action
+    tools: []
+    returns: str
+  iterate:
+    kind: action
+    tools: []
+    instructions: "Iterate one BDD cycle: write one test, confirm it is RED, then\
+      \ call ce().iterate() to build the minimum production code until GREEN. Repeat\
+      \ — one test, one production change, one GREEN — until all tests pass.\n   \
+      \     If the same test is still RED after 2 consecutive fix attempts — stop\
+      \ guessing. Call diagnostic().diagnose() before a third fix (wrong exception,\
+      \ wrong line, shifting failure mode, or a re-read of the code that does not\
+      \ explain the failure)."
+    returns: str
+  partition:
+    kind: action
+    tools: []
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools: []
+    instructions: "Repair the BDD artifact that is failing or malformed.\n       \
+      \ When the BDD artifact is clean, call ce().repair() to repair the matching\
+      \ class artifact."
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Scan the production source for every public method and property;\
+      \ flag any with no corresponding test as a coverage gap. Fix every BDD violation\
+      \ and coverage gap — confirm each failing test is RED for the right reason.\n\
+      \        When BDD violations and coverage gaps are resolved, call ce().satisfy()\
+      \ to build or fix the minimum production code until GREEN. One test, one production\
+      \ change, one GREEN — repeat until validate passes.\n        If the same test\
+      \ is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose()\
+      \ before a third fix (wrong exception, wrong line, shifting failure mode, or\
+      \ a re-read of the code that does not explain the failure)."
+    returns: str
+  sketch:
+    kind: action
+    tools: []
+    instructions: "Sketch the BDD hierarchy at the current fidelity.\n        When\
+      \ BDD sketch is complete, call ce().sketch() to sketch the matching classes."
+    returns: str
+  validate:
+    kind: action
+    tools: []
+    instructions: "Validate all BDD artifacts at the current fidelity.\n        When\
+      \ BDD validation passes, call ce().validate() to validate the matching class\
+      \ artifacts."
+    returns: str
+  archive_mistakes:
+    kind: sub_agent
+    launch: non_blocking
+    parameters:
+      repo_root: str
+    returns: str
+  verify_regression:
+    kind: sub_agent
+    launch: non_blocking
+    parameters:
+      examples_root: str
+    returns: str
+---
+```
+```
+
+---
+
+## Other fields
+
+- **agent_message:** none in the read response.
+- **File was not edited** (per your request).

@@ -1,0 +1,194 @@
+/*
+  abd.works brand stylesheet - shared by every page template in this folder.
+
+  Source of truth: abd-works-brand/.agents/skills/abd-visual-branding/SKILL.md
+  (single source of truth for brand implementation per that skill's own text).
+  Copy tokens/rules back here if the brand skill changes - do not fork values.
+
+  Dual-mode: Executive (light) is default. Engineering (dark) activates via
+  data-theme="engineering" on <html> - see the mode-switch script each page includes.
+*/
+
+:root {
+  /* Executive (light) - default */
+  --bg: #F6F5F3;
+  --surface: #FFFFFF;
+  --raised: #F0ECE4;
+  --border: #DDD8CF;
+  --text: #111113;
+  --text-muted: #595A61;
+
+  /* Brand signal - same in both modes */
+  --accent: #E5531A;
+  --accent-deep: #C64514;
+  --accent-soft: #F2A07A;
+  --accent-glow: #FF6A2E;
+  --ai-accent: #4FC3F7; /* AI-activity signal ONLY - never a decorative/brand color */
+
+  /* Semantic */
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --info: #3B82F6;
+
+  /* Spacing scale */
+  --spacing-xs: clamp(6px, 1vw, 8px);
+  --spacing-sm: clamp(10px, 2vw, 14px);
+  --spacing-md: clamp(14px, 3vw, 20px);
+  --spacing-lg: clamp(20px, 4vw, 28px);
+  --spacing-xl: clamp(28px, 5vw, 40px);
+
+  /* Type scale */
+  --text-xs: clamp(10px, 1.4vw, 12px);
+  --text-sm: clamp(12px, 1.6vw, 14px);
+  --text-base: clamp(14px, 2vw, 16px);
+  --text-lg: clamp(16px, 2.5vw, 18px);
+  --text-xl: clamp(18px, 3vw, 22px);
+}
+
+html[data-theme="engineering"] {
+  --bg: #0B0B0B;
+  --surface: #111113;
+  --raised: #1B1B20;
+  --border: #2A2A2A;
+  --text: #F4F4F5;
+  --text-muted: #9B9BA8;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.6;
+}
+
+code, .mono, .kicker, .logo em {
+  font-family: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+
+/* -- Type scale (Step 4) ------------------------------------------------- */
+
+h1 { font-size: 38px; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 var(--spacing-xs); }
+h2 { font-size: 28px; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em; margin: 0 0 var(--spacing-xs); }
+p  { font-size: var(--text-base); color: var(--text); margin: 0 0 var(--spacing-sm); }
+p.muted, .text-muted { color: var(--text-muted); }
+p.small, .text-sm { font-size: var(--text-sm); }
+
+.kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* -- Logo lockup (Step 5) -------------------------------------------------
+   Real asset: logo/abd.works.wordmark.{black,white}.svg in the brand repo.
+   Text lockup here so these reference pages stay self-contained. "works" is
+   italic per the SVG lockup; do not recolor outside the approved palette. */
+
+.logo { font-family: "Inter", sans-serif; font-weight: 700; font-size: var(--text-lg); }
+.logo span { color: var(--accent); }
+.logo em { font-style: italic; font-weight: 500; color: var(--text); }
+
+/* -- Mode switch (Step 6) ------------------------------------------------- */
+
+.mode-switch {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+}
+.mode-switch button {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.mode-switch button[aria-pressed="true"] { background: var(--accent); color: #0B0B0B; }
+.mode-switch button:not([aria-pressed="true"]):hover { color: var(--text); }
+
+/* -- Buttons (Step 6) ------------------------------------------------------ */
+
+.btn {
+  font-family: "Inter", sans-serif;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-block;
+}
+.btn.primary { background: var(--accent); color: #0B0B0B; }
+.btn.primary:hover { background: var(--accent-deep); }
+.btn.ghost { background: transparent; border-color: var(--border); color: var(--text); }
+.btn.ghost:hover { border-color: var(--accent); }
+.btn.danger { background: transparent; border-color: var(--error); color: var(--error); }
+
+/* -- Cards / panels / regions (Step 6) -------------------------------------
+   Every IA slot renders as one of these - border is the only depth signal,
+   no drop shadows. */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--spacing-md);
+  transition: border-color 180ms;
+}
+.card:hover { border-color: var(--accent); }
+.card > .card-label {
+  display: block;
+  margin: 0 0 var(--spacing-sm);
+}
+
+/* -- Terminal / code blocks (Step 6) --------------------------------------- */
+
+.term {
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--spacing-sm);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.term .prompt { color: var(--text-muted); margin-right: 0.5em; }
+.term .accent { color: var(--accent); }
+
+/* -- Page chrome shared by every template ---------------------------------- */
+
+.page { max-width: 72rem; margin: 0 auto; padding: var(--spacing-lg); }
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: var(--spacing-md); margin-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--border);
+}
+.page-meta { color: var(--text-muted); font-size: var(--text-sm); margin-bottom: var(--spacing-lg); }
+.page-footer {
+  margin-top: var(--spacing-xl); padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border); color: var(--text-muted); font-size: var(--text-xs);
+}
+
+/* -- Layout grid ------------------------------------------------------------
+   One .layout per page; .band spans full width (header/footer-style slots),
+   .columns holds side-by-side .card regions sized by inline --w from the
+   matching specifications/generic/<id>.drawio geometry. */
+
+.layout { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+.band { width: 100%; }
+.columns { display: flex; gap: var(--spacing-sm); align-items: stretch; }
+.columns > .card { flex: 0 0 calc(var(--w, 1) * 100% - var(--spacing-sm)); min-width: 0; }

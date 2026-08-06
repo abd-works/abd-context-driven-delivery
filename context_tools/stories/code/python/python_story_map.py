@@ -1,6 +1,6 @@
 """PythonStoryMap - runnable `*_story.py` per Story (explore/spec).
 
-Engineering: ``*_spec.py`` (isolated); ``*_spec.{tier}.py`` for other tiers.
+Engineering: ``*_test_helper.{tier}.py`` per tier - every tier named explicitly, including ``domain``.
 """
 
 from __future__ import annotations

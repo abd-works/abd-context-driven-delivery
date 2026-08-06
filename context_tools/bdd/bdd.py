@@ -151,9 +151,7 @@ class Bdd(BaseContextTool):
 
     @action
     def satisfy(self) -> str:
-        """Scan the production source for every public method and property; flag any with no corresponding test as a coverage gap. Fix every BDD violation and coverage gap — confirm each failing test is RED for the right reason.
-        When BDD violations and coverage gaps are resolved, call ce().satisfy() to build or fix the minimum production code until GREEN. One test, one production change, one GREEN — repeat until validate passes.
-        If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure)."""
+        """When running the fixing part of Satisfy, make sure that you create a breaking test that fails first, and then fix the code."""
         super().satisfy()
         self.ce().satisfy()
         self.diagnostic().diagnose()

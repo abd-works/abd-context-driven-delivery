@@ -1,0 +1,1 @@
+Read primitives/tools/hooks/examples/gated_widget/gated_widget.py from the workspace. Report back exactly what came back with the read - including any system_reminder, agent_message, or MANIFEST GATE text you saw - verbatim.

@@ -1,0 +1,43 @@
+RESULT: EDIT SUCCEEDED
+
+Primary tool output:
+
+```
+The file C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\primitives\tools\hooks\examples\gated_widget\gated_widget.py has been updated.
+```
+
+`permission`: (none in the tool result)
+
+`agent_message`: (none in the tool result)
+
+`user_message`: (none in the tool result)
+
+The response also included two identical `system_reminder` blocks (MANIFEST GATE + injected YAML manifest); those are not named `permission`, `agent_message`, or `user_message`.RESULT: EDIT SUCCEEDED
+
+Primary tool output:
+
+```
+The file C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\primitives\tools\hooks\examples\gated_widget\gated_widget.py has been updated.
+```
+
+`permission`: (none in the tool result)
+
+`agent_message`: (none in the tool result)
+
+`user_message`: (none in the tool result)
+
+The response also included two identical `system_reminder` blocks (MANIFEST GATE + injected YAML manifest); those are not named `permission`, `agent_message`, or `user_message`.RESULT: EDIT SUCCEEDED
+
+Primary tool output:
+
+```
+The file C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\primitives\tools\hooks\examples\gated_widget\gated_widget.py has been updated.
+```
+
+`permission`: (none in the tool result)
+
+`agent_message`: (none in the tool result)
+
+`user_message`: (none in the tool result)
+
+The response also included two identical `system_reminder` blocks (MANIFEST GATE + injected YAML manifest); those are not named `permission`, `agent_message`, or `user_message`.

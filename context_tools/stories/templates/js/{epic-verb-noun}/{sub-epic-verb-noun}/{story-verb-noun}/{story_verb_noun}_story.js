@@ -5,49 +5,27 @@
  * format: js
  * ---
  *
- * Story: {Story Verb-Noun} (tier-neutral).
- * Wired to ExampleFactory fakes — not a tier test.
- * Assert the public interface of I{Type} only.
+ * Story: {Story Verb-Noun} (scenario fidelity - tier-neutral).
+ * Calls helper-object methods only - no assertions, no tier mechanism here.
  *
- * Run:  node --test …/{story_verb_noun}_story.js
- * Specs: {story_verb_noun}_spec.js (isolated); {story_verb_noun}_spec.{tier}.js (other tiers)
+ * Tiers: {story_verb_noun}_test_helper.{tier}.js implements {StoryVerbNoun}Helper
+ * (tier ∈ domain | client | server | e2e | project-specific, e.g. api, db).
+ *
+ * @typedef {object} {StoryVerbNoun}Helper
+ * @property {function(): (void|Promise<void>)} givenPrecondition
+ * @property {function(): (void|Promise<void>)} whenAction
+ * @property {function(): (void|Promise<void>)} thenOutcome
  */
 
-import assert from "node:assert/strict";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { ManageCharacterSheetHelper as EpicHelper } from "../../{epic-verb-noun}-helper.js";
 import { scenario, story } from "../../../story-test.js";
 
-const helper = new EpicHelper();
-
-/**
- * Shared scenarios. Story file runs with mode "fake".
- * Tier specs call this with "isolated" | "production".
- */
-export function create{StoryVerbNoun}Story(mode) {
+/** @param {{StoryVerbNoun}Helper} h */
+export function create{StoryVerbNoun}Story(h) {
   story("{Story Verb-Noun}", () => {
     scenario("{main-flow outcome name}", ({ given, when, then }) => {
-      let subject;
-
-      given("a domain object from the ExampleFactory", () => {
-        // helper.given…({ mode }) — fake I{Type}; values from examples[{example_key}]
-        subject = null;
-      });
-
-      when("the Actor exercises a public operation", () => {
-        // public seam only
-      });
-
-      then("an observable outcome is visible on the public interface", () => {
-        assert.ok(subject);
-      });
+      given("{given step text}", () => h.givenPrecondition());
+      when("{when step text}", () => h.whenAction());
+      then("{then step text}", () => h.thenOutcome());
     });
   });
-}
-
-const thisFile = fileURLToPath(import.meta.url);
-const entry = process.argv[1] && path.resolve(process.argv[1]);
-if (entry && path.resolve(thisFile) === entry) {
-  create{StoryVerbNoun}Story("fake");
 }

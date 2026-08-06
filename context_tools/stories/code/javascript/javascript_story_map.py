@@ -9,7 +9,7 @@ Explore / specification leaf shape (via ``story_file.render_story_file``):
   }
 
 Per-epic ``<epic-slug>-helper.js`` carries ExampleFactory accessors when declared.
-Engineering: ``*_spec.js`` (isolated); ``*_spec.{tier}.js`` for other tiers.
+Engineering: ``*_test_helper.{tier}.js`` per tier - every tier named explicitly, including ``domain``.
 """
 
 from __future__ import annotations

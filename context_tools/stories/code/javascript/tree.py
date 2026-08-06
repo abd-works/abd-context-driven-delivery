@@ -69,7 +69,7 @@ def _render_epic_helper(epic: Epic) -> str | None:
     lines.append(
         "  /** Shared given/when/then helpers. Call ExampleFactory methods - do not invent Fakes. */"
     )
-    lines.append("  /** Explore/spec default: mode \"fake\". Tiers pass isolated|production. */")
+    lines.append("  /** Shared ExampleFactory accessors. Tier test-helpers import this to build real collaborators. */")
     lines.append("")
     lines.extend(render_js_factory_accessors(factories))
     if not factories:
@@ -114,13 +114,9 @@ def _render_story(
     story_snake = to_snake(story.name)
     story_folder = f"{parent}/{story_slug}"
     relative_story_test = "../" * depth + "story-test.js"
-    relative_helper = "../" * (depth - 1) + f"{to_kebab(epic.name)}-helper.js"
-    helper_class = f"{to_pascal(epic.name)}Helper"
     tree[f"{story_folder}/{story_snake}_story.js"] = render_story_file(
         story,
         relative_story_test_path=relative_story_test,
-        relative_helper_path=relative_helper,
-        helper_class=helper_class,
     )
 
 

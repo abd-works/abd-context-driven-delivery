@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Template fragment: comparison-matrix
+     Category: Content & Data Organization
+     Slots: features, plan-columns
+     CLI: n/a
+
+     Usage:
+       1. Open this file in draw.io to preview the slot layout.
+       2. Copy the <mxCell> elements into your target .drawio file (Edit > XML).
+       3. Replace each [slot-name] placeholder cell with real region cells
+          (list rows, form field rows, verb rows — see companion .md).
+       4. Adjust x="50" y="50" on the screen cell to reposition on the canvas.
+       5. Rename all IDs: replace "_tmpl" with "_<yourscreenname>"
+          to avoid ID collisions in the target file.
+-->
+<mxfile host="Electron" version="29.0.3">
+  <diagram id="comparison-matrix-template" name="comparison-matrix">
+    <mxGraphModel dx="800" dy="400" grid="0" gridSize="10" guides="1" tooltips="1"
+      connect="1" arrows="1" fold="1" page="1" pageScale="1"
+      pageWidth="1200" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+    <mxCell id="s_comparison_matrix_tmpl" value="comparison-matrix" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontStyle=1;fontSize=13;verticalAlign=top;align=center;" vertex="1" parent="1">
+      <mxGeometry x="50" y="50" width="420" height="144" as="geometry" />
+    </mxCell>
+    <mxCell id="s_comparison_matrix_tmpl_features" value="[features]" style="whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1;fontStyle=1;fontSize=11;verticalAlign=middle;align=center;" vertex="1" parent="s_comparison_matrix_tmpl">
+      <mxGeometry x="8" y="40" width="141" height="96" as="geometry" />
+    </mxCell>
+    <mxCell id="s_comparison_matrix_tmpl_plan_a" value="[plan-a]" style="whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1;fontStyle=1;fontSize=11;verticalAlign=middle;align=center;" vertex="1" parent="s_comparison_matrix_tmpl">
+      <mxGeometry x="149" y="40" width="131" height="96" as="geometry" />
+    </mxCell>
+    <mxCell id="s_comparison_matrix_tmpl_plan_b" value="[plan-b]" style="whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=1;fontStyle=1;fontSize=11;verticalAlign=middle;align=center;" vertex="1" parent="s_comparison_matrix_tmpl">
+      <mxGeometry x="281" y="40" width="131" height="96" as="geometry" />
+    </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

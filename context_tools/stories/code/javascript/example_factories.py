@@ -24,7 +24,7 @@ def render_js_factory_accessors(factories: Sequence[str]) -> List[str]:
     if not factories:
         return []
     lines = [
-        "  // Example factories (explore/spec -> fake; tier specs -> isolated|production)",
+        "  // Example factories - imported by tier test-helpers to build real collaborators",
         "",
     ]
     for name in factories:

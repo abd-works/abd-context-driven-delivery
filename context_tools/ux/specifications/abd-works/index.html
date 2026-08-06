@@ -1,0 +1,93 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>abd.works &mdash; IA layout specifications</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="abd-works-brand.css">
+  <style>.index-list { list-style: none; padding: 0; } .index-list li { padding: 6px 0; }</style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <span class="logo"><span>abd</span><em>.works</em></span>
+      <div class="mode-switch" role="group" aria-label="Color mode">
+        <button type="button" data-mode="executive" aria-pressed="true">Executive</button>
+        <button type="button" data-mode="engineering" aria-pressed="false">Engineering</button>
+      </div>
+    </header>
+    <p class="kicker">Specification</p>
+    <h1>IA layout specifications</h1>
+    <p class="text-muted">43 branded page templates - one per layout in
+      <code>../generic/</code>. Pick one, open it, and alter it for
+      the real screen instead of building from scratch.</p>
+
+      <h2>Screen &amp; Core Page Skeletons</h2>
+      <ul class="index-list">
+        <li><a href="dashboard.html">Dashboard</a> <span class="text-muted small">&mdash; Grid of modular widgets/cards for data viz and quick actions.</span></li>
+        <li><a href="feed.html">Feed</a> <span class="text-muted small">&mdash; Endless vertical scroll of dynamic content (chronological/algo).</span></li>
+        <li><a href="split-screen.html">Split Screen</a> <span class="text-muted small">&mdash; 50/50 or fixed/fluid dual-panel layout (e.g., Map + List).</span></li>
+        <li><a href="single-page-spa.html">Single Page Spa</a> <span class="text-muted small">&mdash; One long-scrolling page with sticky anchor nav links.</span></li>
+        <li><a href="asymmetrical.html">Asymmetrical</a> <span class="text-muted small">&mdash; Unbalanced grid elements to break monotony and guide focus.</span></li>
+        <li><a href="magazine-editorial.html">Magazine Editorial</a> <span class="text-muted small">&mdash; Multi-column, varied-size grids mimicking news print.</span></li>
+        <li><a href="full-screen-media.html">Full Screen Media</a> <span class="text-muted small">&mdash; Immersive background video/image with minimal overlay text.</span></li>
+        <li><a href="parallax.html">Parallax</a> <span class="text-muted small">&mdash; Multi-layered background/foreground scrolling at different speeds.</span></li>
+        <li><a href="infinite-canvas.html">Infinite Canvas</a> <span class="text-muted small">&mdash; Borderless 2D pan/zoom workspace (e.g., Miro, Figma).</span></li>
+        <li><a href="holy-grail.html">Holy Grail</a> <span class="text-muted small">&mdash; Header + footer + three columns: left nav, body, right aside.</span></li>
+        <li><a href="card-based.html">Card Based</a> <span class="text-muted small">&mdash; Entire screen comprised of modular moveable masonry blocks.</span></li>
+      </ul>
+
+      <h2>Navigation &amp; Navigation Housing</h2>
+      <ul class="index-list">
+        <li><a href="sidebar.html">Sidebar</a> <span class="text-muted small">&mdash; Left/right fixed vertical panel beside a main workspace.</span></li>
+        <li><a href="top-header.html">Top Header</a> <span class="text-muted small">&mdash; Horizontal bar at the top of the viewport for core paths.</span></li>
+        <li><a href="bottom-bar.html">Bottom Bar</a> <span class="text-muted small">&mdash; Mobile-first sticky bottom navigation for thumb-reachability.</span></li>
+        <li><a href="tabbed.html">Tabbed</a> <span class="text-muted small">&mdash; Inline tab headers used to switch views inside a wrapper.</span></li>
+        <li><a href="mega-menu.html">Mega Menu</a> <span class="text-muted small">&mdash; Massive multi-column dropdown panel exposed from main header.</span></li>
+        <li><a href="drawer-hamburger.html">Drawer Hamburger</a> <span class="text-muted small">&mdash; Off-screen overlay panel that slides into view when triggered.</span></li>
+        <li><a href="breadcrumb.html">Breadcrumb</a> <span class="text-muted small">&mdash; Linear horizontal path tracking the user's location hierarchy.</span></li>
+        <li><a href="fab-menu.html">Fab Menu</a> <span class="text-muted small">&mdash; Circular floating trigger opening contextual action sub-menus.</span></li>
+        <li><a href="rail-navigation.html">Rail Navigation</a> <span class="text-muted small">&mdash; Ultra-skinny vertical icon-only sidebar for high-density apps.</span></li>
+        <li><a href="tree-navigation.html">Tree Navigation</a> <span class="text-muted small">&mdash; Collapsible nested list layout for deep file/concept directories.</span></li>
+      </ul>
+
+      <h2>Content &amp; Data Organization</h2>
+      <ul class="index-list">
+        <li><a href="grid.html">Grid</a> <span class="text-muted small">&mdash; Symmetrical rows and columns of uniform cards or asset previews.</span></li>
+        <li><a href="list.html">List</a> <span class="text-muted small">&mdash; Single-column vertical stack ideal for scanning text-dense items.</span></li>
+        <li><a href="masonry.html">Masonry</a> <span class="text-muted small">&mdash; Staggered-height columns fitting uneven content fluidly (Pinterest).</span></li>
+        <li><a href="carousel-slider.html">Carousel Slider</a> <span class="text-muted small">&mdash; Linear horizontal row of elements scrolled via touch/arrows.</span></li>
+        <li><a href="accordion.html">Accordion</a> <span class="text-muted small">&mdash; Vertically stacked headers that expand to reveal content blocks.</span></li>
+        <li><a href="timeline.html">Timeline</a> <span class="text-muted small">&mdash; Central vertical/horizontal line tracking sequential events.</span></li>
+        <li><a href="kanban-board.html">Kanban Board</a> <span class="text-muted small">&mdash; Vertical columns representing workflow status stages.</span></li>
+        <li><a href="comparison-matrix.html">Comparison Matrix</a> <span class="text-muted small">&mdash; Side-by-side spec sheets/tables for product options.</span></li>
+        <li><a href="f-pattern.html">F Pattern</a> <span class="text-muted small">&mdash; Content aligned to a top-heavy, left-to-right scanning habit.</span></li>
+        <li><a href="z-pattern.html">Z Pattern</a> <span class="text-muted small">&mdash; Landing page elements placed along a diagonal zig-zag visual path.</span></li>
+        <li><a href="hero-banner.html">Hero Banner</a> <span class="text-muted small">&mdash; High-impact top section with headline, graphic, and core CTA.</span></li>
+        <li><a href="spreadsheet.html">Spreadsheet</a> <span class="text-muted small">&mdash; Infinite rows and columns of dense editable cells.</span></li>
+      </ul>
+
+      <h2>User Actions &amp; Overlays</h2>
+      <ul class="index-list">
+        <li><a href="wizard-stepper.html">Wizard Stepper</a> <span class="text-muted small">&mdash; Linear multi-screen setup for complex sequential tasks.</span></li>
+        <li><a href="form.html">Form</a> <span class="text-muted small">&mdash; Clean single-column layout optimised for fast data entry.</span></li>
+        <li><a href="search-filter.html">Search Filter</a> <span class="text-muted small">&mdash; Search/Omnibox paired with a persistent filtering pane.</span></li>
+        <li><a href="modal-dialog.html">Modal Dialog</a> <span class="text-muted small">&mdash; Locked, centered modal window dimming out the backdrop.</span></li>
+        <li><a href="flyout-panel.html">Flyout Panel</a> <span class="text-muted small">&mdash; Contextual side-sheet sliding out over the main content.</span></li>
+        <li><a href="empty-state.html">Empty State</a> <span class="text-muted small">&mdash; Educational, graphic-rich layout shown when no data exists yet.</span></li>
+        <li><a href="tooltip-popover.html">Tooltip Popover</a> <span class="text-muted small">&mdash; Floating micro-box pointing directly to an interface element.</span></li>
+        <li><a href="skeleton-loading.html">Skeleton Loading</a> <span class="text-muted small">&mdash; Wireframe-like shapes animating while actual data fetches.</span></li>
+        <li><a href="toast-snackbar.html">Toast Snackbar</a> <span class="text-muted small">&mdash; Low-priority micro-banner floating momentarily at a screen edge.</span></li>
+        <li><a href="coachmarks-walkthrough.html">Coachmarks Walkthrough</a> <span class="text-muted small">&mdash; Guided overlay highlighting interface features sequentially.</span></li>
+      </ul>
+  </div>
+  <script>
+    const buttons = document.querySelectorAll('.mode-switch button');
+    buttons.forEach((btn) => btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-mode');
+      document.documentElement.setAttribute('data-theme', mode === 'engineering' ? 'engineering' : 'executive');
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+    }));
+  </script>
+</body>
+</html>

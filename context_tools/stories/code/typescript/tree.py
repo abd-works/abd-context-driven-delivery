@@ -51,7 +51,7 @@ def _helper(epic: Epic) -> str:
         lines.append("")
     lines.append(f"export class {helper_class} {{")
     lines.append(
-        "  // explore/spec -> fake mode; tier specs -> isolated|production"
+        "  // Shared ExampleFactory accessors. Tier test-helpers import this to build real collaborators."
     )
     for name in factories:
         method = name[0].lower() + name[1:]
@@ -74,12 +74,9 @@ def _render_sub_epic(
             continue
         story_folder = f"{folder}/{to_kebab(story.name)}"
         relative_test = "../" * depth + "story-test"
-        relative_helper = "../" * (depth - 1) + f"{to_kebab(epic.name)}-helper"
         tree[f"{story_folder}/{to_snake(story.name)}_story.ts"] = render_story_file(
             story,
             relative_story_test_path=relative_test,
-            relative_helper_path=relative_helper,
-            helper_class=f"{to_pascal(epic.name)}Helper",
         )
 
 

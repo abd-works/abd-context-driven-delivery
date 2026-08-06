@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from context_tools.ux.ux_model.layouts import resolve_layout
 from context_tools.ux.ux_model.nodes import Control, Region, Screen
 from context_tools.ux.ux_model.ux_map import UxMap
 
@@ -61,12 +60,7 @@ def ux_map_to_cli_state(ux_map: UxMap, target: str = "") -> Dict[str, Any]:
 
 def _cli_layout(layout_id: str) -> str:
     key = (layout_id or "").strip().lower()
-    if key in _CLI_LAYOUTS:
-        return _CLI_LAYOUTS[key]
-    template = resolve_layout(key)
-    if template and template.id in _CLI_LAYOUTS:
-        return _CLI_LAYOUTS[template.id]
-    return "stack"
+    return _CLI_LAYOUTS.get(key, "stack")
 
 
 def _region_to_cli(region: Region) -> Dict[str, Any]:

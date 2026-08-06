@@ -1,0 +1,1 @@
+you need to make sure that we have a proper story map as a markdown file and that the test that you've got, where the specs are, are created according to the acceptance tests. IE, you've got a folder and file structure that matches the story map.

@@ -1,11 +1,17 @@
-"""Java tier scaffolder - Spec / Spec{Tier} classes."""
+"""Java tier scaffolder - write-once `{Story}TestHelper{Tier}.java` per tier.
+
+Every tier is named explicitly, including the baseline (`Domain`) - there is
+no implicit no-suffix tier class. Java's file-name-matches-class-name rule
+means the tier suffix is PascalCase-concatenated rather than dot-separated
+(see `java/story_file.py` module docstring).
+"""
 
 from __future__ import annotations
 
 from typing import Dict, Sequence
 
 from context_tools.stories.code.code_story_map import to_kebab, to_pascal
-from context_tools.stories.code.java.story_file import render_tier_spec_file
+from context_tools.stories.code.java.story_file import render_test_helper_file
 from context_tools.stories.story_model.nodes import Epic, SubEpic
 from context_tools.stories.story_model.story_map import StoryMap
 
@@ -38,7 +44,7 @@ def _scaffold_sub(
         if not story.scenarios:
             continue
         story_folder = f"{folder}/{to_kebab(story.name)}"
-        base = to_pascal(story.name)
+        story_class = f"{to_pascal(story.name)}Story"
         for tier in tiers:
-            name = f"{base}StorySpec.java" if tier == "isolated" else f"{base}StorySpec{to_pascal(tier)}.java"
-            tree[f"{story_folder}/{name}"] = render_tier_spec_file(story, tier=tier)
+            name = f"{story_class}TestHelper{to_pascal(tier)}.java"
+            tree[f"{story_folder}/{name}"] = render_test_helper_file(story, tier=tier)

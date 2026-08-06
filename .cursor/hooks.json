@@ -1,4 +1,5 @@
 {
+  "version": 1,
   "hooks": {
     "postToolUse": [
       {
@@ -25,13 +26,6 @@
       {
         "command": "python primitives/tools/hooks/manifest_gate.py read",
         "timeout": 60,
-        "failClosed": false
-      }
-    ],
-    "afterShellExecution": [
-      {
-        "command": "python primitives/tools/hooks/manifest_gate.py shell",
-        "timeout": 15,
         "failClosed": false
       }
     ]

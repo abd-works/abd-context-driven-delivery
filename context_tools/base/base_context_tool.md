@@ -31,13 +31,12 @@ Take the persona of a **critical judge** — do not edit the artifact.
 ---
 # Satisfy
 
-Find and fix every problem in the artifact you wrote under the generator **`active`** root — including generating any missing artifacts.
+Satisfy runs in **tool mode**: it does not inline a recipe. It hands you two tool calls to make yourself, in order — first find the problems, then fix them.
 
-1. Follow **`session_guidance`**. Edit only under that layout.
-2. **Generate missing artifacts first.** Before validate, check each module folder under `path` for a missing `.context/module-context.md`. A missing context file IS a violation — create it at the current fidelity (thin at modules: Purpose, Seam, Dependencies; full at model: + Primary use case, Rationale, Public API) before running validate. Do not skip this step.
-3. Run **validate** against those session-rooted artifacts.
-4. Fix every reported violation in the artifact (same paths — do not invent a divergent folder).
-5. When done, run **validate** again until it passes.
+1. **`validate`** — run this first. Judge the artifact under the generator **`active`** root against the **contexts** and every named rule, and call **`scan`** on the session-rooted paths. Produce the full list of violations and coverage gaps. Do not fix anything in this step.
+2. **`generate_fixes_from_validate`** — run this second, once you hold the validate report. Follow **`session_guidance`** and edit only under that layout. Generate any missing artifacts (a missing `.context/module-context.md` IS a violation — create it at the current fidelity: thin at modules with Purpose, Seam, Dependencies; full at model with + Primary use case, Rationale, Public API), then fix every reported violation in the same paths — do not invent a divergent folder.
+
+When done, run **`validate`** again and repeat the two-call loop until it passes.
 
 ---
 # Document

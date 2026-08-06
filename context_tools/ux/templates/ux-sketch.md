@@ -8,7 +8,7 @@ Sketch the **site map first** (connection tree), then **screen boxes** that show
 
 **IA discipline:** no toolbar dumps, AC, or copy walls. ~4 user stories per screen. Tab states are **separate boxes**; sibling chrome dimmed / `chrome: same as …`.
 
-**Layouts:** pick from the thin catalog (`sidebar`, `tabbed`, `modal`, `form`, `stack`, `split-screen`, `holy-grail`, …) — `apply_layout` seeds named region slots.
+**Layouts:** pick from the reference library at `specifications/generic/` (`sidebar`, `tabbed`, `modal-dialog`, `form`, `list`, `split-screen`, `holy-grail`, `breadcrumb`, `kanban-board`, … — 43 patterns, one `.md` ASCII + one `.drawio` fragment per layout) — the default, unbranded set. If a specific brand applies (e.g. abd.works), use its sibling folder under `specifications/` instead (e.g. `specifications/abd-works/`). Open the matching file(s), read its slots, and alter it for this screen rather than drawing the box from scratch. `apply_layout` just records the chosen layout name — append the regions yourself.
 
 ---
 

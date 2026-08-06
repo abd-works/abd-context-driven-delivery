@@ -32,7 +32,7 @@ def _helper(epic: Epic, helper_class: str) -> str:
     lines = [
         f"/** Epic helper - ExampleFactory accessors; AI fills given_* bodies. */",
         f"public class {helper_class} {{",
-        "  // explore/spec -> fake mode; tiers -> isolated|production",
+        "  // Explore/spec accessor. Tier test-helpers import this to build real collaborators.",
     ]
     for name in factories:
         method = name[0].lower() + name[1:]
@@ -55,6 +55,4 @@ def _render_sub(
             continue
         story_folder = f"{folder}/{to_kebab(story.name)}"
         class_name = f"{to_pascal(story.name)}Story"
-        tree[f"{story_folder}/{class_name}.java"] = render_story_file(
-            story, helper_class=f"{to_pascal(epic.name)}Helper"
-        )
+        tree[f"{story_folder}/{class_name}.java"] = render_story_file(story)

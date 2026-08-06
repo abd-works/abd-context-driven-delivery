@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>abd.works &mdash; Comparison Matrix layout</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="abd-works-brand.css">
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <span class="logo"><span>abd</span><em>.works</em></span>
+      <div class="mode-switch" role="group" aria-label="Color mode">
+        <button type="button" data-mode="executive" aria-pressed="true">Executive</button>
+        <button type="button" data-mode="engineering" aria-pressed="false">Engineering</button>
+      </div>
+    </header>
+
+    <p class="kicker">Specification &middot; Content &amp; Data Organization</p>
+    <h1>Comparison Matrix</h1>
+    <p class="text-muted">Side-by-side spec sheets/tables for product options.</p>
+    <p class="page-meta mono">Slots: features &middot; plan-columns</p>
+
+    <div class="layout">
+    <div class="columns">
+      <div class="card" style="--w:0.35">
+        <span class="card-label kicker">features</span>
+        <p class="small text-muted">Row one &middot; Row two</p>
+        <div><button class="btn primary" type="button">Primary action</button> <button class="btn ghost" type="button">Secondary</button></div>
+      </div>
+      <div class="card" style="--w:0.325">
+        <span class="card-label kicker">plan-a</span>
+        <p class="small text-muted">Row one &middot; Row two</p>
+        <div><button class="btn ghost" type="button">Action</button></div>
+      </div>
+      <div class="card" style="--w:0.325">
+        <span class="card-label kicker">plan-b</span>
+        <p class="small text-muted">Row one &middot; Row two</p>
+        <div><button class="btn ghost" type="button">Action</button></div>
+      </div>
+    </div>
+    </div>
+
+    <footer class="page-footer">
+      Reference specification &mdash; abd.works brand applied to the <code>comparison-matrix</code> IA layout.
+      Unbranded reference: <code>../generic/comparison-matrix.md</code> (ASCII) and
+      <code>../generic/comparison-matrix.drawio</code> (diagram fragment).
+      Regions above are placeholders &mdash; replace with the real screen's controls and copy.
+    </footer>
+  </div>
+  <script>
+    const buttons = document.querySelectorAll('.mode-switch button');
+    buttons.forEach((btn) => btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-mode');
+      document.documentElement.setAttribute('data-theme', mode === 'engineering' ? 'engineering' : 'executive');
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+    }));
+  </script>
+</body>
+</html>

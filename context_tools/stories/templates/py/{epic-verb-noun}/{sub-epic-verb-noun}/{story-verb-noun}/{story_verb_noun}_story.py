@@ -5,39 +5,38 @@
 # section: leaf-story-file
 # ---
 #
-# Runnable story (explore/spec). Wired to ExampleFactory fakes.
-# Assert the public interface of I{Type} only.
+# Runnable story (scenario fidelity - tier-neutral). Calls helper-protocol
+# methods only - no assertions, no tier mechanism here.
 #
-#   Folder tree      -> {epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/
-#   Story file       -> {story_verb_noun}_story.py
-#   Isolated spec    -> {story_verb_noun}_spec.py          (engineering)
-#   Tier spec        -> {story_verb_noun}_spec.{tier}.py   (engineering)
-#
-# Concrete values live in {Type}ExampleFactory - do not invent example tables here.
+#   Folder tree   -> {epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/
+#   Story file    -> {story_verb_noun}_story.py
+#   Tier files    -> {story_verb_noun}_test_helper.{tier}.py
+#                    (tier in domain | client | server | e2e | project-specific)
 
-"""Story tests for `{Story Name}` - fake mode when collected as the entry module."""
+"""Story: {Story Name} (scenario fidelity - tier-neutral)."""
 
 from __future__ import annotations
 
-from {epic_verb_noun}_helper import {EpicVerbNoun}Helper
-
-helper = {EpicVerbNoun}Helper()
+from typing import Protocol
 
 
-def create_{story_verb_noun}_story(mode: str = "fake") -> None:
-    """Register scenarios. Story entry uses fake; tier specs pass isolated|production."""
+class {EpicVerbNoun}Helper(Protocol):
+    def given_precondition(self) -> None: ...
+    def when_action(self) -> None: ...
+    def then_outcome(self) -> None: ...
+
+
+def create_{story_verb_noun}_story(h: "{EpicVerbNoun}Helper") -> dict:
+    """Build one pytest test function per scenario. Returns {test_name: fn}
+    for the tier file to bind at module scope.
+    """
+    tests = {}
 
     def test_main_flow_observable_outcome() -> None:
-        # given - helper.given_...(mode=mode) -> fake I{Type} from ExampleFactory
-        bundle = helper  # replace with real given_* call
-        _ = bundle
+        """SCENARIO: {main-flow outcome}"""
+        h.given_precondition()
+        h.when_action()
+        h.then_outcome()
 
-        # when - exercise public operations on I{Type}
-        ...
-
-        # then - assert public interface only (no private fields)
-        assert True  # replace with public-seam assertion
-
-
-# Collect when this module is the pytest entry (not when a tier imports the function)
-create_{story_verb_noun}_story("fake")
+    tests["test_main_flow_observable_outcome"] = test_main_flow_observable_outcome
+    return tests

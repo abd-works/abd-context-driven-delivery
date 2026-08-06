@@ -110,10 +110,10 @@ UxMap
       add path
       replace paths
   ----
- LayoutTemplate
-      id
-      slots
-      // thin catalog in layouts.py — not ASCII/drawio paste library
+ // No LayoutTemplate catalog - Screen.apply_layout(id) just records the
+ // layout name; the AI reads the matching pair under
+ // specifications/generic/ (or a branded sibling under specifications/)
+ // for that layout's slots and appends the real Regions itself
   ----
  UxChannel
       parse content

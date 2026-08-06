@@ -1,21 +1,30 @@
-"""JavaScript runnable story-file renderer (explore / specification).
+"""JavaScript runnable story-file renderer (scenario fidelity - no tier suffix).
 
-Emits Given / When / Then against factory fakes - not pure data.
+Emits a Given/When/Then wiring that calls a helper-object method per step -
+the story file owns no assertions and no tier mechanism itself. JavaScript has
+no static interfaces, so the seam is documented via a JSDoc `@typedef` and
+enforced only by duck-typing:
 
-    export function createSubmitOrderStory(mode) {
+    /**
+     * @typedef {object} SubmitOrderHelper
+     * @property {function(): (void|Promise<void>)} givenACartWithItems
+     * @property {function(): (void|Promise<void>)} whenTheCustomerSubmitsTheOrder
+     * @property {function(): (void|Promise<void>)} thenTheOrderIsConfirmed
+     */
+
+    /** @param {SubmitOrderHelper} h */
+    export function createSubmitOrderStory(h) {
       story("Submit Order", () => {
         scenario("...", ({ given, when, then }) => {
-          given("...", () => { /* helper -> ExampleFactory fake */ });
-          when("...", () => { /* public operations */ });
-          then("...", () => { /* assert public interface of I{Type} */ });
+          given("a cart with items", () => h.givenACartWithItems());
+          when("the customer submits the order", () => h.whenTheCustomerSubmitsTheOrder());
+          then("the order is confirmed", () => h.thenTheOrderIsConfirmed());
         });
       });
     }
 
-    // fake only when this file is the test entry
-    if (entry && path.resolve(thisFile) === entry) {
-      createSubmitOrderStory("fake");
-    }
+Every tier's `{story}_test_helper.{tier}.js` implements the same method names
+on a plain class and calls `createSubmitOrderStory(new TierHelper())`.
 """
 
 from __future__ import annotations
@@ -24,6 +33,7 @@ import re
 from typing import List
 
 from context_tools.stories.code.code_story_map import to_pascal
+from context_tools.stories.code.helper_interface import build_helper_seam
 from context_tools.stories.story_model.nodes import Story
 
 
@@ -31,87 +41,97 @@ def render_story_file(
     story: Story,
     *,
     relative_story_test_path: str = "../../story-test.js",
-    relative_helper_path: str | None = None,
-    helper_class: str | None = None,
 ) -> str:
     fn = f"create{to_pascal(story.name)}Story"
+    helper_iface = f"{to_pascal(story.name)}Helper"
     actor = (story.users[0] if story.users else "").strip()
+    methods, method_for = build_helper_seam(story)
 
     lines: List[str] = []
     lines.append("/**")
-    lines.append(f" * Story: {story.name} (tier-neutral).")
+    lines.append(f" * Story: {story.name} (scenario fidelity - tier-neutral).")
     if actor:
         lines.append(f" * Actor: {actor}")
-    lines.append(" * Wired to ExampleFactory fakes - not a tier test.")
-    lines.append(" * Assert the public interface of I{Type} only.")
-    lines.append(" *")
+    lines.append(" * Calls helper-object methods only - no assertions, no tier mechanism here.")
     lines.append(
-        f" * Specs: {_snake(story.name)}_spec.js (isolated); "
-        f"{_snake(story.name)}_spec.{{tier}}.js (other tiers)"
+        f" * Tiers: {_snake(story.name)}_test_helper.{{tier}}.js implements {helper_iface}."
     )
+    lines.append(" *")
+    lines.append(f" * @typedef {{object}} {helper_iface}")
+    for method in methods:
+        lines.append(f" * @property {{function(): (void|Promise<void>)}} {method.name}")
     lines.append(" */")
     lines.append("")
-    lines.append('import assert from "node:assert/strict";')
-    lines.append('import path from "node:path";')
-    lines.append('import { fileURLToPath } from "node:url";')
-    if relative_helper_path and helper_class:
-        lines.append(f'import {{ {helper_class} }} from "{relative_helper_path}";')
     lines.append(f'import {{ scenario, story }} from "{relative_story_test_path}";')
     lines.append("")
-    if relative_helper_path and helper_class:
-        lines.append(f"const helper = new {helper_class}();")
-        lines.append("")
-    lines.append(f"export function {fn}(mode) {{")
+    lines.append(f"/** @param {{{helper_iface}}} h */")
+    lines.append(f"export function {fn}(h) {{")
     lines.append(f'  story({_js_string(story.name)}, () => {{')
 
     scenarios = list(getattr(story, "scenarios", []) or [])
     if not scenarios:
-        lines.append('    // TODO: add main-flow scenario')
-    for scenario in scenarios:
-        lines.extend(_render_scenario(scenario))
+        lines.append("    // TODO: add main-flow scenario")
+    for scenario_ in scenarios:
+        lines.extend(_render_scenario(scenario_, method_for))
 
     lines.append("  });")
-    lines.append("}")
-    lines.append("")
-    lines.append(
-        "// Story path - fake only when this file is the test entry (not when a tier imports it)"
-    )
-    lines.append("const thisFile = fileURLToPath(import.meta.url);")
-    lines.append("const entry = process.argv[1] && path.resolve(process.argv[1]);")
-    lines.append("if (entry && path.resolve(thisFile) === entry) {")
-    lines.append(f'  {fn}("fake");')
     lines.append("}")
     lines.append("")
     return "\n".join(lines)
 
 
-def _render_scenario(scenario) -> List[str]:
+def render_test_helper_file(story: Story, *, tier: str) -> str:
+    """Write-once skeleton for `{story}_test_helper.{tier}.js`.
+
+    Scaffolds a plain class with `not implemented` stub methods (code path).
+    The AI/human path fills each stub with that tier's real mechanism.
+    """
+    fn = f"create{to_pascal(story.name)}Story"
+    tier_class = f"{to_pascal(tier)}Helper"
+    methods, _ = build_helper_seam(story)
+
+    lines: List[str] = [
+        "/**",
+        f" * Tier: {tier} - implements {to_pascal(story.name)}Helper for {story.name}.",
+        " */",
+        "",
+        'import { describe } from "node:test";',
+        f'import {{ {fn} }} from "./{_snake(story.name)}_story.js";',
+        "",
+        f"class {tier_class} {{",
+    ]
+    for method in methods:
+        lines.append(f"  {method.name}() {{")
+        lines.append(f'    throw new Error("not implemented: {method.name}");')
+        lines.append("  }")
+    lines.append("}")
+    lines.append("")
+    lines.append(f'describe("tier: {tier}", () => {{')
+    lines.append(f"  {fn}(new {tier_class}());")
+    lines.append("});")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _render_scenario(scenario, method_for) -> List[str]:
     lines: List[str] = []
     lines.append(f'    scenario({_js_string(scenario.name)}, ({{ given, when, then }}) => {{')
-
     for clause in scenario.given:
-        lines.append(f'      given({_js_string(clause.text)}, () => {{')
+        method = method_for("given", clause.text)
         lines.append(
-            "        // helper.given...({ mode }) - fake I{Type} from ExampleFactory"
+            f'      given({_js_string(method.display_text)}, () => h.{method.name}());'
         )
-        lines.append("      });")
-        lines.append("")
-
     for interaction in scenario.interactions:
         for clause in interaction.when:
-            lines.append(f'      when({_js_string(clause.text)}, () => {{')
-            lines.append("        // exercise public operations on I{Type}")
-            lines.append("      });")
-            lines.append("")
-        for clause in interaction.then:
-            lines.append(f'      then({_js_string(clause.text)}, () => {{')
+            method = method_for("when", clause.text)
             lines.append(
-                "        // assert.equal / assert.ok on public interface only"
+                f'      when({_js_string(method.display_text)}, () => h.{method.name}());'
             )
-            lines.append("        assert.ok(true); // replace with public-seam assertion")
-            lines.append("      });")
-            lines.append("")
-
+        for clause in interaction.then:
+            method = method_for("then", clause.text)
+            lines.append(
+                f'      then({_js_string(method.display_text)}, () => h.{method.name}());'
+            )
     lines.append("    });")
     lines.append("")
     return lines

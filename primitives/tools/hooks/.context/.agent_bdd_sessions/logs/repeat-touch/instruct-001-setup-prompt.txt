@@ -1,0 +1,1 @@
+Using the edit tool, append a one-line comment `# probe-1` to the end of primitives/tools/hooks/examples/gated_widget/gated_widget.py. Then state literally, on its own line, either `RESULT: EDIT SUCCEEDED` or `RESULT: EDIT BLOCKED` depending on what actually happened, and quote any `permission` field you saw, verbatim.

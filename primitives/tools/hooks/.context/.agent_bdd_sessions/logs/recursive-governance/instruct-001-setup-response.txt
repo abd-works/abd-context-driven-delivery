@@ -1,0 +1,1354 @@
+Here is exactly what came back from this read of `context_tools/bdd/bdd.py` (file not edited).
+
+---
+
+## File body (tool output: lines 1–188)
+
+```
+     1|# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+     2|# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+     3|# Do not author behavior from this Python source.
+     4|# invoke-new: action generate | context.fidelity behavior
+     5|# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+     6|# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+     7|"""BDD generator - multi-fidelity behavior skeletons and development."""
+     8|
+     9|from __future__ import annotations
+    10|
+    11|from typing import TYPE_CHECKING, TypedDict
+    12|
+    13|from context_tools.base.base_context_tool import BaseContextTool
+    14|from primitives.actions.action import action
+    15|from primitives.instructions import instruction
+    16|from primitives.tools.tool import tool  # noqa: F401
+    17|
+    18|if TYPE_CHECKING:
+    19|    from utilities.diagnose.diagnose import Diagnose
+    20|
+    21|_FIDELITY_FORMAT_DEFAULTS = {
+    22|    "modules": "markdown",   # delegates to CE; no BDD-specific spec file written
+    23|    "behavior": "python",
+    24|    "development": "python",
+    25|}
+    26|_SUPPORTED_FORMATS = frozenset({"markdown", "python", "typescript", "java"})
+    27|
+    28|# BDD fidelity → CleanEngineering fidelity at the same design depth.
+    29|_CE_FIDELITY: dict[str, str] = {
+    30|    "modules": "modules",
+    31|    "behavior": "model",
+    32|    "development": "code",
+    33|}
+    34|
+    35|
+    36|class TransformResult(TypedDict):
+    37|    """Result of a sideways format conversion."""
+    38|
+    39|    source_format: str
+    40|    target_format: str
+    41|    content: str
+    42|
+    43|
+    44|def _resolve_format(fidelity: str, format: str | None) -> str:
+    45|    """Validate fidelity, resolve format to its default when None, validate format, and return it."""
+    46|    if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
+    47|        raise ValueError(
+    48|            f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
+    49|        )
+    50|    resolved = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
+    51|    if resolved not in _SUPPORTED_FORMATS:
+    52|        raise ValueError(
+    53|            f"Unsupported format {resolved!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
+    54|        )
+    55|    return resolved
+    56|
+    57|
+    58|class Bdd(BaseContextTool):
+    59|    """# Instructions
+    60|
+    61|    Depends on CleanEngineering (lazy import in ce() and transform to avoid circular imports at
+    62|    module load time).
+    63|    """
+    64|
+    65|    default_workspace_folder: str = "src"
+    66|    context_index_key: str = "bdd"
+    67|    _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+    68|
+    69|
+    70|    fidelities = {
+    71|        BaseContextTool.DISCOVERY: "modules",
+    72|        BaseContextTool.SPEC:      "behavior",
+    73|        BaseContextTool.ENGINEER:  "development",
+    74|    }
+    75|
+    76|    def __init__(
+    77|        self,
+    78|        fidelity: str = "behavior",
+    79|        format: str | None = None,
+    80|        path: str | None = None,
+    81|        session: str | None = None,
+    82|        workspace: str | None = None,
+    83|    ) -> None:
+    84|        resolved_format = _resolve_format(fidelity, format)
+    85|        super().__init__(
+    86|            format=resolved_format, path=path, session=session, workspace=workspace
+    87|        )
+    88|        self.fidelity = fidelity
+    89|
+    90|    # -- CleanEngineering companion ------------------------------------------
+    91|
+    92|    def ce(self) -> "BaseContextTool":
+    93|        """CleanEngineering companion at the matching fidelity (tool mode — invoke separately when ready)."""
+    94|        # lazy import: avoids circular import at module load
+    95|        from context_tools.clean_engineering.clean_engineering import CleanEngineering
+    96|
+    97|        instance = CleanEngineering(
+    98|            fidelity=_CE_FIDELITY.get(self.fidelity, "modules"),
+    99|            path=self._raw_path,
+   100|            session=self.workspace.name,
+   101|            workspace=self.workspace.workspace_root,
+   102|        )
+   103|        instance.mode = "tool"
+   104|        return instance
+   105|
+   106|    def diagnostic(self) -> "Diagnose":
+   107|        """Diagnose companion — common six-phase loop as a tool (not inlined)."""
+   108|        # lazy import: keeps diagnose optional at module load
+   109|        from utilities.diagnose.diagnose import Diagnose
+   110|
+   111|        return Diagnose()
+   112|
+   113|    # -- Lifecycle actions: BDD first, then CE classes -----------------------
+   114|
+   115|    @action
+   116|    def generate(self) -> str:
+   117|        """At modules fidelity: delegate entirely to ce().generate() — no BDD spec file is written at this stage. Use this to bootstrap CE class structure before writing tests.
+   118|        At behavior fidelity: write all BDD test signatures (SIGNATURE markers).
+   119|        At development fidelity: write full test bodies and production code.
+   120|        When the target module already exists, scan the production source for every public method and property and verify each has test coverage — add missing signatures for any gap before writing new ones.
+   121|        BDD tests must conform to CE class structure: describe/it hierarchies must map onto public CE interfaces and operations.
+   122|        When BDD artifacts are complete, call ce().generate() to produce the matching class skeletons."""
+   123|        super().generate()
+   124|        self.ce().generate()
+   125|        return "When done, run validate."
+   126|
+   127|    @action
+   128|    def grill(self) -> str:
+   129|        """Run the BDD grill loop to surface assumptions and gaps.
+   130|        When BDD grill is complete, call ce().grill() to do the same for the matching classes."""
+   131|        super().grill()
+   132|        self.ce().grill()
+   133|        return "Grill complete; run generate."
+   134|
+   135|    @action
+   136|    def sketch(self) -> str:
+   137|        """Sketch the BDD hierarchy at the current fidelity.
+   138|        When BDD sketch is complete, call ce().sketch() to sketch the matching classes."""
+   139|        super().sketch()
+   140|        self.ce().sketch()
+   141|        return "Sketch complete; run generate."
+   142|
+   143|    @action
+   144|    def iterate(self) -> str:
+   145|        """Iterate one BDD cycle: write one test, confirm it is RED, then call ce().iterate() to build the minimum production code until GREEN. Repeat — one test, one production change, one GREEN — until all tests pass.
+   146|        If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure)."""
+   147|        super().iterate()
+   148|        self.ce().iterate()
+   149|        self.diagnostic().diagnose()
+   150|        return "Iterate complete; run validate."
+   151|
+   152|    @action
+   153|    def satisfy(self) -> str:
+   154|        """Scan the production source for every public method and property; flag any with no corresponding test as a coverage gap. Fix every BDD violation and coverage gap — confirm each failing test is RED for the right reason.
+   155|        When BDD violations and coverage gaps are resolved, call ce().satisfy() to build or fix the minimum production code until GREEN. One test, one production change, one GREEN — repeat until validate passes.
+   156|        If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure)."""
+   157|        super().satisfy()
+   158|        self.ce().satisfy()
+   159|        self.diagnostic().diagnose()
+   160|        return "When done, run validate on artifacts under {session.path}/."
+   161|
+   162|    @action
+   163|    def validate(self) -> str:
+   164|        """Validate all BDD artifacts at the current fidelity.
+   165|        When BDD validation passes, call ce().validate() to validate the matching class artifacts."""
+   166|        super().validate()
+   167|        self.ce().validate()
+   168|        return "Validation report for artifacts under {session.path}/."
+   169|
+   170|    @action
+   171|    def repair(self) -> str:
+   172|        """Repair the BDD artifact that is failing or malformed.
+   173|        When the BDD artifact is clean, call ce().repair() to repair the matching class artifact."""
+   174|        super().repair()
+   175|        self.ce().repair()
+   176|        return "Repair complete; run validate."
+   177|
+   178|    # -- Tool: sideways format conversion ------------------------------------
+   179|
+   180|    @tool
+   181|    def transform(self, source_format: str, target_format: str, content: str) -> TransformResult:
+   182|        """Sideways format conversion at the same fidelity.
+   183|        Delegates to clean_engineering.transform until BDD has its own channel model."""
+   184|        # lazy import: avoids circular import at module load
+   185|        from context_tools.clean_engineering.clean_engineering import CleanEngineering
+   186|
+   187|        return CleanEngineering().transform(source_format, target_format, content)
+   188|
+```
+
+---
+
+## agent_message
+
+None in this read payload.
+
+---
+
+## Cursor rules block (“The following cursor rule files are relevant…”)
+
+Not present in this read payload (unlike the prior read in this conversation).
+
+---
+
+## system_reminder (MANIFEST GATE) — verbatim
+
+```
+<system_reminder>
+MANIFEST GATE - C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\bdd\bdd.py
+Header executed. Follow response.instructions only - do not author from source.
+
+  # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+  # invoke-new: action generate | context.fidelity behavior
+  # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+  # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+
+Manifest output (injected automatically):
+```yaml
+---
+type: bdd
+capabilities:
+- tool
+- agent
+signature:
+  instructions: "# Instructions\n\n    Depends on CleanEngineering (lazy import in\
+    \ ce() and transform to avoid circular imports at\n    module load time)."
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest context_tools.bdd.bdd:Bdd
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      fidelity: str
+      format: str | None
+      path: str | None
+      session: str | None
+      workspace: str | None
+  close_session:
+    kind: tool
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  log_correction:
+    kind: tool
+    parameters:
+      entry_id: str
+      improved: str
+      status: str
+    returns: str
+  log_mistake:
+    kind: tool
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      when: str
+    returns: str
+  read_context_index:
+    kind: tool
+    returns: str
+  record_context_root:
+    kind: tool
+    parameters:
+      root: str
+      note: str
+    returns: str
+  scan:
+    kind: tool
+    parameters:
+      paths: list[str]
+    returns: str
+  transform:
+    kind: tool
+    instructions: "Sideways format conversion at the same fidelity.\n        Delegates\
+      \ to clean_engineering.transform until BDD has its own channel model."
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: TransformResult
+  active:
+    kind: resource
+    type: Session
+  mode:
+    kind: resource
+    type: str
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing - before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: '# Document
+
+
+      Take the persona of a **neutral observer** — describe what exists, do not prescribe
+      what should exist.
+
+
+      1. Follow **`session_guidance`**. Observe and write under the session layout.
+
+      2. Read the **contexts** to understand the vocabulary and structure of the domain.
+
+      3. Fill the **template** scaffold with observed content — describe current state
+      only.
+
+      4. Do not apply, suggest, or imply rules or best practices in the generated
+      output.
+
+      5. Call **`scan`** and append all violations to the document as-is — flag them,
+      do not correct them.
+
+      6. Save the artifact under the session layout from `session_guidance`.'
+    parameters:
+      paths: list[str]
+    returns: str
+  generate:
+    kind: action
+    tools: []
+    instructions: "At modules fidelity: delegate entirely to ce().generate() — no\
+      \ BDD spec file is written at this stage. Use this to bootstrap CE class structure\
+      \ before writing tests.\n        At behavior fidelity: write all BDD test signatures\
+      \ (SIGNATURE markers).\n        At development fidelity: write full test bodies\
+      \ and production code.\n        When the target module already exists, scan\
+      \ the production source for every public method and property and verify each\
+      \ has test coverage — add missing signatures for any gap before writing new\
+      \ ones.\n        BDD tests must conform to CE class structure: describe/it hierarchies\
+      \ must map onto public CE interfaces and operations.\n        When BDD artifacts\
+      \ are complete, call ce().generate() to produce the matching class skeletons."
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  grill:
+    kind: action
+    tools: []
+    instructions: "Run the BDD grill loop to surface assumptions and gaps.\n     \
+      \   When BDD grill is complete, call ce().grill() to do the same for the matching\
+      \ classes."
+    returns: str
+  improve:
+    kind: action
+    tools: []
+    returns: str
+  iterate:
+    kind: action
+    tools: []
+    instructions: "Iterate one BDD cycle: write one test, confirm it is RED, then\
+      \ call ce().iterate() to build the minimum production code until GREEN. Repeat\
+      \ — one test, one production change, one GREEN — until all tests pass.\n   \
+      \     If the same test is still RED after 2 consecutive fix attempts — stop\
+      \ guessing. Call diagnostic().diagnose() before a third fix (wrong exception,\
+      \ wrong line, shifting failure mode, or a re-read of the code that does not\
+      \ explain the failure)."
+    returns: str
+  partition:
+    kind: action
+    tools: []
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools: []
+    instructions: "Repair the BDD artifact that is failing or malformed.\n       \
+      \ When the BDD artifact is clean, call ce().repair() to repair the matching\
+      \ class artifact."
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Scan the production source for every public method and property;\
+      \ flag any with no corresponding test as a coverage gap. Fix every BDD violation\
+      \ and coverage gap — confirm each failing test is RED for the right reason.\n\
+      \        When BDD violations and coverage gaps are resolved, call ce().satisfy()\
+      \ to build or fix the minimum production code until GREEN. One test, one production\
+      \ change, one GREEN — repeat until validate passes.\n        If the same test\
+      \ is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose()\
+      \ before a third fix (wrong exception, wrong line, shifting failure mode, or\
+      \ a re-read of the code that does not explain the failure)."
+    returns: str
+  sketch:
+    kind: action
+    tools: []
+    instructions: "Sketch the BDD hierarchy at the current fidelity.\n        When\
+      \ BDD sketch is complete, call ce().sketch() to sketch the matching classes."
+    returns: str
+  validate:
+    kind: action
+    tools: []
+    instructions: "Validate all BDD artifacts at the current fidelity.\n        When\
+      \ BDD validation passes, call ce().validate() to validate the matching class\
+      \ artifacts."
+    returns: str
+  archive_mistakes:
+    kind: sub_agent
+    launch: non_blocking
+    parameters:
+      repo_root: str
+    returns: str
+  verify_regression:
+    kind: sub_agent
+    launch: non_blocking
+    parameters:
+      examples_root: str
+    returns: str
+---
+```
+</system_reminder>
+```Here is exactly what came back from this read of `context_tools/bdd/bdd.py` (file not edited).
+
+---
+
+## File body (tool output: lines 1–188)
+
+```
+     1|# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+     2|# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+     3|# Do not author behavior from this Python source.
+     4|# invoke-new: action generate | context.fidelity behavior
+     5|# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+     6|# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+     7|"""BDD generator - multi-fidelity behavior skeletons and development."""
+     8|
+     9|from __future__ import annotations
+    10|
+    11|from typing import TYPE_CHECKING, TypedDict
+    12|
+    13|from context_tools.base.base_context_tool import BaseContextTool
+    14|from primitives.actions.action import action
+    15|from primitives.instructions import instruction
+    16|from primitives.tools.tool import tool  # noqa: F401
+    17|
+    18|if TYPE_CHECKING:
+    19|    from utilities.diagnose.diagnose import Diagnose
+    20|
+    21|_FIDELITY_FORMAT_DEFAULTS = {
+    22|    "modules": "markdown",   # delegates to CE; no BDD-specific spec file written
+    23|    "behavior": "python",
+    24|    "development": "python",
+    25|}
+    26|_SUPPORTED_FORMATS = frozenset({"markdown", "python", "typescript", "java"})
+    27|
+    28|# BDD fidelity → CleanEngineering fidelity at the same design depth.
+    29|_CE_FIDELITY: dict[str, str] = {
+    30|    "modules": "modules",
+    31|    "behavior": "model",
+    32|    "development": "code",
+    33|}
+    34|
+    35|
+    36|class TransformResult(TypedDict):
+    37|    """Result of a sideways format conversion."""
+    38|
+    39|    source_format: str
+    40|    target_format: str
+    41|    content: str
+    42|
+    43|
+    44|def _resolve_format(fidelity: str, format: str | None) -> str:
+    45|    """Validate fidelity, resolve format to its default when None, validate format, and return it."""
+    46|    if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
+    47|        raise ValueError(
+    48|            f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
+    49|        )
+    50|    resolved = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
+    51|    if resolved not in _SUPPORTED_FORMATS:
+    52|        raise ValueError(
+    53|            f"Unsupported format {resolved!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
+    54|        )
+    55|    return resolved
+    56|
+    57|
+    58|class Bdd(BaseContextTool):
+    59|    """# Instructions
+    60|
+    61|    Depends on CleanEngineering (lazy import in ce() and transform to avoid circular imports at
+    62|    module load time).
+    63|    """
+    64|
+    65|    default_workspace_folder: str = "src"
+    66|    context_index_key: str = "bdd"
+    67|    _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+    68|
+    69|
+    70|    fidelities = {
+    71|        BaseContextTool.DISCOVERY: "modules",
+    72|        BaseContextTool.SPEC:      "behavior",
+    73|        BaseContextTool.ENGINEER:  "development",
+    74|    }
+    75|
+    76|    def __init__(
+    77|        self,
+    78|        fidelity: str = "behavior",
+    79|        format: str | None = None,
+    80|        path: str | None = None,
+    81|        session: str | None = None,
+    82|        workspace: str | None = None,
+    83|    ) -> None:
+    84|        resolved_format = _resolve_format(fidelity, format)
+    85|        super().__init__(
+    86|            format=resolved_format, path=path, session=session, workspace=workspace
+    87|        )
+    88|        self.fidelity = fidelity
+    89|
+    90|    # -- CleanEngineering companion ------------------------------------------
+    91|
+    92|    def ce(self) -> "BaseContextTool":
+    93|        """CleanEngineering companion at the matching fidelity (tool mode — invoke separately when ready)."""
+    94|        # lazy import: avoids circular import at module load
+    95|        from context_tools.clean_engineering.clean_engineering import CleanEngineering
+    96|
+    97|        instance = CleanEngineering(
+    98|            fidelity=_CE_FIDELITY.get(self.fidelity, "modules"),
+    99|            path=self._raw_path,
+   100|            session=self.workspace.name,
+   101|            workspace=self.workspace.workspace_root,
+   102|        )
+   103|        instance.mode = "tool"
+   104|        return instance
+   105|
+   106|    def diagnostic(self) -> "Diagnose":
+   107|        """Diagnose companion — common six-phase loop as a tool (not inlined)."""
+   108|        # lazy import: keeps diagnose optional at module load
+   109|        from utilities.diagnose.diagnose import Diagnose
+   110|
+   111|        return Diagnose()
+   112|
+   113|    # -- Lifecycle actions: BDD first, then CE classes -----------------------
+   114|
+   115|    @action
+   116|    def generate(self) -> str:
+   117|        """At modules fidelity: delegate entirely to ce().generate() — no BDD spec file is written at this stage. Use this to bootstrap CE class structure before writing tests.
+   118|        At behavior fidelity: write all BDD test signatures (SIGNATURE markers).
+   119|        At development fidelity: write full test bodies and production code.
+   120|        When the target module already exists, scan the production source for every public method and property and verify each has test coverage — add missing signatures for any gap before writing new ones.
+   121|        BDD tests must conform to CE class structure: describe/it hierarchies must map onto public CE interfaces and operations.
+   122|        When BDD artifacts are complete, call ce().generate() to produce the matching class skeletons."""
+   123|        super().generate()
+   124|        self.ce().generate()
+   125|        return "When done, run validate."
+   126|
+   127|    @action
+   128|    def grill(self) -> str:
+   129|        """Run the BDD grill loop to surface assumptions and gaps.
+   130|        When BDD grill is complete, call ce().grill() to do the same for the matching classes."""
+   131|        super().grill()
+   132|        self.ce().grill()
+   133|        return "Grill complete; run generate."
+   134|
+   135|    @action
+   136|    def sketch(self) -> str:
+   137|        """Sketch the BDD hierarchy at the current fidelity.
+   138|        When BDD sketch is complete, call ce().sketch() to sketch the matching classes."""
+   139|        super().sketch()
+   140|        self.ce().sketch()
+   141|        return "Sketch complete; run generate."
+   142|
+   143|    @action
+   144|    def iterate(self) -> str:
+   145|        """Iterate one BDD cycle: write one test, confirm it is RED, then call ce().iterate() to build the minimum production code until GREEN. Repeat — one test, one production change, one GREEN — until all tests pass.
+   146|        If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure)."""
+   147|        super().iterate()
+   148|        self.ce().iterate()
+   149|        self.diagnostic().diagnose()
+   150|        return "Iterate complete; run validate."
+   151|
+   152|    @action
+   153|    def satisfy(self) -> str:
+   154|        """Scan the production source for every public method and property; flag any with no corresponding test as a coverage gap. Fix every BDD violation and coverage gap — confirm each failing test is RED for the right reason.
+   155|        When BDD violations and coverage gaps are resolved, call ce().satisfy() to build or fix the minimum production code until GREEN. One test, one production change, one GREEN — repeat until validate passes.
+   156|        If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure)."""
+   157|        super().satisfy()
+   158|        self.ce().satisfy()
+   159|        self.diagnostic().diagnose()
+   160|        return "When done, run validate on artifacts under {session.path}/."
+   161|
+   162|    @action
+   163|    def validate(self) -> str:
+   164|        """Validate all BDD artifacts at the current fidelity.
+   165|        When BDD validation passes, call ce().validate() to validate the matching class artifacts."""
+   166|        super().validate()
+   167|        self.ce().validate()
+   168|        return "Validation report for artifacts under {session.path}/."
+   169|
+   170|    @action
+   171|    def repair(self) -> str:
+   172|        """Repair the BDD artifact that is failing or malformed.
+   173|        When the BDD artifact is clean, call ce().repair() to repair the matching class artifact."""
+   174|        super().repair()
+   175|        self.ce().repair()
+   176|        return "Repair complete; run validate."
+   177|
+   178|    # -- Tool: sideways format conversion ------------------------------------
+   179|
+   180|    @tool
+   181|    def transform(self, source_format: str, target_format: str, content: str) -> TransformResult:
+   182|        """Sideways format conversion at the same fidelity.
+   183|        Delegates to clean_engineering.transform until BDD has its own channel model."""
+   184|        # lazy import: avoids circular import at module load
+   185|        from context_tools.clean_engineering.clean_engineering import CleanEngineering
+   186|
+   187|        return CleanEngineering().transform(source_format, target_format, content)
+   188|
+```
+
+---
+
+## agent_message
+
+None in this read payload.
+
+---
+
+## Cursor rules block (“The following cursor rule files are relevant…”)
+
+Not present in this read payload (unlike the prior read in this conversation).
+
+---
+
+## system_reminder (MANIFEST GATE) — verbatim
+
+```
+<system_reminder>
+MANIFEST GATE - C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\bdd\bdd.py
+Header executed. Follow response.instructions only - do not author from source.
+
+  # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+  # invoke-new: action generate | context.fidelity behavior
+  # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+  # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+
+Manifest output (injected automatically):
+```yaml
+---
+type: bdd
+capabilities:
+- tool
+- agent
+signature:
+  instructions: "# Instructions\n\n    Depends on CleanEngineering (lazy import in\
+    \ ce() and transform to avoid circular imports at\n    module load time)."
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest context_tools.bdd.bdd:Bdd
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      fidelity: str
+      format: str | None
+      path: str | None
+      session: str | None
+      workspace: str | None
+  close_session:
+    kind: tool
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  log_correction:
+    kind: tool
+    parameters:
+      entry_id: str
+      improved: str
+      status: str
+    returns: str
+  log_mistake:
+    kind: tool
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      when: str
+    returns: str
+  read_context_index:
+    kind: tool
+    returns: str
+  record_context_root:
+    kind: tool
+    parameters:
+      root: str
+      note: str
+    returns: str
+  scan:
+    kind: tool
+    parameters:
+      paths: list[str]
+    returns: str
+  transform:
+    kind: tool
+    instructions: "Sideways format conversion at the same fidelity.\n        Delegates\
+      \ to clean_engineering.transform until BDD has its own channel model."
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: TransformResult
+  active:
+    kind: resource
+    type: Session
+  mode:
+    kind: resource
+    type: str
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing - before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: '# Document
+
+
+      Take the persona of a **neutral observer** — describe what exists, do not prescribe
+      what should exist.
+
+
+      1. Follow **`session_guidance`**. Observe and write under the session layout.
+
+      2. Read the **contexts** to understand the vocabulary and structure of the domain.
+
+      3. Fill the **template** scaffold with observed content — describe current state
+      only.
+
+      4. Do not apply, suggest, or imply rules or best practices in the generated
+      output.
+
+      5. Call **`scan`** and append all violations to the document as-is — flag them,
+      do not correct them.
+
+      6. Save the artifact under the session layout from `session_guidance`.'
+    parameters:
+      paths: list[str]
+    returns: str
+  generate:
+    kind: action
+    tools: []
+    instructions: "At modules fidelity: delegate entirely to ce().generate() — no\
+      \ BDD spec file is written at this stage. Use this to bootstrap CE class structure\
+      \ before writing tests.\n        At behavior fidelity: write all BDD test signatures\
+      \ (SIGNATURE markers).\n        At development fidelity: write full test bodies\
+      \ and production code.\n        When the target module already exists, scan\
+      \ the production source for every public method and property and verify each\
+      \ has test coverage — add missing signatures for any gap before writing new\
+      \ ones.\n        BDD tests must conform to CE class structure: describe/it hierarchies\
+      \ must map onto public CE interfaces and operations.\n        When BDD artifacts\
+      \ are complete, call ce().generate() to produce the matching class skeletons."
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  grill:
+    kind: action
+    tools: []
+    instructions: "Run the BDD grill loop to surface assumptions and gaps.\n     \
+      \   When BDD grill is complete, call ce().grill() to do the same for the matching\
+      \ classes."
+    returns: str
+  improve:
+    kind: action
+    tools: []
+    returns: str
+  iterate:
+    kind: action
+    tools: []
+    instructions: "Iterate one BDD cycle: write one test, confirm it is RED, then\
+      \ call ce().iterate() to build the minimum production code until GREEN. Repeat\
+      \ — one test, one production change, one GREEN — until all tests pass.\n   \
+      \     If the same test is still RED after 2 consecutive fix attempts — stop\
+      \ guessing. Call diagnostic().diagnose() before a third fix (wrong exception,\
+      \ wrong line, shifting failure mode, or a re-read of the code that does not\
+      \ explain the failure)."
+    returns: str
+  partition:
+    kind: action
+    tools: []
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools: []
+    instructions: "Repair the BDD artifact that is failing or malformed.\n       \
+      \ When the BDD artifact is clean, call ce().repair() to repair the matching\
+      \ class artifact."
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Scan the production source for every public method and property;\
+      \ flag any with no corresponding test as a coverage gap. Fix every BDD violation\
+      \ and coverage gap — confirm each failing test is RED for the right reason.\n\
+      \        When BDD violations and coverage gaps are resolved, call ce().satisfy()\
+      \ to build or fix the minimum production code until GREEN. One test, one production\
+      \ change, one GREEN — repeat until validate passes.\n        If the same test\
+      \ is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose()\
+      \ before a third fix (wrong exception, wrong line, shifting failure mode, or\
+      \ a re-read of the code that does not explain the failure)."
+    returns: str
+  sketch:
+    kind: action
+    tools: []
+    instructions: "Sketch the BDD hierarchy at the current fidelity.\n        When\
+      \ BDD sketch is complete, call ce().sketch() to sketch the matching classes."
+    returns: str
+  validate:
+    kind: action
+    tools: []
+    instructions: "Validate all BDD artifacts at the current fidelity.\n        When\
+      \ BDD validation passes, call ce().validate() to validate the matching class\
+      \ artifacts."
+    returns: str
+  archive_mistakes:
+    kind: sub_agent
+    launch: non_blocking
+    parameters:
+      repo_root: str
+    returns: str
+  verify_regression:
+    kind: sub_agent
+    launch: non_blocking
+    parameters:
+      examples_root: str
+    returns: str
+---
+```
+</system_reminder>
+```Here is exactly what came back from this read of `context_tools/bdd/bdd.py` (file not edited).
+
+---
+
+## File body (tool output: lines 1–188)
+
+```
+     1|# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+     2|# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+     3|# Do not author behavior from this Python source.
+     4|# invoke-new: action generate | context.fidelity behavior
+     5|# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+     6|# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+     7|"""BDD generator - multi-fidelity behavior skeletons and development."""
+     8|
+     9|from __future__ import annotations
+    10|
+    11|from typing import TYPE_CHECKING, TypedDict
+    12|
+    13|from context_tools.base.base_context_tool import BaseContextTool
+    14|from primitives.actions.action import action
+    15|from primitives.instructions import instruction
+    16|from primitives.tools.tool import tool  # noqa: F401
+    17|
+    18|if TYPE_CHECKING:
+    19|    from utilities.diagnose.diagnose import Diagnose
+    20|
+    21|_FIDELITY_FORMAT_DEFAULTS = {
+    22|    "modules": "markdown",   # delegates to CE; no BDD-specific spec file written
+    23|    "behavior": "python",
+    24|    "development": "python",
+    25|}
+    26|_SUPPORTED_FORMATS = frozenset({"markdown", "python", "typescript", "java"})
+    27|
+    28|# BDD fidelity → CleanEngineering fidelity at the same design depth.
+    29|_CE_FIDELITY: dict[str, str] = {
+    30|    "modules": "modules",
+    31|    "behavior": "model",
+    32|    "development": "code",
+    33|}
+    34|
+    35|
+    36|class TransformResult(TypedDict):
+    37|    """Result of a sideways format conversion."""
+    38|
+    39|    source_format: str
+    40|    target_format: str
+    41|    content: str
+    42|
+    43|
+    44|def _resolve_format(fidelity: str, format: str | None) -> str:
+    45|    """Validate fidelity, resolve format to its default when None, validate format, and return it."""
+    46|    if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
+    47|        raise ValueError(
+    48|            f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
+    49|        )
+    50|    resolved = format if format is not None else _FIDELITY_FORMAT_DEFAULTS[fidelity]
+    51|    if resolved not in _SUPPORTED_FORMATS:
+    52|        raise ValueError(
+    53|            f"Unsupported format {resolved!r}. Choose from: {sorted(_SUPPORTED_FORMATS)}"
+    54|        )
+    55|    return resolved
+    56|
+    57|
+    58|class Bdd(BaseContextTool):
+    59|    """# Instructions
+    60|
+    61|    Depends on CleanEngineering (lazy import in ce() and transform to avoid circular imports at
+    62|    module load time).
+    63|    """
+    64|
+    65|    default_workspace_folder: str = "src"
+    66|    context_index_key: str = "bdd"
+    67|    _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+    68|
+    69|
+    70|    fidelities = {
+    71|        BaseContextTool.DISCOVERY: "modules",
+    72|        BaseContextTool.SPEC:      "behavior",
+    73|        BaseContextTool.ENGINEER:  "development",
+    74|    }
+    75|
+    76|    def __init__(
+    77|        self,
+    78|        fidelity: str = "behavior",
+    79|        format: str | None = None,
+    80|        path: str | None = None,
+    81|        session: str | None = None,
+    82|        workspace: str | None = None,
+    83|    ) -> None:
+    84|        resolved_format = _resolve_format(fidelity, format)
+    85|        super().__init__(
+    86|            format=resolved_format, path=path, session=session, workspace=workspace
+    87|        )
+    88|        self.fidelity = fidelity
+    89|
+    90|    # -- CleanEngineering companion ------------------------------------------
+    91|
+    92|    def ce(self) -> "BaseContextTool":
+    93|        """CleanEngineering companion at the matching fidelity (tool mode — invoke separately when ready)."""
+    94|        # lazy import: avoids circular import at module load
+    95|        from context_tools.clean_engineering.clean_engineering import CleanEngineering
+    96|
+    97|        instance = CleanEngineering(
+    98|            fidelity=_CE_FIDELITY.get(self.fidelity, "modules"),
+    99|            path=self._raw_path,
+   100|            session=self.workspace.name,
+   101|            workspace=self.workspace.workspace_root,
+   102|        )
+   103|        instance.mode = "tool"
+   104|        return instance
+   105|
+   106|    def diagnostic(self) -> "Diagnose":
+   107|        """Diagnose companion — common six-phase loop as a tool (not inlined)."""
+   108|        # lazy import: keeps diagnose optional at module load
+   109|        from utilities.diagnose.diagnose import Diagnose
+   110|
+   111|        return Diagnose()
+   112|
+   113|    # -- Lifecycle actions: BDD first, then CE classes -----------------------
+   114|
+   115|    @action
+   116|    def generate(self) -> str:
+   117|        """At modules fidelity: delegate entirely to ce().generate() — no BDD spec file is written at this stage. Use this to bootstrap CE class structure before writing tests.
+   118|        At behavior fidelity: write all BDD test signatures (SIGNATURE markers).
+   119|        At development fidelity: write full test bodies and production code.
+   120|        When the target module already exists, scan the production source for every public method and property and verify each has test coverage — add missing signatures for any gap before writing new ones.
+   121|        BDD tests must conform to CE class structure: describe/it hierarchies must map onto public CE interfaces and operations.
+   122|        When BDD artifacts are complete, call ce().generate() to produce the matching class skeletons."""
+   123|        super().generate()
+   124|        self.ce().generate()
+   125|        return "When done, run validate."
+   126|
+   127|    @action
+   128|    def grill(self) -> str:
+   129|        """Run the BDD grill loop to surface assumptions and gaps.
+   130|        When BDD grill is complete, call ce().grill() to do the same for the matching classes."""
+   131|        super().grill()
+   132|        self.ce().grill()
+   133|        return "Grill complete; run generate."
+   134|
+   135|    @action
+   136|    def sketch(self) -> str:
+   137|        """Sketch the BDD hierarchy at the current fidelity.
+   138|        When BDD sketch is complete, call ce().sketch() to sketch the matching classes."""
+   139|        super().sketch()
+   140|        self.ce().sketch()
+   141|        return "Sketch complete; run generate."
+   142|
+   143|    @action
+   144|    def iterate(self) -> str:
+   145|        """Iterate one BDD cycle: write one test, confirm it is RED, then call ce().iterate() to build the minimum production code until GREEN. Repeat — one test, one production change, one GREEN — until all tests pass.
+   146|        If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure)."""
+   147|        super().iterate()
+   148|        self.ce().iterate()
+   149|        self.diagnostic().diagnose()
+   150|        return "Iterate complete; run validate."
+   151|
+   152|    @action
+   153|    def satisfy(self) -> str:
+   154|        """Scan the production source for every public method and property; flag any with no corresponding test as a coverage gap. Fix every BDD violation and coverage gap — confirm each failing test is RED for the right reason.
+   155|        When BDD violations and coverage gaps are resolved, call ce().satisfy() to build or fix the minimum production code until GREEN. One test, one production change, one GREEN — repeat until validate passes.
+   156|        If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure)."""
+   157|        super().satisfy()
+   158|        self.ce().satisfy()
+   159|        self.diagnostic().diagnose()
+   160|        return "When done, run validate on artifacts under {session.path}/."
+   161|
+   162|    @action
+   163|    def validate(self) -> str:
+   164|        """Validate all BDD artifacts at the current fidelity.
+   165|        When BDD validation passes, call ce().validate() to validate the matching class artifacts."""
+   166|        super().validate()
+   167|        self.ce().validate()
+   168|        return "Validation report for artifacts under {session.path}/."
+   169|
+   170|    @action
+   171|    def repair(self) -> str:
+   172|        """Repair the BDD artifact that is failing or malformed.
+   173|        When the BDD artifact is clean, call ce().repair() to repair the matching class artifact."""
+   174|        super().repair()
+   175|        self.ce().repair()
+   176|        return "Repair complete; run validate."
+   177|
+   178|    # -- Tool: sideways format conversion ------------------------------------
+   179|
+   180|    @tool
+   181|    def transform(self, source_format: str, target_format: str, content: str) -> TransformResult:
+   182|        """Sideways format conversion at the same fidelity.
+   183|        Delegates to clean_engineering.transform until BDD has its own channel model."""
+   184|        # lazy import: avoids circular import at module load
+   185|        from context_tools.clean_engineering.clean_engineering import CleanEngineering
+   186|
+   187|        return CleanEngineering().transform(source_format, target_format, content)
+   188|
+```
+
+---
+
+## agent_message
+
+None in this read payload.
+
+---
+
+## Cursor rules block (“The following cursor rule files are relevant…”)
+
+Not present in this read payload (unlike the prior read in this conversation).
+
+---
+
+## system_reminder (MANIFEST GATE) — verbatim
+
+```
+<system_reminder>
+MANIFEST GATE - C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\bdd\bdd.py
+Header executed. Follow response.instructions only - do not author from source.
+
+  # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+  # invoke-new: action generate | context.fidelity behavior
+  # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+  # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+
+Manifest output (injected automatically):
+```yaml
+---
+type: bdd
+capabilities:
+- tool
+- agent
+signature:
+  instructions: "# Instructions\n\n    Depends on CleanEngineering (lazy import in\
+    \ ce() and transform to avoid circular imports at\n    module load time)."
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest context_tools.bdd.bdd:Bdd
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  new:
+    kind: constructor
+    instructions: Create a toolset instance.
+    parameters:
+      fidelity: str
+      format: str | None
+      path: str | None
+      session: str | None
+      workspace: str | None
+  close_session:
+    kind: tool
+    parameters:
+      outcome: str
+      handoff: str
+    returns: str
+  create_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  ensure_session:
+    kind: tool
+    parameters:
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
+    returns: str
+  log_correction:
+    kind: tool
+    parameters:
+      entry_id: str
+      improved: str
+      status: str
+    returns: str
+  log_mistake:
+    kind: tool
+    parameters:
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      when: str
+    returns: str
+  read_context_index:
+    kind: tool
+    returns: str
+  record_context_root:
+    kind: tool
+    parameters:
+      root: str
+      note: str
+    returns: str
+  scan:
+    kind: tool
+    parameters:
+      paths: list[str]
+    returns: str
+  transform:
+    kind: tool
+    instructions: "Sideways format conversion at the same fidelity.\n        Delegates\
+      \ to clean_engineering.transform until BDD has its own channel model."
+    parameters:
+      source_format: str
+      target_format: str
+      content: str
+    returns: TransformResult
+  active:
+    kind: resource
+    type: Session
+  mode:
+    kind: resource
+    type: str
+  add_generate_header_to_generated:
+    kind: action
+    tools: []
+    instructions: Prepend the following block verbatim as the very first lines of
+      the file you are writing - before any imports, before any code.
+    returns: str
+  document:
+    kind: action
+    tools:
+    - generate_output
+    - add_generate_header_to_generated
+    instructions: '# Document
+
+
+      Take the persona of a **neutral observer** — describe what exists, do not prescribe
+      what should exist.
+
+
+      1. Follow **`session_guidance`**. Observe and write under the session layout.
+
+      2. Read the **contexts** to understand the vocabulary and structure of the domain.
+
+      3. Fill the **template** scaffold with observed content — describe current state
+      only.
+
+      4. Do not apply, suggest, or imply rules or best practices in the generated
+      output.
+
+      5. Call **`scan`** and append all violations to the document as-is — flag them,
+      do not correct them.
+
+      6. Save the artifact under the session layout from `session_guidance`.'
+    parameters:
+      paths: list[str]
+    returns: str
+  generate:
+    kind: action
+    tools: []
+    instructions: "At modules fidelity: delegate entirely to ce().generate() — no\
+      \ BDD spec file is written at this stage. Use this to bootstrap CE class structure\
+      \ before writing tests.\n        At behavior fidelity: write all BDD test signatures\
+      \ (SIGNATURE markers).\n        At development fidelity: write full test bodies\
+      \ and production code.\n        When the target module already exists, scan\
+      \ the production source for every public method and property and verify each\
+      \ has test coverage — add missing signatures for any gap before writing new\
+      \ ones.\n        BDD tests must conform to CE class structure: describe/it hierarchies\
+      \ must map onto public CE interfaces and operations.\n        When BDD artifacts\
+      \ are complete, call ce().generate() to produce the matching class skeletons."
+    returns: str
+  generate_output:
+    kind: action
+    tools: []
+    returns: str
+  grill:
+    kind: action
+    tools: []
+    instructions: "Run the BDD grill loop to surface assumptions and gaps.\n     \
+      \   When BDD grill is complete, call ce().grill() to do the same for the matching\
+      \ classes."
+    returns: str
+  improve:
+    kind: action
+    tools: []
+    returns: str
+  iterate:
+    kind: action
+    tools: []
+    instructions: "Iterate one BDD cycle: write one test, confirm it is RED, then\
+      \ call ce().iterate() to build the minimum production code until GREEN. Repeat\
+      \ — one test, one production change, one GREEN — until all tests pass.\n   \
+      \     If the same test is still RED after 2 consecutive fix attempts — stop\
+      \ guessing. Call diagnostic().diagnose() before a third fix (wrong exception,\
+      \ wrong line, shifting failure mode, or a re-read of the code that does not\
+      \ explain the failure)."
+    returns: str
+  partition:
+    kind: action
+    tools: []
+    parameters:
+      context: str
+      mode: str
+      out_root: str | None
+    returns: str
+  repair:
+    kind: action
+    tools: []
+    instructions: "Repair the BDD artifact that is failing or malformed.\n       \
+      \ When the BDD artifact is clean, call ce().repair() to repair the matching\
+      \ class artifact."
+    returns: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Scan the production source for every public method and property;\
+      \ flag any with no corresponding test as a coverage gap. Fix every BDD violation\
+      \ and coverage gap — confirm each failing test is RED for the right reason.\n\
+      \        When BDD violations and coverage gaps are resolved, call ce().satisfy()\
+      \ to build or fix the minimum production code until GREEN. One test, one production\
+      \ change, one GREEN — repeat until validate passes.\n        If the same test\
+      \ is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose()\
+      \ before a third fix (wrong exception, wrong line, shifting failure mode, or\
+      \ a re-read of the code that does not explain the failure)."
+    returns: str
+  sketch:
+    kind: action
+    tools: []
+    instructions: "Sketch the BDD hierarchy at the current fidelity.\n        When\
+      \ BDD sketch is complete, call ce().sketch() to sketch the matching classes."
+    returns: str
+  validate:
+    kind: action
+    tools: []
+    instructions: "Validate all BDD artifacts at the current fidelity.\n        When\
+      \ BDD validation passes, call ce().validate() to validate the matching class\
+      \ artifacts."
+    returns: str
+  archive_mistakes:
+    kind: sub_agent
+    launch: non_blocking
+    parameters:
+      repo_root: str
+    returns: str
+  verify_regression:
+    kind: sub_agent
+    launch: non_blocking
+    parameters:
+      examples_root: str
+    returns: str
+---
+```
+</system_reminder>
+```

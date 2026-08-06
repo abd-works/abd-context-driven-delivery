@@ -1,0 +1,50 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>abd.works &mdash; Empty State layout</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="abd-works-brand.css">
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <span class="logo"><span>abd</span><em>.works</em></span>
+      <div class="mode-switch" role="group" aria-label="Color mode">
+        <button type="button" data-mode="executive" aria-pressed="true">Executive</button>
+        <button type="button" data-mode="engineering" aria-pressed="false">Engineering</button>
+      </div>
+    </header>
+
+    <p class="kicker">Specification &middot; User Actions &amp; Overlays</p>
+    <h1>Empty State</h1>
+    <p class="text-muted">Educational, graphic-rich layout shown when no data exists yet.</p>
+    <p class="page-meta mono">Slots: icon &middot; headline &middot; subtext &middot; cta</p>
+
+    <div class="layout">
+    <div class="columns">
+      <div class="card" style="--w:1">
+        <span class="card-label kicker">body</span>
+        <p class="small text-muted">Row one &middot; Row two</p>
+        <div><button class="btn primary" type="button">Primary action</button> <button class="btn ghost" type="button">Secondary</button></div>
+      </div>
+    </div>
+    </div>
+
+    <footer class="page-footer">
+      Reference specification &mdash; abd.works brand applied to the <code>empty-state</code> IA layout.
+      Unbranded reference: <code>../generic/empty-state.md</code> (ASCII) and
+      <code>../generic/empty-state.drawio</code> (diagram fragment).
+      Regions above are placeholders &mdash; replace with the real screen's controls and copy.
+    </footer>
+  </div>
+  <script>
+    const buttons = document.querySelectorAll('.mode-switch button');
+    buttons.forEach((btn) => btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-mode');
+      document.documentElement.setAttribute('data-theme', mode === 'engineering' ? 'engineering' : 'executive');
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+    }));
+  </script>
+</body>
+</html>

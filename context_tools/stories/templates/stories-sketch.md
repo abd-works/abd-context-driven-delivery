@@ -21,7 +21,7 @@ Do **not** tag lines with fidelity markers. Depth is what you fill:
 | **discovery** | Epic / SubEpic / named stories + thin-slice; clear approx gaps as you name stories |
 | **exploration** | Main-flow Given / When / Then under each confirming story; objects from ExampleFactory fakes; assert public interface. No shared background yet. |
 | **specification** | Extra scenarios, shared setup / background; still fake + public interface; values from factories |
-| **engineering** | Which tier(s) (`isolated` / `production`); not full impl in the sketch |
+| **engineering** | Which tier(s) (`domain` / `client` / `server` / `e2e` / project-specific); not full impl in the sketch |
 
 **Notation:** indent = nesting · `{Actor} --> {Verb Noun}` story · `* approx N–M …` unmapped · `~>` increment · `//` note.
 

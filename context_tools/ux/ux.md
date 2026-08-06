@@ -34,7 +34,13 @@ Do **not** bake product words (catalog, cart) into the template — those are bo
 
 **Markdown:** optional context only (thinking, invariants, interaction notes). Primary path is **drawio (IA) → html (mockup/spec)**.
 
-**Layouts:** catalog in `ux_model/layouts.py` (layout id → named slots). Use `Screen.apply_layout` to set layout and seed empty regions.
+**Specifications (layouts):** `specifications/` holds the full IA screen-template set as ready-to-adapt reference artifacts, one sibling folder per style:
+
+- `specifications/generic/` — **default.** One `.md` ASCII reference + one `.drawio` XML fragment per layout (accordion, breadcrumb, kanban-board, sidebar, tabbed, wizard-stepper, … 43 patterns), mirrored verbatim from abd-skills. No brand.
+- `specifications/abd-works/` — the same 43 layouts as real, brand-styled HTML (`<id>.html` + `index.html`), all sharing `abd-works-brand.css` (tokens/type/components copied from the `abd-visual-branding` SKILL.md: colors, Inter/JetBrains Mono type scale, buttons, cards, dual Executive/Engineering mode). Use this folder instead of `generic/` whenever the screen needs the abd.works brand (see `brand-is-opt-in` below).
+- Add further sibling folders under `specifications/` for other brands/styles the same way; each folder's own files stay self-contained (own stylesheet, own copies).
+
+Before sketching a screen's ASCII box, drawio region cells, or brand-layer html, open the matching file(s) in the specification folder that applies — `generic/` unless a specific brand is asked for or already established for this work — read its slots, and alter that file for the real screen. Do not draw box art, drawio cells, or brand markup from scratch when one of these already covers the shape. `Screen.apply_layout(layout_id)` just records that choice as the layout name; append the real `Region`s yourself from the slots you just read.
 
 **Channels:** drawio, html, markdown, json — peer parse/render; `transform` moves sideways at the same fidelity. One `html` channel deepens by fidelity (js interactions → optional brand layer + honest stubs at **mockup** → real frontend at **front_end_code**; host FE stacks welcome at **front_end_code**).
 
@@ -102,7 +108,7 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 8. **Optional — branding (off by default).** Apply a css / design-tokens / brand layer only when **one of these is true**:
    - The user explicitly asks for brand at this step, or
    - Brand/css tokens already exist somewhere in the workspace (check before deciding).
-   Do not invent brand. When active: add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to **front_end_code** automatically — do not re-apply.
+   Do not invent brand. When active, pick the sibling folder under `specifications/` for the brand that applies (e.g. `specifications/abd-works/`) and start from its matching page rather than inventing tokens; if no named brand applies, `specifications/generic/` (no brand layer) is the default. Fall back to whatever brand/css tokens already exist in the workspace when neither covers it. Add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to **front_end_code** automatically — do not re-apply.
 
 ### Rules
 

@@ -47,7 +47,7 @@ def _render_epic_helper(epic: Epic) -> str:
     ]
     lines.extend(render_python_factory_imports(factories))
     lines.append(f"class {helper_class}:")
-    lines.append('    """Shared helpers. Explore/spec -> fake mode; tiers pass isolated|production."""')
+    lines.append('    """Shared ExampleFactory accessors. Tier test-helpers import this to build real collaborators."""')
     lines.append("")
     lines.extend(render_python_factory_accessors(factories))
     if not factories:
@@ -75,12 +75,4 @@ def _render_story(
     story_slug = to_kebab(story.name)
     story_snake = to_snake(story.name)
     story_folder = f"{parent}/{story_slug}"
-    helper_module = f"{to_snake(epic.name)}_helper"
-    # Import path: story is 3 levels under epic (sub/story/file) -> relative via package note
-    relative_helper = f"..{to_snake(epic.name)}_helper"
-    # Prefer simple module name; AI adjusts sys.path / package layout
-    tree[f"{story_folder}/{story_snake}_story.py"] = render_story_file(
-        story,
-        relative_helper_module=helper_module,
-        helper_class=f"{to_pascal(epic.name)}Helper",
-    )
+    tree[f"{story_folder}/{story_snake}_story.py"] = render_story_file(story)

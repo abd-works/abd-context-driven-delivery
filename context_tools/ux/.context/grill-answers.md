@@ -86,15 +86,25 @@ sandbox/<epic>/
 ## Sketch annotations
 - **No margin fidelity tags** (`<-i` / `<-m` / `<-s`). Declare fidelity once at the top. Do not annotate sketch lines.
 
-## Layout catalog
-- **Thin registry only** (`ux_model/layouts.py`): layout id → slots (+ aliases). Seed via `Screen.apply_layout`.
-- Source: abd-skills `screen-templates` vocabulary — **do not** bulk-import ASCII/drawio fragments.
-- HTML uses `data-layout` for a few structural grids (sidebar, split-screen, holy-grail, tabbed).
+## Layout catalog (superseded 2026-08-04)
+- **Reversed:** the abd-skills `screen-templates` library (43 patterns, `.md` + `.drawio`) is now mirrored verbatim at `templates/screen-templates/` — no longer just vocabulary.
+- `ux_model/layouts.py` (the thin id → slots registry + `Screen.apply_layout` auto-seeding) is **deleted**. It only ever covered 14 of the 43 patterns and duplicated what the mirrored `.md` files already say. `Screen.apply_layout(id)` now just records the layout name; the AI reads the matching template pair for its slots and appends `Region`s itself.
+- HTML still uses `data-layout` for a few structural grids (sidebar, split-screen, holy-grail, tabbed) — unaffected, it only reads `screen.layout` as a string.
+
+## Branded specifications (abd.works) — 2026-08-04
+- Added `specifications/abd-works/` — one real HTML page per `templates/screen-templates/<id>` (43 + `index.html`), same slot geometry, dressed in the abd.works brand instead of ASCII/greybox.
+- Brand tokens/type/components copied verbatim from `abd-works-brand/.agents/skills/abd-visual-branding/SKILL.md` (that skill is its own stated single source of truth) into one shared `abd-works-brand.css` — colors, Inter/JetBrains Mono type scale, spacing, buttons, cards, dual Executive(light)/Engineering(dark) mode via `data-theme`. Logo is a text lockup (`abd` + italic `.works`) — the real wordmark SVGs referenced by the brand skill were not present in the synced brand folder, so no binary asset was copied in.
+- Pages were produced with a throwaway Node generator (reused the same layout geometry as the screen-templates mirror, so the branded grid matches the unbranded reference 1:1) and the generator was deleted after running — the deliverable is the 45 static files, not a pipeline.
+- `ux.md` now points to this folder from both the `mockup` brand-opt-in rule and the `templates/screen-templates/` layouts note: when brand = abd.works, start from the matching `specifications/abd-works/<id>.html` instead of inventing tokens.
+
+## Specifications folder reorganized — 2026-08-04
+- Moved `templates/screen-templates/` (the 43 generic `.md` + `.drawio` pairs) to `specifications/generic/` — a sibling of `specifications/abd-works/`, not a child of `templates/`. `templates/` now only holds render-time shells (`html/mockup_shell.html`, `html/mockup.html`, `ux-sketch.md`), which are generation-output templates, not pick-and-adapt reference specs.
+- `specifications/` is now the one place with a folder per style: `generic/` (no brand, default) and `abd-works/` (branded) as siblings. Default is `generic/` unless a specific brand is asked for or already established for the work — then use that brand's sibling folder instead.
+- Updated every stale `templates/screen-templates/` reference to `specifications/generic/`: `ux.md`, `templates/ux-sketch.md`, `ux_model/nodes.py` docstring, `ux_model/.context/module-context.md`, `.context/ux-model-sketch.md`, and the relative links baked into the 43 `specifications/abd-works/*.html` pages + `index.html` (`../../templates/screen-templates/` → `../generic/`).
 
 ## Deferred
 - Review shell right-side contents (annotations vs demo controls) — revisit later.
 - Example-data injection + story-through-mockup/spec tracing (explicitly later).
-- Expanding layout catalog beyond core IA patterns when mockup needs them.
 
 ### Story demo ? Play runs story GWT; interactive shares same UI and helpers
 

@@ -1,0 +1,406 @@
+Exact Read tool result:
+
+---
+
+**File body (lines 1–57):**
+
+```
+     1|# @toolset-manifest python -m tools manifest tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+     2|# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+     3|# Do not author behavior from this Python source.
+     4|# invoke-edit: action satisfy | toolset: tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+     5|"""Fixture toolset - exists only to drive hooks_agent_spec.py scenarios end-to-end.
+     6|
+     7|Not a real generator. ``satisfy`` does no generation work; it exists purely so the
+     8|``invoke-edit`` directive above has a real, cheap action to run. ``_REVISION`` is a
+     9|throwaway marker some scenarios edit directly to prove a write landed on disk.
+    10|"""
+    11|from __future__ import annotations
+    12|
+    13|from primitives.actions.action import action, agentic_toolset
+    14|from sub_agent.sub_agent import sub_agent
+    15|from tools.tool import resource, tool
+    16|
+    17|_REVISION = 1
+    18|
+    19|
+    20|@agentic_toolset
+    21|class GatedWidget:
+    22|    """Minimal manifest-gated fixture for hooks_agent_spec.py scenarios."""
+    23|
+    24|    def __init__(self) -> None:
+    25|        self._label = "widget"
+    26|
+    27|    @property
+    28|    @resource
+    29|    def label(self) -> str:
+    30|        """Current label."""
+    31|        return self._label
+    32|
+    33|    @tool
+    34|    def rename(self, label: str) -> str:
+    35|        """Rename the widget - plain tool, no gate semantics of its own."""
+    36|        self._label = label
+    37|        return f"renamed to {label}"
+    38|
+    39|    @action
+    40|    def satisfy(self) -> str:
+    41|        """Acknowledge manifest compliance for this fixture - no real generation work.
+    42|        Exists so the invoke-edit directive above has a real action to execute."""
+    43|        return (
+    44|            "GatedWidget compliance acknowledged - edits to gated_widget.py are "
+    45|            "cleared for this session."
+    46|        )
+    47|
+    48|    @sub_agent
+    49|    @tool
+    50|    def launch_revision_bump(self) -> str:
+    51|        """Launch a non-blocking background sub-agent. That sub-agent must open
+    52|        primitives/tools/hooks/examples/gated_widget/gated_widget.py directly (a plain
+    53|        file edit, not a `tools run` call) and change the module-level `_REVISION = 1`
+    54|        line to `_REVISION = 2`, then report back the exact tool result it received for
+    55|        that edit - in particular any `permission`, `agent_message`, or `user_message`
+    56|        fields that came back with it."""
+    57|
+```
+
+(No `# probe` line in this read output. No “The following cursor rule files are relevant…” block.)
+
+---
+
+**`agent_message`:** not present in the Read tool response.
+
+---
+
+**`system_reminder` (MANIFEST GATE), verbatim:**
+
+```
+<system_reminder>
+MANIFEST GATE - C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\primitives\tools\hooks\examples\gated_widget\gated_widget.py
+Header executed. Follow response.instructions only - do not author from source.
+
+  # @toolset-manifest python -m tools manifest tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+  # invoke-edit: action satisfy | toolset: tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+
+Manifest output (injected automatically):
+```yaml
+---
+type: gatedwidget
+capabilities:
+- tool
+- agent
+signature:
+  instructions: Minimal manifest-gated fixture for hooks_agent_spec.py scenarios.
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  rename:
+    kind: tool
+    instructions: Rename the widget - plain tool, no gate semantics of its own.
+    parameters:
+      label: str
+    returns: str
+  label:
+    kind: resource
+    type: str
+  mode:
+    kind: resource
+    type: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Acknowledge manifest compliance for this fixture - no real generation\
+      \ work.\n        Exists so the invoke-edit directive above has a real action\
+      \ to execute."
+    returns: str
+  launch_revision_bump:
+    kind: sub_agent
+    launch: non_blocking
+    instructions: "Launch a non-blocking background sub-agent. That sub-agent must\
+      \ open\n        primitives/tools/hooks/examples/gated_widget/gated_widget.py\
+      \ directly (a plain\n        file edit, not a `tools run` call) and change the\
+      \ module-level `_REVISION = 1`\n        line to `_REVISION = 2`, then report\
+      \ back the exact tool result it received for\n        that edit - in particular\
+      \ any `permission`, `agent_message`, or `user_message`\n        fields that\
+      \ came back with it."
+    returns: str
+---
+```
+</system_reminder>
+```Exact Read tool result:
+
+---
+
+**File body (lines 1–57):**
+
+```
+     1|# @toolset-manifest python -m tools manifest tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+     2|# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+     3|# Do not author behavior from this Python source.
+     4|# invoke-edit: action satisfy | toolset: tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+     5|"""Fixture toolset - exists only to drive hooks_agent_spec.py scenarios end-to-end.
+     6|
+     7|Not a real generator. ``satisfy`` does no generation work; it exists purely so the
+     8|``invoke-edit`` directive above has a real, cheap action to run. ``_REVISION`` is a
+     9|throwaway marker some scenarios edit directly to prove a write landed on disk.
+    10|"""
+    11|from __future__ import annotations
+    12|
+    13|from primitives.actions.action import action, agentic_toolset
+    14|from sub_agent.sub_agent import sub_agent
+    15|from tools.tool import resource, tool
+    16|
+    17|_REVISION = 1
+    18|
+    19|
+    20|@agentic_toolset
+    21|class GatedWidget:
+    22|    """Minimal manifest-gated fixture for hooks_agent_spec.py scenarios."""
+    23|
+    24|    def __init__(self) -> None:
+    25|        self._label = "widget"
+    26|
+    27|    @property
+    28|    @resource
+    29|    def label(self) -> str:
+    30|        """Current label."""
+    31|        return self._label
+    32|
+    33|    @tool
+    34|    def rename(self, label: str) -> str:
+    35|        """Rename the widget - plain tool, no gate semantics of its own."""
+    36|        self._label = label
+    37|        return f"renamed to {label}"
+    38|
+    39|    @action
+    40|    def satisfy(self) -> str:
+    41|        """Acknowledge manifest compliance for this fixture - no real generation work.
+    42|        Exists so the invoke-edit directive above has a real action to execute."""
+    43|        return (
+    44|            "GatedWidget compliance acknowledged - edits to gated_widget.py are "
+    45|            "cleared for this session."
+    46|        )
+    47|
+    48|    @sub_agent
+    49|    @tool
+    50|    def launch_revision_bump(self) -> str:
+    51|        """Launch a non-blocking background sub-agent. That sub-agent must open
+    52|        primitives/tools/hooks/examples/gated_widget/gated_widget.py directly (a plain
+    53|        file edit, not a `tools run` call) and change the module-level `_REVISION = 1`
+    54|        line to `_REVISION = 2`, then report back the exact tool result it received for
+    55|        that edit - in particular any `permission`, `agent_message`, or `user_message`
+    56|        fields that came back with it."""
+    57|
+```
+
+(No `# probe` line in this read output. No “The following cursor rule files are relevant…” block.)
+
+---
+
+**`agent_message`:** not present in the Read tool response.
+
+---
+
+**`system_reminder` (MANIFEST GATE), verbatim:**
+
+```
+<system_reminder>
+MANIFEST GATE - C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\primitives\tools\hooks\examples\gated_widget\gated_widget.py
+Header executed. Follow response.instructions only - do not author from source.
+
+  # @toolset-manifest python -m tools manifest tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+  # invoke-edit: action satisfy | toolset: tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+
+Manifest output (injected automatically):
+```yaml
+---
+type: gatedwidget
+capabilities:
+- tool
+- agent
+signature:
+  instructions: Minimal manifest-gated fixture for hooks_agent_spec.py scenarios.
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  rename:
+    kind: tool
+    instructions: Rename the widget - plain tool, no gate semantics of its own.
+    parameters:
+      label: str
+    returns: str
+  label:
+    kind: resource
+    type: str
+  mode:
+    kind: resource
+    type: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Acknowledge manifest compliance for this fixture - no real generation\
+      \ work.\n        Exists so the invoke-edit directive above has a real action\
+      \ to execute."
+    returns: str
+  launch_revision_bump:
+    kind: sub_agent
+    launch: non_blocking
+    instructions: "Launch a non-blocking background sub-agent. That sub-agent must\
+      \ open\n        primitives/tools/hooks/examples/gated_widget/gated_widget.py\
+      \ directly (a plain\n        file edit, not a `tools run` call) and change the\
+      \ module-level `_REVISION = 1`\n        line to `_REVISION = 2`, then report\
+      \ back the exact tool result it received for\n        that edit - in particular\
+      \ any `permission`, `agent_message`, or `user_message`\n        fields that\
+      \ came back with it."
+    returns: str
+---
+```
+</system_reminder>
+```Exact Read tool result:
+
+---
+
+**File body (lines 1–57):**
+
+```
+     1|# @toolset-manifest python -m tools manifest tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+     2|# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+     3|# Do not author behavior from this Python source.
+     4|# invoke-edit: action satisfy | toolset: tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+     5|"""Fixture toolset - exists only to drive hooks_agent_spec.py scenarios end-to-end.
+     6|
+     7|Not a real generator. ``satisfy`` does no generation work; it exists purely so the
+     8|``invoke-edit`` directive above has a real, cheap action to run. ``_REVISION`` is a
+     9|throwaway marker some scenarios edit directly to prove a write landed on disk.
+    10|"""
+    11|from __future__ import annotations
+    12|
+    13|from primitives.actions.action import action, agentic_toolset
+    14|from sub_agent.sub_agent import sub_agent
+    15|from tools.tool import resource, tool
+    16|
+    17|_REVISION = 1
+    18|
+    19|
+    20|@agentic_toolset
+    21|class GatedWidget:
+    22|    """Minimal manifest-gated fixture for hooks_agent_spec.py scenarios."""
+    23|
+    24|    def __init__(self) -> None:
+    25|        self._label = "widget"
+    26|
+    27|    @property
+    28|    @resource
+    29|    def label(self) -> str:
+    30|        """Current label."""
+    31|        return self._label
+    32|
+    33|    @tool
+    34|    def rename(self, label: str) -> str:
+    35|        """Rename the widget - plain tool, no gate semantics of its own."""
+    36|        self._label = label
+    37|        return f"renamed to {label}"
+    38|
+    39|    @action
+    40|    def satisfy(self) -> str:
+    41|        """Acknowledge manifest compliance for this fixture - no real generation work.
+    42|        Exists so the invoke-edit directive above has a real action to execute."""
+    43|        return (
+    44|            "GatedWidget compliance acknowledged - edits to gated_widget.py are "
+    45|            "cleared for this session."
+    46|        )
+    47|
+    48|    @sub_agent
+    49|    @tool
+    50|    def launch_revision_bump(self) -> str:
+    51|        """Launch a non-blocking background sub-agent. That sub-agent must open
+    52|        primitives/tools/hooks/examples/gated_widget/gated_widget.py directly (a plain
+    53|        file edit, not a `tools run` call) and change the module-level `_REVISION = 1`
+    54|        line to `_REVISION = 2`, then report back the exact tool result it received for
+    55|        that edit - in particular any `permission`, `agent_message`, or `user_message`
+    56|        fields that came back with it."""
+    57|
+```
+
+(No `# probe` line in this read output. No “The following cursor rule files are relevant…” block.)
+
+---
+
+**`agent_message`:** not present in the Read tool response.
+
+---
+
+**`system_reminder` (MANIFEST GATE), verbatim:**
+
+```
+<system_reminder>
+MANIFEST GATE - C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\primitives\tools\hooks\examples\gated_widget\gated_widget.py
+Header executed. Follow response.instructions only - do not author from source.
+
+  # @toolset-manifest python -m tools manifest tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+  # invoke-edit: action satisfy | toolset: tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+
+Manifest output (injected automatically):
+```yaml
+---
+type: gatedwidget
+capabilities:
+- tool
+- agent
+signature:
+  instructions: Minimal manifest-gated fixture for hooks_agent_spec.py scenarios.
+  read_manifest:
+    kind: meta
+    instructions: Get the latest manifest (this document).
+    cmd: python -m tools manifest tools.hooks.examples.gated_widget.gated_widget:GatedWidget
+    returns: manifest
+  invoke:
+    kind: meta
+    instructions: Run one tool or action on a toolset instance.
+    cmd: python -m tools run <request.yaml|->
+  rename:
+    kind: tool
+    instructions: Rename the widget - plain tool, no gate semantics of its own.
+    parameters:
+      label: str
+    returns: str
+  label:
+    kind: resource
+    type: str
+  mode:
+    kind: resource
+    type: str
+  satisfy:
+    kind: action
+    tools: []
+    instructions: "Acknowledge manifest compliance for this fixture - no real generation\
+      \ work.\n        Exists so the invoke-edit directive above has a real action\
+      \ to execute."
+    returns: str
+  launch_revision_bump:
+    kind: sub_agent
+    launch: non_blocking
+    instructions: "Launch a non-blocking background sub-agent. That sub-agent must\
+      \ open\n        primitives/tools/hooks/examples/gated_widget/gated_widget.py\
+      \ directly (a plain\n        file edit, not a `tools run` call) and change the\
+      \ module-level `_REVISION = 1`\n        line to `_REVISION = 2`, then report\
+      \ back the exact tool result it received for\n        that edit - in particular\
+      \ any `permission`, `agent_message`, or `user_message`\n        fields that\
+      \ came back with it."
+    returns: str
+---
+```
+</system_reminder>
+```

@@ -100,28 +100,40 @@ adding new test methods when the spec grows.
 tests/
 +-- story-test.<ext>                         <- GWT helpers (story / scenario / given / when / then)
 +-- <epic-slug>/
-    +-- <epic-slug>-helper.<ext>             <- ExampleFactory accessors
+    +-- <epic-slug>-helper.<ext>             <- ExampleFactory accessors (used by tier files, not the story file)
     +-- <sub-epic-slug>/
         +-- <story-slug>/
-            +-- <story_snake>_story.<ext>         <- explore/spec (fake + public interface)
-            +-- <story_snake>_spec.<ext>          <- isolated objects (write-once)
-            +-- <story_snake>_spec.production.<ext> <- other tiers (write-once)
+            +-- <story_snake>_story.<ext>                    <- scenario fidelity: helper interface + GWT wiring, no suffix
+            +-- <story_snake>_test_helper.<tier>.<ext>        <- one per tier (write-once); every tier is named explicitly
 ```
 
-**Language variation — story / isolated-spec / tier-spec:**
+**Language variation — story / test-helper:**
 
-| Language | Story (explore/spec) | Isolated | Other tiers |
-| --- | --- | --- | --- |
-| JavaScript | `<story_snake>_story.js` | `<story_snake>_spec.js` | `<story_snake>_spec.{tier}.js` |
-| Python | `<story_snake>_story.py` | `<story_snake>_spec.py` | `<story_snake>_spec.{tier}.py` |
-| TypeScript | `<story_snake>_story.ts` | `<story_snake>_spec.ts` | `<story_snake>_spec.{tier}.ts` |
-| Java | `<StorySlug>Story.java` | `<StorySlug>Spec.java` | `<StorySlug>Spec<Tier>.java` |
+| Language | Story (scenario fidelity, no suffix) | Tier test-helper |
+| --- | --- | --- |
+| JavaScript | `<story_snake>_story.js` | `<story_snake>_test_helper.<tier>.js` |
+| Python | `<story_snake>_story.py` | `<story_snake>_test_helper.<tier>.py` |
+| TypeScript | `<story_snake>_story.ts` | `<story_snake>_test_helper.<tier>.ts` |
+| Java | `<StorySlug>Story.java` | `<StorySlug>Story` + `TestHelper` + `<Tier>` PascalCase, e.g. `<StorySlug>StoryTestHelperDomain.java` |
 
-Explore/spec story files are **runnable** Given / When / Then against factory
-**fakes**, asserting the **public interface** of `I{Type}`. Concrete values live
-in `{Type}ExampleFactory` — not inventable `examples: [{ … }]` tables in the
-story file. Tier specs call the shared story function with `isolated` or
-`production` mode.
+`<tier>` is project-specific, discovered from the caller's tier list — typically
+`domain | client | server | e2e`, or another layer name the AI chooses from
+context (e.g. `api`, `db`). There is no implicit no-suffix baseline tier: even
+the `domain` tier gets an explicit `_test_helper.domain.<ext>` file. Java's
+file-name-matches-class-name rule is the one exception — it cannot use a
+literal `.` before the tier segment, so the tier PascalCase is concatenated
+onto the class name instead of dot-separated (mirrors the existing
+Python-only snake-case epic-helper exception below).
+
+The `<story_snake>_story.<ext>` file (scenario fidelity, no suffix) declares
+one helper-interface method per distinct Given/When/Then clause and wires
+`story()` / `scenario()` blocks that call those methods only — no assertions,
+no tier mechanism, no ExampleFactory import. Concrete values live in
+`{Type}ExampleFactory` — not inventable `examples: [{ … }]` tables in the story
+file. Every `<story_snake>_test_helper.<tier>.<ext>` file implements that
+interface with the tier's real mechanism (domain class call, Supertest route,
+Testing Library render, Playwright page, …) and calls
+`create<StoryName>Story(new TierHelper())`.
 
 The `context_tools/stories/examples/{ts,py}/process-payments/` trees are the canonical
 reference of what a fully-expanded code example looks like: root document-mode
@@ -156,11 +168,15 @@ with the language's identifier grammar, hence the single exception.
 
 ### Example factories (Clean Engineering link)
 
-When scenarios need domain objects from CE, helpers **import `{Type}ExampleFactory`**
-and call `load*({ mode })`. Story files import helpers and assert the public
-`I{Type}` seam. Chain at explore/spec: steps → helper → factory → fake `I{Type}`.
-At engineering, tier specs pass `isolated` (`{Type}` + injected mocks) or
-`production` (`{Type}` + real collaborators). See `stories.md` § Example factories.
+When a tier's implementation needs domain objects from CE, its test-helper
+class **imports `{Type}ExampleFactory`** and calls `load*({ mode })` inside the
+helper-interface method bodies it implements — never inside the story file,
+which stays tier-neutral. Which `{Type}` collaborators are real vs.
+constructor-injected mocks is a per-tier choice the test-helper class makes
+(e.g. a `domain`/`server` tier passes `Isolated` or `Production` mode to the
+factory; a `client` tier renders against the real client domain with the HTTP
+client mocked; an `e2e` tier uses nothing but the real stack). See `stories.md`
+§ Example factories.
 
 JSON is emitted as `stories.json` — one file per project, pure data, round-trip
 by design. See `../document/json/` for details.

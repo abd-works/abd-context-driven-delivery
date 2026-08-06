@@ -11,7 +11,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from context_tools.ux.document.json.nodes import JsonUxMap
-from context_tools.ux.ux_model.nodes import Screen, Transition
+from context_tools.ux.ux_model.nodes import Region, Screen, Transition
 from context_tools.ux.ux_model.ux_map import UxMap
 
 
@@ -21,6 +21,7 @@ with description("JsonUxMap"):
         self.source.scope = "Place New Order"
         screen = Screen("Catalog", 0, "catalog")
         screen.apply_layout("stack")
+        screen.append_region(Region("rows", 0, "rows"))
         screen.attach_domain_term("Product")
         self.source.append_screen(screen)
         self.source.append_transition(
@@ -40,7 +41,7 @@ with description("JsonUxMap"):
         expect(self.parsed.scope).to(equal("Place New Order"))
         expect([s.name for s in self.parsed.screens]).to(equal(["Catalog"]))
 
-    with it("should round-trip layout-seeded regions and domain terms"):
+    with it("should round-trip regions and domain terms"):
         screen = self.parsed.find_screen("Catalog")
         expect(screen.layout).to(equal("stack"))
         expect(screen.domain_terms).to(equal(["Product"]))

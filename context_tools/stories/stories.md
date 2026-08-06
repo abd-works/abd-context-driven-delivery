@@ -8,7 +8,7 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 |---|---|---|
 | **story_map** | markdown | Story map + thin-slice |
 | **scenarios** | markdown | Main-flow scenarios per story (single or multiple); optional variations; fake + public seam |
-| **acceptance_tests** | python | `*_spec` + `*_spec.{tier}` — CE runs alongside to produce matching production code |
+| **acceptance_tests** | python | `*_story` (helper interface) + `*_test_helper.{tier}` per tier — CE runs alongside to produce matching production code |
 
 **Templates** live under `templates/` per format. **Scanners** read the canonical model only — never language syntax.
 
@@ -64,7 +64,10 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 **Goal:** Turn locked scenarios into runnable acceptance coverage; CE runs alongside to produce matching production code.
 
-**Produce:** `*_spec` + `*_spec.{tier}` — CE runs alongside to produce matching production code.
+**Produce:** `*_story` (declares a helper interface, calls its methods only) +
+`*_test_helper.{tier}` per tier (implements the interface; every tier is named
+explicitly, including `domain` — no implicit no-suffix tier) — CE runs
+alongside to produce matching production code.
 
 ### Rules
 

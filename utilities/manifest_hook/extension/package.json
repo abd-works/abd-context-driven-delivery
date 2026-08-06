@@ -1,0 +1,10 @@
+{
+  "name": "manifest-gate-notifier",
+  "displayName": "Manifest Gate Notifier",
+  "description": "Adapter bridge: exposes a local HTTP API so Python hooks can call vscode.window.show*Message() directly.",
+  "version": "1.0.0",
+  "publisher": "abd",
+  "engines": { "vscode": "^1.85.0" },
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"]
+}

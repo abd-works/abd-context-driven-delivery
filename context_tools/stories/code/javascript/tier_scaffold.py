@@ -1,9 +1,8 @@
-"""JavaScript tier scaffolder - write-once specs.
+"""JavaScript tier scaffolder - write-once `{story}_test_helper.{tier}.js`.
 
-- isolated -> ``{story}_spec.js``
-- other tiers -> ``{story}_spec.{tier}.js``
-
-Each re-runs the shared story function with the matching mode.
+Every tier is named explicitly, including the baseline (`domain`) - there is
+no implicit no-suffix tier file. Each tier file is a skeleton class
+implementing the story's helper interface with `not implemented` stubs.
 """
 
 from __future__ import annotations
@@ -11,7 +10,7 @@ from __future__ import annotations
 from typing import Dict, Sequence
 
 from context_tools.stories.code.code_story_map import to_kebab, to_snake
-from context_tools.stories.code.javascript.spec_file import render_tier_spec_file
+from context_tools.stories.code.javascript.story_file import render_test_helper_file
 from context_tools.stories.story_model.nodes import Epic, Story, SubEpic
 from context_tools.stories.story_model.story_map import StoryMap
 
@@ -87,8 +86,5 @@ def _scaffold_story(
     story_snake = to_snake(story.name)
     story_folder = f"{parent}/{story_slug}"
     for tier in tiers:
-        if tier == "isolated":
-            tier_path = f"{story_folder}/{story_snake}_spec.js"
-        else:
-            tier_path = f"{story_folder}/{story_snake}_spec.{tier}.js"
-        tree[tier_path] = render_tier_spec_file(story, tier=tier)
+        tier_path = f"{story_folder}/{story_snake}_test_helper.{tier}.js"
+        tree[tier_path] = render_test_helper_file(story, tier=tier)

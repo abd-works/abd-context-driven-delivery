@@ -11,7 +11,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from context_tools.ux.diagram.drawio.nodes import DrawioUxMap
-from context_tools.ux.ux_model.nodes import Screen, Transition
+from context_tools.ux.ux_model.nodes import Region, Screen, Transition
 
 
 def _site_map() -> DrawioUxMap:
@@ -24,6 +24,8 @@ def _site_map() -> DrawioUxMap:
 
     sheet = Screen("Character Sheet", 0)
     sheet.apply_layout("sidebar")
+    sheet.append_region(Region("panel", 0, "panel"))
+    sheet.append_region(Region("body", 1, "body"))
     sheet.attach_story_name("Update Ability Rank")
     sheet.attach_domain_term("Character")
 
@@ -69,7 +71,7 @@ with description("DrawioUxMap"):
         names = [screen.name for screen in self.parsed.screens]
         expect(names).to(equal(["Character Sheet", "Character Sheet - Abilities"]))
 
-    with it("should round-trip layout-seeded region titles from Detailed IA"):
+    with it("should round-trip region titles from Detailed IA"):
         sheet = next(s for s in self.parsed.screens if s.name == "Character Sheet")
         expect([region.name for region in sheet.regions]).to(equal(["panel", "body"]))
 

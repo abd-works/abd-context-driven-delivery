@@ -1,11 +1,15 @@
-"""Python tier scaffolder - `*_spec.py` (isolated) and `*_spec.{tier}.py`."""
+"""Python tier scaffolder - write-once `*_test_helper.{tier}.py`.
+
+Every tier is named explicitly, including the baseline (`domain`) - there is
+no implicit no-suffix tier file.
+"""
 
 from __future__ import annotations
 
 from typing import Dict, Sequence
 
 from context_tools.stories.code.code_story_map import to_kebab, to_snake
-from context_tools.stories.code.python.story_file import render_tier_spec_file
+from context_tools.stories.code.python.story_file import render_test_helper_file
 from context_tools.stories.story_model.nodes import Epic, Story, SubEpic
 from context_tools.stories.story_model.story_map import StoryMap
 
@@ -54,8 +58,5 @@ def _scaffold_story(
     story_folder = f"{parent}/{to_kebab(story.name)}"
     story_snake = to_snake(story.name)
     for tier in tiers:
-        if tier == "isolated":
-            path = f"{story_folder}/{story_snake}_spec.py"
-        else:
-            path = f"{story_folder}/{story_snake}_spec.{tier}.py"
-        tree[path] = render_tier_spec_file(story, tier=tier)
+        path = f"{story_folder}/{story_snake}_test_helper.{tier}.py"
+        tree[path] = render_test_helper_file(story, tier=tier)

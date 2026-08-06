@@ -9,6 +9,10 @@
 			"path": "../abd-skills"
 		},
 		{
+			"name": "story-ui",
+			"path": "../story-ui"
+		},
+		{
 			"path": "../you-tube-scraper"
 		}
 	],

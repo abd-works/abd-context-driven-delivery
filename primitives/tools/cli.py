@@ -9,6 +9,16 @@ from typing import Any
 from agent_bdd import build_runbook, read_manifest
 from tools.tool import _ManifestYaml, RunError, Toolset, _ToolsetLoader, _ToolsetRunner
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+for _cat in ("primitives", "utilities", "context_tools"):
+    _p = str(_REPO_ROOT / _cat)
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+from utilities.manifest_hook import manifest_gate_conf  # noqa: E402
+
 try:
     import yaml
 except ImportError:  # pragma: no cover
@@ -77,7 +87,24 @@ class _ToolsCli:
         else:
             body = toolset.front_matter
             print(body if plain else self._yaml.fenced(body))
+        self._confirm_manifest_ran(argv[0])
         return 0
+
+    def _confirm_manifest_ran(self, target: str) -> None:
+        """Emit one normal-mode confirmation that a manifest actually ran.
+
+        Runs for every manifest command, whether triggered by a hook touching
+        a governed asset or by a direct call like this one with no hook
+        involved - the hook is not the only path that runs a manifest.
+        Printed to stderr so it never pollutes the manifest body on stdout.
+        Also fires a real OS notification so the user sees it in the system
+        tray regardless of which chat window triggered the run.
+        """
+        if manifest_gate_conf.read_mode() not in ("normal", "verbose"):
+            return
+        print(f"[manifest] ran {target}", file=sys.stderr)
+        from utilities.manifest_hook.manifest_gate_conf import show_os_notification
+        show_os_notification("Manifest Gate", f"Manifest ran: {target}")
 
     def _run_main(self, argv: list[str]) -> int:
         if not argv:

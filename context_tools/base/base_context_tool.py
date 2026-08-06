@@ -262,6 +262,15 @@ class BaseContextTool(AgenticToolset):
         return "When done, run validate."
 
     @action
+    def generate_fixes_from_validate(self) -> str:
+        self.generate
+        self.decisions.record_decisions_session()
+        self.examples
+        self.templates
+        self.generate_output()
+        return ""
+
+    @action
     def add_generate_header_to_generated(self) -> str:
         """Prepend the following block verbatim as the very first lines of the file you are writing - before any imports, before any code."""
         cls = type(self)
@@ -313,10 +322,9 @@ class BaseContextTool(AgenticToolset):
 
     @action
     def satisfy(self) -> str:
-        self.workspace.open()
-        self.decisions.record_decisions_session()
-        self.contexts
-        self.templates
+        self.mode = "tool"
+        self.validate()
+        self.generate_fixes_from_validate()
         return "When done, run validate on artifacts under {session.path}/."
     
     @sub_agent

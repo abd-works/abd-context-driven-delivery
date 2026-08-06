@@ -1,120 +1,137 @@
-"""Python runnable story-file renderer (explore / specification).
+"""Python runnable story-file renderer (scenario fidelity - no tier suffix).
 
-Emits a mode-parameterized story function with GWT stubs for AI to fill:
+Declares a `typing.Protocol` with one method per distinct Given/When/Then
+clause, and a `create_{story}_story(h)` factory that builds one pytest test
+function per scenario, each calling only `h.<method>()` - no assertions, no
+tier mechanism here:
 
-    def create_submit_order_story(mode: str = "fake") -> None:
+    class SubmitOrderHelper(Protocol):
+        def given_a_cart_with_items(self) -> None: ...
+        def when_the_customer_submits_the_order(self) -> None: ...
+        def then_the_order_is_confirmed(self) -> None: ...
+
+    def create_submit_order_story(h: "SubmitOrderHelper") -> dict:
         def test_main_flow() -> None:
-            # given / when / then stubs -> helper -> ExampleFactory
-            ...
-        # register tests...
+            h.given_a_cart_with_items()
+            h.when_the_customer_submits_the_order()
+            h.then_the_order_is_confirmed()
+        return {"test_main_flow": test_main_flow}
 
-    if __name__ == "__main__" or collected as entry:
-        create_submit_order_story("fake")
+Every tier's `{story}_test_helper.{tier}.py` implements the Protocol and binds
+`create_submit_order_story(TierHelper())` at module scope so pytest discovers
+the returned test functions.
 """
 
 from __future__ import annotations
 
-import re
 from typing import List
 
 from context_tools.stories.code.code_story_map import to_pascal, to_snake
+from context_tools.stories.code.helper_interface import build_helper_seam
 from context_tools.stories.story_model.nodes import Story
 
 
-def render_story_file(
-    story: Story,
-    *,
-    relative_helper_module: str | None = None,
-    helper_class: str | None = None,
-) -> str:
+def render_story_file(story: Story) -> str:
     fn = f"create_{to_snake(story.name)}_story"
+    helper_iface = f"{to_pascal(story.name)}Helper"
     actor = (story.users[0] if story.users else "").strip()
-    domain = list(getattr(story, "domain_terms", None) or [])
-    evidence = list(getattr(story, "evidence", None) or [])
+    methods, method_for = build_helper_seam(story)
 
     lines: List[str] = []
     lines.append('"""')
-    lines.append(f"Story: {story.name} (tier-neutral).")
+    lines.append(f"Story: {story.name} (scenario fidelity - tier-neutral).")
     if actor:
         lines.append(f"Actor: {actor}")
-    if domain:
-        lines.append(f"Domain terms: {', '.join(domain)}")
-    if evidence:
-        lines.append(f"Evidence: {', '.join(evidence)}")
-    lines.append("Wired to ExampleFactory fakes - not a tier test.")
-    lines.append("Assert the public interface of I{Type} only.")
+    lines.append("Calls helper-protocol methods only - no assertions, no tier mechanism here.")
     lines.append(
-        f"Specs: {to_snake(story.name)}_spec.py (isolated); "
-        f"{to_snake(story.name)}_spec.{{tier}}.py (other tiers)"
+        f"Tiers: {to_snake(story.name)}_test_helper.{{tier}}.py implements {helper_iface}."
     )
     lines.append('"""')
     lines.append("")
     lines.append("from __future__ import annotations")
     lines.append("")
-    if relative_helper_module and helper_class:
-        lines.append(f"from {relative_helper_module} import {helper_class}")
-        lines.append("")
-        lines.append(f"helper = {helper_class}()")
-        lines.append("")
-    lines.append(f"def {fn}(mode: str = \"fake\") -> None:")
-    lines.append(
-        '    """Register scenarios. Story entry uses fake; tier specs pass isolated|production."""'
-    )
+    lines.append("from typing import Protocol")
     lines.append("")
+    lines.append("")
+    lines.append(f"class {helper_iface}(Protocol):")
+    if methods:
+        for method in methods:
+            lines.append(f"    def {method.name}(self) -> None: ...")
+    else:
+        lines.append("    ...")
+    lines.append("")
+    lines.append("")
+    lines.append(f'def {fn}(h: "{helper_iface}") -> dict:')
+    lines.append(
+        '    """Build one pytest test function per scenario. Returns {test_name: fn}'
+        " for the tier file to bind at module scope."
+    )
+    lines.append('    """')
+    lines.append("    tests = {}")
 
     scenarios = list(getattr(story, "scenarios", []) or [])
     if not scenarios:
         lines.append("    # TODO: add main-flow scenario")
-        lines.append("    pass")
     for scenario in scenarios:
-        lines.extend(_render_scenario(scenario, indent="    "))
+        lines.extend(_render_scenario(scenario, method_for))
 
-    lines.append("")
-    lines.append("# Story path - fake when this module is the pytest/entry module")
-    lines.append(f'{fn}("fake")')
+    lines.append("    return tests")
     lines.append("")
     return "\n".join(lines)
 
 
-def render_tier_spec_file(story: Story, *, tier: str) -> str:
+def render_test_helper_file(story: Story, *, tier: str) -> str:
+    """Write-once skeleton for `{story}_test_helper.{tier}.py`.
+
+    Scaffolds a class with `NotImplementedError` stub methods (code path) and
+    binds the story's generated tests at module scope so pytest discovers
+    them. The AI/human path fills each stub with that tier's real mechanism.
+    """
     fn = f"create_{to_snake(story.name)}_story"
-    module = f"{to_snake(story.name)}_story"
-    lines = [
+    module = to_snake(story.name) + "_story"
+    tier_class = f"{to_pascal(tier)}Helper"
+    methods, _ = build_helper_seam(story)
+
+    lines: List[str] = [
         '"""',
-        f"Tier: {tier} - same {story.name} story.",
-        "ExampleFactory builds types with injected deps (isolated) or real collaborators.",
+        f"Tier: {tier} - implements {to_pascal(story.name)}Helper for {story.name}.",
         '"""',
         "",
         "from __future__ import annotations",
         "",
         f"from {module} import {fn}",
         "",
-        f'{fn}("{tier}")',
         "",
+        f"class {tier_class}:",
     ]
+    for method in methods:
+        lines.append(f"    def {method.name}(self) -> None:")
+        lines.append(f'        raise NotImplementedError("not implemented: {method.name}")')
+        lines.append("")
+    if not methods:
+        lines.append("    pass")
+        lines.append("")
+    lines.append("")
+    lines.append(f"globals().update({fn}({tier_class}()))")
+    lines.append("")
     return "\n".join(lines)
 
 
-def _render_scenario(scenario, *, indent: str) -> List[str]:
+def _render_scenario(scenario, method_for) -> List[str]:
     slug = to_snake(scenario.name)
-    lines: List[str] = []
-    lines.append(f"{indent}def test_{slug}() -> None:")
-    lines.append(f'{indent}    """')
-    lines.append(f"{indent}    SCENARIO: {scenario.name}")
+    test_name = f"test_{slug}"
+    lines: List[str] = [f"    def {test_name}() -> None:"]
+    lines.append(f'        """SCENARIO: {scenario.name}"""')
     for clause in scenario.given:
-        lines.append(f"{indent}    GIVEN: {clause.text}")
+        method = method_for("given", clause.text)
+        lines.append(f"        h.{method.name}()  # GIVEN: {method.display_text}")
     for interaction in scenario.interactions:
         for clause in interaction.when:
-            lines.append(f"{indent}    WHEN: {clause.text}")
+            method = method_for("when", clause.text)
+            lines.append(f"        h.{method.name}()  # WHEN: {method.display_text}")
         for clause in interaction.then:
-            lines.append(f"{indent}    THEN: {clause.text}")
-    example_rows = list(getattr(scenario, "example_rows", None) or [])
-    if example_rows:
-        lines.append(f"{indent}    EXAMPLES: see ExampleFactory / markdown examples table")
-    lines.append(f'{indent}    """')
-    lines.append(f"{indent}    # given - helper.given_...(mode=mode) -> fake I{{Type}}")
-    lines.append(f"{indent}    # when - exercise public operations")
-    lines.append(f"{indent}    # then - assert public interface only (AI fills)")
-    lines.append(f"{indent}    assert True  # replace with public-seam assertion")
+            method = method_for("then", clause.text)
+            lines.append(f"        h.{method.name}()  # THEN: {method.display_text}")
+    lines.append(f"    tests[{test_name!r}] = {test_name}")
     lines.append("")
     return lines

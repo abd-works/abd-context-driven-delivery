@@ -24,6 +24,9 @@ tools
 actions 
 iterative story testing
 partition refactor
+repair, log, and examples evals
+catalog
+MERN Context tool
 
 -----
 
@@ -37,15 +40,14 @@ reviewing
 developing
 
 ----------
-repair, log, and examples evals
-catalog
-MERN Context tool
+hook notifications and debugging
+bring context to markdown over as an agentic tool with actions / tools
 
 backlog
 ----------------
 
-hook notifications and debugging
-bring context to markdown over as an agentic tool with actions / tools
+
+
 patterns and frameworks
   agent 
   --> action calls as a tool that returns agentic instruction with tool ochestration but at call time
@@ -57,7 +59,7 @@ grill expansion below
 
 
 
-
+agent builder
 stroy to ce algnment, story disc to detailed
 consolidate handoff and session logs
 session plan

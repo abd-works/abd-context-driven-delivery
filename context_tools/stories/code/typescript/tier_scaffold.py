@@ -1,11 +1,17 @@
-"""TypeScript tier scaffolder - `*_spec.ts` / `*_spec.{tier}.ts`."""
+"""TypeScript tier scaffolder - write-once `*_test_helper.{tier}.ts` per tier.
+
+Every tier is named explicitly, including the baseline (`domain`) - there is
+no implicit no-suffix tier file. The `{story}_story.ts` file (no suffix) is
+the scenario-fidelity GWT/requirements file, not a tier file, and is rendered
+separately (see `tree.py`).
+"""
 
 from __future__ import annotations
 
 from typing import Dict, Sequence
 
 from context_tools.stories.code.code_story_map import to_kebab, to_snake
-from context_tools.stories.code.typescript.story_file import render_tier_spec_file
+from context_tools.stories.code.typescript.story_file import render_test_helper_file
 from context_tools.stories.story_model.nodes import Epic, Story, SubEpic
 from context_tools.stories.story_model.story_map import StoryMap
 
@@ -43,9 +49,5 @@ def _scaffold_sub(
         story_folder = f"{folder}/{to_kebab(story.name)}"
         snake = to_snake(story.name)
         for tier in tiers:
-            path = (
-                f"{story_folder}/{snake}_spec.ts"
-                if tier == "isolated"
-                else f"{story_folder}/{snake}_spec.{tier}.ts"
-            )
-            tree[path] = render_tier_spec_file(story, tier=tier)
+            path = f"{story_folder}/{snake}_test_helper.{tier}.ts"
+            tree[path] = render_test_helper_file(story, tier=tier)

@@ -1,27 +1,25 @@
 /**
- * Story: {Story Verb-Noun} (tier-neutral).
- * Specs: {story_verb_noun}_spec.ts (isolated); {story_verb_noun}_spec.{tier}.ts
+ * Story: {Story Verb-Noun} (scenario fidelity - tier-neutral).
+ * Calls helper-interface methods only - no assertions, no tier mechanism here.
+ *
+ * Tiers: {story_verb_noun}_test_helper.{tier}.ts implements {StoryVerbNoun}Helper
+ * (tier ∈ domain | client | server | e2e | project-specific, e.g. api, db).
  */
 
 import { scenario, story } from "../../../story-test";
-import { EpicVerbNounHelper } from "../../{epic-verb-noun}-helper";
 
-const helper = new EpicVerbNounHelper();
+export interface {StoryVerbNoun}Helper {
+  givenPrecondition(): void | Promise<void>;
+  whenAction(): void | Promise<void>;
+  thenOutcome(): void | Promise<void>;
+}
 
-export function create{StoryVerbNoun}Story(mode: string): void {
+export function create{StoryVerbNoun}Story(h: {StoryVerbNoun}Helper): void {
   story("{Story Verb-Noun}", () => {
     scenario("{main-flow outcome}", ({ given, when, then }) => {
-      given("a domain object from the ExampleFactory", () => {
-        // helper.given…({ mode }) — AI fills
-      });
-      when("the Actor exercises a public operation", () => {
-        // AI fills
-      });
-      then("an observable outcome is visible on the public interface", () => {
-        // AI fills
-      });
+      given("{given step text}", () => h.givenPrecondition());
+      when("{when step text}", () => h.whenAction());
+      then("{then step text}", () => h.thenOutcome());
     });
   });
 }
-
-create{StoryVerbNoun}Story("fake");

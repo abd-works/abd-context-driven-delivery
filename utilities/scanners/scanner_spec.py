@@ -123,6 +123,30 @@ with description("Scanner.is_skipped_path"):
                 Scanner.is_skipped_path(Path("examples/md/story-map.md"))
             ).to(be_true)
 
+    with context("a path the caller named explicitly"):
+        with before.each:
+            self.temp_dir = tempfile.TemporaryDirectory()
+            self.root = Path(self.temp_dir.name)
+            self.fixture = self.root / "examples" / "widget" / "widget.py"
+            self.fixture.parent.mkdir(parents=True)
+            self.fixture.write_text("bad\n", encoding="utf-8")
+
+        with it("should scan it even though it sits under examples/"):
+            with Scanner.explicitly_requested([self.fixture]):
+                skipped = Scanner.is_skipped_path(self.fixture)
+            expect(skipped).to(be_false)
+
+        with it("should keep skipping its neighbours that were not named"):
+            neighbour = self.fixture.parent / "other.py"
+            with Scanner.explicitly_requested([self.fixture]):
+                skipped = Scanner.is_skipped_path(neighbour)
+            expect(skipped).to(be_true)
+
+        with it("should go back to skipping once the request is over"):
+            with Scanner.explicitly_requested([self.fixture]):
+                pass
+            expect(Scanner.is_skipped_path(self.fixture)).to(be_true)
+
 
 with description("ScannerRunner.violations_exit_code"):
     with context("a violations list that is empty"):
