@@ -110,3 +110,91 @@
 2026-08-06T01:44:57Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\manifest_hook\extension\setup.ps1
 2026-08-06T01:44:57Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\manifest_hook\extension\setup.ps1
 2026-08-06T01:44:58Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\manifest_hook\extension\setup.ps1
+2026-08-06T01:49:35Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo\agent-tools\4a717ca8-eb10-4caf-9400-a37e59ef9fc2.txt
+2026-08-06T01:49:58Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\story-ui\.gitignore
+2026-08-06T01:49:58Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\story-ui\.gitignore
+2026-08-06T01:58:28Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities
+2026-08-06T01:58:29Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\echo
+2026-08-06T01:58:36Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\echo\echo.py  - 3 line(s)
+2026-08-06T01:58:37Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\agent_skills
+2026-08-06T01:58:41Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\agent_skills\agent_skills.py  - 1 line(s)
+2026-08-06T01:59:18Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\.context
+2026-08-06T01:59:19Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities
+2026-08-06T01:59:24Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\echo\echo_spec.py  - 3 line(s)
+2026-08-06T01:59:25Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\partition\partition_spec.py  - 3 line(s)
+2026-08-06T01:59:57Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo
+2026-08-06T02:00:00Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\.context\sessions\context-setup\session.md
+2026-08-06T02:00:18Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-06T02:00:45Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo
+2026-08-06T02:00:45Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo
+2026-08-06T02:00:49Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-06T02:00:49Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo
+2026-08-06T02:02:53Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\__init__.py
+2026-08-06T02:02:53Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\__init__.py
+2026-08-06T02:03:25Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T02:03:26Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T02:04:02Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_index.py  - 3 line(s)
+2026-08-06T02:04:03Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_index.py  - 3 line(s)
+2026-08-06T02:04:39Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup_spec.py  - 3 line(s)
+2026-08-06T02:04:40Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup_spec.py  - 3 line(s)
+2026-08-06T02:05:25Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_index_spec.py  - 3 line(s)
+2026-08-06T02:05:26Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_index_spec.py  - 3 line(s)
+2026-08-06T02:06:52Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\.context\sessions\context-setup\session.md
+2026-08-06T02:06:52Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\.context\sessions\context-setup\session.md
+2026-08-06T02:06:53Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\.context\sessions\context-setup\session.md
+2026-08-06T02:06:53Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\.context\sessions\context-setup\session.md
+2026-08-06T02:07:32Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\partition\partition.py  - 3 line(s)
+2026-08-06T02:07:32Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-06T02:07:37Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\partition\partition.py  - 3 line(s)
+2026-08-06T02:08:09Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\stories.py  - 4 line(s)
+2026-08-06T02:08:28Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\base\base_context_tool.py  - 5 line(s)
+2026-08-06T02:08:33Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\base\base_context_tool.py  - 5 line(s)
+2026-08-06T02:08:33Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools
+2026-08-06T02:08:38Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\base\base_context_tool.py  - 5 line(s)
+2026-08-06T02:08:49Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\base
+2026-08-06T02:08:50Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\clean_engineering
+2026-08-06T02:08:56Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\base\base_context_tool.py  - 5 line(s)
+2026-08-06T02:09:01Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\base\base_context_tool.py  - 5 line(s)
+2026-08-06T02:11:01Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\semantic_indexer.py  - 3 line(s)
+2026-08-06T02:11:02Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\semantic_indexer.py  - 3 line(s)
+2026-08-06T02:11:12Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools
+2026-08-06T02:11:13Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools
+2026-08-06T02:11:17Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools
+2026-08-06T02:11:25Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T02:11:26Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T02:11:27Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T02:11:53Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T02:11:54Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T02:11:55Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:14:28Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:14:29Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:14:30Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:14:48Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:14:49Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:14:50Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:14:52Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:14:53Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:14:54Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:15:13Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:15:14Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:15:14Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:17:27Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:17:28Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:17:29Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:17:32Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:17:33Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:17:34Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:19:07Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-06T03:19:16Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\stories.py  - 4 line(s)
+2026-08-06T03:19:43Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:19:44Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:19:45Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:20:30Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:20:31Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:20:32Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:20:45Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:20:46Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:20:47Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup.py  - 3 line(s)
+2026-08-06T03:21:14Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup_spec.py  - 3 line(s)
+2026-08-06T03:21:15Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup_spec.py  - 3 line(s)
+2026-08-06T03:21:16Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup_spec.py  - 3 line(s)
