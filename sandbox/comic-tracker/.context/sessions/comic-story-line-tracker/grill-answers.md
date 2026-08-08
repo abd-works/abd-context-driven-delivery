@@ -216,15 +216,55 @@ Passes logged in `cdd-sketch.md`:
 | `ReadingPath.nextInSeries` | Always `Series.nextInSeries(issue)`; ignores events and `continuesIn`. |
 | Issue detail panel (UX) | Shows three affordances: `Next`, `Next in series`, `Continues in`; plus `Transfers available`. Continues-in transfers listed regardless of event state; event-owned transfers listed only when their event is enabled. |
 
-### Next-across-events — **open** (Q5, paused)
+### Next-across-events — Q5 answered (2026-08-08)
 
 **Frame.** The priority rule "event order trumps" is unambiguous when the
 pinned stop belongs to exactly one enabled event. When it belongs to two
-or more enabled events (e.g. Spider-Man in "Civil War" and "The
-Initiative" simultaneously), `ReadingPath.next` has to pick which event's
-readingOrder to follow. Q5 asked and paused when the user pivoted to the
-left-rail refinement (see next entry). Q5 will be re-posed after this
-entry is applied.
+or more (e.g. Spider-Man in both "Civil War" and "The Initiative"),
+`ReadingPath.next` has to pick which event's readingOrder to follow.
+
+**Options asked** (see git history for full framing):
+1. **(Recommended) Explicit "active event" pin.**
+2. Fixture-declared `Event.priority`.
+3. Alphabetical / by `Event.id`.
+4. `nextsByEvent` — all offered, no single `next`.
+5. Event trumps only when exactly one enabled; otherwise fall through.
+6. Other / I'll specify.
+
+**Recorded answer:** 1 — user response was "proceed with grill", which I
+took as "accept the recommended and keep going". If misread, roll back.
+
+**CE consequences applied to `cdd-sketch.md`.**
+
+| Concept | Change |
+|---|---|
+| `ReadingPath.activeEvent` | NEW: `Event \| None` — the reader's chosen crossover context. Sticky across pinned stops until they change it or its event is disabled. |
+| `ReadingPath.setActiveEvent(event)` | NEW operator. `event=None` clears. |
+| `ReadingPath.next` priority | Extended to 5 rules: (1) activeEvent trumps → (2) sole enabled event trumps → (3) `None` when ≥2 enabled events and activeEvent None → (4) `continuesIn` → (5) `nextInSeries`. |
+| `ReadingPath.ambiguousEvents` | NEW derived: enabled events on the pinned stop other than `activeEvent`. Non-empty triggers the UX prompt. |
+| Invariant | `activeEvent` auto-clears when `EventFilter` disables it. |
+| `PinController.pinViaTransfer(t)` | NEW operator. When `t.origin` is an Event, sets `activeEvent = t.origin` (Q5 stickiness). When `t.origin == 'continues_in'`, clears `activeEvent`. |
+| `PinController.pin(stop)` | Direct-click pin leaves `activeEvent` unchanged — the reader keeps their crossover context until they explicitly change it in the detail panel. |
+
+**UX consequences applied.** Detail panel gains a `Reading in: {event} [▾]`
+chip. The `[▾]` menu is `ambiguousEvents + [current] + "— none —"`. When
+the pinned stop has ≥2 enabled events and `activeEvent` is `None`, the
+`Next` action is disabled (dim) with a hint prompting the reader to pick
+one.
+
+**BDD consequences applied.** New scenarios under `a reading path — next`:
+- multi-event pinned stop with `activeEvent = None` → returns None,
+  reports `ambiguousEvents`.
+- multi-event pinned stop with `activeEvent` set → returns that event's
+  next in `readingOrder`.
+- disabling the active event → auto-clears `activeEvent`, falls through
+  to the remaining single-event rule.
+
+Plus new `a pin controller` scenarios covering `pinViaTransfer` for both
+Event and `continues_in` origins, and direct `pin(stop)` preserving
+`activeEvent`.
+
+**Passes logged:** `pass #next-across-events` in `cdd-sketch.md ## log`.
 
 ---
 

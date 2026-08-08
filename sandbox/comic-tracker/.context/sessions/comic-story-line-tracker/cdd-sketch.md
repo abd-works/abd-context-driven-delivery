@@ -97,8 +97,9 @@ flow:
         or a per-event colour?
       · #multi-event-stop — a stop belonging to two enabled events: two
         transfers drawn (one per bundle) or one merged transfer?
-      · #next-across-events — when the pinned stop is in ≥2 enabled events,
-        whose readingOrder provides `next`? (Q5 currently paused.)
+      · #next-across-events — RESOLVED (Q5, 2026-08-08): explicit activeEvent
+        pin, sticky via pinViaTransfer, cleared when its event is disabled;
+        UX prompts on ambiguity via ambiguousEvents.
       · #event-roster-parity — should Events follow the same search + drag +
         roster pattern that Series now uses? (Introduced by roster refinement.)
 
@@ -111,7 +112,6 @@ flow:
   open:
     - TODO decide transfer styling (whose colour, whose look)                    #transfer-style
     - TODO decide multi-event stop rendering (two lines vs merged)               #multi-event-stop
-    - TODO decide next-stop resolution when pinned stop is in ≥2 enabled events  #next-across-events
     - TODO decide whether events follow the search+drag+roster pattern           #event-roster-parity
     - TODO decide character-filter scope (search-facet only, or dim stops too?)   #character-filter-scope
     - TODO promote Character to first-class entity when metadata is needed        #character-not-first-class-yet
@@ -131,6 +131,7 @@ flow:
     - pass #next-vs-next-in-series     # two distinct operators (grill Q4)
     - pass #series-roster-model        # SeriesCatalog + Search + ActiveSeriesRoster
     - pass #character-as-string-tag    # characters live as list[str] on Series (and Issue)
+    - pass #next-across-events         # explicit activeEvent pin (Q5, option 1)
     - skip #single-point-rule          # dissolved by metaphor swap
 
 =========
@@ -738,30 +739,44 @@ ux:
     [ issue detail panel — transfer affordance ]     right side-panel
       ┌─────────────────────────────────────┐
       │ Spider-Man (2003) #3                │
-      │ In events: Civil War (on)           │
+      │ In events: Civil War, Initiative    │ ← all events the issue belongs to
+      │ Reading in:  Civil War       [ ▾ ]  │ ← activeEvent chip (Q5)
+      │                                     │    menu = ambiguousEvents:
+      │                                     │      · Civil War (current)
+      │                                     │      · Initiative
+      │                                     │      · — none —
       │ ─────────────────────────────────── │
-      │ Next  →  Iron Man #13               │ ← ReadingPath.next (event trumps)
-      │            (via Civil War)          │
+      │ Next  →  Iron Man #13               │ ← ReadingPath.next
+      │            (via Civil War)          │    (uses activeEvent when set)
       │                                     │
       │ Next in series →  Spider-Man #4     │ ← ReadingPath.nextInSeries
       │                                     │
       │ Continues in →  Avengers #22        │ ← issue.continuesIn (shown when set;
-      │                                     │    dimmed when overridden by event)
+      │                                     │    dimmed when activeEvent trumps)
       │ ─────────────────────────────────── │
       │ Transfers available:                │
       │   ↳ Iron Man #13   (Civil War)      │
+      │   ↳ New Warriors #1 (Initiative)    │
       │   ↳ Avengers #22   (continuesIn)    │
       │ ─────────────────────────────────── │
       │ [ Read on Marvel Unltd ]            │
       └─────────────────────────────────────┘
-      Stories (~4): Next · Next in Series · Continues In · Transfer to Stop
+      Stories (~5): Next · Next in Series · Continues In · Transfer to Stop
+                    · Set Reading Event
       Domain terms: next · next-in-series · continues-in · transfer · event
+                    · active event
       key:
-        → next  ·  ↳ cross-line transfer
+        → next  ·  ↳ cross-line transfer  ·  [ ▾ ] active-event selector
         on Next → pin the stop returned by ReadingPath.next
+          (when the pinned issue has ≥2 enabled events and activeEvent is None,
+          Next is DISABLED (dim) with a hint "pick a Reading in: event above")
         on Next in series → pin the stop returned by ReadingPath.nextInSeries
         on Continues in → pin the stop pointed to by issue.continuesIn
-        on ↳ transfer → pin target stop; camera pans
+        on ↳ transfer → PinController.pinViaTransfer(t) — also sets
+          activeEvent = t.origin when origin is an Event (Q5 stickiness)
+        on Reading in: [ ▾ ] → ReadingPath.setActiveEvent(chosen)
+          (option "— none —" clears activeEvent; Next falls through to
+          continuesIn / nextInSeries per priority rule)
         on [ Read on MU ] → marvelunlimited://comic/{id}
         event-owned transfers listed only when their event is enabled;
         continuesIn transfer listed regardless of event state
@@ -773,31 +788,60 @@ ce:
     # timeline/reading_path.py
     ReadingPath
       pinnedStop                              # Stop
+      activeEvent                             # Event | None — the reader's chosen
+                                              #   event context (Q5 rule: sticky)
       subwayMap                               # SubwayMap
-      eventFilter                             # EventFilter — needed for priority rule
-      next                                    # returns Stop | None — story continuation
+      eventFilter                             # EventFilter
+      setActiveEvent event                    # -> None; may be set to None to clear
+      next                                    # returns Stop | None
       nextInSeries                            # returns Stop | None — always issueNumber+1
       transfersAvailable                      # returns list[TransferConnection]
+      ambiguousEvents                         # returns list[Event]:
+                                              #   pinnedStop's events that are enabled
+                                              #   AND !=activeEvent — non-empty means
+                                              #   the UX must prompt for a pick
       -> Series.nextInSeries
       -> Event.nextInEvent
       -> SubwayMap.visibleTransfers
-      // Priority for `next` (grill Q4 external-data rule):
-      //   1. If pinnedStop.issue.events has ≥ 1 event AND EventFilter enables
-      //      it → next = that event's nextInEvent(pinnedStop.issue)
-      //      (event order trumps).
-      //      -- #next-across-events open: which event wins when ≥2 enabled.
-      //   2. Else if pinnedStop.issue.continuesIn is not None →
+      -> EventFilter.isEnabled
+      // Priority for `next` (Q4 external-data rule + Q5 active-event rule):
+      //   1. If activeEvent is not None AND EventFilter.isEnabled(activeEvent)
+      //      AND pinnedStop.issue in activeEvent.readingOrder
+      //      → next = activeEvent.nextInEvent(pinnedStop.issue)
+      //   2. Else if pinnedStop has exactly ONE enabled event `e`
+      //      → next = e.nextInEvent(pinnedStop.issue)  (and set activeEvent = e
+      //        as a side-effect of pinning, see PinController)
+      //   3. Else if pinnedStop has TWO OR MORE enabled events AND activeEvent
+      //      is None
+      //      → next = None; UX MUST prompt the reader to pick one via
+      //        `ambiguousEvents` (the detail panel shows a "Reading in: ▾"
+      //        chip whose menu is `ambiguousEvents`).
+      //   4. Else if pinnedStop.issue.continuesIn is not None →
       //      next = stopOf(continuesIn).
-      //   3. Else → next = stopOf(pinnedStop.series.nextInSeries(pinnedStop.issue)).
-      // Invariant: nextInSeries ignores events and continuesIn entirely.
+      //   5. Else → next = stopOf(pinnedStop.series.nextInSeries(pinnedStop.issue)).
+      // Invariant: nextInSeries ignores events, activeEvent, and continuesIn.
+      // Invariant: activeEvent auto-clears when EventFilter disables it.
       // Invariant: transfersAvailable is the subset of SubwayMap.visibleTransfers
       //            that has pinnedStop as fromStop.
 
       ----
      PinController
       current                                 # Stop
+      readingPath                             # ReadingPath
       pin stop                                # Stop -> None; updates current
+      pinViaTransfer transfer                 # Stop -> None; also sets
+                                              #   readingPath.activeEvent to
+                                              #   transfer.origin when origin is
+                                              #   an Event (else clears it)
       // UX seam: DetailPanelView subscribes to `current` changes.
+      // Q5 (active-event stickiness):
+      //   · pinViaTransfer where transfer.origin is Event `e`
+      //       → readingPath.setActiveEvent(e)
+      //   · pinViaTransfer where transfer.origin == 'continues_in'
+      //       → readingPath.setActiveEvent(None)
+      //   · pin (direct click on the map, no transfer)
+      //       → leaves activeEvent unchanged (reader keeps their crossover
+      //         context until they explicitly change it in the detail panel)
 
 ---
 bdd:
@@ -824,6 +868,19 @@ bdd:
           it should offer Avengers #22 (disabled event falls through to continuesIn)
         with the stop in Civil War (disabled) AND continuesIn = None
           it should offer Spider-Man (2003) #4 (falls all the way through)
+        with the stop in Civil War AND Initiative (both enabled) AND
+        activeEvent = None
+          it should offer None (Q5 rule 3 — ambiguous; UX must prompt)
+          it should report ambiguousEvents = [Civil War, Initiative]
+        with the stop in Civil War AND Initiative (both enabled) AND
+        activeEvent = Civil War
+          it should offer the next stop per Civil War.readingOrder
+          it should NOT consult Initiative.readingOrder for `next`
+        with the stop in Civil War AND Initiative (both enabled) AND
+        activeEvent = Civil War AND Civil War becomes disabled
+          it should auto-clear activeEvent to None (invariant)
+          it should fall through to Initiative-only if Initiative remains
+            the only enabled event on the stop
 
     a reading path — transfers offered on the pinned stop
       that has a pinned stop with continuesIn crossing to a different series
@@ -838,6 +895,13 @@ bdd:
       that has been asked to pin a stop reached via a transfer
         it should update `current` to the target stop
         it should trigger a detail-panel re-render for the target stop
+      that has been asked to pinViaTransfer(t) where t.origin is Civil War
+        it should set readingPath.activeEvent = Civil War (Q5 stickiness)
+      that has been asked to pinViaTransfer(t) where t.origin is 'continues_in'
+        it should clear readingPath.activeEvent to None
+      that has been asked to pin(stop) directly (no transfer, e.g. map click)
+        it should leave readingPath.activeEvent unchanged
+          (reader keeps their crossover context until they explicitly change it)
 =========
 
 =========
@@ -924,3 +988,4 @@ bdd:
 - spec / Subway Map / pass #next-vs-next-in-series # two distinct operators
 - spec / Subway Map / pass #series-roster-model    # search + drag + active roster
 - spec / Subway Map / pass #character-as-string-tag # not first-class yet
+- spec / Read & Transfer / pass #next-across-events # activeEvent pin (Q5)
