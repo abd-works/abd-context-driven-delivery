@@ -4,9 +4,12 @@
 
 - **date:** 2026-08-08
 - **path:** sandbox/comic-tracker
-- **goal:** Interactive Comic Story Line Tracker — segmented, constellation-style
-  timeline that makes it easy to start reading a comic from a crossover event and
-  flip across series when timelines intersect
+- **goal:** Interactive Comic Story Line Tracker — subway-map timeline where each
+  series is one unbroken line with issues as stops, and cross-series continuations
+  are transfer lines bundled into per-event toggles. Makes it easy to start reading
+  from any stop and transfer across lines at the crossovers.
+  (Metaphor swap 2026-08-08: was segmented / constellation-style; see
+  `grill-answers.md` § "Visual metaphor swap".)
 - **fidelities:** spec (CDD) — child stage keys: ux=mockup, ce=code, bdd=behavior
 - **contexts (in play):** ux, clean_engineering, bdd
   (stories / ddd omitted this cycle — user scoped grill+sketch to CE + BDD + UX)

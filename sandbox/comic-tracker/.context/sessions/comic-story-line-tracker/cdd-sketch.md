@@ -3,19 +3,25 @@ scope: Increment 1 — Interactive Comic Story Line Tracker (single visual)
 
 # Sources / context
 
-- User ask (prior chat turn, verbatim intent):
+- User ask (prior chat turns, verbatim intent):
   - "Build an interactive comic story line tracker"
-  - A single visual: **segmented comic-book timeline**. A segment is a continuous
-    run of comics in one series that **starts and ends where it intersects with
-    other comic-book timelines** (crossovers).
-  - Events look like **constellations** — segments become single or double comic
-    points where the run is short.
-  - "Easy to start reading a comic based on a storyline and **flip over to the
-    other comic book**" — the reader jumps between series at the crossover.
-  - **Filters:** comic series, event, timeline era.
-  - Each point is a comic issue — **hover expands** to show series/issue, plot
-    synopsis, characters, and **hyperlinks to Marvel Unlimited comic in iOS
-    when possible**.
+  - **Subway-map metaphor** (redirect 2026-08-08):
+    - "a series is an unbroken line of comics visualized kind of like a subway
+      line with stops but the stops are comics"
+    - "a comic continues on another comic — a line similar to main series line
+      connects them across the series"
+    - "an event would have a lot of these lines crossing the series, so you
+      could probably filter the event lines on and off as a function"
+  - Original intent still in force:
+    - "easy to start reading a comic based on a storyline and flip over to the
+      other comic book"
+    - Filters: comic series, event, timeline era.
+    - Each point is a comic — hover expands to show series/issue, plot synopsis,
+      characters, and "hyperlinks to marvel u comic in iOS if possible".
+- Superseded (kept for traceability, not in current design):
+  - Constellation-of-segments metaphor. Segment concept dissolved: series lines
+    are now unbroken. See `grill-answers.md` § "Visual metaphor swap" for the
+    decision record.
 - Framework references:
   - `context_tools/cdd/cdd.md` (stage table, sketch rules)
   - `context_tools/cdd/templates/cdd-sketch.md` (this scaffold)
@@ -29,34 +35,52 @@ flow:
   recommend: more-same-stage
   next: spec (stay — resolve open blockers, then proceed to engineer)
   note: |
-    Data source now locked (curated fixture JSON) — grill Q2 answered. Three
-    cross-lens blockers remain before views fully agree:
-      1. iOS deep-link scheme for Marvel Unlimited is not verified; UX
-         "Read on Marvel Unlimited" affordance and CE `MarvelUnlimitedLink`
-         factory both depend on it.
-      2. Segment boundary rule when a series has only one event-issue in the
-         visible filter set (single-point "constellation" vs. absorb into
-         neighbour) — UX drawing rule, CE `Segment` invariant, and BDD "renders
-         a constellation of one issue" all wait on this decision.
-      3. Filter composition rule (AND across facets, OR within facet is the
-         working default) — CE `FilterSet.apply` invariant and BDD filter
-         scenarios both branch on it.
-    Do not recommend proceed to engineer until #1–#3 close.
+    Metaphor swapped from constellation-of-segments to subway map. Lens blocks
+    rebuilt around SeriesLine (unbroken lane), Stop (issue), TransferConnection
+    (cross-series continuation styled like a series line), and Event (a named
+    bundle of TransferConnections that can be toggled on/off).
+
+    Old blockers reconciled:
+      · #single-point-rule — DISSOLVED. There are no segments to leave a stop
+        stranded on; every stop lives on its series line.
+      · #filter-compose — REFRAMED. Event filter is now per-event on/off toggle
+        (multi-select bundle visibility), not a query filter over issues.
+        Series still filters lanes; era still filters the time window.
+        Composition question is much smaller but still worth confirming.
+
+    Fresh cross-lens blockers introduced by the new metaphor:
+      1. TransferConnection topology inside one event with N stops across M
+         series — all pairs, chained by publicationDate, or hub-and-spoke
+         through a primary issue?
+      2. TransferConnection styling — "line similar to main series line" is a
+         range: same colour as source lane, same colour as target lane, blended,
+         or a per-event colour?
+      3. Multi-event membership — when a stop belongs to two enabled events,
+         are two transfers drawn (one per bundle), or one merged transfer?
+
+    Carried blockers:
+      · #mu-deeplink — verify Marvel Unlimited iOS URL scheme + fallback.
+
+    Do not recommend proceed to engineer until the three fresh blockers plus
+    #mu-deeplink close.
   open:
-    - TODO verify Marvel Unlimited iOS URL scheme + fallback  #mu-deeplink
-    - TODO define single-issue-segment rule                   #single-point-rule
-    - TODO decide filter composition rule (AND across facets, OR within facet?) #filter-compose
-    - doing sketch UX / CE / BDD for Theme 1                  #sketch-theme-1
-    - doing sketch UX / CE / BDD for Theme 2                  #sketch-theme-2
-    - doing sketch UX / CE / BDD for Theme 3                  #sketch-theme-3
+    - TODO decide transfer topology inside an event                    #transfer-topology
+    - TODO decide transfer styling (whose colour, whose look)          #transfer-style
+    - TODO decide multi-event stop rendering (two lines vs merged)     #multi-event-stop
+    - TODO verify Marvel Unlimited iOS URL scheme + fallback           #mu-deeplink
+    - TODO confirm filter composition (series × era = AND; events multi-toggle) #filter-compose
+    - doing sketch UX / CE / BDD for Theme 1                           #sketch-theme-1
+    - doing sketch UX / CE / BDD for Theme 2                           #sketch-theme-2
+    - doing sketch UX / CE / BDD for Theme 3                           #sketch-theme-3
   done:
     - pass #fidelity-choice          # spec picked so bdd lens is available
-    - pass #lens-selection            # ce + bdd + ux (per user); stories/ddd omitted this cycle
+    - pass #lens-selection            # ce + bdd + ux (user-confirmed 2026-08-08)
     - pass #scope-increment-1         # single visual + hover card + filters
-    - pass #data-source               # curated fixture JSON (grill Q2)
+    - pass #data-source               # curated fixture JSON (grill Q2, 2026-08-08)
+    - skip #single-point-rule         # dissolved by metaphor swap (2026-08-08)
 
 =========
-theme: Timeline Constellation  (user-goal — "see the map, filter it, orient")
+theme: Subway Map  (user-goal — "see the network, toggle events, filter lines")
 ---------
 ux:
     Fidelity: mockup
@@ -65,16 +89,17 @@ ux:
       SITE MAP
     ═══════════════════════════════════════════════════════════
 
-    timeline constellation
-      ├─ [top nav]  filter rail toggle ──→ timeline constellation (filters shown)
-      ├─ [action]   hover issue point ───→ issue hover card (overlay)
-      ├─ [action]   click issue point ───→ issue detail panel (pinned)
-      └─ [action]   click crossover edge → event focus mode (dim non-event)
+    subway map
+      ├─ [top nav]  filter rail toggle ──→ subway map (filters shown)
+      ├─ [action]   hover stop ──────────→ stop hover card (overlay)
+      ├─ [action]   click stop ──────────→ issue detail panel (pinned)
+      ├─ [action]   toggle event checkbox → subway map (event bundle on/off)
+      └─ [action]   click transfer line ─→ issue detail panel (bridged stop)
 
     issue detail panel
       ├─ [action]   read on marvel unlimited → external (marvelunlimited://…)
-      ├─ [action]   next in this series ─────→ timeline constellation (new pin)
-      └─ [action]   flip to other series ────→ timeline constellation (new pin)
+      ├─ [action]   next stop on this line ──→ subway map (new pin)
+      └─ [action]   transfer to other line ──→ subway map (new pin, camera pans)
 
     Nav tags: [top nav] · [action] · [system]
 
@@ -82,72 +107,60 @@ ux:
       SCREENS
     ═══════════════════════════════════════════════════════════
 
-    [ timeline constellation ]                       filter rail + canvas
+    [ subway map ]                                    filter rail + canvas
       ┌────────────────┬────────────────────────────────────────┐
       │ Series         │  1963 ····· 1984 ····· 2006 ····· 2024 │  era ruler
-      │ [x] Amazing SM │  ─●───●───●══●══●───●───●──●─●─────    │  ← series lane
-      │ [x] Iron Man   │       ●───●══●──●═════●──●───●         │
-      │ [x] X-Men      │        ●══●──●───●══●═══●─●───●        │
-      │ [ ] Cap        │  (dim if unchecked)                    │
+      │ [x] Amazing SM │  ●━━●━━●━━●━━●━━●━━●━━●━━●━━●━━●━━●    │  ← series line
+      │ [x] Iron Man   │        ●━━●━━●━━●━━●━━●━━●━━●━━●━━●    │
+      │ [x] X-Men      │      ●━━●━━●━━●━━●━━●━━●━━●━━●━━●━━●   │
+      │ [ ] Cap        │  (dim if unchecked — line + stops hidden)      │
       │ ──────────     │                                        │
-      │ Event          │  crossover edges connect points ═══    │
-      │ [ Civil War ▾] │  across lanes (constellation lines)    │
+      │ Events         │  transfers drawn only for enabled events:      │
+      │ [x] Secret Wars│      ●━━●━━●━━●                                │
+      │ [x] Civil War  │           ┃                                    │
+      │ [ ] House of M │      ●━━●━━●━━●                                │
+      │ [x] AvX        │           ┃                                    │
+      │                │      ●━━●━━●━━●   ← transfer line between lanes│
       │ Era            │                                        │
-      │ (○) All        │  legend: ● issue · ══ segment          │
-      │ ( ) Bronze     │          ─── connecting event edge     │
-      │ (●) Modern     │          ○  single-point constellation │
+      │ (○) All        │  legend: ● stop · ━━ series line       │
+      │ ( ) Bronze     │          ┃ transfer line (per-event colour, T4) │
+      │ (●) Modern     │                                        │
       │                │                                        │
       │ [ Reset ]      │                                        │
       └────────────────┴────────────────────────────────────────┘
-      Stories (~4): Filter Series · Filter Event · Filter Era · Reset Filters
-      Domain terms: series · issue · segment · crossover event · era
+      Stories (~4): Filter Series · Toggle Event · Filter Era · Reset Filters
+      Domain terms: series line · stop · transfer connection · event bundle · era
       key:
-        [x]/[ ] check · (○)/(●) radio · [▾] dropdown · [ btn ] button
-        ● issue point · ══ segment line · ─── event edge · ›sel‹ selected
-        on hover ● → issue hover card
+        [x]/[ ] check · (○)/(●) radio · [ btn ] button
+        ● stop · ━━ series line · ┃ transfer (styled per event — #transfer-style)
+        on hover ● → stop hover card
         on click ● → issue detail panel (pinned)
-        on click ─── → event focus mode (non-event issues dimmed)
+        on click ┃ → issue detail panel for the target stop
+        on [x] event → draw that event's transfer bundle
+        on [ ] event → hide that event's transfer bundle
+        series lines are always unbroken along their lane (no segmentation)
 
-    [ issue hover card ]                             overlay tooltip
+    [ stop hover card ]                              overlay tooltip
       ┌─────────────────────────────┐
       │ Amazing Spider-Man #533     │
-      │ 2006-08 · Civil War         │
+      │ 2006-08                     │
+      │ In events: Civil War        │  ← empty when no event membership
       │ ─────────────────────────── │
       │ Synopsis: 2–3 line teaser…  │
       │ Characters: Spider-Man,     │
       │             Iron Man, MJ    │
       │ [ Read on Marvel Unltd ]    │
       └─────────────────────────────┘
-      Stories (~2): Hover Issue · Deep-Link to Marvel Unlimited
-      Domain terms: issue · synopsis · character · deep link
+      Stories (~2): Hover Stop · Deep-Link to Marvel Unlimited
+      Domain terms: stop · synopsis · character · deep link
       key:
         [ btn ] button
         on [ Read on Marvel Unltd ] → marvelunlimited://comic/{id}
           fallback → https://www.marvel.com/comics/issue/{id}
         overlay auto-dismisses on pointer-leave
 
-    [ issue detail panel ]                           right side-panel
-      ┌─────────────────────────────┐
-      │ Amazing Spider-Man #533     │
-      │ Civil War · 2006-08         │
-      │ ─────────────────────────── │
-      │ Full synopsis (paragraph).  │
-      │ Characters: · · ·           │
-      │ Segment: ASM #529–#538      │
-      │ Event bridges:              │
-      │   ↳ Iron Man #13 (Civil W.) │
-      │   ↳ Cap #22 (Civil War)     │
-      │ [ Read on MU ] [ Pin next ] │
-      └─────────────────────────────┘
-      Stories (~3): Pin Issue · Flip to Bridged Series · Continue in Series
-      Domain terms: segment · event bridge · pin
-      key:
-        [ btn ] button · ↳ bridge link
-        on [ Read on MU ] → marvelunlimited://comic/{id} (fallback https)
-        on ↳ bridge → timeline constellation focuses bridged issue
-
-    // stubbed brand notes deferred to specification pass (dark comic-panel palette,
-    //  Kirby-dot texture, Ben-Day accents) — not drawn at mockup fidelity.
+    // stubbed brand notes deferred to specification pass (dark palette, subway
+    //  map typography, event bundles as coloured routes) — not drawn here.
 
 ---
 ce:
@@ -158,25 +171,29 @@ ce:
     comic-tracker/
       catalog                                # issues, series, characters, events
         issue                                # leaf domain entity
-        series                               # ordered set of issues
+        series                               # ordered set of issues (unbroken)
         character                            # cross-cutting collaborator
-        event -> issue                       # crossover event = set of issues
+        event -> issue                       # named bundle of transfers
         fixture_issue_repository -> issue, series, event, character
                                              # reads catalog/fixtures/marvel-canon.json
-                                             # (grill Q2: #data-source = fixture JSON)
-      timeline                               # constellation model
-        segment -> catalog/series, catalog/event   # continuous run between events
-        constellation -> segment, catalog/event    # segments + event edges
-        era                                        # bucketing rule for the ruler
+      timeline                               # subway-map model
+        series_line -> catalog/series        # unbroken lane for one series
+        stop -> catalog/issue                # a single issue's position on a line
+        transfer_connection -> catalog/issue, catalog/event
+                                             # continuation between two stops
+                                             # on different series lines
+        transfer_bundle -> catalog/event, transfer_connection
+                                             # all transfers owned by one event
+        subway_map -> series_line, transfer_bundle
+        era                                  # bucketing rule for the ruler
       filter                                       # facet composition
-        facet                                      # abstract facet
-        series_facet -> facet
-        event_facet -> facet
-        era_facet -> facet
+        series_filter                              # visible series set (AND-of-checks)
+        event_filter                               # enabled events (multi-toggle)
+        era_filter                                 # time window
       view                                         # rendering-facing seam
-        timeline_view -> timeline, filter
-        hover_card_view -> catalog/issue
-        detail_panel_view -> timeline/constellation
+        subway_map_view -> timeline/subway_map, filter
+        stop_hover_view -> catalog/issue
+        detail_panel_view -> timeline/subway_map
       links                                        # outbound URLs
         marvel_unlimited_link -> catalog/issue
 
@@ -192,7 +209,7 @@ ce:
       era                                     # Era
       synopsis
       characters                              # list[Character]
-      events                                  # list[Event]  (0..N)
+      events                                  # list[Event]  (0..N — 0 is fine)
       marvelUnlimitedId
       -> series.appendIssue                   # invariant: series ordering by publicationDate
       // Invariant: (series, issueNumber) unique.
@@ -200,9 +217,12 @@ ce:
      Series
       id
       title
-      issues                                  # composition list[Issue]
+      issues                                  # composition list[Issue] — ordered by pubDate
       appendIssue issue
+      firstIssue                              # Issue
+      lastIssue                               # Issue
       issuesBetween fromDate toDate           # returns ordered list[Issue]
+      // Invariant: issues form ONE unbroken sequence — no segmentation.
       ----
      Event
       id
@@ -210,6 +230,7 @@ ce:
       era
       participatingIssues                     # list[Issue] — 2+ across ≥2 Series
       // Invariant: participatingIssues covers ≥ 2 distinct Series.
+      // Invariant: an Issue may appear in 0..N Events (multi-membership OK).
       ----
      Character
       name
@@ -217,73 +238,116 @@ ce:
 
       ====
 
-    # timeline/segment.py — cohesive family
-    Segment
+    # timeline/series_line.py — cohesive family
+    SeriesLine
       series                                  # Series
-      startIssue                              # Issue  (event-participating or first-in-series)
-      endIssue                                # Issue  (event-participating or last-in-series)
-      issues                                  # list[Issue]  (start..end inclusive by pubDate)
-      bridgingEvents                          # list[Event]  (events at start/end boundaries)
-      isSinglePoint                           # bool  (len(issues) == 1) — #single-point-rule
-      isDoublePoint                           # bool  (len(issues) == 2) — "constellation" cluster
-      -> Series.issuesBetween
-      // Invariant: startIssue.publicationDate <= endIssue.publicationDate.
-      // Invariant: boundaries are either series ends OR members of ≥1 Event
-      //            that also touches another visible Series (given filter set).
+      stops                                   # list[Stop] — one per issue, in pubDate order
+      xRange                                  # (firstDate, lastDate) — pixels along ruler
+      yLane                                   # lane y-position
+      -> Series.issues                        # source of stops
+      // Invariant: len(stops) == len(series.issues).
+      // Invariant: the line drawn between stops is CONTINUOUS end-to-end
+      //            (no boundary breaks, ever).
 
       ----
-     Constellation
-      segments                                # list[Segment]
-      eventEdges                              # list[EventEdge]
-      buildFrom seriesSet eventSet filterSet  # factory-shaped operation
-      -> Segment(…)
-      -> EventEdge(…)
-      // Invariant: no Segment overlaps another Segment on the same Series.
-
-      ----
-     EventEdge
-      event                                   # Event
-      issuePair                               # (Issue, Issue) — different Series
-      // Rendering-facing: one edge per unordered pair of participating issues.
-
-      ====
-
-    # filter/facet.py
-    Facet
-      key                                     # 'series' | 'event' | 'era'
-      selectedValues                          # set[Any]
-      matches issue                           # bool
-      ----
-     FilterSet
-      facets                                  # list[Facet]
-      apply issues                            # returns filtered list
-      -> Facet.matches
-      // Open #filter-compose: AND across facets is the working default;
-      // OR within a facet is the working default. Confirm during grill.
-
-      ====
-
-    # view/timeline_view.py
-    TimelineView
-      constellation                           # Constellation
-      xScaleFor date                          # returns px along ruler
-      yLaneFor series                         # returns px lane y
-      renderSegment segment                   # draw thick line
-      renderPoint issue                       # draw circle
-      renderEventEdge edge                    # draw curve between two points
-      renderConstellationOfOne segment        # #single-point-rule branch
-      ----
-     HoverCardView
+     Stop
       issue                                   # Issue
+      seriesLine                              # SeriesLine
+      xPosition                               # px along ruler
+      yPosition                               # px on lane (= seriesLine.yLane)
+      isTransferHub                           # bool — participates in ≥1 enabled event
+      -> SeriesLine
+      // Invariant: xPosition derived from issue.publicationDate + ruler scale.
+
+      ====
+
+    # timeline/transfer_connection.py — cohesive family
+    TransferConnection
+      fromStop                                # Stop  (on Series A)
+      toStop                                  # Stop  (on Series B, B != A)
+      event                                   # Event  (owning bundle)
+      // Invariant: fromStop.seriesLine.series != toStop.seriesLine.series.
+      // Invariant: both stops' issues are members of `event`.
+      // Rendering seam: draw as a line "similar to a series line" —
+      //                 styling decided by #transfer-style (see flow.open).
+
+      ----
+     TransferBundle
+      event                                   # Event
+      connections                             # list[TransferConnection]
+      enabled                                 # bool — controlled by EventFilter
+      buildFrom event participatingStops      # factory operation
+      // Open #transfer-topology: how `connections` is built from
+      //                          participatingStops (all-pairs vs. chained
+      //                          by pubDate vs. hub-and-spoke).
+      // Open #multi-event-stop: a Stop that appears in two enabled
+      //                         bundles carries two TransferConnections
+      //                         through it (default) or a merged one.
+
+      ====
+
+    # timeline/subway_map.py
+    SubwayMap
+      seriesLines                             # list[SeriesLine]
+      transferBundles                         # list[TransferBundle]  (one per Event)
+      buildFrom seriesSet eventSet            # factory-shaped operation
+      -> SeriesLine(…)
+      -> TransferBundle.buildFrom(…)
+      visibleTransfers                        # returns list[TransferConnection]
+                                              # for bundles where enabled == True
+      // Invariant: every SeriesLine renders regardless of event filters —
+      //            events control transfers only, never lanes.
+
+      ====
+
+    # filter/*.py
+    SeriesFilter
+      selectedSeries                          # set[Series]
+      hides seriesLine                        # bool
+      // Working default: unchecked series hide their entire SeriesLine.
+
+      ----
+     EventFilter
+      enabledEvents                           # set[Event]  (multi-toggle)
+      isEnabled event                         # bool
+      -> TransferBundle.enabled (setter side effect)
+      // Open #filter-compose: series + era compose AND for lane visibility;
+      //                       events are independent — they gate transfer
+      //                       bundles only, not stops or lanes.
+
+      ----
+     EraFilter
+      window                                  # (fromDate, toDate) | 'all'
+      inWindow date                           # bool
+
+      ====
+
+    # view/*.py
+    SubwayMapView
+      subwayMap                               # SubwayMap
+      filters                                 # (SeriesFilter, EventFilter, EraFilter)
+      xScaleFor date                          # px along ruler
+      yLaneFor series                         # px lane y
+      renderSeriesLine seriesLine             # draw unbroken line + all stops
+      renderStop stop
+      renderTransferConnection connection     # per-event styling (#transfer-style)
+      -> SubwayMap.visibleTransfers
+      -> SeriesFilter.hides
+      -> EraFilter.inWindow
+
+      ----
+     StopHoverView
+      stop                                    # Stop
       render                                  # returns overlay DOM
-      -> MarvelUnlimitedLink.for(issue)
+      -> MarvelUnlimitedLink.for(stop.issue)
+
       ----
      DetailPanelView
-      issue                                   # Issue (pinned)
-      constellation                           # Constellation (for bridge lookups)
+      stop                                    # Stop (pinned)
+      subwayMap                               # SubwayMap (for transfer lookups)
       render                                  # returns panel DOM
-      -> Constellation.bridgesFor(issue)      # returns list[(Event, Issue)] on other Series
-      -> MarvelUnlimitedLink.for(issue)
+      -> SubwayMap.visibleTransfers           # only within enabled bundles
+      -> MarvelUnlimitedLink.for(stop.issue)
 
       ====
 
@@ -300,82 +364,114 @@ ce:
     FixtureIssueRepository
       fixturePath                             # 'catalog/fixtures/marvel-canon.json'
       loadAll                                 # returns (list[Series], list[Event], list[Character])
-      allSeries                               # list[Series]
-      allEvents                               # list[Event]
-      allEras                                 # list[Era]  — enumerated at load
+      allSeries
+      allEvents
+      allEras                                 # derived from loaded Issues
       -> loadAll
-      // Invariant: allEras is derived from loaded Issues, not hardcoded.
-      // No async / HTTP surface; deterministic across BDD runs.
-      // Grill Q2: #data-source = curated fixture JSON. No port abstraction
-      //           this cycle — API impl deferred until an explicit ask.
+      // Grill Q2: #data-source = curated fixture JSON.
 
     ----
     # Notes for spec/code phase (not drawn here):
-    //  · No formal I{Type} names yet — modules fidelity would keep it plain.
-    //    Model fidelity would introduce IIssue / ISeries / … at generate time.
-    //  · Example factory family lives in a sibling `*_example_factory.py`
-    //    (fake / isolated / production modes) per clean_engineering sketch rule.
-    //    Fake bundle reads directly from the same marvel-canon.json fixture.
+    //  · No formal I{Type} names yet — model fidelity would introduce them
+    //    at generate time.
+    //  · Example factory family lives in a sibling `*_example_factory.py`;
+    //    Fake bundle reads directly from marvel-canon.json.
+    //  · No Segment / Constellation / EventEdge concepts — dissolved by the
+    //    metaphor swap. Series lines are unbroken; events own transfer bundles.
 
 ---
-bdd:                                          # explore+ only — spec fidelity uses `behavior`
+bdd:                                          # spec fidelity uses `behavior`
     Fidelity: behavior
 
-    ## Timeline Constellation — describe / it
+    ## Subway Map — describe / it
 
-    a timeline constellation
-      that has been built from a FixtureIssueRepository (marvel-canon.json)
-        it should place one lane per visible series
-        it should place one point per issue on its series lane
-        it should draw a segment line between each boundary pair on the same series
-        it should draw an event edge between each participating issue pair
-          across different series lanes
-      that has a series with exactly one event-participating issue in the visible set
-        with #single-point-rule = "constellation of one" (working default)
-          it should render that issue as a stand-alone point (no segment line)
-        with #single-point-rule = "absorb into neighbour" (alternative, deferred)
-          it should extend the previous segment to include that issue
+    a series line
+      that has been built from the fixture (marvel-canon.json)
+        it should place one stop per issue in publicationDate order
+        it should draw a continuous line from firstIssue to lastIssue
+        it should not break the line at any stop, ever
+      that has a series with only one issue in the visible era window
+        it should still draw a line — degenerate to a single stop with no
+          visible edge — but the line concept remains unbroken
 
-    a filter set
-      that has one facet selected (Series = "Amazing Spider-Man")
-        it should include every issue on that series
-        it should exclude issues on all other series
-      that has two facets selected (Series = "Amazing Spider-Man"; Event = "Civil War")
-        with #filter-compose = "AND across facets, OR within facet" (working default)
-          it should include only ASM issues that also participate in Civil War
-        with #filter-compose = "OR across facets" (alternative, deferred)
-          it should include ASM issues plus all Civil War issues
-      that has era = "Modern"
-        it should exclude issues whose publicationDate is outside 1998..present
+    a subway map
+      that has been built from the fixture with two enabled events
+        it should render one series line per visible series
+        it should render one transfer bundle per enabled event
+        it should not render any transfer for a disabled event
+      that has a stop belonging to two enabled events (multi-membership)
+        with #multi-event-stop = "one transfer per bundle" (working default)
+          it should render N transfer connections through that stop,
+            one per bundle it belongs to
+        with #multi-event-stop = "merged transfer" (alternative)
+          it should render one connection styled to indicate two events
+
+    a transfer connection
+      that connects a stop on Series A to a stop on Series B (A != B) via an
+      enabled event
+        it should draw a line styled similarly to a series line
+          (styling per #transfer-style)
+        it should carry the event's identity (colour / label / route)
+      that connects to a stop on a series whose SeriesFilter check is off
+        it should not render (the target lane is hidden)
+      that belongs to a disabled event
+        it should not render
+
+    a transfer bundle
+      that has been asked to build from an event with N participating stops
+        with #transfer-topology = "chained by pubDate" (working default)
+          it should produce N-1 connections between consecutive stops
+        with #transfer-topology = "all pairs"
+          it should produce N*(N-1)/2 connections
+        with #transfer-topology = "hub-and-spoke via primary issue"
+          it should produce N-1 connections from the primary stop to each other
+
+    a series filter
+      that has "Amazing Spider-Man" checked and "Iron Man" unchecked
+        it should keep the ASM line visible
+        it should hide the Iron Man line and all of its stops
+        it should hide any transfer connection endpointed on Iron Man
+
+    an era filter
+      that has era = "Modern" (1998..present)
+        it should crop each series line to stops with publicationDate in window
+        it should hide transfers whose either endpoint falls outside the window
+
+    an event filter
+      that has "Civil War" enabled and "House of M" disabled
+        it should keep Civil War's transfer bundle visible
+        it should hide House of M's transfer bundle
+        it should leave all series lines and stops rendered regardless
 =========
 
 =========
-theme: Read & Flip  (user-goal — "start reading a storyline; hop across series")
+theme: Read & Transfer  (user-goal — "start reading; hop to a bridged series")
 ---------
 ux:
     Fidelity: mockup
 
-    [ issue detail panel — flip affordance ]         right side-panel
+    [ issue detail panel — transfer affordance ]     right side-panel
       ┌─────────────────────────────┐
-      │ Civil War · 2006-08         │
       │ Amazing Spider-Man #533     │
+      │ 2006-08 · Civil War         │
       │ ─────────────────────────── │
-      │ Continue in this series:    │
+      │ Continue on this line:      │
       │   → ASM #534 (Aug 2006)     │
-      │ Flip to other series in     │
-      │ Civil War:                  │
+      │ Transfer via Civil War:     │
       │   ↳ Iron Man #13 (Aug 06)   │
       │   ↳ Cap #22   (Aug 06)      │
       │   ↳ X-Men #29 (Aug 06)      │
+      │ (Civil War toggle: [x] on)  │  ← reflects EventFilter state
       │ [ Read on Marvel Unltd ]    │
       └─────────────────────────────┘
-      Stories (~3): Continue in Series · Flip to Bridged Series · Deep-Link
-      Domain terms: continue · flip · bridge · deep link
+      Stories (~3): Continue on Line · Transfer via Event · Deep-Link
+      Domain terms: continue · transfer · event · deep link
       key:
-        → next-in-series · ↳ cross-series bridge
-        on → next → pin next issue on same lane
-        on ↳ bridge → pin bridged issue on other lane, camera pans to it
+        → next-stop-on-same-line · ↳ cross-line transfer
+        on → next → pin next stop on same lane
+        on ↳ transfer → pin target stop on other lane; camera pans
         on [ Read on MU ] → marvelunlimited://comic/{id}
+        transfers listed only for events currently enabled in the filter rail
 
 ---
 ce:
@@ -383,19 +479,20 @@ ce:
 
     # timeline/reading_path.py
     ReadingPath
-      pinnedIssue                             # Issue
-      constellation                           # Constellation
-      nextInSameSeries                        # returns Issue | None
-      flipsAvailable                          # returns list[(Event, Issue)]
-      -> Constellation.bridgesFor(pinnedIssue)
+      pinnedStop                              # Stop
+      subwayMap                               # SubwayMap
+      nextStopOnLine                          # returns Stop | None
+      transfersAvailable                      # returns list[TransferConnection]
+      -> SubwayMap.visibleTransfers           # filters by enabled events
       -> Series.issuesBetween
-      // Invariant: nextInSameSeries is the earliest Issue on pinnedIssue.series
-      //            with publicationDate > pinnedIssue.publicationDate.
+      // Invariant: nextStopOnLine is the earliest Stop on pinnedStop.seriesLine
+      //            with publicationDate > pinnedStop.issue.publicationDate.
+      // Invariant: transfersAvailable draws only from enabled TransferBundles.
 
       ----
      PinController
-      current                                 # Issue
-      pin issue                               # Issue -> None; updates current
+      current                                 # Stop
+      pin stop                                # Stop -> None; updates current
       // UX seam: DetailPanelView subscribes to `current` changes.
 
 ---
@@ -403,17 +500,19 @@ bdd:
     Fidelity: behavior
 
     a reading path
-      that has a pinned issue on Amazing Spider-Man
-        it should offer the next ASM issue by publicationDate
-        with the pinned issue participating in Civil War (a crossover event)
-          it should offer one bridge per other Series participating in Civil War
-        with the pinned issue participating in NO event
-          it should offer no bridges
+      that has a pinned stop on Amazing Spider-Man
+        it should offer the next ASM stop by publicationDate
+        with the pinned stop participating in Civil War (enabled event)
+          it should offer one transfer per other Series in Civil War
+        with the pinned stop participating in Civil War (disabled event)
+          it should offer no transfers via Civil War
+        with the pinned stop participating in NO event
+          it should offer no transfers
 
     a pin controller
-      that has been asked to pin an issue reached via a bridge
-        it should update `current` to the bridged issue
-        it should trigger a detail-panel re-render for the bridged issue
+      that has been asked to pin a stop reached via a transfer
+        it should update `current` to the target stop
+        it should trigger a detail-panel re-render for the target stop
 =========
 
 =========
@@ -422,21 +521,22 @@ theme: Comic Details  (user-goal — "know what this issue is; open it in the ap
 ux:
     Fidelity: mockup
 
-    [ issue hover card — expanded state ]            overlay tooltip
+    [ stop hover card — expanded state ]             overlay tooltip
       ┌─────────────────────────────┐
       │ Iron Man #13                │
-      │ 2006-08 · Civil War · Modern│
+      │ 2006-08 · Modern            │
+      │ In events: Civil War        │
       │ ─────────────────────────── │
       │ Synopsis:                   │
       │   Tony debates SHRA…        │
       │ Characters:                 │
       │   Iron Man, Spider-Man,     │
       │   Reed Richards, Mr Fant.   │
-      │ Segment: IM #12–#14         │
+      │ On line: Iron Man (unbroken)│
       │ [ Read on Marvel Unltd ]    │
       └─────────────────────────────┘
-      Stories (~2): Hover Issue · Deep-Link
-      Domain terms: synopsis · character · segment · deep link
+      Stories (~2): Hover Stop · Deep-Link
+      Domain terms: stop · synopsis · character · event · deep link
       key:
         card sizes to content; max ~28ch × ~14 lines
         on [ Read on MU ] → marvelunlimited://comic/{id}
@@ -447,39 +547,41 @@ ux:
 ce:
     Fidelity: model
 
-    # catalog/issue_card.py — presentation-only helper
-    IssueCard
-      issue                                   # Issue
+    # catalog/stop_card.py — presentation-only helper
+    StopCard
+      stop                                    # Stop
       synopsisShort                           # first ~2 lines
       synopsisFull                            # full paragraph
       keyCharacters                           # top ~5 characters
-      segmentSummary                          # 'IM #12–#14'  (from Segment)
-      -> MarvelUnlimitedLink.for(issue)
+      eventTags                               # list[Event.name] — from stop.issue.events
+      -> MarvelUnlimitedLink.for(stop.issue)
       // No state — pure view model.
 
       ----
-     IssueCard.for issue segment              # factory operation
-      -> new IssueCard(issue=…, segmentSummary=segment.summary())
+     StopCard.for stop                        # factory operation
+      -> new StopCard(stop=…)
 
 ---
 bdd:
     Fidelity: behavior
 
-    an issue card
-      that has been built for an issue with a segment
+    a stop card
+      that has been built for a stop whose issue belongs to one event
         it should render the issue title with issueNumber
         it should render the publicationDate and era
+        it should render an "In events" line naming that event
         it should render a short synopsis (~2 lines)
         it should render the top characters
-        it should render the segment summary as "{seriesShort} #{first}–#{last}"
         it should render a Read-on-Marvel-Unlimited action pointing at the
           marvelunlimited:// scheme with a web fallback URL
-      that has been built for an issue with no segment
+      that has been built for a stop whose issue belongs to no event
         it should still render title, date, synopsis and characters
-        it should omit the segment summary line
+        it should omit the "In events" line
 =========
 
 ## log
-- spec / Timeline Constellation / pass #fidelity-choice
-- spec / Timeline Constellation / pass #lens-selection
-- spec / Timeline Constellation / pass #scope-increment-1
+- spec / Subway Map / pass #fidelity-choice
+- spec / Subway Map / pass #lens-selection
+- spec / Subway Map / pass #scope-increment-1
+- spec / Subway Map / pass #data-source            # curated fixture JSON
+- spec / Subway Map / skip #single-point-rule      # dissolved by metaphor swap

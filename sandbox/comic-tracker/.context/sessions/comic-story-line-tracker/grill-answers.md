@@ -106,22 +106,89 @@ series lanes" in the `bdd:` block.
 ### How should a series with only one event-participating issue render?
 
 **Frame.** User called the visual a **constellation** where "segments become
-single or double comic points". That names the shape but leaves the drawing
-rule for a lone event-issue open.
+single or double comic points". Options 1–4 asked (see git history at commit
+eb0c75e for the original framing).
 
-Options:
-1. **(Recommended, working default) "Constellation of one"** — render the
-   lone event-issue as a stand-alone point on its lane; no segment line
-   through it. Preserves the constellation metaphor literally.
-2. "Absorb into neighbour" — extend the preceding segment to include it, so
-   every point lies on a segment line.
-3. Hybrid — stand-alone at first render, absorbed when hovered.
-4. Other / I'll specify.
+**Recorded answer:** **skip / obsoleted** — dissolved by the metaphor swap
+of 2026-08-08 (see next entry). Series lines are now unbroken; there is no
+segment to leave a stop stranded on. Logged as `skip #single-point-rule` in
+`cdd-sketch.md` `## log`.
 
-**Recorded answer:** **open** — sketched as `#single-point-rule` under
-`flow.open`. BDD covers both branches (`with #single-point-rule = "constellation
-of one"` / `with #single-point-rule = "absorb into neighbour"`). Working
-default in CE + UX is option 1.
+---
+
+### Visual metaphor swap — subway map replaces constellation
+
+**Frame.** After the first sketch, user redirected the visual (verbatim):
+"a series is an unbroken line of comics visualized kind of like a subway
+line with stops but the stops are comics"; "a comic continues on another
+comic — a line similar to main series line connects them across the series";
+"an event would have a lot of these lines crossing the series, so you could
+probably filter the event lines on and off as a function".
+
+**Change.** Rebuilt the sketch around a subway-map domain model.
+
+| Was | Now |
+|---|---|
+| `Segment` — bounded run of issues between event intersections | **Gone.** |
+| `Constellation` — collection of segments + event edges | `SubwayMap` — collection of `SeriesLine`s + `TransferBundle`s |
+| `EventEdge` — draws between two participating issues | `TransferConnection` — a line "similar to a series line" between two `Stop`s on different `SeriesLine`s |
+| Segment invariants ("boundaries at event intersections") | `SeriesLine` invariant: continuous end-to-end, no breaks |
+| Event filter narrows the issue set | **`EventFilter` toggles per-event `TransferBundle` visibility** (multi-select on/off) |
+| Rendering: segment lines + point clusters | Rendering: unbroken lanes + stops + toggleable transfer bundles |
+
+**Recorded answer:** applied. Metaphor swap logged; sketch fully rewritten
+around SeriesLine / Stop / TransferConnection / TransferBundle / Event.
+Old blockers reconciled:
+
+- `#single-point-rule` → **skip** (no segments to strand a stop on).
+- `#filter-compose` → **reframed**. Series checkboxes hide entire lanes;
+  Era window crops each lane and its transfers; Events are independent
+  multi-toggles that gate transfer bundles only. Working default recorded
+  in `cdd-sketch.md` `filter/EventFilter` — still tagged `#filter-compose`
+  in `flow.open` until user confirms.
+
+**Fresh blockers introduced this cycle** (see next three entries below,
+each awaiting a grill turn):
+
+- `#transfer-topology` — inside one event with N stops across M series,
+  how many `TransferConnection`s are drawn and how are they routed?
+- `#transfer-style` — "line similar to main series line" leaves the
+  colour/style range open (source lane's colour vs. per-event colour).
+- `#multi-event-stop` — a stop in two enabled events: two overlapping
+  transfers, or one merged transfer styled to indicate both?
+
+---
+
+### Transfer topology inside one event — **open** (Q4 next)
+
+**Frame.** `TransferBundle.buildFrom(event, participatingStops)` needs to
+turn N stops (across M series) into a set of `TransferConnection`s. Three
+credible routings each imply different visual density and different reader
+mental models. Awaiting the next grill turn.
+
+Working default in sketch: `#transfer-topology = "chained by pubDate"`
+(N-1 connections between consecutive stops in publication-date order).
+BDD covers all three branches under `a transfer bundle`.
+
+---
+
+### Transfer connection styling — **open**
+
+**Frame.** User said the transfer line is "similar to main series line".
+That names the family but leaves colour / weight / dash open. Awaiting a
+later grill turn once `#transfer-topology` is settled.
+
+---
+
+### Multi-event stop rendering — **open**
+
+**Frame.** An `Issue` may belong to 0..N `Event`s. When two enabled events
+both touch the same stop, do we draw one transfer per bundle (each in its
+event's style) or one merged transfer indicating both? Awaiting a later
+grill turn.
+
+Working default in sketch: one transfer per bundle. BDD covers both branches
+under `a subway map … that has a stop belonging to two enabled events`.
 
 ---
 
@@ -204,13 +271,18 @@ gate before generate.
 
 ## Flow decision after this grill
 
-- Views broadly agree on **shape**: constellation timeline with segments,
-  event edges, hover card, detail panel, and Marvel Unlimited deep link.
-- Three cross-lens blockers remain (`#data-source`, `#mu-deeplink`,
-  `#single-point-rule`) and one working-default that should be confirmed
-  (`#filter-compose`).
+- Views broadly agree on the **new shape**: subway map with unbroken series
+  lines, stops per issue, per-event transfer bundles that toggle on/off,
+  hover card, detail panel, and Marvel Unlimited deep link.
+- Blockers now (post-metaphor-swap):
+  - `#transfer-topology` — Q4 next.
+  - `#transfer-style` — later grill turn.
+  - `#multi-event-stop` — later grill turn.
+  - `#mu-deeplink` — later grill turn.
+  - `#filter-compose` — confirm working default (series+era AND for lanes,
+    events multi-toggle for transfers).
 - **Recommendation:** `more-same-stage` (stay at `spec`). Do not run
-  `generate` for CE / BDD / UX until the four items above resolve.
+  `generate` for CE / BDD / UX until the five items above resolve.
 
 ## Follow-ups (not this cycle)
 
