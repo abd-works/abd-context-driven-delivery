@@ -95,8 +95,9 @@ flow:
       · #transfer-style — "line similar to main series line" is a range:
         same colour as source lane, same colour as target lane, blended,
         or a per-event colour?
-      · #multi-event-stop — a stop belonging to two enabled events: two
-        transfers drawn (one per bundle) or one merged transfer?
+      · #multi-event-stop — RESOLVED (Q6, 2026-08-08): two independent
+        TransferConnections, no fan-out, no merge, no active-event
+        highlighting. Rare in practice.
       · #next-across-events — RESOLVED (Q5, 2026-08-08): explicit activeEvent
         pin, sticky via pinViaTransfer, cleared when its event is disabled;
         UX prompts on ambiguity via ambiguousEvents.
@@ -111,7 +112,6 @@ flow:
     Do not recommend proceed to engineer until these six items close.
   open:
     - TODO decide transfer styling (whose colour, whose look)                    #transfer-style
-    - TODO decide multi-event stop rendering (two lines vs merged)               #multi-event-stop
     - TODO decide whether events follow the search+drag+roster pattern           #event-roster-parity
     - TODO decide character-filter scope (search-facet only, or dim stops too?)   #character-filter-scope
     - TODO promote Character to first-class entity when metadata is needed        #character-not-first-class-yet
@@ -132,6 +132,7 @@ flow:
     - pass #series-roster-model        # SeriesCatalog + Search + ActiveSeriesRoster
     - pass #character-as-string-tag    # characters live as list[str] on Series (and Issue)
     - pass #next-across-events         # explicit activeEvent pin (Q5, option 1)
+    - pass #multi-event-stop           # different lines, no fan-out (Q6, option 2)
     - skip #single-point-rule          # dissolved by metaphor swap
 
 =========
@@ -426,9 +427,12 @@ ce:
       // No pubDate inference; no all-pairs completion; no hub construction.
       // Grill Q4: #transfer-topology = external (readingOrder + continuesIn).
       //
-      // Open #multi-event-stop: a Stop that appears in two enabled bundles
-      //                         carries two TransferConnections through it
-      //                         (default) or a merged one.
+      // Q6 (#multi-event-stop, 2026-08-08): a Stop that appears in two
+      //   enabled bundles carries TWO independent TransferConnections. No
+      //   fan-out geometry, no merged renderer, no activeEvent highlighting.
+      //   Perfectly overlapping lines are acceptable — the case is rare in
+      //   practice. User rationale: "different lines, one per event, it will
+      //   almost never happen".
 
       ----
      ContinuesInTransfers                     # module-level collection
@@ -570,6 +574,10 @@ ce:
       renderSeriesLine seriesLine             # only when roster.isVisible(series)
       renderStop stop
       renderTransferConnection connection     # per-event styling (#transfer-style)
+                                              # Each TransferConnection renders
+                                              # independently — no fan-out, no
+                                              # merge, no active-event weighting
+                                              # (Q6 #multi-event-stop).
       -> SubwayMap.visibleTransfers
       -> ActiveSeriesRoster.isVisible
       -> EraFilter.inWindow
@@ -639,11 +647,10 @@ bdd:                                          # spec fidelity uses `behavior`
         it should render one transfer bundle per enabled event
         it should not render any transfer for a disabled event
       that has a stop belonging to two enabled events (multi-membership)
-        with #multi-event-stop = "one transfer per bundle" (working default)
-          it should render N transfer connections through that stop,
-            one per bundle it belongs to
-        with #multi-event-stop = "merged transfer" (alternative)
-          it should render one connection styled to indicate two events
+        it should render one TransferConnection per bundle the stop belongs to
+        it should NOT merge, fan-out, or dim any of them
+          (Q6: #multi-event-stop — different lines, one per event; rare in
+          practice, so perfect overlap is acceptable)
 
     a transfer connection
       that has origin = 'continues_in'
@@ -989,3 +996,4 @@ bdd:
 - spec / Subway Map / pass #series-roster-model    # search + drag + active roster
 - spec / Subway Map / pass #character-as-string-tag # not first-class yet
 - spec / Read & Transfer / pass #next-across-events # activeEvent pin (Q5)
+- spec / Subway Map / pass #multi-event-stop        # different lines (Q6)

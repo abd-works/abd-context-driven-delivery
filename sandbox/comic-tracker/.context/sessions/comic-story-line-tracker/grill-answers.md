@@ -366,15 +366,30 @@ later grill turn once `#transfer-topology` is settled.
 
 ---
 
-### Multi-event stop rendering — **open**
+### Multi-event stop rendering — Q6 answered (2026-08-08)
 
-**Frame.** An `Issue` may belong to 0..N `Event`s. When two enabled events
-both touch the same stop, do we draw one transfer per bundle (each in its
-event's style) or one merged transfer indicating both? Awaiting a later
-grill turn.
+**Frame.** When two enabled events both touch the same stop, how do we
+render the two transfers that leave it?
 
-Working default in sketch: one transfer per bundle. BDD covers both branches
-under `a subway map … that has a stop belonging to two enabled events`.
+**Options asked** (see git history for full framing): (1) fan-out + active
+highlight, (2) two overlapping lines, (3) merged transfer, (4) show only
+active event's, (5) event-count badge on stop, (6) other.
+
+**Recorded answer (user 2026-08-08, verbatim):** "different lines, one
+per event. it will almost never happen."
+
+**CE consequences applied.** No new geometry, no new render layer, no
+active-event weighting. `SubwayMapView.renderTransferConnection` renders
+each `TransferConnection` independently. If two enabled events share the
+same `(fromStop, toStop)` pair, both lines paint and may perfectly
+overlap. `TransferBundle.buildFrom` doc note clarifies the rationale
+verbatim.
+
+**BDD consequences applied.** The two `with #multi-event-stop = …` branches
+collapse to one `it should`: "render one TransferConnection per bundle the
+stop belongs to; do NOT merge, fan-out, or dim any of them".
+
+**Passes logged:** `pass #multi-event-stop` in `cdd-sketch.md ## log`.
 
 ---
 
