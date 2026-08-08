@@ -41,23 +41,21 @@ Options (recommended first):
 
 ### Which lenses run this cycle?
 
-**Frame.** User explicitly named "clean Eng and NDD and ux" — reading `NDD`
-as a typo for `BDD` (B and N are keyboard-adjacent; `BDD` is a valid CDD
-lens per `cdd.md`; `DDD` is also possible but less phonetically likely and
-the handoff already treats DDD as active-elsewhere). Per
-`templates/cdd-sketch.md`: "If a lens is not in play this cycle, omit the
-block entirely."
+**Frame.** User explicitly named "clean Eng and NDD and ux". `NDD` isn't a
+framework lens; the two plausible reads are `BDD` (keyboard-adjacent to `N`)
+and `DDD` (same "…DD" phonetic). Sources read: `context_tools/cdd/cdd.md`
+lens table + `context_tools/cdd/cdd.py::_CONTEXT_TOOLS_BY_STAGE`.
 
-Options:
-1. **(Recommended) CE + BDD + UX only** — honour the ask verbatim; omit
-   `stories:` and `ddd:` blocks this cycle. Note them as follow-ups.
-2. Add `stories:` alongside — spec's canonical set includes stories; helpful
-   for grounding, but not asked for.
-3. Add `ddd:` alongside — same reasoning; not asked for.
-4. Other / I'll specify.
+Options asked:
+1. **(Recommended) BDD** — keyboard-adjacent typo; forces fidelity ≥ spec.
+2. DDD — bounded-context/aggregate framing; allows fidelity `discovery`.
+3. Both BDD and DDD alongside CE + UX (four-lens).
+4. All five (add stories too — canonical spec set).
+5. Other / I'll specify.
 
-**Recorded answer:** 1 — CE + BDD + UX. Logged as `pass #lens-selection`.
-`stories` + `ddd` grill/sketch left as an explicit follow-up.
+**Recorded answer:** 1 — **BDD** (user-confirmed 2026-08-08). Lenses in play
+this cycle: `clean_engineering` + `bdd` + `ux`. `stories` + `ddd` deferred as
+explicit follow-ups. Logged as `pass #lens-selection`.
 
 ---
 
