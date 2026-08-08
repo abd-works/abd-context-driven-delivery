@@ -12,6 +12,19 @@ scope: Increment 1 — Interactive Comic Story Line Tracker (single visual)
       connects them across the series"
     - "an event would have a lot of these lines crossing the series, so you
       could probably filter the event lines on and off as a function"
+  - **External-data / hard-numbered rule** (redirect 2026-08-08, Q4 turn):
+    - "no we dont infer anything all data comes from external sources and is
+      tracked with a hard number"
+    - "comic series — eg Spider-Man (2003) that the renumbering of Spider-Man
+      from 2003" — Series identity includes volume/year.
+    - "issue 1, issue 2, issue 3 → these are default order" — series order is
+      `issueNumber`, hard-numbered, external.
+    - "say issue 3 is tbc in Avengers 22, next returns Avengers 22,
+      next-in-series returns Spider-Man 4" — cross-series continuation is an
+      explicit `continuesIn` pointer on the issue.
+    - "if there is event; event order trumps, next-in-series same" —
+      `Event.readingOrder` overrides `continuesIn`; `next-in-series` is a
+      distinct operator that always walks series order.
   - Original intent still in force:
     - "easy to start reading a comic based on a storyline and flip over to the
       other comic book"
@@ -48,36 +61,47 @@ flow:
         Series still filters lanes; era still filters the time window.
         Composition question is much smaller but still worth confirming.
 
-    Fresh cross-lens blockers introduced by the new metaphor:
-      1. TransferConnection topology inside one event with N stops across M
-         series — all pairs, chained by publicationDate, or hub-and-spoke
-         through a primary issue?
-      2. TransferConnection styling — "line similar to main series line" is a
-         range: same colour as source lane, same colour as target lane, blended,
-         or a per-event colour?
-      3. Multi-event membership — when a stop belongs to two enabled events,
-         are two transfers drawn (one per bundle), or one merged transfer?
+    #transfer-topology resolved by Q4: topology is not inferred — it comes
+    from the fixture as explicit external data. Every transfer on the map is
+    either (a) an `Issue.continuesIn` pointer that crosses Series, or
+    (b) a consecutive pair in an `Event.readingOrder` that crosses Series.
+    No pubDate-based chaining, no all-pairs completion, no derived hubs.
+
+    Fresh cross-lens blockers still open:
+      · #transfer-style — "line similar to main series line" is a range:
+        same colour as source lane, same colour as target lane, blended,
+        or a per-event colour?
+      · #multi-event-stop — a stop belonging to two enabled events: two
+        transfers drawn (one per bundle) or one merged transfer?
+      · #next-across-events (NEW) — when the pinned stop is in ≥2 enabled
+        events, whose readingOrder provides `next`? (One winner, all offered
+        as choices, latest-navigated wins?)
 
     Carried blockers:
       · #mu-deeplink — verify Marvel Unlimited iOS URL scheme + fallback.
+      · #filter-compose — confirm working default (series+era AND for lanes,
+        events multi-toggle for transfers only).
 
-    Do not recommend proceed to engineer until the three fresh blockers plus
-    #mu-deeplink close.
+    Do not recommend proceed to engineer until these five items close.
   open:
-    - TODO decide transfer topology inside an event                    #transfer-topology
-    - TODO decide transfer styling (whose colour, whose look)          #transfer-style
-    - TODO decide multi-event stop rendering (two lines vs merged)     #multi-event-stop
-    - TODO verify Marvel Unlimited iOS URL scheme + fallback           #mu-deeplink
-    - TODO confirm filter composition (series × era = AND; events multi-toggle) #filter-compose
-    - doing sketch UX / CE / BDD for Theme 1                           #sketch-theme-1
-    - doing sketch UX / CE / BDD for Theme 2                           #sketch-theme-2
-    - doing sketch UX / CE / BDD for Theme 3                           #sketch-theme-3
+    - TODO decide transfer styling (whose colour, whose look)                    #transfer-style
+    - TODO decide multi-event stop rendering (two lines vs merged)               #multi-event-stop
+    - TODO decide next-stop resolution when pinned stop is in ≥2 enabled events  #next-across-events
+    - TODO verify Marvel Unlimited iOS URL scheme + fallback                     #mu-deeplink
+    - TODO confirm filter composition (series+era AND; events multi-toggle)      #filter-compose
+    - doing sketch UX / CE / BDD for Theme 1                                     #sketch-theme-1
+    - doing sketch UX / CE / BDD for Theme 2                                     #sketch-theme-2
+    - doing sketch UX / CE / BDD for Theme 3                                     #sketch-theme-3
   done:
-    - pass #fidelity-choice          # spec picked so bdd lens is available
-    - pass #lens-selection            # ce + bdd + ux (user-confirmed 2026-08-08)
-    - pass #scope-increment-1         # single visual + hover card + filters
-    - pass #data-source               # curated fixture JSON (grill Q2, 2026-08-08)
-    - skip #single-point-rule         # dissolved by metaphor swap (2026-08-08)
+    - pass #fidelity-choice            # spec picked so bdd lens is available
+    - pass #lens-selection             # ce + bdd + ux (user-confirmed 2026-08-08)
+    - pass #scope-increment-1          # single visual + hover card + filters
+    - pass #data-source                # curated fixture JSON (grill Q2)
+    - pass #transfer-topology          # external readingOrder + continuesIn (grill Q4)
+    - pass #external-data-only         # no inference; all order via hard numbers
+    - pass #series-volume-identity     # Series identity = (title, volume/year)
+    - pass #next-vs-next-in-series     # two distinct operators (grill Q4)
+    - skip #single-point-rule          # dissolved by metaphor swap
 
 =========
 theme: Subway Map  (user-goal — "see the network, toggle events, filter lines")
@@ -200,36 +224,48 @@ ce:
     ## Class notation (per-module)
 
     Issue
-      id
+      id                                      # external hard id (from fixture)
       series                                  # -> Series
-      issueNumber
+      issueNumber                             # int; hard-numbered; defines default series order
       title
-      publicationDate
-      inUniverseDate                          # optional; falls back to publicationDate
-      era                                     # Era
+      publicationDate                         # used ONLY for horizontal x-axis position;
+                                              # NEVER used to derive ordering
+      era                                     # Era — derived from publicationDate window
       synopsis
       characters                              # list[Character]
       events                                  # list[Event]  (0..N — 0 is fine)
+      continuesIn                             # Issue | None — explicit "TBC in …" pointer;
+                                              # may point to same Series or a different one
       marvelUnlimitedId
-      -> series.appendIssue                   # invariant: series ordering by publicationDate
+      -> series.appendIssue
       // Invariant: (series, issueNumber) unique.
+      // Invariant: continuesIn, when set, points to an Issue in the fixture.
+      //            May cross Series (source of a cross-series transfer).
       ----
      Series
-      id
-      title
-      issues                                  # composition list[Issue] — ordered by pubDate
+      id                                      # external hard id (from fixture)
+      title                                   # e.g. "Spider-Man"
+      volume                                  # int or year — e.g. 2003 for "Spider-Man (2003)"
+      displayName                             # derived: 'Spider-Man (2003)'
+      issues                                  # composition list[Issue] — ordered by issueNumber
       appendIssue issue
-      firstIssue                              # Issue
-      lastIssue                               # Issue
-      issuesBetween fromDate toDate           # returns ordered list[Issue]
-      // Invariant: issues form ONE unbroken sequence — no segmentation.
+      firstIssue                              # Issue at min(issueNumber)
+      lastIssue                               # Issue at max(issueNumber)
+      nextInSeries afterIssue                 # returns Issue | None — walks issueNumber+1
+      // Invariant: Series identity is (title, volume). Renumbering = new Series.
+      // Invariant: issues form ONE unbroken sequence in issueNumber order.
+      // Invariant: nextInSeries ignores events and continuesIn — always issueNumber+1.
       ----
      Event
-      id
-      name
+      id                                      # external hard id (from fixture)
+      name                                    # e.g. "Civil War"
       era
-      participatingIssues                     # list[Issue] — 2+ across ≥2 Series
-      // Invariant: participatingIssues covers ≥ 2 distinct Series.
+      readingOrder                            # list[Issue] — ORDERED, external, hard-numbered
+      participatingSeries                     # derived set of distinct Series in readingOrder
+      indexOf issue                           # returns int position in readingOrder
+      nextInEvent afterIssue                  # returns Issue | None — next in readingOrder
+      // Invariant: readingOrder is externally given; NOT derived from pubDate.
+      // Invariant: participatingSeries.size >= 2.
       // Invariant: an Issue may appear in 0..N Events (multi-membership OK).
       ----
      Character
@@ -265,24 +301,46 @@ ce:
     TransferConnection
       fromStop                                # Stop  (on Series A)
       toStop                                  # Stop  (on Series B, B != A)
-      event                                   # Event  (owning bundle)
-      // Invariant: fromStop.seriesLine.series != toStop.seriesLine.series.
-      // Invariant: both stops' issues are members of `event`.
+      origin                                  # 'continues_in' | Event
+      // Invariant: fromStop.seriesLine.series != toStop.seriesLine.series
+      //            (a within-series continuation is NOT a transfer; the
+      //            unbroken series line already carries it).
       // Rendering seam: draw as a line "similar to a series line" —
       //                 styling decided by #transfer-style (see flow.open).
+      // If origin == 'continues_in':
+      //   · sourced from fromStop.issue.continuesIn == toStop.issue
+      //   · always eligible for render (subject to SeriesFilter)
+      // If origin == Event:
+      //   · sourced from a consecutive cross-series pair in Event.readingOrder
+      //   · eligible for render iff EventFilter.isEnabled(origin)
 
       ----
      TransferBundle
       event                                   # Event
       connections                             # list[TransferConnection]
-      enabled                                 # bool — controlled by EventFilter
-      buildFrom event participatingStops      # factory operation
-      // Open #transfer-topology: how `connections` is built from
-      //                          participatingStops (all-pairs vs. chained
-      //                          by pubDate vs. hub-and-spoke).
-      // Open #multi-event-stop: a Stop that appears in two enabled
-      //                         bundles carries two TransferConnections
-      //                         through it (default) or a merged one.
+      enabled                                 # bool — mirrors EventFilter.isEnabled(event)
+      buildFrom event                         # factory operation
+      // buildFrom event:
+      //   for each consecutive pair (a, b) in event.readingOrder:
+      //     if a.series != b.series:
+      //       yield TransferConnection(fromStop=stopOf(a),
+      //                                toStop=stopOf(b),
+      //                                origin=event)
+      // No pubDate inference; no all-pairs completion; no hub construction.
+      // Grill Q4: #transfer-topology = external (readingOrder + continuesIn).
+      //
+      // Open #multi-event-stop: a Stop that appears in two enabled bundles
+      //                         carries two TransferConnections through it
+      //                         (default) or a merged one.
+
+      ----
+     ContinuesInTransfers                     # module-level collection
+      allFor issues                           # returns list[TransferConnection]
+      // For every issue with continuesIn != None whose target is on a
+      //   different Series, yield one TransferConnection with
+      //   origin='continues_in'.
+      // These are NOT owned by any TransferBundle. They are always drawn
+      //   subject to SeriesFilter, regardless of EventFilter state.
 
       ====
 
@@ -290,13 +348,19 @@ ce:
     SubwayMap
       seriesLines                             # list[SeriesLine]
       transferBundles                         # list[TransferBundle]  (one per Event)
+      continuesInTransfers                    # list[TransferConnection]  (origin='continues_in')
       buildFrom seriesSet eventSet            # factory-shaped operation
       -> SeriesLine(…)
       -> TransferBundle.buildFrom(…)
-      visibleTransfers                        # returns list[TransferConnection]
-                                              # for bundles where enabled == True
+      -> ContinuesInTransfers.allFor(…)
+      visibleTransfers                        # returns list[TransferConnection]:
+                                              #   continuesInTransfers +
+                                              #   flatten(bundle.connections
+                                              #           for bundle where enabled)
       // Invariant: every SeriesLine renders regardless of event filters —
-      //            events control transfers only, never lanes.
+      //            events control event-owned transfers only, never lanes.
+      // Invariant: continuesIn transfers are always eligible (subject to
+      //            SeriesFilter), even when every event is disabled.
 
       ====
 
@@ -407,24 +471,33 @@ bdd:                                          # spec fidelity uses `behavior`
           it should render one connection styled to indicate two events
 
     a transfer connection
-      that connects a stop on Series A to a stop on Series B (A != B) via an
-      enabled event
+      that has origin = 'continues_in'
         it should draw a line styled similarly to a series line
           (styling per #transfer-style)
-        it should carry the event's identity (colour / label / route)
+        it should always be eligible for render (SeriesFilter only)
+      that has origin = an Event
+        it should draw a line styled similarly to a series line
+        it should render only when EventFilter.isEnabled(origin)
       that connects to a stop on a series whose SeriesFilter check is off
         it should not render (the target lane is hidden)
-      that belongs to a disabled event
-        it should not render
 
     a transfer bundle
-      that has been asked to build from an event with N participating stops
-        with #transfer-topology = "chained by pubDate" (working default)
-          it should produce N-1 connections between consecutive stops
-        with #transfer-topology = "all pairs"
-          it should produce N*(N-1)/2 connections
-        with #transfer-topology = "hub-and-spoke via primary issue"
-          it should produce N-1 connections from the primary stop to each other
+      that has been asked to buildFrom an event whose readingOrder is
+      [Spider-Man (2003) #3, Avengers #22, Spider-Man (2003) #4]
+        it should produce one TransferConnection Spider-Man #3 → Avengers #22
+        it should produce one TransferConnection Avengers #22 → Spider-Man #4
+        it should NOT produce any other transfer (no all-pairs, no hub)
+      that has been asked to buildFrom an event whose readingOrder is
+      [A#1, A#2, B#1] (two consecutive stops on the SAME series A)
+        it should skip the A#1 → A#2 pair (same series — carried by the line)
+        it should produce one TransferConnection A#2 → B#1
+
+    a continues-in transfer
+      that is derived from Spider-Man (2003) #3 whose continuesIn = Avengers #22
+        it should exist as a TransferConnection with origin = 'continues_in'
+        it should render even when every EventFilter is disabled
+      that is derived from an issue whose continuesIn points to the SAME series
+        it should not produce a TransferConnection (already on the series line)
 
     a series filter
       that has "Amazing Spider-Man" checked and "Iron Man" unchecked
@@ -451,27 +524,35 @@ ux:
     Fidelity: mockup
 
     [ issue detail panel — transfer affordance ]     right side-panel
-      ┌─────────────────────────────┐
-      │ Amazing Spider-Man #533     │
-      │ 2006-08 · Civil War         │
-      │ ─────────────────────────── │
-      │ Continue on this line:      │
-      │   → ASM #534 (Aug 2006)     │
-      │ Transfer via Civil War:     │
-      │   ↳ Iron Man #13 (Aug 06)   │
-      │   ↳ Cap #22   (Aug 06)      │
-      │   ↳ X-Men #29 (Aug 06)      │
-      │ (Civil War toggle: [x] on)  │  ← reflects EventFilter state
-      │ [ Read on Marvel Unltd ]    │
-      └─────────────────────────────┘
-      Stories (~3): Continue on Line · Transfer via Event · Deep-Link
-      Domain terms: continue · transfer · event · deep link
+      ┌─────────────────────────────────────┐
+      │ Spider-Man (2003) #3                │
+      │ In events: Civil War (on)           │
+      │ ─────────────────────────────────── │
+      │ Next  →  Iron Man #13               │ ← ReadingPath.next (event trumps)
+      │            (via Civil War)          │
+      │                                     │
+      │ Next in series →  Spider-Man #4     │ ← ReadingPath.nextInSeries
+      │                                     │
+      │ Continues in →  Avengers #22        │ ← issue.continuesIn (shown when set;
+      │                                     │    dimmed when overridden by event)
+      │ ─────────────────────────────────── │
+      │ Transfers available:                │
+      │   ↳ Iron Man #13   (Civil War)      │
+      │   ↳ Avengers #22   (continuesIn)    │
+      │ ─────────────────────────────────── │
+      │ [ Read on Marvel Unltd ]            │
+      └─────────────────────────────────────┘
+      Stories (~4): Next · Next in Series · Continues In · Transfer to Stop
+      Domain terms: next · next-in-series · continues-in · transfer · event
       key:
-        → next-stop-on-same-line · ↳ cross-line transfer
-        on → next → pin next stop on same lane
-        on ↳ transfer → pin target stop on other lane; camera pans
+        → next  ·  ↳ cross-line transfer
+        on Next → pin the stop returned by ReadingPath.next
+        on Next in series → pin the stop returned by ReadingPath.nextInSeries
+        on Continues in → pin the stop pointed to by issue.continuesIn
+        on ↳ transfer → pin target stop; camera pans
         on [ Read on MU ] → marvelunlimited://comic/{id}
-        transfers listed only for events currently enabled in the filter rail
+        event-owned transfers listed only when their event is enabled;
+        continuesIn transfer listed regardless of event state
 
 ---
 ce:
@@ -481,13 +562,24 @@ ce:
     ReadingPath
       pinnedStop                              # Stop
       subwayMap                               # SubwayMap
-      nextStopOnLine                          # returns Stop | None
+      eventFilter                             # EventFilter — needed for priority rule
+      next                                    # returns Stop | None — story continuation
+      nextInSeries                            # returns Stop | None — always issueNumber+1
       transfersAvailable                      # returns list[TransferConnection]
-      -> SubwayMap.visibleTransfers           # filters by enabled events
-      -> Series.issuesBetween
-      // Invariant: nextStopOnLine is the earliest Stop on pinnedStop.seriesLine
-      //            with publicationDate > pinnedStop.issue.publicationDate.
-      // Invariant: transfersAvailable draws only from enabled TransferBundles.
+      -> Series.nextInSeries
+      -> Event.nextInEvent
+      -> SubwayMap.visibleTransfers
+      // Priority for `next` (grill Q4 external-data rule):
+      //   1. If pinnedStop.issue.events has ≥ 1 event AND EventFilter enables
+      //      it → next = that event's nextInEvent(pinnedStop.issue)
+      //      (event order trumps).
+      //      -- #next-across-events open: which event wins when ≥2 enabled.
+      //   2. Else if pinnedStop.issue.continuesIn is not None →
+      //      next = stopOf(continuesIn).
+      //   3. Else → next = stopOf(pinnedStop.series.nextInSeries(pinnedStop.issue)).
+      // Invariant: nextInSeries ignores events and continuesIn entirely.
+      // Invariant: transfersAvailable is the subset of SubwayMap.visibleTransfers
+      //            that has pinnedStop as fromStop.
 
       ----
      PinController
@@ -499,15 +591,36 @@ ce:
 bdd:
     Fidelity: behavior
 
-    a reading path
-      that has a pinned stop on Amazing Spider-Man
-        it should offer the next ASM stop by publicationDate
-        with the pinned stop participating in Civil War (enabled event)
-          it should offer one transfer per other Series in Civil War
-        with the pinned stop participating in Civil War (disabled event)
-          it should offer no transfers via Civil War
-        with the pinned stop participating in NO event
-          it should offer no transfers
+    a reading path — `nextInSeries`
+      that has a pinned stop on Spider-Man (2003) #3
+        it should always offer Spider-Man (2003) #4 as nextInSeries
+        with #3 belonging to an enabled event whose readingOrder differs
+          it should STILL offer Spider-Man (2003) #4 (events don't affect this)
+        with #3 having continuesIn = Avengers #22
+          it should STILL offer Spider-Man (2003) #4 (continuesIn doesn't affect this)
+
+    a reading path — `next` (priority-rule)
+      that has a pinned stop on Spider-Man (2003) #3
+        with the stop in NO event and continuesIn = None
+          it should offer Spider-Man (2003) #4 (default series order)
+        with the stop in NO event and continuesIn = Avengers #22
+          it should offer Avengers #22 (continuesIn wins over default)
+        with the stop in Civil War (enabled) whose readingOrder places it before
+        Iron Man #13 AND continuesIn = Avengers #22
+          it should offer Iron Man #13 (event order trumps continuesIn)
+        with the stop in Civil War (disabled) AND continuesIn = Avengers #22
+          it should offer Avengers #22 (disabled event falls through to continuesIn)
+        with the stop in Civil War (disabled) AND continuesIn = None
+          it should offer Spider-Man (2003) #4 (falls all the way through)
+
+    a reading path — transfers offered on the pinned stop
+      that has a pinned stop with continuesIn crossing to a different series
+        it should offer one continuesIn transfer regardless of EventFilter
+      that has a pinned stop in Civil War (enabled) whose readingOrder places
+      Iron Man #13 immediately after it
+        it should offer that Civil-War transfer
+      that has a pinned stop in Civil War (disabled)
+        it should NOT offer that Civil-War transfer
 
     a pin controller
       that has been asked to pin a stop reached via a transfer
@@ -585,3 +698,7 @@ bdd:
 - spec / Subway Map / pass #scope-increment-1
 - spec / Subway Map / pass #data-source            # curated fixture JSON
 - spec / Subway Map / skip #single-point-rule      # dissolved by metaphor swap
+- spec / Subway Map / pass #transfer-topology      # external readingOrder + continuesIn
+- spec / Subway Map / pass #external-data-only     # no inference from pubDate/anything
+- spec / Subway Map / pass #series-volume-identity # Series id = (title, volume/year)
+- spec / Subway Map / pass #next-vs-next-in-series # two distinct operators

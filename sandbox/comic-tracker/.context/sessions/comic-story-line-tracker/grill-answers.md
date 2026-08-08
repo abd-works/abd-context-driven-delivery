@@ -159,16 +159,70 @@ each awaiting a grill turn):
 
 ---
 
-### Transfer topology inside one event — **open** (Q4 next)
+### Transfer topology inside one event — Q4 answered
 
 **Frame.** `TransferBundle.buildFrom(event, participatingStops)` needs to
-turn N stops (across M series) into a set of `TransferConnection`s. Three
-credible routings each imply different visual density and different reader
-mental models. Awaiting the next grill turn.
+turn participating stops into a set of `TransferConnection`s. Original
+options: chained-by-pubDate, all-pairs, hub-and-spoke, adjacent-per-pair.
 
-Working default in sketch: `#transfer-topology = "chained by pubDate"`
-(N-1 connections between consecutive stops in publication-date order).
-BDD covers all three branches under `a transfer bundle`.
+**Recorded answer (user 2026-08-08, verbatim):** "no we dont infer anything
+all data comes from external sources and is tracked with a hard number …
+issue 1, issue 2, issue 3 → these are default order, then say issue 3 is
+tbc in Avengers 22, next returns Avengers 22, next-in-series returns
+Spider-Man 4, if there is event; event order trumps, next-in-series same."
+
+Interpretation applied (see this file's "Data-model consequences" section
+below for details):
+
+1. **Nothing is inferred from `publicationDate` for ordering.** pubDate is
+   used only to position stops horizontally on the ruler; it never
+   determines what comes next.
+2. **Series default order = `Issue.issueNumber`** (hard number from
+   fixture).
+3. **Cross-series continuation = explicit `Issue.continuesIn` pointer.**
+   No derivation.
+4. **Event order = explicit `Event.readingOrder: list[Issue]`.** No
+   derivation.
+5. **`TransferConnection.origin`** is either `'continues_in'` (from a
+   `continuesIn` pointer that crosses Series) or an `Event` (from a
+   consecutive readingOrder pair that crosses Series). Two consecutive
+   readingOrder issues on the SAME series produce no transfer (the series
+   line already carries them).
+6. **`ReadingPath.next` priority:** enabled event's readingOrder trumps →
+   else `continuesIn` → else `Series.nextInSeries` (issueNumber+1). See
+   the priority-rule BDD block in `cdd-sketch.md`.
+7. **`ReadingPath.nextInSeries` is a distinct operator** that always
+   returns `Series.nextInSeries(issue)` regardless of events or
+   `continuesIn`.
+
+Passes logged in `cdd-sketch.md`:
+- `pass #transfer-topology` (external readingOrder + continuesIn)
+- `pass #external-data-only` (no pubDate-based inference anywhere)
+- `pass #series-volume-identity` (Series id = (title, volume/year))
+- `pass #next-vs-next-in-series` (two distinct operators)
+
+### Data-model consequences applied to cdd-sketch.md
+
+| Concept | Change |
+|---|---|
+| `Series` | Adds `volume` (year); `displayName` derived as e.g. `Spider-Man (2003)`; identity is `(title, volume)`. Renumbering = new Series. Adds `nextInSeries afterIssue` operator; issues ordered by `issueNumber`. |
+| `Issue` | Ordering source is `issueNumber`, not `publicationDate`. `publicationDate` retained only for x-axis positioning. Adds `continuesIn: Issue \| None` (explicit "TBC in …" pointer). |
+| `Event` | Replaces unordered `participatingIssues` with ordered `readingOrder: list[Issue]`. Adds `indexOf(issue)` and `nextInEvent(afterIssue)`. `participatingSeries` derived. |
+| `TransferConnection` | Adds `origin: 'continues_in' \| Event`. Invariant: `fromStop.series != toStop.series` (within-series continuations are carried by the unbroken series line, never drawn as transfers). |
+| `TransferBundle` | `buildFrom(event)` walks consecutive `readingOrder` pairs; keeps only cross-series pairs. No pubDate chaining, no all-pairs completion, no hub construction. |
+| `ContinuesInTransfers` | NEW module-level collection: for every Issue with `continuesIn != None` whose target is on a different Series, yields one `TransferConnection(origin='continues_in')`. Always eligible regardless of event filter state. |
+| `SubwayMap.visibleTransfers` | `continuesInTransfers + flatten(bundle.connections for enabled bundles)`. |
+| `ReadingPath.next` | Priority rule (event trumps → continuesIn → nextInSeries). |
+| `ReadingPath.nextInSeries` | Always `Series.nextInSeries(issue)`; ignores events and `continuesIn`. |
+| Issue detail panel (UX) | Shows three affordances: `Next`, `Next in series`, `Continues in`; plus `Transfers available`. Continues-in transfers listed regardless of event state; event-owned transfers listed only when their event is enabled. |
+
+### Next-across-events — **open** (Q5 next)
+
+**Frame.** The priority rule "event order trumps" is unambiguous when the
+pinned stop belongs to exactly one enabled event. When it belongs to two
+or more enabled events (e.g. Spider-Man in "Civil War" and "The
+Initiative" simultaneously), `ReadingPath.next` has to pick which event's
+readingOrder to follow. Awaiting the next grill turn. See Q5.
 
 ---
 
