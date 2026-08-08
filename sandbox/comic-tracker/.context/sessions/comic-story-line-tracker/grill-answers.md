@@ -216,13 +216,69 @@ Passes logged in `cdd-sketch.md`:
 | `ReadingPath.nextInSeries` | Always `Series.nextInSeries(issue)`; ignores events and `continuesIn`. |
 | Issue detail panel (UX) | Shows three affordances: `Next`, `Next in series`, `Continues in`; plus `Transfers available`. Continues-in transfers listed regardless of event state; event-owned transfers listed only when their event is enabled. |
 
-### Next-across-events — **open** (Q5 next)
+### Next-across-events — **open** (Q5, paused)
 
 **Frame.** The priority rule "event order trumps" is unambiguous when the
 pinned stop belongs to exactly one enabled event. When it belongs to two
 or more enabled events (e.g. Spider-Man in "Civil War" and "The
 Initiative" simultaneously), `ReadingPath.next` has to pick which event's
-readingOrder to follow. Awaiting the next grill turn. See Q5.
+readingOrder to follow. Q5 asked and paused when the user pivoted to the
+left-rail refinement (see next entry). Q5 will be re-posed after this
+entry is applied.
+
+---
+
+### Left-rail redesign — search + drag + active roster (2026-08-08)
+
+**Frame.** User redirect (verbatim): "think we can drag in series from a
+search / browse on left; actives series checked u checks but a diff
+grouping not same a search results".
+
+**Interpretation applied.** The single "Series" checkbox list in the filter
+rail is replaced by TWO separate lists in the left rail:
+
+1. **Search / Browse** — the full Series catalogue (from `FixtureIssueRepository`)
+   presented as a searchable/browsable list. Each row is a **draggable
+   candidate**. No checkboxes.
+2. **Active Series (roster)** — the working set the reader has dragged in.
+   Each row is `[x] displayName [×]` — checkbox toggles line visibility on
+   the map, `[×]` removes from the roster. No drag handles.
+
+Drop from Search into Active adds the Series to the roster. The two lists
+never merge visually or conceptually — they are separate groupings with
+different affordances.
+
+**CE consequences applied to `cdd-sketch.md`.**
+
+| Concept | Change |
+|---|---|
+| `SeriesFilter` | **Removed.** Its role is split into `ActiveSeriesRoster` (which Series are in the map) and `RosterEntry.visible` (whether that Series' line is drawn). |
+| `SeriesCatalog` (NEW) | Complete searchable inventory backed by `FixtureIssueRepository`. Stable across the session. Exposes `byDisplayName(query)` and `groupedByTitle`. |
+| `SeriesSearch` (NEW) | Query operator over the catalog. Supports `mode = 'search' \| 'browse'`. Empty query in `browse` mode returns the full catalog grouped by title (volumes together). |
+| `ActiveSeriesRoster` (NEW) | Ordered list of `RosterEntry`. Operators: `add`, `remove`, `toggleVisible`, `isVisible`, `contains`, `visibleSeries`, `allActiveSeries`. Invariant: no duplicates. |
+| `RosterEntry` (NEW) | `(series, visible: bool)`. Default `visible = True` on add. |
+| `SubwayMap.buildFrom` | Now takes `roster` (was `seriesSet`). One `SeriesLine` per `roster.allActiveSeries`; `visibleTransfers` filtered by `roster.isVisible` on both endpoints. |
+| `SubwayMapView` | Consults `roster.isVisible(series)` before drawing each `SeriesLine`. Series not in the roster contribute no lane, stops, or transfers. |
+| `SearchBrowseView` (NEW) | Renders query box + results list. Rows draggable; no checkboxes. On drop → `ActiveSeriesRoster.add(series)`. |
+| `ActiveRosterView` (NEW) | Renders roster rows with checkbox + `[×]`. Also a drop target (drag from search). Empty state prompts "drag a series here to add it to the map". |
+
+**BDD consequences applied.** New `describe` blocks:
+- `a series catalog` — every Series exposed; distinct volumes as distinct rows.
+- `a series search` — case-insensitive `displayName` match; empty query in
+  browse mode returns grouped-by-title.
+- `an active series roster` — add / duplicate-no-op / toggleVisible /
+  remove behaviours.
+- `a subway map — sourced from the roster` — three states covered:
+  both visible, one toggled invisible (kept but hidden), one removed
+  (gone entirely).
+
+**Related open item introduced.** Should Events follow the same
+search + drag + roster pattern? Fixture has multiple concurrent events
+across eras; a checkbox list scales less well than a searchable roster,
+but events are typically fewer than series so the checkbox list may be
+fine. Tracked as `#event-roster-parity` in `flow.open`; not blocking Q5.
+
+**Passes logged:** `pass #series-roster-model` in `cdd-sketch.md ## log`.
 
 ---
 

@@ -12,6 +12,12 @@ scope: Increment 1 — Interactive Comic Story Line Tracker (single visual)
       connects them across the series"
     - "an event would have a lot of these lines crossing the series, so you
       could probably filter the event lines on and off as a function"
+  - **Search / browse + active roster** (redirect 2026-08-08, post-Q4 turn):
+    - "think we can drag in series from a search / browse on left; actives
+      series checked u checks but a diff grouping not same a search results"
+    - Left rail splits into Search/Browse (draggable candidates) and Active
+      Series (checkable roster). Drag drops from search into the active list;
+      the two lists never merge.
   - **External-data / hard-numbered rule** (redirect 2026-08-08, Q4 turn):
     - "no we dont infer anything all data comes from external sources and is
       tracked with a hard number"
@@ -67,28 +73,35 @@ flow:
     (b) a consecutive pair in an `Event.readingOrder` that crosses Series.
     No pubDate-based chaining, no all-pairs completion, no derived hubs.
 
+    Left rail restructured (2026-08-08, post-Q4 turn): SeriesFilter split into
+    SeriesCatalog + SeriesSearch (draggable candidate list) and
+    ActiveSeriesRoster (checkable working set). The two are separate
+    groupings with different affordances; drag drops from search into roster.
+
     Fresh cross-lens blockers still open:
       · #transfer-style — "line similar to main series line" is a range:
         same colour as source lane, same colour as target lane, blended,
         or a per-event colour?
       · #multi-event-stop — a stop belonging to two enabled events: two
         transfers drawn (one per bundle) or one merged transfer?
-      · #next-across-events (NEW) — when the pinned stop is in ≥2 enabled
-        events, whose readingOrder provides `next`? (One winner, all offered
-        as choices, latest-navigated wins?)
+      · #next-across-events — when the pinned stop is in ≥2 enabled events,
+        whose readingOrder provides `next`? (Q5 currently paused.)
+      · #event-roster-parity — should Events follow the same search + drag +
+        roster pattern that Series now uses? (Introduced by roster refinement.)
 
     Carried blockers:
       · #mu-deeplink — verify Marvel Unlimited iOS URL scheme + fallback.
-      · #filter-compose — confirm working default (series+era AND for lanes,
-        events multi-toggle for transfers only).
+      · #filter-compose — confirm working default (era window + event
+        multi-toggle; roster gates series visibility outright).
 
-    Do not recommend proceed to engineer until these five items close.
+    Do not recommend proceed to engineer until these six items close.
   open:
     - TODO decide transfer styling (whose colour, whose look)                    #transfer-style
     - TODO decide multi-event stop rendering (two lines vs merged)               #multi-event-stop
     - TODO decide next-stop resolution when pinned stop is in ≥2 enabled events  #next-across-events
+    - TODO decide whether events follow the search+drag+roster pattern           #event-roster-parity
     - TODO verify Marvel Unlimited iOS URL scheme + fallback                     #mu-deeplink
-    - TODO confirm filter composition (series+era AND; events multi-toggle)      #filter-compose
+    - TODO confirm filter composition (era window; events multi-toggle)          #filter-compose
     - doing sketch UX / CE / BDD for Theme 1                                     #sketch-theme-1
     - doing sketch UX / CE / BDD for Theme 2                                     #sketch-theme-2
     - doing sketch UX / CE / BDD for Theme 3                                     #sketch-theme-3
@@ -101,6 +114,7 @@ flow:
     - pass #external-data-only         # no inference; all order via hard numbers
     - pass #series-volume-identity     # Series identity = (title, volume/year)
     - pass #next-vs-next-in-series     # two distinct operators (grill Q4)
+    - pass #series-roster-model        # SeriesCatalog + Search + ActiveSeriesRoster
     - skip #single-point-rule          # dissolved by metaphor swap
 
 =========
@@ -114,16 +128,22 @@ ux:
     ═══════════════════════════════════════════════════════════
 
     subway map
-      ├─ [top nav]  filter rail toggle ──→ subway map (filters shown)
-      ├─ [action]   hover stop ──────────→ stop hover card (overlay)
-      ├─ [action]   click stop ──────────→ issue detail panel (pinned)
-      ├─ [action]   toggle event checkbox → subway map (event bundle on/off)
-      └─ [action]   click transfer line ─→ issue detail panel (bridged stop)
+      ├─ [top nav]  filter rail toggle ─────→ subway map (rail shown)
+      ├─ [action]   type in search box ─────→ subway map (search results update)
+      ├─ [action]   drag series from results→ subway map (added to active roster)
+      ├─ [action]   toggle active checkbox ─→ subway map (line visibility flips)
+      ├─ [action]   click × on active row ──→ subway map (removed from roster)
+      ├─ [action]   hover stop ─────────────→ stop hover card (overlay)
+      ├─ [action]   click stop ─────────────→ issue detail panel (pinned)
+      ├─ [action]   toggle event checkbox ──→ subway map (event bundle on/off)
+      └─ [action]   click transfer line ────→ issue detail panel (target stop)
 
     issue detail panel
       ├─ [action]   read on marvel unlimited → external (marvelunlimited://…)
-      ├─ [action]   next stop on this line ──→ subway map (new pin)
-      └─ [action]   transfer to other line ──→ subway map (new pin, camera pans)
+      ├─ [action]   next stop ───────────────→ subway map (new pin)
+      ├─ [action]   next in series ──────────→ subway map (new pin, same line)
+      ├─ [action]   continues in ────────────→ subway map (new pin, jumps line)
+      └─ [action]   transfer to stop ────────→ subway map (new pin, camera pans)
 
     Nav tags: [top nav] · [action] · [system]
 
@@ -131,37 +151,61 @@ ux:
       SCREENS
     ═══════════════════════════════════════════════════════════
 
-    [ subway map ]                                    filter rail + canvas
-      ┌────────────────┬────────────────────────────────────────┐
-      │ Series         │  1963 ····· 1984 ····· 2006 ····· 2024 │  era ruler
-      │ [x] Amazing SM │  ●━━●━━●━━●━━●━━●━━●━━●━━●━━●━━●━━●    │  ← series line
-      │ [x] Iron Man   │        ●━━●━━●━━●━━●━━●━━●━━●━━●━━●    │
-      │ [x] X-Men      │      ●━━●━━●━━●━━●━━●━━●━━●━━●━━●━━●   │
-      │ [ ] Cap        │  (dim if unchecked — line + stops hidden)      │
-      │ ──────────     │                                        │
-      │ Events         │  transfers drawn only for enabled events:      │
-      │ [x] Secret Wars│      ●━━●━━●━━●                                │
-      │ [x] Civil War  │           ┃                                    │
-      │ [ ] House of M │      ●━━●━━●━━●                                │
-      │ [x] AvX        │           ┃                                    │
-      │                │      ●━━●━━●━━●   ← transfer line between lanes│
-      │ Era            │                                        │
-      │ (○) All        │  legend: ● stop · ━━ series line       │
-      │ ( ) Bronze     │          ┃ transfer line (per-event colour, T4) │
-      │ (●) Modern     │                                        │
-      │                │                                        │
-      │ [ Reset ]      │                                        │
-      └────────────────┴────────────────────────────────────────┘
-      Stories (~4): Filter Series · Toggle Event · Filter Era · Reset Filters
-      Domain terms: series line · stop · transfer connection · event bundle · era
+    [ subway map ]                                    split-rail + canvas
+      ┌───────────────────────┬────────────────────────────────────────┐
+      │ Search / Browse       │  1963 ····· 1984 ····· 2006 ····· 2024 │  era ruler
+      │ [ spider________  🔍 ]│                                        │
+      │ Results (7):          │  ●━━●━━●━━●━━●━━●━━●━━●━━●━━●━━●━━●    │ ← active line
+      │   Spider-Man (1963)  ⋮│        ●━━●━━●━━●━━●━━●━━●━━●━━●━━●    │
+      │   Spider-Man (1990)  ⋮│      ●━━●━━●━━●━━●━━●━━●━━●━━●━━●━━●   │
+      │   Spider-Man (1999)  ⋮│  (unchecked lines are dim / hidden)    │
+      │   Spider-Man (2003)  ⋮│                                        │
+      │   Amazing SM (1963)  ⋮│  event bundles (drawn only if enabled):│
+      │   Ultimate SM (2000) ⋮│      ●━━●━━●━━●                        │
+      │   Superior SM (2013) ⋮│           ┃                            │
+      │  ⋮ = drag handle      │      ●━━●━━●━━●   ← transfer line      │
+      │                       │           ┃                            │
+      │  drag row → active ↓  │      ●━━●━━●━━●                        │
+      ├───────────────────────┤                                        │
+      │ Active Series (roster)│                                        │
+      │ [x] Amazing SM   [×]  │                                        │
+      │ [x] Iron Man     [×]  │                                        │
+      │ [x] X-Men        [×]  │                                        │
+      │ [ ] Cap          [×]  │  legend:                               │
+      │  (drop zone here)     │    ● stop  ━━ series line              │
+      │                       │    ┃ transfer (per-event, #transfer-style)│
+      ├───────────────────────┤                                        │
+      │ Events                │                                        │
+      │ [x] Secret Wars       │                                        │
+      │ [x] Civil War         │                                        │
+      │ [ ] House of M        │                                        │
+      │ [x] AvX               │                                        │
+      ├───────────────────────┤                                        │
+      │ Era                   │                                        │
+      │ (○) All               │                                        │
+      │ ( ) Bronze            │                                        │
+      │ (●) Modern            │                                        │
+      │                       │                                        │
+      │ [ Reset roster ]      │                                        │
+      └───────────────────────┴────────────────────────────────────────┘
+      Stories (~6): Search Series · Drag Series into Roster · Toggle Series
+                    Visibility · Remove from Roster · Toggle Event · Filter Era
+      Domain terms: series catalog · search result · active series roster ·
+                    series line · stop · transfer connection · event bundle · era
       key:
-        [x]/[ ] check · (○)/(●) radio · [ btn ] button
-        ● stop · ━━ series line · ┃ transfer (styled per event — #transfer-style)
+        [x]/[ ] check · (○)/(●) radio · [ btn ] button · ⋮ drag handle · [×] remove
+        Search results and Active roster are TWO SEPARATE LISTS with different
+          affordances — results are draggable candidates (no checkboxes);
+          roster rows are checkable + removable (no drag handles).
+        on type in search → Search Results list re-queries SeriesCatalog
+        on drag row → drop into Active Series → ActiveSeriesRoster.add(series)
+        on [x]/[ ] active row → ActiveSeriesRoster.toggleVisible(series)
+        on [×] active row → ActiveSeriesRoster.remove(series)
+        on empty roster → canvas shows era ruler only ("drag a series to begin")
         on hover ● → stop hover card
         on click ● → issue detail panel (pinned)
         on click ┃ → issue detail panel for the target stop
-        on [x] event → draw that event's transfer bundle
-        on [ ] event → hide that event's transfer bundle
+        on [x]/[ ] event → EventFilter.enable / disable(event)
         series lines are always unbroken along their lane (no segmentation)
 
     [ stop hover card ]                              overlay tooltip
@@ -210,12 +254,17 @@ ce:
                                              # all transfers owned by one event
         subway_map -> series_line, transfer_bundle
         era                                  # bucketing rule for the ruler
+      roster                                       # left-rail model (search + active list)
+        series_catalog -> catalog/series           # complete searchable inventory
+        series_search -> series_catalog            # query operator over the catalog
+        active_series_roster -> catalog/series     # working set the reader has added
       filter                                       # facet composition
-        series_filter                              # visible series set (AND-of-checks)
         event_filter                               # enabled events (multi-toggle)
         era_filter                                 # time window
       view                                         # rendering-facing seam
-        subway_map_view -> timeline/subway_map, filter
+        search_browse_view -> roster/series_search, roster/active_series_roster
+        active_roster_view -> roster/active_series_roster
+        subway_map_view -> timeline/subway_map, roster, filter
         stop_hover_view -> catalog/issue
         detail_panel_view -> timeline/subway_map
       links                                        # outbound URLs
@@ -346,31 +395,84 @@ ce:
 
     # timeline/subway_map.py
     SubwayMap
-      seriesLines                             # list[SeriesLine]
+      seriesLines                             # list[SeriesLine] — one per ActiveSeriesRoster entry
       transferBundles                         # list[TransferBundle]  (one per Event)
       continuesInTransfers                    # list[TransferConnection]  (origin='continues_in')
-      buildFrom seriesSet eventSet            # factory-shaped operation
-      -> SeriesLine(…)
+      buildFrom roster eventSet               # factory-shaped operation
+      -> SeriesLine(…) for series in roster.allActiveSeries
       -> TransferBundle.buildFrom(…)
       -> ContinuesInTransfers.allFor(…)
       visibleTransfers                        # returns list[TransferConnection]:
-                                              #   continuesInTransfers +
-                                              #   flatten(bundle.connections
-                                              #           for bundle where enabled)
-      // Invariant: every SeriesLine renders regardless of event filters —
-      //            events control event-owned transfers only, never lanes.
-      // Invariant: continuesIn transfers are always eligible (subject to
-      //            SeriesFilter), even when every event is disabled.
+                                              #   [t for t in continuesInTransfers
+                                              #      if roster.isVisible(t.fromStop.series)
+                                              #     and roster.isVisible(t.toStop.series)] +
+                                              #   flatten(bundle.connections for bundle
+                                              #           where bundle.enabled and both
+                                              #           endpoints' series are visible)
+      // Invariant: a SeriesLine is drawn iff its Series is in the roster
+      //            AND its RosterEntry.visible == True.
+      // Invariant: unchecked-in-roster series still occupy the transferBundles
+      //            model (transfers touching them are computed) but are hidden
+      //            at render time — checking them shows the line + its transfers
+      //            without recomputing the map.
+      // Invariant: series NOT in the roster contribute NO lane, stops, or
+      //            transfers to the map (removed = gone until re-added).
 
       ====
 
-    # filter/*.py
-    SeriesFilter
-      selectedSeries                          # set[Series]
-      hides seriesLine                        # bool
-      // Working default: unchecked series hide their entire SeriesLine.
+    # roster/series_catalog.py — cohesive family
+    SeriesCatalog
+      allSeries                               # list[Series] — from FixtureIssueRepository
+      byDisplayName query                     # returns list[Series] whose displayName
+                                              # contains `query` (case-insensitive)
+      groupedByTitle                          # returns dict[title -> list[Series]]
+                                              # for browse mode (title expands to
+                                              # its distinct volumes)
+      -> FixtureIssueRepository.allSeries
+      // Invariant: allSeries is stable across the session — the catalog is
+      //            the full external inventory, not the working set.
 
       ----
+     SeriesSearch
+      catalog                                 # SeriesCatalog
+      query                                   # str  (may be empty)
+      mode                                    # 'search' | 'browse'
+      results                                 # returns list[Series]
+      -> SeriesCatalog.byDisplayName / groupedByTitle
+      // When `query` is empty AND mode = 'browse': results is groupedByTitle
+      //   flattened in an editorially useful order (title, then volume).
+      // When `query` is non-empty: results is byDisplayName(query).
+
+    ====
+
+    # roster/active_series_roster.py — the working set
+    ActiveSeriesRoster
+      entries                                 # ordered list[RosterEntry]
+      add series                              # -> None
+      remove series                           # -> None
+      toggleVisible series                    # -> None
+      isVisible series                        # -> bool
+      contains series                         # -> bool
+      visibleSeries                           # returns list[Series]
+      allActiveSeries                         # returns list[Series]  (visible+hidden)
+      // Invariant: no duplicate Series in entries.
+      // Invariant: adding a Series already in entries is a no-op (or moves it
+      //            to the end — TBD; not critical for spec).
+      // Invariant: removing a Series drops any pinned stop that lives on it
+      //            (delegated to PinController via a subscription).
+
+      ----
+     RosterEntry
+      series                                  # Series
+      visible                                 # bool  (default True on add)
+      // No other state — draw order is entries' list order.
+
+---
+# SeriesFilter no longer exists as a separate concept — its role is
+# split between ActiveSeriesRoster (WHICH series are in the map) and
+# each RosterEntry.visible (whether that series' line is drawn).
+
+    # filter/*.py
      EventFilter
       enabledEvents                           # set[Event]  (multi-toggle)
       isEnabled event                         # bool
@@ -387,16 +489,41 @@ ce:
       ====
 
     # view/*.py
-    SubwayMapView
+    SearchBrowseView
+      seriesSearch                            # SeriesSearch
+      roster                                  # ActiveSeriesRoster  (drop target)
+      renderQueryBox
+      renderResultsList                       # each row draggable; NO checkbox
+      onDrop series                           # -> roster.add(series)
+      -> SeriesSearch.results
+      -> ActiveSeriesRoster.add
+      // Invariant: renderResultsList does NOT show checkboxes. Results and
+      //            roster are visually and semantically distinct groupings.
+
+      ----
+     ActiveRosterView
+      roster                                  # ActiveSeriesRoster  (drop target + list)
+      renderRosterList                        # each row: [x] displayName [×]
+      onToggle series                         # -> roster.toggleVisible(series)
+      onRemove series                         # -> roster.remove(series)
+      onDrop series                           # -> roster.add(series)   (drop target)
+      -> ActiveSeriesRoster
+      // Invariant: renderRosterList does NOT show drag handles — items are
+      //            managed by the checkbox and the × button only.
+      // Empty state: renders "drag a series here to add it to the map".
+
+      ----
+     SubwayMapView
       subwayMap                               # SubwayMap
-      filters                                 # (SeriesFilter, EventFilter, EraFilter)
+      roster                                  # ActiveSeriesRoster
+      filters                                 # (EventFilter, EraFilter)
       xScaleFor date                          # px along ruler
-      yLaneFor series                         # px lane y
-      renderSeriesLine seriesLine             # draw unbroken line + all stops
+      yLaneFor series                         # px lane y (one per roster.allActiveSeries)
+      renderSeriesLine seriesLine             # only when roster.isVisible(series)
       renderStop stop
       renderTransferConnection connection     # per-event styling (#transfer-style)
       -> SubwayMap.visibleTransfers
-      -> SeriesFilter.hides
+      -> ActiveSeriesRoster.isVisible
       -> EraFilter.inWindow
 
       ----
@@ -478,8 +605,10 @@ bdd:                                          # spec fidelity uses `behavior`
       that has origin = an Event
         it should draw a line styled similarly to a series line
         it should render only when EventFilter.isEnabled(origin)
-      that connects to a stop on a series whose SeriesFilter check is off
+      that connects to a stop on a series whose roster entry is invisible
         it should not render (the target lane is hidden)
+      that connects to a stop on a series NOT in the roster
+        it should not render (the target lane doesn't exist)
 
     a transfer bundle
       that has been asked to buildFrom an event whose readingOrder is
@@ -499,11 +628,47 @@ bdd:                                          # spec fidelity uses `behavior`
       that is derived from an issue whose continuesIn points to the SAME series
         it should not produce a TransferConnection (already on the series line)
 
-    a series filter
-      that has "Amazing Spider-Man" checked and "Iron Man" unchecked
-        it should keep the ASM line visible
-        it should hide the Iron Man line and all of its stops
+    a series catalog
+      that has been built from the fixture
+        it should expose every Series in the fixture as a single searchable list
+        it should distinguish volumes with the same title as separate entries
+          (e.g. "Spider-Man (1963)" and "Spider-Man (2003)" both present)
+
+    a series search
+      that has query = "spider"  (case-insensitive)
+        it should return every Series whose displayName contains "spider"
+        it should NOT return Series whose title alone contains "spider" but whose
+          displayName was rewritten (all matching is against displayName)
+      that has query = ""  and mode = "browse"
+        it should return the full catalog grouped by title (volumes together)
+
+    an active series roster
+      that has just been created
+        it should contain no entries
+        it should report isVisible(anySeries) == False
+      that has been asked to add "Spider-Man (2003)"
+        it should contain one entry whose series = Spider-Man (2003) and
+          visible = True
+      that has been asked to add "Spider-Man (2003)" twice
+        it should contain exactly one entry for that Series (no duplicates)
+      that has "Spider-Man (2003)" in it and receives toggleVisible(...)
+        it should keep the entry but flip visible False
+        with subsequent toggleVisible(...)
+          it should flip visible back to True
+      that has "Spider-Man (2003)" in it and receives remove(...)
+        it should contain no entry for that Series
+
+    a subway map — sourced from the roster
+      that has been built from a roster containing "Amazing Spider-Man" and
+      "Iron Man" (both visible)
+        it should render both lines
+      with "Iron Man" toggled invisible in the roster
+        it should render only the Amazing Spider-Man line
         it should hide any transfer connection endpointed on Iron Man
+        it should keep Iron Man in the roster for later re-toggling
+      with "Iron Man" removed from the roster
+        it should render only the Amazing Spider-Man line
+        it should NOT include Iron Man's transfer contributions in the map at all
 
     an era filter
       that has era = "Modern" (1998..present)
@@ -702,3 +867,4 @@ bdd:
 - spec / Subway Map / pass #external-data-only     # no inference from pubDate/anything
 - spec / Subway Map / pass #series-volume-identity # Series id = (title, volume/year)
 - spec / Subway Map / pass #next-vs-next-in-series # two distinct operators
+- spec / Subway Map / pass #series-roster-model    # search + drag + active roster
