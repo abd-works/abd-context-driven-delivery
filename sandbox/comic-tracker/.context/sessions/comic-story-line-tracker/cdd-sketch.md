@@ -29,22 +29,20 @@ flow:
   recommend: more-same-stage
   next: spec (stay — resolve open blockers, then proceed to engineer)
   note: |
-    UX has a locked visual concept (constellation timeline + hover card + filter
-    rail) that the CE and BDD blocks agree with, BUT three cross-lens blockers
-    remain before views fully agree:
-      1. Data source for issues + crossover-event membership is not chosen
-         (fixture JSON vs. Marvel API vs. hand-curated). CE `IssueRepository`
-         and BDD "loads the timeline" scenarios both depend on it.
-      2. iOS deep-link scheme for Marvel Unlimited is not verified; UX
+    Data source now locked (curated fixture JSON) — grill Q2 answered. Three
+    cross-lens blockers remain before views fully agree:
+      1. iOS deep-link scheme for Marvel Unlimited is not verified; UX
          "Read on Marvel Unlimited" affordance and CE `MarvelUnlimitedLink`
          factory both depend on it.
-      3. Segment boundary rule when a series has only one event-issue in the
+      2. Segment boundary rule when a series has only one event-issue in the
          visible filter set (single-point "constellation" vs. absorb into
          neighbour) — UX drawing rule, CE `Segment` invariant, and BDD "renders
          a constellation of one issue" all wait on this decision.
+      3. Filter composition rule (AND across facets, OR within facet is the
+         working default) — CE `FilterSet.apply` invariant and BDD filter
+         scenarios both branch on it.
     Do not recommend proceed to engineer until #1–#3 close.
   open:
-    - TODO pick data source for issues + events               #data-source
     - TODO verify Marvel Unlimited iOS URL scheme + fallback  #mu-deeplink
     - TODO define single-issue-segment rule                   #single-point-rule
     - TODO decide filter composition rule (AND across facets, OR within facet?) #filter-compose
@@ -55,6 +53,7 @@ flow:
     - pass #fidelity-choice          # spec picked so bdd lens is available
     - pass #lens-selection            # ce + bdd + ux (per user); stories/ddd omitted this cycle
     - pass #scope-increment-1         # single visual + hover card + filters
+    - pass #data-source               # curated fixture JSON (grill Q2)
 
 =========
 theme: Timeline Constellation  (user-goal — "see the map, filter it, orient")
@@ -162,6 +161,9 @@ ce:
         series                               # ordered set of issues
         character                            # cross-cutting collaborator
         event -> issue                       # crossover event = set of issues
+        fixture_issue_repository -> issue, series, event, character
+                                             # reads catalog/fixtures/marvel-canon.json
+                                             # (grill Q2: #data-source = fixture JSON)
       timeline                               # constellation model
         segment -> catalog/series, catalog/event   # continuous run between events
         constellation -> segment, catalog/event    # segments + event edges
@@ -292,14 +294,28 @@ ce:
       webFallbackUrl                          # 'https://www.marvel.com/comics/issue/{marvelUnlimitedId}'
       // Open #mu-deeplink: verify actual iOS scheme; keep web fallback as truth.
 
+    ====
+
+    # catalog/fixture_issue_repository.py
+    FixtureIssueRepository
+      fixturePath                             # 'catalog/fixtures/marvel-canon.json'
+      loadAll                                 # returns (list[Series], list[Event], list[Character])
+      allSeries                               # list[Series]
+      allEvents                               # list[Event]
+      allEras                                 # list[Era]  — enumerated at load
+      -> loadAll
+      // Invariant: allEras is derived from loaded Issues, not hardcoded.
+      // No async / HTTP surface; deterministic across BDD runs.
+      // Grill Q2: #data-source = curated fixture JSON. No port abstraction
+      //           this cycle — API impl deferred until an explicit ask.
+
     ----
     # Notes for spec/code phase (not drawn here):
     //  · No formal I{Type} names yet — modules fidelity would keep it plain.
     //    Model fidelity would introduce IIssue / ISeries / … at generate time.
     //  · Example factory family lives in a sibling `*_example_factory.py`
     //    (fake / isolated / production modes) per clean_engineering sketch rule.
-    //  · Persistence deferred — Open #data-source drives whether IssueRepository
-    //    reads a JSON fixture, hits Marvel API, or both (Conformist ACL).
+    //    Fake bundle reads directly from the same marvel-canon.json fixture.
 
 ---
 bdd:                                          # explore+ only — spec fidelity uses `behavior`
@@ -308,7 +324,7 @@ bdd:                                          # explore+ only — spec fidelity 
     ## Timeline Constellation — describe / it
 
     a timeline constellation
-      that has been built from a series set and an event set
+      that has been built from a FixtureIssueRepository (marvel-canon.json)
         it should place one lane per visible series
         it should place one point per issue on its series lane
         it should draw a segment line between each boundary pair on the same series

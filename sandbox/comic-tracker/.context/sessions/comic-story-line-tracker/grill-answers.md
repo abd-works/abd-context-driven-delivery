@@ -152,24 +152,29 @@ default in the `ce:` block; BDD covers both option 1 and option 2 branches.
 **Frame.** The user's ask ("hyperlinks to marvel u comic in iOS") implies
 Marvel Unlimited coverage. Nothing in the ask says the app must talk to
 Marvel's API. CE `IssueRepository` shape depends on this choice, as does the
-BDD "loads the timeline" scenario surface.
+BDD "loads the timeline" scenario surface and the UX filter dropdowns.
+Sources read: `context_tools/cdd/.context/grill-answers.md` (Fake / Isolated
+/ Production factory pattern).
 
-Options:
-1. **(Recommended for Increment 1) Curated fixture JSON** — hand-authored file
-   of a small canon slice (e.g. Civil War, Secret Wars, House of M, Infinity
-   Gauntlet across ~5–6 series). Zero external dependency, easy to demo,
-   deterministic tests.
-2. Marvel Developer API — authoritative catalog but requires credentials,
-   rate limits, and mapping to `marvelUnlimitedId`.
-3. Both — fixture as fake tier, API as production tier (ties into CE
-   fake/isolated/production factory pattern from
-   `context_tools/cdd/.context/grill-answers.md`).
-4. Other / I'll specify.
+Options asked:
+1. **(Recommended) Curated fixture JSON** — hand-authored `catalog/fixtures/
+   marvel-canon.json`; ~5–6 series across ~4 crossover events; zero external
+   dependency; deterministic BDD; doubles as Fake factory data.
+2. Marvel Developer API sole source — authoritative, but API keys, rate
+   limits, CORS proxy, Marvel-API-id → Marvel-Unlimited-id mapping.
+3. Both — fixture as Fake tier, API as Production tier via the workspace's
+   Fake / Isolated / Production factory pattern.
+4. Fixture now, port shape ready for a second impl later.
+5. Other / I'll specify.
 
-**Recorded answer:** **open** — sketched as `#data-source` under
-`flow.open`. Working recommendation for Increment 1 is option 1; option 3 is
-the natural growth path and aligns with the CE factory pattern already in the
-workspace grill-answers.
+**Recorded answer:** 1 — **Curated fixture JSON** (user-confirmed
+2026-08-08). Logged as `pass #data-source`. Downstream implications:
+- CE `catalog/` module gets a `FixtureIssueRepository` reading
+  `catalog/fixtures/marvel-canon.json`; no port abstraction this cycle.
+- Fixture doubles as the `Fake` factory bundle for BDD.
+- UX filter dropdowns are populated from the fixture — enumerable at build
+  time, no async spinner state.
+- Marvel Unlimited link stays outbound-only (`#mu-deeplink` still open).
 
 ---
 
