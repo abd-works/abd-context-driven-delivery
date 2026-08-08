@@ -282,6 +282,42 @@ fine. Tracked as `#event-roster-parity` in `flow.open`; not blocking Q5.
 
 ---
 
+### Character demoted from first-class to string tag (2026-08-08)
+
+**Frame.** User redirect (verbatim): "character is a sub of series an
+attribute; can tag and filter on characters a character, but not first
+class entity yet".
+
+**Interpretation applied.** The `catalog/character` module and the
+`Character` class are removed. Characters are string tags rooted at Series.
+
+**CE consequences applied to `cdd-sketch.md`.**
+
+| Concept | Change |
+|---|---|
+| `Character` (class) | **Removed.** No first-class entity. |
+| `catalog/character` (module) | **Removed** from the module nest. |
+| `Series.characters` | NEW: `list[str]` — top-level character tag list for the Series (which characters this series features overall). Authoritative for filtering. |
+| `Issue.characters` | Type changed from `list[Character]` to `list[str]`. Optional per-issue detail; when empty, `effectiveCharacters` falls back to `series.characters`. |
+| `Issue.effectiveCharacters` | NEW derived property: `issue.characters if non-empty else series.characters`. Used by the hover card and stop card. |
+| `CharacterTagIndex` (new module) | Lightweight lookup: `allTags`, `seriesFor(tag)`, `issuesFor(tag)`. Exact-string matching; no alias resolution (that's a first-class promotion concern). |
+| `StopCard.keyCharacters` | Now `list[str]` from `stop.issue.effectiveCharacters` — no Character objects to dereference. |
+
+**BDD consequences applied.** New `it should` clauses under `a stop card`
+cover the `Issue.effectiveCharacters` fallback: renders `issue.characters`
+when populated, else `series.characters`.
+
+**Related open items introduced.**
+- `#character-not-first-class-yet` — promotion path (metadata like real
+  name, first appearance, alt identities, alias resolution) when needed
+  later.
+- `#character-filter-scope` — character filter as search-facet only, or
+  also dim per-stop on the map? Small, not blocking Q5.
+
+**Passes logged:** `pass #character-as-string-tag` in `cdd-sketch.md`.
+
+---
+
 ### Transfer connection styling — **open**
 
 **Frame.** User said the transfer line is "similar to main series line".

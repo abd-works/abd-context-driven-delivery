@@ -18,6 +18,13 @@ scope: Increment 1 — Interactive Comic Story Line Tracker (single visual)
     - Left rail splits into Search/Browse (draggable candidates) and Active
       Series (checkable roster). Drag drops from search into the active list;
       the two lists never merge.
+  - **Character not first-class yet** (redirect 2026-08-08, post-Q5 turn):
+    - "character is a sub of series an attribute; can tag and filter on
+      characters a character, but not first class entity yet"
+    - Character is a `list[str]` tag attribute on Series (and optionally on
+      Issue for per-issue detail); no `Character` class; CharacterTagIndex
+      does exact-string lookup for filter/search. Promotion path tracked
+      as `#character-not-first-class-yet`.
   - **External-data / hard-numbered rule** (redirect 2026-08-08, Q4 turn):
     - "no we dont infer anything all data comes from external sources and is
       tracked with a hard number"
@@ -78,6 +85,12 @@ flow:
     ActiveSeriesRoster (checkable working set). The two are separate
     groupings with different affordances; drag drops from search into roster.
 
+    Character demoted (2026-08-08, post-Q5 turn): Character is NOT a first-class
+    entity yet. Characters live as list[str] tag attributes on Series (and
+    optionally on Issue for per-issue detail). CharacterTagIndex is a
+    lightweight lookup for search + filter. #character-not-first-class-yet
+    tracks the promotion path when metadata is needed.
+
     Fresh cross-lens blockers still open:
       · #transfer-style — "line similar to main series line" is a range:
         same colour as source lane, same colour as target lane, blended,
@@ -100,6 +113,8 @@ flow:
     - TODO decide multi-event stop rendering (two lines vs merged)               #multi-event-stop
     - TODO decide next-stop resolution when pinned stop is in ≥2 enabled events  #next-across-events
     - TODO decide whether events follow the search+drag+roster pattern           #event-roster-parity
+    - TODO decide character-filter scope (search-facet only, or dim stops too?)   #character-filter-scope
+    - TODO promote Character to first-class entity when metadata is needed        #character-not-first-class-yet
     - TODO verify Marvel Unlimited iOS URL scheme + fallback                     #mu-deeplink
     - TODO confirm filter composition (era window; events multi-toggle)          #filter-compose
     - doing sketch UX / CE / BDD for Theme 1                                     #sketch-theme-1
@@ -115,6 +130,7 @@ flow:
     - pass #series-volume-identity     # Series identity = (title, volume/year)
     - pass #next-vs-next-in-series     # two distinct operators (grill Q4)
     - pass #series-roster-model        # SeriesCatalog + Search + ActiveSeriesRoster
+    - pass #character-as-string-tag    # characters live as list[str] on Series (and Issue)
     - skip #single-point-rule          # dissolved by metaphor swap
 
 =========
@@ -237,12 +253,16 @@ ce:
     ## Module nest
 
     comic-tracker/
-      catalog                                # issues, series, characters, events
-        issue                                # leaf domain entity
-        series                               # ordered set of issues (unbroken)
-        character                            # cross-cutting collaborator
+      catalog                                # issues, series, events (NO Character class)
+        issue                                # leaf domain entity; carries characters: list[str]
+        series                               # ordered set of issues (unbroken);
+                                             #   carries characters: list[str] (top-level tags)
         event -> issue                       # named bundle of transfers
-        fixture_issue_repository -> issue, series, event, character
+        character_tag_index -> series, issue # lightweight lookup: tag → series+issues
+                                             #   Character is a STRING TAG on Series/Issue;
+                                             #   NOT a first-class entity yet
+                                             #   (#character-not-first-class-yet)
+        fixture_issue_repository -> issue, series, event
                                              # reads catalog/fixtures/marvel-canon.json
       timeline                               # subway-map model
         series_line -> catalog/series        # unbroken lane for one series
@@ -281,15 +301,22 @@ ce:
                                               # NEVER used to derive ordering
       era                                     # Era — derived from publicationDate window
       synopsis
-      characters                              # list[Character]
+      characters                              # list[str]  — per-issue appearances tag list;
+                                              #   MAY be empty; when empty, fall back to
+                                              #   series.characters for display purposes
       events                                  # list[Event]  (0..N — 0 is fine)
       continuesIn                             # Issue | None — explicit "TBC in …" pointer;
                                               # may point to same Series or a different one
       marvelUnlimitedId
+      effectiveCharacters                     # returns list[str]:
+                                              #   characters if non-empty else series.characters
       -> series.appendIssue
       // Invariant: (series, issueNumber) unique.
       // Invariant: continuesIn, when set, points to an Issue in the fixture.
       //            May cross Series (source of a cross-series transfer).
+      // Note: characters are STRING TAGS, not Character objects.
+      //       #character-not-first-class-yet — promote later when metadata
+      //       (real name, first appearance, alt identities, …) is needed.
       ----
      Series
       id                                      # external hard id (from fixture)
@@ -297,6 +324,9 @@ ce:
       volume                                  # int or year — e.g. 2003 for "Spider-Man (2003)"
       displayName                             # derived: 'Spider-Man (2003)'
       issues                                  # composition list[Issue] — ordered by issueNumber
+      characters                              # list[str]  — top-level character tag list
+                                              #   for this Series (which characters this
+                                              #   series features overall)
       appendIssue issue
       firstIssue                              # Issue at min(issueNumber)
       lastIssue                               # Issue at max(issueNumber)
@@ -304,6 +334,9 @@ ce:
       // Invariant: Series identity is (title, volume). Renumbering = new Series.
       // Invariant: issues form ONE unbroken sequence in issueNumber order.
       // Invariant: nextInSeries ignores events and continuesIn — always issueNumber+1.
+      // Invariant: characters is authoritative for filtering; issue.characters is
+      //            optional finer-grain per-issue detail (subset of series.characters
+      //            when both are populated by the fixture).
       ----
      Event
       id                                      # external hard id (from fixture)
@@ -316,10 +349,24 @@ ce:
       // Invariant: readingOrder is externally given; NOT derived from pubDate.
       // Invariant: participatingSeries.size >= 2.
       // Invariant: an Issue may appear in 0..N Events (multi-membership OK).
-      ----
-     Character
-      name
-      appearsIn                               # list[Issue]
+
+    ====
+
+    # catalog/character_tag_index.py — lightweight lookup, no Character class
+    CharacterTagIndex
+      buildFrom seriesList                    # walks each series' + issues' characters lists
+      allTags                                 # returns sorted list[str]  — unique character names
+      seriesFor tag                           # returns list[Series]  — series whose
+                                              #   `characters` contains `tag`
+      issuesFor tag                           # returns list[Issue]   — issues whose
+                                              #   effectiveCharacters contains `tag`
+      -> Series.characters
+      -> Issue.effectiveCharacters
+      // Invariant: tags are exact-match strings; no normalisation / aliases here.
+      //            Alias resolution belongs to the first-class Character promotion
+      //            (#character-not-first-class-yet).
+      // Rendering seam: powers character search-facet in SearchBrowseView and
+      //                 (later) per-stop dimming when a character filter is active.
 
       ====
 
@@ -830,10 +877,12 @@ ce:
       stop                                    # Stop
       synopsisShort                           # first ~2 lines
       synopsisFull                            # full paragraph
-      keyCharacters                           # top ~5 characters
+      keyCharacters                           # top ~5 strings from
+                                              #   stop.issue.effectiveCharacters
       eventTags                               # list[Event.name] — from stop.issue.events
       -> MarvelUnlimitedLink.for(stop.issue)
       // No state — pure view model.
+      // Character strings only — no Character objects to dereference.
 
       ----
      StopCard.for stop                        # factory operation
@@ -849,12 +898,18 @@ bdd:
         it should render the publicationDate and era
         it should render an "In events" line naming that event
         it should render a short synopsis (~2 lines)
-        it should render the top characters
+        it should render the top characters as plain strings
         it should render a Read-on-Marvel-Unlimited action pointing at the
           marvelunlimited:// scheme with a web fallback URL
       that has been built for a stop whose issue belongs to no event
         it should still render title, date, synopsis and characters
         it should omit the "In events" line
+      that has been built for a stop whose issue.characters is empty AND
+      whose series.characters is populated
+        it should render series.characters as the character strings
+          (Issue.effectiveCharacters fallback rule)
+      that has been built for a stop whose issue.characters is populated
+        it should render issue.characters (not series.characters)
 =========
 
 ## log
@@ -868,3 +923,4 @@ bdd:
 - spec / Subway Map / pass #series-volume-identity # Series id = (title, volume/year)
 - spec / Subway Map / pass #next-vs-next-in-series # two distinct operators
 - spec / Subway Map / pass #series-roster-model    # search + drag + active roster
+- spec / Subway Map / pass #character-as-string-tag # not first-class yet
