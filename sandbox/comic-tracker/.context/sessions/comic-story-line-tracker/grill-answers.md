@@ -358,11 +358,38 @@ when populated, else `series.characters`.
 
 ---
 
-### Transfer connection styling — **open**
+### Transfer connection styling — Q7 answered (2026-08-09)
 
 **Frame.** User said the transfer line is "similar to main series line".
-That names the family but leaves colour / weight / dash open. Awaiting a
-later grill turn once `#transfer-topology` is settled.
+Weight-class was implied; colour source and continuesIn treatment open.
+
+**Options asked** (see git history for full framing): (1) per-event colour
++ neutral continuesIn, (2) source-lane colour, (3) blended gradient,
+(4) uniform neutral, (5) dashed vs solid, (6) other.
+
+**Recorded answer:** 1 — per-event colour + neutral for continuesIn.
+
+**CE consequences applied.**
+
+| Concept | Change |
+|---|---|
+| `Series.colour` | NEW: `str` hex from fixture. Drives `SeriesLine.renderStyle`. |
+| `Event.colour` | NEW: `str` hex from fixture. Drives event-owned `TransferConnection.renderStyle`. |
+| `TransferConnection.renderStyle` | NEW derived: returns colour + weight + dash. Event-owned → `origin.colour`; continuesIn → `Palette.NEUTRAL_TRANSFER`; weight = `Palette.SERIES_LINE_WEIGHT`; dash = solid. |
+| `SeriesLine.renderStyle` | NEW derived: colour = `series.colour`; weight = `Palette.SERIES_LINE_WEIGHT`; dash = solid. |
+| `timeline/palette.py` (NEW module) | Holds `SERIES_LINE_WEIGHT`, `TRANSFER_WEIGHT = SERIES_LINE_WEIGHT`, `NEUTRAL_TRANSFER` hex. |
+| `SubwayMapView.renderSeriesLine` | Applies `seriesLine.renderStyle`. |
+| `SubwayMapView.renderTransferConnection` | Applies `connection.renderStyle`. |
+| `FixtureIssueRepository` | Loader MUST populate `Series.colour` and `Event.colour`; palette discipline (no collisions across `Series ∪ Events ∪ {NEUTRAL_TRANSFER}`). |
+| Invariant | `Series.colour` distinct from any `Event.colour`; documented on both classes. |
+
+**BDD consequences applied.** New `a transfer connection` clauses assert
+`renderStyle.colour == origin.colour` for event-owned and
+`renderStyle.colour == Palette.NEUTRAL_TRANSFER` for continuesIn, both at
+weight `SERIES_LINE_WEIGHT` and dash `solid`. New `a series line` block
+asserts the same shape at `series.colour`.
+
+**Passes logged:** `pass #transfer-style`.
 
 ---
 

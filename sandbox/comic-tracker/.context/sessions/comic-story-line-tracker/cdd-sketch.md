@@ -92,9 +92,10 @@ flow:
     tracks the promotion path when metadata is needed.
 
     Fresh cross-lens blockers still open:
-      · #transfer-style — "line similar to main series line" is a range:
-        same colour as source lane, same colour as target lane, blended,
-        or a per-event colour?
+      · #transfer-style — RESOLVED (Q7, 2026-08-09): per-event colour +
+        neutral for continuesIn; series colour on series lines; all
+        solid, all same weight. Fixture supplies Series.colour and
+        Event.colour with palette discipline.
       · #multi-event-stop — RESOLVED (Q6, 2026-08-08): two independent
         TransferConnections, no fan-out, no merge, no active-event
         highlighting. Rare in practice.
@@ -111,7 +112,6 @@ flow:
 
     Do not recommend proceed to engineer until these six items close.
   open:
-    - TODO decide transfer styling (whose colour, whose look)                    #transfer-style
     - TODO decide whether events follow the search+drag+roster pattern           #event-roster-parity
     - TODO decide character-filter scope (search-facet only, or dim stops too?)   #character-filter-scope
     - TODO promote Character to first-class entity when metadata is needed        #character-not-first-class-yet
@@ -133,6 +133,7 @@ flow:
     - pass #character-as-string-tag    # characters live as list[str] on Series (and Issue)
     - pass #next-across-events         # explicit activeEvent pin (Q5, option 1)
     - pass #multi-event-stop           # different lines, no fan-out (Q6, option 2)
+    - pass #transfer-style             # per-event colour + neutral (Q7, option 1)
     - skip #single-point-rule          # dissolved by metaphor swap
 
 =========
@@ -212,6 +213,10 @@ ux:
                     series line · stop · transfer connection · event bundle · era
       key:
         [x]/[ ] check · (○)/(●) radio · [ btn ] button · ⋮ drag handle · [×] remove
+        Series lines wear their series.colour (solid, series-line weight).
+        Event-owned transfers wear origin.colour (solid, same weight).
+        continuesIn transfers wear Palette.NEUTRAL_TRANSFER (muted grey,
+          solid, same weight).
         Search results and Active roster are TWO SEPARATE LISTS with different
           affordances — results are draggable candidates (no checkboxes);
           roster rows are checkable + removable (no drag handles).
@@ -325,6 +330,8 @@ ce:
       title                                   # e.g. "Spider-Man"
       volume                                  # int or year — e.g. 2003 for "Spider-Man (2003)"
       displayName                             # derived: 'Spider-Man (2003)'
+      colour                                  # str — hex "#rrggbb" from fixture;
+                                              #   drives SeriesLine render (Q7)
       issues                                  # composition list[Issue] — ordered by issueNumber
       characters                              # list[str]  — top-level character tag list
                                               #   for this Series (which characters this
@@ -339,11 +346,16 @@ ce:
       // Invariant: characters is authoritative for filtering; issue.characters is
       //            optional finer-grain per-issue detail (subset of series.characters
       //            when both are populated by the fixture).
+      // Invariant: colour is externally curated; fixture MUST ensure Series colours
+      //            and Event colours don't collide (Q7 palette-discipline note).
       ----
      Event
       id                                      # external hard id (from fixture)
       name                                    # e.g. "Civil War"
       era
+      colour                                  # str — hex "#rrggbb" from fixture;
+                                              #   drives event-owned TransferConnection
+                                              #   render (Q7)
       readingOrder                            # list[Issue] — ORDERED, external, hard-numbered
       participatingSeries                     # derived set of distinct Series in readingOrder
       indexOf issue                           # returns int position in readingOrder
@@ -351,6 +363,31 @@ ce:
       // Invariant: readingOrder is externally given; NOT derived from pubDate.
       // Invariant: participatingSeries.size >= 2.
       // Invariant: an Issue may appear in 0..N Events (multi-membership OK).
+      // Invariant: colour is externally curated; must be distinct from all
+      //            Series colours in the fixture (palette discipline).
+
+    ====
+
+    # timeline/palette.py — tiny constants module (Q7)
+    Palette
+      SERIES_LINE_WEIGHT                      # number  — e.g. 4px
+      TRANSFER_WEIGHT = SERIES_LINE_WEIGHT    # same class as series line
+      NEUTRAL_TRANSFER                        # str hex — muted grey for
+                                              #   continuesIn transfers
+      // Invariant: NEUTRAL_TRANSFER must not collide with any Series.colour or
+      //            Event.colour in the fixture (palette discipline).
+
+      ----
+     SeriesLineRenderStyle
+      colour
+      weight
+      dash                                    # 'solid'
+
+      ----
+     TransferRenderStyle
+      colour
+      weight
+      dash                                    # 'solid'
 
     ====
 
@@ -378,6 +415,10 @@ ce:
       stops                                   # list[Stop] — one per issue, in pubDate order
       xRange                                  # (firstDate, lastDate) — pixels along ruler
       yLane                                   # lane y-position
+      renderStyle                             # returns SeriesLineRenderStyle:
+                                              #   colour = series.colour  (Q7)
+                                              #   weight = SERIES_LINE_WEIGHT
+                                              #   dash   = solid
       -> Series.issues                        # source of stops
       // Invariant: len(stops) == len(series.issues).
       // Invariant: the line drawn between stops is CONTINUOUS end-to-end
@@ -400,14 +441,21 @@ ce:
       fromStop                                # Stop  (on Series A)
       toStop                                  # Stop  (on Series B, B != A)
       origin                                  # 'continues_in' | Event
+      renderStyle                             # returns TransferRenderStyle:
+                                              #   Event   → colour=origin.colour, dash=solid
+                                              #   'continues_in' → colour=NEUTRAL_TRANSFER,
+                                              #                    dash=solid
+                                              #   weight = SERIES_LINE_WEIGHT (same class)
       // Invariant: fromStop.seriesLine.series != toStop.seriesLine.series
       //            (a within-series continuation is NOT a transfer; the
       //            unbroken series line already carries it).
-      // Rendering seam: draw as a line "similar to a series line" —
-      //                 styling decided by #transfer-style (see flow.open).
+      // Rendering seam: draw as a line "similar to a series line" — Q7 rule:
+      //   · event-owned transfers wear the event's colour;
+      //   · continuesIn transfers wear a neutral colour;
+      //   · weight matches series-line weight; both are solid.
       // If origin == 'continues_in':
       //   · sourced from fromStop.issue.continuesIn == toStop.issue
-      //   · always eligible for render (subject to SeriesFilter)
+      //   · always eligible for render (subject to Roster visibility)
       // If origin == Event:
       //   · sourced from a consecutive cross-series pair in Event.readingOrder
       //   · eligible for render iff EventFilter.isEnabled(origin)
@@ -571,9 +619,13 @@ ce:
       filters                                 # (EventFilter, EraFilter)
       xScaleFor date                          # px along ruler
       yLaneFor series                         # px lane y (one per roster.allActiveSeries)
-      renderSeriesLine seriesLine             # only when roster.isVisible(series)
+      renderSeriesLine seriesLine             # only when roster.isVisible(series);
+                                              # applies seriesLine.renderStyle
+                                              # (Q7 series colour)
       renderStop stop
-      renderTransferConnection connection     # per-event styling (#transfer-style)
+      renderTransferConnection connection     # applies connection.renderStyle
+                                              # (Q7: event.colour for event-owned;
+                                              #  neutral for continuesIn).
                                               # Each TransferConnection renders
                                               # independently — no fan-out, no
                                               # merge, no active-event weighting
@@ -610,12 +662,17 @@ ce:
     # catalog/fixture_issue_repository.py
     FixtureIssueRepository
       fixturePath                             # 'catalog/fixtures/marvel-canon.json'
-      loadAll                                 # returns (list[Series], list[Event], list[Character])
+      loadAll                                 # returns (list[Series], list[Event])
       allSeries
       allEvents
       allEras                                 # derived from loaded Issues
       -> loadAll
       // Grill Q2: #data-source = curated fixture JSON.
+      // Fixture MUST supply:
+      //   · Series.colour hex per Series
+      //   · Event.colour hex per Event
+      //   · Palette discipline: no colour collisions across Series ∪ Events
+      //     ∪ {NEUTRAL_TRANSFER}   (Q7).
 
     ----
     # Notes for spec/code phase (not drawn here):
@@ -654,16 +711,25 @@ bdd:                                          # spec fidelity uses `behavior`
 
     a transfer connection
       that has origin = 'continues_in'
-        it should draw a line styled similarly to a series line
-          (styling per #transfer-style)
-        it should always be eligible for render (SeriesFilter only)
-      that has origin = an Event
-        it should draw a line styled similarly to a series line
-        it should render only when EventFilter.isEnabled(origin)
+        it should expose renderStyle with colour = Palette.NEUTRAL_TRANSFER
+        it should expose renderStyle with weight = Palette.SERIES_LINE_WEIGHT
+        it should expose renderStyle with dash = solid
+        it should always be eligible for render (roster only)
+      that has origin = Civil War (an Event whose colour = "#c62828")
+        it should expose renderStyle with colour = "#c62828"
+        it should expose renderStyle with weight = Palette.SERIES_LINE_WEIGHT
+        it should expose renderStyle with dash = solid
+        it should render only when EventFilter.isEnabled(Civil War)
       that connects to a stop on a series whose roster entry is invisible
         it should not render (the target lane is hidden)
       that connects to a stop on a series NOT in the roster
         it should not render (the target lane doesn't exist)
+
+    a series line
+      that has been built from Spider-Man (2003) (colour = "#e53935")
+        it should expose renderStyle with colour = "#e53935"
+        it should expose renderStyle with weight = Palette.SERIES_LINE_WEIGHT
+        it should expose renderStyle with dash = solid
 
     a transfer bundle
       that has been asked to buildFrom an event whose readingOrder is
@@ -997,3 +1063,4 @@ bdd:
 - spec / Subway Map / pass #character-as-string-tag # not first-class yet
 - spec / Read & Transfer / pass #next-across-events # activeEvent pin (Q5)
 - spec / Subway Map / pass #multi-event-stop        # different lines (Q6)
+- spec / Subway Map / pass #transfer-style          # per-event colour (Q7)
