@@ -352,6 +352,53 @@ Q10 based on this research and wait for the user's decision.
 
 ---
 
+### Q10 answered — scheme-only + digital-id provenance (2026-08-09)
+
+**Frame.** Re-posed Q10 with six evidence-grounded options.
+
+**User answer:** "3 only" — scheme-only, no fallback — plus a follow-up
+question: "but where do we get the ids, is it standardized?"
+
+**Answer to the standardization question.**
+
+- The `digital_id` is **Marvel-internal**, non-standardised (no ISBN /
+  UPC / cross-publisher equivalent). Distinct from the `id` used on
+  marvel.com web URLs.
+- Public Marvel Developer API is **shut down** (2026 confirmed via
+  `emreparker/marvel-comics` README).
+- Practical sources today:
+  - Cached mirrors: `marvel.geoffrich.net`, `marvel.emreparker.com`.
+  - Marvel Unlimited web reader URL structure:
+    `https://read.marvel.com/#/book/{digital_id}/…` (manual lookup).
+  - Manual curation into the fixture (feasible for our Q2 curated slice).
+- Not every issue has a `digital_id` — issues not on MU (older material,
+  rights issues) simply don't. The button MUST NOT render for those.
+
+**CE consequences applied to `cdd-sketch.md`.**
+
+| Concept | Change |
+|---|---|
+| `Issue.marvelUnlimitedId` | RENAMED to `marvelDigitalId: int \| None`. `None` means "no MU release". Fixture curator populates from cached mirror or manual lookup. |
+| `MarvelUnlimitedLink.for(issue)` | Return type changed to `MarvelUnlimitedLink \| None`. Returns `None` when `issue.marvelDigitalId is None`. |
+| `MarvelUnlimitedLink.iosDeepLink` | Now `'marvelunlimited://reader/{marvelDigitalId}'` (was `.../comic/{id}`). |
+| `MarvelUnlimitedLink.webFallbackUrl` | RETIRED. Q10 = option 3 (scheme-only). |
+| UX rule | Hover card and detail panel MUST NOT render the "Read on Marvel Unlimited" affordance when `issue.marvelDigitalId is None`. |
+| Screen-box key blocks | Legend text updated to state the scheme-only behaviour and the hide-when-null rule. |
+
+**BDD consequences.** `a stop card` gains a new `it should` clause:
+"issue with `marvelDigitalId = None` → omit the Read-on-Marvel-Unlimited
+action". The `marvelDigitalId is None → no button` rule is asserted
+explicitly so nothing renders a dead scheme URL.
+
+**Followup open item.** `#digital-id-provenance` — the fixture pipeline
+for populating `marvelDigitalId` at scale (cached mirror ingest + gap
+fallback) is documented conceptually here but not yet built. Not
+blocking further grill.
+
+**Passes logged:** `pass #mu-deeplink`.
+
+---
+
 ### Character demoted from first-class to string tag (2026-08-08)
 
 **Frame.** User redirect (verbatim): "character is a sub of series an

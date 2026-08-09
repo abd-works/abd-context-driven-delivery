@@ -189,7 +189,10 @@ flow:
         individual issues added from the same search.
 
       Carried blockers:
-      · #mu-deeplink — verify Marvel Unlimited iOS URL scheme + fallback.
+      · #mu-deeplink — RESOLVED (Q10, 2026-08-09): scheme-only,
+        `marvelunlimited://reader/{marvelDigitalId}`. No web fallback.
+        Button rendered only when the issue has a marvelDigitalId in the
+        fixture.
       · #filter-compose — confirm working default (era window narrows the
         canvas; all roster gates are independent visibility toggles).
 
@@ -208,7 +211,6 @@ flow:
     close.
   open:
     - TODO promote Character to first-class entity when metadata is needed        #character-not-first-class-yet
-    - TODO verify Marvel Unlimited iOS URL scheme + fallback                     #mu-deeplink
     - TODO confirm filter composition (era window; three rosters independent)    #filter-compose
     - doing sketch UX / CE / BDD for Theme 1                                     #sketch-theme-1
     - doing sketch UX / CE / BDD for Theme 2                                     #sketch-theme-2
@@ -235,6 +237,7 @@ flow:
     - pass #hide-not-dim               # replaced FADED opacity with SHOW/HIDE
     - pass #one-lane-one-filter        # PhantomSeriesLine/FocusedSeriesLine retired
     - pass #character-filter-scope     # falls out of unified search + filter model
+    - pass #mu-deeplink                # scheme-only, no fallback (Q10, option 3)
     - skip #single-point-rule          # dissolved by metaphor swap
 
 =========
@@ -264,7 +267,9 @@ ux:
       └─ [action]   click transfer line ─────→ issue detail panel (target stop)
 
     issue detail panel
-      ├─ [action]   read on marvel unlimited → external (marvelunlimited://…)
+      ├─ [action]   read on marvel unlimited → external (marvelunlimited://reader/{digitalId};
+                                              iOS app only, no web fallback,
+                                              affordance hidden if issue has no digitalId)
       ├─ [action]   next stop ───────────────→ subway map (new pin)
       ├─ [action]   next in series ──────────→ subway map (new pin, same line)
       ├─ [action]   continues in ────────────→ subway map (new pin, jumps line)
@@ -401,8 +406,8 @@ ux:
       Domain terms: stop · synopsis · character · deep link
       key:
         [ btn ] button
-        on [ Read on Marvel Unltd ] → marvelunlimited://comic/{id}
-          fallback → https://www.marvel.com/comics/issue/{id}
+        on [ Read on Marvel Unltd ] → marvelunlimited://reader/{marvelDigitalId}
+          (Q10: scheme-only; no web fallback; button hidden when marvelDigitalId is None)
         overlay auto-dismisses on pointer-leave
 
     // stubbed brand notes deferred to specification pass (dark palette, subway
@@ -485,7 +490,11 @@ ce:
       events                                  # list[Event]  (0..N — 0 is fine)
       continuesIn                             # Issue | None — explicit "TBC in …" pointer;
                                               # may point to same Series or a different one
-      marvelUnlimitedId
+      marvelDigitalId                         # int | None — Marvel's digital_id;
+                                              #   None when issue is not on MU.
+                                              #   Populated per issue in the fixture
+                                              #   from cached Marvel API mirrors
+                                              #   (grill Q10 provenance).
       effectiveCharacters                     # returns list[str]:
                                               #   1. issue.characters if non-empty
                                               #   2. else if series.protagonist is Team:
@@ -1046,10 +1055,19 @@ ce:
 
     # links/marvel_unlimited_link.py
     MarvelUnlimitedLink
-      for issue                               # -> MarvelUnlimitedLink
-      iosDeepLink                             # 'marvelunlimited://comic/{marvelUnlimitedId}'
-      webFallbackUrl                          # 'https://www.marvel.com/comics/issue/{marvelUnlimitedId}'
-      // Open #mu-deeplink: verify actual iOS scheme; keep web fallback as truth.
+      for issue                               # -> MarvelUnlimitedLink | None
+                                              #   None when issue.marvelDigitalId is None
+                                              #   (no MU release for that comic).
+      iosDeepLink                             # 'marvelunlimited://reader/{marvelDigitalId}'
+      // Q10 (2026-08-09): scheme-only. NO web fallback. On desktop and on
+      //   iOS without the app installed, the link silently no-ops — the
+      //   "Read on Marvel Unlimited" button is a targeted iOS-app affordance,
+      //   not a general-purpose link.
+      // Empirical basis: Stack Overflow (2019) documents this exact scheme
+      //   host/path. Bundle ID com.marvel.unlimited. Not standardised — it's
+      //   a Marvel-internal integer with no cross-industry equivalent.
+      // UX rule: if issue.marvelDigitalId is None, the hover / detail
+      //   panel does NOT render the "Read on Marvel Unlimited" affordance.
 
     ====
 
@@ -1337,7 +1355,7 @@ ux:
         on Reading in: [ ▾ ] → ReadingPath.setActiveEvent(chosen)
           (option "— none —" clears activeEvent; Next falls through to
           continuesIn / nextInSeries per priority rule)
-        on [ Read on MU ] → marvelunlimited://comic/{id}
+        on [ Read on MU ] → marvelunlimited://reader/{marvelDigitalId}
         event-owned transfers listed only when their event is enabled;
         continuesIn transfer listed regardless of event state
 
@@ -1495,8 +1513,8 @@ ux:
       Domain terms: stop · synopsis · character · event · deep link
       key:
         card sizes to content; max ~28ch × ~14 lines
-        on [ Read on MU ] → marvelunlimited://comic/{id}
-                            fallback → https://www.marvel.com/comics/issue/{id}
+        on [ Read on MU ] → marvelunlimited://reader/{marvelDigitalId}
+                            (Q10: scheme-only; no web fallback; button hidden when marvelDigitalId is None)
         on ESC or pointer-leave → dismiss
 
 ---
@@ -1530,8 +1548,12 @@ bdd:
         it should render an "In events" line naming that event
         it should render a short synopsis (~2 lines)
         it should render the top characters as plain strings
-        it should render a Read-on-Marvel-Unlimited action pointing at the
-          marvelunlimited:// scheme with a web fallback URL
+        it should render a Read-on-Marvel-Unlimited action pointing at
+          "marvelunlimited://reader/{issue.marvelDigitalId}" when the
+          issue has a marvelDigitalId
+      that has been built for an issue whose marvelDigitalId is None
+        it should OMIT the Read-on-Marvel-Unlimited action
+          (Q10: scheme-only, no web fallback → don't render a dead button)
       that has been built for a stop whose issue belongs to no event
         it should still render title, date, synopsis and characters
         it should omit the "In events" line
@@ -1565,3 +1587,4 @@ bdd:
 - spec / Subway Map / pass #hide-not-dim            # replaced FADED with SHOW/HIDE
 - spec / Subway Map / pass #one-lane-one-filter     # unified lane model
 - spec / Subway Map / pass #character-filter-scope  # emergent from unified model
+- spec / Comic Details / pass #mu-deeplink          # scheme-only (Q10)
