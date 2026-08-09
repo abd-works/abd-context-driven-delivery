@@ -322,6 +322,36 @@ fine. Tracked as `#event-roster-parity` in `flow.open`; not blocking Q5.
 
 ---
 
+### Marvel Unlimited deep-link — research findings (2026-08-09, Q10 in progress)
+
+**Frame.** User pushed back on my Universal-Link recommendation ("It's an
+iOS app not a website") and asked for deeper research on how to open a
+specific Marvel Unlimited comic in the iOS app.
+
+**Empirical findings (dates verified 2026-08-09 UTC).**
+
+| Question | Evidence | Status |
+|---|---|---|
+| Custom URL scheme? | Stack Overflow (2019) shows Marvel Unlimited app registered scheme: `marvelunlimited://reader/{digitalId}`. Bundle ID `com.marvel.unlimited`. The Marvel API used to return an `inAppLink` = `https://applink.marvel.com/issu/{digitalId}?...`. | Scheme documented empirically; recency unverified for iOS 16+ (app v7.100). |
+| Universal Link via `marvel.com`? | `curl` against Apple's AASA CDN (`app-site-association.cdn-apple.com/a/v1/{marvel.com,www.marvel.com}`) returns `404` with `Apple-Failure-Reason: SWCERR00101 Bad HTTP Response: 403 Forbidden` — Apple's crawler is blocked at source. Direct fetch to `https://www.marvel.com/.well-known/apple-app-site-association` returns `404`. | **Dead.** No AASA is served by marvel.com. |
+| Universal Link via `applink.marvel.com`? | `applink.marvel.com` fails DNS resolution from this VM (`Could not resolve host`) and Apple's CDN returns `405 Method Not Allowed` (unknown domain) for it. Historical (2019) evidence says this domain hosted the Marvel-blessed applink handler. | **Unverified in 2026.** Could not confirm live. |
+| Marvel Developer API for `digital_id`? | `emreparker/marvel-comics` README (2026): "I went looking for the Marvel API — only to realize it had been shut down." Mirrors like `marvel.geoffrich.net` and `marvel.emreparker.com` still expose `id` and `digital_id`. | **Public API shut down**; cached mirrors available. |
+| Marvel web URL for a comic? | `curl -I https://www.marvel.com/comics/issue/52447/secret_wars_2015_1` → `200 OK`. Structure: `/comics/issue/{numericId}/{slug}`. My earlier `/comics/issue/{id}` (no slug) returned 404 — the slug matters. | **Works.** |
+| Query hint `?mobile-app=true`? | Observed in-the-wild on `https://www.marvel.com/comics/issue/75125/marvel_comics_2019_1000?mobile-app=true&theme=dark` (200 OK). Undocumented; likely a hybrid-web-view hint the app itself uses; probably no effect for third-party callers. | Cosmetic; ignore. |
+
+**Fixture implications.** For every issue the fixture needs at minimum:
+- `marvelDigitalId: int` — feeds `marvelunlimited://reader/{digitalId}`.
+- `marvelWebUrlSlug: str` — feeds `https://www.marvel.com/comics/issue/{id}/{slug}`.
+
+Existing sketch field `marvelUnlimitedId` is under-specified and MUST be
+replaced with the pair above (a single id can't drive both the scheme and
+the web slug).
+
+**Q10 remains OPEN** with these evidence-grounded options. I will re-pose
+Q10 based on this research and wait for the user's decision.
+
+---
+
 ### Character demoted from first-class to string tag (2026-08-08)
 
 **Frame.** User redirect (verbatim): "character is a sub of series an
