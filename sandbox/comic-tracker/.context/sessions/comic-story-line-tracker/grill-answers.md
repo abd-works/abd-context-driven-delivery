@@ -452,6 +452,57 @@ that can be added to the map without their whole series.
 
 ---
 
+### Team, hide-not-dim, one-lane-one-filter cluster (2026-08-09)
+
+**Frame.** Three rapid user redirects across one turn cluster reshaped
+the protagonist model, the render language, and the roster surface.
+
+**User inputs (verbatim, in order).**
+
+1. "a series has either a team or a single main character … single
+   characters guest appearances show up just like being the main
+   character of a series … When Teams are main character list the
+   character roster for that issue, membership changes based on a team
+   membership duration, which has start and end issues"
+2. "Series → protagonist → Not the whole series ; just the spans the
+   character is a team member"
+3. "Changed my mind on the dimming of guest appearance or team
+   appearance, don't show elements at all instead of dimming"
+4. "Focused vs phantom doesn't make sense to me. We have a set of
+   series we display, display issues in a series based on a filter.
+   Eg character → main, guest, team display the ranges where true;
+   it's not diff kinds of lanes"
+
+**Applied — combined summary.**
+
+| Layer | Change |
+|---|---|
+| Catalog | `Team` promoted to first-class: `id`, `name`, `memberships`, `rosterAtIssue(issue)`, `allTimeMembers`. `TeamMembership` = `(character: str, startIssue, endIssue)`; endIssue may be `None` (open-ended). |
+| `Series` | Adds `protagonist: str \| Team` (required, external). Adds `protagonistIncludes(tag)` predicate. Supporting cast still `characters: list[str]`, disjoint from protagonist. |
+| `Issue` | `effectiveCharacters` now derives from protagonist when `issue.characters` is empty: team → `rosterAtIssue`; single → `[protagonist]`. |
+| Search | Adds `SeriesMatch` shape with `matchedVia` and `focusCharacter`. Series can match via `displayName`, `protagonist` (single), `team-member:{char}` (yields focusCharacter), or `supporting`. Team-member matches carry the specific character. |
+| Character | Still NOT first-class. Q9 (`#character-filter-scope`) implicitly resolved: no `ActiveCharacterRoster`. Character-driven browsing falls out of the unified search + filter model. |
+| Rendering language | "Dim non-highlighted" retired. Hide-not-dim: hidden stops and their surrounding line segments simply do not render. `Palette.FADED_OPACITY` retired. Render styles no longer carry `opacity`. |
+| Lane model | `PhantomSeriesLine` and `FocusedSeriesLine` subtypes RETIRED. One `SeriesLine` class with optional `filter: SeriesFilter`. Base `SeriesLine` renders unbroken end-to-end when filter is None. |
+| `SeriesFilter` (new) | `CharacterAppearanceFilter(character)` — matches issues via `effectiveCharacters` (covers main / team-member / guest uniformly). `IssueSetFilter(issues)` — matches a specific set of issues on this series. Each exposes `matches(issue)` and `describe`. |
+| `SeriesRosterEntry` | Adds `filter: SeriesFilter \| None`. Filter merge rule on `add`: None clears; `IssueSetFilter + IssueSetFilter` unions; other combinations replace. |
+| Rosters | `OneOffIssueRoster` RETIRED. Two rosters now: `ActiveSeriesRoster` (with filters) and `ActiveEventRoster`. |
+| Click routing | Issue result click → `seriesRoster.add(issue.series, IssueSetFilter({issue}))`. Series result click with `focusCharacter` → `seriesRoster.add(series, CharacterAppearanceFilter(focusCharacter))`. Series result click without focus → `seriesRoster.add(series, None)`. |
+| `SubwayMap.buildFrom` | Now takes `(seriesRoster, eventRoster)` only. Emits one `SeriesLine(series, filter=entry.filter)` per series-roster entry. Empty visibleStops lanes drop out. |
+| BDD | `an active series roster` gains filter-merge scenarios. `a one-off issue roster` block DELETED. `a phantom series line` / `a focused series line` merged into `a series line — with a filter`. New `a series filter` describes for both filter kinds. `a team` and `a series with a team protagonist` describes cover the roster-at-issue rules. |
+| UX | Left rail: two active-list panels (Series with filter hint per row, Events). Domain-terms updated. Legend replaces faded glyphs with hide language. |
+
+**Related open items reconciled.**
+- `#character-filter-scope` → **passed** (falls out of the unified model).
+- `#one-off-stop-geometry` → **passed** (no phantom rows / no stars).
+- `#character-not-first-class-yet` → still open as a promotion path;
+  Team is promoted, Character isn't yet.
+
+**Passes logged:** `#team-first-class`, `#hide-not-dim`,
+`#one-lane-one-filter`, `#character-filter-scope`.
+
+---
+
 ### Phantom lane + bright guest stop — one-off refinement (2026-08-09)
 
 **Frame.** During Q9, the user pivoted with a rendering rule for one-offs:

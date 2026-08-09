@@ -18,6 +18,55 @@ scope: Increment 1 — Interactive Comic Story Line Tracker (single visual)
     - Left rail splits into Search/Browse (draggable candidates) and Active
       Series (checkable roster). Drag drops from search into the active list;
       the two lists never merge.
+  - **Protagonist = single character or Team; team roster is time-varying**
+    (redirect 2026-08-09, post-Q8 turn):
+    - "a series has either a team or a single main character"
+    - "Single characters guest appearances show up just like being the main
+      character of a series — u search Spider-Man you return all series with
+      … Spider[-Man] and … return issues with guest appearance …, click on
+      series; add lane to visual. Click on issues same thing landed faded"
+    - "When Teams are main character list the character roster for that
+      issue, membership changes based on a team membership duration, which
+      has start and end issues"
+    - "Team appearances look just like main character appearances"
+    - Series.protagonist is a `str | Team`. Team is first-class; its roster
+      is a list of `TeamMembership(character, startIssue, endIssue)`
+      records. Team.rosterAtIssue(issue) returns the active members at that
+      point in the team's series. Character remains a string tag; only Team
+      is being promoted this turn.
+    - Implicitly answers Q9 (#character-filter-scope) as option 2: no
+      ActiveCharacterRoster. Character-filtering falls out of the existing
+      unified search — click series = lane, click issue = faded phantom
+      lane. Team-series and single-character series render identically.
+  - **Focused spans: adding a team-series via a character shows only the
+    membership spans** (redirect 2026-08-09, immediate follow-on):
+    - "Series → protagonist → Not the whole series ; just the spans the
+      character is a team member"
+    - When a team-protagonist series is added to ActiveSeriesRoster via a
+      character-driven search click, only the stops covered by that
+      character's TeamMembership spans render. Third render variant:
+      FocusedSeriesLine.
+    - Single-character-protagonist series matched via character search
+      stay fully bright (the whole lane IS that character).
+  - **Hide instead of dim** (redirect 2026-08-09, immediate follow-on):
+    - "Changed my mind on the dimming of guest appearance or team
+      appearance, don't show elements at all instead of dimming"
+    - Replaces the dim-vs-bright rendering with SHOW / HIDE. Only the
+      "true" stops render; the rest are simply not drawn.
+      `Palette.FADED_OPACITY` retired.
+  - **One kind of lane, filtered** (redirect 2026-08-09, immediate
+    follow-on):
+    - "Focused vs phantom doesn't make sense to me. We have a set of
+      series we display, display issues in a series based on a filter.
+      Eg character → main, guest, team display the ranges where true;
+      it's not diff kinds of lanes"
+    - Collapses `PhantomSeriesLine` and `FocusedSeriesLine` subtypes into
+      a single `SeriesLine` with a `filter: SeriesFilter | None`. The
+      filter — whether character-based, issue-based, or absent — just
+      decides which stops render. `OneOffIssueRoster` retires; one-off
+      issue additions become `IssueSetFilter` entries on the
+      `ActiveSeriesRoster`. Two rosters now, not three
+      (`ActiveSeriesRoster`, `ActiveEventRoster`).
   - **Phantom lane + bright guest stop** (redirect 2026-08-09, post-Q8 turn):
     - "One off lanes are faded and so are stops with exception for the
       guest appearance"
@@ -109,6 +158,19 @@ flow:
     lightweight lookup for search + filter. #character-not-first-class-yet
     tracks the promotion path when metadata is needed.
 
+    Team promoted, Character stays a string tag (2026-08-09): Series.protagonist
+    is `str | Team`. Team is first-class with time-varying `memberships`.
+    Team.rosterAtIssue(issue) returns active members at that point.
+    Issue.effectiveCharacters derives from the protagonist when the issue's
+    own `characters` list is empty.
+
+    One kind of lane, filter-driven visibility (2026-08-09): PhantomSeriesLine
+    and FocusedSeriesLine subtypes retired. SeriesLine carries an optional
+    SeriesFilter (CharacterAppearanceFilter or IssueSetFilter). Hidden
+    stops and their surrounding line segments are NOT drawn (hide-not-dim).
+    OneOffIssueRoster retired — one-off issue clicks land on
+    ActiveSeriesRoster with an IssueSetFilter.
+
     Fresh cross-lens blockers still open:
       · #transfer-style — RESOLVED (Q7, 2026-08-09): per-event colour +
         neutral for continuesIn; series colour on series lines; all
@@ -130,17 +192,21 @@ flow:
       · #mu-deeplink — verify Marvel Unlimited iOS URL scheme + fallback.
       · #filter-compose — confirm working default (era window narrows the
         canvas; all roster gates are independent visibility toggles).
-      · #character-filter-scope — search-facet-only or dim stops too?
-        (Re-frame under Q9 given new phantom/highlight visual language.)
 
-      · #one-off-stop-geometry — RESOLVED (post-Q8 refinement, 2026-08-09):
-        no phantom row / lone star. Instead PhantomSeriesLine renders the
-        whole owning series at FADED_OPACITY with the guest stop(s) at
-        BRIGHT_OPACITY.
+      Resolved this turn cluster:
+      · #character-filter-scope — RESOLVED (2026-08-09): no
+        ActiveCharacterRoster. Character-filtering falls out of the
+        unified search (click series-or-issue) combined with the new
+        Team protagonist model + FocusedSeriesLine (team-member spans)
+        + PhantomSeriesLine (one-off guests).
+      · #one-off-stop-geometry — RESOLVED: no phantom row / no lone
+        stars either. PhantomSeriesLine renders the guest stops on the
+        series' own y-lane; other stops are simply not drawn
+        (hide-not-dim).
 
-    Do not recommend proceed to engineer until the remaining items close.
+    Do not recommend proceed to engineer until the remaining two items
+    close.
   open:
-    - TODO decide character-filter scope (search-facet only, or dim stops too?)   #character-filter-scope
     - TODO promote Character to first-class entity when metadata is needed        #character-not-first-class-yet
     - TODO verify Marvel Unlimited iOS URL scheme + fallback                     #mu-deeplink
     - TODO confirm filter composition (era window; three rosters independent)    #filter-compose
@@ -163,8 +229,12 @@ flow:
     - pass #transfer-style             # per-event colour + neutral (Q7, option 1)
     - pass #event-roster-parity        # roster yes; click-only (Q8)
     - pass #unified-search             # one search box across Series/Events/Issues (Q8)
-    - pass #one-off-issues             # OneOffIssueRoster (Q8)
-    - pass #phantom-lane-render        # faded lane + bright guest stop (2026-08-09)
+    - pass #one-off-issues             # click-to-add issues (Q8; roster since retired)
+    - pass #phantom-lane-render        # (superseded by hide-not-dim + unify)
+    - pass #team-first-class           # Team, TeamMembership, protagonist model
+    - pass #hide-not-dim               # replaced FADED opacity with SHOW/HIDE
+    - pass #one-lane-one-filter        # PhantomSeriesLine/FocusedSeriesLine retired
+    - pass #character-filter-scope     # falls out of unified search + filter model
     - skip #single-point-rule          # dissolved by metaphor swap
 
 =========
@@ -222,29 +292,37 @@ ux:
       │   Spider-Verse       +    │      ●━━●━━●━━●                      │
       │  Issues (3) — one-off     │                                      │
       │   Iron Man #45       +    │  phantom lane (from one-off roster): │
-      │   Daredevil #101     +    │    ┅◌┅┅◌┅┅●┅┅◌┅┅◌┅┅◌   Iron Man       │
-      │   Fantastic Four #22 +    │           ↑ BRIGHT: the guest issue  │
-      │                           │             (Iron Man #45)           │
-      │                           │    lane + all other stops FADED      │
-      │                           │    (Palette.FADED_OPACITY)           │
+      │   Daredevil #101     +    │              ●              Iron Man │
+      │   Fantastic Four #22 +    │              ↑ the guest issue only  │
+      │                           │                (Iron Man #45).       │
+      │                           │    Non-guest stops and the connecting│
+      │                           │    line are NOT drawn (hide-not-dim).│
+      │                           │                                      │
+      │ (results for team-member  │  focused lane (character-driven add  │
+      │  matches carry a hint:    │   into series roster):               │
+      │  "· X-Men — Wolverine's   │               ━●━●━●━●        X-Men  │
+      │   spans")                 │               └── span drawn ─┘       │
+      │                           │            = Wolverine's membership  │
+      │                           │              (X-Men #94 – #200)      │
+      │                           │    Off-span stops and their line     │
+      │                           │    segments are NOT drawn.           │
       │  ⋮ = drag handle (series) │                                      │
       │  + = click to add         │                                      │
       ├───────────────────────────┤                                      │
       │ Active Series             │                                      │
-      │ [x] Amazing SM       [×]  │                                      │
-      │ [x] Iron Man         [×]  │                                      │
-      │ [x] X-Men            [×]  │                                      │
-      │ [ ] Cap              [×]  │  legend:                             │
-      │  (drop zone here)         │    ● stop  ━━ series line (bright)   │
-      │                           │    ◌ stop  ┅┅ series line (FADED —   │
-      ├───────────────────────────┤          phantom lane from one-off)  │
-      │ Active Events             │    ┃ transfer (colour = origin's)    │
+      │ [x] Amazing SM               [×]                                 │
+      │ [x] Iron Man · guest: #45    [×]  ← filter shown in row          │
+      │ [x] X-Men · Wolverine's        [×]  ← character filter           │
+      │       appearances                                                │
+      │ [ ] Cap                     [×]  │                               │
+      │  (drop zone here)         │    ● stop  ━━ series line            │
+      │                           │    (nothing renders for hidden       │
+      ├───────────────────────────┤     stops or their segments —        │
+      │ Active Events             │     hide-not-dim)                    │
+      │                           │    ┃ transfer (colour = origin's)    │
       │ [x] Civil War        [×]  │                                      │
       │ [x] Secret Wars      [×]  │                                      │
       │ [ ] House of M       [×]  │                                      │
-      ├───────────────────────────┤                                      │
-      │ One-off Issues            │                                      │
-      │ [x] Iron Man #45     [×]  │                                      │
       ├───────────────────────────┤                                      │
       │ Era                       │                                      │
       │ (○) All                   │                                      │
@@ -254,38 +332,53 @@ ux:
       │ [ Reset all rosters ]     │                                      │
       └───────────────────────────┴──────────────────────────────────────┘
       Stories (~8): Search Everything · Add Series (click or drag) ·
-                    Add Event (click only) · Add One-off Issue (click only) ·
-                    Toggle Roster Visibility · Remove from Roster · Filter Era
-                    · Read Stop Detail
+                    Add Event (click only) · Add Issue as Filtered Series
+                    Entry (click only) · Toggle Roster Visibility ·
+                    Remove from Roster · Clear Filter · Filter Era ·
+                    Read Stop Detail
       Domain terms: catalog · search result · series · event · issue ·
-                    active series roster · active event roster ·
-                    one-off issue roster · series line · phantom series line
-                    · stop · transfer connection · event bundle · era ·
-                    guest appearance
+                    active series roster (with filters) · active event
+                    roster · series line · series filter (character-based
+                    OR issue-set-based) · stop · transfer connection ·
+                    event bundle · era · guest appearance
       key:
         [x]/[ ] check · (○)/(●) radio · [ btn ] button · ⋮ drag handle (series)
           · + click-to-add (all kinds) · [×] remove
         Series lines wear their series.colour; event-owned transfers wear
           origin.colour; continuesIn transfers wear Palette.NEUTRAL_TRANSFER;
           all solid, all series-line weight.
-        Phantom series lines (spawned by OneOffIssueRoster) share the same
-          shape as a full lane but render at FADED_OPACITY; the specific
-          guest-appearance stop(s) on that lane render at BRIGHT_OPACITY.
-          If the reader later adds the phantom's series to
-          ActiveSeriesRoster, the phantom promotes to a bright lane at the
-          next SubwayMap rebuild.
-        Unified search matches against Series.displayName, Event.name,
-          Issue.title (and Issue characters). Results grouped by kind.
-        on click Series result → ActiveSeriesRoster.add(series)
+        Phantom series lines (spawned by OneOffIssueRoster): only the
+          guest stops render; every other stop on that lane, and every
+          line segment that would connect them, is NOT drawn. A single
+          one-off appears as a lone stop on the series' y-lane at its
+          own xPosition. If the reader later adds the phantom's series
+          to ActiveSeriesRoster, a normal SeriesLine (whole lane) is
+          drawn at the next rebuild.
+        Focused series lines (spawned when a team-protagonist series is
+          added with focusCharacter set): only stops within the
+          character's team-membership issueNumber spans render. Off-span
+          stops and their line segments are NOT drawn — spans appear as
+          disjoint short lines. Reader can clear focus (or re-add
+          without focus) to draw the whole lane.
+        Unified search matches against Series.displayName, protagonist
+          (single or team-member), Series.characters (supporting),
+          Event.name, and Issue.title / characters. Results grouped by
+          kind; team-member matches carry the specific character as focus.
+        on click Series result (SeriesMatch) →
+          ActiveSeriesRoster.add(series,
+            filter=CharacterAppearanceFilter(match.focusCharacter)
+                   if match.focusCharacter else None)
         on drag Series result → drop into "Active Series" → same as click
         on click Event result → ActiveEventRoster.add(event)
           (events CANNOT be dragged — click is the only affordance)
-        on click Issue result → OneOffIssueRoster.add(issue)
-          (issues CANNOT be dragged — click is the only affordance)
+        on click Issue result → ActiveSeriesRoster.add(
+            issue.series, filter=IssueSetFilter({issue}))
+          (unions with existing IssueSetFilter on that series;
+           replaces other filter kinds. Issues CANNOT be dragged.)
         on [x]/[ ] any roster row → that roster's toggleVisible(entry)
         on [×] any roster row → that roster's remove(entry)
         on empty rosters → canvas shows era ruler only
-          ("search then click to add series, events, or one-off issues")
+          ("search then click to add series, events, or individual issues")
         on hover ● / ★ → stop hover card
         on click ● / ★ → issue detail panel (pinned)
         on click ┃ → issue detail panel for the target stop
@@ -322,34 +415,43 @@ ce:
     ## Module nest
 
     comic-tracker/
-      catalog                                # issues, series, events (NO Character class)
-        issue                                # leaf domain entity; carries characters: list[str]
+      catalog                                # issues, series, events, teams
+                                             # (Character still NOT first-class)
+        issue                                # leaf domain entity;
+                                             #   characters: list[str] (optional override)
         series                               # ordered set of issues (unbroken);
-                                             #   carries characters: list[str] and colour
+                                             #   protagonist: str | Team;
+                                             #   characters: list[str] (supporting cast);
+                                             #   colour
+        team                                 # first-class team protagonist
+        team_membership -> team, issue       # (character str, startIssue, endIssue)
         event -> issue                       # named bundle of transfers; carries colour
-        character_tag_index -> series, issue # lightweight lookup: tag → series+issues
+        character_tag_index -> series, issue, team
+                                             # lightweight lookup: tag → series+issues+teams
                                              #   #character-not-first-class-yet
-        catalog -> issue, series, event      # aggregate root of the fixture
+        catalog -> issue, series, event, team
+                                             # aggregate root of the fixture
         fixture_issue_repository -> catalog  # loads catalog from fixtures/marvel-canon.json
       search                                       # unified query over the whole catalog
         search_query -> catalog/catalog            # matches Series, Events, Issues
         search_results                             # grouped result bag (series/events/issues)
-      roster                                       # working sets — one per kind
-        active_series_roster -> catalog/series     # click-or-drag to add
+      roster                                       # working sets — TWO rosters only
+        active_series_roster -> catalog/series     # click-or-drag to add.
+                                                   # Entries carry an optional
+                                                   # SeriesFilter (character or issue-set)
         active_event_roster -> catalog/event       # click-only to add (replaces EventFilter)
-        one_off_issue_roster -> catalog/issue      # click-only to add (single stops on map)
+        series_filter                              # SeriesFilter / CharacterAppearanceFilter
+                                                   # / IssueSetFilter strategies
       timeline                               # subway-map model
-        series_line -> catalog/series        # unbroken lane for one series
-                                             #   subtype: PhantomSeriesLine
-                                             #   (faded lane, bright highlighted stops)
+        series_line -> catalog/series        # ONE lane class; filter-driven visibility.
+                                             # (No PhantomSeriesLine / FocusedSeriesLine
+                                             #  subtypes — retired 2026-08-09.)
         stop -> catalog/issue                # a single issue's position on a line
         transfer_connection -> catalog/issue, catalog/event
                                              # continuation between two stops
-                                             # (may endpoint on a phantom lane too)
         transfer_bundle -> catalog/event, transfer_connection
                                              # all transfers owned by one event
-        palette                              # SERIES_LINE_WEIGHT, NEUTRAL_TRANSFER,
-                                             # FADED_OPACITY, BRIGHT_OPACITY
+        palette                              # SERIES_LINE_WEIGHT, NEUTRAL_TRANSFER
         subway_map -> series_line, transfer_bundle
         era                                  # bucketing rule for the ruler
       filter                                       # what remains after roster consolidation
@@ -377,15 +479,19 @@ ce:
                                               # NEVER used to derive ordering
       era                                     # Era — derived from publicationDate window
       synopsis
-      characters                              # list[str]  — per-issue appearances tag list;
-                                              #   MAY be empty; when empty, fall back to
-                                              #   series.characters for display purposes
+      characters                              # list[str]  — OPTIONAL per-issue override tag list;
+                                              #   when non-empty, wins over derivation from
+                                              #   series.protagonist for effectiveCharacters
       events                                  # list[Event]  (0..N — 0 is fine)
       continuesIn                             # Issue | None — explicit "TBC in …" pointer;
                                               # may point to same Series or a different one
       marvelUnlimitedId
       effectiveCharacters                     # returns list[str]:
-                                              #   characters if non-empty else series.characters
+                                              #   1. issue.characters if non-empty
+                                              #   2. else if series.protagonist is Team:
+                                              #        list(protagonist.rosterAtIssue(self))
+                                              #   3. else (single-character protagonist):
+                                              #        [series.protagonist]
       -> series.appendIssue
       // Invariant: (series, issueNumber) unique.
       // Invariant: continuesIn, when set, points to an Issue in the fixture.
@@ -401,20 +507,30 @@ ce:
       displayName                             # derived: 'Spider-Man (2003)'
       colour                                  # str — hex "#rrggbb" from fixture;
                                               #   drives SeriesLine render (Q7)
+      protagonist                             # str | Team  — REQUIRED, external, hard.
+                                              #   Either a single character name (str tag)
+                                              #   OR a reference to a Team.
       issues                                  # composition list[Issue] — ordered by issueNumber
-      characters                              # list[str]  — top-level character tag list
-                                              #   for this Series (which characters this
-                                              #   series features overall)
+      characters                              # list[str] — SUPPORTING cast tag list
+                                              #   (characters that recur across issues but are
+                                              #   not the protagonist). Optional; drives search
+                                              #   surface for supporting cast matches.
       appendIssue issue
       firstIssue                              # Issue at min(issueNumber)
       lastIssue                               # Issue at max(issueNumber)
       nextInSeries afterIssue                 # returns Issue | None — walks issueNumber+1
+      protagonistIncludes tag                 # returns bool:
+                                              #   if protagonist is str: protagonist == tag
+                                              #   if protagonist is Team:
+                                              #     tag in protagonist.allTimeMembers
       // Invariant: Series identity is (title, volume). Renumbering = new Series.
       // Invariant: issues form ONE unbroken sequence in issueNumber order.
       // Invariant: nextInSeries ignores events and continuesIn — always issueNumber+1.
-      // Invariant: characters is authoritative for filtering; issue.characters is
-      //            optional finer-grain per-issue detail (subset of series.characters
-      //            when both are populated by the fixture).
+      // Invariant: protagonist is REQUIRED and is either a single character name
+      //            OR a Team; never both, never absent.
+      // Invariant: characters (supporting cast) is DISJOINT from the protagonist
+      //            (a single-char protagonist / team-member character MUST NOT
+      //            appear again in `characters`).
       // Invariant: colour is externally curated; fixture MUST ensure Series colours
       //            and Event colours don't collide (Q7 palette-discipline note).
       ----
@@ -437,37 +553,102 @@ ce:
 
     ====
 
-    # timeline/palette.py — tiny constants module (Q7 + one-off refinement)
+    # roster/series_filter.py — SeriesLine.filter strategies
+    SeriesFilter
+      matches issue                           # returns bool
+      describe                                # returns str — human-readable label
+                                              #   for the roster row (e.g. "guest: #45")
+      // Base is abstract — every subtype implements matches + describe.
+
+      ----
+     CharacterAppearanceFilter : SeriesFilter
+      character                               # str — the character tag
+      matches issue                           # OVERRIDE:
+                                              #   character in issue.effectiveCharacters
+      describe                                # OVERRIDE:
+                                              #   f"{character}'s appearances"
+      // Covers all three relationship kinds — main / team-member / guest —
+      //   uniformly, because `effectiveCharacters` already resolves them:
+      //     · single-character protagonist → main.
+      //     · team protagonist → team-roster-at-issue (team-member spans).
+      //     · issue.characters override → guest / any explicit appearance.
+      // No need to branch on kind — one predicate handles all three.
+
+      ----
+     IssueSetFilter : SeriesFilter
+      issues                                  # set[Issue] — specific issues on this Series
+      matches issue                           # OVERRIDE:  issue in issues
+      describe                                # OVERRIDE:  f"#{sorted issueNumbers}"
+      // Populated by clicks on Issue search results (guest-appearance
+      //   entries). Multiple issue clicks on the same series UNION their
+      //   sets (see ActiveSeriesRoster.add merge rule).
+
+    ====
+
+    # timeline/palette.py — tiny constants module (Q7)
     Palette
       SERIES_LINE_WEIGHT                      # number  — e.g. 4px
       TRANSFER_WEIGHT = SERIES_LINE_WEIGHT    # same class as series line
       NEUTRAL_TRANSFER                        # str hex — muted grey for
                                               #   continuesIn transfers
-      BRIGHT_OPACITY                          # number  — e.g. 1.0
-      FADED_OPACITY                           # number  — e.g. 0.3
-                                              #   applied to PhantomSeriesLine's line
-                                              #   and to its non-highlighted stops
       // Invariant: NEUTRAL_TRANSFER must not collide with any Series.colour or
       //            Event.colour in the fixture (palette discipline).
+      // Note: an earlier version of this module carried BRIGHT_OPACITY /
+      //       FADED_OPACITY constants for dim rendering. Both retired on
+      //       2026-08-09 with the hide-instead-of-dim refinement. Nothing
+      //       renders faded any longer; the render pipeline just skips
+      //       hidden stops and their surrounding segments.
 
       ----
      SeriesLineRenderStyle
       colour
       weight
       dash                                    # 'solid'
-      opacity                                 # BRIGHT_OPACITY | FADED_OPACITY
 
       ----
      StopRenderStyle
       colour
-      opacity                                 # BRIGHT_OPACITY | FADED_OPACITY
 
       ----
      TransferRenderStyle
       colour
       weight
       dash                                    # 'solid'
-      opacity                                 # BRIGHT_OPACITY typically
+
+    ====
+
+    # catalog/team.py — first-class team protagonist
+    Team
+      id                                      # external hard id (from fixture)
+      name                                    # e.g. "X-Men", "Avengers", "Fantastic Four"
+      memberships                             # list[TeamMembership] — external, hard
+      rosterAtIssue issue                     # returns set[str] — active member character
+                                              # names at that issue on the team's series.
+                                              # A membership is "active at issue X" when:
+                                              #   membership.startIssue.issueNumber
+                                              #     <= X.issueNumber
+                                              #   AND (membership.endIssue is None
+                                              #        OR X.issueNumber
+                                              #           <= membership.endIssue.issueNumber)
+                                              # AND issue.series == membership.startIssue.series.
+      allTimeMembers                          # returns set[str] — union of every membership.character
+      -> TeamMembership
+      // Invariant: memberships are external, hard-numbered facts.
+      //            NEVER derived from anything else in the model.
+
+      ----
+     TeamMembership
+      character                               # str tag — a character name
+      startIssue                              # Issue — when they join (inclusive)
+      endIssue                                # Issue | None — when they leave (inclusive);
+                                              #                None means still current
+      -> Series.nextInSeries                  # (for validation only)
+      // Invariant: startIssue and endIssue (when not None) are on the SAME Series.
+      //            That Series is the team's series (Series.protagonist == owning Team).
+      // Invariant: endIssue is None OR endIssue.issueNumber >= startIssue.issueNumber.
+      // Invariant: no assumption of continuous membership — the fixture may include
+      //            multiple non-overlapping memberships for the same character on the
+      //            same team.
 
     ====
 
@@ -489,48 +670,41 @@ ce:
 
       ====
 
-    # timeline/series_line.py — cohesive family
+    # timeline/series_line.py — one lane class, filter-driven visibility
     SeriesLine
       series                                  # Series
-      stops                                   # list[Stop] — one per issue, in pubDate order
+      stops                                   # list[Stop] — one per issue,
+                                              #   in issueNumber order
       xRange                                  # (firstDate, lastDate) — pixels along ruler
       yLane                                   # lane y-position
-      renderStyle                             # returns SeriesLineRenderStyle:
-                                              #   colour  = series.colour  (Q7)
-                                              #   weight  = SERIES_LINE_WEIGHT
-                                              #   dash    = solid
-                                              #   opacity = Palette.BRIGHT_OPACITY
-      renderStyleFor stop                     # returns StopRenderStyle:
-                                              #   colour  = series.colour
-                                              #   opacity = Palette.BRIGHT_OPACITY
+      filter                                  # SeriesFilter | None
+                                              #   None = whole lane visible.
+                                              #   Some filter = only issues where
+                                              #                 filter.matches(issue) is True.
+      visibleStops                            # returns list[Stop]:
+                                              #   if filter is None: return stops
+                                              #   else: return [s for s in stops
+                                              #                   if filter.matches(s.issue)]
+      renderStyle                             # SeriesLineRenderStyle:
+                                              #   colour = series.colour  (Q7)
+                                              #   weight = SERIES_LINE_WEIGHT
+                                              #   dash   = solid
+      drawSegmentBetween a b                  # returns bool — for two consecutive-in-
+                                              #   visibleStops stops:
+                                              #     True iff a and b are also consecutive
+                                              #     in `stops` (no hidden stop between).
       -> Series.issues                        # source of stops
       // Invariant: len(stops) == len(series.issues).
-      // Invariant: the line drawn between stops is CONTINUOUS end-to-end
-      //            (no boundary breaks, ever).
-
-      ----
-     PhantomSeriesLine : SeriesLine
-      highlightedStops                        # set[Stop] — the guest-appearance
-                                              #   stops that render bright while
-                                              #   the rest of the lane fades
-      renderStyle                             # OVERRIDE:
-                                              #   opacity = Palette.FADED_OPACITY
-                                              #   (colour, weight, dash unchanged)
-      renderStyleFor stop                     # OVERRIDE:
-                                              #   if stop in highlightedStops:
-                                              #     opacity = Palette.BRIGHT_OPACITY
-                                              #   else:
-                                              #     opacity = Palette.FADED_OPACITY
-      // Introduced by one-off / guest-appearance semantics (2026-08-09):
-      //   Adding an Issue to OneOffIssueRoster whose Series is NOT in the
-      //   ActiveSeriesRoster produces a PhantomSeriesLine for that Series
-      //   with highlightedStops = the roster's one-off Issues on that Series.
-      // Invariant: same shape as SeriesLine — the entire series' stops are
-      //            placed on the lane at their real xPositions; only the
-      //            render opacity differs. No "phantom row"; it IS a lane.
-      // Invariant: if the Series is later added to ActiveSeriesRoster, the
-      //            PhantomSeriesLine is replaced by a normal SeriesLine at
-      //            the next SubwayMap rebuild.
+      // Invariant: NO subtypes — "phantom" and "focused" concepts collapse
+      //            into filter kinds (see SeriesFilter below).
+      // Invariant: when filter is None → visibleStops == stops AND
+      //            drawSegmentBetween returns True for every adjacent pair
+      //            → rendered line is CONTINUOUS end-to-end. Matches the
+      //            subway-line metaphor for direct roster adds.
+      // Invariant: when filter is set → only matching stops render, with
+      //            line segments drawn ONLY between visible stops that are
+      //            consecutive in issueNumber. The underlying Series is
+      //            still unbroken; only the render drops hidden pieces.
 
       ----
      Stop
@@ -605,50 +779,45 @@ ce:
 
     # timeline/subway_map.py
     SubwayMap
-      seriesLines                             # list[SeriesLine | PhantomSeriesLine]:
-                                              #   · SeriesLine per ActiveSeriesRoster entry
-                                              #   · PhantomSeriesLine per Series that has ≥1
-                                              #     one-off entry and is NOT in the series roster
-      transferBundles                         # list[TransferBundle] — one per ActiveEventRoster entry
+      seriesLines                             # list[SeriesLine] — one per
+                                              #   ActiveSeriesRoster entry (all same type)
+      transferBundles                         # list[TransferBundle] —
+                                              #   one per ActiveEventRoster entry
       continuesInTransfers                    # list[TransferConnection]  (origin='continues_in')
-      buildFrom seriesRoster eventRoster oneOffRoster
-                                              # factory-shaped operation:
-                                              #   1. for series in seriesRoster.allActiveSeries:
-                                              #        emit SeriesLine(series)
-                                              #   2. for each distinct series `s` referenced by
-                                              #      oneOffRoster.entries where `s` not in
-                                              #      seriesRoster:
-                                              #        emit PhantomSeriesLine(
-                                              #          series=s,
-                                              #          highlightedStops={stopOf(e.issue) for e
-                                              #                            in oneOffRoster.entries
-                                              #                            if e.issue.series == s})
-                                              #   3. for event in eventRoster.entries:
+      buildFrom seriesRoster eventRoster      # factory-shaped operation:
+                                              #   1. for entry in seriesRoster.entries:
+                                              #        emit SeriesLine(
+                                              #          series=entry.series,
+                                              #          filter=entry.filter)
+                                              #   2. for event in eventRoster.entries:
                                               #        emit TransferBundle.buildFrom(event)
-                                              #   4. emit ContinuesInTransfers.allFor(all_issues)
-      visibleSeriesLines                      # returns list[SeriesLine | PhantomSeriesLine]:
-                                              #   · SeriesLines whose series is visible in
-                                              #     seriesRoster
-                                              #   · PhantomSeriesLines whose highlightedStops
-                                              #     intersect oneOffRoster.visibleIssues
-                                              #     (if the reader hides every one-off on a
-                                              #      phantom lane, the whole phantom lane
-                                              #      disappears — no context without a target)
+                                              #   3. emit ContinuesInTransfers.allFor(all_issues)
+      visibleSeriesLines                      # returns list[SeriesLine]:
+                                              #   [line for line in seriesLines
+                                              #      if seriesRoster.isVisible(line.series)
+                                              #     and len(line.visibleStops) > 0]
+                                              # (a filter that yields zero visible stops
+                                              #  drops the lane entirely — no empty rows)
       visibleTransfers                        # returns list[TransferConnection]:
                                               #   [t for t in continuesInTransfers
                                               #      if bothEndpointsVisible(t)] +
                                               #   flatten(bundle.connections for bundle
                                               #           where bundle.enabled and
                                               #           bothEndpointsVisible(t))
-      // "bothEndpointsVisible(t)": stop's series is either in seriesRoster
-      //   with isVisible == True, OR the stop is on a PhantomSeriesLine
-      //   whose highlightedStops includes the stop AND oneOffRoster is
-      //   visible for the stop's issue.
+      // "bothEndpointsVisible(t)": for each endpoint stop:
+      //   · the endpoint's Series has a SeriesLine in seriesLines;
+      //   · the seriesRoster entry for that series is visible; AND
+      //   · the stop is in that SeriesLine's `visibleStops` (i.e. the
+      //     lane's filter, if any, matches).
+      // Hide-not-dim (2026-08-09): a transfer whose endpoint is a hidden
+      //   stop is NOT rendered — no dangling half-transfer into empty
+      //   space.
       // Invariant: events NOT in eventRoster contribute NO TransferBundle.
-      // Invariant: series NOT in seriesRoster AND with NO one-off entries
-      //            contribute NO SeriesLine — the map ignores them.
-      // Invariant: a series in seriesRoster wins over any phantom
-      //            representation — one lane per series, at most.
+      // Invariant: series NOT in seriesRoster contribute NO SeriesLine.
+      // Invariant: at most one SeriesLine per Series — clicking a one-off
+      //            issue on a series that is already rostered UNIONs its
+      //            issue into the existing filter (or the resulting union
+      //            of filters); it does NOT emit a second lane.
 
       ====
 
@@ -663,50 +832,84 @@ ce:
 
     ====
 
-    # search/search_query.py — unified query across the catalog (Q8)
+    # search/search_query.py — unified query across the catalog (Q8 + focus refinement)
     SearchQuery
       catalog                                 # Catalog
       query                                   # str  (may be empty)
       results                                 # returns SearchResults
       -> Catalog.allSeries / allEvents / allIssues
       // Match rules (case-insensitive substring on the exposed name):
-      //   · Series matches when query in series.displayName OR
-      //                    query in any of series.characters.
+      //   · Series matches EITHER as:
+      //       (a) 'displayName'   — query in series.displayName
+      //       (b) 'protagonist'   — series.protagonist is str AND
+      //                             query in series.protagonist
+      //       (c) 'team-member:{char}' — series.protagonist is Team AND
+      //                             query matches a specific `char` in
+      //                             series.protagonist.allTimeMembers
+      //                             (yields focusCharacter = char)
+      //       (d) 'supporting'    — query in series.characters
+      //     A single Series may produce MULTIPLE SeriesMatch entries when
+      //     several rules fire — de-dup by (series, focusCharacter).
       //   · Event  matches when query in event.name.
       //   · Issue  matches when query in issue.title OR
       //                    query in any of issue.characters
-      //                    (one-off appearances — the guest-star / crossover
-      //                    surface; excludes issues whose series already
-      //                    matches the query, to avoid duplication).
-      // When query is empty: results.series = allSeries, results.events =
-      //   allEvents, results.issues = [] (no one-offs on empty query).
+      //                    AND issue.series did NOT already produce a
+      //                    SeriesMatch for this query (one-off exclusion
+      //                    rule).
+      // When query is empty: results.series = every Series (each as a
+      //   plain SeriesMatch with focusCharacter=None); results.events =
+      //   allEvents; results.issues = [].
 
       ----
      SearchResults
-      series                                  # list[Series]
+      series                                  # list[SeriesMatch]
       events                                  # list[Event]
       issues                                  # list[Issue]   — one-off appearances only
       isEmpty                                 # bool
+
+      ----
+     SeriesMatch
+      series                                  # Series
+      matchedVia                              # 'displayName' | 'protagonist' |
+                                              # 'team-member:{char}' | 'supporting'
+      focusCharacter                          # str | None — set only when matchedVia
+                                              #   == 'team-member:{char}'; drives
+                                              #   FocusedSeriesLine on click.
+      // Invariant: click adds via
+      //   seriesRoster.add(series=match.series,
+      //                    focusCharacter=match.focusCharacter).
 
     ====
 
     # roster/active_series_roster.py — the working set for series
     ActiveSeriesRoster
       entries                                 # ordered list[SeriesRosterEntry]
-      add series                              # -> None
+      add series filter                       # -> None; filter defaults to None
+                                              #   (direct add). Set by character or
+                                              #   issue-click search results.
       remove series                           # -> None
       toggleVisible series                    # -> None
+      setFilter series filter                 # -> None; None clears the filter
       isVisible series                        # -> bool
       contains series                         # -> bool
+      filterFor series                        # -> SeriesFilter | None
       visibleSeries                           # returns list[Series]
       allActiveSeries                         # returns list[Series]  (visible+hidden)
       // Invariant: no duplicate Series in entries.
-      // Invariant: adding a Series already in entries is a no-op.
+      // Merge rule when add() is called on an already-rostered series:
+      //   · new filter is None            → clear existing filter (show whole lane)
+      //   · new filter is IssueSetFilter AND existing is IssueSetFilter
+      //                                    → union the two issue sets
+      //   · otherwise                     → REPLACE existing filter with new one
+      // `visible` is preserved across adds; only the filter changes.
 
       ----
      SeriesRosterEntry
       series
       visible                                 # bool  (default True on add)
+      filter                                  # SeriesFilter | None
+      describeFilter                          # returns str:
+                                              #   filter.describe if filter else ''
 
     ====
 
@@ -733,30 +936,12 @@ ce:
 
     ====
 
-    # roster/one_off_issue_roster.py — individually-added issues (Q8)
-    OneOffIssueRoster
-      entries                                 # ordered list[OneOffEntry]
-      add issue                               # -> None  (click-only)
-      remove issue                            # -> None
-      toggleVisible issue                     # -> None
-      isVisible issue                         # -> bool
-      contains issue                          # -> bool
-      visibleIssues                           # returns list[Issue]
-      // Invariant: no duplicate Issue in entries.
-      // Invariant: adding an Issue whose Series is already in
-      //            ActiveSeriesRoster is allowed but redundant — the map
-      //            still renders it as its normal stop on the series line
-      //            (no phantom row). Removing/hiding the series then leaves
-      //            the one-off entry to render as a phantom-row ★ stop.
-
-      ----
-     OneOffEntry
-      issue
-      visible                                 # bool  (default True on add)
-
 ---
-# EventFilter and SeriesFilter are both retired. Their roles are covered
-# by ActiveEventRoster and ActiveSeriesRoster respectively.
+# OneOffIssueRoster is RETIRED (2026-08-09). One-off issue additions are
+# absorbed into ActiveSeriesRoster as SeriesRosterEntry instances whose
+# filter is an IssueSetFilter for the clicked issues. Clicking multiple
+# one-off issues on the same series UNIONS their filter's issue set.
+# EventFilter is also retired — replaced by ActiveEventRoster.
 
     # filter/*.py
      EraFilter
@@ -766,64 +951,81 @@ ce:
       ====
 
     # view/*.py
-    UnifiedSearchView                          # Q8 — replaces SearchBrowseView
+     UnifiedSearchView                          # Q8 — replaces SearchBrowseView
       searchQuery                             # SearchQuery
       seriesRoster                            # ActiveSeriesRoster  (drop target for series)
       eventRoster                             # ActiveEventRoster
-      oneOffRoster                            # OneOffIssueRoster
       renderQueryBox
       renderGroupedResults                    # three sub-lists: Series / Events / Issues
                                               #  · Series rows: [⋮][+ click]  (draggable)
                                               #  · Event rows:  [+ click]     (no drag)
                                               #  · Issue rows:  [+ click]     (no drag)
-      onClickSeries series                    # -> seriesRoster.add(series)
-      onDragSeries series                     # -> seriesRoster.add(series)  (equiv)
+      onClickSeries match                     # SeriesMatch ->
+                                              #   filter = (CharacterAppearanceFilter(
+                                              #              match.focusCharacter)
+                                              #             if match.focusCharacter
+                                              #             else None)
+                                              #   seriesRoster.add(match.series, filter)
+      onDragSeries match                      # equivalent to onClickSeries
       onClickEvent event                      # -> eventRoster.add(event)
-      onClickIssue issue                      # -> oneOffRoster.add(issue)
+      onClickIssue issue                      # -> seriesRoster.add(
+                                              #      issue.series,
+                                              #      filter=IssueSetFilter({issue}))
+                                              #    (merge rule unions with any existing
+                                              #     IssueSetFilter on that series)
       -> SearchQuery.results
       // Invariant: Series rows have BOTH ⋮ (drag) and + (click) affordances.
       //            Event and Issue rows have ONLY + (click); no drag handle.
       //            Reflects the Q8 user constraint "can't drag events".
+      // Q9/one-lane consolidation: Issue clicks route to seriesRoster,
+      //   not to a separate one-off roster. Result appears as another
+      //   entry (or a filter update) in the "Active Series" panel with a
+      //   filter description like "guest: #45".
 
       ----
      ActiveRosterView
       seriesRoster                            # ActiveSeriesRoster  (drop target)
       eventRoster                             # ActiveEventRoster
-      oneOffRoster                            # OneOffIssueRoster
-      renderSeriesList                        # each row: [x] displayName [×]
+      renderSeriesList                        # each row:
+                                              #   [x] displayName · describeFilter [×]
+                                              #   (describeFilter shows the filter
+                                              #    hint, e.g. "Wolverine's appearances"
+                                              #    or "#45, #52"; blank when no filter)
       renderEventList                         # each row: [x] eventName [×]
-      renderOneOffList                        # each row: [x] issueTitle [×]
       onToggleSeries s / onRemoveSeries s     # -> seriesRoster.*
       onToggleEvent e  / onRemoveEvent e      # -> eventRoster.*
-      onToggleIssue i  / onRemoveIssue i      # -> oneOffRoster.*
+      onClearFilterFor series                 # -> seriesRoster.setFilter(series, None)
       onDropSeries s                          # -> seriesRoster.add(s)  (drop target)
       // Empty state: renders "search then click to add series, events, or
-      //   one-off issues".
+      //   individual issues".
+      // Two-panel layout (was three): Active Series (which may carry
+      //   filters) + Active Events. One-off issue additions surface as
+      //   filtered entries under Active Series, not as a separate list.
 
       ----
      SubwayMapView
       subwayMap                               # SubwayMap
       seriesRoster                            # ActiveSeriesRoster
       eventRoster                             # ActiveEventRoster
-      oneOffRoster                            # OneOffIssueRoster
       eraFilter                               # EraFilter
       xScaleFor date                          # px along ruler
-      yLaneFor seriesLine                     # px lane y — one per SeriesLine OR
-                                              #   PhantomSeriesLine, in draw order
-      renderSeriesLine seriesLine             # applies seriesLine.renderStyle:
-                                              #   normal SeriesLine → BRIGHT
-                                              #   PhantomSeriesLine → FADED lane,
-                                              #     BRIGHT stops for highlightedStops,
-                                              #     FADED stops otherwise
-                                              # (uses seriesLine.renderStyleFor(stop)
-                                              #  for each stop's opacity)
-      renderStop stop                         # opacity from stop.seriesLine.renderStyleFor(stop)
+      yLaneFor seriesLine                     # px lane y — one per visible SeriesLine
+      renderSeriesLine seriesLine             # for each consecutive pair (a, b) in
+                                              #   seriesLine.visibleStops:
+                                              #     if seriesLine.drawSegmentBetween(a, b):
+                                              #       draw segment(a, b) with
+                                              #       seriesLine.renderStyle
+                                              # for stop in seriesLine.visibleStops:
+                                              #   renderStop(stop)
+                                              # Hidden stops and their surrounding
+                                              # segments are NOT drawn.
+      renderStop stop                         # renders at series.colour;
+                                              # only called for stops in visibleStops
       renderTransferConnection connection     # applies connection.renderStyle;
                                               # each independent (Q6 no fan-out)
       -> SubwayMap.visibleTransfers
       -> SubwayMap.visibleSeriesLines
       -> ActiveEventRoster.isVisible
-      -> OneOffIssueRoster.isVisible
       -> EraFilter.inWindow
 
       ----
@@ -943,39 +1145,73 @@ bdd:                                          # spec fidelity uses `behavior`
 
     a catalog
       that has been built from the fixture
-        it should expose every Series, Event, and Issue as a single aggregate
+        it should expose every Series, Event, Issue, and Team as a single aggregate
         it should distinguish volumes with the same title as separate Series
           (e.g. "Spider-Man (1963)" and "Spider-Man (2003)" both present)
 
-    a search query — grouped results (Q8)
-      that has query = "spider"  (case-insensitive)
-        it should return series whose displayName contains "spider"
-        it should return series whose characters contain "spider" (tag match)
-        it should return events whose name contains "spider"
-        it should return issues whose title contains "spider" (one-off)
-        it should return issues whose characters contain "spider" AND whose
-          series does NOT match the query (one-off appearance rule; excludes
-          duplication)
+    a team
+      that has memberships [ (Wolverine, X-Men #94, X-Men #200),
+                              (Wolverine, X-Men #300, None),
+                              (Cyclops,  X-Men #1,   None) ]
+        it should report allTimeMembers == {Wolverine, Cyclops}
+        it should report rosterAtIssue(X-Men #150) == {Wolverine, Cyclops}
+        it should report rosterAtIssue(X-Men #250) == {Cyclops}
+        it should report rosterAtIssue(X-Men #350) == {Wolverine, Cyclops}
+      that has an open-ended membership (endIssue = None)
+        it should treat the membership as active through the series' lastIssue
+
+    a series with a team protagonist (X-Men)
+      that has an issue X-Men #150 with issue.characters empty
+        it should expose effectiveCharacters == list(X-Men.rosterAtIssue(#150))
+      that has an issue X-Men #150 with issue.characters = ['Wolverine', 'Beast']
+        it should expose effectiveCharacters == ['Wolverine', 'Beast']
+          (issue-level override wins)
+
+    a search query — grouped results (Q8 + team refinement)
+      that has query = "spider-man"  (case-insensitive)
+        it should return a SeriesMatch for Amazing Spider-Man with
+          matchedVia = 'protagonist' and focusCharacter = None
+        it should return a SeriesMatch for New Avengers (Team includes
+          Spider-Man) with matchedVia = 'team-member:Spider-Man'
+          and focusCharacter = 'Spider-Man'
+        it should return issues whose characters contain "spider-man" AND
+          whose series didn't already produce a SeriesMatch
+      that has query = "wolverine"
+        it should return a SeriesMatch for X-Men with
+          matchedVia = 'team-member:Wolverine' and focusCharacter = 'Wolverine'
+        it should return a SeriesMatch for Wolverine (solo series) with
+          matchedVia = 'protagonist' and focusCharacter = None
       that has query = ""
-        it should return every Series in `series`
-        it should return every Event in `events`
-        it should return no Issue in `issues` (no one-offs on an empty query)
+        it should return every Series as SeriesMatch(focusCharacter=None)
+        it should return every Event
+        it should return no Issue in `issues`
 
     an active series roster
       that has just been created
         it should contain no entries
         it should report isVisible(anySeries) == False
-      that has been asked to add "Spider-Man (2003)"
-        it should contain one entry whose series = Spider-Man (2003) and
-          visible = True
-      that has been asked to add "Spider-Man (2003)" twice
-        it should contain exactly one entry for that Series (no duplicates)
-      that has "Spider-Man (2003)" in it and receives toggleVisible(...)
+      that has been asked to add "Spider-Man (2003)" with filter = None
+        it should contain one entry (visible True, filter None)
+      that has been asked to add X-Men with filter =
+        CharacterAppearanceFilter("Wolverine")
+        it should contain one entry whose filter is that CharacterAppearanceFilter
+      that has X-Men (no filter) and receives add(X-Men,
+        CharacterAppearanceFilter("Wolverine"))
+        it should REPLACE filter with the character filter
+      that has X-Men (CharacterAppearanceFilter("Wolverine")) and receives
+        add(X-Men, None)
+        it should CLEAR the filter
+      that has Iron Man (IssueSetFilter({#45})) and receives
+        add(Iron Man, IssueSetFilter({#52}))
+        it should UNION into IssueSetFilter({#45, #52})
+      that has Iron Man (IssueSetFilter({#45})) and receives
+        add(Iron Man, CharacterAppearanceFilter("Wolverine"))
+        it should REPLACE (different filter kind, not IssueSet+IssueSet)
+      that has "Spider-Man (2003)" and receives toggleVisible(...)
         it should keep the entry but flip visible False
-        with subsequent toggleVisible(...)
-          it should flip visible back to True
-      that has "Spider-Man (2003)" in it and receives remove(...)
-        it should contain no entry for that Series
+      that has X-Men (CharacterAppearanceFilter("Wolverine")) and receives
+        setFilter(X-Men, None)
+        it should clear the filter to None
 
     an active event roster (Q8 — replaces the retired EventFilter)
       that has just been created
@@ -993,44 +1229,48 @@ bdd:                                          # spec fidelity uses `behavior`
       that has "Civil War" removed
         it should drop the bundle from SubwayMap.transferBundles entirely
 
-    a one-off issue roster (Q8 + phantom-lane refinement)
-      that has just been created
-        it should contain no entries
-      that has been asked to add "Iron Man #45"
-        it should contain one entry (visible True by default)
-      that has "Iron Man #45" whose series "Iron Man (1968)" is NOT in the
-      ActiveSeriesRoster
-        it should cause SubwayMap.buildFrom to emit a PhantomSeriesLine for
-          "Iron Man (1968)" with highlightedStops = { stopOf(Iron Man #45) }
-        it should NOT spawn any lone star / stand-alone marker
-      that has "Iron Man #45" whose series IS in the ActiveSeriesRoster
-        it should NOT spawn a PhantomSeriesLine (a normal SeriesLine covers it)
-        it should leave the roster entry in place (no auto-removal)
-      that has "Iron Man #45" toggled invisible AND its series is NOT rostered
-        it should remove Iron Man #45 from highlightedStops
-        it should drop the PhantomSeriesLine entirely if it becomes the
-          last one-off on that lane (no context without a target)
-      that has "Iron Man #45" and "Iron Man #52" both added AND Iron Man (1968)
-      is NOT rostered
-        it should emit one PhantomSeriesLine for Iron Man (1968)
-        it should include both stops in highlightedStops
-      that has "Iron Man #45" removed
-        it should drop the entry entirely (same rule as toggle-off-then-drop)
+    a series filter — CharacterAppearanceFilter
+      that has character = "Wolverine"
+        it should match every Issue whose effectiveCharacters contains "Wolverine"
+      that has character = "Wolverine" against an Iron Man issue where
+        issue.effectiveCharacters does NOT contain "Wolverine"
+        it should NOT match
+      that describes itself
+        it should return "Wolverine's appearances" (or similar) via .describe
 
-    a phantom series line (one-off / guest-appearance rendering)
-      that has been built for Iron Man (1968) with highlightedStops =
-      { stopOf(Iron Man #45) }
-        it should expose renderStyle.opacity = Palette.FADED_OPACITY
-        it should expose renderStyleFor(stopOf(Iron Man #45)).opacity
-          = Palette.BRIGHT_OPACITY
-        it should expose renderStyleFor(any other stop).opacity
-          = Palette.FADED_OPACITY
-        it should preserve series.colour and SERIES_LINE_WEIGHT
-        it should place ALL of Iron Man's stops on the lane at their real
-          xPositions (not just the highlighted ones)
-      that later has Iron Man (1968) added to ActiveSeriesRoster
-        it should be replaced by a normal SeriesLine at the next
-          SubwayMap rebuild (no double-rendering)
+    a series filter — IssueSetFilter
+      that has issues = { Iron Man #45, Iron Man #52 }
+        it should match Iron Man #45 and Iron Man #52
+        it should NOT match any other issue on Iron Man
+        it should describe as "#45, #52" (or similar)
+
+    a series line — with a filter
+      that has been built for X-Men with filter =
+        CharacterAppearanceFilter("Wolverine") AND Wolverine's memberships
+        translate to Team.rosterAtIssue covering [#94..#200] ∪ [#300..#400]
+        it should expose visibleStops == every Stop whose issueNumber is
+          in [94..200] ∪ [300..400]
+        it should return drawSegmentBetween(#95, #96) == True   (consecutive, both visible)
+        it should return drawSegmentBetween(#200, #300) == False (hidden stops between)
+        it should NOT expose issueNumber 250 as visible
+      that has been built for Iron Man (1968) with filter =
+        IssueSetFilter({#45})
+        it should expose visibleStops == [ stopOf(#45) ]
+        it should render no line segment (single visible stop)
+      that has been built for Iron Man (1968) with filter =
+        IssueSetFilter({#45, #46})  (consecutive)
+        it should expose both stops
+        it should return drawSegmentBetween(#45, #46) == True
+      that has been built for Iron Man (1968) with filter =
+        IssueSetFilter({#45, #52})  (non-consecutive)
+        it should expose both stops
+        it should return drawSegmentBetween(#45, #52) == False
+      that has been built with filter = None
+        it should expose visibleStops == all its stops (whole lane)
+        it should return drawSegmentBetween == True for every adjacent pair
+          (subway metaphor: unbroken lane)
+      that later has its filter cleared (setFilter(series, None))
+        it should render as an unfiltered lane at the next SubwayMap rebuild
 
     a subway map — sourced from the roster
       that has been built from a roster containing "Amazing Spider-Man" and
@@ -1320,5 +1560,8 @@ bdd:
 - spec / Subway Map / pass #transfer-style          # per-event colour (Q7)
 - spec / Subway Map / pass #event-roster-parity     # click-only roster (Q8)
 - spec / Subway Map / pass #unified-search          # one search across kinds (Q8)
-- spec / Subway Map / pass #one-off-issues          # OneOffIssueRoster (Q8)
-- spec / Subway Map / pass #phantom-lane-render     # faded lane + bright guest stop
+- spec / Subway Map / pass #one-off-issues          # click-to-add issues (Q8)
+- spec / Subway Map / pass #team-first-class        # protagonist + team memberships
+- spec / Subway Map / pass #hide-not-dim            # replaced FADED with SHOW/HIDE
+- spec / Subway Map / pass #one-lane-one-filter     # unified lane model
+- spec / Subway Map / pass #character-filter-scope  # emergent from unified model
