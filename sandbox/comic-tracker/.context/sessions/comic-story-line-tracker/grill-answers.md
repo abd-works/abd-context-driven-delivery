@@ -452,6 +452,57 @@ that can be added to the map without their whole series.
 
 ---
 
+### Phantom lane + bright guest stop — one-off refinement (2026-08-09)
+
+**Frame.** During Q9, the user pivoted with a rendering rule for one-offs:
+"One off lanes are faded and so are stops with exception for the guest
+appearance."
+
+**Interpretation applied.** OneOffStop (my Q8 lone-star marker) is
+retired. Adding a one-off issue to `OneOffIssueRoster` now spawns a
+**faded phantom lane for the whole owning series**, with the specific
+guest-appearance stop(s) rendered bright. Same lane geometry as any
+`SeriesLine` — the difference is opacity per stop and per line.
+
+**CE consequences applied.**
+
+| Concept | Change |
+|---|---|
+| `PhantomSeriesLine : SeriesLine` (NEW subtype) | Adds `highlightedStops: set[Stop]`; overrides `renderStyle` to opacity = `FADED_OPACITY`; overrides `renderStyleFor(stop)` to `BRIGHT_OPACITY` when `stop in highlightedStops`, else `FADED_OPACITY`. All other lane geometry (colour, weight, stops list, xPositions) unchanged from `SeriesLine`. |
+| `SeriesLine.renderStyle` | Adds `opacity` (defaults to `BRIGHT_OPACITY`). Adds `renderStyleFor(stop)` accessor. |
+| `Palette` | Adds `BRIGHT_OPACITY` and `FADED_OPACITY` constants. `SeriesLineRenderStyle` and `StopRenderStyle` shapes gain `opacity`. |
+| `OneOffStop` (was NEW in Q8) | **Retired.** Concept dissolves into `PhantomSeriesLine.highlightedStops`. |
+| `SubwayMap.buildFrom` | Emission rule reshaped: for each distinct series `s` in `oneOffRoster.entries` where `s` is not in `seriesRoster`, emit `PhantomSeriesLine(series=s, highlightedStops={stopOf(e.issue) for e in oneOffRoster.entries if e.issue.series == s})`. |
+| `SubwayMap.visibleSeriesLines` | Includes `SeriesLine`s (from series roster) AND `PhantomSeriesLine`s (from one-off roster). A `PhantomSeriesLine` disappears when the reader hides every one-off on that lane ("no context without a target"). |
+| `SubwayMapView` | `yLaneFor(seriesLine)` handles both types; `renderSeriesLine` and `renderStop` consult `seriesLine.renderStyleFor(stop)` for per-stop opacity. `renderOneOffStop` / `yPhantomRowFor` retired. |
+| Promotion rule | A phantom lane whose series is later added to `ActiveSeriesRoster` is replaced by a normal `SeriesLine` at the next `SubwayMap` rebuild — one lane per series, always. |
+
+**BDD consequences applied.**
+
+- `a one-off issue roster` scenarios rewritten to assert
+  `PhantomSeriesLine` emission (not a lone star), and to cover
+  multi-guest-per-lane merging.
+- `a phantom series line` (new describe block) asserts
+  `renderStyle.opacity == FADED_OPACITY`, per-stop opacity by
+  `highlightedStops` membership, preservation of `series.colour` and
+  `SERIES_LINE_WEIGHT`, and the promotion-to-normal rule.
+
+**Related open items reconciled.**
+
+- `#one-off-stop-geometry` → **resolved by this refinement.** No phantom
+  rows / no lone stars; every one-off adds a full-length phantom lane.
+
+**Passes logged:** `pass #phantom-lane-render`. `#one-off-stop-geometry`
+removed from `flow.open`.
+
+**Q9 (`#character-filter-scope`) implications.** This visual language
+("fade context, highlight target") is exactly what a character filter
+would use. Q9 re-poses next with this pattern in mind — the answer now
+has a natural implementation path if the user picks the "roster + dim"
+option.
+
+---
+
 ### Multi-event stop rendering — Q6 answered (2026-08-08)
 
 **Frame.** When two enabled events both touch the same stop, how do we

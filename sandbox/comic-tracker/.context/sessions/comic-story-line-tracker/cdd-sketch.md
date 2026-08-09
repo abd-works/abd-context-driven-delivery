@@ -18,6 +18,14 @@ scope: Increment 1 — Interactive Comic Story Line Tracker (single visual)
     - Left rail splits into Search/Browse (draggable candidates) and Active
       Series (checkable roster). Drag drops from search into the active list;
       the two lists never merge.
+  - **Phantom lane + bright guest stop** (redirect 2026-08-09, post-Q8 turn):
+    - "One off lanes are faded and so are stops with exception for the
+      guest appearance"
+    - Adding a one-off issue renders the ENTIRE series it belongs to as a
+      faded phantom lane. All its stops render faded, EXCEPT the specific
+      guest-appearance stop, which renders bright.
+    - Retires the OneOffStop star marker from Q8. Concept dissolves into
+      PhantomSeriesLine.highlightedStops.
   - **Unified search + three rosters** (redirect 2026-08-09, post-Q7 turn):
     - "Events should be searched in same text box as series, results grouped,
       series, events, issues (one off appearances)"
@@ -123,13 +131,16 @@ flow:
       · #filter-compose — confirm working default (era window narrows the
         canvas; all roster gates are independent visibility toggles).
       · #character-filter-scope — search-facet-only or dim stops too?
-      · #one-off-stop-geometry — dedicated phantom row per one-off vs a
-        single shared "one-offs" row? (Introduced by Q8.)
+        (Re-frame under Q9 given new phantom/highlight visual language.)
 
-    Do not recommend proceed to engineer until these items close.
+      · #one-off-stop-geometry — RESOLVED (post-Q8 refinement, 2026-08-09):
+        no phantom row / lone star. Instead PhantomSeriesLine renders the
+        whole owning series at FADED_OPACITY with the guest stop(s) at
+        BRIGHT_OPACITY.
+
+    Do not recommend proceed to engineer until the remaining items close.
   open:
     - TODO decide character-filter scope (search-facet only, or dim stops too?)   #character-filter-scope
-    - TODO decide one-off stop geometry (per-issue phantom row vs shared row)     #one-off-stop-geometry
     - TODO promote Character to first-class entity when metadata is needed        #character-not-first-class-yet
     - TODO verify Marvel Unlimited iOS URL scheme + fallback                     #mu-deeplink
     - TODO confirm filter composition (era window; three rosters independent)    #filter-compose
@@ -152,7 +163,8 @@ flow:
     - pass #transfer-style             # per-event colour + neutral (Q7, option 1)
     - pass #event-roster-parity        # roster yes; click-only (Q8)
     - pass #unified-search             # one search box across Series/Events/Issues (Q8)
-    - pass #one-off-issues             # OneOffIssueRoster + OneOffStop on phantom row (Q8)
+    - pass #one-off-issues             # OneOffIssueRoster (Q8)
+    - pass #phantom-lane-render        # faded lane + bright guest stop (2026-08-09)
     - skip #single-point-rule          # dissolved by metaphor swap
 
 =========
@@ -209,10 +221,12 @@ ux:
       │   Civil War          +    │           ┃                          │
       │   Spider-Verse       +    │      ●━━●━━●━━●                      │
       │  Issues (3) — one-off     │                                      │
-      │   Iron Man #45       +    │  one-off stops (from one-off roster):│
-      │   Daredevil #101     +    │       ★ (Iron Man #45)               │ ← floats
-      │   Fantastic Four #22 +    │           on its own row / phantom lane
-      │                           │                                      │
+      │   Iron Man #45       +    │  phantom lane (from one-off roster): │
+      │   Daredevil #101     +    │    ┅◌┅┅◌┅┅●┅┅◌┅┅◌┅┅◌   Iron Man       │
+      │   Fantastic Four #22 +    │           ↑ BRIGHT: the guest issue  │
+      │                           │             (Iron Man #45)           │
+      │                           │    lane + all other stops FADED      │
+      │                           │    (Palette.FADED_OPACITY)           │
       │  ⋮ = drag handle (series) │                                      │
       │  + = click to add         │                                      │
       ├───────────────────────────┤                                      │
@@ -221,10 +235,10 @@ ux:
       │ [x] Iron Man         [×]  │                                      │
       │ [x] X-Men            [×]  │                                      │
       │ [ ] Cap              [×]  │  legend:                             │
-      │  (drop zone here)         │    ● stop  ━━ series line            │
-      │                           │    ┃ transfer (colour = origin's)    │
-      ├───────────────────────────┤    ★ one-off stop (issue on phantom  │
-      │ Active Events             │      row; label shows series)        │
+      │  (drop zone here)         │    ● stop  ━━ series line (bright)   │
+      │                           │    ◌ stop  ┅┅ series line (FADED —   │
+      ├───────────────────────────┤          phantom lane from one-off)  │
+      │ Active Events             │    ┃ transfer (colour = origin's)    │
       │ [x] Civil War        [×]  │                                      │
       │ [x] Secret Wars      [×]  │                                      │
       │ [ ] House of M       [×]  │                                      │
@@ -245,14 +259,21 @@ ux:
                     · Read Stop Detail
       Domain terms: catalog · search result · series · event · issue ·
                     active series roster · active event roster ·
-                    one-off issue roster · series line · stop · transfer
-                    connection · event bundle · one-off stop · era
+                    one-off issue roster · series line · phantom series line
+                    · stop · transfer connection · event bundle · era ·
+                    guest appearance
       key:
         [x]/[ ] check · (○)/(●) radio · [ btn ] button · ⋮ drag handle (series)
-          · + click-to-add (all kinds) · [×] remove · ★ one-off stop
+          · + click-to-add (all kinds) · [×] remove
         Series lines wear their series.colour; event-owned transfers wear
           origin.colour; continuesIn transfers wear Palette.NEUTRAL_TRANSFER;
           all solid, all series-line weight.
+        Phantom series lines (spawned by OneOffIssueRoster) share the same
+          shape as a full lane but render at FADED_OPACITY; the specific
+          guest-appearance stop(s) on that lane render at BRIGHT_OPACITY.
+          If the reader later adds the phantom's series to
+          ActiveSeriesRoster, the phantom promotes to a bright lane at the
+          next SubwayMap rebuild.
         Unified search matches against Series.displayName, Event.name,
           Issue.title (and Issue characters). Results grouped by kind.
         on click Series result → ActiveSeriesRoster.add(series)
@@ -319,16 +340,17 @@ ce:
         one_off_issue_roster -> catalog/issue      # click-only to add (single stops on map)
       timeline                               # subway-map model
         series_line -> catalog/series        # unbroken lane for one series
+                                             #   subtype: PhantomSeriesLine
+                                             #   (faded lane, bright highlighted stops)
         stop -> catalog/issue                # a single issue's position on a line
-        one_off_stop -> catalog/issue        # stop that lives on a phantom row
-                                             #   for a series NOT in the series roster
         transfer_connection -> catalog/issue, catalog/event
                                              # continuation between two stops
-                                             # (may endpoint on a one_off_stop too)
+                                             # (may endpoint on a phantom lane too)
         transfer_bundle -> catalog/event, transfer_connection
                                              # all transfers owned by one event
-        palette                              # SERIES_LINE_WEIGHT, NEUTRAL_TRANSFER, styles
-        subway_map -> series_line, transfer_bundle, one_off_stop
+        palette                              # SERIES_LINE_WEIGHT, NEUTRAL_TRANSFER,
+                                             # FADED_OPACITY, BRIGHT_OPACITY
+        subway_map -> series_line, transfer_bundle
         era                                  # bucketing rule for the ruler
       filter                                       # what remains after roster consolidation
         era_filter                                 # time window
@@ -415,12 +437,16 @@ ce:
 
     ====
 
-    # timeline/palette.py — tiny constants module (Q7)
+    # timeline/palette.py — tiny constants module (Q7 + one-off refinement)
     Palette
       SERIES_LINE_WEIGHT                      # number  — e.g. 4px
       TRANSFER_WEIGHT = SERIES_LINE_WEIGHT    # same class as series line
       NEUTRAL_TRANSFER                        # str hex — muted grey for
                                               #   continuesIn transfers
+      BRIGHT_OPACITY                          # number  — e.g. 1.0
+      FADED_OPACITY                           # number  — e.g. 0.3
+                                              #   applied to PhantomSeriesLine's line
+                                              #   and to its non-highlighted stops
       // Invariant: NEUTRAL_TRANSFER must not collide with any Series.colour or
       //            Event.colour in the fixture (palette discipline).
 
@@ -429,12 +455,19 @@ ce:
       colour
       weight
       dash                                    # 'solid'
+      opacity                                 # BRIGHT_OPACITY | FADED_OPACITY
+
+      ----
+     StopRenderStyle
+      colour
+      opacity                                 # BRIGHT_OPACITY | FADED_OPACITY
 
       ----
      TransferRenderStyle
       colour
       weight
       dash                                    # 'solid'
+      opacity                                 # BRIGHT_OPACITY typically
 
     ====
 
@@ -463,36 +496,53 @@ ce:
       xRange                                  # (firstDate, lastDate) — pixels along ruler
       yLane                                   # lane y-position
       renderStyle                             # returns SeriesLineRenderStyle:
-                                              #   colour = series.colour  (Q7)
-                                              #   weight = SERIES_LINE_WEIGHT
-                                              #   dash   = solid
+                                              #   colour  = series.colour  (Q7)
+                                              #   weight  = SERIES_LINE_WEIGHT
+                                              #   dash    = solid
+                                              #   opacity = Palette.BRIGHT_OPACITY
+      renderStyleFor stop                     # returns StopRenderStyle:
+                                              #   colour  = series.colour
+                                              #   opacity = Palette.BRIGHT_OPACITY
       -> Series.issues                        # source of stops
       // Invariant: len(stops) == len(series.issues).
       // Invariant: the line drawn between stops is CONTINUOUS end-to-end
       //            (no boundary breaks, ever).
 
       ----
+     PhantomSeriesLine : SeriesLine
+      highlightedStops                        # set[Stop] — the guest-appearance
+                                              #   stops that render bright while
+                                              #   the rest of the lane fades
+      renderStyle                             # OVERRIDE:
+                                              #   opacity = Palette.FADED_OPACITY
+                                              #   (colour, weight, dash unchanged)
+      renderStyleFor stop                     # OVERRIDE:
+                                              #   if stop in highlightedStops:
+                                              #     opacity = Palette.BRIGHT_OPACITY
+                                              #   else:
+                                              #     opacity = Palette.FADED_OPACITY
+      // Introduced by one-off / guest-appearance semantics (2026-08-09):
+      //   Adding an Issue to OneOffIssueRoster whose Series is NOT in the
+      //   ActiveSeriesRoster produces a PhantomSeriesLine for that Series
+      //   with highlightedStops = the roster's one-off Issues on that Series.
+      // Invariant: same shape as SeriesLine — the entire series' stops are
+      //            placed on the lane at their real xPositions; only the
+      //            render opacity differs. No "phantom row"; it IS a lane.
+      // Invariant: if the Series is later added to ActiveSeriesRoster, the
+      //            PhantomSeriesLine is replaced by a normal SeriesLine at
+      //            the next SubwayMap rebuild.
+
+      ----
      Stop
       issue                                   # Issue
-      seriesLine                              # SeriesLine
+      seriesLine                              # SeriesLine | PhantomSeriesLine
       xPosition                               # px along ruler
       yPosition                               # px on lane (= seriesLine.yLane)
       isTransferHub                           # bool — participates in ≥1 enabled event
       -> SeriesLine
       // Invariant: xPosition derived from issue.publicationDate + ruler scale.
-
-      ----
-     OneOffStop
-      issue                                   # Issue whose series is NOT in the series roster
-      phantomRow                              # int — an assigned row index below the main lanes
-      xPosition                               # px along ruler (from issue.publicationDate)
-      yPosition                               # px on the phantom row
-      seriesLabel                             # issue.series.displayName — shown to the left
-      // Invariant: no SeriesLine passes through a OneOffStop; it renders as
-      //            a lone ★ marker.
-      // Invariant: OneOffStops can still be transfer endpoints (event-owned
-      //            or continuesIn) — the transfer line reaches down to the
-      //            phantom row.
+      // Note: on a PhantomSeriesLine, the Stop's render opacity comes from
+      //       seriesLine.renderStyleFor(self); no OneOffStop class exists.
 
       ====
 
@@ -555,40 +605,50 @@ ce:
 
     # timeline/subway_map.py
     SubwayMap
-      seriesLines                             # list[SeriesLine] — one per ActiveSeriesRoster entry
+      seriesLines                             # list[SeriesLine | PhantomSeriesLine]:
+                                              #   · SeriesLine per ActiveSeriesRoster entry
+                                              #   · PhantomSeriesLine per Series that has ≥1
+                                              #     one-off entry and is NOT in the series roster
       transferBundles                         # list[TransferBundle] — one per ActiveEventRoster entry
       continuesInTransfers                    # list[TransferConnection]  (origin='continues_in')
-      oneOffStops                             # list[OneOffStop] — one per OneOffIssueRoster entry
-                                              #   whose issue's series is NOT in the series roster
       buildFrom seriesRoster eventRoster oneOffRoster
-                                              # factory-shaped operation
-      -> SeriesLine(…) for series in seriesRoster.allActiveSeries
-      -> TransferBundle.buildFrom(…) for event in eventRoster.entries
-      -> ContinuesInTransfers.allFor(…)
-      -> OneOffStop(…) for issue in oneOffRoster.entries
-                          if issue.series not in seriesRoster
-      visibleSeriesLines                      # returns list[SeriesLine]:
-                                              #   [line for line in seriesLines
-                                              #      if seriesRoster.isVisible(line.series)]
+                                              # factory-shaped operation:
+                                              #   1. for series in seriesRoster.allActiveSeries:
+                                              #        emit SeriesLine(series)
+                                              #   2. for each distinct series `s` referenced by
+                                              #      oneOffRoster.entries where `s` not in
+                                              #      seriesRoster:
+                                              #        emit PhantomSeriesLine(
+                                              #          series=s,
+                                              #          highlightedStops={stopOf(e.issue) for e
+                                              #                            in oneOffRoster.entries
+                                              #                            if e.issue.series == s})
+                                              #   3. for event in eventRoster.entries:
+                                              #        emit TransferBundle.buildFrom(event)
+                                              #   4. emit ContinuesInTransfers.allFor(all_issues)
+      visibleSeriesLines                      # returns list[SeriesLine | PhantomSeriesLine]:
+                                              #   · SeriesLines whose series is visible in
+                                              #     seriesRoster
+                                              #   · PhantomSeriesLines whose highlightedStops
+                                              #     intersect oneOffRoster.visibleIssues
+                                              #     (if the reader hides every one-off on a
+                                              #      phantom lane, the whole phantom lane
+                                              #      disappears — no context without a target)
       visibleTransfers                        # returns list[TransferConnection]:
                                               #   [t for t in continuesInTransfers
                                               #      if bothEndpointsVisible(t)] +
                                               #   flatten(bundle.connections for bundle
                                               #           where bundle.enabled and
-                                              #           bothEndpointsVisible(...))
-      visibleOneOffStops                      # returns list[OneOffStop]:
-                                              #   [s for s in oneOffStops
-                                              #      if oneOffRoster.isVisible(s.issue)]
-      // "bothEndpointsVisible(t)": stops' series is either in seriesRoster
-      //   with isVisible == True, OR the stop is a one-off in oneOffRoster
-      //   with isVisible == True.
-      // Invariant: events NOT in eventRoster contribute NO TransferBundle to
-      //            the map — different from prior EventFilter semantics.
-      // Invariant: series NOT in seriesRoster contribute NO SeriesLine.
-      // Invariant: issues NOT in oneOffRoster AND whose series is not in
-      //            seriesRoster do NOT appear on the map at all — even if
-      //            they are transfer endpoints of a visible bundle
-      //            (transfer is dropped from visibleTransfers).
+                                              #           bothEndpointsVisible(t))
+      // "bothEndpointsVisible(t)": stop's series is either in seriesRoster
+      //   with isVisible == True, OR the stop is on a PhantomSeriesLine
+      //   whose highlightedStops includes the stop AND oneOffRoster is
+      //   visible for the stop's issue.
+      // Invariant: events NOT in eventRoster contribute NO TransferBundle.
+      // Invariant: series NOT in seriesRoster AND with NO one-off entries
+      //            contribute NO SeriesLine — the map ignores them.
+      // Invariant: a series in seriesRoster wins over any phantom
+      //            representation — one lane per series, at most.
 
       ====
 
@@ -748,18 +808,20 @@ ce:
       oneOffRoster                            # OneOffIssueRoster
       eraFilter                               # EraFilter
       xScaleFor date                          # px along ruler
-      yLaneFor series                         # px lane y  (one per seriesRoster entry)
-      yPhantomRowFor oneOffStop               # px row  (below main lanes)
-      renderSeriesLine seriesLine             # only when seriesRoster.isVisible(series);
-                                              # applies seriesLine.renderStyle (Q7)
-      renderStop stop                         # normal in-lane stop
-      renderOneOffStop stop                   # ★ marker on the phantom row;
-                                              # only when oneOffRoster.isVisible(stop.issue)
+      yLaneFor seriesLine                     # px lane y — one per SeriesLine OR
+                                              #   PhantomSeriesLine, in draw order
+      renderSeriesLine seriesLine             # applies seriesLine.renderStyle:
+                                              #   normal SeriesLine → BRIGHT
+                                              #   PhantomSeriesLine → FADED lane,
+                                              #     BRIGHT stops for highlightedStops,
+                                              #     FADED stops otherwise
+                                              # (uses seriesLine.renderStyleFor(stop)
+                                              #  for each stop's opacity)
+      renderStop stop                         # opacity from stop.seriesLine.renderStyleFor(stop)
       renderTransferConnection connection     # applies connection.renderStyle;
                                               # each independent (Q6 no fan-out)
       -> SubwayMap.visibleTransfers
-      -> SubwayMap.visibleOneOffStops
-      -> ActiveSeriesRoster.isVisible
+      -> SubwayMap.visibleSeriesLines
       -> ActiveEventRoster.isVisible
       -> OneOffIssueRoster.isVisible
       -> EraFilter.inWindow
@@ -931,22 +993,44 @@ bdd:                                          # spec fidelity uses `behavior`
       that has "Civil War" removed
         it should drop the bundle from SubwayMap.transferBundles entirely
 
-    a one-off issue roster (Q8)
+    a one-off issue roster (Q8 + phantom-lane refinement)
       that has just been created
         it should contain no entries
       that has been asked to add "Iron Man #45"
         it should contain one entry (visible True by default)
       that has "Iron Man #45" whose series "Iron Man (1968)" is NOT in the
-      series roster
-        it should render a OneOffStop for that issue on the phantom row
-        it should show issue.series.displayName as the row label
-      that has "Iron Man #45" whose series IS in the series roster
-        it should NOT render a phantom-row OneOffStop
-          (the issue already renders as a normal in-lane Stop)
-      that has "Iron Man #45" toggled invisible
-        it should hide the OneOffStop (or normal Stop, if series is rostered)
+      ActiveSeriesRoster
+        it should cause SubwayMap.buildFrom to emit a PhantomSeriesLine for
+          "Iron Man (1968)" with highlightedStops = { stopOf(Iron Man #45) }
+        it should NOT spawn any lone star / stand-alone marker
+      that has "Iron Man #45" whose series IS in the ActiveSeriesRoster
+        it should NOT spawn a PhantomSeriesLine (a normal SeriesLine covers it)
+        it should leave the roster entry in place (no auto-removal)
+      that has "Iron Man #45" toggled invisible AND its series is NOT rostered
+        it should remove Iron Man #45 from highlightedStops
+        it should drop the PhantomSeriesLine entirely if it becomes the
+          last one-off on that lane (no context without a target)
+      that has "Iron Man #45" and "Iron Man #52" both added AND Iron Man (1968)
+      is NOT rostered
+        it should emit one PhantomSeriesLine for Iron Man (1968)
+        it should include both stops in highlightedStops
       that has "Iron Man #45" removed
-        it should drop the entry entirely
+        it should drop the entry entirely (same rule as toggle-off-then-drop)
+
+    a phantom series line (one-off / guest-appearance rendering)
+      that has been built for Iron Man (1968) with highlightedStops =
+      { stopOf(Iron Man #45) }
+        it should expose renderStyle.opacity = Palette.FADED_OPACITY
+        it should expose renderStyleFor(stopOf(Iron Man #45)).opacity
+          = Palette.BRIGHT_OPACITY
+        it should expose renderStyleFor(any other stop).opacity
+          = Palette.FADED_OPACITY
+        it should preserve series.colour and SERIES_LINE_WEIGHT
+        it should place ALL of Iron Man's stops on the lane at their real
+          xPositions (not just the highlighted ones)
+      that later has Iron Man (1968) added to ActiveSeriesRoster
+        it should be replaced by a normal SeriesLine at the next
+          SubwayMap rebuild (no double-rendering)
 
     a subway map — sourced from the roster
       that has been built from a roster containing "Amazing Spider-Man" and
@@ -1236,4 +1320,5 @@ bdd:
 - spec / Subway Map / pass #transfer-style          # per-event colour (Q7)
 - spec / Subway Map / pass #event-roster-parity     # click-only roster (Q8)
 - spec / Subway Map / pass #unified-search          # one search across kinds (Q8)
-- spec / Subway Map / pass #one-off-issues          # OneOffIssueRoster + phantom row (Q8)
+- spec / Subway Map / pass #one-off-issues          # OneOffIssueRoster (Q8)
+- spec / Subway Map / pass #phantom-lane-render     # faded lane + bright guest stop
