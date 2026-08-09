@@ -393,6 +393,65 @@ asserts the same shape at `series.colour`.
 
 ---
 
+### Unified search + three rosters — Q8 answered (2026-08-09)
+
+**Frame.** Prior sketch had Series in a search+drag roster and Events as a
+flat checkbox list. Q8 asked whether Events should adopt the roster
+pattern.
+
+**User answer (verbatim).** "Events should be searched in same text box as
+series, results grouped, series, events, issues (one off appearances)"
+and "Click and issue, series, or one off adds to view; can't drag events".
+
+**Interpretation applied.** One search box across the left rail; results
+grouped into Series / Events / Issues; click any result to add to the
+appropriate roster. Series remain draggable, events and issues are
+click-only. Issue results are "one-off appearances" — individual issues
+that can be added to the map without their whole series.
+
+**CE consequences applied.**
+
+| Concept | Change |
+|---|---|
+| `Catalog` (NEW) | Aggregate over the fixture — exposes `allSeries`, `allEvents`, `allIssues`. |
+| `SearchQuery` (NEW) | Unified query over the catalog. Match rules: Series matches on `displayName` + `characters`; Event on `name`; Issue on `title` + `characters` **and** series does not already match (one-off rule). Empty query returns all series + all events + no issues. |
+| `SearchResults` (NEW) | Grouped bag: `series: list[Series]`, `events: list[Event]`, `issues: list[Issue]`. Exposes `isEmpty`. |
+| `ActiveEventRoster` (NEW — replaces `EventFilter`) | Click-only add (no drag). `add`, `remove`, `toggleVisible`, `isVisible`, `contains`, `visibleEvents`. Retires `EventFilter` entirely — events NOT in the roster contribute NO `TransferBundle` (different semantics: prior EventFilter had all events present + toggled). |
+| `EventRosterEntry` (NEW) | `(event, visible: bool)`. |
+| `OneOffIssueRoster` (NEW) | Click-only add. Holds individually-added issues that render as `OneOffStop` markers when their series is NOT in the series roster. |
+| `OneOffEntry` (NEW) | `(issue, visible: bool)`. |
+| `OneOffStop` (NEW) | `(issue, phantomRow, xPosition, yPosition, seriesLabel)`. Rendered as `★` on a phantom row below the main lanes; can still be a transfer endpoint. |
+| `SubwayMap.buildFrom` | Now takes `(seriesRoster, eventRoster, oneOffRoster)`; produces `seriesLines`, `transferBundles`, `continuesInTransfers`, and `oneOffStops`. |
+| `SubwayMap.visibleSeriesLines` / `visibleTransfers` / `visibleOneOffStops` | Three visibility views consumed by the view. `bothEndpointsVisible(t)` helper considers a stop visible if its series is a visible roster entry **or** it's a visible one-off. |
+| `SubwayMapView` | Consumes all three rosters + `EraFilter`; adds `renderOneOffStop` + `yPhantomRowFor(oneOffStop)`. |
+| `UnifiedSearchView` (NEW — replaces `SearchBrowseView`) | Renders grouped results. Series rows have both `⋮ drag` and `+ click`; Event rows and Issue rows have only `+ click`. |
+| `ActiveRosterView` | Now renders three stacked lists (series / events / one-offs), each with `[x]` + `[×]`. Only the series list is a drop target. |
+| `ReadingPath` | `eventFilter` field renamed to `eventRoster` (typed `ActiveEventRoster`); priority rule reworded in terms of `eventRoster.isVisible`. `activeEvent` still auto-clears when the roster hides or removes it. `pinnedStop` type widened to `Stop \| OneOffStop`. |
+
+**BDD consequences applied.**
+
+- `a catalog` — new describe (was `a series catalog`).
+- `a search query — grouped results` — new; asserts the three-group return
+  and the one-off exclusion rule.
+- `an active event roster` — new; replaces the retired `an event filter`
+  block. Adds an explicit "NOT be dragged in from search — click only"
+  clause reflecting the UX constraint.
+- `a one-off issue roster` — new; add / phantom-row-render / already-in-
+  series-roster / toggle / remove behaviours.
+- Existing series-search and event-filter scenarios retired.
+
+**Related open items introduced.**
+
+- `#one-off-stop-geometry` — per-issue phantom row vs a single shared
+  "one-offs" row for all one-offs. Working default in the sketch: per-issue
+  phantom rows (`phantomRow` is an int index per OneOffStop). Not blocking
+  further grill.
+
+**Passes logged:** `pass #event-roster-parity`, `pass #unified-search`,
+`pass #one-off-issues`.
+
+---
+
 ### Multi-event stop rendering — Q6 answered (2026-08-08)
 
 **Frame.** When two enabled events both touch the same stop, how do we
