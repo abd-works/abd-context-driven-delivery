@@ -446,11 +446,53 @@ covering four cases: no refiners; event refiner; date refiner; hidden event
 
 ---
 
-### Public comic APIs research — in progress (2026-08-10)
+### Public comic APIs research (2026-08-10)
 
 User asked: "To get the catalog of comics we can read from comic vine or
-another public repo with api please research". Research findings drafted
-below (this section will be expanded once user picks a direction).
+another public repo with api please research", then followed up: "research
+who else has built apps that access / rationalize comic repos into a
+public api".
+
+**Direct sources by provider.**
+
+| Source | Auth | Rate limit | Non-com clause | Coverage vs our model |
+|---|---|---|---|---|
+| Comic Vine | `api_key` + unique UA | 200/hour/resource + 1/sec throttle | **Non-commercial only** | Series, Issues, Characters, Teams, Story arcs. **Story arc sort by cover_date only — no editorial `readingOrder`.** |
+| Metron.cloud | HTTP Basic | ~30/minute | Community-open | Series, Issues, Characters, Teams, Story arcs. **Has `/api/reading_list/`** — closest public analogue to `readingOrder`. Exposes `cv_id`/`gcd_id` cross-refs. |
+| GCD | Account (dumps) OR API wrapper via Grayven | Dump download-scale | Commercial OK with credit + link | Comprehensive; needs schema mapping. |
+| Marvel Developer API | `ts + md5(ts+priv+pub)` | ~3000/day | Attribution required | **DEAD (2026-08-10 verified):** `developer.marvel.com` redirects to marvel.com; `gateway.marvel.com` returns 500s on real endpoints. Only cached mirrors accessible. |
+| SuperHero API | Token in path | ~60/minute | Free | Characters only (powerstats, appearances). |
+
+**Rationalizers / aggregators found.**
+
+| Project | What it is | Coverage of OUR editorial layer |
+|---|---|---|
+| **comicverse-api** (Chahine, MIT) | Self-host Fastify/TS REST API over CV + Metron + Marvel + SuperHero. Zod canonical schema, per-source dedup via `cv_id`/`gcd_id`, per-provider rate limits, `Promise.allSettled` graceful degradation. New (June 2026), 1 contributor. | `Comic`, `Character`, `Creator`, `Publisher`, `Series` only. **No `Team`, no `StoryArc/Event`, no `readingOrder`.** |
+| **Metron Project ecosystem** (community, MIT) | Metron.cloud (own DB with cross-refs) + Simyan (CV wrapper) + Grayven (GCD wrapper) + Mokkari (Metron wrapper) + Comicbox (file-tagging tool). | Metron itself is the only source with `/api/reading_list/`. TeamMembership timelines / `continuesIn` / protagonist typing still absent. |
+| **fakeheal/comicvine-sdk** (PHP, Saloon) | Typed DTOs for every CV endpoint. Single-source. | Same coverage as CV → no editorial layer. |
+| **emreparker/marvel-comics** + `marvel.geoffrich.net` | Cached mirrors of the Marvel API. Snapshot data w/ `digital_id`. | Only useful for `marvelDigitalId`; static; no editorial layer. |
+
+**Bottom line.** Structural rationalization is a solved problem (Metron
+and comicverse-api both cover it). Editorial rationalization — reading
+orders as external hard-numbered lists, team-membership timelines with
+start/end issues, TBC continuation pointers, single-char-vs-team
+protagonist typing — is essentially **virgin territory in public APIs**.
+That's what makes the user's AI-augmentation idea materially valuable —
+it fills a gap that nobody has publicly closed.
+
+**Four ways forward for Increment 1 (pending user pick).**
+
+1. Baseline via Metron directly + AI-augment the editorial layer.
+2. Self-host `comicverse-api` + extend its schema for our editorial fields.
+3. Build a new CDD context tool (`context_tools/catalog_ingest/`) that
+   owns the baseline + augmentation pipeline (the user's original
+   proposal).
+4. Composite pragmatic path: Metron for baseline structural data,
+   Marvel mirror for `digital_id`, AI-scrape editorial fields into a
+   companion JSON layer; no aggregator infrastructure to run.
+
+Awaiting user decision. This section will be revised once a direction
+is locked and the sketch scope shifts.
 
 ---
 
