@@ -496,6 +496,54 @@ is locked and the sketch scope shifts.
 
 ---
 
+### Increment plan locked (2026-08-10)
+
+**Frame.** After the "who else has rationalized comic repos" research
+delivered, the user set the increment plan explicitly.
+
+**User answer (verbatim).**
+- "Increment 1 — load small sample of data from sources; create a
+  query, view results; view imported; query browse results"
+- "Increment 2 ai scanner for additional missing content agent tool
+  from ABD-cdd extend a action research, review, extract"
+- "Wort about others later" (read: worry about others later)
+
+**Interpretation applied.**
+
+- **Increment 1 (front of work)** — data-first slice, no subway-map UI.
+  Sub-epics: Load Sample, Query, View Results, Browse Imported. Storage
+  stays fixture JSON (Q2). Baseline structural data likely from Metron
+  (has cross-refs + `reading_list`); `marvelDigitalId` from a Marvel
+  API mirror (research verified Marvel's own portal is dead in 2026).
+- **Increment 2** — a NEW CDD context tool, peer of `cdd`, `stories`,
+  `ux`, `bdd`, `clean_engineering`, `ddd`. Working folder name
+  `context_tools/catalog_scanner/` (subject to grill). Three actions:
+  `research` (AI web-scan for editorial gaps), `review` (human-in-the-
+  loop confirmation), `extract` (merge confirmed findings into the
+  fixture). Fills the editorial layer nobody publicly covers.
+- **Increment 3+** — the subway-map tracker (everything the sketch
+  currently has spec-level detail for). Deferred until I2 lands.
+- **"Others"** — deferred: comicverse-api adoption, GCD direct,
+  tracker UX polish, Character-first-class promotion.
+
+**Sketch consequences applied to `cdd-sketch.md`.**
+
+| Change | Detail |
+|---|---|
+| `scope` | Now multi-increment; annotated to name each increment. |
+| Sources / context | Increment-plan bullet added with the user's verbatim quotes and interpretation. |
+| `flow.note` | Notes the scope broadening; recommends grill on I1 sub-epics before any generate. |
+| `flow.open` | Adds I1-focused TODOs (`#i1-sources`, `#i1-slice-shape`, `#i1-load-sample`, `#i1-query`, `#i1-view-results`, `#i1-browse-imported`) and I2 TODOs (`#i2-tool-name`, `#i2-tool-shape`, `#i2-web-sources`, `#i2-review-ux`). Old `#sketch-theme-*` items retagged as I3+. |
+| `flow.done` | `pass #increment-plan` added. |
+| New themes at top | Four Increment 1 theme stubs (Load Sample, Query, View Results, Browse Imported) with lens blocks reading "TODO — grill first" and working-shape hints from the research. One Increment 2 theme stub (AI Scanner Context Tool) with the actions surface sketched. |
+| Existing subway-map themes | Untouched. Retagged as "I3+ sub-epic" in their theme headers. Section-header banner marks them as deferred. |
+
+**Session.md** — updated to reflect the increment plan.
+
+**Passes logged:** `pass #increment-plan`.
+
+---
+
 ### Character demoted from first-class to string tag (2026-08-08)
 
 **Frame.** User redirect (verbatim): "character is a sub of series an

@@ -10,6 +10,20 @@
   from any stop and transfer across lines at the crossovers.
   (Metaphor swap 2026-08-08: was segmented / constellation-style; see
   `grill-answers.md` § "Visual metaphor swap".)
+- **increment plan (2026-08-10 redirect):**
+  · I1 (current front of work) — Load a small sample of catalog data from
+    public sources (Metron baseline + Marvel API mirror for `digitalId`);
+    provide a Query capability + Results view + Browse Imported view.
+    Fixture JSON is the runtime source (per Q2). No subway-map UI yet.
+  · I2 — AI scanner as a new CDD context tool that extends the ABD-CDD
+    framework. Peers with `cdd`, `stories`, `ux`, `bdd`,
+    `clean_engineering`, `ddd` under `context_tools/`. Actions:
+    `research`, `review`, `extract`. Closes the editorial-layer gap that
+    public APIs don't cover (readingOrder, TeamMembership spans,
+    continuesIn, protagonist typing).
+  · I3+ — Subway-map tracker (all existing spec-level themes deferred).
+  · "Others" (comicverse-api adoption, GCD direct, tracker UX polish,
+    Character-first-class promotion) — deferred beyond I2.
 - **fidelities:** spec (CDD) — child stage keys: ux=mockup, ce=code, bdd=behavior
 - **contexts (in play):** ux, clean_engineering, bdd
   (stories / ddd omitted this cycle — user scoped grill+sketch to CE + BDD + UX)

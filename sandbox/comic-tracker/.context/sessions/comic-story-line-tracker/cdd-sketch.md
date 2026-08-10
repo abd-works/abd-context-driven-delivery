@@ -1,5 +1,8 @@
 fidelity: spec
-scope: Increment 1 — Interactive Comic Story Line Tracker (single visual)
+scope: multi-increment engagement (see "Increment plan" in Sources / context)
+  · I1 (current front of work) — Load Sample + Query + Browse
+  · I2                        — AI Scanner CDD tool (research / review / extract)
+  · I3+                       — Subway-map tracker (all existing spec-level themes)
 
 # Sources / context
 
@@ -54,6 +57,28 @@ scope: Increment 1 — Interactive Comic Story Line Tracker (single visual)
     - Replaces the dim-vs-bright rendering with SHOW / HIDE. Only the
       "true" stops render; the rest are simply not drawn.
       `Palette.FADED_OPACITY` retired.
+  - **Increment plan** (redirect 2026-08-10, post-research):
+    - "Increment 1 - load small sample of data from sources; create a
+      query, view results; view imported; query browse results"
+    - "Increment 2 ai scanner for additional missing content agent tool
+      from ABD-cdd extend a action research, review, extract"
+    - "Worry about others later"
+    - Increment 1 sub-epics: load a bounded slice from Metron (baseline
+      structural) + Marvel API mirror (for `marvelDigitalId`); query the
+      loaded catalog; view results; browse imported inventory. Storage
+      still the fixture JSON (Q2). NO subway-map UI yet.
+    - Increment 2: a new CDD context tool peers with `cdd`, `stories`,
+      `ux`, `bdd`, `clean_engineering`, `ddd`. Working folder name
+      `context_tools/catalog_scanner/` (name subject to grill). Actions:
+      `research` (AI-driven web scanning for editorial gaps), `review`
+      (human-in-the-loop confirmation of AI findings), `extract` (merge
+      confirmed findings into the fixture). Follows the manifest / grill
+      / sketch / generate rhythm the other context tools use.
+    - I3+ = the subway-map tracker (all existing spec-level themes
+      preserved below — see `## Increment 3+ (deferred)` marker).
+    - "Others later" = defer choice of additional data sources
+      (comicverse-api, GCD, CV direct), tracker UX polish, and
+      character-first-class promotion until I2 completes.
   - **Content OR, refiners AND — events and dates intersect** (redirect
     2026-08-09, post-Q10 turn):
     - "if I would look for Spider-man between 2000 and 2006 I expect to
@@ -154,12 +179,19 @@ scope: Increment 1 — Interactive Comic Story Line Tracker (single visual)
 flow:
   status: more-same-stage
   recommend: more-same-stage
-  next: spec (stay — resolve open blockers, then proceed to engineer)
+  next: spec (stay — grill Increment 1 sub-epics before generating)
   note: |
-    Metaphor swapped from constellation-of-segments to subway map. Lens blocks
-    rebuilt around SeriesLine (unbroken lane), Stop (issue), TransferConnection
-    (cross-series continuation styled like a series line), and Event (a named
-    bundle of TransferConnections that can be toggled on/off).
+    Scope broadened (2026-08-10): the engagement is now multi-increment.
+    Current front of work is Increment 1 (Load Sample + Query + Browse);
+    Increment 2 is the AI scanner CDD tool; Increment 3+ is the subway-map
+    tracker (all existing sketch content preserved but deferred).
+
+    Nothing has been grilled or sketched for Increment 1 or Increment 2 yet.
+    The lens blocks below (subway-map themes) are Increment 3 material —
+    still valid, but on hold. Do NOT recommend generate on those until we
+    return to I3.
+
+    Subway-map metaphor + all downstream decisions still hold (see history):
 
     Old blockers reconciled:
       · #single-point-rule — DISSOLVED. There are no segments to leave a stop
@@ -237,13 +269,27 @@ flow:
         series' own y-lane; other stops are simply not drawn
         (hide-not-dim).
 
-    Do not recommend proceed to engineer until the remaining two items
-    close.
+    Do not recommend proceed to engineer on the I3+ subway-map themes
+    yet — they now sit behind I1 and I2. Any new grill/sketch effort
+    should focus on I1 first.
   open:
-    - TODO promote Character to first-class entity when metadata is needed        #character-not-first-class-yet
-    - doing sketch UX / CE / BDD for Theme 1                                     #sketch-theme-1
-    - doing sketch UX / CE / BDD for Theme 2                                     #sketch-theme-2
-    - doing sketch UX / CE / BDD for Theme 3                                     #sketch-theme-3
+    # --- Increment 1 (current front of work) ---
+    - TODO pick data source(s) for the I1 sample slice                    #i1-sources
+    - TODO decide what "small sample" means — issue count / time window   #i1-slice-shape
+    - TODO grill + sketch I1: Load Sample sub-epic (ux/ce/bdd/stories/ddd) #i1-load-sample
+    - TODO grill + sketch I1: Query sub-epic                              #i1-query
+    - TODO grill + sketch I1: View Results sub-epic                       #i1-view-results
+    - TODO grill + sketch I1: Browse Imported sub-epic                    #i1-browse-imported
+    # --- Increment 2 (deferred; grill AFTER I1 generate) ---
+    - TODO name and place the AI scanner CDD tool (context_tools/…)       #i2-tool-name
+    - TODO shape the tool's manifest, fidelities, and three actions       #i2-tool-shape
+    - TODO decide which web sources the AI scanner targets                #i2-web-sources
+    - TODO decide human-in-the-loop UX for `review`                       #i2-review-ux
+    # --- Increment 3+ (deferred; existing spec-level detail preserved) ---
+    - TODO promote Character to first-class entity when metadata is needed #character-not-first-class-yet
+    - doing sketch UX / CE / BDD for Theme 1  (I3+ subway map)            #sketch-theme-1
+    - doing sketch UX / CE / BDD for Theme 2  (I3+ read & transfer)       #sketch-theme-2
+    - doing sketch UX / CE / BDD for Theme 3  (I3+ comic details)         #sketch-theme-3
   done:
     - pass #fidelity-choice            # spec picked so bdd lens is available
     - pass #lens-selection             # ce + bdd + ux (user-confirmed 2026-08-08)
@@ -268,10 +314,233 @@ flow:
     - pass #character-filter-scope     # falls out of unified search + filter model
     - pass #mu-deeplink                # scheme-only, no fallback (Q10, option 3)
     - pass #filter-compose             # content OR + refiners AND (Q11)
+    - pass #increment-plan             # I1 data + query + browse; I2 AI scanner tool; I3+ tracker (2026-08-10)
     - skip #single-point-rule          # dissolved by metaphor swap
 
 =========
-theme: Subway Map  (user-goal — "see the network, toggle events, filter lines")
+# =============================================================
+#   Increment 1 — Load Sample + Query + Browse  (front of work)
+# =============================================================
+# The four themes below are placeholders — nothing grilled or sketched
+# yet. Every lens block reads "TODO — grill first per flow.open".
+# The lens content in the I3+ themes further down remains untouched.
+
+theme: Load Sample Data  (I1 sub-epic — "pull a bounded slice from public sources")
+---------
+stories:
+    Connect Comic Catalog Sources
+        Load Sample Slice
+            Author --> Load Metron Baseline
+            Author --> Enrich with Marvel Digital IDs
+            Author --> Write catalog/fixtures/marvel-canon.json
+            * TODO — grill I1 story map; pending #i1-sources + #i1-slice-shape
+    ~> Increment 1: bounded slice of series + issues + characters loaded
+       from at least one public source and persisted as the fixture JSON.
+---
+ce:
+    Fidelity: modules
+
+    // TODO — grill first (#i1-load-sample). Working shape from Q10 research:
+    //   loader/
+    //     metron_client     — thin HTTP wrapper (or via Mokkari)
+    //     marvel_mirror_client — reads cached mirror for digital_id
+    //     baseline_ingest -> loader/metron_client, marvel_mirror_client
+    //     fixture_writer  — emits catalog/fixtures/marvel-canon.json
+    //   No editorial-field derivation yet — that's Increment 2.
+---
+ux:
+    Fidelity: ia
+
+    // TODO — grill first (#i1-load-sample). Working shape:
+    //   [ Load Sample ] screen:
+    //     · pick source(s)  · pick slice window  · run  · progress log
+    //   Result: a summary panel showing counts of Series / Issues /
+    //     Characters / StoryArcs / Teams pulled, plus any load warnings.
+---
+bdd:
+    Fidelity: behavior
+
+    // TODO — grill first. Working scaffold:
+    //   a baseline ingest
+    //     that has been asked to load the "2000..2006" slice from Metron
+    //       it should return SeriesRosterEntries for each series in-window
+    //       it should return Issues in issueNumber order per series
+    //       it should attach marvelDigitalId from the Marvel mirror when found
+    //       it should leave marvelDigitalId as None when no mirror hit
+=========
+
+=========
+theme: Query  (I1 sub-epic — "search the loaded catalog")
+---------
+stories:
+    Connect Comic Catalog Sources
+        Query Loaded Catalog
+            Author --> Compose Query
+            Author --> Execute Query
+            * TODO — grill I1 query behaviours; pending #i1-query
+---
+ce:
+    Fidelity: modules
+
+    // TODO — grill first (#i1-query). Working shape:
+    //   query/
+    //     query_input     — free-text + filter facets (year range,
+    //                        publisher, kind: series|event|issue|character)
+    //     query_executor -> catalog/catalog
+    //     query_result   — grouped result set (series/events/issues/characters)
+    //
+    // NOTE: the Q8 UnifiedSearchView semantics can be reused here at a
+    //   lower fidelity — I1 doesn't need drag or roster interactions yet.
+---
+ux:
+    Fidelity: ia
+
+    // TODO — grill first. Working shape:
+    //   [ Query ] screen:
+    //     [ search box ] + facet chips (year / publisher / kind)
+    //     [ Run ] button
+    //     → results view (below)
+---
+bdd:
+    Fidelity: behavior
+
+    // TODO — grill first. Working scaffold:
+    //   a query
+    //     that has been executed against the loaded catalog
+    //       it should return matching Series in `results.series`
+    //       it should return matching Events in `results.events`
+    //       it should return matching Issues in `results.issues`
+    //       it should return matching Characters in `results.characters`
+=========
+
+=========
+theme: View Results  (I1 sub-epic — "see what the query returned")
+---------
+stories:
+    Connect Comic Catalog Sources
+        View Query Results
+            Author --> Inspect Grouped Results
+            Author --> Open a Result Detail
+            * TODO — grill I1 view behaviours; pending #i1-view-results
+---
+ce:
+    Fidelity: modules
+
+    // TODO — grill first (#i1-view-results). Working shape:
+    //   view/
+    //     query_results_view — renders grouped list (series, events, issues, characters)
+    //     result_detail_view — renders a single record's canonical fields
+---
+ux:
+    Fidelity: ia
+
+    // TODO — grill first. Working shape:
+    //   [ Results ] screen: four grouped result columns (Series / Events /
+    //     Issues / Characters), each with count + list of rows.
+    //   Click any row → detail view with the record's full fields.
+---
+bdd:
+    Fidelity: behavior
+
+    // TODO — grill first.
+=========
+
+=========
+theme: Browse Imported  (I1 sub-epic — "inventory the loaded catalog")
+---------
+stories:
+    Connect Comic Catalog Sources
+        Browse Imported Inventory
+            Author --> Browse by Publisher
+            Author --> Browse by Series
+            Author --> Browse by Year
+            * TODO — grill I1 browse behaviours; pending #i1-browse-imported
+---
+ce:
+    Fidelity: modules
+
+    // TODO — grill first (#i1-browse-imported).
+---
+ux:
+    Fidelity: ia
+
+    // TODO — grill first. Working shape:
+    //   [ Browse ] screen: nav rail (Publisher / Series / Year / Kind)
+    //     + inventory list. Purely for confirming what the load produced.
+---
+bdd:
+    Fidelity: behavior
+
+    // TODO — grill first.
+=========
+
+=========
+# =============================================================
+#   Increment 2 — AI Scanner CDD Tool  (deferred; grill after I1)
+# =============================================================
+theme: AI Scanner Context Tool  (I2 — ABD-CDD extension with research / review / extract)
+---------
+stories:
+    Extend ABD-CDD With a Catalog Scanner
+        Create catalog_scanner Context Tool
+            Framework Author --> Register Manifest
+            Framework Author --> Add Fidelities (discovery → spec → engineer)
+            Framework Author --> Register Sub-Actions research / review / extract
+        Run Research Action Against Loaded Catalog
+            Catalog Curator --> Research Missing Editorial Data
+            Catalog Curator --> Review AI Findings
+            Catalog Curator --> Extract Confirmed Findings Into Fixture
+            * TODO — grill I2 story map after I1 generate lands (#i2-tool-shape)
+---
+ce:
+    Fidelity: modules
+
+    // TODO — grill first (#i2-tool-name, #i2-tool-shape). Working shape:
+    //   context_tools/catalog_scanner/           <- name subject to grill
+    //     manifest         — python -m tools manifest entry
+    //     catalog_scanner.py — Cdd-style class with @action-decorated methods
+    //     templates/
+    //       research-plan-template.md
+    //       review-template.md
+    //     .context/       — module-context.md, examples.md, tests
+    //     research   — action: AI web-search over targets;
+    //                  emits Finding[] proposals per target
+    //     review     — action: human confirms/edits Findings;
+    //                  produces ConfirmedFinding[]
+    //     extract    — action: writes ConfirmedFindings into the fixture
+    //                  (readingOrder / TeamMembership / continuesIn /
+    //                   protagonist typing)
+    //
+    // Fills the editorial gaps identified in the research findings —
+    //   nobody in the public API landscape covers this today.
+---
+bdd:
+    Fidelity: behavior
+
+    // TODO — grill first. Working scaffold:
+    //   catalog scanner — research
+    //     that has been asked to research readingOrder for an Event
+    //       it should query the configured web sources
+    //       it should produce a Finding with a proposed ordered list of Issues
+    //   catalog scanner — review
+    //     that has a Finding in the queue
+    //       it should present it to the curator with source citations
+    //       it should accept edits or a full rewrite
+    //   catalog scanner — extract
+    //     that has ConfirmedFindings for Event.readingOrder
+    //       it should update the fixture's Event.readingOrder in place
+=========
+
+# =============================================================
+#   Increment 3+ — Subway-Map Tracker  (deferred; existing spec-level themes below)
+# =============================================================
+# Nothing below this section header changes. All model + BDD detail
+# from prior grill turns remains valid; it will resurface as the
+# front of work when I1 and I2 complete. Do NOT recommend generate on
+# these until then.
+
+=========
+theme: Subway Map  (I3+ sub-epic — "see the network, toggle events, filter lines")
 ---------
 ux:
     Fidelity: mockup
@@ -1393,7 +1662,7 @@ bdd:                                          # spec fidelity uses `behavior`
 =========
 
 =========
-theme: Read & Transfer  (user-goal — "start reading; hop to a bridged series")
+theme: Read & Transfer  (I3+ sub-epic — "start reading; hop to a bridged series")
 ---------
 ux:
     Fidelity: mockup
@@ -1574,7 +1843,7 @@ bdd:
 =========
 
 =========
-theme: Comic Details  (user-goal — "know what this issue is; open it in the app")
+theme: Comic Details  (I3+ sub-epic — "know what this issue is; open it in the app")
 ---------
 ux:
     Fidelity: mockup
