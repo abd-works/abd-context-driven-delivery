@@ -399,6 +399,61 @@ blocking further grill.
 
 ---
 
+### Q11 answered — content OR, refiners AND (2026-08-09)
+
+**Frame.** Re-posed Q11 as a rubber-stamp confirmation of composition
+defaults. The user's answer was a substantive redirect that reshaped the
+semantics.
+
+**User answer (verbatim).**
+- "if I would look for Spider-man between 2000 and 2006 I expect to see
+  all series starring Spider-man, every issue where Spider-man is a
+  guest star, every issue where Spider-man is a team member — it's
+  inclusive. Now if I go and I add an event then you have a join because
+  you only want to see everything that's in that event with Spider-man
+  in it. Only events should be an add, and dates."
+- "if I say I wanna look for a series with Spider-man in it and they
+  want to see series with the Avengers in it and I want to see issue 27
+  of the Fantastic Four then it's an or and you're going to add all
+  those things in."
+
+**Applied.**
+
+| Layer | Composition |
+|---|---|
+| Content (SeriesRosterEntry union) | **OR** — every entry's `visibleStops` contributes to a growing union on the map. Series adds, character-driven series adds, and one-off issue adds ALL union together. |
+| Events (ActiveEventRoster) | **AND** — the union of visible events' `readingOrder` intersects the content union. No visible events → no event constraint. Multiple visible events OR among themselves. |
+| Date range (DateWindow) | **AND** — crops publicationDate to the window (preset era OR explicit range). |
+| Roster visibility per row | Hiding via checkbox removes that entry's contribution (equivalent to removing for the current render). |
+
+**CE consequences applied to `cdd-sketch.md`.**
+
+| Concept | Change |
+|---|---|
+| `EraFilter` (renamed) | Renamed to `DateWindow`. Fields: `preset` (era bucket OR None), `explicitRange` ((from, to) OR None); `window` derived. Supports both preset eras and explicit ranges like `2000..2006`. |
+| `SubwayMap.eventEnvelope` (NEW) | Returns `set[Issue] \| None`. `None` when no visible events → refiner inactive. Otherwise union of all visible-rostered events' `readingOrder`. |
+| `SubwayMap.dateEnvelope` (NEW) | Returns `(fromDate, toDate) \| None`. |
+| `SubwayMap.contentVisibleStopsFor(line)` (NEW) | `line.visibleStops` (per-lane OR content) filtered by the AND refiners (`eventEnvelope`, `dateEnvelope`). |
+| `SubwayMap.visibleSeriesLines` | Now excludes lanes whose `contentVisibleStopsFor` is empty after refiners apply — no empty rows in the OR-∩-AND view. |
+| `TransferBundle.enabled` | Same as before (mirrors event-roster visibility). Transfers still gate on both endpoints in `contentVisibleStopsFor`. |
+
+**BDD consequences applied.** New `a date window` describe covering preset,
+explicit range, and no-cropping. New `a subway map — composition` describe
+covering four cases: no refiners; event refiner; date refiner; hidden event
+(refiner inactive); empty content.
+
+**Passes logged:** `pass #filter-compose`.
+
+---
+
+### Public comic APIs research — in progress (2026-08-10)
+
+User asked: "To get the catalog of comics we can read from comic vine or
+another public repo with api please research". Research findings drafted
+below (this section will be expanded once user picks a direction).
+
+---
+
 ### Character demoted from first-class to string tag (2026-08-08)
 
 **Frame.** User redirect (verbatim): "character is a sub of series an

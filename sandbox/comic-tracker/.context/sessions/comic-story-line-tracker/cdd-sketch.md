@@ -54,6 +54,34 @@ scope: Increment 1 — Interactive Comic Story Line Tracker (single visual)
     - Replaces the dim-vs-bright rendering with SHOW / HIDE. Only the
       "true" stops render; the rest are simply not drawn.
       `Palette.FADED_OPACITY` retired.
+  - **Content OR, refiners AND — events and dates intersect** (redirect
+    2026-08-09, post-Q10 turn):
+    - "if I would look for Spider-man between 2000 and 2006 I expect to
+      see all series starring Spider-man, every issue where Spider-man
+      is a guest star, every issue where Spider-man is a team member —
+      it's inclusive. Now if I go and I add an event then you have a
+      join because you only want to see everything that's in that event
+      with Spider-man in it. Only events should be an add, and dates."
+    - "if I say I wanna look for a series with Spider-man in it and
+      they want to see series with the Avengers in it and I want to
+      see issue 27 of the Fantastic Four then it's an or and you're
+      going to add all those things in."
+    - Composition rules:
+      · CONTENT layer — OR / union.  Every SeriesRosterEntry (with or
+        without a filter) contributes its `visibleStops` to a growing
+        union on the map. Series adds, character-driven series adds,
+        and one-off issue adds ALL union together.
+      · REFINER layer — AND / intersection.  Events (via
+        ActiveEventRoster) and dates (via DateWindow) narrow the
+        content union: a stop renders iff it's in the content union
+        AND (no visible events rostered OR the stop's issue is in
+        SOME visible event's readingOrder) AND (the stop's issue's
+        publicationDate is inside the DateWindow).
+      · Multiple visible events OR among themselves (union of their
+        readingOrders); the resulting event set AND-intersects the
+        content.
+      · EraFilter generalises to DateWindow (preset era OR explicit
+        `(fromDate, toDate)` range).
   - **One kind of lane, filtered** (redirect 2026-08-09, immediate
     follow-on):
     - "Focused vs phantom doesn't make sense to me. We have a set of
@@ -188,13 +216,15 @@ flow:
         Issues. EventFilter is retired. OneOffIssueRoster introduced for
         individual issues added from the same search.
 
-      Carried blockers:
+      Resolved this turn cluster (Q10 + Q11):
       · #mu-deeplink — RESOLVED (Q10, 2026-08-09): scheme-only,
         `marvelunlimited://reader/{marvelDigitalId}`. No web fallback.
-        Button rendered only when the issue has a marvelDigitalId in the
-        fixture.
-      · #filter-compose — confirm working default (era window narrows the
-        canvas; all roster gates are independent visibility toggles).
+        Button rendered only when the issue has a marvelDigitalId.
+      · #filter-compose — RESOLVED (Q11, 2026-08-09): CONTENT
+        OR-composes (SeriesRosterEntry union), REFINERS AND-compose
+        on top (events intersect content via readingOrder; DateWindow
+        crops publicationDate). EraFilter generalised to DateWindow
+        (preset era OR explicit range).
 
       Resolved this turn cluster:
       · #character-filter-scope — RESOLVED (2026-08-09): no
@@ -211,7 +241,6 @@ flow:
     close.
   open:
     - TODO promote Character to first-class entity when metadata is needed        #character-not-first-class-yet
-    - TODO confirm filter composition (era window; three rosters independent)    #filter-compose
     - doing sketch UX / CE / BDD for Theme 1                                     #sketch-theme-1
     - doing sketch UX / CE / BDD for Theme 2                                     #sketch-theme-2
     - doing sketch UX / CE / BDD for Theme 3                                     #sketch-theme-3
@@ -238,6 +267,7 @@ flow:
     - pass #one-lane-one-filter        # PhantomSeriesLine/FocusedSeriesLine retired
     - pass #character-filter-scope     # falls out of unified search + filter model
     - pass #mu-deeplink                # scheme-only, no fallback (Q10, option 3)
+    - pass #filter-compose             # content OR + refiners AND (Q11)
     - skip #single-point-rule          # dissolved by metaphor swap
 
 =========
@@ -801,12 +831,28 @@ ce:
                                               #   2. for event in eventRoster.entries:
                                               #        emit TransferBundle.buildFrom(event)
                                               #   3. emit ContinuesInTransfers.allFor(all_issues)
+      eventEnvelope                           # returns set[Issue] | None:
+                                              #   Union of readingOrder for every event in
+                                              #   eventRoster with isVisible == True.
+                                              #   None when no events are rostered
+                                              #   visible → refiner is inactive.
+      dateEnvelope                            # returns (fromDate, toDate) | None:
+                                              #   from dateWindow.window (None = no cropping).
+      contentVisibleStopsFor line             # returns list[Stop]:
+                                              #   `line.visibleStops` filtered by the AND
+                                              #   refiners:
+                                              #     (eventEnvelope is None OR
+                                              #      stop.issue in eventEnvelope)
+                                              #     AND (dateEnvelope is None OR
+                                              #          stop.issue.publicationDate in
+                                              #          dateEnvelope)
       visibleSeriesLines                      # returns list[SeriesLine]:
                                               #   [line for line in seriesLines
                                               #      if seriesRoster.isVisible(line.series)
-                                              #     and len(line.visibleStops) > 0]
-                                              # (a filter that yields zero visible stops
-                                              #  drops the lane entirely — no empty rows)
+                                              #     and len(contentVisibleStopsFor(line)) > 0]
+                                              # (a lane whose stops all get filtered out by
+                                              #  the AND refiners drops entirely — no empty
+                                              #  rows in the OR content ∩ AND refiners view)
       visibleTransfers                        # returns list[TransferConnection]:
                                               #   [t for t in continuesInTransfers
                                               #      if bothEndpointsVisible(t)] +
@@ -952,10 +998,19 @@ ce:
 # one-off issues on the same series UNIONS their filter's issue set.
 # EventFilter is also retired — replaced by ActiveEventRoster.
 
-    # filter/*.py
-     EraFilter
-      window                                  # (fromDate, toDate) | 'all'
-      inWindow date                           # bool
+    # filter/*.py — renamed and generalised (Q11)
+     DateWindow                                     # was EraFilter
+      preset                                  # 'all' | 'silver' | 'bronze' | 'modern' | None
+      explicitRange                           # (fromDate, toDate) | None — precise range
+      window                                  # returns (fromDate, toDate) | None:
+                                              #   explicitRange wins over preset when both set;
+                                              #   None → 'all' (no cropping)
+      inWindow date                           # returns bool
+      // Q11: replaces the coarse era radio. Supports either a preset era
+      //   bucket ('modern', 'bronze', 'silver') for convenience OR an
+      //   explicit (fromDate, toDate) range (e.g. 2000..2006).
+      // Composition rule: `inWindow` is one of the AND refiners applied on
+      //   top of the OR-composed content set (see SubwayMap below).
 
       ====
 
@@ -1302,10 +1357,39 @@ bdd:                                          # spec fidelity uses `behavior`
         it should render only the Amazing Spider-Man line
         it should NOT include Iron Man's transfer contributions in the map at all
 
-    an era filter
-      that has era = "Modern" (1998..present)
+    a date window (was era filter — generalised in Q11)
+      that has preset = "modern" (1998..present) and explicitRange = None
+        it should report window as (1998-01-01, today)
         it should crop each series line to stops with publicationDate in window
-        it should hide transfers whose either endpoint falls outside the window
+      that has explicitRange = (2000-01-01, 2006-12-31)
+        it should return that explicit range from `window`
+        it should ignore preset when explicitRange is set
+      that has preset = None and explicitRange = None
+        it should return window = None (no cropping)
+
+    a subway map — composition (Q11: OR content ∩ AND refiners)
+      that has seriesRoster = [ Amazing SM (no filter),
+                                Iron Man (IssueSetFilter({#45})),
+                                X-Men (CharacterAppearanceFilter("Wolverine")) ]
+      and eventRoster = [] and dateWindow.window = None
+        it should render Amazing SM's whole lane (OR content, no refiner)
+        it should render Iron Man #45 stop only
+        it should render X-Men stops where Wolverine effectiveCharacters matches
+      that has the same seriesRoster and eventRoster = [ Civil War (visible) ]
+        it should compute eventEnvelope == Civil War.readingOrder
+        it should render ONLY those Amazing SM stops that are ALSO in Civil War
+        it should render ONLY Iron Man #45 IFF #45 is in Civil War.readingOrder
+        it should render ONLY the X-Men stops that (a) match Wolverine AND
+          (b) are in Civil War.readingOrder
+      that has the same seriesRoster and dateWindow.explicitRange = (2000, 2006)
+        it should render only stops whose publicationDate is 2000..2006
+        (regardless of per-lane filter matches outside that range)
+      that has eventRoster = [ Civil War (hidden) ]
+        it should treat eventEnvelope as None (no visible events)
+        it should render content unfiltered by events
+      that has NO content in the seriesRoster
+        it should render an empty canvas (era ruler only) regardless of the
+          event or date envelopes
 =========
 
 =========
@@ -1588,3 +1672,4 @@ bdd:
 - spec / Subway Map / pass #one-lane-one-filter     # unified lane model
 - spec / Subway Map / pass #character-filter-scope  # emergent from unified model
 - spec / Comic Details / pass #mu-deeplink          # scheme-only (Q10)
+- spec / Subway Map / pass #filter-compose          # OR content + AND refiners (Q11)
