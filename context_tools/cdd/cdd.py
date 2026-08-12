@@ -70,48 +70,60 @@ class Cdd(BaseContextTool):
         ]
 
     # -- Actions ---------------------------------------------------------------
-    # Each action body is a single for-each loop over context_tools().
-    # The expander iterates the live list and walks <tool>.<action> on each instance,
-    # embedding that child's full instruction set (including its own decorators) inline.
+    # grill / sketch: inline each child's high-level pass (action mode).
+    # generate / iterate / validate / satisfy / document: set child mode=tool so
+    # each is a separate tools run — never inline full child recipes.
 
     @action
     def generate_output(self) -> str:
+        """Invoke each stage child's generate as its own tools run."""
         for context_tool in self.context_tools():
+            context_tool.mode = "tool"
             context_tool.generate()
-        return ""
+        return "Invoke each Separate tools run above, one child at a time."
 
     @action
     def grill(self) -> str:
+        """Inline each stage child's grill (high-level Q&A only)."""
         for context_tool in self.context_tools():
             context_tool.grill()
         return ""
 
     @action
     def sketch(self) -> str:
+        """Inline each stage child's sketch (high-level shape only)."""
         for context_tool in self.context_tools():
             context_tool.sketch()
         return ""
 
     @action
     def iterate(self) -> str:
+        """Invoke each stage child's iterate as its own tools run."""
         for context_tool in self.context_tools():
+            context_tool.mode = "tool"
             context_tool.iterate()
-        return ""
+        return "Invoke each Separate tools run above, one child at a time."
 
     @action
     def validate(self) -> str:
+        """Invoke each stage child's validate as its own tools run."""
         for context_tool in self.context_tools():
+            context_tool.mode = "tool"
             context_tool.validate()
-        return ""
+        return "Invoke each Separate tools run above, one child at a time."
 
     @action
     def satisfy(self) -> str:
+        """Invoke each stage child's satisfy as its own tools run."""
         for context_tool in self.context_tools():
+            context_tool.mode = "tool"
             context_tool.satisfy()
-        return ""
+        return "Invoke each Separate tools run above, one child at a time."
 
     @action
     def document(self, paths: list[str]) -> str:
+        """Invoke each stage child's document as its own tools run."""
         for context_tool in self.context_tools():
+            context_tool.mode = "tool"
             context_tool.document(paths)
-        return ""
+        return "Invoke each Separate tools run above, one child at a time."

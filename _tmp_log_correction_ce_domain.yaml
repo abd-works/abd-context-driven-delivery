@@ -1,0 +1,11 @@
+﻿toolset: context_tools.cdd.cdd:Cdd
+tool: log_correction
+context:
+  fidelity: discovery
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  entry_id: a8f8a0d4
+  improved: |
+    Removed per-theme ## CE Domain blocks; domain lives only in consolidated # DDD.
+  status: fixed

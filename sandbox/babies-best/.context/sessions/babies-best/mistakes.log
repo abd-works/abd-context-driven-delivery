@@ -1,0 +1,19 @@
+# mistakes.log - babies-best sprint
+# Log omissions/errors here. Each entry:
+#   when, artifact, rule, wrong (one line), original, improved, status, tool, fidelity
+# A mistake pointed out = failed to do it right; log it immediately via log_mistake, then complete it via log_correction.
+
+---
+id: b3539a74
+when: Formalizing Discover Nyc Activities after sketch ? user asked for specification with code/markdown; agent skipped acceptance_tests fidelity shape
+artifact: discover_nyc_activities/discover_nyc_activities_spec.py (ad-hoc mega mamba suite) and discover_nyc_activities_story.py
+rule: acceptance_tests fidelity ? produce per-story *_story.py (helper Protocol + create_*_story) and *_test_helper.{tier}.py under epic/sub-epic/story folders; do not invent a parallel mamba mega-spec
+wrong: Wrote a single mamba description suite and a fat story helper outside the Stories acceptance_tests leaf layout, then treated that as formal acceptance coverage
+original: |
+  Follow Stories generate at acceptance_tests ? mirror story hierarchy on disk; each confirming story gets *_story.py + *_test_helper.domain.py (and other tiers as needed); bind tests via globals().update(create_*_story(DomainHelper())); ground scenarios in scenario markdown
+improved: |
+  
+status: open
+tool: Stories
+fidelity: acceptance_tests
+---

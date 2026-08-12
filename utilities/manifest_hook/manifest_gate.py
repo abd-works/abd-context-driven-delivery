@@ -45,7 +45,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]  # utilities/manifest_hook/ -> 
 _LOG_FILE = Path(__file__).resolve().parent / "manifest_gate.log"
 _MANIFEST_PREFIXES = ("# @toolset-manifest", "# invoke-")
 _SCAN_LINES = 15
-_CATEGORY_DIRS = ("primitives", "utilities", "context_tools")
+_CATEGORY_DIRS = ("primitives", "utilities", "context_tools", "context_tools/actions")
 _MAX_MANIFEST_RETRIES = 2
 
 if str(_REPO_ROOT) not in sys.path:

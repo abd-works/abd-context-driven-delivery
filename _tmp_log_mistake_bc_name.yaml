@@ -1,0 +1,13 @@
+﻿toolset: context_tools.cdd.cdd:Cdd
+tool: log_mistake
+context:
+  fidelity: discovery
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  artifact: cdd-sketch.md#DDD Catalog
+  rule: (process) bc-name-matches-sole-aggregate
+  wrong: Named bounded context Catalog when it only contains Plan — redundant; BC should be Plan.
+  original: |
+    ## Catalog / ### Plan (aggregate)
+    User: why Catalog BC with only Plan — shouldn't the BC just be called Plan?

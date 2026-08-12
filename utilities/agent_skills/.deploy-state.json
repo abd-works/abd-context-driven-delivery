@@ -13,6 +13,7 @@
     "ux",
     "agent-skills",
     "catalog-generator",
+    "context-setup",
     "diagnose",
     "echo",
     "grill-context",
@@ -21,5 +22,54 @@
     "record-decisions",
     "sketch"
   ],
-  "deployed_commands": []
+  "deployed_commands": [],
+  "deploy_roots": [
+    "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\.cursor",
+    "C:\\Users\\thoma\\.cursor",
+    "C:\\dev\\paradise-mobile\\.cursor"
+  ],
+  "multi_folder_workspace": {
+    "workspace_file": "C:\\dev\\paradise-mobile\\paradise-mobile.code-workspace",
+    "folders": [
+      "C:\\dev\\paradise-mobile\\pml-cypress-automations",
+      "C:\\dev\\paradise-mobile\\pml-harmony",
+      "C:\\dev\\paradise-mobile\\pml-midtier",
+      "C:\\dev\\paradise-mobile\\pml-my",
+      "C:\\dev\\paradise-mobile\\pml-vouchera",
+      "C:\\dev\\paradise-mobile\\pml-onboarding",
+      "C:\\dev\\paradise-mobile\\pml-website",
+      "C:\\dev\\paradise-mobile\\pml-domain",
+      "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery",
+      "C:\\dev\\paradise-mobile\\.cursor"
+    ],
+    "shared_root": "C:\\dev\\paradise-mobile"
+  },
+  "multi_folder_workspaces": [
+    {
+      "workspace_file": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery\\abd-context-driven-delivery.code-workspace",
+      "folders": [
+        "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery",
+        "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-skills",
+        "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\story-ui",
+        "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\you-tube-scraper"
+      ],
+      "shared_root": "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery"
+    },
+    {
+      "workspace_file": "C:\\dev\\paradise-mobile\\paradise-mobile.code-workspace",
+      "folders": [
+        "C:\\dev\\paradise-mobile\\pml-cypress-automations",
+        "C:\\dev\\paradise-mobile\\pml-harmony",
+        "C:\\dev\\paradise-mobile\\pml-midtier",
+        "C:\\dev\\paradise-mobile\\pml-my",
+        "C:\\dev\\paradise-mobile\\pml-vouchera",
+        "C:\\dev\\paradise-mobile\\pml-onboarding",
+        "C:\\dev\\paradise-mobile\\pml-website",
+        "C:\\dev\\paradise-mobile\\pml-domain",
+        "C:\\Users\\thoma\\OneDrive - Agile by Design\\Shared Documents\\Assets\\abd-works-repo\\abd-context-driven-delivery",
+        "C:\\dev\\paradise-mobile\\.cursor"
+      ],
+      "shared_root": "C:\\dev\\paradise-mobile"
+    }
+  ]
 }

@@ -8,7 +8,7 @@ from mamba import before, context, description, it
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools"):
+for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -16,7 +16,7 @@ for _cat in ("primitives", "utilities", "context_tools"):
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"
 _GENERATOR_DIR = _REPO_ROOT / "context_tools" / "base"
 _LIFECYCLE_PROSE_DIR = _GENERATOR_DIR  # sections in base_context_tool.md
-_REPAIR_DIR = _REPO_ROOT / "utilities" / "repair"
+_REPAIR_DIR = _REPO_ROOT / "context_tools" / "actions" / "repair"
 
 from primitives.instructions import Instruction
 from primitives.instructions import _active_resource, _format_keys, _path_for_name, _path_for_templates
@@ -205,7 +205,7 @@ with description("_expand_docstring"):
             expect(expanded).to(equal(direct))
 
     with context("a kit-local repair action docstring"):
-        with it("should equal the direct load of utilities/repair/repair.md"):
+        with it("should equal the direct load of context_tools/actions/repair/repair.md"):
             from context_tools.base.base_context_tool import BaseContextTool
             expanded = _expand_docstring(
                 "repair", BaseContextTool.repair, instance=BaseContextTool()

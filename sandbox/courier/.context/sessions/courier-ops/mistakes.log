@@ -1,0 +1,59 @@
+# Mistakes log — courier-ops
+
+## 2026-08-07 — clean-engineering-model.md
+
+**Artifact:** `sandbox/courier/.context/clean-engineering-model.md`
+**Rule:** `clean_engineering-templates` — separate model and specification fidelity sections
+
+**Wrong:** Collapsed all classes into a single `## Specification fidelity` section using `### Type : IType` heading format; the `## Model fidelity` section was entirely absent. `I{Type}` interfaces and concrete implementations were mixed under one heading, making model and spec detail indistinguishable and breaking the drawio transform (it saw one undifferentiated blob).
+
+**Correct:** Per the shopping-cart canonical example — two separate sections: `## Model fidelity` (all `I{Type}` blocks, no `+` prefix, compact typed contracts) followed by `## Specification fidelity` (concrete `{Type}` blocks with `+` prefix, relationship markers, invariants, interactions). Each section is independent — model adds typed shape, spec fills in the behavior.
+
+**When:** spec / generate / gen-ce pass — clean-engineering-model.md written without model section
+
+---
+
+## 2026-08-07 — bounded-context-map.md (missing map view)
+
+**Artifact:** `sandbox/courier/.context/bounded-context-map.md`
+**Rule:** `ddd.md` bounded_context — "Draw context boundaries, dependency arcs"; produce an inventory + diagram + arc summary, THEN building blocks detail under each context
+
+**Wrong:** Document dives straight into per-context building blocks (aggregates, stereotypes, invariants) without a strategic map view at the top. A bounded context map must first show the MAP: context inventory, a visual representation of boundaries and arcs, and integration arc summaries. What we generated is entirely tactical DDD (building blocks) with no map.
+
+**Correct:** Structure is: (1) `## Context Map` — ASCII diagram + context inventory + arc summaries; THEN (2) per-context building blocks sections (`## Routing`, `## PackageIntake`, `## Fleet`) with aggregate + stereotype detail; THEN (3) `## Dependencies` with full arc detail. The "map" part is the first section — without it the document is just a building blocks registry, not a context map.
+
+**When:** spec / generate / gen-ddd pass — generated building_blocks fidelity detail without adding the strategic map view first
+
+
+**Artifact:** `sandbox/courier/.context/bounded-context-map.md`
+**Rule:** `ddd.md` — building_blocks deepens the same context map, calls clean_engineering; CE is the downstream artifact; do not restate class contracts in two places
+
+**Wrong:** Generated bounded-context-map.md with full CE-format class contracts (all properties, all operations, Invariant lines per operation) AND ALSO generated clean-engineering-model.md with the same contracts. Two unlinked models carrying the same class structure — bounded-context-map used CE `+` prefix, `<<composition>>` / `<<association>>` property markers, and typed operation signatures, duplicating everything already in CE.
+
+**Correct:** DDD bounded-context-map owns the domain semantic layer: context boundaries, owning teams, aggregate root identification, DDD stereotypes (`<<Aggregate Root>>`, `<<Value Object>>`, etc.), key domain invariants (aggregate-level, not per-operation), and cross-context integration wiring. CE owns the full class contracts (I{Type} model + concrete {Type} spec with relationship markers, interactions, full invariants). DDD class blocks should carry DDD stereotype + the top-level domain invariants + reference to CE for full contracts — not re-state every property and operation.
+
+**When:** spec / generate / gen-ddd pass — DDD generated full CE-style class contracts without checking whether CE model existed or would be generated alongside
+
+
+**Artifact:** `sandbox/courier/.context/story-map.md`, `story-context.md`, `thin-slice.md`
+**Rule:** `stories` — at spec fidelity every story must be explicitly named; `* approx X more stories` is discovery/scaffold language
+
+**Wrong:** story-map.md retained 8 `* approx X more stories (hint)` placeholder lines inside a spec-fidelity artifact. story-context.md listed only 15 of ~22 stories. thin-slice.md placed only 4 stories (Increment 1) leaving 18 stories unplaced.
+
+**Correct:** Once past scaffold/discovery, every story must be named explicitly — no approximation lines. All stories must be placed into an increment in thin-slice. The `* approx` form is only acceptable at discovery fidelity where the full mechanics haven't been grilled.
+
+**When:** spec / generate / gen-stories pass — story-map.md written with approx lines carried over from sketch scaffold
+
+---
+
+## 2026-08-07 — clean-engineering-model.md (fidelity sections instead of modules)
+
+**Artifact:** `sandbox/courier/.context/clean-engineering-model.md` and `context_tools/clean_engineering/templates/clean_engineering-templates.md`
+**Rule:** `clean_engineering-templates` and `markdown_class_model.py` document format: H1 = module, H2 = class within that module; organize by module, not by fidelity level
+
+**Wrong:** Document had ONE H1 (the full system title) with `## Model fidelity` and `## Specification fidelity` as H2 headings, grouping ALL interfaces together and ALL implementations together. The markdown parser (`markdown_class_model.py`) reads H1 as module and H2 as class — so "Model fidelity" and "Specification fidelity" became two giant class boxes in Draw.io, each containing all interface or all implementation content crammed into one cell. Additionally, inline `<!-- Md -->` and `<!-- S -->` tags on property lines get included in the type_hint strings, polluting the parsed model with comment text. The template (`clean_engineering-templates.md`) has the same wrong structure.
+
+**Correct:** The document must use H1 per module (`# routes`, `# zones`, `# packages`) and H2 per class (`## IRoute`, `## Route`, `## IRouteZoneSequence`, etc.). Interface (I{Type}) and implementation ({Type}) both sit under the same module H1 — interface first, then implementation. No `## Model fidelity` or `## Specification fidelity` section headers anywhere. Fidelity is conveyed by the class name convention (I{Type} vs {Type}) and the `+` prefix on spec implementations, not by grouping headings. Language companion and modules overview go as prose BEFORE the first H1 (parser ignores pre-H1 content but humans can read it). The template must reflect this same module-first structure.
+
+**When:** spec / generate / gen-ce pass — followed the template which incorrectly grouped by fidelity instead of by module; template itself encoded the wrong structure
+

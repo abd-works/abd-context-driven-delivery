@@ -1,0 +1,13 @@
+﻿toolset: context_tools.cdd.cdd:Cdd
+tool: log_mistake
+context:
+  fidelity: discovery
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  artifact: cdd-sketch.md#DDD
+  rule: (process) cart-billing-under-subscription-bc
+  wrong: Placed Cart and Billing under Customer BC; they belong with Subscription (line/service lifecycle and its purchase/payment), not with slow-changing Customer identity.
+  original: |
+    Customer had cart?: Cart, billing: Billing, plus Cart/Billing subsections and Customer→Catalog via Cart.
+    User: Cart and Billing belong under Subscription — think conceptually (purchase/change of a line and paying for the service).

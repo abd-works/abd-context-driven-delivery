@@ -115,26 +115,27 @@ with description("Resolve Lifecycle Action Source Dir And Calls Via AST Walk"):
             expect([n for n in names if n.startswith("_")]).to(equal([]))
             expect(names.index("improve")).to(equal(names.index("repair") + 1))
 
-        with it("resolves partition to its delegate kit dir under utilities/partition/"):
+        with it("resolves partition to its delegate kit dir under context_tools/actions/partition/"):
             expect(self.by_name["partition"].source_dir.name).to(equal("partition"))
+            expect(self.by_name["partition"].source_dir.parent.name).to(equal("actions"))
 
-        with it("resolves grill to utilities/grill_context/ and a call to generate"):
+        with it("resolves grill to context_tools/actions/grill_context/ and a call to generate"):
             expect(self.by_name["grill"].source_dir.name).to(equal("grill_context"))
             expect(self.by_name["grill"].calls).to(contain("generate"))
 
-        with it("resolves sketch to utilities/sketch/ and a call to generate"):
+        with it("resolves sketch to context_tools/actions/sketch/ and a call to generate"):
             expect(self.by_name["sketch"].source_dir.name).to(equal("sketch"))
             expect(self.by_name["sketch"].calls).to(contain("generate"))
 
-        with it("resolves iterate to utilities/iterate/ and a call to generate"):
+        with it("resolves iterate to context_tools/actions/iterate/ and a call to generate"):
             expect(self.by_name["iterate"].source_dir.name).to(equal("iterate"))
             expect(self.by_name["iterate"].calls).to(contain("generate"))
 
-        with it("resolves repair to utilities/repair/ with no same-instance action call"):
+        with it("resolves repair to context_tools/actions/repair/ with no same-instance action call"):
             expect(self.by_name["repair"].source_dir.name).to(equal("repair"))
             expect(self.by_name["repair"].calls).to(equal([]))
 
-        with it("resolves improve to utilities/repair/ after repair, still no same-instance action call"):
+        with it("resolves improve to context_tools/actions/repair/ after repair, still no same-instance action call"):
             expect(self.by_name["improve"].source_dir.name).to(equal("repair"))
             expect(self.by_name["improve"].calls).to(equal([]))
 

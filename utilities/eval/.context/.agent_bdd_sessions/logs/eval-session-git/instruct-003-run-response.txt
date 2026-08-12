@@ -1,0 +1,55 @@
+The command was run from the repo root with `PYTHONIOENCODING=utf-8` (required for `python -m tools` on Windows in this project).
+
+With no YAML on stdin, `python -m tools run -` exited with code 1:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+To drive it, pipe or redirect a request, for example:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: AgentSkills
+tool: deploy_again
+"@ | python -m tools run -
+```
+
+If you have a specific `toolset` / `tool` payload, share it and we can run that the same way.The command was run from the repo root with `PYTHONIOENCODING=utf-8` (required for `python -m tools` on Windows in this project).
+
+With no YAML on stdin, `python -m tools run -` exited with code 1:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+To drive it, pipe or redirect a request, for example:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: AgentSkills
+tool: deploy_again
+"@ | python -m tools run -
+```
+
+If you have a specific `toolset` / `tool` payload, share it and we can run that the same way.The command was run from the repo root with `PYTHONIOENCODING=utf-8` (required for `python -m tools` on Windows in this project).
+
+With no YAML on stdin, `python -m tools run -` exited with code 1:
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+To drive it, pipe or redirect a request, for example:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: AgentSkills
+tool: deploy_again
+"@ | python -m tools run -
+```
+
+If you have a specific `toolset` / `tool` payload, share it and we can run that the same way.

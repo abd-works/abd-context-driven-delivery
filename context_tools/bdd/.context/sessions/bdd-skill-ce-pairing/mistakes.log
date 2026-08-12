@@ -1,0 +1,52 @@
+# mistakes.log - bdd-skill-ce-pairing sprint
+# Log omissions/errors here. Each entry:
+#   when, artifact, rule, wrong (one line), original, improved, status, tool, fidelity
+# A mistake pointed out = failed to do it right; log it immediately via log_mistake, then complete it via log_correction.
+
+---
+id: 791a5bb6
+when: 2026-08-10
+artifact: .cursor/skills/bdd/SKILL.md
+rule: (process) BDD path always pairs Clean Engineering — skill must state it; not optional like CDD perspectives
+wrong: BDD skill shim only says run manifest and follow instructions — never states that sketch/grill/generate/validate/satisfy/iterate/repair must always be followed by ce() counterpart, so agents confuse it with CDD optional perspective choice
+original: |
+  ---
+  name: bdd
+  description: "BDD generator - multi-fidelity behavior skeletons and development."
+  disable-model-invocation: true
+  ---
+  
+  # Bdd
+  
+  Run the manifest to load tools, actions, and instructions:
+  
+  ```
+  python -m tools manifest context_tools.bdd.bdd:Bdd
+  ```
+  
+  Follow `response.instructions` before doing anything else. Invoke tools by writing
+  the request to a YAML file (e.g. `_req.yaml`) and running:
+  
+  ```
+  python -m tools run _req.yaml
+  ```
+  
+  Delete the file after the call. Request format — `toolset` is the classname from
+  the manifest step above:
+  
+  ```yaml
+  toolset: context_tools.bdd.bdd:Bdd
+  context:
+    key: value      # constructor params (fidelity, path, session, …)
+  tool: <tool_name>   # or action: <action_name>
+  arguments:
+    key: value
+  ```
+  
+  Read `examples/` before guessing any field shape.
+improved: |
+  
+status: open
+tool: Bdd
+fidelity: skill
+---

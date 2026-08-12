@@ -1,0 +1,12 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: modules
+  path: C:\dev\paradise-mobile\pml-my
+  session: pml-my-module-docs
+tool: log_mistake
+arguments:
+  artifact: C:\dev\paradise-mobile\pml-my\src\pages\.context\module-context.md
+  rule: physical-folder
+  wrong: Documentation stopped arbitrarily at the top-level page folders (pages/My, pages/Onboarding, pages/SignIn, pages/SignUp, pages/Protected). Each of these is a self-contained sub-application with its own pages, components, hooks, recoil, types, utils, and services layers — dozens of meaningful modules that were left undocumented. Either every folder that represents a cohesive functional unit must get a module-context.md, or sub-folders that are pure implementation details of their parent (assets/, thin config/) should be absorbed into the parent description. Stopping mid-tree at an arbitrary depth is never correct.
+  original: "Apply the rule: any folder that (a) contains its own public surface (index.ts or named exports consumed by siblings/ancestors) or (b) groups a coherent sub-domain (e.g. Billing, Onboarding/Profile, SignIn/ForgotPassword) earns its own module-context.md. Leaf-only folders (assets/, a single-file config/) are documented at the nearest meaningful parent. The entire src tree must be walked, not just the first two levels."
+  when: document action, modules fidelity, pml-my-module-docs session

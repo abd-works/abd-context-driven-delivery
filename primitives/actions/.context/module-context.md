@@ -53,6 +53,8 @@ Every prose part (string literals in `@action` bodies, text loaded from `@instru
 
 Same-instance recipes can flip mode mid-body with `self.mode = "tool"` (or `"action"`). The expander applies that assignment for subsequent nested calls in the same walk, then restores the prior mode when the walk finishes — so a shared kit instance is not left stuck in tool mode. That is how one toolset defers a nested self-action without constructing a second copy of itself.
 
+For-each over companions (`for child in self.context_tools(): …`) respects the same rule: `child.mode = "tool"` inside the loop is applied before `child.<action>()`, and mode=tool callees are deferred (with a `Separate tools run` hint naming toolset + action + fidelity) instead of inlined.
+
 Setting `mode` to any value other than `"action"` or `"tool"` raises `ValueError`.
 
 **`Action`** — named handle for one discovered action (name + callable); contributes its own signature entry to the manifest. Exposes `instructions` (the action's docstring text), `signature_entry` (the manifest dict with `kind`, `tools`, etc.), and `add_to_signature` (writes the entry into a signature dict). `@action` only exposes that surface — it is not the seam itself. Run path is `action:` via Tools/`ToolsetExtensions` (private `_ActionRunner`), not a second public runner type.

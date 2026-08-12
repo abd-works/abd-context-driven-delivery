@@ -1,0 +1,11 @@
+﻿toolset: context_tools.cdd.cdd:Cdd
+tool: log_correction
+context:
+  fidelity: discovery
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  entry_id: ff9f0932
+  improved: |
+    Added → Plan arc on Bundle: Subscription (via Bundle) depends on Plan; Plan fields copied at assignment; Customer/Supplier pattern.
+  status: fixed

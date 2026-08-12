@@ -15,7 +15,7 @@ _AGENT_SKILLS_DIR = Path(__file__).resolve().parent
 for p in (str(_REPO_ROOT), str(_AGENT_SKILLS_DIR)):
     if p not in sys.path:
         sys.path.insert(0, p)
-for _cat in ("primitives", "utilities", "context_tools"):
+for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -112,6 +112,70 @@ with description("_merge_hooks"):
             result = _s._merge_hooks(existing, _GATE_CONFIG)
             expect("SessionStart" in result["hooks"]).to(be_true)
             expect("PostToolUse" in result["hooks"]).to(be_true)
+
+
+with description("write_action_command tool"):
+    with before.each:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.skills = AgentSkills()
+        import agent_skills.agent_skills as _mod
+        self._mod = _mod
+        self._orig_root = _mod._REPO_ROOT
+        _mod._REPO_ROOT = self.root
+
+    with after.each:
+        self._mod._REPO_ROOT = self._orig_root
+        self.tmp.cleanup()
+
+    with context("ide=cursor"):
+        with it("writes a host-action command that names the action parameter"):
+            path = self.skills.write_action_command(action="sketch", ide="cursor")
+            target = self.root / ".cursor" / "commands" / "sketch.md"
+            expect(target.is_file()).to(be_true)
+            content = target.read_text(encoding="utf-8")
+            expect(content).to(contain("action: sketch"))
+            expect(content).to(contain("context-tool skill"))
+            expect(path).to(contain("sketch.md"))
+
+    with context("ide=vscode"):
+        with it("writes a prompt file with frontmatter name"):
+            self.skills.write_action_command(action="iterate", ide="vscode")
+            target = self.root / ".github" / "prompts" / "iterate.prompt.md"
+            expect(target.is_file()).to(be_true)
+            content = target.read_text(encoding="utf-8")
+            expect(content).to(contain('name: "iterate"'))
+            expect(content).to(contain("action: iterate"))
+
+
+with description("write_companion_command tool"):
+    with before.each:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.skills = AgentSkills()
+        import agent_skills.agent_skills as _mod
+        self._mod = _mod
+        self._orig_root = _mod._REPO_ROOT
+        _mod._REPO_ROOT = self.root
+
+    with after.each:
+        self._mod._REPO_ROOT = self._orig_root
+        self.tmp.cleanup()
+
+    with context("ide=cursor"):
+        with it("writes a companion command for the echo toolset"):
+            path = self.skills.write_companion_command(
+                command_name="echo",
+                toolset_ref="echo.echo:Echoer",
+                class_name="Echoer",
+                ide="cursor",
+            )
+            target = self.root / ".cursor" / "commands" / "echo.md"
+            expect(target.is_file()).to(be_true)
+            content = target.read_text(encoding="utf-8")
+            expect(content).to(contain("echo.echo:Echoer"))
+            expect(content).to(contain("companion toolset"))
+            expect(path).to(contain("echo.md"))
 
 
 with description("write_focus_shortcut tool"):
@@ -241,6 +305,23 @@ with description("scan_toolsets tool"):
         entries = json.loads(AgentSkills().scan_toolsets())
         slugs = [e["skill_slug"] for e in entries]
         expect("agent-skills" in slugs).to(be_true)
+
+    with it("still discovers action-package toolsets under context_tools/actions"):
+        entries = json.loads(AgentSkills().scan_toolsets())
+        dirs = {e["module_dir"] for e in entries}
+        expect("sketch" in dirs).to(be_true)
+        sketch = next(e for e in entries if e["module_dir"] == "sketch")
+        expect("actions" in Path(sketch["file_path"]).parts).to(be_true)
+
+
+with description("_is_under_actions"):
+    with it("returns true for paths under context_tools/actions"):
+        path = _REPO_ROOT / "context_tools" / "actions" / "sketch" / "sketch.py"
+        expect(_s._is_under_actions(path)).to(be_true)
+
+    with it("returns false for utilities packages"):
+        path = _REPO_ROOT / "utilities" / "agent_skills" / "agent_skills.py"
+        expect(_s._is_under_actions(path)).to(equal(False))
 
 
 with description("write_skill_shim tool"):
@@ -460,6 +541,93 @@ with description("clean_skills tool"):
             result = self.skills.clean_skills()
             expect(skill_dir.exists()).not_to(be_true)
             expect(result).to(contain("clean-engineering"))
+
+
+with description("_ide_config_roots multi-folder workspace"):
+    with before.each:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.base = Path(self.tmp.name)
+        self.shared = self.base / "shared-workspace"
+        self.repo = self.shared / "abd-context-driven-delivery"
+        self.other = self.shared / "other-repo"
+        self.user_home = self.base / "user-home"
+        self.repo.mkdir(parents=True)
+        self.other.mkdir(parents=True)
+        self.user_home.mkdir(parents=True)
+        (self.shared / "multi.code-workspace").write_text(
+            json.dumps({
+                "folders": [
+                    {"path": "other-repo"},
+                    {"path": "abd-context-driven-delivery"},
+                ]
+            }),
+            encoding="utf-8",
+        )
+        self.skills = AgentSkills()
+        import agent_skills.agent_skills as _mod
+        self._mod = _mod
+        self._orig_root = _mod._REPO_ROOT
+        self._orig_home = _mod._home
+        _mod._REPO_ROOT = self.repo
+        _mod._home = lambda: self.user_home
+
+    with after.each:
+        self._mod._REPO_ROOT = self._orig_root
+        self._mod._home = self._orig_home
+        self.tmp.cleanup()
+
+    with it("finds the multi-folder workspace that includes the repo"):
+        found = self.skills._find_multi_folder_workspace()
+        expect(found is not None).to(be_true)
+        expect(found["shared_root"]).to(equal(str(self.shared.resolve())))
+        expect(len(found["folders"])).to(equal(2))
+
+    with it("returns repo, user, and shared .cursor roots for cursor"):
+        roots = self.skills._ide_config_roots("cursor")
+        resolved = {r.resolve() for r in roots}
+        expect(self.repo.resolve() / ".cursor" in resolved).to(be_true)
+        expect(self.user_home.resolve() / ".cursor" in resolved).to(be_true)
+        expect(self.shared.resolve() / ".cursor" in resolved).to(be_true)
+
+    with it("writes skill shims to every cursor deploy root"):
+        path = self.skills.write_skill_shim(
+            skill_slug="cdd",
+            manifest_command="python -m tools manifest context_tools.cdd.cdd:Cdd",
+            class_name="Cdd",
+            description="CDD orchestrator",
+            ide="cursor",
+        )
+        for root in (
+            self.repo / ".cursor" / "skills" / "cdd",
+            self.user_home / ".cursor" / "skills" / "cdd",
+            self.shared / ".cursor" / "skills" / "cdd",
+        ):
+            expect((root / "SKILL.md").is_file()).to(be_true)
+        expect(path).to(contain("SKILL.md"))
+
+    with it("keeps vscode deploy rooted at the repo only"):
+        roots = self.skills._ide_config_roots("vscode")
+        expect(roots).to(equal([self.repo / ".github"]))
+
+    with it("unions shared roots from every matching multi-folder workspace"):
+        product_ws = self.base / "product-root"
+        (product_ws / "app-a").mkdir(parents=True)
+        (product_ws / "app-b").mkdir(parents=True)
+        (product_ws / "wide.code-workspace").write_text(
+            json.dumps({
+                "folders": [
+                    {"path": "app-a"},
+                    {"path": "app-b"},
+                    {"path": str(self.repo)},
+                ]
+            }),
+            encoding="utf-8",
+        )
+        roots = {r.resolve() for r in self.skills._ide_config_roots("cursor")}
+        expect(self.shared.resolve() / ".cursor" in roots).to(be_true)
+        expect(product_ws.resolve() / ".cursor" in roots).to(be_true)
+        primary = self.skills._find_multi_folder_workspace()
+        expect(Path(primary["workspace_file"]).name).to(equal("wide.code-workspace"))
 
 
 with description("deploy_tools_as_skills action"):

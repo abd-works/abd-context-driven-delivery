@@ -1,0 +1,13 @@
+﻿toolset: context_tools.cdd.cdd:Cdd
+tool: log_mistake
+context:
+  fidelity: discovery
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  artifact: cdd-sketch.md#DDD Customer
+  rule: (process) onboarded-flag-on-customer-entity
+  wrong: Modeled onboarding as a separate Onboard value object / commentary block instead of a simple onboarded boolean on the Customer entity.
+  original: |
+    metadata.onboard: Onboard with personaId/done?/voucher plus explanatory notes.
+    User: belongs on entity Customer — onboarded true/false, simple.

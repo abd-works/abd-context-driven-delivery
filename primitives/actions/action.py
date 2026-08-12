@@ -792,6 +792,17 @@ class _ActionExpander:
         text = f"Resource `{member}` = {resource_value!r}."
         acc.add_text(text + '\n\n' + doc if doc else text)
 
+    @staticmethod
+    def _deferred_action_hint(target_instance: Any, member: str) -> str:
+        """One-line agent hint naming the separate tools-run for a mode=tool action."""
+        cls = type(target_instance)
+        path = getattr(cls, "manifest_path", None) or f"{cls.__module__}:{cls.__name__}"
+        fidelity = getattr(target_instance, "fidelity", None)
+        hint = f"Separate tools run — toolset: `{path}` action: `{member}`"
+        if fidelity is not None:
+            hint += f" context.fidelity: `{fidelity}`"
+        return hint
+
     def _expand_action_call(
         self, member: str, target_instance: Any, visited: "frozenset[tuple[str, str]]",
         acc: _ProseAccumulator,
@@ -805,25 +816,47 @@ class _ActionExpander:
         """
         if getattr(target_instance, "mode", "action") == "tool":
             acc.tool_steps.append(member)
+            acc.add_text(self._deferred_action_hint(target_instance, member))
             return
         self._walk_nested_action(member, target_instance, visited, acc)
+
+    @staticmethod
+    def _loop_var_mode_assign(statement: "ast.stmt", var_name: str) -> str | None:
+        """Return mode from ``<var>.mode = "tool"|"action"`` inside a for-each body."""
+        if not isinstance(statement, ast.Assign) or len(statement.targets) != 1:
+            return None
+        target = statement.targets[0]
+        if not (
+            isinstance(target, ast.Attribute)
+            and isinstance(target.value, ast.Name)
+            and target.value.id == var_name
+            and target.attr == "mode"
+        ):
+            return None
+        if isinstance(statement.value, ast.Constant) and isinstance(statement.value.value, str):
+            return statement.value.value
+        return None
 
     def _walk_for_each_body(
         self, stmt: ast.For, var_name: str, target_item: Any,
         visited: "frozenset[tuple[str, str]]", acc: _ProseAccumulator,
     ) -> None:
-        """Dispatch each member call on target_item found inside the for-each body."""
+        """Dispatch mode assigns and member calls on target_item inside the for-each body."""
         target_cls = type(target_item)
         target_actions = _action_slot_names(target_cls)
         target_tools = self._validator._tool_names(target_cls)
         for body_stmt in stmt.body:
+            mode_value = self._loop_var_mode_assign(body_stmt, var_name)
+            if mode_value is not None:
+                target_item.mode = mode_value
+                continue
             if not isinstance(body_stmt, ast.Expr):
                 continue
             member_attr = self._member_call_attr(body_stmt.value, var_name)
             if member_attr is None:
                 continue
             if member_attr in target_actions:
-                self._walk_nested_action(member_attr, target_item, visited, acc)
+                self._expand_action_call(member_attr, target_item, visited, acc)
             elif member_attr in target_tools:
                 acc.tool_steps.append(member_attr)
 

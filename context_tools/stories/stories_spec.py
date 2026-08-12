@@ -47,8 +47,8 @@ with description("Stories"):
         with before.each:
             self.stories = Stories(fidelity="scenarios")
 
-        with it("should default format to python"):
-            expect(self.stories.format).to(equal("python"))
+        with it("should default format to markdown"):
+            expect(self.stories.format).to(equal("markdown"))
 
         with it("should retain fidelity scenarios"):
             expect(self.stories.fidelity).to(equal("scenarios"))

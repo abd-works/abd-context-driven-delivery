@@ -7,7 +7,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools"):
+for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -498,6 +498,73 @@ with description("AgenticToolset"):
 
         with it("should restore mode to action after the walk"):
             expect(self.instance.mode).to(equal("action"))
+
+
+@agentic_toolset
+class _ForEachCallee:
+    @_tool
+    def polish(self) -> str:
+        return "polished"
+
+    @action
+    def prepare(self) -> str:
+        """FOREACH_CALLEE_MARKER: prepare carefully."""
+        self.polish()
+        return "prepared"
+
+
+@agentic_toolset
+class _ForEachCaller:
+    def companions(self) -> list:
+        return [_ForEachCallee(), _ForEachCallee()]
+
+    @action
+    def orchestrate(self) -> str:
+        """FOREACH_CALLER_MARKER: defer each companion."""
+        for companion in self.companions():
+            companion.mode = "tool"
+            companion.prepare()
+        return "orchestrated"
+
+    @action
+    def inline_all(self) -> str:
+        """FOREACH_INLINE_MARKER: inline each companion."""
+        for companion in self.companions():
+            companion.prepare()
+        return "inlined"
+
+
+with description("a for-each action over companion toolsets"):
+    with context("when each companion is flipped to tool mode in the loop"):
+        with before.each:
+            self.body = _ActionExpander.instance().parse_body(
+                _ForEachCaller.orchestrate, _ForEachCaller()
+            )
+            self.joined = "\n".join(self.body.prose_parts)
+
+        with it("should keep the caller marker"):
+            expect("FOREACH_CALLER_MARKER" in self.joined).to(be_true)
+
+        with it("should not inline companion action instructions"):
+            expect("FOREACH_CALLEE_MARKER" in self.joined).to(equal(False))
+
+        with it("should list prepare as a deferred tool"):
+            expect("prepare" in self.body.tool_steps).to(be_true)
+
+        with it("should emit a separate-tools-run hint for deferred companions"):
+            # Identical toolset+action hints dedupe; still one deferred prepare step.
+            expect(self.joined.count("Separate tools run")).to(equal(1))
+            expect("prepare" in self.body.tool_steps).to(be_true)
+
+    with context("when companions stay in action mode"):
+        with before.each:
+            self.body = _ActionExpander.instance().parse_body(
+                _ForEachCaller.inline_all, _ForEachCaller()
+            )
+            self.joined = "\n".join(self.body.prose_parts)
+
+        with it("should inline companion action instructions"):
+            expect("FOREACH_CALLEE_MARKER" in self.joined).to(be_true)
 
 
 with description("ActionValidationError"):

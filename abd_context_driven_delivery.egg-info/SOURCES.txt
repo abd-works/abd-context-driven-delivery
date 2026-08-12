@@ -45,8 +45,10 @@ context_tools/clean_engineering/class_model/__init__.py
 context_tools/clean_engineering/class_model/base_class_model.py
 context_tools/clean_engineering/class_model/base_class_model_spec.py
 context_tools/clean_engineering/class_model/c_family_parse.py
-context_tools/clean_engineering/class_model/drawio_class_model.py
-context_tools/clean_engineering/class_model/drawio_module_model_spec.py
+context_tools/clean_engineering/class_model/drawio/drawio_class_model.py
+context_tools/clean_engineering/class_model/drawio/drawio_module_model_spec.py
+context_tools/clean_engineering/class_model/drawio/__init__.py
+context_tools/clean_engineering/class_model/drawio/drawio.md
 context_tools/clean_engineering/class_model/example_factory_convert_spec.py
 context_tools/clean_engineering/class_model/java_class_model.py
 context_tools/clean_engineering/class_model/javascript_class_model.py

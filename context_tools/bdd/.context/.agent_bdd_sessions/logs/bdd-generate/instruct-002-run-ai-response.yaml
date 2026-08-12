@@ -2,15 +2,19 @@ ok: true
 toolset: context_tools.bdd.bdd:Bdd
 action: generate
 result: When done, run validate.
-instructions: "Write all BDD test signatures first (SIGNATURE markers at behavior\
-  \ fidelity, full bodies at development fidelity).\nWhen the target module already\
-  \ exists, scan the production source for every public method and property and verify\
-  \ each has test coverage — add missing signatures for any gap before writing new\
-  \ ones.\nWhen BDD artifacts are complete, call ce().generate() to produce the matching\
-  \ class skeletons.\n\n# Generate\n\n1. Follow **`session_guidance`** and the session\
-  \ tools (`read_context_index`, `record_context_root`, `create_session` when needed).\
-  \ Resolve workspace + tool root, then use the **`active`** resource for `active.path`\
-  \ / `active.folder`.\n2. **MUST — prove-read before asking.** Before any grill/iterate\
+instructions: "At modules fidelity: delegate entirely to ce().generate() — no BDD\
+  \ spec file is written at this stage. Use this to bootstrap CE class structure before\
+  \ writing tests.\nAt behavior fidelity: write all BDD test signatures (SIGNATURE\
+  \ markers).\nAt development fidelity: write full test bodies and production code.\n\
+  When the target module already exists, scan the production source for every public\
+  \ method and property and verify each has test coverage — add missing signatures\
+  \ for any gap before writing new ones.\nBDD tests must conform to CE class structure:\
+  \ describe/it hierarchies must map onto public CE interfaces and operations.\nWhen\
+  \ BDD artifacts are complete, call ce().generate() to produce the matching class\
+  \ skeletons.\n\n# Generate\n\n1. Follow **`session_guidance`** and the session tools\
+  \ (`read_context_index`, `record_context_root`, `create_session` when needed). Resolve\
+  \ workspace + tool root, then use the **`active`** resource for `active.path` /\
+  \ `active.folder`.\n2. **MUST — prove-read before asking.** Before any grill/iterate\
   \ question (and before inventing options or story/module names):\n   - Identify\
   \ **every relevant context file referenced or implied** by the decision — not one\
   \ favorite type. Typical set: `{workspace}/.context/context-index.md`, owning `*-segment.md`,\
@@ -22,11 +26,15 @@ instructions: "Write all BDD test signatures first (SIGNATURE markers at behavio
   \ it in the question turn:** name the path(s) read and ground options in concrete\
   \ terms from them. If you cannot cite specifics from the relevant files, you have\
   \ not read them — go read before asking.\n   - Asking from a skim is a **defect**,\
-  \ same class as dumping a whole artifact in one iterate tick.\n3. **`sources-scoped-to-generated-context`**\
-  \ — Hang `**Sources / context:**` on the node they ground: epic / sub-epic / feature\
-  \ / module, or a lower item (scenario, class, screen, component, …). Root or parent-level\
-  \ Sources are fine when those files apply to the **entire** artifact or subtree.\n\
-  4. Apply all guidance and named rules in each **context** — each bullet is a requirement.\n\
+  \ same class as dumping a whole artifact in one iterate tick.\n2b. **`do-not-invent-requirements`**\
+  \ — Do not invent requirements, status/maintenance signals, or competing command\
+  \ surfaces absent from source / the ask. Prefer the existing gap/fallback (or the\
+  \ already-specified invoke surface) over minting a new state or a second co-equal\
+  \ how-to-call block.\n3. **`sources-scoped-to-generated-context`** — Hang `**Sources\
+  \ / context:**` on the node they ground: epic / sub-epic / feature / module, or\
+  \ a lower item (scenario, class, screen, component, …). Root or parent-level Sources\
+  \ are fine when those files apply to the **entire** artifact or subtree.\n4. Apply\
+  \ all guidance and named rules in each **context** — each bullet is a requirement.\n\
   5. Match **examples** for shape, depth, and tone.\n6. Fill the **template** scaffold\
   \ and save the artifact under the session layout from `session_guidance`.\n7. Follow\
   \ any extra build steps included in your instructions when present.\n8. Run **validate**.\
@@ -44,11 +52,11 @@ instructions: "Write all BDD test signatures first (SIGNATURE markers at behavio
   \n## One call to open\n\n**`open`** — single action before generate / grill / sketch\
   \ / iterate / validate:\n\n1. Resolve durable root (`path`)\n2. Ensure sprint exists\
   \ (load or create)\n3. Load context index if present\n4. Record this tool's root\
-  \ when `context_index_key` is set\n\n```yaml\naction: open   # via self.workspace().open()\
+  \ when `context_index_key` is set\n\n```yaml\naction: open   # via self.workspace.open()\
   \ from BaseContextTool\n```\n\nDo **not** separately chain bind + read_context_index\
   \ + record_context_root from lifecycle bodies — `open` already does that.\n\n##\
   \ Layout\n\n- **path** — docs → `{path}/.context/`; code/modules → `{path}/`\n-\
-  \ **folder** — `session.md`, grill-answers, engagement sketches, handoff, `to-fix.log`\n\
+  \ **folder** — `session.md`, grill-answers, engagement sketches, handoff, `mistakes.log`\n\
   - **context-index** — `{workspace_root}/.context/context-index.md`\n\n## Root when\
   \ `path` omitted\n\n1. context-index entry for `context_index_key`\n2. else `{workspace_root}/{default_workspace_folder}`\n\
   \nResource `active` = Session(path='src', name=None).\n\nOffer and write Context\
@@ -65,32 +73,32 @@ instructions: "Write all BDD test signatures first (SIGNATURE markers at behavio
   \ CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences\
   \ only when they add genuine value.\n\n# Contexts\n\nBehavior-driven development\
   \ turns domain vocabulary into passing tests. Every BDD artifact is an indented\
-  \ hierarchy. Sketch that shape first (`sketch-template.md`).\n\n## Hierarchy shape\
-  \ (required)\n\n```\ndescribe {subject — domain thing, state, or observable condition}\n\
-  \  that {event or condition that sets the subject up}\n    with {narrower condition}\n\
-  \      it should {observable outcome}\n```\n\nRead top-down as a **usage / storytelling\
-  \ sequence**: what the user or system does first, then what is true, then what is\
-  \ observed. Nest by the **real events and conditions** that make the next observation\
-  \ possible — not by package, class role, or test fixture type.\n\n| Line | Names\
-  \ | Never names |\n| --- | --- | --- |\n| **describe** | Subject under observation\
-  \ in plain English (thing, state, condition) | Manager / hub / runner / service\
-  \ / internal class; decorator symbol (`@log`); marker name |\n| **that …** | Past\
-  \ or present event/condition on that subject (`that has been logged`, `that is invoked`)\
-  \ | `when …` |\n| **with …** | Narrower standing condition (`with no session name\
-  \ given`, `with verbose off`) | `when …`; implementation knobs phrased as API flags\
-  \ |\n| **it should …** | One stakeholder-visible outcome | Internals, private fields,\
-  \ call counts on mocks of the subject |\n\n**Pass (storytelling / usage order):**\n\
-  ```\nan action that is annotated with log\n  that is invoked\n    it should record\
-  \ a run event on the session trail\n  that has been logged\n    with no session\
-  \ name given\n      it should use the default session\n    with a given session\
-  \ name\n      it should keep events under that session\n    with verbose off\n \
-  \     it should write a summary line and keep the last payload\n      with full\
-  \ logging requested\n        it should flush the last payload\n    with verbose\
-  \ on\n      it should write payload files for later events\n\nan action that is\
-  \ not annotated\n  that is invoked\n    it should leave the session trail empty\n\
-  ```\n\n**Fail:**\n```\n@log marker                          ← mechanism / symbol,\
-  \ not a subject\nToolsetRunner                        ← manager / internal\na logged\
-  \ tool                        ← splits the same subject; use one action story\n\
+  \ hierarchy. Sketch that shape first (`templates/bdd-sketch.md`).\n\n## Hierarchy\
+  \ shape (required)\n\n```\ndescribe {subject — domain thing, state, or observable\
+  \ condition}\n  that {event or condition that sets the subject up}\n    with {narrower\
+  \ condition}\n      it should {observable outcome}\n```\n\nRead top-down as a **usage\
+  \ / storytelling sequence**: what the user or system does first, then what is true,\
+  \ then what is observed. Nest by the **real events and conditions** that make the\
+  \ next observation possible — not by package, class role, or test fixture type.\n\
+  \n| Line | Names | Never names |\n| --- | --- | --- |\n| **describe** | Subject\
+  \ under observation in plain English (thing, state, condition) | Manager / hub /\
+  \ runner / service / internal class; decorator symbol (`@log`); marker name |\n\
+  | **that …** | Past or present event/condition on that subject (`that has been logged`,\
+  \ `that is invoked`) | `when …` |\n| **with …** | Narrower standing condition (`with\
+  \ no session name given`, `with verbose off`) | `when …`; implementation knobs phrased\
+  \ as API flags |\n| **it should …** | One stakeholder-visible outcome | Internals,\
+  \ private fields, call counts on mocks of the subject |\n\n**Pass (storytelling\
+  \ / usage order):**\n```\nan action that is annotated with log\n  that is invoked\n\
+  \    it should record a run event on the session trail\n  that has been logged\n\
+  \    with no session name given\n      it should use the default session\n    with\
+  \ a given session name\n      it should keep events under that session\n    with\
+  \ verbose off\n      it should write a summary line and keep the last payload\n\
+  \      with full logging requested\n        it should flush the last payload\n \
+  \   with verbose on\n      it should write payload files for later events\n\nan\
+  \ action that is not annotated\n  that is invoked\n    it should leave the session\
+  \ trail empty\n```\n\n**Fail:**\n```\n@log marker                          ← mechanism\
+  \ / symbol, not a subject\nToolsetRunner                        ← manager / internal\n\
+  a logged tool                        ← splits the same subject; use one action story\n\
   when no session name is given        ← never \"when\" for state — use \"with …\"\
   \n```\n\n**Shared Rules:**\n\n- **`observable-behavior`** — Prove what a stakeholder\
   \ can verify without reading code (return value, state, public effect). Never internals.\n\
@@ -126,106 +134,107 @@ instructions: "Write all BDD test signatures first (SIGNATURE markers at behavio
   \ Jest/TypeScript or JUnit 5/Java when the project uses those.\n- Convert every\
   \ sketch hierarchy line to its framework equivalent (see Framework syntax).\n- Process\
   \ in batches of ~18 describe blocks when the hierarchy is large.\n\nFill the **behavior**\
-  \ (SIGNATURE) section of `formats/{format}/bdd-template.*`.\n\n### Framework syntax\n\
-  \n| Construct | Jest (TypeScript) | Mamba (Python) | JUnit 5 (Java) |\n| --- | ---\
-  \ | --- | --- |\n| Top-level concept | `describe('Context', () => {` | `with description('Context'):`\
-  \ | `@Nested class Context` |\n| Nested state/context | `describe('that has…', ()\
-  \ => {` | `with context('that has…'):` | `@Nested class ThatHas…` |\n| Behavior\
-  \ | `it('should …', () => {` | `with it('should …'):` | `@Test void should…()` |\n\
-  | Marker | `// BDD: SIGNATURE` | `# BDD: SIGNATURE` | `// BDD: SIGNATURE` |\n\n\
-  ### Rules\n\n- **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing\
-  \ added, removed, or flattened. Same depth, same `it` count.\n- **`signature-markers`**\
-  \ — Every `it` body is exactly `// BDD: SIGNATURE` or `# BDD: SIGNATURE`.\n- **`no-implementation`**\
-  \ — No assertions, mocks, production imports, helpers, or `beforeEach` / shared\
-  \ setup.\n- **`framework-syntax`** — One confirmed framework throughout. Do not\
-  \ mix Jest and Mamba constructs.\n\n**Pass:**\n```typescript\nit('should apply a\
-  \ percentage discount to eligible items', () => {\n  // BDD: SIGNATURE\n});\n```\n\
-  \n**Fail:** any assertion, mock, import of production code, or helper inside the\
-  \ body.\n\n---\n\n## development\n\n**Default format:** Python\n\n**Goal:** Replace\
-  \ `BDD: SIGNATURE` markers one at a time with it shgould /expect bodies, then minimum\
-  \ production code until green. Inherit the framework from the **behavior** artifactif\
-  \ already completed.\n\n1. **Confirm framework** — inherit from the behavior file.\n\
-  2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report\
-  \ count.\n3. **Identify shared setup** — extract to `beforeEach` / `with before.each:`\
-  \ or a factory when three or more siblings share arrangement.\n4. Pick **one** marker.\
-  \ Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `formats/{format}/bdd-template.*`.\n\
-  5. Run the test — confirm RED for the right reason.\n6. Write the **minimum** production\
-  \ code until GREEN (PRODUCTION CODE section of the same template).\n7. Refactor\
-  \ only while green. Move to the next marker.\n8. Repeat until zero markers remain,\
-  \ then run **validate**.\n\n### Coverage scan (existing code)\n\nWhen generating\
-  \ or satisfying against a module that already exists, read the production source\
-  \ before touching the spec:\n\n1. List every public method, property, class, and\
-  \ constant (exclude `_`-prefixed members unless publicly documented).\n2. Compare\
-  \ against the existing spec to find members with no `it should` entry.\n3. Add `it\
-  \ should` entries (at behavior fidelity) or full test bodies (at development fidelity)\
-  \ for every gap — do not skip any public member.\n4. Only then proceed with RED-GREEN-REFACTOR\
-  \ for the new or updated tests.\n\n### The RED-GREEN-REFACTOR cycle\n\n**RED** —\
-  \ fail for the right reason before production code exists.  \n**GREEN** — least\
-  \ production code that makes this assertion pass.  \n**REFACTOR** — clean up while\
-  \ green. One test, one production change, one green — do not batch all bodies first.\n\
-  \n### Arrange-Act-Assert\n\nLabel Arrange / Act / Assert; one observable outcome\
-  \ per `it` (`observable-behavior` above). Split unrelated expects. Shared construction\
-  \ → `beforeEach` / factory at three sibling dupes.\n\n### Rules\n\n- **`red-then-green`**\
-  \ — Fail for the right reason before production code changes.\n- **`minimum-green`**\
-  \ / **`code-minimalism`** — Least production code that makes this assertion pass.\n\
-  - **`refactor-only-when-green`** — Refactor only while green.\n- **`one-signature-at-a-time`**\
-  \ — One marker → green → next. Do not batch all bodies first.\n- **`one-assertion-per-test`**\
-  \ —  one outcome per `it`. tighly connects `expects`\n- **`layer-isolation`** —\
-  \ Mock only at architecture boundaries; never the subject under test.\n- **`no-remaining-signatures`**\
-  \ — Zero `BDD: SIGNATURE` markers when done.\n- **`full-surface-coverage`** — Before\
-  \ generating or satisfying, scan the production source for all public members. Add\
-  \ `it should` entries for every uncovered public method, property, or class. Complete\
-  \ coverage is required; no public surface may be left untested.\n- **`context-sharing`**\
-  \ — Shared construction in `beforeEach` / factory at three sibling dupes.\n- **`oo-api-design`**\
-  \ — Ask-don't-tell: construct fully; own state on the object; operations on the\
-  \ closest domain concept.\n- **`honors-documented-surface-contracts`** — Public\
-  \ API must match documented surface contracts; if a spec fights the contract, fix\
-  \ the spec.\n- **`roundtrip-parity-is-required`** — Adapter parse/render seams assert\
-  \ `counts(parse(render(canonical))) == counts(canonical)`.\n- **`code-source-of-truth-guard`**\
-  \ — Tests reject unsafe regeneration when generation can overwrite hand-edited code.\n\
-  - **`impl-must-carry-bdd-manifest`** — Impl paired with `*_spec.py` carries `# @toolset-manifest\
-  \ … context_tools.bdd.bdd:Bdd`.\n- **`observable-behavior`** — Assert public outcomes\
-  \ only.\n\n---\n\n## evals/backends-restate-shared-behavior/fail.md\n\n# HIERARCHY:\
-  \ story-graph-ops — Diagrams and Code sections rendered without an abstract subject\n\
-  \n<!--\nViolates: abstract-subject-then-concrete-backends.\n\nEvery concrete backend\
-  \ restates the same structural and reconciliation observations\nthat a single abstract\
-  \ subject (`a diagram Story Map`, `a code Story Map`) would carry\nonce. The behavior\
-  \ is real and state-oriented, but it is duplicated across backends.\n\nAdd a fifth\
-  \ backend (Whimsical, Excalidraw, Kotlin, Rust…) and every observation\nbelow gets\
-  \ copy-pasted again — the specifications will silently drift.\n-->\n\n## Diagrams\n\
-  \na DrawIO Story Map\n  that holds a rendered Story Map with 4 Epics and 3 SubEpics\
-  \ under the first Epic\n    it should contain 4 Epic elements on the Epic row\n\
-  \    every Epic element\n      it should sit at its Epic's row Y coordinate\n\n\
-  \    with a fifth Epic appended\n      it should contain 5 Epic elements on the\
-  \ Epic row\n      the first 4 Epic elements\n        it should be byte-identical\
-  \ to before\n\n    with the first Epic removed\n      it should contain 3 Epic elements\n\
-  \      the SubEpic elements that lived under the removed Epic\n        it should\
-  \ be gone\n\n    with the first Epic renamed\n      the Epic element for the first\
-  \ Epic\n        it should carry the new name\n\na Miro Story Map\n  that holds a\
-  \ rendered Story Map with 4 Epics and 3 SubEpics under the first Epic\n    it should\
-  \ contain 4 Epic elements on the Epic row\n    every Epic element\n      it should\
-  \ sit at its Epic's row Y coordinate\n\n    with a fifth Epic appended\n      it\
-  \ should contain 5 Epic elements on the Epic row\n      the first 4 Epic elements\n\
-  \        it should be unchanged\n\n    with the first Epic removed\n      it should\
-  \ contain 3 Epic elements\n      the SubEpic elements that lived under the removed\
-  \ Epic\n        it should be gone\n\n    with the first Epic renamed\n      the\
-  \ Epic element for the first Epic\n        it should carry the new name\n\n## Code\n\
-  \na TypeScript story-spec Story Map\n  that holds a rendered Story Map with 4 Epics\n\
-  \    every Epic\n      it should produce a folder under the tests root, named after\
-  \ the Epic slug\n\n    with a fifth Epic appended\n      the appended Epic\n   \
-  \     it should produce a new folder under the tests root\n\n    with the first\
-  \ Epic renamed\n      the folder for the first Epic\n        it should carry the\
-  \ new slug\n\na Python acceptance-test Story Map\n  that holds a rendered Story\
-  \ Map with 4 Epics\n    every Epic\n      it should produce a folder under the tests\
+  \ (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).\n\
+  \n### Framework syntax\n\n| Construct | Jest (TypeScript) | Mamba (Python) | JUnit\
+  \ 5 (Java) |\n| --- | --- | --- | --- |\n| Top-level concept | `describe('Context',\
+  \ () => {` | `with description('Context'):` | `@Nested class Context` |\n| Nested\
+  \ state/context | `describe('that has…', () => {` | `with context('that has…'):`\
+  \ | `@Nested class ThatHas…` |\n| Behavior | `it('should …', () => {` | `with it('should\
+  \ …'):` | `@Test void should…()` |\n| Marker | `// BDD: SIGNATURE` | `# BDD: SIGNATURE`\
+  \ | `// BDD: SIGNATURE` |\n\n### Rules\n\n- **`hierarchy-preservation`** — 1:1 from\
+  \ sketch nesting to code. Nothing added, removed, or flattened. Same depth, same\
+  \ `it` count.\n- **`signature-markers`** — Every `it` body is exactly `// BDD: SIGNATURE`\
+  \ or `# BDD: SIGNATURE`.\n- **`no-implementation`** — No assertions, mocks, production\
+  \ imports, helpers, or `beforeEach` / shared setup.\n- **`framework-syntax`** —\
+  \ One confirmed framework throughout. Do not mix Jest and Mamba constructs.\n\n\
+  **Pass:**\n```typescript\nit('should apply a percentage discount to eligible items',\
+  \ () => {\n  // BDD: SIGNATURE\n});\n```\n\n**Fail:** any assertion, mock, import\
+  \ of production code, or helper inside the body.\n\n---\n\n## development\n\n**Default\
+  \ format:** Python\n\n**Goal:** Replace `BDD: SIGNATURE` markers one at a time with\
+  \ it shgould /expect bodies, then minimum production code until green. Inherit the\
+  \ framework from the **behavior** artifactif already completed.\n\n1. **Confirm\
+  \ framework** — inherit from the behavior file.\n2. **Scan markers** — list all\
+  \ `it` blocks still containing `BDD: SIGNATURE`; report count.\n3. **Identify shared\
+  \ setup** — extract to `beforeEach` / `with before.each:` or a factory when three\
+  \ or more siblings share arrangement.\n4. Pick **one** marker. Fill Arrange-Act-Assert\
+  \ from the DEVELOPMENT TESTS section of `templates/bdd-templates.{ext}` (`.py` /\
+  \ `.java` / `.ts`).\n5. Run the test — confirm RED for the right reason.\n6. Write\
+  \ the **minimum** production code until GREEN (PRODUCTION CODE section of the same\
+  \ template).\n7. Refactor only while green. Move to the next marker.\n8. Repeat\
+  \ until zero markers remain, then run **validate**.\n\n### Coverage scan (existing\
+  \ code)\n\nWhen generating or satisfying against a module that already exists, read\
+  \ the production source before touching the spec:\n\n1. List every public method,\
+  \ property, class, and constant (exclude `_`-prefixed members unless publicly documented).\n\
+  2. Compare against the existing spec to find members with no `it should` entry.\n\
+  3. Add `it should` entries (at behavior fidelity) or full test bodies (at development\
+  \ fidelity) for every gap — do not skip any public member.\n4. Only then proceed\
+  \ with RED-GREEN-REFACTOR for the new or updated tests.\n\n### The RED-GREEN-REFACTOR\
+  \ cycle\n\n**RED** — fail for the right reason before production code exists.  \n\
+  **GREEN** — least production code that makes this assertion pass.  \n**REFACTOR**\
+  \ — clean up while green. One test, one production change, one green — do not batch\
+  \ all bodies first.\n\n### Arrange-Act-Assert\n\nLabel Arrange / Act / Assert; one\
+  \ observable outcome per `it` (`observable-behavior` above). Split unrelated expects.\
+  \ Shared construction → `beforeEach` / factory at three sibling dupes.\n\n### Rules\n\
+  \n- **`red-then-green`** — Fail for the right reason before production code changes.\n\
+  - **`minimum-green`** / **`code-minimalism`** — Least production code that makes\
+  \ this assertion pass.\n- **`refactor-only-when-green`** — Refactor only while green.\n\
+  - **`one-signature-at-a-time`** — One marker → green → next. Do not batch all bodies\
+  \ first.\n- **`one-assertion-per-test`** —  one outcome per `it`. tighly connects\
+  \ `expects`\n- **`layer-isolation`** — Mock only at architecture boundaries; never\
+  \ the subject under test.\n- **`no-remaining-signatures`** — Zero `BDD: SIGNATURE`\
+  \ markers when done.\n- **`full-surface-coverage`** — Before generating or satisfying,\
+  \ scan the production source for all public members. Add `it should` entries for\
+  \ every uncovered public method, property, or class. Complete coverage is required;\
+  \ no public surface may be left untested.\n- **`context-sharing`** — Shared construction\
+  \ in `beforeEach` / factory at three sibling dupes.\n- **`oo-api-design`** — Ask-don't-tell:\
+  \ construct fully; own state on the object; operations on the closest domain concept.\n\
+  - **`honors-documented-surface-contracts`** — Public API must match documented surface\
+  \ contracts; if a spec fights the contract, fix the spec.\n- **`roundtrip-parity-is-required`**\
+  \ — Adapter parse/render seams assert `counts(parse(render(canonical))) == counts(canonical)`.\n\
+  - **`code-source-of-truth-guard`** — Tests reject unsafe regeneration when generation\
+  \ can overwrite hand-edited code.\n- **`impl-must-carry-bdd-manifest`** — Impl paired\
+  \ with `*_spec.py` carries `# @toolset-manifest … context_tools.bdd.bdd:Bdd`.\n\
+  - **`observable-behavior`** — Assert public outcomes only.\n\n---\n\n## evals/backends-restate-shared-behavior/fail.md\n\
+  \n# HIERARCHY: story-graph-ops — Diagrams and Code sections rendered without an\
+  \ abstract subject\n\n<!--\nViolates: abstract-subject-then-concrete-backends.\n\
+  \nEvery concrete backend restates the same structural and reconciliation observations\n\
+  that a single abstract subject (`a diagram Story Map`, `a code Story Map`) would\
+  \ carry\nonce. The behavior is real and state-oriented, but it is duplicated across\
+  \ backends.\n\nAdd a fifth backend (Whimsical, Excalidraw, Kotlin, Rust…) and every\
+  \ observation\nbelow gets copy-pasted again — the specifications will silently drift.\n\
+  -->\n\n## Diagrams\n\na DrawIO Story Map\n  that holds a rendered Story Map with\
+  \ 4 Epics and 3 SubEpics under the first Epic\n    it should contain 4 Epic elements\
+  \ on the Epic row\n    every Epic element\n      it should sit at its Epic's row\
+  \ Y coordinate\n\n    with a fifth Epic appended\n      it should contain 5 Epic\
+  \ elements on the Epic row\n      the first 4 Epic elements\n        it should be\
+  \ byte-identical to before\n\n    with the first Epic removed\n      it should contain\
+  \ 3 Epic elements\n      the SubEpic elements that lived under the removed Epic\n\
+  \        it should be gone\n\n    with the first Epic renamed\n      the Epic element\
+  \ for the first Epic\n        it should carry the new name\n\na Miro Story Map\n\
+  \  that holds a rendered Story Map with 4 Epics and 3 SubEpics under the first Epic\n\
+  \    it should contain 4 Epic elements on the Epic row\n    every Epic element\n\
+  \      it should sit at its Epic's row Y coordinate\n\n    with a fifth Epic appended\n\
+  \      it should contain 5 Epic elements on the Epic row\n      the first 4 Epic\
+  \ elements\n        it should be unchanged\n\n    with the first Epic removed\n\
+  \      it should contain 3 Epic elements\n      the SubEpic elements that lived\
+  \ under the removed Epic\n        it should be gone\n\n    with the first Epic renamed\n\
+  \      the Epic element for the first Epic\n        it should carry the new name\n\
+  \n## Code\n\na TypeScript story-spec Story Map\n  that holds a rendered Story Map\
+  \ with 4 Epics\n    every Epic\n      it should produce a folder under the tests\
   \ root, named after the Epic slug\n\n    with a fifth Epic appended\n      the appended\
   \ Epic\n        it should produce a new folder under the tests root\n\n    with\
   \ the first Epic renamed\n      the folder for the first Epic\n        it should\
-  \ carry the new slug\n\na Java acceptance-test Story Map\n  that holds a rendered\
+  \ carry the new slug\n\na Python acceptance-test Story Map\n  that holds a rendered\
   \ Story Map with 4 Epics\n    every Epic\n      it should produce a folder under\
   \ the tests root, named after the Epic slug\n\n    with a fifth Epic appended\n\
   \      the appended Epic\n        it should produce a new folder under the tests\
   \ root\n\n    with the first Epic renamed\n      the folder for the first Epic\n\
-  \        it should carry the new slug\n\n\n## evals/backends-restate-shared-behavior/pass.md\n\
+  \        it should carry the new slug\n\na Java acceptance-test Story Map\n  that\
+  \ holds a rendered Story Map with 4 Epics\n    every Epic\n      it should produce\
+  \ a folder under the tests root, named after the Epic slug\n\n    with a fifth Epic\
+  \ appended\n      the appended Epic\n        it should produce a new folder under\
+  \ the tests root\n\n    with the first Epic renamed\n      the folder for the first\
+  \ Epic\n        it should carry the new slug\n\n\n## evals/backends-restate-shared-behavior/pass.md\n\
   \n# HIERARCHY: story-graph-ops — Diagrams and Code with abstract subjects\n\n<!--\n\
   Passes: abstract-subject-then-concrete-backends.\n\nShared structural and reconciliation\
   \ observations live once on the abstract\nsubject (`a diagram Story Map`, `a code\
@@ -630,16 +639,18 @@ instructions: "Write all BDD test signatures first (SIGNATURE markers at behavio
   \    {local_setup} = {value}\n            # Act\n            self.entity.{action}({local_setup})\n\
   \            # Assert\n            expect(self.entity.{property}).to(equal({expected_value}))\n\
   \n\nPrepend the following block verbatim as the very first lines of the file you\
-  \ are writing - before any imports, before any code.\n\nEvery tool call uses this\
-  \ shape - set `tool` and `arguments`, pipe to CLI:\n\n```yaml\ntoolset: context_tools.bdd.bdd:Bdd\n\
-  context:\n  fidelity: behavior\n  format: python\ntool: <tool name>\narguments:\n\
-  \  <if needed>\n```\n\nRun: python -m tools run -\n\nSuggested flow (repeat and\
-  \ reorder as the story needs):\n\n1. tool: ensure_session\n   arguments:\n     name:\
-  \ <value>\n     goal: <value>\n     fidelities: <value>\n     contexts: <value>\n\
-  \     path: <value>\n\n2. tool: read_context_index\n\n3. tool: record_context_root\n\
-  \   arguments:\n     root: <value>\n     note: <value>\n\n4. tool: read_cdr_format\n\
-  \n5. tool: list_cdrs\n\n6. tool: write_cdr\n\n7. tool: generate\n\nRead `resources`\
-  \ from each response before choosing the next tool."
+  \ are writing - before any imports, before any code.\n\nSeparate tools run — toolset:\
+  \ `context_tools.clean_engineering.clean_engineering:CleanEngineering` action: `generate`\
+  \ context.fidelity: `model`\n\nEvery tool call uses this shape - set `tool` and\
+  \ `arguments`, pipe to CLI:\n\n```yaml\ntoolset: context_tools.bdd.bdd:Bdd\ncontext:\n\
+  \  fidelity: behavior\n  format: python\ntool: <tool name>\narguments:\n  <if needed>\n\
+  ```\n\nRun: python -m tools run -\n\nSuggested flow (repeat and reorder as the story\
+  \ needs):\n\n1. tool: ensure_session\n   arguments:\n     name: <value>\n     goal:\
+  \ <value>\n     fidelities: <value>\n     contexts: <value>\n     path: <value>\n\
+  \n2. tool: read_context_index\n\n3. tool: record_context_root\n   arguments:\n \
+  \    root: <value>\n     note: <value>\n\n4. tool: read_cdr_format\n\n5. tool: list_cdrs\n\
+  \n6. tool: write_cdr\n\n7. tool: generate\n\nRead `resources` from each response\
+  \ before choosing the next tool."
 tools:
 - ensure_session
 - read_context_index
@@ -657,7 +668,7 @@ resources:
     goal: null
     fidelities: null
     contexts: null
-    started: '2026-08-01'
+    started: '2026-08-10'
     ended: null
     outcome: null
     handoff: null

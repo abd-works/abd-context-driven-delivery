@@ -1,0 +1,20 @@
+```yaml
+ok: true
+toolset: context_tools.ddd.ddd:Ddd
+tool: log_mistake
+result: ff9f0932
+resources:
+  active:
+    path: C:\dev\paradise-mobile\pml-my
+    name: pml-my-current-state
+    folder: C:\dev\paradise-mobile\pml-my\.context\sessions\pml-my-current-state
+    goal: Document the current state of pml-my — selfcare and onboarding SPA — capturing
+      surface, domain model, page inventory, and tech architecture for CDD use.
+    fidelities: discovery
+    contexts: app-extraction, src, architecture-context
+    started: '2026-08-10'
+    ended: '2026-08-11'
+    outcome: handoff written
+    handoff: handoffs/handoff-2026-08-11-cdd-sketch-open-questions.md
+  mode: action
+```

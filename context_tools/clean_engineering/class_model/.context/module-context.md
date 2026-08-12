@@ -12,9 +12,12 @@ Each channel class exposes `parse(text) -> CleanEngineeringModel` and `render(mo
 
 `CleanEngineeringModel`, `Module`, `OoadClass`, `Property`, `Operation`, `Relationship`, `UpdateReport`; channel classes (`MarkdownCleanEngineeringModel`, `PythonCleanEngineeringModel`, `DrawIOCleanEngineeringModel`, …); example-factory helpers on the base model.
 
+Draw.io lives under `class_model/drawio/`: channel (`drawio_class_model.py`), miniature kit `Drawio` (`drawio.py` — render / scan / repair), rules (`drawio.md`), scanners, and `examples/evals/` fixtures.
+
 ## Dependencies
 
-`update_report` (translation / reconcile); stdlib XML/HTML for draw.io; no dependency on scanners.
+`update_report` (translation / reconcile); stdlib XML/HTML for draw.io; Drawio kit depends on Scan + Repair. Layout scanners do not depend on OO code scanners.
+
 
 ## Known scan notes
 

@@ -5,9 +5,9 @@
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 
 Peer-kit expansion lives with the kits:
-- ``utilities/workspace/workspace_session_spec.py``
-- ``utilities/partition/partition_spec.py``
-- ``utilities/repair/repair_spec.py``
+- ``context_tools/actions/workspace/workspace_session_spec.py``
+- ``context_tools/actions/partition/partition_spec.py``
+- ``context_tools/actions/repair/repair_spec.py``
 
 Meta generator face (scaffold templates / create_context_tool.md) lives in
 ``create_context_tool/create_context_tool_spec.py``.
@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-from expects import be_true, equal, expect, raise_error
+from expects import be_false, be_true, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
@@ -221,18 +221,9 @@ with description("BaseContextTool composer"):
             with it("should set action to satisfy"):
                 expect(self.response["action"]).to(equal("satisfy"))
 
-            with it("should name open session tools then CDR tools on satisfy"):
+            with it("should name validate then generate_fixes_from_validate"):
                 expect(self.response["tools"]).to(
-                    equal(
-                        [
-                            "ensure_session",
-                            "read_context_index",
-                            "record_context_root",
-                            "read_cdr_format",
-                            "list_cdrs",
-                            "write_cdr",
-                        ]
-                    )
+                    equal(["validate", "generate_fixes_from_validate"])
                 )
 
             with it("should inline satisfy prose"):
@@ -240,8 +231,8 @@ with description("BaseContextTool composer"):
                     be_true
                 )
 
-            with it("should inline the domain template"):
-                expect(self.template in self.response["instructions"]).to(be_true)
+            with it("should not inline the domain template in tool mode"):
+                expect(self.template in self.response["instructions"]).to(be_false)
 
     with context("BaseContextTool generate"):
         with before.all:
@@ -607,9 +598,9 @@ with description("BaseContextTool._set_fidelity"):
             self.stories._set_fidelity("scenarios")
             expect(self.stories.fidelity).to(equal("scenarios"))
 
-        with it("should update format to python when set to scenarios"):
+        with it("should update format to markdown when set to scenarios"):
             self.stories._set_fidelity("scenarios")
-            expect(self.stories.format).to(equal("python"))
+            expect(self.stories.format).to(equal("markdown"))
 
         with it("should update fidelity to acceptance_tests"):
             self.stories._set_fidelity("acceptance_tests")

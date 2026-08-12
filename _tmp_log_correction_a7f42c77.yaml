@@ -1,0 +1,11 @@
+﻿toolset: context_tools.cdd.cdd:Cdd
+tool: log_correction
+context:
+  fidelity: discovery
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  entry_id: a7f42c77
+  improved: |
+    Moved Cart and Billing under Subscription BC. Customer keeps identity/onboarded + → Subscription only. Subscription has cart?, billing; Catalog dependency via Cart/bundle stays on Subscription.
+  status: fixed

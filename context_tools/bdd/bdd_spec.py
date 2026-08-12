@@ -129,9 +129,12 @@ with description("a Bdd toolset"):
             prose = _expanded(_bdd(), "satisfy")
             expect("RED" in prose).to(be_true)
 
-        with it("should include BDD behavior hierarchy rules"):
+        with it("should defer validate instead of inlining the full BDD contexts"):
             prose = _expanded(_bdd(), "satisfy")
-            expect("Behavior-driven development" in prose).to(be_true)
+            expect("Separate tools run" in prose and "action: `validate`" in prose).to(
+                be_true
+            )
+            expect("Deepen OO design" in prose).to(equal(False))
 
         with it("should tell the agent to call ce().satisfy() when BDD violations are resolved"):
             prose = _expanded(_bdd(), "satisfy")

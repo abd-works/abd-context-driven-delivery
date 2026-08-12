@@ -1,0 +1,124 @@
+Here is what `utilities/eval/session.py` contains (686 lines).
+
+## Purpose
+
+Eval session domain: model contracts and production code aligned with `eval-ce-sketch.md`. An eval session is a YAML document (`session.yaml`) of chat turns, tool calls, mistakes, and corrections, tied to git in the workspace.
+
+## Structure
+
+**Git helpers**
+
+- `find_git_root` — walks up to find `.git`
+- `_git` — runs `git -C root …` and raises on failure
+
+**Protocols / ABCs**
+
+- `IWorkspaceArea` — path, name, folder (seam to workspace session)
+- `IToolCall`, `ICorrection`, `IMistake`, `ITurn` — turn-level entities
+- `IWorkspaceRepo` — session branch, path-limited commits, HEAD/branch
+- `ICDDRepo` — tool/CDD repo branch + SHA
+- `ISession` — lifecycle: `begin_turn`, record calls/mistakes/corrections, `finish_turn`, `save`/`load`
+
+**Concrete dataclasses**
+
+- `ToolCall`, `Correction`, `Mistake`, `Turn` (8-char UUID ids for turns)
+
+**Repo implementations**
+
+- `NullWorkspaceRepo` / `NullCDDRepo` — test doubles
+- `WorkspaceRepo` — real git: `session/{name}` branch, `add`/`commit` limited to given paths, `is_dirty`
+- `CDDRepo` — current branch and SHA
+- `repos_for_workspace` — one clone → both repos; no git → nulls
+
+**`Session`**
+
+- On init: optional injected repos or `repos_for_workspace`, ensures session branch, optional dirty check on session path
+- Open turn accumulates tool calls and mistakes
+- `finish_turn`: if workspace path is not dirty, clears open turn and returns `None`; otherwise sets prompt/result/context, commits session file on session branch, records CDD branch/SHA, appends turn, saves YAML
+- `save` / `load` — `session.yaml` under `workspace.folder` with branch, path, turns (including nested mistakes/corrections)
+
+The file header points agents at the Bdd manifest/run flow (`context_tools.bdd.bdd:Bdd`); that is tooling metadata, not runtime behavior of the domain itself.
+
+If you want a specific part (e.g. `finish_turn` dirty logic or YAML shape), say which.Here is what `utilities/eval/session.py` contains (686 lines).
+
+## Purpose
+
+Eval session domain: model contracts and production code aligned with `eval-ce-sketch.md`. An eval session is a YAML document (`session.yaml`) of chat turns, tool calls, mistakes, and corrections, tied to git in the workspace.
+
+## Structure
+
+**Git helpers**
+
+- `find_git_root` — walks up to find `.git`
+- `_git` — runs `git -C root …` and raises on failure
+
+**Protocols / ABCs**
+
+- `IWorkspaceArea` — path, name, folder (seam to workspace session)
+- `IToolCall`, `ICorrection`, `IMistake`, `ITurn` — turn-level entities
+- `IWorkspaceRepo` — session branch, path-limited commits, HEAD/branch
+- `ICDDRepo` — tool/CDD repo branch + SHA
+- `ISession` — lifecycle: `begin_turn`, record calls/mistakes/corrections, `finish_turn`, `save`/`load`
+
+**Concrete dataclasses**
+
+- `ToolCall`, `Correction`, `Mistake`, `Turn` (8-char UUID ids for turns)
+
+**Repo implementations**
+
+- `NullWorkspaceRepo` / `NullCDDRepo` — test doubles
+- `WorkspaceRepo` — real git: `session/{name}` branch, `add`/`commit` limited to given paths, `is_dirty`
+- `CDDRepo` — current branch and SHA
+- `repos_for_workspace` — one clone → both repos; no git → nulls
+
+**`Session`**
+
+- On init: optional injected repos or `repos_for_workspace`, ensures session branch, optional dirty check on session path
+- Open turn accumulates tool calls and mistakes
+- `finish_turn`: if workspace path is not dirty, clears open turn and returns `None`; otherwise sets prompt/result/context, commits session file on session branch, records CDD branch/SHA, appends turn, saves YAML
+- `save` / `load` — `session.yaml` under `workspace.folder` with branch, path, turns (including nested mistakes/corrections)
+
+The file header points agents at the Bdd manifest/run flow (`context_tools.bdd.bdd:Bdd`); that is tooling metadata, not runtime behavior of the domain itself.
+
+If you want a specific part (e.g. `finish_turn` dirty logic or YAML shape), say which.Here is what `utilities/eval/session.py` contains (686 lines).
+
+## Purpose
+
+Eval session domain: model contracts and production code aligned with `eval-ce-sketch.md`. An eval session is a YAML document (`session.yaml`) of chat turns, tool calls, mistakes, and corrections, tied to git in the workspace.
+
+## Structure
+
+**Git helpers**
+
+- `find_git_root` — walks up to find `.git`
+- `_git` — runs `git -C root …` and raises on failure
+
+**Protocols / ABCs**
+
+- `IWorkspaceArea` — path, name, folder (seam to workspace session)
+- `IToolCall`, `ICorrection`, `IMistake`, `ITurn` — turn-level entities
+- `IWorkspaceRepo` — session branch, path-limited commits, HEAD/branch
+- `ICDDRepo` — tool/CDD repo branch + SHA
+- `ISession` — lifecycle: `begin_turn`, record calls/mistakes/corrections, `finish_turn`, `save`/`load`
+
+**Concrete dataclasses**
+
+- `ToolCall`, `Correction`, `Mistake`, `Turn` (8-char UUID ids for turns)
+
+**Repo implementations**
+
+- `NullWorkspaceRepo` / `NullCDDRepo` — test doubles
+- `WorkspaceRepo` — real git: `session/{name}` branch, `add`/`commit` limited to given paths, `is_dirty`
+- `CDDRepo` — current branch and SHA
+- `repos_for_workspace` — one clone → both repos; no git → nulls
+
+**`Session`**
+
+- On init: optional injected repos or `repos_for_workspace`, ensures session branch, optional dirty check on session path
+- Open turn accumulates tool calls and mistakes
+- `finish_turn`: if workspace path is not dirty, clears open turn and returns `None`; otherwise sets prompt/result/context, commits session file on session branch, records CDD branch/SHA, appends turn, saves YAML
+- `save` / `load` — `session.yaml` under `workspace.folder` with branch, path, turns (including nested mistakes/corrections)
+
+The file header points agents at the Bdd manifest/run flow (`context_tools.bdd.bdd:Bdd`); that is tooling metadata, not runtime behavior of the domain itself.
+
+If you want a specific part (e.g. `finish_turn` dirty logic or YAML shape), say which.

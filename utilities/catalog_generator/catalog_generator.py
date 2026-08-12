@@ -557,7 +557,9 @@ def resolve_lifecycle_actions(
             class_name = peer_kit_attrs[delegate_attr]
             module_path = _import_module_for_class(tree, class_name)
             package_name = module_path.split(".")[0] if module_path else delegate_attr
-            source_dir = _REPO_ROOT / "utilities" / package_name
+            actions_dir = _REPO_ROOT / "context_tools" / "actions" / package_name
+            utilities_dir = _REPO_ROOT / "utilities" / package_name
+            source_dir = actions_dir if actions_dir.is_dir() else utilities_dir
         else:
             source_dir = _REPO_ROOT / "context_tools" / "base"
 

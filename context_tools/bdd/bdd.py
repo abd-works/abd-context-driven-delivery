@@ -151,7 +151,9 @@ class Bdd(BaseContextTool):
 
     @action
     def satisfy(self) -> str:
-        """When running the fixing part of Satisfy, make sure that you create a breaking test that fails first, and then fix the code."""
+        """When running the fixing part of Satisfy, make sure that you create a breaking test that fails first (RED), and then fix the code.
+        When BDD violations are resolved, call ce().satisfy() to do the same for the matching classes.
+        If the same test keeps failing, call diagnostic().diagnose()."""
         super().satisfy()
         self.ce().satisfy()
         self.diagnostic().diagnose()

@@ -28,6 +28,18 @@
         "timeout": 60,
         "failClosed": false
       }
+    ],
+    "PostToolUse": [
+      {
+        "command": "python primitives/tools/hooks/manifest_gate.py post",
+        "matcher": "Read"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "command": "python primitives/tools/hooks/manifest_gate.py pre",
+        "matcher": "Write"
+      }
     ]
   }
 }

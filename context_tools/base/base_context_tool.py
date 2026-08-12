@@ -43,6 +43,14 @@ from tools.tool import tool
 class BaseContextTool(AgenticToolset):
     """# Instructions"""
 
+    SHAPING: ClassVar[str] = "shaping"
+    DISCOVERY: ClassVar[str] = "discovery"
+    SPEC: ClassVar[str] = "spec"
+    ENGINEER: ClassVar[str] = "engineer"
+
+    fidelities: ClassVar[dict[str, str] | None] = None
+    _fidelity_format_defaults: ClassVar[dict[str, str]] = {}
+
     def __init__(
         self,
         format: str | None = None,
@@ -70,16 +78,60 @@ class BaseContextTool(AgenticToolset):
         self.decisions = RecordDecisions()
         self.partitioner = Partition()
         self.repairer = Repair(workspace=self.workspace, scanner=self.scanner)
+        self._bind_eval()
 
+    def _bind_eval(self) -> None:
+        """Attach ``self.eval`` when the workspace session has path/folder/name.
 
-    #  -- Stage / Fidelity ----------------
-    SHAPING:   ClassVar[str] = "shaping"
-    DISCOVERY: ClassVar[str] = "discovery"
-    SPEC:      ClassVar[str] = "spec"
-    ENGINEER:  ClassVar[str] = "engineer"
- 
-    fidelities: ClassVar[dict[str, str] | None] = None
-    _fidelity_format_defaults: ClassVar[dict[str, str]] = {}
+        Also binds ``SessionLog`` to this workspace so that every subsequent
+        ``@log``-decorated tool or action forwards a ``ToolCall`` to the open
+        eval Turn (via ``SessionLog.append → eval.record_tool_call``).
+        """
+        from eval.session import Session as EvalSession
+
+        name = getattr(self.workspace, "name", None)
+        if not name:
+            self.eval = None
+            if hasattr(self.workspace, "eval"):
+                self.workspace.eval = None  # type: ignore[attr-defined]
+            return
+        try:
+            _ = self.workspace.folder
+        except ValueError:
+            self.eval = None
+            return
+        try:
+            self.eval = EvalSession(workspace=self.workspace)
+        except Exception:
+            self.eval = None
+            return
+        self.workspace.eval = self.eval  # type: ignore[attr-defined]
+        # Bind SessionLog so @log-decorated runs forward ToolCalls to the eval Turn.
+        from workspace.session_log import SessionLog
+
+        SessionLog.instance().bind(self.workspace)
+        # Persist context so the Cursor stop hook can call finish_eval_turn.
+        self._write_eval_state()
+
+    def _write_eval_state(self) -> None:
+        """Write ~/.cursor/cdd_eval_state.json so the stop hook can close the turn."""
+        import json as _json
+        import pathlib as _pathlib
+
+        state_dir = _pathlib.Path.home() / ".cursor"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        state = {
+            "cdd_repo": str(_pathlib.Path(__file__).resolve().parent.parent.parent),
+            "toolset_path": f"{type(self).__module__}:{type(self).__name__}",
+            "path": self._raw_path,
+            "session": getattr(self.workspace, "name", None),
+        }
+        try:
+            (state_dir / "cdd_eval_state.json").write_text(
+                _json.dumps(state, indent=2), encoding="utf-8"
+            )
+        except Exception:
+            pass
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -165,13 +217,15 @@ class BaseContextTool(AgenticToolset):
         path: str = "",
     ) -> str:
         """ensure_session"""
-        return self.workspace.ensure_session(
+        result = self.workspace.ensure_session(
             name=name,
             goal=goal,
             fidelities=fidelities,
             contexts=contexts,
             path=path,
         )
+        self._bind_eval()
+        return result
 
     @tool
     def create_session(
@@ -183,13 +237,15 @@ class BaseContextTool(AgenticToolset):
         path: str = "",
     ) -> str:
         """create_session"""
-        return self.workspace.create_session(
+        result = self.workspace.create_session(
             name=name,
             goal=goal,
             fidelities=fidelities,
             contexts=contexts,
             path=path,
         )
+        self._bind_eval()
+        return result
 
     @tool
     def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:
@@ -210,6 +266,7 @@ class BaseContextTool(AgenticToolset):
     def scaffold(self) -> Instruction: ...
 
     # -- Lifecycle actions  -----------------------------------
+    @log
     @action
     def partition(
         self,
@@ -230,6 +287,7 @@ class BaseContextTool(AgenticToolset):
             "Hard fail if any new chunk fails named-entry completeness."
         )
 
+    @log
     @action
     def grill(self) -> str:
         """Grill then generate - pure grill loop, then the host generate body."""
@@ -239,6 +297,7 @@ class BaseContextTool(AgenticToolset):
         self.generate()
         return "Grill complete; generate instructions applied."
 
+    @log
     @action
     def sketch(self) -> str:
         """Sketch then generate - grill + sketch cadence, then the host generate body."""
@@ -289,6 +348,7 @@ class BaseContextTool(AgenticToolset):
         """"""
         return ""
 
+    @log
     @action
     def document(self, paths: list[str]) -> str:
         self.workspace.open()
@@ -299,6 +359,7 @@ class BaseContextTool(AgenticToolset):
         self.add_generate_header_to_generated()
         return "Document existing state under {session.path}/ - violations flagged, none corrected."
 
+    @log
     @action
     def iterate(self) -> str:
         """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
@@ -308,6 +369,7 @@ class BaseContextTool(AgenticToolset):
         self.generate()
         return "Iterate complete; generate instructions applied."
 
+    @log
     @action
     def validate(self) -> str:
         self.workspace.open()
@@ -315,18 +377,21 @@ class BaseContextTool(AgenticToolset):
         self.scanner.scan()
         return "Validation report for artifacts under {session.path}/."
 
+    @log
     @tool
     def scan(self, paths: list[str]) -> str:
         """scan"""
         return self.scanner.scan(paths)
 
+    @log
     @action
     def satisfy(self) -> str:
         self.mode = "tool"
         self.validate()
         self.generate_fixes_from_validate()
         return "When done, run validate on artifacts under {session.path}/."
-    
+
+    @log
     @sub_agent
     @action
     def repair(self, asset: str, violation: str) -> str:
@@ -337,7 +402,8 @@ class BaseContextTool(AgenticToolset):
         self.templates
         self.repairer.repair(asset, violation)
         return "Repair {{asset}} under {session.path}/ until validate passes."
-    
+
+    @log
     @tool
     def log_mistake(
         self,
@@ -348,21 +414,53 @@ class BaseContextTool(AgenticToolset):
         when: str = "",
     ) -> str:
         """log_mistake"""
-        return self.repairer.log_mistake(
+        tool_name = type(self).__name__
+        fidelity = getattr(self, "fidelity", "") or ""
+        entry_id = self.repairer.log_mistake(
             artifact=artifact,
             rule=rule,
             wrong=wrong,
             original=original,
             when=when,
-            tool=type(self).__name__,
-            fidelity=getattr(self, "fidelity", "") or "",
+            tool=tool_name,
+            fidelity=fidelity,
         )
+        if self.eval is not None:
+            from eval.session import Mistake
 
+            self.eval.record_mistake(
+                Mistake(
+                    _entry_id=entry_id,
+                    _artifact=artifact,
+                    _rule=rule,
+                    _wrong=wrong,
+                    _original=original,
+                    _tool=tool_name,
+                    _fidelity=fidelity,
+                )
+            )
+        return entry_id
+
+    @log
     @tool
     def log_correction(self, entry_id: str, improved: str, status: str = "fixed") -> str:
         """log_correction"""
-        return self.repairer.log_correction(entry_id, improved, status)
+        path = self.repairer.log_correction(entry_id, improved, status)
+        if self.eval is not None:
+            self.eval.record_correction(entry_id, improved)
+        return path
 
+    @tool
+    def finish_eval_turn(
+        self, prompt: str = "", result: str = "", context: str = ""
+    ) -> str:
+        """Close the open eval Turn at the chat-reply boundary (hook/host calls once)."""
+        if self.eval is None:
+            return ""
+        closed = self.eval.finish_turn(prompt, result, context)
+        return closed.id if closed is not None else ""
+
+    @log
     @action
     def improve(self) -> str:
         """improve"""

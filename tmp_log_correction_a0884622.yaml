@@ -1,0 +1,10 @@
+﻿toolset: context_tools.cdd.cdd:Cdd
+session:
+  path: c:\dev\paradise-mobile\pml-my
+  name: pml-my-current-state
+tool: log_correction
+arguments:
+  entry_id: a0884622
+  improved: |
+    Corrected d7e2e80e framing to story-map / customer-experience (rule: order-themes-by-story-map-customer-experience). Not a UX-perspective rule.
+  status: fixed

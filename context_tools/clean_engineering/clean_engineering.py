@@ -10,13 +10,15 @@ from __future__ import annotations
 
 from focus import focus
 from context_tools.base.base_context_tool import BaseContextTool
-from context_tools.clean_engineering.class_model.drawio_class_model import DrawIOCleanEngineeringModel
+from context_tools.clean_engineering.class_model.drawio.drawio import Drawio
+from context_tools.clean_engineering.class_model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
 from context_tools.clean_engineering.class_model.java_class_model import JavaCleanEngineeringModel
 from context_tools.clean_engineering.class_model.javascript_class_model import JavaScriptCleanEngineeringModel
 from context_tools.clean_engineering.class_model.json_class_model import JsonCleanEngineeringModel
 from context_tools.clean_engineering.class_model.markdown_class_model import MarkdownCleanEngineeringModel
 from context_tools.clean_engineering.class_model.python_class_model import PythonCleanEngineeringModel
 from context_tools.clean_engineering.class_model.typescript_class_model import TypeScriptCleanEngineeringModel
+from primitives.actions.action import action
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from tools.tool import resource, tool  # noqa: F401
@@ -79,18 +81,42 @@ class CleanEngineering(BaseContextTool):
             format=resolved_format, path=path, session=session, workspace=workspace
         )
         self.fidelity = fidelity
+        self.drawio = Drawio(workspace=self.workspace)
 
     # Resolves to # Contexts in clean_engineering.md (fidelities + design vocabulary).
     @instruction
     def contexts(self) -> Instruction: ...
 
+    @action
+    def generate_output(self) -> str:
+        """Write the fidelity artifact under the session.
+
+        When ``format`` is ``drawio``, call ``drawio.render`` (create diagram →
+        scan layout rules in drawio contexts → repair sub-agent on definitive
+        layout failures). Otherwise produce the active channel output
+        (markdown / python / …) from contexts, examples, and templates — do
+        not invoke drawio.render.
+        """
+        self.drawio.mode = "tool"
+        self.drawio.render()
+        return "Artifact written under {session.path}/."
+
     @tool
-    def transform(self, source_format: str, target_format: str, content: str) -> dict:
+    def transform(
+        self,
+        source_format: str,
+        target_format: str,
+        content: str,
+        previous: str = "",
+        keep_positioning: bool = False,
+    ) -> dict:
         """Parse content from source_format into the canonical model, then render into target_format.
         Supported transform channels: markdown, json, python, typescript, java, javascript, drawio.
         drawio auto-selects modules view (system-context style) vs UML class view from model content.
-        Generate AI surfaces: markdown / python / javascript templates under templates/;
-        modules.drawio for modules-fidelity diagrams (seam bullets + dependency arrows).
+        When target_format is drawio and keep_positioning is true, pass previous Draw.io XML
+        (or leave previous empty and use drawio.render / create_diagram with a path) so existing
+        class positions and relationship routing are kept; only new classes/edges are laid out.
+        For a persisted class diagram with layout scan/repair, use ``drawio.render`` (via generate when format is drawio) instead of transform alone.
         Moves content sideways between formats at the same fidelity - no analytical upgrade."""
         if source_format not in _CHANNELS:
             raise ValueError(
@@ -101,5 +127,12 @@ class CleanEngineering(BaseContextTool):
                 f"Unsupported target_format {target_format!r}. Choose from: {sorted(_CHANNELS)}"
             )
         canonical = _CHANNELS[source_format].parse(content)
-        rendered = _CHANNELS[target_format].render(canonical)
+        if target_format == "drawio":
+            rendered = _CHANNELS[target_format].render(
+                canonical,
+                previous=previous or None,
+                keep_positioning=keep_positioning,
+            )
+        else:
+            rendered = _CHANNELS[target_format].render(canonical)
         return {"format": target_format, "content": rendered}

@@ -6,12 +6,20 @@
 
 CleanEngineering Python template - two files when Stories-bound:
 
-    {family_slug}.py                 - I{Class} + {Class} (+ subtypes)   PRODUCTION
-    {type_slug}_example_factory.py   - I{Class}ExampleFactory + factory  SEPARATE
+    {family_slug}.py                 - (I{Class} +) {Class} (+ subtypes)   PRODUCTION
+    {type_slug}_example_factory.py   - (I{Class}ExampleFactory +) factory  SEPARATE
 
-A production file holds the public seam I{Class}, the production Class that
-extends it, subtypes, and tightly connected peers. Not one class per file.
-Example factories are NEVER in that file (example-factory-separate-file).
+INTERFACES ARE OPTIONAL (see clean_engineering.md SS Interfaces). I{Class} and
+I{Class}ExampleFactory below are shown because this is the richer case to document -
+default to OMITTING both and stubbing {Class} / {Class}ExampleFactory directly
+(empty bodies at Md, filled at S/C, no ABC base needed) unless the user asked for an
+interface, or the module genuinely has multiple layers/implementations behind one
+seam. The two decisions (domain type vs. factory) are independent.
+
+A production file holds the public seam (I{Class} when one exists), the production
+Class that extends it (or stands alone when no interface exists), subtypes, and
+tightly connected peers. Not one class per file. Example factories are NEVER in
+that file (example-factory-separate-file).
 
 Layout (physical-folder): write each file under the **module** folder
 (e.g. {module_slug}/{family_slug}.py). Module context:
@@ -20,8 +28,8 @@ Layout (physical-folder): write each file under the **module** folder
 Naming:
     File (production)  {family_slug}.py
     File (factory)     {type_slug}_example_factory.py
-    Interface          I{Class}                (public seam; model fidelity)
-    Class              {Class}(I{Class})       (production; specification+)
+    Interface          I{Class}                (OPTIONAL - public seam only when requested; model fidelity)
+    Class              {Class}(I{Class})       (production; drop "(I{Class})" when no interface exists)
     ExampleFactory     {Class}ExampleFactory   (plain class; no Loader base; Md+/S+)
     Modes              Fake | Isolated | Production  (factory behavior - not subclasses)
     Property           {owned_property}, ...     (snake_case slots)
@@ -34,9 +42,11 @@ Naming:
 Fidelity tags:
     L  = language companion (prose; refined every stage - not a fidelity)
     Mu = modules       (thin terms, one-way deps, build order - markdown / module-context)
-    Md = model         (I{Class} only - empty public props/ops; optional I{Class}ExampleFactory in factory file)
-    S  = specification (Class extends I{Class}; public filled; privates empty on Class;
-                       {Class}ExampleFactory modes in sibling factory file when Stories-bound)
+    Md = model         (empty public props/ops directly on Class by default; I{Class} - and
+                       optional I{Class}ExampleFactory in factory file - only when requested)
+    S  = specification (Class extends I{Class} when one exists, else stands alone; public
+                       filled; privates empty on Class; {Class}ExampleFactory modes in
+                       sibling factory file when Stories-bound)
     C  = code          (fill remaining empties on Class; drop interactions)
 """
 
@@ -49,6 +59,10 @@ from abc import ABC, abstractmethod
 # =============================================================================
 
 
+# OPTIONAL - omit this whole class by default. Only add I{ClassName} when the
+# user requested an interface, or {ClassName} has multiple layers/implementations
+# behind one seam. Otherwise skip straight to `class {ClassName}:` below with the
+# same empty (# Md) bodies, and drop `(I{ClassName})` from its base list.
 class I{ClassName}(ABC):                                                # Md
     """*{ClassName}* is - one sentence: what it is, its unique role.
     Identity only. No relationship or behavior sentences here."""     # L
@@ -76,6 +90,8 @@ class I{ClassName}(ABC):                                                # Md
 
 
 class {ClassName}(I{ClassName}):                                        # S
+    # Drop "(I{ClassName})" above when no interface exists - {ClassName} then
+    # carries the # Md empty-body members itself instead of inheriting them.
     """*{ClassName}* is - one sentence: what it is, its unique role."""  # L
 
     # -- Public properties (filled at specification) -------------------------
@@ -148,6 +164,8 @@ class {ChildClass}({ClassName}, I{ChildClass}):                         # S
 # =============================================================================
 
 
+# OPTIONAL - same opt-in rule as I{ClassName} above; omit by default and go
+# straight to `class {ClassName}ExampleFactory:` below.
 class I{ClassName}ExampleFactory(ABC):                                  # Md
     """Loads examples[{example_key}] as Fake | Isolated | Production modes."""  # L
 
@@ -156,6 +174,7 @@ class I{ClassName}ExampleFactory(ABC):                                  # Md
 
 
 class {ClassName}ExampleFactory(I{ClassName}ExampleFactory):            # S
+    # Drop "(I{ClassName}ExampleFactory)" above when no interface exists.
     """Fake: mock framework + examples; Isolated: {ClassName}(injected mocks);
     Production: {ClassName}(real collaborators)."""                     # L
 

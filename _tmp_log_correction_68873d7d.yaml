@@ -1,0 +1,11 @@
+﻿toolset: context_tools.cdd.cdd:Cdd
+tool: log_correction
+context:
+  fidelity: discovery
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  entry_id: 68873d7d
+  improved: |
+    Removed Portability→Subscription (intra Subscription BC). Remaining cross-BC only: Customer→Subscription, Subscription→Catalog.
+  status: fixed

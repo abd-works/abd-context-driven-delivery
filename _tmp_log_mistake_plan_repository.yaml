@@ -1,0 +1,28 @@
+toolset: context_tools.cdd.cdd:Cdd
+tool: log_mistake
+context:
+  fidelity: discovery
+  path: C:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  artifact: >-
+    pml-my/tests/domain/plan/plan.ts and pml-my/tests/domain/plan/plan.e2e.ts
+    (PlanRepository interface + its e2e implementation, built during
+    Playwright acceptance-test work for the "Sign Up — Select Plan" story)
+  rule: >-
+    DDD tactical patterns (Repository, Aggregate Root, Value Object, Domain
+    Service, etc.) each have a well-known, standard implementation shape that
+    must be applied deliberately per-tactic — not invented ad hoc per
+    aggregate. In particular a Repository is fundamentally a COLLECTION
+    abstraction over its Aggregate Root (most often a Dictionary/keyed-
+    collection, sometimes a List), so it should expose collection-style
+    access (e.g. a .plans / .availablePlans keyed collection, iterable,
+    indexable by key such as plan name or id) — not a grab-bag of unrelated
+    one-off finder methods invented per repository.
+  wrong: |
+    PlanRepository was modeled as { findAvailable(filter): Promise<Plan[]>; findById(id): Promise<Plan> } — a bag of ad hoc async methods — instead of as a proper collection interface. The three plans currently visible in the sandbox's Catalog UI are the active/sellable subset of a larger catalog that also contains inactive (non-sellable) plans; PlanRepository should have modeled that directly as a keyed collection (e.g. .plans for the full catalog keyed by name/id, .availablePlans for the active/sellable subset), the way every Repository tactical-pattern implementation should by default, rather than one-off methods reinvented per aggregate. More generally: there is currently no documented guidance anywhere in the CDD DDD-modeling process on the STANDARD implementation shape expected for each DDD tactic (Repository -> collection interface; and whatever the equivalent standard shapes are for Aggregate Root, Value Object, Domain Service, etc.) — that guidance gap is the root cause, this Plan/PlanRepository instance is just where it surfaced.
+  original: |
+    export interface PlanRepository {
+      findAvailable(filter: PlanFilter): Promise<Plan[]>
+      findById(planId: string): Promise<Plan>
+    }

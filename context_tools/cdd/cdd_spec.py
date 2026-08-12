@@ -18,6 +18,7 @@ for _cat in ("context_tools", "primitives", "utilities"):
 from expects import be_true, equal, expect, raise_error
 from mamba import before, context, description, it
 
+from primitives.actions.action import _ActionExpander
 from context_tools.bdd.bdd import Bdd
 from context_tools.cdd.cdd import Cdd
 from context_tools.clean_engineering.clean_engineering import CleanEngineering
@@ -119,6 +120,7 @@ with description("a CDD orchestrator"):
     with context("whose lifecycle actions walk the stage tools"):
         with before.each:
             self.cdd = Cdd(fidelity="discovery")
+            self.expander = _ActionExpander.instance()
 
         with it("should expose generate_output as a callable action"):
             expect(callable(self.cdd.generate_output)).to(be_true)
@@ -140,3 +142,34 @@ with description("a CDD orchestrator"):
 
         with it("should expose document as a callable action"):
             expect(callable(self.cdd.document)).to(be_true)
+
+        with context("when satisfy is expanded"):
+            with before.each:
+                self.body = self.expander.parse_body(Cdd.satisfy, self.cdd)
+                self.joined = "\n".join(self.body.prose_parts)
+
+            with it("should defer each child satisfy as a separate tools run"):
+                expect(self.joined.count("Separate tools run")).to(equal(4))
+
+            with it("should not inline CleanEngineering satisfy recipes"):
+                expect("Deepen OO design" in self.joined).to(equal(False))
+
+            with it("should name Stories satisfy among the deferred runs"):
+                expect("context_tools.stories.stories:Stories" in self.joined).to(
+                    be_true
+                )
+
+        with context("when sketch is expanded"):
+            with before.each:
+                self.body = self.expander.parse_body(Cdd.sketch, self.cdd)
+                self.joined = "\n".join(self.body.prose_parts)
+
+            with it("should not defer child sketch actions themselves"):
+                expect(
+                    "Separate tools run — toolset: `context_tools.stories.stories:Stories` action: `sketch`"
+                    in self.joined
+                ).to(equal(False))
+                expect(
+                    "Separate tools run — toolset: `context_tools.ddd.ddd:Ddd` action: `sketch`"
+                    in self.joined
+                ).to(equal(False))

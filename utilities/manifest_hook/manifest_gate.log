@@ -198,3 +198,234 @@
 2026-08-06T03:21:14Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup_spec.py  - 3 line(s)
 2026-08-06T03:21:15Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup_spec.py  - 3 line(s)
 2026-08-06T03:21:16Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\context_setup\context_setup_spec.py  - 3 line(s)
+2026-08-07T16:43:17Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\bdd\bdd.py  - 4 line(s)
+2026-08-07T16:43:17Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\ddd\ddd.py  - 5 line(s)
+2026-08-07T16:43:18Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\stories.py  - 4 line(s)
+2026-08-07T16:43:41Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd
+2026-08-07T16:43:45Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\.context\module-context.md
+2026-08-07T16:43:45Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\.context\cdd-sketch.md
+2026-08-07T16:51:44Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd
+2026-08-07T16:51:58Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd_spec.py  - 3 line(s)
+2026-08-07T16:53:06Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T16:53:07Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T16:53:08Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T16:53:09Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T16:54:18Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-07T16:54:46Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo\agent-tools\7b1da4d0-e2bb-4f01-8d4b-b021f4df4481.txt
+2026-08-07T16:55:03Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-07T16:55:59Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd_spec.py  - 3 line(s)
+2026-08-07T16:56:03Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd_spec.py  - 3 line(s)
+2026-08-07T16:56:04Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd_spec.py  - 3 line(s)
+2026-08-07T16:56:04Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd_spec.py  - 3 line(s)
+2026-08-07T16:58:33Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\.context\module-context.md
+2026-08-07T16:58:34Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\.context\module-context.md
+2026-08-07T16:58:35Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\.context\module-context.md
+2026-08-07T16:58:35Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\.context\module-context.md
+2026-08-07T16:59:08Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-07T17:43:59Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T17:44:00Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T17:44:01Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T17:44:10Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd_spec.py  - 3 line(s)
+2026-08-07T17:44:11Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd_spec.py  - 3 line(s)
+2026-08-07T17:44:12Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd_spec.py  - 3 line(s)
+2026-08-07T17:44:26Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\.context\module-context.md
+2026-08-07T17:44:26Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\.context\module-context.md
+2026-08-07T17:44:27Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\.context\module-context.md
+2026-08-07T17:46:37Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T17:46:38Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T17:46:39Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T17:47:27Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo\agent-tools\1b53549a-7301-4c2d-b9db-c9dcfe58cd12.txt
+2026-08-07T17:47:33Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo\agent-tools\1b53549a-7301-4c2d-b9db-c9dcfe58cd12.txt
+2026-08-07T17:47:38Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo\agent-tools\1b53549a-7301-4c2d-b9db-c9dcfe58cd12.txt
+2026-08-07T17:48:31Z [pre ] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T17:48:32Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T17:48:33Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.py  - 4 line(s)
+2026-08-07T19:32:14Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\.cursor\skills\grill-me-and-sketch\SKILL.md
+2026-08-07T19:32:40Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier
+2026-08-07T19:32:54Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-07T19:32:54Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-07T19:32:57Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\.cursor\skills\sketch\SKILL.md
+2026-08-07T19:32:58Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\primitives\tools
+2026-08-07T19:33:10Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd
+2026-08-07T19:33:10Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-07T19:33:24Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\cdd.md
+2026-08-07T19:33:24Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\templates\cdd-sketch.md
+2026-08-07T19:33:35Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\session.md
+2026-08-07T19:33:35Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo/agent-tools/b3df6114-a53c-4004-9eb2-9093d1d244aa.txt
+2026-08-07T19:33:36Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo/agent-tools/b3df6114-a53c-4004-9eb2-9093d1d244aa.txt
+2026-08-07T19:33:49Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo\agent-tools\1a1580ca-f573-4258-92e4-3f42980baf0d.txt
+2026-08-07T19:33:49Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo\agent-tools\b3df6114-a53c-4004-9eb2-9093d1d244aa.txt
+2026-08-07T19:33:58Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-07T19:33:59Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\.cursor\skills\grill-me-and-sketch\grill-me.md
+2026-08-07T19:33:59Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-07T19:34:02Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\sketch\sketch.md
+2026-08-07T19:34:03Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\sketch\sketch.py  - 1 line(s)
+2026-08-07T19:35:32Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools
+2026-08-07T19:35:55Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\.context\cdd-sketch.md
+2026-08-07T19:35:56Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\cdd\examples\.context\module-context.md
+2026-08-07T19:36:46Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-07T19:36:58Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\workspace\session.py
+2026-08-07T19:37:21Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:37:22Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:39:21Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:39:22Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:39:22Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:39:23Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:39:24Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:39:24Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:39:25Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:39:25Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:39:26Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:41:14Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:41:14Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:41:15Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:41:16Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:41:17Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:41:17Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:41:18Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:41:18Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:41:19Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:42:56Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:42:56Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:42:57Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:43:07Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:43:08Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:43:08Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:43:10Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:43:10Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:43:11Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:43:12Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:43:12Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:43:13Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:43:52Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:43:52Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:43:53Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:44:21Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\bdd\templates\bdd-sketch.md
+2026-08-07T19:45:11Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:45:11Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:45:12Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:45:13Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:45:14Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:45:14Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:45:15Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:45:15Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:45:16Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:46:24Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo\agent-tools\0f439b5c-f806-406c-8563-e7d9eb2881cc.txt
+2026-08-07T19:46:24Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo\agent-tools\0f439b5c-f806-406c-8563-e7d9eb2881cc.txt
+2026-08-07T19:46:33Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\ddd
+2026-08-07T19:46:34Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools
+2026-08-07T19:46:34Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories
+2026-08-07T19:46:35Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\ux
+2026-08-07T19:46:35Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\clean_engineering
+2026-08-07T19:46:37Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\bdd
+2026-08-07T19:46:50Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\ddd\ddd.py  - 5 line(s)
+2026-08-07T19:46:50Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\stories.py  - 4 line(s)
+2026-08-07T19:46:50Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\ux\ux.py  - 4 line(s)
+2026-08-07T19:46:51Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.py  - 4 line(s)
+2026-08-07T19:46:51Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo\agent-tools\0f439b5c-f806-406c-8563-e7d9eb2881cc.txt
+2026-08-07T19:46:52Z [post] FIRED  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\bdd\bdd.py  - 4 line(s)
+2026-08-07T19:46:59Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\base
+2026-08-07T19:47:00Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-07T19:47:01Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\ddd
+2026-08-07T19:47:10Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\ddd\templates\bounded-context-template.md
+2026-08-07T19:47:10Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\ddd
+2026-08-07T19:47:37Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:47:37Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:47:38Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:47:53Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo\agent-tools\e1cbdda9-9a9d-4fd6-a810-40da83997ec9.txt
+2026-08-07T19:47:54Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories
+2026-08-07T19:47:54Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories
+2026-08-07T19:48:04Z [post] skip  C:\Users\thoma\.cursor\projects\c-Users-thoma-OneDrive-Agile-by-Design-Shared-Documents-Assets-abd-works-repo\agent-tools\e1cbdda9-9a9d-4fd6-a810-40da83997ec9.txt
+2026-08-07T19:48:05Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\templates\md\scenario-main-flow.md
+2026-08-07T19:48:05Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\templates\md\story-map.md
+2026-08-07T19:48:06Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\examples\manage-customer-orders\md\story-map.md
+2026-08-07T19:48:06Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\examples\manage-customer-orders\md\scenario-main-flow.md
+2026-08-07T19:48:07Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories
+2026-08-07T19:48:17Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\templates\md\story-context.md
+2026-08-07T19:48:17Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\templates\md\thin-slice.md
+2026-08-07T19:48:17Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-07T19:48:21Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\tests\.context
+2026-08-07T19:48:21Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\tests\.context\story-map.md
+2026-08-07T19:49:06Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\story-map.md
+2026-08-07T19:49:06Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\story-map.md
+2026-08-07T19:49:20Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\thin-slice.md
+2026-08-07T19:49:21Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\thin-slice.md
+2026-08-07T19:49:23Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios.md
+2026-08-07T19:49:23Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\story-context.md
+2026-08-07T19:49:24Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios.md
+2026-08-07T19:49:24Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\story-context.md
+2026-08-07T19:49:56Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories
+2026-08-07T19:49:56Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery
+2026-08-07T19:50:01Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\document
+2026-08-07T19:50:02Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\scanners\scenarios_shape_scanner.py
+2026-08-07T19:50:06Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\document\markdown\nodes.py
+2026-08-07T19:50:06Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories
+2026-08-07T19:50:13Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\document\markdown
+2026-08-07T19:50:14Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\document\markdown\nodes.py
+2026-08-07T19:50:37Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\scanners\story_map_outline_shape_scanner.py
+2026-08-07T19:50:37Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\document\markdown\nodes.py
+2026-08-07T19:50:43Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\document\markdown\markdown_story_map_spec.py
+2026-08-07T19:50:43Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories
+2026-08-07T19:50:50Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories\scanners\story_map_shape_scanner.py
+2026-08-07T19:50:50Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\stories
+2026-08-07T19:51:06Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\story-map.md
+2026-08-07T19:51:06Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\story-map.md
+2026-08-07T19:51:07Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\story-map.md
+2026-08-07T19:51:32Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\story-map.md
+2026-08-07T19:51:32Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\story-map.md
+2026-08-07T19:51:32Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\story-map.md
+2026-08-07T19:51:33Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\thin-slice.md
+2026-08-07T19:51:33Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\thin-slice.md
+2026-08-07T19:51:34Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\thin-slice.md
+2026-08-07T19:51:51Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\create-delivery-route.md
+2026-08-07T19:51:51Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\create-delivery-route.md
+2026-08-07T19:51:53Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\add-zone-to-route.md
+2026-08-07T19:51:54Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\add-zone-to-route.md
+2026-08-07T19:51:55Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\remove-zone-from-route.md
+2026-08-07T19:51:56Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\remove-zone-from-route.md
+2026-08-07T19:51:57Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\view-stops-on-route.md
+2026-08-07T19:51:58Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\view-stops-on-route.md
+2026-08-07T19:51:59Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\reorder-route-zones.md
+2026-08-07T19:52:00Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\reorder-route-zones.md
+2026-08-07T19:52:01Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\recalculate-route-path.md
+2026-08-07T19:52:02Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\recalculate-route-path.md
+2026-08-07T19:52:04Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\view-route-path.md
+2026-08-07T19:52:04Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\view-route-path.md
+2026-08-07T19:52:05Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\assign-package-to-stop.md
+2026-08-07T19:52:06Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\assign-package-to-stop.md
+2026-08-07T19:52:08Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\unassign-package-from-stop.md
+2026-08-07T19:52:08Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\unassign-package-from-stop.md
+2026-08-07T19:52:10Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\move-package-between-stops.md
+2026-08-07T19:52:10Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\move-package-between-stops.md
+2026-08-07T19:52:11Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\list-packages-on-route.md
+2026-08-07T19:52:12Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\list-packages-on-route.md
+2026-08-07T19:52:12Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\define-zone-boundary.md
+2026-08-07T19:52:13Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\define-zone-boundary.md
+2026-08-07T19:52:14Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\edit-zone-boundary.md
+2026-08-07T19:52:15Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\edit-zone-boundary.md
+2026-08-07T19:52:16Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\list-zones.md
+2026-08-07T19:52:16Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\list-zones.md
+2026-08-07T19:52:18Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\story-context.md
+2026-08-07T19:52:18Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\view-zone-detail.md
+2026-08-07T19:52:18Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\story-context.md
+2026-08-07T19:52:19Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\scenarios\view-zone-detail.md
+2026-08-07T19:52:19Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\plan-delivery-routes\story-context.md
+2026-08-07T19:52:49Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\thin-slice.md
+2026-08-07T19:52:50Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\thin-slice.md
+2026-08-07T19:52:50Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:52:50Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\thin-slice.md
+2026-08-07T19:52:50Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:52:51Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:53:00Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:53:01Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:53:01Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:53:14Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\ddd\templates\bounded-context-template.md
+2026-08-07T19:53:15Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\context_tools\ddd
+2026-08-07T19:54:06Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\bounded-context-map.md
+2026-08-07T19:54:06Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\bounded-context-map.md
+2026-08-07T19:54:16Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:54:16Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:54:17Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:54:37Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:54:38Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-07T19:54:38Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md

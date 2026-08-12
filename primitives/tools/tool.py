@@ -304,7 +304,7 @@ class _ToolsetLoader:
         parts = module_name.split(".")
         repo = Path(__file__).resolve().parents[2]
         search_roots = [repo] + [
-            repo / name for name in ("primitives", "utilities", "context_tools")
+            repo / name for name in ("primitives", "utilities", "context_tools", "context_tools/actions")
         ]
         module_file = None
         for root in search_roots:

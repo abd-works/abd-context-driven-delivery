@@ -1,1 +1,13 @@
-Completed successfully (exit code 0). The Bdd manifest was printed to stdout as fenced YAML (`type: bdd`, capabilities `tool` / `agent`, full `signature`). I set `PYTHONIOENCODING=utf-8` before running the command, per repo rules.Completed successfully (exit code 0). The Bdd manifest was printed to stdout as fenced YAML (`type: bdd`, capabilities `tool` / `agent`, full `signature`). I set `PYTHONIOENCODING=utf-8` before running the command, per repo rules.Completed successfully (exit code 0). The Bdd manifest was printed to stdout as fenced YAML (`type: bdd`, capabilities `tool` / `agent`, full `signature`). I set `PYTHONIOENCODING=utf-8` before running the command, per repo rules.
+Completed successfully (exit code 0).
+
+Stdout begins with `[manifest] ran context_tools.bdd.bdd:Bdd`, then the Bdd manifest as fenced YAML. I set `PYTHONIOENCODING=utf-8` before the command, per repo rules.
+
+Compared with your last run, the signature now includes tools `log_correction` and `log_mistake` (replacing `log_fix`), actions `generate_fixes_from_validate` and `improve`, updated `satisfy` instructions, and sub-agents `archive_mistakes` and `verify_regression`.Completed successfully (exit code 0).
+
+Stdout begins with `[manifest] ran context_tools.bdd.bdd:Bdd`, then the Bdd manifest as fenced YAML. I set `PYTHONIOENCODING=utf-8` before the command, per repo rules.
+
+Compared with your last run, the signature now includes tools `log_correction` and `log_mistake` (replacing `log_fix`), actions `generate_fixes_from_validate` and `improve`, updated `satisfy` instructions, and sub-agents `archive_mistakes` and `verify_regression`.Completed successfully (exit code 0).
+
+Stdout begins with `[manifest] ran context_tools.bdd.bdd:Bdd`, then the Bdd manifest as fenced YAML. I set `PYTHONIOENCODING=utf-8` before the command, per repo rules.
+
+Compared with your last run, the signature now includes tools `log_correction` and `log_mistake` (replacing `log_fix`), actions `generate_fixes_from_validate` and `improve`, updated `satisfy` instructions, and sub-agents `archive_mistakes` and `verify_regression`.

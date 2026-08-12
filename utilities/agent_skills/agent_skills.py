@@ -1,7 +1,7 @@
 # @toolset-manifest python -m tools manifest agent_skills.agent_skills:AgentSkills
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Deploy workspace toolsets as IDE shims - one skill per toolset."""
+"""Deploy workspace toolsets as IDE skill shims; action kits as commands/prompts."""
 from __future__ import annotations
 
 import ast
@@ -17,6 +17,12 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _STATE_FILE = Path(__file__).resolve().parent / ".deploy-state.json"
 
 _SKIP_DIRS = frozenset({"__pycache__", "examples", "primitives"})
+_WORKSPACE_SEARCH_DEPTH = 5
+
+
+def _home() -> Path:
+    """User home directory. Patchable in tests."""
+    return Path.home()
 
 _SHIM_TEMPLATE = """\
 ---
@@ -53,6 +59,138 @@ arguments:
 ```
 
 Read `examples/` before guessing any field shape.
+"""
+
+# Host lifecycle actions on BaseContextTool, backed by context_tools/actions/.
+# Deployed as Cursor commands / VS Code prompts — composable with a context-tool skill
+# (e.g. /cdd + /sketch → run the CDD toolset with action: sketch).
+_HOST_ACTION_COMMANDS: tuple[str, ...] = (
+    "sketch",
+    "iterate",
+    "grill",
+    "partition",
+    "repair",
+    "improve",
+)
+
+# Companion toolsets under context_tools/actions/ — not Base @actions; still get
+# IDE commands that run the companion in the current context-tool session frame.
+_COMPANION_ACTION_COMMANDS: tuple[tuple[str, str, str], ...] = (
+    # (command_slug, manifest_ref, class_name)
+    ("echo", "echo.echo:Echoer", "Echoer"),
+    ("handoff", "handoff.handoff:Handoff", "Handoff"),
+)
+
+# Skill slugs previously deployed for action packages — remove on deploy.
+_STALE_ACTION_SKILL_SLUGS: tuple[str, ...] = (
+    "sketch",
+    "iterate",
+    "grill-context",
+    "partition",
+    "repair",
+    "echo",
+    "handoff",
+    "workspace",
+)
+
+_CURSOR_ACTION_COMMAND_TEMPLATE = """\
+# {action}
+
+A context-tool skill is already in play (or invoke one first — e.g. /cdd, /bdd,
+/stories, /clean-engineering).
+
+Run **that** context tool with this action:
+
+```yaml
+toolset: <toolset from the context-tool skill already in play>
+action: {action}
+```
+
+Follow the context-tool skill's instructions: run its manifest, obey
+`response.instructions`, then invoke via `python -m tools run` with the YAML
+above (write `_req.yaml`, run, delete). Read `examples/` before guessing field
+shape. Constructor params (`fidelity`, `path`, `session`, …) come from the
+context-tool skill / session already in play.
+"""
+
+_VSCODE_ACTION_PROMPT_TEMPLATE = """\
+---
+description: "Run context-tool action: {action}"
+name: "{action}"
+argument-hint: "Describe what to {action}"
+agent: agent
+---
+
+# {action}
+
+A context-tool skill is already in play (or invoke one first — e.g. /cdd, /bdd,
+/stories, /clean-engineering).
+
+Run **that** context tool with this action:
+
+```yaml
+toolset: <toolset from the context-tool skill already in play>
+action: {action}
+```
+
+Follow the context-tool skill's instructions: run its manifest, obey
+`response.instructions`, then invoke via `python -m tools run` with the YAML
+above (write `_req.yaml`, run, delete). Read `examples/` before guessing field
+shape. Constructor params (`fidelity`, `path`, `session`, …) come from the
+context-tool skill / session already in play.
+"""
+
+_CURSOR_COMPANION_COMMAND_TEMPLATE = """\
+# {class_name}
+
+A context-tool skill/session is already in play. Run this companion toolset in
+that frame (same path / session / workspace as the context tool):
+
+```
+python -m tools manifest {toolset_ref}
+```
+
+Follow `response.instructions`. Invoke via `_req.yaml` + `python -m tools run`:
+
+```yaml
+toolset: {toolset_ref}
+context:
+  path: <active context-tool path>
+  session: <active session name>
+action: <action from this companion's manifest>
+```
+
+Delete the request file after the call. Read `examples/` before guessing field shape.
+"""
+
+_VSCODE_COMPANION_PROMPT_TEMPLATE = """\
+---
+description: "Run companion {class_name} in the current context-tool session"
+name: "{command_name}"
+argument-hint: "Describe what to do with {class_name}"
+agent: agent
+---
+
+# {class_name}
+
+A context-tool skill/session is already in play. Run this companion toolset in
+that frame (same path / session / workspace as the context tool):
+
+```
+python -m tools manifest {toolset_ref}
+```
+
+Follow `response.instructions`. Invoke via `_req.yaml` + `python -m tools run`:
+
+```yaml
+toolset: {toolset_ref}
+context:
+  path: <active context-tool path>
+  session: <active session name>
+action: <action from this companion's manifest>
+```
+
+Delete the request file after the call. Read `examples/` before guessing field shape.
 """
 
 _CURSOR_COMMAND_TEMPLATE = """\
@@ -117,7 +255,7 @@ action: {action}
 
 @toolset
 class AgentSkills:
-    """Deploy workspace toolsets - one skill per toolset."""
+    """Deploy context-tool skills + action commands/prompts for Cursor and VS Code."""
 
     # ------------------------------------------------------------------ #
     # Private helpers                                                      #
@@ -209,7 +347,7 @@ class AgentSkills:
             module_path = module_class.split(":")[0]
             parts = module_path.split(".")
             search_roots = [_REPO_ROOT] + [
-                _REPO_ROOT / name for name in ("primitives", "utilities", "context_tools")
+                _REPO_ROOT / name for name in ("primitives", "utilities", "context_tools", "context_tools/actions")
             ]
             for root in search_roots:
                 search = root
@@ -239,12 +377,23 @@ class AgentSkills:
         result["hooks"] = existing_hooks
         return result
 
+    def _actions_root(self) -> Path:
+        return _REPO_ROOT / "context_tools" / "actions"
+
+    def _is_under_actions(self, path: Path) -> bool:
+        """True when path lives under context_tools/actions/ (peer action kits)."""
+        try:
+            path.resolve().relative_to(self._actions_root().resolve())
+            return True
+        except ValueError:
+            return False
+
     def _should_skip(self, path: Path) -> bool:
         try:
             relative = path.relative_to(_REPO_ROOT)
         except ValueError:
             return True
-        if len(relative.parts) > 3:
+        if len(relative.parts) > 4:
             return True
         for part in relative.parts:
             if part in _SKIP_DIRS or part.startswith("_"):
@@ -279,9 +428,211 @@ class AgentSkills:
         )
         return enriched
 
+    def _path_variants(self, path: Path) -> list[Path]:
+        """Return absolute and resolve() forms when they differ (junction-aware)."""
+        variants: list[Path] = []
+        seen: set[Path] = set()
+        for form in (path.absolute(), path.resolve()):
+            if form not in seen:
+                seen.add(form)
+                variants.append(form)
+        return variants
+
+    def _iter_workspace_files(self) -> list[Path]:
+        """Find nearby *.code-workspace files by walking ancestors and siblings.
+
+        Starts from the repo root and the process cwd. Keeps both absolute and
+        resolve() forms so a junction checkout (c:\\dev -> OneDrive) still
+        discovers sibling workspaces like paradise-mobile/.
+        """
+        found: list[Path] = []
+        seen: set[Path] = set()
+
+        def _add(ws: Path) -> None:
+            resolved = ws.resolve()
+            if resolved not in seen:
+                seen.add(resolved)
+                found.append(resolved)
+
+        starts: list[Path] = []
+        start_seen: set[Path] = set()
+        for raw in [_REPO_ROOT, Path.cwd()]:
+            try:
+                for form in self._path_variants(raw):
+                    if form not in start_seen:
+                        start_seen.add(form)
+                        starts.append(form)
+            except OSError:
+                continue
+
+        for start in starts:
+            current = start
+            for _ in range(_WORKSPACE_SEARCH_DEPTH + 1):
+                for ws in sorted(current.glob("*.code-workspace")):
+                    _add(ws)
+                # Cousin layouts: parent/sibling/*.code-workspace (e.g. paradise-mobile/)
+                if current.parent != current:
+                    try:
+                        children = sorted(
+                            p for p in current.iterdir()
+                            if p.is_dir() and not p.name.startswith(".")
+                        )
+                    except OSError:
+                        children = []
+                    for child in children:
+                        for ws in sorted(child.glob("*.code-workspace")):
+                            _add(ws)
+                if current.parent == current:
+                    break
+                current = current.parent
+        return found
+
+    def _resolve_workspace_folders(self, workspace_file: Path) -> list[Path]:
+        """Resolve absolute folder paths from a VS Code/Cursor .code-workspace file."""
+        data = json.loads(workspace_file.read_text(encoding="utf-8"))
+        base = workspace_file.parent
+        folders: list[Path] = []
+        for entry in data.get("folders", []):
+            raw = entry.get("path")
+            if not raw:
+                continue
+            path = Path(raw)
+            folders.append(path.resolve() if path.is_absolute() else (base / path).resolve())
+        return folders
+
+    def _path_covers_repo(self, folder: Path, repo: Path) -> bool:
+        try:
+            if folder == repo or repo.is_relative_to(folder) or folder.is_relative_to(repo):
+                return True
+        except (ValueError, OSError):
+            pass
+        # Same checkout exposed via two roots (junction / OneDrive sync path)
+        try:
+            marker = Path("utilities") / "agent_skills" / "agent_skills.py"
+            folder_marker = folder / marker
+            repo_marker = repo / marker
+            if folder_marker.is_file() and repo_marker.is_file():
+                return folder_marker.samefile(repo_marker)
+        except OSError:
+            pass
+        return False
+
+    def _repo_identities(self) -> list[Path]:
+        """Repo roots that represent this checkout (module path + cwd checkout).
+
+        Keeps absolute and resolve() forms so junction checkouts match workspace
+        folder entries that still point at the logical c:\\dev path.
+        """
+        identities: list[Path] = []
+        seen: set[Path] = set()
+        marker = Path("utilities") / "agent_skills" / "agent_skills.py"
+
+        def _add(path: Path) -> None:
+            for form in self._path_variants(path):
+                if form not in seen:
+                    seen.add(form)
+                    identities.append(form)
+
+        _add(_REPO_ROOT)
+        repo_marker = _REPO_ROOT / marker
+        try:
+            cwd = Path.cwd()
+        except OSError:
+            return identities
+        for base in self._path_variants(cwd):
+            for candidate in [base, *base.parents]:
+                candidate_marker = candidate / marker
+                if not candidate_marker.is_file():
+                    continue
+                try:
+                    if not repo_marker.is_file() or not candidate_marker.samefile(repo_marker):
+                        break
+                except OSError:
+                    break
+                _add(candidate)
+                break
+        return identities
+
+    def _find_multi_folder_workspaces(self) -> list[dict]:
+        """Return every multi-folder workspace that includes this repo."""
+        repos = self._repo_identities()
+        matches: list[dict] = []
+        for ws_file in self._iter_workspace_files():
+            try:
+                folders = self._resolve_workspace_folders(ws_file)
+            except (OSError, json.JSONDecodeError, TypeError, ValueError):
+                continue
+            if len(folders) < 2:
+                continue
+            if any(
+                self._path_covers_repo(folder, repo)
+                for folder in folders
+                for repo in repos
+            ):
+                matches.append({
+                    "workspace_file": str(ws_file),
+                    "folders": [str(f) for f in folders],
+                    "shared_root": str(ws_file.parent.resolve()),
+                })
+        return matches
+
+    def _find_multi_folder_workspace(self) -> dict | None:
+        """Return the richest multi-folder workspace that includes this repo.
+
+        Prefers the match with the most folders (typical multi-root product
+        workspace over a smaller sibling workspace file).
+        """
+        matches = self._find_multi_folder_workspaces()
+        if not matches:
+            return None
+        return max(matches, key=lambda m: len(m["folders"]))
+
+    def _ide_config_roots(self, ide: str) -> list[Path]:
+        """IDE config roots (.cursor or .github) where shims should be written.
+
+        Always includes the repo root. For Cursor multi-folder workspaces, also
+        includes ~/.cursor (user-level, available in every project) and each
+        matching .code-workspace parent's .cursor (shared sibling layouts).
+        """
+        name = ".cursor" if ide == "cursor" else ".github"
+        roots: list[Path] = [_REPO_ROOT / name]
+        if ide == "cursor":
+            multis = self._find_multi_folder_workspaces()
+            if multis:
+                roots.append(_home() / ".cursor")
+                for multi in multis:
+                    roots.append(Path(multi["shared_root"]) / ".cursor")
+        deduped: list[Path] = []
+        seen: set[Path] = set()
+        for root in roots:
+            resolved = root.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            deduped.append(root)
+        return deduped
+
     # ------------------------------------------------------------------ #
     # Tools                                                                #
     # ------------------------------------------------------------------ #
+
+    @tool
+    def resolve_deploy_targets(self, ide: str = "cursor") -> str:
+        """Resolve where skill shims will be written for the given IDE.
+        Returns JSON with ide_config_roots, multi_folder_workspaces, and primary workspace."""
+        return json.dumps(
+            {
+                "ide": ide,
+                "repo_root": str(_REPO_ROOT),
+                "cwd": str(Path.cwd()),
+                "repo_identities": [str(p) for p in self._repo_identities()],
+                "workspace_files": [str(p) for p in self._iter_workspace_files()],
+                "multi_folder_workspaces": self._find_multi_folder_workspaces(),
+                "primary_multi_folder_workspace": self._find_multi_folder_workspace(),
+                "ide_config_roots": [str(p) for p in self._ide_config_roots(ide)],
+            },
+            indent=2,
+        )
 
     @tool
     def scan_toolsets(self) -> str:
@@ -334,11 +685,9 @@ class AgentSkills:
         """Write a skill shim SKILL.md with a hardcoded manifest call.
         ide=cursor -> .cursor/skills/{skill_slug}/SKILL.md
         ide=vscode -> .github/skills/{skill_slug}/SKILL.md
-        Returns the absolute path of the written file."""
-        base = ".cursor" if ide == "cursor" else ".github"
-        skill_dir = _REPO_ROOT / base / "skills" / skill_slug
-        skill_dir.mkdir(parents=True, exist_ok=True)
-        skill_md = skill_dir / "SKILL.md"
+        For Cursor multi-folder workspaces, also writes to ~/.cursor/skills and
+        the .code-workspace parent .cursor/skills.
+        Returns the absolute path of the primary (repo) written file."""
         safe_description = description.replace('"', "'")
         content = _SHIM_TEMPLATE.format(
             skill_slug=skill_slug,
@@ -347,8 +696,72 @@ class AgentSkills:
             toolset_ref=self._toolset_ref(manifest_command),
             description=safe_description,
         )
-        skill_md.write_text(content, encoding="utf-8")
-        return str(skill_md)
+        written: list[str] = []
+        for ide_root in self._ide_config_roots(ide):
+            skill_dir = ide_root / "skills" / skill_slug
+            skill_dir.mkdir(parents=True, exist_ok=True)
+            skill_md = skill_dir / "SKILL.md"
+            skill_md.write_text(content, encoding="utf-8")
+            written.append(str(skill_md))
+        return written[0]
+
+    @tool
+    def write_action_command(self, action: str, ide: str) -> str:
+        """Write a host-action command/prompt composable with a context-tool skill.
+        ide=cursor -> .cursor/commands/{action}.md
+        ide=vscode -> .github/prompts/{action}.prompt.md
+        For Cursor multi-folder workspaces, also writes to every deploy root.
+        Returns the absolute path of the primary (repo) written file."""
+        written: list[str] = []
+        for ide_root in self._ide_config_roots(ide):
+            if ide == "cursor":
+                target_dir = ide_root / "commands"
+                target_dir.mkdir(parents=True, exist_ok=True)
+                target = target_dir / f"{action}.md"
+                content = _CURSOR_ACTION_COMMAND_TEMPLATE.format(action=action)
+            else:
+                target_dir = ide_root / "prompts"
+                target_dir.mkdir(parents=True, exist_ok=True)
+                target = target_dir / f"{action}.prompt.md"
+                content = _VSCODE_ACTION_PROMPT_TEMPLATE.format(action=action)
+            target.write_text(content, encoding="utf-8")
+            written.append(str(target))
+        return written[0]
+
+    @tool
+    def write_companion_command(
+        self,
+        command_name: str,
+        toolset_ref: str,
+        class_name: str,
+        ide: str,
+    ) -> str:
+        """Write a companion toolset command/prompt for echo/handoff-style kits.
+        ide=cursor -> .cursor/commands/{command_name}.md
+        ide=vscode -> .github/prompts/{command_name}.prompt.md
+        Returns the absolute path of the primary (repo) written file."""
+        written: list[str] = []
+        for ide_root in self._ide_config_roots(ide):
+            if ide == "cursor":
+                target_dir = ide_root / "commands"
+                target_dir.mkdir(parents=True, exist_ok=True)
+                target = target_dir / f"{command_name}.md"
+                content = _CURSOR_COMPANION_COMMAND_TEMPLATE.format(
+                    class_name=class_name,
+                    toolset_ref=toolset_ref,
+                )
+            else:
+                target_dir = ide_root / "prompts"
+                target_dir.mkdir(parents=True, exist_ok=True)
+                target = target_dir / f"{command_name}.prompt.md"
+                content = _VSCODE_COMPANION_PROMPT_TEMPLATE.format(
+                    class_name=class_name,
+                    toolset_ref=toolset_ref,
+                    command_name=command_name,
+                )
+            target.write_text(content, encoding="utf-8")
+            written.append(str(target))
+        return written[0]
 
     @tool
     def write_focus_shortcut(
@@ -365,51 +778,58 @@ class AgentSkills:
         """Write a focus shortcut for an @focus action.
         ide=cursor -> .cursor/commands/{command_name}.md
         ide=vscode -> .github/prompts/{command_name}.prompt.md
-        Returns the absolute path of the written file."""
-        if ide == "cursor":
-            target_dir = _REPO_ROOT / ".cursor" / "commands"
-            target_dir.mkdir(parents=True, exist_ok=True)
-            target = target_dir / f"{command_name}.md"
-            content = _CURSOR_COMMAND_TEMPLATE.format(
-                class_name=class_name,
-                action=action,
-                focus_value=focus_value,
-                manifest_command=manifest_command,
-                toolset_ref=toolset_ref,
-                filter_key=filter_key,
-            )
-        else:
-            target_dir = _REPO_ROOT / ".github" / "prompts"
-            target_dir.mkdir(parents=True, exist_ok=True)
-            safe_description = f"{class_name} - {action} at {focus_value} fidelity".replace('"', "'")
-            target = target_dir / f"{command_name}.prompt.md"
-            content = _VSCODE_PROMPT_TEMPLATE.format(
-                class_name=class_name,
-                action=action,
-                focus_value=focus_value,
-                manifest_command=manifest_command,
-                toolset_ref=toolset_ref,
-                filter_key=filter_key,
-                command_name=command_name,
-                description=safe_description,
-            )
-        target.write_text(content, encoding="utf-8")
-        return str(target)
+        Returns the absolute path of the primary (repo) written file."""
+        written: list[str] = []
+        for ide_root in self._ide_config_roots(ide):
+            if ide == "cursor":
+                target_dir = ide_root / "commands"
+                target_dir.mkdir(parents=True, exist_ok=True)
+                target = target_dir / f"{command_name}.md"
+                content = _CURSOR_COMMAND_TEMPLATE.format(
+                    class_name=class_name,
+                    action=action,
+                    focus_value=focus_value,
+                    manifest_command=manifest_command,
+                    toolset_ref=toolset_ref,
+                    filter_key=filter_key,
+                )
+            else:
+                target_dir = ide_root / "prompts"
+                target_dir.mkdir(parents=True, exist_ok=True)
+                safe_description = f"{class_name} - {action} at {focus_value} fidelity".replace('"', "'")
+                target = target_dir / f"{command_name}.prompt.md"
+                content = _VSCODE_PROMPT_TEMPLATE.format(
+                    class_name=class_name,
+                    action=action,
+                    focus_value=focus_value,
+                    manifest_command=manifest_command,
+                    toolset_ref=toolset_ref,
+                    filter_key=filter_key,
+                    command_name=command_name,
+                    description=safe_description,
+                )
+            target.write_text(content, encoding="utf-8")
+            written.append(str(target))
+        return written[0]
 
     @tool
     def remove_focus_shortcut(self, command_name: str, ide: str) -> str:
         """Remove a deployed focus shortcut.
         ide=cursor -> .cursor/commands/{command_name}.md
         ide=vscode -> .github/prompts/{command_name}.prompt.md
-        Returns the removed path or 'not found: <path>'."""
-        if ide == "cursor":
-            target = _REPO_ROOT / ".cursor" / "commands" / f"{command_name}.md"
-        else:
-            target = _REPO_ROOT / ".github" / "prompts" / f"{command_name}.prompt.md"
-        if not target.exists():
-            return f"not found: {target}"
-        target.unlink()
-        return f"removed: {target}"
+        Removes from every configured deploy root. Returns a summary."""
+        results: list[str] = []
+        for ide_root in self._ide_config_roots(ide):
+            if ide == "cursor":
+                target = ide_root / "commands" / f"{command_name}.md"
+            else:
+                target = ide_root / "prompts" / f"{command_name}.prompt.md"
+            if not target.exists():
+                results.append(f"not found: {target}")
+                continue
+            target.unlink()
+            results.append(f"removed: {target}")
+        return "\n".join(results)
 
     @tool
     def save_state(
@@ -422,13 +842,21 @@ class AgentSkills:
         """Persist last deploy parameters to .deploy-state.json next to this file.
         deployed_skills is a JSON array of skill_slug strings.
         deployed_commands is a JSON array of command_name strings.
+        Also stores resolved deploy_roots for multi-folder cleanup.
         Returns the state file path."""
         state = {
             "ide": ide,
             "name_filter": name_filter,
             "deployed": json.loads(deployed_skills),
             "deployed_commands": json.loads(deployed_commands),
+            "deploy_roots": [str(r) for r in self._ide_config_roots(ide)],
         }
+        multi = self._find_multi_folder_workspace()
+        if multi:
+            state["multi_folder_workspace"] = multi
+        multis = self._find_multi_folder_workspaces()
+        if multis:
+            state["multi_folder_workspaces"] = multis
         _STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
         return str(_STATE_FILE)
 
@@ -445,46 +873,58 @@ class AgentSkills:
         """Deploy primitives/tools/hooks/manifest-gate.json to the IDE hooks location.
         ide=cursor -> merges into .cursor/hooks.json (creates if absent).
         ide=vscode -> copies to .github/hooks/manifest-gate.json.
-        Returns the path written, or 'not found: <path>' if the source is missing."""
+        For Cursor multi-folder workspaces, merges into every deploy root.
+        Returns the paths written, or 'not found: <path>' if the source is missing."""
         source = _REPO_ROOT / "primitives" / "tools" / "hooks" / "manifest-gate.json"
         if not source.exists():
             return f"not found: {source}"
         gate_config = json.loads(source.read_text(encoding="utf-8"))
-        if ide == "cursor":
-            target = _REPO_ROOT / ".cursor" / "hooks.json"
-            target.parent.mkdir(parents=True, exist_ok=True)
-            existing = json.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
-            merged = self._merge_hooks(existing, gate_config)
-            target.write_text(json.dumps(merged, indent=2), encoding="utf-8")
-            return str(target)
-        else:
-            target = _REPO_ROOT / ".github" / "hooks" / "manifest-gate.json"
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
-            return str(target)
+        written: list[str] = []
+        for ide_root in self._ide_config_roots(ide):
+            if ide == "cursor":
+                target = ide_root / "hooks.json"
+                target.parent.mkdir(parents=True, exist_ok=True)
+                existing = json.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
+                merged = self._merge_hooks(existing, gate_config)
+                target.write_text(json.dumps(merged, indent=2), encoding="utf-8")
+                written.append(str(target))
+            else:
+                target = ide_root / "hooks" / "manifest-gate.json"
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+                written.append(str(target))
+        return "\n".join(written)
 
     @tool
     def remove_skill_shim(self, skill_slug: str, ide: str) -> str:
         """Remove .cursor/skills/{skill_slug}/ (ide=cursor) or .github/skills/{skill_slug}/ (ide=vscode).
-        Returns the removed path or 'not found: <path>'."""
+        Removes from every configured deploy root. Returns a summary."""
         import shutil
         import subprocess
-        base = ".cursor" if ide == "cursor" else ".github"
-        skill_dir = _REPO_ROOT / base / "skills" / skill_slug
-        if not skill_dir.exists():
-            return f"not found: {skill_dir}"
-        try:
-            shutil.rmtree(skill_dir)
-        except OSError:
-            subprocess.run(
-                ["powershell", "-Command", f"Remove-Item -LiteralPath '{skill_dir}' -Recurse -Force"],
-                check=True,
-            )
-        return f"removed: {skill_dir}"
+        results: list[str] = []
+        for ide_root in self._ide_config_roots(ide):
+            skill_dir = ide_root / "skills" / skill_slug
+            if not skill_dir.exists():
+                results.append(f"not found: {skill_dir}")
+                continue
+            try:
+                shutil.rmtree(skill_dir)
+            except OSError:
+                subprocess.run(
+                    ["powershell", "-Command", f"Remove-Item -LiteralPath '{skill_dir}' -Recurse -Force"],
+                    check=True,
+                )
+            results.append(f"removed: {skill_dir}")
+        return "\n".join(results)
 
     def _deploy_entries(self, entries: list[dict], ide: str) -> tuple[list[str], list[str]]:
         deployed_skills: list[str] = []
+        deployed_commands: list[str] = []
         for entry in entries:
+            if self._is_under_actions(Path(entry["file_path"])):
+                # Action kits → commands/prompts only, never standalone skills.
+                self.remove_skill_shim(skill_slug=entry["skill_slug"], ide=ide)
+                continue
             self.write_skill_shim(
                 skill_slug=entry["skill_slug"],
                 manifest_command=entry["manifest_command"],
@@ -495,13 +935,26 @@ class AgentSkills:
             deployed_skills.append(entry["skill_slug"])
             for stale_slug in entry.get("stale_focus_skill_slugs", []):
                 self.remove_skill_shim(skill_slug=stale_slug, ide=ide)
-            # Drop legacy per-focusxaction commands/prompts - not a good IDE fit.
+            # Drop legacy per-focus×action commands/prompts - not a good IDE fit.
             for shortcut in entry.get("focus_shortcuts", []):
                 self.remove_focus_shortcut(
                     command_name=shortcut["command_name"],
                     ide=ide,
                 )
-        return deployed_skills, []
+        for stale_slug in _STALE_ACTION_SKILL_SLUGS:
+            self.remove_skill_shim(skill_slug=stale_slug, ide=ide)
+        for action in _HOST_ACTION_COMMANDS:
+            self.write_action_command(action=action, ide=ide)
+            deployed_commands.append(action)
+        for command_name, toolset_ref, class_name in _COMPANION_ACTION_COMMANDS:
+            self.write_companion_command(
+                command_name=command_name,
+                toolset_ref=toolset_ref,
+                class_name=class_name,
+                ide=ide,
+            )
+            deployed_commands.append(command_name)
+        return deployed_skills, deployed_commands
 
     @action
     def deploy_tools_as_skills(self, name_filter: str, ide: str) -> str:
@@ -511,13 +964,19 @@ class AgentSkills:
         self.scan_toolsets()
         """Step 3 - Apply name_filter: keep entries whose module_dir or skill_slug contains it; skip if filter is empty (= all)."""
         """Step 4 - Present the filtered list of skills and ask the user to confirm before writing."""
-        """Step 5 - For each confirmed entry: write one skill shim, remove stale per-focus skill shims and legacy focus commands."""
+        """Step 5 - For each confirmed entry under context_tools/ or utilities/: write one skill shim; skip context_tools/actions/ (those become commands). Cursor multi-folder: repo + ~/.cursor + workspace-parent .cursor. Remove stale per-focus skill shims and legacy focus commands."""
         self.write_skill_shim()
+        """Step 5b - For each host lifecycle action (sketch, iterate, grill, partition, repair, improve): write Cursor command or VS Code prompt that runs the context tool already in play with action: <name>. For companions (echo, handoff): write companion commands. Remove stale action-package skill shims."""
+        self.write_action_command()
+        self.write_companion_command()
         """Step 6 - Call deploy_hooks(ide) to install hooks/manifest-gate.json into the IDE hooks location."""
         self.deploy_hooks()
-        """Step 7 - Call save_state with ide, name_filter, deployed skill_slugs, and empty deployed_commands."""
+        """Step 7 - Call save_state with ide, name_filter, deployed skill_slugs, and deployed action command names."""
         self.save_state()
-        return "IDE shims written. Hooks deployed. State saved. Reload the IDE to pick them up."
+        return (
+            "IDE skill shims written. Context-tool action commands/prompts written. "
+            "Hooks deployed. State saved. Reload the IDE to pick them up."
+        )
 
     @tool
     def deploy_again(self) -> str:
@@ -548,7 +1007,17 @@ class AgentSkills:
             deployed_skills=json.dumps(deployed_skills),
             deployed_commands=json.dumps(deployed_commands),
         )
-        return f"Re-deployed {len(deployed_skills)} skill(s): {', '.join(deployed_skills)}."
+        roots = ", ".join(str(r) for r in self._ide_config_roots(ide))
+        multi = self._find_multi_folder_workspace()
+        multi_note = (
+            f" Multi-folder workspace detected ({Path(multi['workspace_file']).name})."
+            if multi and ide == "cursor"
+            else ""
+        )
+        return (
+            f"Re-deployed {len(deployed_skills)} skill(s): {', '.join(deployed_skills)}."
+            f"{multi_note} Roots: {roots}."
+        )
 
     @tool
     def clean_skills(self) -> str:

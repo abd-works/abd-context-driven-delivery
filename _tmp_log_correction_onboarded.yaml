@@ -1,0 +1,11 @@
+﻿toolset: context_tools.cdd.cdd:Cdd
+tool: log_correction
+context:
+  fidelity: discovery
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  entry_id: 2775a352
+  improved: |
+    Customer now has onboarded: boolean; removed #### Onboard and metadata.onboard from DDD sketch.
+  status: fixed

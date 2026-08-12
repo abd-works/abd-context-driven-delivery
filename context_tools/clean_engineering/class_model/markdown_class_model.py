@@ -341,26 +341,86 @@ def _parse_class(name: str, body: str, order: int, cls: type) -> OoadClass:
     props_text = parts4[0] if parts4 else ""
     ops_text = parts4[1] if len(parts4) > 1 else ""
 
+    props, rels = _parse_properties_and_relationships(props_text)
     return cls(
         name=name,
         sequential_order=order,
         intent=intent,
-        properties=_parse_properties(props_text),
+        properties=props,
         operations=_parse_operations(ops_text),
+        relationships=rels,
     )
 
 
-def _parse_properties(text: str) -> List[Property]:
-    props = []
+_CE_STEREOTYPE_KINDS = {
+    "composition": "composition",
+    "aggregation": "aggregation",
+    "association": "association",
+}
+
+
+def _strip_ce_prefix(line: str) -> tuple[str, str | None]:
+    """Strip CE OOAD format prefix from a property/operation line.
+
+    Handles lines like:
+      + << composition >> identity: Identity
+      + name: string
+      + save(): void
+      - privateOp(): void
+    Returns (bare_line, stereotype_kind | None).
+    stereotype_kind is one of "composition", "aggregation", "association" or None.
+    """
+    # Strip leading "+" (public) visibility marker used in CE OOAD markdown
+    if line.startswith("+"):
+        line = line[1:].strip()
+    # Extract and strip UML stereotype annotation like "<< composition >>"
+    kind: str | None = None
+    m = re.match(r"^<<\s*(\w+)\s*>>\s*", line)
+    if m:
+        raw_kind = m.group(1).lower()
+        kind = _CE_STEREOTYPE_KINDS.get(raw_kind)
+        line = line[m.end():].strip()
+    return line, kind
+
+
+def _parse_properties_and_relationships(text: str) -> tuple[List[Property], List[Relationship]]:
+    """Parse properties AND extract Relationship objects from CE OOAD stereotype annotations.
+
+    A line like ``+ << composition >> identity: Identity`` produces both a
+    Property(name="identity", type_hint="Identity") and a
+    Relationship(kind="composition", target="Identity").
+    """
+    props: List[Property] = []
+    rels: List[Relationship] = []
     for line in text.splitlines():
         stripped = line.strip()
-        if not stripped or stripped.startswith("#") or stripped.startswith("-{"):
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.startswith("//") or stripped.startswith("->"):
+            continue
+        stripped, rel_kind = _strip_ce_prefix(stripped)
+        if not stripped:
+            continue
+        # Skip lines that look like operations
+        if re.match(r"^_?\w+\s*\(", stripped):
             continue
         m = re.match(r"^(\w+):\s*(.+)", stripped)
         if m:
-            props.append(Property(name=m.group(1), type_hint=m.group(2).strip()))
+            prop_name = m.group(1)
+            # Strip array marker and optional suffix (e.g. "Subscription[]" → "Subscription")
+            type_raw = m.group(2).strip()
+            # Remove trailing " | null" or "| None" suffix for relationship target resolution
+            type_clean = re.split(r"\s*\|", type_raw)[0].strip().rstrip("[]").strip()
+            props.append(Property(name=prop_name, type_hint=type_raw))
+            if rel_kind and type_clean and re.match(r"^[A-Z]\w*$", type_clean):
+                rels.append(Relationship(kind=rel_kind, target=type_clean))
         elif re.match(r"^\w+$", stripped):
             props.append(Property(name=stripped))
+    return props, rels
+
+
+def _parse_properties(text: str) -> List[Property]:
+    props, _ = _parse_properties_and_relationships(text)
     return props
 
 
@@ -370,8 +430,14 @@ def _parse_operations(text: str) -> List[Operation]:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
+        # Skip comment / implementation-note lines
+        if stripped.startswith("//") or stripped.startswith("->"):
+            continue
+        # CE format uses "-" prefix for private ops; standard format already handles it
         private = stripped.startswith("- ")
         body = stripped[2:].strip() if private else stripped
+        # Strip CE OOAD "+" visibility marker (and any stereotype, discarded for ops)
+        body, _ = _strip_ce_prefix(body)
         m = re.match(r"^(_?\w+)\(([^)]*)\)(?::\s*(.+))?", body)
         if m:
             op_name = ("_" if private and not m.group(1).startswith("_") else "") + m.group(1)

@@ -21,7 +21,11 @@
 - Resource `active`; instruction `session_guidance`
 - Class knobs: `default_workspace_folder`, `context_index_key`
 - Lifecycle actions: `generate`, `validate`, `satisfy`, `document`, `grill`, `sketch`, `iterate`, `generate_output`, `add_generate_header_to_generated`
+- Eval capture: `self.eval` (`eval.Session`); `@log` → `record_tool_call`; `log_mistake` / `log_correction` dual-write to eval; `finish_eval_turn` for the chat-reply boundary
 
 ## Dependencies
 
-Session (composed via `workspace()`), Scan (composed instances); Sketcher, GrillContext, Iterator, RecordDecisions (composed); PartitionPipeline, Repair (methods injected by explicit binding — not MI; prose lookup stays in their source dirs)
+Session / workspace kits under `context_tools/actions/workspace`; Scan under
+`utilities/scanners`; Sketcher, GrillContext, Iterator, Partition, Repair under
+`context_tools/actions/`; RecordDecisions under `utilities/record_decisions`
+(composed via providers — not MI; prose lookup stays in their source dirs)

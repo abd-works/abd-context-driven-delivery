@@ -11,7 +11,7 @@ _PKG_ROOT = Path(__file__).resolve().parent
 _REPO_ROOT = _PKG_ROOT.parent.parent
 _SECRETS_FILE = _PKG_ROOT / "conf" / ".secrets"
 
-_CATEGORY_DIRS = ("primitives", "utilities", "context_tools")
+_CATEGORY_DIRS = ("primitives", "utilities", "context_tools", "context_tools/actions")
 
 
 def _load_secrets(path: Path | None = None) -> None:
