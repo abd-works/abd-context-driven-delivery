@@ -127,7 +127,7 @@ All four are collapsible/expandable `<details>`, open by default for (1) and clo
 | 9 | `repair` | `utilities/repair/` | none (calls `self.scan()`, tool) | ✅ `[repair.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\repair\repair.md)` | ✅ `[module-context.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\repair\.context\module-context.md)` | ✅ `[repair.py](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\repair\repair.py)` |
 | 10 | `improve` | `utilities/repair/` | none (calls `self.repairer.improve()`) | ✅ `[improve.md](c:\dev\abd-works-repo\abd-context-driven-delivery\utilities\repair\improve.md)` | ✅ same as `repair` | ✅ same as `repair` |
 
-Skipped (override hooks, not top-level lifecycle actions): `generate_output`, `add_generate_header_to_generated`.
+Skipped (override hooks, not top-level lifecycle actions): `generate_output`, `add_generate_header_to_generated`, `generate_fixes_from_validate`.
 
 Generator resolves the source dir by walking the `@action` body (delegate call → peer kit dir under `utilities/{name}/`) or, for actions with no delegate call (`generate`, `document`, `validate`, `satisfy`), falls back to `context_tools/base/`. Same walk collects same-instance `self.<other_public_action>()` calls for section 1, and probes the two fixed filenames (`{action}.md` preferred over `{dirname}.md` when both exist — so `improve` gets `improve.md` while sharing `utilities/repair/` with `repair`), plus `.context/module-context.md` and the single main `{dirname}.py` for sections 2–4. `@tool` calls (`scan`, `log_mistake`, `log_correction`, session tools) go in section 1 as plain text — they are not hyperlinked because there is no catalog page for them, not omitted from the list.
 

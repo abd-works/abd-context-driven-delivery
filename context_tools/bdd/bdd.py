@@ -81,6 +81,7 @@ class Bdd(BaseContextTool):
         session: str | None = None,
         workspace: str | None = None,
     ) -> None:
+        fidelity = type(self).resolve_fidelity(fidelity)
         resolved_format = _resolve_format(fidelity, format)
         super().__init__(
             format=resolved_format, path=path, session=session, workspace=workspace

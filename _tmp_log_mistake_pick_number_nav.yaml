@@ -1,0 +1,12 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+tool: log_mistake
+context:
+  fidelity: code
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  artifact: tests/onboard-a-customer/pick-number.md
+  rule: (process) reconcile-live-against-sandbox
+  wrong: Staging spec said prospect proceeds to /onboarding/select-plan after picking a number; live app navigates to /onboarding/select-sim via useReserveNumber.ts navigate('../onboarding/select-sim').
+  original: |
+    Then they proceed to /onboarding/select-plan

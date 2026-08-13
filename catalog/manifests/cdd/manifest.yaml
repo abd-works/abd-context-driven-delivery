@@ -46,6 +46,15 @@ signature:
       contexts: str
       path: str
     returns: str
+  finish_eval_turn:
+    kind: tool
+    instructions: Close the open eval Turn at the chat-reply boundary (hook/host calls
+      once).
+    parameters:
+      prompt: str
+      result: str
+      context: str
+    returns: str
   log_correction:
     kind: tool
     parameters:
@@ -91,6 +100,7 @@ signature:
   document:
     kind: action
     tools: []
+    instructions: Invoke each stage child's document as its own tools run.
     parameters:
       paths: list[str]
     returns: str
@@ -130,13 +140,20 @@ signature:
       \ in your instructions when present.\n8. Run **validate**. If it fails, fix\
       \ the artifact and **validate** again until it passes.\n\n---"
     returns: str
+  generate_fixes_from_validate:
+    kind: action
+    tools:
+    - generate_output
+    returns: str
   generate_output:
     kind: action
     tools: []
+    instructions: Invoke each stage child's generate as its own tools run.
     returns: str
   grill:
     kind: action
     tools: []
+    instructions: Inline each stage child's grill (high-level Q&A only).
     returns: str
   improve:
     kind: action
@@ -145,6 +162,7 @@ signature:
   iterate:
     kind: action
     tools: []
+    instructions: Invoke each stage child's iterate as its own tools run.
     returns: str
   partition:
     kind: action
@@ -164,14 +182,17 @@ signature:
   satisfy:
     kind: action
     tools: []
+    instructions: Invoke each stage child's satisfy as its own tools run.
     returns: str
   sketch:
     kind: action
     tools: []
+    instructions: Inline each stage child's sketch (high-level shape only).
     returns: str
   validate:
     kind: action
     tools: []
+    instructions: Invoke each stage child's validate as its own tools run.
     returns: str
   archive_mistakes:
     kind: sub_agent

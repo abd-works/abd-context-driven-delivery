@@ -530,6 +530,45 @@ with description("BaseContextTool stage constants"):
 
 
 # ---------------------------------------------------------------------------
+# resolve_fidelity — stage command names → concrete fidelities
+# ---------------------------------------------------------------------------
+
+with description("BaseContextTool.resolve_fidelity"):
+    with context("on Stories"):
+        with it("should map discovery to story_map"):
+            expect(Stories.resolve_fidelity("discovery")).to(equal("story_map"))
+
+        with it("should map specification to scenarios"):
+            expect(Stories.resolve_fidelity("specification")).to(equal("scenarios"))
+
+        with it("should map engineering to acceptance_tests"):
+            expect(Stories.resolve_fidelity("engineering")).to(equal("acceptance_tests"))
+
+        with it("should leave a concrete fidelity unchanged"):
+            expect(Stories.resolve_fidelity("story_map")).to(equal("story_map"))
+
+    with context("on CleanEngineering"):
+        with it("should map discovery to modules"):
+            expect(CleanEngineering.resolve_fidelity("discovery")).to(equal("modules"))
+
+        with it("should map specification to model"):
+            expect(CleanEngineering.resolve_fidelity("specification")).to(equal("model"))
+
+        with it("should map engineering to code"):
+            expect(CleanEngineering.resolve_fidelity("engineering")).to(equal("code"))
+
+    with context("constructors accepting stage names"):
+        with it("should construct Stories with fidelity discovery"):
+            expect(Stories(fidelity="discovery").fidelity).to(equal("story_map"))
+
+        with it("should construct CleanEngineering with fidelity specification"):
+            expect(CleanEngineering(fidelity="specification").fidelity).to(equal("model"))
+
+        with it("should construct Ux with fidelity engineering"):
+            expect(Ux(fidelity="engineering").fidelity).to(equal("front_end_code"))
+
+
+# ---------------------------------------------------------------------------
 # fidelities class variable — per tool
 # ---------------------------------------------------------------------------
 

@@ -72,6 +72,7 @@ class CleanEngineering(BaseContextTool):
                 "every stage. Use fidelity 'modules' (after partition), then 'model', "
                 f"'specification', or 'code'. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
             )
+        fidelity = type(self).resolve_fidelity(fidelity)
         if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
             raise ValueError(
                 f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"

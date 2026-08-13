@@ -78,16 +78,18 @@
 <section class="install-block fidelity-guidance" data-fidelity="code" aria-label="Fidelity guidance"><h2>Overview</h2>
 <p>Deepen OO design from modules toward production code. Each fidelity <strong>adds</strong> artifacts — do not invent detail from a deeper level.</p>
 <p><strong>Progression:</strong> <code>partition</code> (action) → <strong>scaffold</strong> → <strong>modules</strong> → <strong>model</strong> → <strong>code</strong>.</p>
+<p><strong>Interfaces (<code>I{Class}</code>) are optional, not automatic.</strong> See <code>## model</code> § Interfaces for the trigger — ask for one, or a genuine multi-layer/multi-implementation seam.</p>
 <hr>
 <h2>code</h2>
 <p><strong>Default format:</strong> Python</p>
-<p><strong>Goal:</strong> Two phases in one fidelity — first lock down the typed contracts (<code>Class(I{Class})</code>), then wire the full production implementation. <code>I{Class}</code> stays as the stable seam throughout.</p>
+<p><strong>Goal:</strong> Two phases in one fidelity — first lock down the typed contracts (<code>Class(I{Class})</code> when an interface was requested at model, otherwise the <code>Class</code> stub already in place from model), then wire the full production implementation. When an <code>I{Class}</code> exists it stays as the stable seam throughout; when it does not, <code>Class</code> itself is the seam.</p>
 <p>A vertical is not at <strong>code</strong> fidelity while it still depends on a mockup / Story Demo shell as the only UI, or on in-memory / fake factories as the only &quot;backend.&quot; <strong>Code</strong> means real backend <strong>and</strong> real frontend (UX <strong>code</strong> fidelity) — not greybox + demo domain alone.</p>
 <h3>Phase 1 — typed contracts</h3>
 <ul>
-<li>Add <code>Class(I{Class})</code> (Java: <code>implements I{Class}</code>) in the <strong>same file</strong> as <code>I{Class}</code>. Do <strong>not</strong> fill out <code>I{Class}</code> or add private members to it.</li>
+<li><strong>When an <code>I{Class}</code> interface was requested at model</strong> (interfaces are optional — see <code>## model</code> § Interfaces): add <code>Class(I{Class})</code> (Java: <code>implements I{Class}</code>) in the <strong>same file</strong> as <code>I{Class}</code>. Do <strong>not</strong> fill out <code>I{Class}</code> or add private members to it.</li>
+<li><strong>When no interface was requested:</strong> skip that step — the empty <code>Class</code> stub already exists from <strong>model</strong> fidelity in its own family file; continue directly onto it.</li>
 <li>On <code>Class</code>: implement public properties and operations; add private properties/operations as <strong>empty interfaces</strong> (<code>...</code> / <code>@abstractmethod</code>); add each relationship with its <strong>kind</strong> (composition / aggregation / association) and <strong>cardinality</strong> (e.g. <code>1..*</code>, <code>0..1</code>); invariants as <strong>comments</strong> (not methods) — formalizing any named at <code>## model</code> § Invariants, or newly introduced here.</li>
-<li>Interactions: <code>@interaction</code> abstract methods on <code>Class</code> (not on <code>I{Class}</code>) — formalizing any named at <code>## model</code> § Interactions, or newly introduced here.</li>
+<li>Interactions: <code>@interaction</code> abstract methods on <code>Class</code> (never on <code>I{Class}</code>, whether or not one exists) — formalizing any named at <code>## model</code> § Interactions, or newly introduced here.</li>
 <li>Complete <code>{Type}ExampleFactory</code> — fill in Fake, Isolated, and Production modes per the <strong>Example factories</strong> pattern in <code>## model</code>.</li>
 <li>Add context sections: <strong>Participants</strong>, <strong>Public API</strong>, <strong>Internal design</strong>, <strong>Domain separation</strong>, optional <strong>Mechanism</strong> (variation points / fixed parts).</li>
 <li>Edit the same <code>.context/module-context.md</code> — do not create parallel context files.</li>
@@ -100,7 +102,7 @@
 <li>Wire <strong>Production</strong> collaborators — real persistence, services, and cross-module dependencies — not Fake-mode stubs as the shipping path.</li>
 <li>Drop <code>@interaction</code> methods — not needed once implemented.</li>
 <li>Keep invariants as <strong>comments</strong>.</li>
-<li>Leave <code>I{Class}</code> in place for the public seam and for hand-written test fakes.</li>
+<li>If an <code>I{Class}</code> exists, leave it in place for the public seam and for hand-written test fakes; if it does not, <code>Class</code> itself remains the seam.</li>
 <li>Add exceptions, named constants, private helpers as needed.</li>
 <li>Edit so language-companion prose stays as the class docstring — implementations sit beneath intent, they do not replace it.</li>
 <li>Edit so the implemented public surface matches the seam already designed — a short caller-facing API with real behaviour behind it, still living in the module folder.</li>
@@ -122,7 +124,7 @@
 <li><strong><code>never-swallow-exceptions</code></strong> — Log and re-raise or convert; never bare swallow.</li>
 <li><strong><code>stop-writing-useless-comments</code></strong> — Comments explain <strong>why</strong>, not <strong>what</strong>.</li>
 </ul></section>
-<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>python</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/99e466ee89549a00a7e14582e440fc3d35f5fc64/context_tools/clean_engineering/templates/clean_engineering-templates.py">templates/clean_engineering-templates.py</a></p><pre class="code-fence"><code class="language-py">&quot;&quot;&quot;
+<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>python</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/4d01623dadcd0a757141f9f54c96dab611b3b557/context_tools/clean_engineering/templates/clean_engineering-templates.py">templates/clean_engineering-templates.py</a></p><pre class="code-fence"><code class="language-py">&quot;&quot;&quot;
 # @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
@@ -130,12 +132,20 @@
 
 CleanEngineering Python template - two files when Stories-bound:
 
-    {family_slug}.py                 - I{Class} + {Class} (+ subtypes)   PRODUCTION
-    {type_slug}_example_factory.py   - I{Class}ExampleFactory + factory  SEPARATE
+    {family_slug}.py                 - (I{Class} +) {Class} (+ subtypes)   PRODUCTION
+    {type_slug}_example_factory.py   - (I{Class}ExampleFactory +) factory  SEPARATE
 
-A production file holds the public seam I{Class}, the production Class that
-extends it, subtypes, and tightly connected peers. Not one class per file.
-Example factories are NEVER in that file (example-factory-separate-file).
+INTERFACES ARE OPTIONAL (see clean_engineering.md SS Interfaces). I{Class} and
+I{Class}ExampleFactory below are shown because this is the richer case to document -
+default to OMITTING both and stubbing {Class} / {Class}ExampleFactory directly
+(empty bodies at Md, filled at S/C, no ABC base needed) unless the user asked for an
+interface, or the module genuinely has multiple layers/implementations behind one
+seam. The two decisions (domain type vs. factory) are independent.
+
+A production file holds the public seam (I{Class} when one exists), the production
+Class that extends it (or stands alone when no interface exists), subtypes, and
+tightly connected peers. Not one class per file. Example factories are NEVER in
+that file (example-factory-separate-file).
 
 Layout (physical-folder): write each file under the **module** folder
 (e.g. {module_slug}/{family_slug}.py). Module context:
@@ -144,8 +154,8 @@ Layout (physical-folder): write each file under the **module** folder
 Naming:
     File (production)  {family_slug}.py
     File (factory)     {type_slug}_example_factory.py
-    Interface          I{Class}                (public seam; model fidelity)
-    Class              {Class}(I{Class})       (production; specification+)
+    Interface          I{Class}                (OPTIONAL - public seam only when requested; model fidelity)
+    Class              {Class}(I{Class})       (production; drop &quot;(I{Class})&quot; when no interface exists)
     ExampleFactory     {Class}ExampleFactory   (plain class; no Loader base; Md+/S+)
     Modes              Fake | Isolated | Production  (factory behavior - not subclasses)
     Property           {owned_property}, ...     (snake_case slots)
@@ -158,9 +168,11 @@ Naming:
 Fidelity tags:
     L  = language companion (prose; refined every stage - not a fidelity)
     Mu = modules       (thin terms, one-way deps, build order - markdown / module-context)
-    Md = model         (I{Class} only - empty public props/ops; optional I{Class}ExampleFactory in factory file)
-    S  = specification (Class extends I{Class}; public filled; privates empty on Class;
-                       {Class}ExampleFactory modes in sibling factory file when Stories-bound)
+    Md = model         (empty public props/ops directly on Class by default; I{Class} - and
+                       optional I{Class}ExampleFactory in factory file - only when requested)
+    S  = specification (Class extends I{Class} when one exists, else stands alone; public
+                       filled; privates empty on Class; {Class}ExampleFactory modes in
+                       sibling factory file when Stories-bound)
     C  = code          (fill remaining empties on Class; drop interactions)
 &quot;&quot;&quot;
 
@@ -173,6 +185,10 @@ from abc import ABC, abstractmethod
 # =============================================================================
 
 
+# OPTIONAL - omit this whole class by default. Only add I{ClassName} when the
+# user requested an interface, or {ClassName} has multiple layers/implementations
+# behind one seam. Otherwise skip straight to `class {ClassName}:` below with the
+# same empty (# Md) bodies, and drop `(I{ClassName})` from its base list.
 class I{ClassName}(ABC):                                                # Md
     &quot;&quot;&quot;*{ClassName}* is - one sentence: what it is, its unique role.
     Identity only. No relationship or behavior sentences here.&quot;&quot;&quot;     # L
@@ -200,6 +216,8 @@ class I{ClassName}(ABC):                                                # Md
 
 
 class {ClassName}(I{ClassName}):                                        # S
+    # Drop &quot;(I{ClassName})&quot; above when no interface exists - {ClassName} then
+    # carries the # Md empty-body members itself instead of inheriting them.
     &quot;&quot;&quot;*{ClassName}* is - one sentence: what it is, its unique role.&quot;&quot;&quot;  # L
 
     # -- Public properties (filled at specification) -------------------------
@@ -272,6 +290,8 @@ class {ChildClass}({ClassName}, I{ChildClass}):                         # S
 # =============================================================================
 
 
+# OPTIONAL - same opt-in rule as I{ClassName} above; omit by default and go
+# straight to `class {ClassName}ExampleFactory:` below.
 class I{ClassName}ExampleFactory(ABC):                                  # Md
     &quot;&quot;&quot;Loads examples[{example_key}] as Fake | Isolated | Production modes.&quot;&quot;&quot;  # L
 
@@ -280,6 +300,7 @@ class I{ClassName}ExampleFactory(ABC):                                  # Md
 
 
 class {ClassName}ExampleFactory(I{ClassName}ExampleFactory):            # S
+    # Drop &quot;(I{ClassName}ExampleFactory)&quot; above when no interface exists.
     &quot;&quot;&quot;Fake: mock framework + examples; Isolated: {ClassName}(injected mocks);
     Production: {ClassName}(real collaborators).&quot;&quot;&quot;                     # L
 

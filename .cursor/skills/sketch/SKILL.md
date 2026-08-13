@@ -1,34 +1,39 @@
 ---
 name: sketch
-description: "Sketch a solution interactively before generating the formal artifact."
+description: "Run the in-scope context tool's sketch action."
 disable-model-invocation: true
 ---
 
-# Sketcher
+# sketch
 
-Run the manifest to load tools, actions, and instructions:
+Do not run this as its own toolset.
 
-```
-python -m tools manifest sketch.sketch:Sketcher
-```
-
-Follow `response.instructions` before doing anything else. Invoke tools by writing
-the request to a YAML file (e.g. `_req.yaml`) and running:
+**Step 1 — Identify the context tool.**
+Check whether a context tool is already in scope — passed in (path / session / toolset) or named in this chat. If one is found, use it. If not, use the `AskQuestion` tool to let the user choose:
 
 ```
-python -m tools run _req.yaml
+Question: "Which context tool should run `sketch`?"
+Options:
+  - /cdd — orchestrate all child tools at one stage
+  - /stories — who does what, in what sequence
+  - /clean-engineering — module boundaries and OO design
+  - /ux — navigation, screens, front end
+  - /bdd — observable behavior and tests
+  - /ddd — bounded contexts and domain building blocks
 ```
 
-Delete the file after the call. Request format — `toolset` is the classname from
-the manifest step above:
+**Step 2 — Identify the fidelity.**
+Check whether a fidelity was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose from the selected context tool's available fidelities (see the quick-reference table), or from the CDD stage names (`discovery`, `specification`, `engineering`).
+
+**Step 3 — Run the action.**
+Invoke the context tool with `action: sketch` and the chosen fidelity:
 
 ```yaml
-toolset: sketch.sketch:Sketcher
+toolset: <selected context tool>
 context:
-  key: value      # constructor params (fidelity, path, session, …)
-tool: <tool_name>   # or action: <action_name>
-arguments:
-  key: value
+  fidelity: <selected fidelity>
+action: sketch
 ```
 
-Read `examples/` before guessing any field shape.
+Follow that context-tool skill's instructions: run its manifest, obey `response.instructions`, then invoke via `_req.yaml` + `python -m tools run`. Read `examples/` before guessing field shape.
+

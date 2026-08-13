@@ -1,0 +1,11 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+tool: log_correction
+context:
+  fidelity: code
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  entry_id: 83a71d38
+  improved: |
+    Reconciled live: after reserving MSISDN, useReserveNumber.ts navigates to ../onboarding/select-sim (not select-plan). pick-number.e2e.ts asserts prospect.isAtOnboardingStep('SelectSim') and URL contains /onboarding/select-sim for both pick-new and port scenarios.
+  status: fixed

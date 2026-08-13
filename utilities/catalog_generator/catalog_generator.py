@@ -393,12 +393,14 @@ def _decorator_names(node: ast.FunctionDef) -> set[str]:
 
 
 # Plan: emit top-level lifecycle actions; skip override hooks.
+# ``generate_fixes_from_validate`` is a satisfy helper, not its own catalog action.
 # ``improve`` sits after ``repair`` — same peer kit (``utilities/repair/``),
 # distinct guide (``improve.md``); the improve loop is catalogued as its own
 # action, not folded into repair.
 _LIFECYCLE_ACTION_SKIP = frozenset({
     "generate_output",
     "add_generate_header_to_generated",
+    "generate_fixes_from_validate",
 })
 
 
@@ -1485,6 +1487,13 @@ class Catalog:
             _REPO_ROOT / "utilities" / "agent_skills" / "agent_skills.py",
         )
         hub_body = (
+            '<section class="catalog-workflow" aria-labelledby="catalog-workflow-heading">'
+            '<h2 id="catalog-workflow-heading">'
+            '<a href="workflow.html">CDD Workflow</a>'
+            "</h2>"
+            "<p>Scenario-based steps for partitioning docs, documenting existing systems, "
+            "designing new work, and fixing artifacts — using context tools, actions, and fidelities.</p>"
+            "</section>\n"
             '<section class="install-block catalog-install" aria-labelledby="catalog-install-heading">'
             '<h2 id="catalog-install-heading">Install</h2>'
             "<ol>"
@@ -1519,6 +1528,34 @@ class Catalog:
             kanban_embed=board,
         )
         write_page(self.out_root, "index.html", hub)
+
+        # -- workflow manual (from catalog/workflow.md) --
+        from catalog_generator.foundry_chrome import markdown_to_html
+
+        workflow_md_path = _REPO_ROOT / "catalog" / "workflow.md"
+        if workflow_md_path.is_file():
+            workflow_md = workflow_md_path.read_text(encoding="utf-8")
+            # Drop the leading H1 — page_shell already provides the title.
+            workflow_body_md = re.sub(
+                r"^#\s+.*\n+", "", workflow_md.lstrip(), count=1, flags=re.MULTILINE
+            )
+            workflow_html = page_shell(
+                title="CDD Workflow — ABD Foundry",
+                h1="CDD Workflow",
+                tagline=(
+                    "Scenario-based steps for using context tools, actions, and fidelities. "
+                    '<a href="index.html">Back to catalog</a>.'
+                ),
+                body_inner=(
+                    '<article class="catalog-workflow-page">'
+                    + markdown_to_html(workflow_body_md, include_tables=True)
+                    + "</article>"
+                ),
+                commons_prefix="commons/",
+                nav_prefix="",
+                nav_current="hub",
+            )
+            write_page(self.out_root, "workflow.html", workflow_html)
 
         # -- flat grids --
         write_page(

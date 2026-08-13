@@ -55,6 +55,7 @@
   <header><span class="badge">Clean Engineering</span></header>
   <div class="purpose-html"><p>Deepen OO design from modules toward production code. Each fidelity <strong>adds</strong> artifacts — do not invent detail from a deeper level.</p>
 <p><strong>Progression:</strong> <code>partition</code> (action) → <strong>scaffold</strong> → <strong>modules</strong> → <strong>model</strong> → <strong>code</strong>.</p>
+<p><strong>Interfaces (<code>I{Class}</code>) are optional, not automatic.</strong> See <code>## model</code> § Interfaces for the trigger — ask for one, or a genuine multi-layer/multi-implementation seam.</p>
 <hr></div>
   <section class="fidelities cap-grid"><a class="cap-card fidelity-card" href="../fidelities/clean_engineering-modules.html"><p class="cap-card__title">modules</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a><a class="cap-card fidelity-card" href="../fidelities/clean_engineering-model.html"><p class="cap-card__title">model</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a><a class="cap-card fidelity-card" href="../fidelities/clean_engineering-code.html"><p class="cap-card__title">code</p><p class="cap-card__label">Fidelity</p><p class="cap-card__more">Open →</p></a></section>
 </article><article class="context-tool-page" data-tool="User Experience">
@@ -82,7 +83,13 @@
 </ul>
 <p>Do <strong>not</strong> bake product words (catalog, cart) into the template — those are bound_field paths / story language only.</p>
 <p><strong>Markdown:</strong> optional context only (thinking, invariants, interaction notes). Primary path is <strong>drawio (IA) → html (mockup/spec)</strong>.</p>
-<p><strong>Layouts:</strong> catalog in <code>ux_model/layouts.py</code> (layout id → named slots). Use <code>Screen.apply_layout</code> to set layout and seed empty regions.</p>
+<p><strong>Specifications (layouts):</strong> <code>specifications/</code> holds the full IA screen-template set as ready-to-adapt reference artifacts, one sibling folder per style:</p>
+<ul>
+<li><code>specifications/generic/</code> — <strong>default.</strong> One <code>.md</code> ASCII reference + one <code>.drawio</code> XML fragment per layout (accordion, breadcrumb, kanban-board, sidebar, tabbed, wizard-stepper, … 43 patterns), mirrored verbatim from abd-skills. No brand.</li>
+<li><code>specifications/abd-works/</code> — the same 43 layouts as real, brand-styled HTML (<code>&lt;id&gt;.html</code> + <code>index.html</code>), all sharing <code>abd-works-brand.css</code> (tokens/type/components copied from the <code>abd-visual-branding</code> SKILL.md: colors, Inter/JetBrains Mono type scale, buttons, cards, dual Executive/Engineering mode). Use this folder instead of <code>generic/</code> whenever the screen needs the abd.works brand (see <code>brand-is-opt-in</code> below).</li>
+<li>Add further sibling folders under <code>specifications/</code> for other brands/styles the same way; each folder&#x27;s own files stay self-contained (own stylesheet, own copies).</li>
+</ul>
+<p>Before sketching a screen&#x27;s ASCII box, drawio region cells, or brand-layer html, open the matching file(s) in the specification folder that applies — <code>generic/</code> unless a specific brand is asked for or already established for this work — read its slots, and alter that file for the real screen. Do not draw box art, drawio cells, or brand markup from scratch when one of these already covers the shape. <code>Screen.apply_layout(layout_id)</code> just records that choice as the layout name; append the real <code>Region</code>s yourself from the slots you just read.</p>
 <p><strong>Channels:</strong> drawio, html, markdown, json — peer parse/render; <code>transform</code> moves sideways at the same fidelity. One <code>html</code> channel deepens by fidelity (js interactions → optional brand layer + honest stubs at <strong>mockup</strong> → real frontend at <strong>front_end_code</strong>; host FE stacks welcome at <strong>front_end_code</strong>).</p>
 <hr>
 <p>This skill operates at <strong>multiple levels of fidelity</strong>. Start from grill + sketch and deepen. Each level <strong>adds</strong> artifacts — do not invent detail from a deeper fidelity.</p>

@@ -1,0 +1,11 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+tool: log_correction
+context:
+  fidelity: code
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  entry_id: 121683f3
+  improved: |
+    Reconciled live: MSISDN inventory uses GET /mv/inventory/msisdn (useGetNumbers.ts → env.midtier.mavenir.inventory + '/msisdn'). MsisdnInventoryE2e and sandbox stubs target /mv/inventory/msisdn, not /mv/numbers.
+  status: fixed

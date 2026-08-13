@@ -48,6 +48,15 @@ signature:
       contexts: str
       path: str
     returns: str
+  finish_eval_turn:
+    kind: tool
+    instructions: Close the open eval Turn at the chat-reply boundary (hook/host calls
+      once).
+    parameters:
+      prompt: str
+      result: str
+      context: str
+    returns: str
   log_correction:
     kind: tool
     parameters:
@@ -163,6 +172,11 @@ signature:
       \ layout from `session_guidance`.\n7. Follow any extra build steps included\
       \ in your instructions when present.\n8. Run **validate**. If it fails, fix\
       \ the artifact and **validate** again until it passes.\n\n---"
+    returns: str
+  generate_fixes_from_validate:
+    kind: action
+    tools:
+    - generate_output
     returns: str
   generate_output:
     kind: action

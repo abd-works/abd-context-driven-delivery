@@ -1,7 +1,7 @@
 # @toolset-manifest python -m tools manifest agent_skills.agent_skills:AgentSkills
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Deploy workspace toolsets as IDE skill shims; action kits as commands/prompts."""
+"""Deploy workspace toolsets as IDE skill shims; action kits as skills+commands."""
 from __future__ import annotations
 
 import ast
@@ -33,89 +33,138 @@ disable-model-invocation: true
 
 # {class_name}
 
-Run the manifest to load tools, actions, and instructions:
+**Step 1 — Identify the action.**
+Check whether an action was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose:
+
+```
+Question: "What action should {class_name} run?"
+Options:
+  - partition — index source material and extract chunks
+  - grill — context-grounded Q&A
+  - sketch — grill plus a persisted rough draft
+  - generate — produce the formal artifact
+  - document — describe existing code/tests/docs
+  - iterate — generate one small slice at a time
+  - validate — scan and report pass/fail
+  - satisfy — validate, fix, validate again until clean
+  - repair — root-cause and fix why the tool produced a violation
+  - improve — log mistake, repair, capture regression
+```
+
+**Step 2 — Identify the fidelity.**
+Check whether a fidelity was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose from this tool's available fidelities or from the CDD stage names (`discovery`, `specification`, `engineering`).
+
+**Step 3 — Run the manifest and invoke.**
+Load this tool's manifest:
 
 ```
 {manifest_command}
 ```
 
-Follow `response.instructions` before doing anything else. Invoke tools by writing
-the request to a YAML file (e.g. `_req.yaml`) and running:
+Follow `response.instructions` before doing anything else. Write the request to
+a YAML file (e.g. `_req.yaml`) and run:
 
 ```
 python -m tools run _req.yaml
 ```
 
-Delete the file after the call. Request format — `toolset` is the classname from
-the manifest step above:
+Delete the file after the call. Request format:
 
 ```yaml
 toolset: {toolset_ref}
 context:
-  key: value      # constructor params (fidelity, path, session, …)
-tool: <tool_name>   # or action: <action_name>
-arguments:
-  key: value
+  fidelity: <selected fidelity>
+action: <selected action>
 ```
 
 Read `examples/` before guessing any field shape.
 """
 
-# Host lifecycle actions on BaseContextTool, backed by context_tools/actions/.
-# Deployed as Cursor commands / VS Code prompts — composable with a context-tool skill
+# Host lifecycle actions on BaseContextTool. Deployed as both skills and
+# Cursor commands / VS Code prompts. Skill/command name matches the action.
+# Do not run the peer kit; use the in-scope context tool's matching action
 # (e.g. /cdd + /sketch → run the CDD toolset with action: sketch).
 _HOST_ACTION_COMMANDS: tuple[str, ...] = (
-    "sketch",
-    "iterate",
-    "grill",
     "partition",
+    "grill",
+    "sketch",
+    "generate",
+    "document",
+    "iterate",
+    "validate",
+    "satisfy",
     "repair",
     "improve",
 )
 
 # Companion toolsets under context_tools/actions/ — not Base @actions; still get
-# IDE commands that run the companion in the current context-tool session frame.
+# IDE skills + commands that run the companion in the current context-tool session.
 _COMPANION_ACTION_COMMANDS: tuple[tuple[str, str, str], ...] = (
     # (command_slug, manifest_ref, class_name)
     ("echo", "echo.echo:Echoer", "Echoer"),
     ("handoff", "handoff.handoff:Handoff", "Handoff"),
 )
 
-# Skill slugs previously deployed for action packages — remove on deploy.
+# Package-slug skills that are not the action name — remove on deploy.
 _STALE_ACTION_SKILL_SLUGS: tuple[str, ...] = (
-    "sketch",
-    "iterate",
     "grill-context",
-    "partition",
-    "repair",
-    "echo",
-    "handoff",
     "workspace",
 )
+
+_ACTION_INVOKE_BODY = """\
+Do not run this as its own toolset.
+
+**Step 1 — Identify the context tool.**
+Check whether a context tool is already in scope — passed in (path / session / toolset) or named in this chat. If one is found, use it. If not, use the `AskQuestion` tool to let the user choose:
+
+```
+Question: "Which context tool should run `{action}`?"
+Options:
+  - /cdd — orchestrate all child tools at one stage
+  - /stories — who does what, in what sequence
+  - /clean-engineering — module boundaries and OO design
+  - /ux — navigation, screens, front end
+  - /bdd — observable behavior and tests
+  - /ddd — bounded contexts and domain building blocks
+```
+
+**Step 2 — Identify the fidelity.**
+Check whether a fidelity was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose from the selected context tool's available fidelities (see the quick-reference table), or from the CDD stage names (`discovery`, `specification`, `engineering`).
+
+**Step 3 — Run the action.**
+Invoke the context tool with `action: {action}` and the chosen fidelity:
+
+```yaml
+toolset: <selected context tool>
+context:
+  fidelity: <selected fidelity>
+action: {action}
+```
+
+Follow that context-tool skill's instructions: run its manifest, obey `response.instructions`, then invoke via `_req.yaml` + `python -m tools run`. Read `examples/` before guessing field shape.
+"""
+
+_ACTION_SKILL_TEMPLATE = """\
+---
+name: {action}
+description: "Run the in-scope context tool's {action} action."
+disable-model-invocation: true
+---
+
+# {action}
+
+{body}
+"""
 
 _CURSOR_ACTION_COMMAND_TEMPLATE = """\
 # {action}
 
-A context-tool skill is already in play (or invoke one first — e.g. /cdd, /bdd,
-/stories, /clean-engineering).
-
-Run **that** context tool with this action:
-
-```yaml
-toolset: <toolset from the context-tool skill already in play>
-action: {action}
-```
-
-Follow the context-tool skill's instructions: run its manifest, obey
-`response.instructions`, then invoke via `python -m tools run` with the YAML
-above (write `_req.yaml`, run, delete). Read `examples/` before guessing field
-shape. Constructor params (`fidelity`, `path`, `session`, …) come from the
-context-tool skill / session already in play.
+{body}
 """
 
 _VSCODE_ACTION_PROMPT_TEMPLATE = """\
 ---
-description: "Run context-tool action: {action}"
+description: "Run the in-scope context tool's {action} action"
 name: "{action}"
 argument-hint: "Describe what to {action}"
 agent: agent
@@ -123,21 +172,36 @@ agent: agent
 
 # {action}
 
-A context-tool skill is already in play (or invoke one first — e.g. /cdd, /bdd,
-/stories, /clean-engineering).
+{body}
+"""
 
-Run **that** context tool with this action:
+_COMPANION_SKILL_TEMPLATE = """\
+---
+name: {command_name}
+description: "Run companion {class_name} in the current context-tool session."
+disable-model-invocation: true
+---
 
-```yaml
-toolset: <toolset from the context-tool skill already in play>
-action: {action}
+# {class_name}
+
+A context-tool skill/session is already in play. Run this companion toolset in
+that frame (same path / session / workspace as the context tool):
+
+```
+python -m tools manifest {toolset_ref}
 ```
 
-Follow the context-tool skill's instructions: run its manifest, obey
-`response.instructions`, then invoke via `python -m tools run` with the YAML
-above (write `_req.yaml`, run, delete). Read `examples/` before guessing field
-shape. Constructor params (`fidelity`, `path`, `session`, …) come from the
-context-tool skill / session already in play.
+Follow `response.instructions`. Invoke via `_req.yaml` + `python -m tools run`:
+
+```yaml
+toolset: {toolset_ref}
+context:
+  path: <active context-tool path>
+  session: <active session name>
+action: <action from this companion's manifest>
+```
+
+Delete the request file after the call. Read `examples/` before guessing field shape.
 """
 
 _CURSOR_COMPANION_COMMAND_TEMPLATE = """\
@@ -191,6 +255,85 @@ action: <action from this companion's manifest>
 ```
 
 Delete the request file after the call. Read `examples/` before guessing field shape.
+"""
+
+# CDD stage fidelities — chat command names map onto BaseContextTool stage keys.
+# Each context tool resolves these via its ``fidelities`` table (e.g. Stories:
+# discovery→story_map; CleanEngineering: specification→model).
+_STAGE_FIDELITY_COMMANDS: tuple[tuple[str, str], ...] = (
+    # (command_slug, fidelity value passed in context.fidelity)
+    ("discovery", "discovery"),
+    ("specification", "specification"),
+    ("engineering", "engineering"),
+)
+
+_STAGE_FIDELITY_INVOKE_BODY = """\
+Do not run this as its own toolset. This command sets the CDD stage to `{fidelity}`.
+
+The context tool maps this stage name to its own concrete fidelity (Stories: discovery→story_map, specification→scenarios, engineering→acceptance_tests; CleanEngineering: discovery→modules, specification→model, engineering→code; and so on).
+
+**Step 1 — Identify the context tool.**
+Check whether a context tool is already in scope — passed in (path / session / toolset) or named in this chat. If one is found, use it. If not, use the `AskQuestion` tool to let the user choose:
+
+```
+Question: "Which context tool should work at the `{fidelity}` stage?"
+Options:
+  - /cdd — orchestrate all child tools at one stage
+  - /stories — who does what, in what sequence
+  - /clean-engineering — module boundaries and OO design
+  - /ux — navigation, screens, front end
+  - /bdd — observable behavior and tests
+  - /ddd — bounded contexts and domain building blocks
+```
+
+**Step 2 — Identify the action.**
+Check whether an action was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose:
+
+```
+Question: "What action should run at `{fidelity}`?"
+Options:
+  - partition — index source material and extract chunks
+  - grill — context-grounded Q&A
+  - sketch — grill plus a persisted rough draft
+  - generate — produce the formal artifact
+  - document — describe existing code/tests/docs
+  - iterate — generate one small slice at a time
+  - validate — scan and report pass/fail
+  - satisfy — validate, fix, validate again until clean
+  - repair — root-cause and fix why the tool produced a violation
+  - improve — log mistake, repair, capture regression
+```
+
+**Step 3 — Run the action at this stage.**
+Invoke the context tool with the chosen action and `{fidelity}` as fidelity:
+
+```yaml
+toolset: <selected context tool>
+context:
+  fidelity: {fidelity}
+action: <selected action>
+```
+
+Follow that context-tool skill's instructions: run its manifest, obey `response.instructions`, then invoke via `_req.yaml` + `python -m tools run`. Read `examples/` before guessing field shape.
+"""
+
+_CURSOR_STAGE_COMMAND_TEMPLATE = """\
+# {stage}
+
+{body}
+"""
+
+_VSCODE_STAGE_PROMPT_TEMPLATE = """\
+---
+description: "Set the in-scope context tool fidelity to CDD stage {stage}"
+name: "{stage}"
+argument-hint: "Optional action to run at {stage}"
+agent: agent
+---
+
+# {stage}
+
+{body}
 """
 
 _CURSOR_COMMAND_TEMPLATE = """\
@@ -255,7 +398,7 @@ action: {action}
 
 @toolset
 class AgentSkills:
-    """Deploy context-tool skills + action commands/prompts for Cursor and VS Code."""
+    """Deploy context-tool skills plus action skills/commands for Cursor and VS Code."""
 
     # ------------------------------------------------------------------ #
     # Private helpers                                                      #
@@ -382,11 +525,14 @@ class AgentSkills:
 
     def _is_under_actions(self, path: Path) -> bool:
         """True when path lives under context_tools/actions/ (peer action kits)."""
-        try:
-            path.resolve().relative_to(self._actions_root().resolve())
-            return True
-        except ValueError:
-            return False
+        for actions_form in self._path_variants(self._actions_root()):
+            for path_form in self._path_variants(path):
+                try:
+                    path_form.relative_to(actions_form)
+                    return True
+                except ValueError:
+                    continue
+        return False
 
     def _should_skip(self, path: Path) -> bool:
         try:
@@ -713,19 +859,65 @@ class AgentSkills:
         For Cursor multi-folder workspaces, also writes to every deploy root.
         Returns the absolute path of the primary (repo) written file."""
         written: list[str] = []
+        body = _ACTION_INVOKE_BODY.format(action=action)
         for ide_root in self._ide_config_roots(ide):
             if ide == "cursor":
                 target_dir = ide_root / "commands"
                 target_dir.mkdir(parents=True, exist_ok=True)
                 target = target_dir / f"{action}.md"
-                content = _CURSOR_ACTION_COMMAND_TEMPLATE.format(action=action)
+                content = _CURSOR_ACTION_COMMAND_TEMPLATE.format(action=action, body=body)
             else:
                 target_dir = ide_root / "prompts"
                 target_dir.mkdir(parents=True, exist_ok=True)
                 target = target_dir / f"{action}.prompt.md"
-                content = _VSCODE_ACTION_PROMPT_TEMPLATE.format(action=action)
+                content = _VSCODE_ACTION_PROMPT_TEMPLATE.format(action=action, body=body)
             target.write_text(content, encoding="utf-8")
             written.append(str(target))
+        return written[0]
+
+    @tool
+    def write_action_skill_shim(self, action: str, ide: str) -> str:
+        """Write a skill shim that routes to the in-scope context tool's matching action.
+        Do not run the action kit as its own toolset.
+        ide=cursor -> .cursor/skills/{action}/SKILL.md
+        ide=vscode -> .github/skills/{action}/SKILL.md
+        For Cursor multi-folder workspaces, also writes to every deploy root.
+        Returns the absolute path of the primary (repo) written file."""
+        body = _ACTION_INVOKE_BODY.format(action=action)
+        content = _ACTION_SKILL_TEMPLATE.format(action=action, body=body)
+        written: list[str] = []
+        for ide_root in self._ide_config_roots(ide):
+            skill_dir = ide_root / "skills" / action
+            skill_dir.mkdir(parents=True, exist_ok=True)
+            skill_md = skill_dir / "SKILL.md"
+            skill_md.write_text(content, encoding="utf-8")
+            written.append(str(skill_md))
+        return written[0]
+
+    @tool
+    def write_companion_skill_shim(
+        self,
+        command_name: str,
+        toolset_ref: str,
+        class_name: str,
+        ide: str,
+    ) -> str:
+        """Write a companion skill shim (echo/handoff) for the current context-tool session.
+        ide=cursor -> .cursor/skills/{command_name}/SKILL.md
+        ide=vscode -> .github/skills/{command_name}/SKILL.md
+        Returns the absolute path of the primary (repo) written file."""
+        content = _COMPANION_SKILL_TEMPLATE.format(
+            command_name=command_name,
+            class_name=class_name,
+            toolset_ref=toolset_ref,
+        )
+        written: list[str] = []
+        for ide_root in self._ide_config_roots(ide):
+            skill_dir = ide_root / "skills" / command_name
+            skill_dir.mkdir(parents=True, exist_ok=True)
+            skill_md = skill_dir / "SKILL.md"
+            skill_md.write_text(content, encoding="utf-8")
+            written.append(str(skill_md))
         return written[0]
 
     @tool
@@ -759,6 +951,31 @@ class AgentSkills:
                     toolset_ref=toolset_ref,
                     command_name=command_name,
                 )
+            target.write_text(content, encoding="utf-8")
+            written.append(str(target))
+        return written[0]
+
+    @tool
+    def write_stage_fidelity_command(self, stage: str, fidelity: str, ide: str) -> str:
+        """Write a CDD stage-fidelity command/prompt (discovery / specification / engineering).
+        Sets context.fidelity on the in-scope context tool; that tool maps the stage
+        to its concrete fidelity via BaseContextTool.resolve_fidelity.
+        ide=cursor -> .cursor/commands/{stage}.md
+        ide=vscode -> .github/prompts/{stage}.prompt.md
+        Returns the absolute path of the primary (repo) written file."""
+        written: list[str] = []
+        body = _STAGE_FIDELITY_INVOKE_BODY.format(fidelity=fidelity)
+        for ide_root in self._ide_config_roots(ide):
+            if ide == "cursor":
+                target_dir = ide_root / "commands"
+                target_dir.mkdir(parents=True, exist_ok=True)
+                target = target_dir / f"{stage}.md"
+                content = _CURSOR_STAGE_COMMAND_TEMPLATE.format(stage=stage, body=body)
+            else:
+                target_dir = ide_root / "prompts"
+                target_dir.mkdir(parents=True, exist_ok=True)
+                target = target_dir / f"{stage}.prompt.md"
+                content = _VSCODE_STAGE_PROMPT_TEMPLATE.format(stage=stage, body=body)
             target.write_text(content, encoding="utf-8")
             written.append(str(target))
         return written[0]
@@ -922,7 +1139,7 @@ class AgentSkills:
         deployed_commands: list[str] = []
         for entry in entries:
             if self._is_under_actions(Path(entry["file_path"])):
-                # Action kits → commands/prompts only, never standalone skills.
+                # Action kits get host-action / companion shims below, not a kit-manifest skill.
                 self.remove_skill_shim(skill_slug=entry["skill_slug"], ide=ide)
                 continue
             self.write_skill_shim(
@@ -943,18 +1160,42 @@ class AgentSkills:
                 )
         for stale_slug in _STALE_ACTION_SKILL_SLUGS:
             self.remove_skill_shim(skill_slug=stale_slug, ide=ide)
-        for action in _HOST_ACTION_COMMANDS:
-            self.write_action_command(action=action, ide=ide)
-            deployed_commands.append(action)
+        for action_name in _HOST_ACTION_COMMANDS:
+            self.write_action_skill_shim(action=action_name, ide=ide)
+            self.write_action_command(action=action_name, ide=ide)
+            deployed_skills.append(action_name)
+            deployed_commands.append(action_name)
+        for stage, fidelity in _STAGE_FIDELITY_COMMANDS:
+            self.write_stage_fidelity_command(stage=stage, fidelity=fidelity, ide=ide)
+            deployed_commands.append(stage)
         for command_name, toolset_ref, class_name in _COMPANION_ACTION_COMMANDS:
+            self.write_companion_skill_shim(
+                command_name=command_name,
+                toolset_ref=toolset_ref,
+                class_name=class_name,
+                ide=ide,
+            )
             self.write_companion_command(
                 command_name=command_name,
                 toolset_ref=toolset_ref,
                 class_name=class_name,
                 ide=ide,
             )
+            deployed_skills.append(command_name)
             deployed_commands.append(command_name)
         return deployed_skills, deployed_commands
+
+    @tool
+    def deploy_filtered_toolsets(self, entries_json: str, ide: str) -> str:
+        """Write skill shims, action skills, and action commands for confirmed scan entries.
+        entries_json is a JSON array of scan_toolsets objects (already filtered).
+        Returns a summary of deployed skill slugs and command names."""
+        entries = json.loads(entries_json)
+        deployed_skills, deployed_commands = self._deploy_entries(entries, ide=ide)
+        return (
+            f"Deployed {len(deployed_skills)} skill(s): {', '.join(deployed_skills)}. "
+            f"Deployed {len(deployed_commands)} command(s): {', '.join(deployed_commands)}."
+        )
 
     @action
     def deploy_tools_as_skills(self, name_filter: str, ide: str) -> str:
@@ -964,17 +1205,14 @@ class AgentSkills:
         self.scan_toolsets()
         """Step 3 - Apply name_filter: keep entries whose module_dir or skill_slug contains it; skip if filter is empty (= all)."""
         """Step 4 - Present the filtered list of skills and ask the user to confirm before writing."""
-        """Step 5 - For each confirmed entry under context_tools/ or utilities/: write one skill shim; skip context_tools/actions/ (those become commands). Cursor multi-folder: repo + ~/.cursor + workspace-parent .cursor. Remove stale per-focus skill shims and legacy focus commands."""
-        self.write_skill_shim()
-        """Step 5b - For each host lifecycle action (sketch, iterate, grill, partition, repair, improve): write Cursor command or VS Code prompt that runs the context tool already in play with action: <name>. For companions (echo, handoff): write companion commands. Remove stale action-package skill shims."""
-        self.write_action_command()
-        self.write_companion_command()
+        """Step 5 - Call deploy_filtered_toolsets with the confirmed entries as JSON and ide. That writes: context-tool skill shims; host-action skill shims (do not run the kit — use the in-scope context tool's matching action); host-action Cursor commands / VS Code prompts with the same text; CDD stage-fidelity commands (discovery / specification / engineering); companion skill+command shims. Cursor multi-folder: every ide_config_root. Removes stale package-slug action skills (grill-context, workspace)."""
+        self.deploy_filtered_toolsets()
         """Step 6 - Call deploy_hooks(ide) to install hooks/manifest-gate.json into the IDE hooks location."""
         self.deploy_hooks()
         """Step 7 - Call save_state with ide, name_filter, deployed skill_slugs, and deployed action command names."""
         self.save_state()
         return (
-            "IDE skill shims written. Context-tool action commands/prompts written. "
+            "IDE skill shims written. Context-tool action skills and commands/prompts written. "
             "Hooks deployed. State saved. Reload the IDE to pick them up."
         )
 
@@ -1015,7 +1253,8 @@ class AgentSkills:
             else ""
         )
         return (
-            f"Re-deployed {len(deployed_skills)} skill(s): {', '.join(deployed_skills)}."
+            f"Re-deployed {len(deployed_skills)} skill(s): {', '.join(deployed_skills)}. "
+            f"Commands: {', '.join(deployed_commands)}."
             f"{multi_note} Roots: {roots}."
         )
 

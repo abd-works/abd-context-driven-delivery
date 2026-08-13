@@ -47,6 +47,15 @@ signature:
       contexts: str
       path: str
     returns: str
+  finish_eval_turn:
+    kind: tool
+    instructions: Close the open eval Turn at the chat-reply boundary (hook/host calls
+      once).
+    parameters:
+      prompt: str
+      result: str
+      context: str
+    returns: str
   log_correction:
     kind: tool
     parameters:
@@ -140,6 +149,11 @@ signature:
       \ write *_spec and *_spec.{tier} acceptance test files. When spec files are\
       \ written, call ce().generate() to produce or update the matching production\
       \ class implementations and wire any supporting code changes."
+    returns: str
+  generate_fixes_from_validate:
+    kind: action
+    tools:
+    - generate_output
     returns: str
   generate_output:
     kind: action

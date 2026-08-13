@@ -1,0 +1,11 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+tool: log_correction
+context:
+  fidelity: code
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+arguments:
+  entry_id: b0dfee62
+  improved: |
+    Reconciled live: portability submit is POST /mv/customer/portability (useNumberPortability.ts patchCustomerPortability). On success with porting 2FA off, updateCustomer('cart.portability', data) and updateCustomer('cart.msisdn', response.temporaryNumber) then navigate to /onboarding/select-sim — no PATCH /mv/customer until later. Sandbox stub POST /mv/customer/portability must return temporaryNumber in the response body.
+  status: fixed

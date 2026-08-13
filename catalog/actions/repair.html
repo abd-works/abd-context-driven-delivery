@@ -75,7 +75,7 @@
 <div class="wrap skill-detail-page">
 <header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">repair</h1></header>
 <section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>repair</code> in the request</p><p class="install-source"><a href="../manifests/actions/repair.html" id="raw-manifest">Raw manifest format →</a></p></section>
-<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><ul><li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/99e466ee89549a00a7e14582e440fc3d35f5fc64/context_tools/base/base_context_tool.py#L309-L312">scan</a> <span class="tag">(tool, no page)</span></li></ul></section>
+<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><ul><li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/4d01623dadcd0a757141f9f54c96dab611b3b557/context_tools/base/base_context_tool.py#L405-L409">scan</a> <span class="tag">(tool, no page)</span></li></ul></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><h1>Repair</h1>
 <p>Iterate until <strong>validate</strong> passes on <code>{{asset}}</code>. The violation signal is:</p>
 <pre><code>{{violation}}</code></pre>
@@ -110,33 +110,19 @@
 <h2>4. Fix the root cause</h2>
 <p>Draft a <strong>surgical</strong> change wherever root cause actually lives:</p>
 <ul>
-<li>Usually the context tool itself — its contexts, examples, template, action</li>
+<li>Usually the context tool itself — its contexts, examples, template, action<br>prose, or scanners.</li>
+<li>Occasionally a shared utility or primitive it depends on, when root cause<br>traces down into one of those instead.</li>
 </ul>
-<p>prose, or scanners.</p>
-<ul>
-<li>Occasionally a shared utility or primitive it depends on, when root cause</li>
-</ul>
-<p>traces down into one of those instead.</p>
 <p>Touch only what root cause implicates; do not rebuild from spec.</p>
 <p><strong>Present the drafted change to the user and wait for approval before applying it.</strong> Never apply a root-cause-level fix silently, even when the cause is obvious.</p>
 <h3>Approval ask (required shape — no mind-reading)</h3>
 <p>Every approval ask — the repair sub-agent&#x27;s return, and any parent summary of it — MUST include all four, in plain English. Slug labels, &quot;Draft A/B&quot;, or &quot;approve?&quot; alone are a defect.</p>
 <ol>
-<li><strong>What went wrong</strong> — the concrete mistake in the artifact (one or two</li>
+<li><strong>What went wrong</strong> — the concrete mistake in the artifact (one or two<br>sentences a reader who was not in the session can follow).</li>
+<li><strong>Why</strong> — what was missing or wrong in the context tool (or utility /<br>primitive) that let it happen — the root cause, not a restatement of (1).</li>
+<li><strong>What we will change</strong> — the surgical fix: which files, what rule /<br>scanner / template / prose lands, and what that stops next time. Name<br>paths; do not hide the solution behind a process-slug.</li>
+<li><strong>Your decision</strong> — exactly what the user should answer, e.g. &quot;Approve<br>applying these changes?&quot;, &quot;Approve with X dropped?&quot;, or &quot;Reshape Y?&quot;.<br>Offer reshape / reject, not only yes.</li>
 </ol>
-<p>sentences a reader who was not in the session can follow).</p>
-<ol>
-<li><strong>Why</strong> — what was missing or wrong in the context tool (or utility /</li>
-</ol>
-<p>primitive) that let it happen — the root cause, not a restatement of (1).</p>
-<ol>
-<li><strong>What we will change</strong> — the surgical fix: which files, what rule /</li>
-</ol>
-<p>scanner / template / prose lands, and what that stops next time. Name paths; do not hide the solution behind a process-slug.</p>
-<ol>
-<li><strong>Your decision</strong> — exactly what the user should answer, e.g. &quot;Approve</li>
-</ol>
-<p>applying these changes?&quot;, &quot;Approve with X dropped?&quot;, or &quot;Reshape Y?&quot;. Offer reshape / reject, not only yes.</p>
 <p>Do not proceed to apply until the user answers that decision.</p>
 <p>Once approved, re-run <strong>generate</strong> (or the steps that produced <code>{{asset}}</code>) and write the output back to <code>{{asset}}</code>. Do not hand-edit <code>{{asset}}</code> to greenwash the scanners while leaving the underlying context tool (or utility/ primitive) broken.</p>
 <p>If the domain has <code>reference/repair-tips.md</code>, read it before writing fix code. Save every fix in <code>runs/&lt;n&gt;/run.md</code>.</p>
@@ -174,25 +160,12 @@
 <p><strong>Seam:</strong> <code>Repair</code>, <code>MistakeEntry</code>, <code>MistakeLog</code>, <code>RegressionExample</code>, <code>RegressionReport</code></p>
 <h2>Public API</h2>
 <ul>
-<li><code>Repair</code> — <code>log_mistake</code>, <code>log_correction</code>, <code>repair</code> (<code>@sub_agent @action</code>),</li>
+<li><code>Repair</code> — <code>log_mistake</code>, <code>log_correction</code>, <code>repair</code> (<code>@sub_agent @action</code>),<br><code>improve</code>, <code>verify_regression</code> (<code>@sub_agent @tool</code>), <code>archive_mistakes</code><br>(<code>@sub_agent @tool</code>). Inside <code>improve()</code>, <code>self.mode = &quot;tool&quot;</code> then<br><code>self.repair(...)</code> lists <code>repair</code> as a deferred tool step instead of<br>eagerly inlining the whole root-cause loop. A direct top-level <code>repair()</code><br>call (e.g. via <code>BaseContextTool.repair()</code> -&gt; <code>self.repairer.repair(...)</code>)<br>keeps the default <code>mode=&quot;action&quot;</code> and still inlines the full loop.</li>
+<li><code>MistakeEntry</code> — props: <code>entry_id</code>, <code>artifact</code>, <code>rule</code>, <code>wrong</code>, <code>original</code>,<br><code>improved</code>, <code>status</code>, <code>when</code>, <code>tool</code>, <code>fidelity</code> (<code>entry_id</code> correlates a<br><code>log_mistake</code> call to its later <code>log_correction</code> — several can stay open at<br>once; <code>tool</code>/<code>fidelity</code> name whichever context tool/fidelity produced the<br>entry; auto-injected by the calling host, never supplied by the agent);<br>ops: <code>render</code></li>
+<li><code>MistakeLog</code> — props: <code>path</code>; ops: <code>append</code>, <code>complete</code> (rewrites the log in<br>place to fill in <code>improved</code>/<code>status</code> on the entry matching <code>entry_id</code> — never<br>appends a second entry for the same mistake), <code>parse</code>, <code>distinct_tags</code>, <code>archive</code><br>(moves — never copies — to <code>.context/archive/repairs/{tool}-{fidelity}-{date}.log</code><br>under a <code>repo_root</code>; falls back to the session name, independently per<br>tool/fidelity, when entries disagree)</li>
+<li><code>RegressionExample</code> — props: <code>folder</code>, <code>faulty_paths</code>, <code>repaired_paths</code>, <code>rule</code><br>(the rule slug this example exercises — the folder name by default, or a<br><code>rule.txt</code> sidecar when two folders deliberately share one scanner); ops:<br><code>verify</code> (faulty paths must still violate that one rule; repaired paths must<br>still be clean of it — unrelated rules firing on an intentionally-narrow<br>fixture snippet do not fail the check). Only exists for <strong>mechanical</strong><br>rules — a judgment-call rule closes on a prose-only fix with no scanner, no<br>fixture pair, and nothing here to regress (see <code>repair.md</code> § &quot;Not every<br>rule is a scanner rule&quot;).</li>
+<li><code>RegressionReport</code> — props: <code>examples_root</code>, <code>results</code>; ops: <code>verify_examples</code>,<br><code>summary</code> (scoped to one tool&#x27;s own <code>examples_root</code> — never repo-wide)</li>
 </ul>
-<p><code>improve</code>, <code>verify_regression</code> (<code>@sub_agent @tool</code>), <code>archive_mistakes</code> (<code>@sub_agent @tool</code>). Inside <code>improve()</code>, <code>self.mode = &quot;tool&quot;</code> then <code>self.repair(...)</code> lists <code>repair</code> as a deferred tool step instead of eagerly inlining the whole root-cause loop. A direct top-level <code>repair()</code> call (e.g. via <code>BaseContextTool.repair()</code> -&gt; <code>self.repairer.repair(...)</code>) keeps the default <code>mode=&quot;action&quot;</code> and still inlines the full loop.</p>
-<ul>
-<li><code>MistakeEntry</code> — props: <code>entry_id</code>, <code>artifact</code>, <code>rule</code>, <code>wrong</code>, <code>original</code>,</li>
-</ul>
-<p><code>improved</code>, <code>status</code>, <code>when</code>, <code>tool</code>, <code>fidelity</code> (<code>entry_id</code> correlates a <code>log_mistake</code> call to its later <code>log_correction</code> — several can stay open at once; <code>tool</code>/<code>fidelity</code> name whichever context tool/fidelity produced the entry; auto-injected by the calling host, never supplied by the agent); ops: <code>render</code></p>
-<ul>
-<li><code>MistakeLog</code> — props: <code>path</code>; ops: <code>append</code>, <code>complete</code> (rewrites the log in</li>
-</ul>
-<p>place to fill in <code>improved</code>/<code>status</code> on the entry matching <code>entry_id</code> — never appends a second entry for the same mistake), <code>parse</code>, <code>distinct_tags</code>, <code>archive</code> (moves — never copies — to <code>.context/archive/repairs/{tool}-{fidelity}-{date}.log</code> under a <code>repo_root</code>; falls back to the session name, independently per tool/fidelity, when entries disagree)</p>
-<ul>
-<li><code>RegressionExample</code> — props: <code>folder</code>, <code>faulty_paths</code>, <code>repaired_paths</code>, <code>rule</code></li>
-</ul>
-<p>(the rule slug this example exercises — the folder name by default, or a <code>rule.txt</code> sidecar when two folders deliberately share one scanner); ops: <code>verify</code> (faulty paths must still violate that one rule; repaired paths must still be clean of it — unrelated rules firing on an intentionally-narrow fixture snippet do not fail the check). Only exists for <strong>mechanical</strong> rules — a judgment-call rule closes on a prose-only fix with no scanner, no fixture pair, and nothing here to regress (see <code>repair.md</code> § &quot;Not every rule is a scanner rule&quot;).</p>
-<ul>
-<li><code>RegressionReport</code> — props: <code>examples_root</code>, <code>results</code>; ops: <code>verify_examples</code>,</li>
-</ul>
-<p><code>summary</code> (scoped to one tool&#x27;s own <code>examples_root</code> — never repo-wide)</p>
 <p><strong>Dependencies:</strong> <code>scanners.Scan</code> (regression re-scans faultyAsset/repairedAsset pairs); <code>sub_agent.sub_agent</code> (marks <code>repair</code>, <code>verify_regression</code>, and <code>archive_mistakes</code> as non-blocking launches); <code>primitives.actions.action</code>&#x27;s <code>mode</code> resource (<code>self.mode = &quot;tool&quot;</code> inside <code>improve</code> defers the nested <code>repair</code> call)</p>
 <p><strong>Mechanism:</strong> Concrete mergeable class (one test tier — no separate interface) composing four domain classes, same split as <code>PartitionPipeline</code>. <code>log_mistake</code> and <code>log_correction</code> are two calls, not one, so the mistake is durably recorded the instant it&#x27;s pointed out — never deferred until a fix exists. Approval asks from <code>repair</code> / <code>improve</code> (see <code>repair.md</code> § Approval ask, <code>improve.md</code> § 3) must state what went wrong, why, what will change, and the user&#x27;s decision — never slug-only boards; the parent resumes the repair sub-agent to apply after approval.</p></section>
 

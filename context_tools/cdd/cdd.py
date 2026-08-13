@@ -49,6 +49,7 @@ class Cdd(BaseContextTool):
         path: str | None = None,
         session: str | None = None,
     ) -> None:
+        fidelity = type(self).resolve_fidelity(fidelity)
         if fidelity not in _CONTEXT_TOOLS_BY_STAGE:
             raise ValueError(
                 f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_CONTEXT_TOOLS_BY_STAGE)}"

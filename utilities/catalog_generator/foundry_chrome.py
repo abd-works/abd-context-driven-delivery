@@ -494,8 +494,12 @@ def fence(lang: str, text: str) -> str:
     return f'<pre class="code-fence"><code class="language-{html.escape(lang)}">{html.escape(text)}</code></pre>'
 
 
-def markdown_to_html(text: str) -> str:
-    """Minimal markdown → HTML for fidelity/overview panels (stdlib only)."""
+def markdown_to_html(text: str, *, include_tables: bool = False) -> str:
+    """Minimal markdown → HTML for fidelity/overview panels (stdlib only).
+
+    Set ``include_tables=True`` to render pipe tables (workflow page); default
+    skips them so fidelity overview index tables stay out of page bodies.
+    """
     if not text or text == "Guidance missing":
         return f"<p>{html.escape(text or '')}</p>"
 
@@ -513,6 +517,8 @@ def markdown_to_html(text: str) -> str:
     _block_start_re = re.compile(
         r"^(#{1,4}\s+|```|\s*[-*]\s+|\s*\d+\.\s+|\s*[❌✅]\s+|\s*\|)"
     )
+    _link_re = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+    _table_sep_re = re.compile(r"^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$")
 
     def close_list() -> None:
         nonlocal in_list
@@ -528,11 +534,32 @@ def markdown_to_html(text: str) -> str:
             in_list = kind
 
     def inline(s: str) -> str:
+        links: list[tuple[str, str]] = []
+
+        def _save_link(m: re.Match) -> str:
+            links.append((m.group(1), m.group(2)))
+            return f"\x00L{len(links) - 1}\x00"
+
+        s = _link_re.sub(_save_link, s)
         s = html.escape(s)
         s = re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
         s = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", s)
         s = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", s)
-        return s
+
+        def _restore_link(m: re.Match) -> str:
+            text, href = links[int(m.group(1))]
+            # Link text may itself contain code/bold — run the same inline pass
+            # without re-entering link extraction (text has no markdown links left).
+            label = html.escape(text)
+            label = re.sub(r"`([^`]+)`", r"<code>\1</code>", label)
+            label = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", label)
+            label = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", label)
+            return f'<a href="{html.escape(href, quote=True)}">{label}</a>'
+
+        return re.sub(r"\x00L(\d+)\x00", _restore_link, s)
+    def _split_row(row: str) -> list[str]:
+        body = row.strip().strip("|")
+        return [c.strip() for c in body.split("|")]
 
     while i < len(lines):
         line = lines[i]
@@ -556,11 +583,30 @@ def markdown_to_html(text: str) -> str:
             i += 1
             continue
 
-        # Skip markdown tables (overview fidelity index — not for the page body).
         if re.match(r"^\s*\|", line):
             close_list()
-            while i < len(lines) and (re.match(r"^\s*\|", lines[i]) or not lines[i].strip()):
+            if not include_tables:
+                while i < len(lines) and (re.match(r"^\s*\|", lines[i]) or not lines[i].strip()):
+                    i += 1
+                continue
+            rows: list[list[str]] = []
+            while i < len(lines) and re.match(r"^\s*\|", lines[i]):
+                rows.append(_split_row(lines[i]))
                 i += 1
+            data_rows = [r for r in rows if not _table_sep_re.match("|" + "|".join(r) + "|")]
+            if not data_rows:
+                continue
+            out.append('<table class="catalog-md-table">')
+            header, *body_rows = data_rows
+            out.append("<thead><tr>" + "".join(f"<th>{inline(c)}</th>" for c in header) + "</tr></thead>")
+            if body_rows:
+                out.append("<tbody>")
+                for row in body_rows:
+                    # Pad/truncate to header width
+                    cells = (row + [""] * len(header))[: len(header)]
+                    out.append("<tr>" + "".join(f"<td>{inline(c)}</td>" for c in cells) + "</tr>")
+                out.append("</tbody>")
+            out.append("</table>")
             continue
 
         m = re.match(r"^(#{1,4})\s+(.*)$", line)
@@ -574,8 +620,22 @@ def markdown_to_html(text: str) -> str:
         if _ul_re.match(line):
             open_list("ul")
             item = _ul_re.sub("", line, count=1)
-            out.append(f"<li>{inline(item)}</li>")
             i += 1
+            cont: list[str] = []
+            while (
+                i < len(lines)
+                and lines[i].startswith(("  ", "\t"))
+                and lines[i].strip()
+                and not _ul_re.match(lines[i])
+                and not _ol_re.match(lines[i])
+            ):
+                cont.append(lines[i].strip())
+                i += 1
+            if cont:
+                body = "<br>".join(inline(chunk) for chunk in [item, *cont])
+                out.append(f"<li>{body}</li>")
+            else:
+                out.append(f"<li>{inline(item)}</li>")
             continue
 
         if _emoji_ul_re.match(line):
@@ -588,10 +648,23 @@ def markdown_to_html(text: str) -> str:
         if _ol_re.match(line):
             open_list("ol")
             item = _ol_re.sub("", line, count=1)
-            out.append(f"<li>{inline(item)}</li>")
             i += 1
+            cont = []
+            while (
+                i < len(lines)
+                and lines[i].startswith(("  ", "\t"))
+                and lines[i].strip()
+                and not _ul_re.match(lines[i])
+                and not _ol_re.match(lines[i])
+            ):
+                cont.append(lines[i].strip())
+                i += 1
+            if cont:
+                body = "<br>".join(inline(chunk) for chunk in [item, *cont])
+                out.append(f"<li>{body}</li>")
+            else:
+                out.append(f"<li>{inline(item)}</li>")
             continue
-
         if not line.strip():
             close_list()
             i += 1

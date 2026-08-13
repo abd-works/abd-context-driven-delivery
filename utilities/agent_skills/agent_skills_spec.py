@@ -135,7 +135,7 @@ with description("write_action_command tool"):
             expect(target.is_file()).to(be_true)
             content = target.read_text(encoding="utf-8")
             expect(content).to(contain("action: sketch"))
-            expect(content).to(contain("context-tool skill"))
+            expect(content).to(contain("AskQuestion"))
             expect(path).to(contain("sketch.md"))
 
     with context("ide=vscode"):
@@ -146,6 +146,166 @@ with description("write_action_command tool"):
             content = target.read_text(encoding="utf-8")
             expect(content).to(contain('name: "iterate"'))
             expect(content).to(contain("action: iterate"))
+
+    with context("host-action wording"):
+        with it("tells the agent not to run the kit and uses AskQuestion for missing params"):
+            self.skills.write_action_command(action="sketch", ide="cursor")
+            content = (self.root / ".cursor" / "commands" / "sketch.md").read_text(encoding="utf-8")
+            expect(content).to(contain("Do not run this as its own toolset"))
+            expect(content).to(contain("already in scope"))
+            expect(content).to(contain("named in this chat"))
+            expect(content).to(contain("action: sketch"))
+            expect(content).to(contain("AskQuestion"))
+            expect(content).to(contain("Identify the context tool"))
+            expect(content).to(contain("Identify the fidelity"))
+
+
+with description("write_stage_fidelity_command tool"):
+    with before.each:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.skills = AgentSkills()
+        import agent_skills.agent_skills as _mod
+        self._mod = _mod
+        self._orig_root = _mod._REPO_ROOT
+        _mod._REPO_ROOT = self.root
+
+    with after.each:
+        self._mod._REPO_ROOT = self._orig_root
+        self.tmp.cleanup()
+
+    with context("ide=cursor"):
+        with it("writes a stage command that sets context.fidelity and uses AskQuestion"):
+            path = self.skills.write_stage_fidelity_command(
+                stage="discovery", fidelity="discovery", ide="cursor"
+            )
+            target = self.root / ".cursor" / "commands" / "discovery.md"
+            expect(target.is_file()).to(be_true)
+            content = target.read_text(encoding="utf-8")
+            expect(content).to(contain("Do not run this as its own toolset"))
+            expect(content).to(contain("fidelity: discovery"))
+            expect(content).to(contain("AskQuestion"))
+            expect(content).to(contain("Identify the context tool"))
+            expect(content).to(contain("Identify the action"))
+            expect(path).to(contain("discovery.md"))
+
+    with context("ide=vscode"):
+        with it("writes a prompt file named after the stage"):
+            self.skills.write_stage_fidelity_command(
+                stage="specification", fidelity="specification", ide="vscode"
+            )
+            target = self.root / ".github" / "prompts" / "specification.prompt.md"
+            expect(target.is_file()).to(be_true)
+            content = target.read_text(encoding="utf-8")
+            expect(content).to(contain('name: "specification"'))
+            expect(content).to(contain("fidelity: specification"))
+            expect(content).to(contain("AskQuestion"))
+
+
+with description("write_action_skill_shim tool"):
+    with before.each:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.skills = AgentSkills()
+        import agent_skills.agent_skills as _mod
+        self._mod = _mod
+        self._orig_root = _mod._REPO_ROOT
+        _mod._REPO_ROOT = self.root
+
+    with after.each:
+        self._mod._REPO_ROOT = self._orig_root
+        self.tmp.cleanup()
+
+    with context("ide=cursor"):
+        with it("writes a skill shim that routes to the in-scope context tool action"):
+            path = self.skills.write_action_skill_shim(action="grill", ide="cursor")
+            target = self.root / ".cursor" / "skills" / "grill" / "SKILL.md"
+            expect(target.is_file()).to(be_true)
+            content = target.read_text(encoding="utf-8")
+            expect(content).to(contain("name: grill"))
+            expect(content).to(contain("Do not run this as its own toolset"))
+            expect(content).to(contain("already in scope"))
+            expect(content).to(contain("named in this chat"))
+            expect(content).to(contain("action: grill"))
+            expect(content).to(contain("AskQuestion"))
+            expect(content).not_to(contain("grill_context.grill_context:GrillContext"))
+            expect(path).to(contain("SKILL.md"))
+
+
+with description("_deploy_entries writes action skills and commands"):
+    with before.each:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.skills = AgentSkills()
+        import agent_skills.agent_skills as _mod
+        self._mod = _mod
+        self._orig_root = _mod._REPO_ROOT
+        _mod._REPO_ROOT = self.root
+
+    with after.each:
+        self._mod._REPO_ROOT = self._orig_root
+        self.tmp.cleanup()
+
+    with it("writes host-action skills and commands even when the scan list is empty"):
+        deployed_skills, deployed_commands = self.skills._deploy_entries([], ide="cursor")
+        expect("sketch" in deployed_skills).to(be_true)
+        expect("grill" in deployed_skills).to(be_true)
+        expect("generate" in deployed_skills).to(be_true)
+        expect("sketch" in deployed_commands).to(be_true)
+        expect("echo" in deployed_skills).to(be_true)
+        expect("echo" in deployed_commands).to(be_true)
+        expect((self.root / ".cursor" / "skills" / "sketch" / "SKILL.md").is_file()).to(be_true)
+        expect((self.root / ".cursor" / "commands" / "sketch.md").is_file()).to(be_true)
+        expect((self.root / ".cursor" / "skills" / "grill" / "SKILL.md").is_file()).to(be_true)
+        expect((self.root / ".cursor" / "commands" / "grill.md").is_file()).to(be_true)
+        expect("discovery" in deployed_commands).to(be_true)
+        expect("specification" in deployed_commands).to(be_true)
+        expect("engineering" in deployed_commands).to(be_true)
+        expect((self.root / ".cursor" / "commands" / "discovery.md").is_file()).to(be_true)
+        expect((self.root / ".cursor" / "commands" / "specification.md").is_file()).to(be_true)
+        expect((self.root / ".cursor" / "commands" / "engineering.md").is_file()).to(be_true)
+        expect((self.root / ".cursor" / "skills" / "grill-context").exists()).not_to(be_true)
+        expect((self.root / ".cursor" / "skills" / "echo" / "SKILL.md").is_file()).to(be_true)
+        expect((self.root / ".cursor" / "commands" / "echo.md").is_file()).to(be_true)
+
+    with it("does not write a generic kit-manifest skill for an actions-package entry"):
+        actions_py = self.root / "context_tools" / "actions" / "sketch" / "sketch.py"
+        actions_py.parent.mkdir(parents=True)
+        actions_py.write_text("# placeholder\n", encoding="utf-8")
+        entry = {
+            "module_dir": "sketch",
+            "skill_slug": "sketch",
+            "manifest_command": "python -m tools manifest sketch.sketch:Sketcher",
+            "class_name": "Sketcher",
+            "description": "Sketch a solution",
+            "file_path": str(actions_py),
+            "stale_focus_skill_slugs": [],
+            "focus_shortcuts": [],
+        }
+        self.skills._deploy_entries([entry], ide="cursor")
+        content = (self.root / ".cursor" / "skills" / "sketch" / "SKILL.md").read_text(encoding="utf-8")
+        expect(content).to(contain("Do not run this as its own toolset"))
+        expect(content).not_to(contain("sketch.sketch:Sketcher"))
+
+
+with description("deploy_filtered_toolsets tool"):
+    with before.each:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.skills = AgentSkills()
+        import agent_skills.agent_skills as _mod
+        self._mod = _mod
+        self._orig_root = _mod._REPO_ROOT
+        _mod._REPO_ROOT = self.root
+
+    with after.each:
+        self._mod._REPO_ROOT = self._orig_root
+        self.tmp.cleanup()
+
+    with it("writes commands under .cursor/commands for the given ide"):
+        result = self.skills.deploy_filtered_toolsets(entries_json="[]", ide="cursor")
+        expect((self.root / ".cursor" / "commands" / "partition.md").is_file()).to(be_true)
+        expect(result).to(contain("command"))
 
 
 with description("write_companion_command tool"):
@@ -339,7 +499,7 @@ with description("write_skill_shim tool"):
         self.tmp.cleanup()
 
     with context("ide=cursor"):
-        with it("writes SKILL.md under .cursor/skills/{slug}/"):
+        with it("writes SKILL.md under .cursor/skills/{slug}/ with AskQuestion fallback"):
             path = self.skills.write_skill_shim(
                 skill_slug="clean-engineering",
                 manifest_command="python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering",
@@ -351,6 +511,9 @@ with description("write_skill_shim tool"):
             expect(target.is_file()).to(be_true)
             content = target.read_text(encoding="utf-8")
             expect(content).to(contain("CleanEngineering"))
+            expect(content).to(contain("AskQuestion"))
+            expect(content).to(contain("Identify the action"))
+            expect(content).to(contain("Identify the fidelity"))
             expect(path).to(contain("SKILL.md"))
 
     with context("ide=vscode"):

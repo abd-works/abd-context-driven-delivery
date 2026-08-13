@@ -104,16 +104,13 @@ with description("Resolve Lifecycle Action Source Dir And Calls Via AST Walk"):
             self.resolutions = resolve_lifecycle_actions()
             self.by_name = {r.name: r for r in self.resolutions}
 
-        with it("walks every public @action in source order, skipping private ones"):
+        with it("walks every public @action in source order, skipping private ones and override hooks"):
             names = [r.name for r in self.resolutions]
-            expected_subsequence = [
+            expect(names).to(equal([
                 "partition", "grill", "sketch", "generate", "document",
                 "iterate", "validate", "satisfy", "repair", "improve",
-            ]
-            positions = [names.index(n) for n in expected_subsequence]
-            expect(positions).to(equal(sorted(positions)))
-            expect([n for n in names if n.startswith("_")]).to(equal([]))
-            expect(names.index("improve")).to(equal(names.index("repair") + 1))
+            ]))
+            expect("generate_fixes_from_validate" in names).to(equal(False))
 
         with it("resolves partition to its delegate kit dir under context_tools/actions/partition/"):
             expect(self.by_name["partition"].source_dir.name).to(equal("partition"))

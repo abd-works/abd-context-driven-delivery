@@ -135,11 +135,11 @@ with description("Render Context Tool Page"):
             expect("bounded contexts" in self.page.lower() or "Apply" in self.page).to(be_true)
 
         with it("shows one card per fidelity, in declared stage order"):
-            bounded_at = self.page.find("Bounded context")
-            building_at = self.page.find("Building blocks")
-            tactics_at = self.page.find(">Tactics<")
+            bounded_at = self.page.find("bounded-context")
+            building_at = self.page.find("building-blocks")
+            tactics_at = self.page.find(">tactics<")
             if tactics_at < 0:
-                tactics_at = self.page.find("Tactics")
+                tactics_at = self.page.find("tactics")
             expect(bounded_at < building_at < tactics_at).to(be_true)
 
 
@@ -181,8 +181,8 @@ with description("Render Hub Board With Actions And Utilities Rows"):
 
         with it("writes index.html with the CDD header row on top"):
             expect(
-                self.index_html.find("Context-driven delivery")
-                < self.index_html.find("Stories")
+                self.index_html.find("context-driven-delivery")
+                < self.index_html.find("stories")
             ).to(be_true)
 
         with it("shows the Actions row and the Utilities row below the board"):
@@ -222,6 +222,18 @@ with description("Render Hub Board With Actions And Utilities Rows"):
             utilities_at = self.index_html.find("Utilities</h3>")
             install_at = self.index_html.find("catalog-install-heading")
             expect(utilities_at < install_at).to(be_true)
+
+        with it("links the CDD Workflow page underneath the board and writes workflow.html"):
+            expect('href="workflow.html"' in self.index_html).to(be_true)
+            expect("catalog-workflow-heading" in self.index_html).to(be_true)
+            workflow_at = self.index_html.find("catalog-workflow-heading")
+            install_at = self.index_html.find("catalog-install-heading")
+            expect(workflow_at < install_at).to(be_true)
+            expect((self.tmp / "workflow.html").is_file()).to(be_true)
+            workflow_html = (self.tmp / "workflow.html").read_text(encoding="utf-8")
+            expect("CDD Workflow" in workflow_html).to(be_true)
+            expect("Scenario 1" in workflow_html).to(be_true)
+            expect('href="actions/partition.html"' in workflow_html).to(be_true)
 
 
 with description("Render Flat Grid Pages"):

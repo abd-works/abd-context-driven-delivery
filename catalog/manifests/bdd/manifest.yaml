@@ -48,6 +48,15 @@ signature:
       contexts: str
       path: str
     returns: str
+  finish_eval_turn:
+    kind: tool
+    instructions: Close the open eval Turn at the chat-reply boundary (hook/host calls
+      once).
+    parameters:
+      prompt: str
+      result: str
+      context: str
+    returns: str
   log_correction:
     kind: tool
     parameters:
@@ -142,6 +151,11 @@ signature:
       \ must map onto public CE interfaces and operations.\n        When BDD artifacts\
       \ are complete, call ce().generate() to produce the matching class skeletons."
     returns: str
+  generate_fixes_from_validate:
+    kind: action
+    tools:
+    - generate_output
+    returns: str
   generate_output:
     kind: action
     tools: []
@@ -186,15 +200,10 @@ signature:
   satisfy:
     kind: action
     tools: []
-    instructions: "Scan the production source for every public method and property;\
-      \ flag any with no corresponding test as a coverage gap. Fix every BDD violation\
-      \ and coverage gap — confirm each failing test is RED for the right reason.\n\
-      \        When BDD violations and coverage gaps are resolved, call ce().satisfy()\
-      \ to build or fix the minimum production code until GREEN. One test, one production\
-      \ change, one GREEN — repeat until validate passes.\n        If the same test\
-      \ is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose()\
-      \ before a third fix (wrong exception, wrong line, shifting failure mode, or\
-      \ a re-read of the code that does not explain the failure)."
+    instructions: "When running the fixing part of Satisfy, make sure that you create\
+      \ a breaking test that fails first (RED), and then fix the code.\n        When\
+      \ BDD violations are resolved, call ce().satisfy() to do the same for the matching\
+      \ classes.\n        If the same test keeps failing, call diagnostic().diagnose()."
     returns: str
   sketch:
     kind: action

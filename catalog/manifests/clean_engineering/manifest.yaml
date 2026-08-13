@@ -47,6 +47,15 @@ signature:
       contexts: str
       path: str
     returns: str
+  finish_eval_turn:
+    kind: tool
+    instructions: Close the open eval Turn at the chat-reply boundary (hook/host calls
+      once).
+    parameters:
+      prompt: str
+      result: str
+      context: str
+    returns: str
   log_correction:
     kind: tool
     parameters:
@@ -83,14 +92,19 @@ signature:
       \ render into target_format.\n        Supported transform channels: markdown,\
       \ json, python, typescript, java, javascript, drawio.\n        drawio auto-selects\
       \ modules view (system-context style) vs UML class view from model content.\n\
-      \        Generate AI surfaces: markdown / python / javascript templates under\
-      \ templates/;\n        modules.drawio for modules-fidelity diagrams (seam bullets\
-      \ + dependency arrows).\n        Moves content sideways between formats at the\
-      \ same fidelity - no analytical upgrade."
+      \        When target_format is drawio and keep_positioning is true, pass previous\
+      \ Draw.io XML\n        (or leave previous empty and use drawio.render / create_diagram\
+      \ with a path) so existing\n        class positions and relationship routing\
+      \ are kept; only new classes/edges are laid out.\n        For a persisted class\
+      \ diagram with layout scan/repair, use ``drawio.render`` (via generate when\
+      \ format is drawio) instead of transform alone.\n        Moves content sideways\
+      \ between formats at the same fidelity - no analytical upgrade."
     parameters:
       source_format: str
       target_format: str
       content: str
+      previous: str
+      keep_positioning: bool
     returns: dict
   active:
     kind: resource
@@ -169,9 +183,20 @@ signature:
       \ in your instructions when present.\n8. Run **validate**. If it fails, fix\
       \ the artifact and **validate** again until it passes.\n\n---"
     returns: str
+  generate_fixes_from_validate:
+    kind: action
+    tools:
+    - generate_output
+    returns: str
   generate_output:
     kind: action
     tools: []
+    instructions: "Write the fidelity artifact under the session.\n\n        When\
+      \ ``format`` is ``drawio``, call ``drawio.render`` (create diagram →\n     \
+      \   scan layout rules in drawio contexts → repair sub-agent on definitive\n\
+      \        layout failures). Otherwise produce the active channel output\n   \
+      \     (markdown / python / …) from contexts, examples, and templates — do\n\
+      \        not invoke drawio.render."
     returns: str
   grill:
     kind: action
@@ -207,28 +232,30 @@ signature:
     returns: str
   satisfy:
     kind: action
-    tools: []
+    tools:
+    - validate
+    - generate_fixes_from_validate
     instructions: '# Satisfy
 
 
-      Find and fix every problem in the artifact you wrote under the generator **`active`**
-      root — including generating any missing artifacts.
+      Satisfy runs in **tool mode**: it does not inline a recipe. It hands you two
+      tool calls to make yourself, in order — first find the problems, then fix them.
 
 
-      1. Follow **`session_guidance`**. Edit only under that layout.
+      1. **`validate`** — run this first. Judge the artifact under the generator **`active`**
+      root against the **contexts** and every named rule, and call **`scan`** on the
+      session-rooted paths. Produce the full list of violations and coverage gaps.
+      Do not fix anything in this step.
 
-      2. **Generate missing artifacts first.** Before validate, check each module
-      folder under `path` for a missing `.context/module-context.md`. A missing context
-      file IS a violation — create it at the current fidelity (thin at modules: Purpose,
-      Seam, Dependencies; full at model: + Primary use case, Rationale, Public API)
-      before running validate. Do not skip this step.
+      2. **`generate_fixes_from_validate`** — run this second, once you hold the validate
+      report. Follow **`session_guidance`** and edit only under that layout. Generate
+      any missing artifacts (a missing `.context/module-context.md` IS a violation
+      — create it at the current fidelity: thin at modules with Purpose, Seam, Dependencies;
+      full at model with + Primary use case, Rationale, Public API), then fix every
+      reported violation in the same paths — do not invent a divergent folder.
 
-      3. Run **validate** against those session-rooted artifacts.
 
-      4. Fix every reported violation in the artifact (same paths — do not invent
-      a divergent folder).
-
-      5. When done, run **validate** again until it passes.
+      When done, run **`validate`** again and repeat the two-call loop until it passes.
 
 
       ---'

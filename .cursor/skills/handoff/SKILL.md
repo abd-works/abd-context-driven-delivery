@@ -1,34 +1,26 @@
 ---
 name: handoff
-description: "Handoff - compact the current session so a fresh agent can continue."
+description: "Run companion Handoff in the current context-tool session."
 disable-model-invocation: true
 ---
 
 # Handoff
 
-Run the manifest to load tools, actions, and instructions:
+A context-tool skill/session is already in play. Run this companion toolset in
+that frame (same path / session / workspace as the context tool):
 
 ```
 python -m tools manifest handoff.handoff:Handoff
 ```
 
-Follow `response.instructions` before doing anything else. Invoke tools by writing
-the request to a YAML file (e.g. `_req.yaml`) and running:
-
-```
-python -m tools run _req.yaml
-```
-
-Delete the file after the call. Request format — `toolset` is the classname from
-the manifest step above:
+Follow `response.instructions`. Invoke via `_req.yaml` + `python -m tools run`:
 
 ```yaml
 toolset: handoff.handoff:Handoff
 context:
-  key: value      # constructor params (fidelity, path, session, …)
-tool: <tool_name>   # or action: <action_name>
-arguments:
-  key: value
+  path: <active context-tool path>
+  session: <active session name>
+action: <action from this companion's manifest>
 ```
 
-Read `examples/` before guessing any field shape.
+Delete the request file after the call. Read `examples/` before guessing field shape.

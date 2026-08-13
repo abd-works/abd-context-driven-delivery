@@ -64,6 +64,7 @@ class Ux(BaseContextTool):
         session: str | None = None,
         workspace: str | None = None,
     ) -> None:
+        fidelity = type(self).resolve_fidelity(fidelity)
         if fidelity not in _FIDELITY_FORMAT_DEFAULTS:
             raise ValueError(
                 f"Unsupported fidelity {fidelity!r}. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"

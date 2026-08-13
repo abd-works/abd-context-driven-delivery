@@ -78,6 +78,7 @@
 <section class="install-block fidelity-guidance" data-fidelity="modules" aria-label="Fidelity guidance"><h2>Overview</h2>
 <p>Deepen OO design from modules toward production code. Each fidelity <strong>adds</strong> artifacts — do not invent detail from a deeper level.</p>
 <p><strong>Progression:</strong> <code>partition</code> (action) → <strong>scaffold</strong> → <strong>modules</strong> → <strong>model</strong> → <strong>code</strong>.</p>
+<p><strong>Interfaces (<code>I{Class}</code>) are optional, not automatic.</strong> See <code>## model</code> § Interfaces for the trigger — ask for one, or a genuine multi-layer/multi-implementation seam.</p>
 <hr>
 <h2>modules</h2>
 <p><strong>Default format:</strong> markdown <strong>Diagram format:</strong> <code>drawio</code> (modules view — blue boxes, seam-term bullets, one-way dependency arrows; template <code>templates/modules.drawio</code>). Language channels (python/java/…) are for <strong>model</strong> and later — not required here.</p>
@@ -118,7 +119,7 @@
 <li><strong><code>named-seam-and-constraint</code></strong> — Every module owns a <em>seam</em> — the public surface of classes and operations callers depend on — paired with a <em>constraint</em> stating what callers must do or must not do at that boundary. A module is described by what it requires of its callers, not only by what it holds.</li>
 <li><strong><code>deep-module</code></strong> — The seam stays a short named list of classes and operations with substantial functionality behind it (Ousterhout: small interface, large hidden implementation). If internal helpers leak into the seam, encapsulation is overhead without benefit. Scanner heuristic: at most <strong>40%</strong> of top-level symbols may be public (leading underscore for the rest).</li>
 <li><strong><code>physical-folder</code></strong> — Each module occupies its own folder; class files, markdown documents, and other module-level artifacts live in it. Generated code belongs in that folder — not beside the module, not in a flat dump outside it. Nested modules use child folders under the parent (<code>nested-physical-folder</code>). Not every folder is a module — chapter or organisational folders may group several modules and must not be treated as one module unless they own <code>.context/module-context.md</code>.</li>
-<li><strong><code>cohesive-file</code></strong> — Put a <strong>class family</strong> in one file: the primary type, its subtypes, and tightly connected peers that only make sense together (element + collection, small aggregate + its part). Name the file after the family concept (<code>abilities.py</code> for <code>Ability</code> + <code>Abilities</code>). Split into another file only when a type is independently reused across families or the file becomes a grab-bag of unrelated types. Do not default to one class per file. <strong>Exception:</strong> <code>{Type}ExampleFactory</code> (and its <code>I{Type}ExampleFactory</code> + <code>examples</code> data) always live in a <strong>sibling file</strong> — never in the production family file (see <strong>Example factories</strong>).</li>
+<li><strong><code>cohesive-file</code></strong> — Put a <strong>class family</strong> in one file: the primary type, its subtypes, and tightly connected peers that only make sense together (element + collection, small aggregate + its part). Name the file after the family concept (<code>abilities.py</code> for <code>Ability</code> + <code>Abilities</code>). Split into another file only when a type is independently reused across families or the file becomes a grab-bag of unrelated types. Do not default to one class per file. <strong>Exception:</strong> <code>{Type}ExampleFactory</code> (and its <code>examples</code> data, plus <code>I{Type}ExampleFactory</code> when one was requested) always live in a <strong>sibling file</strong> — never in the production family file (see <strong>Example factories</strong>).</li>
 <li><strong><code>abstraction-focus</code></strong> — Module description names <em>what</em> the module does at a higher level than the classes inside it; public verbs are caller-facing, not internal steps or storage layouts.</li>
 <li><strong><code>layer-separation</code></strong> — Adjacent modules operate at different abstraction levels; collapse pass-through modules.</li>
 <li><strong><code>complexity-absorption</code></strong> — Push configuration and edge-case handling into the module; callers pass intent, not setup flags.</li>
@@ -137,14 +138,23 @@
 <p>Whether a module is a mechanism is stereotyped lightly at <strong>modules</strong> fidelity and made precise at <strong>model</strong> / <strong>code</strong> (variation points and fixed parts listed in the context file). Mechanism identification is optional and exploratory — pursue it when the pattern is genuinely recurring, not as a default.</p>
 <p>At <strong>modules</strong> fidelity, <code>.context/module-context.md</code> is thin: Purpose, Seam (term list), Dependencies (one-way), optional Mechanism note — plus <code>{session}/.context/module-build-order.md</code>. At <strong>model</strong> fidelity it expands to <strong>Purpose</strong>, <strong>Primary use case</strong>, <strong>Rationale</strong>, <strong>Seam</strong>, <strong>Public API</strong>, and <strong>Dependencies</strong>.</p>
 <hr></section>
-<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>markdown</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/99e466ee89549a00a7e14582e440fc3d35f5fc64/context_tools/clean_engineering/templates/clean_engineering-templates.md">templates/clean_engineering-templates.md</a></p><pre class="code-fence"><code class="language-markdown">&lt;!--
+<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>markdown</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/4d01623dadcd0a757141f9f54c96dab611b3b557/context_tools/clean_engineering/templates/clean_engineering-templates.md">templates/clean_engineering-templates.md</a></p><pre class="code-fence"><code class="language-markdown">&lt;!--
   clean_engineering markdown template — unified across all fidelities.
 
-  Fidelity tags on every element (as HTML comments at end of line or block):
+  INTERFACES ARE OPTIONAL (see clean_engineering.md § Interfaces). This template shows
+  the `I{ClassName}` form because it is the richer case to document. Default to
+  skipping `## I{ClassName}` entirely and starting straight at `## {ClassName}` (empty,
+  untagged-S members at model) unless the user asked for an interface, or the module
+  genuinely has multiple layers/implementations behind one seam. When skipped, the S/C
+  tags below still apply to `## {ClassName}` — there is just no separate Md section.
+
+  Fidelity tags on section headings (as HTML comments — informational only):
     L  = language companion (prose identity; refined at every stage — not a fidelity)
     Mu = modules        (thin terms, one-way deps, build order; no I{Class} yet)
-    Md = model          (I{ClassName} only — empty public props/ops)
-    S  = specification  ({ClassName} extends I{ClassName}; public filled; privates empty)
+    Md = model          (I{ClassName} — typed compact block — ONLY when an interface is
+                         requested; otherwise model is the empty `## {ClassName}` block)
+    S  = specification  ({ClassName}: public filled with + prefix, relationship kinds,
+                         invariant sentences, interactions)
     C  = code           (fill {ClassName}; drop interactions; keep invariant comments)
 
   Class member format (model &amp; specification):
@@ -153,13 +163,17 @@
     -       (dash prefix)  private operation
     +       (plus prefix)  public — specification fidelity only
 
-  Subtypes use ### **{ChildClass} : {ClassName}** notation; deltas only.
-  Substitute {ClassName} / {owned_property} / {param} / {Type} / … when generating.
+  Document structure: H1 = module, H2 = class within that module.
+  Interface (I{ClassName}) and implementation ({ClassName}) both sit under the
+  same module H1 — interface first, then implementation. No fidelity section
+  headers (## Model fidelity / ## Specification fidelity) in the output.
+  Language companion and modules overview go as prose BEFORE the first H1.
+
+  Subtypes use ## {ChildClass} : {ClassName} notation; deltas only.
+  Substitute {ClassName} / {owned_property} / {param} / {Type} / ... when generating.
 --&gt;
 
-# {ClassName}                                                     &lt;!-- L --&gt;
-
----
+**Sources / context:** {source_files}                             &lt;!-- L --&gt;
 
 ## Language companion                                             &lt;!-- L --&gt;
 
@@ -176,90 +190,111 @@ This paragraph IS the class definition. Identity only.}           &lt;!-- L --&g
 
 - {delta behavior only — what this subtype adds or overrides}     &lt;!-- L --&gt;
 
+## Modules                                                        &lt;!-- Mu --&gt;
+
+Build order: `{first}` → `{second}` → `{third}`
+
 ---
 
-## Modules fidelity                                               &lt;!-- Mu --&gt;
-
-### Module `{module_path}`                                        &lt;!-- Mu --&gt;
+# {module_path}                                                   &lt;!-- Mu --&gt;
 
 - **Purpose:** {one paragraph}                                    &lt;!-- Mu --&gt;
-- **Seam (terms):** {ClassName}, {ChildClass}, …                  &lt;!-- Mu --&gt;
-- **Dependencies (one-way):** {other_module}, …                   &lt;!-- Mu --&gt;
-- **Build order:** see `{session}/.context/module-build-order.md` &lt;!-- Mu --&gt;
+- **Seam (terms):** {ClassName}, {ChildClass}, ...                &lt;!-- Mu --&gt;
+- **Dependencies (one-way):** {other_module}, ...                 &lt;!-- Mu --&gt;
 
-Diagram (optional): fill `templates/modules.drawio` — one blue box per module;
-bullets = Seam terms; arrows = one-way Dependencies (toward the depended-on module).
-Path nesting = containment (child boxes inside the parent). Shared base terms live on
-the parent module, not a `parent/base` submodule. No stack/tech callouts.
-Transform: `markdown` ↔ `drawio` at modules fidelity.
+## I{ClassName}                                                   &lt;!-- Md, optional --&gt;
+&lt;!-- Omit this section entirely by default — see note at top of file.
+     Include it only when an interface was requested, or the module has
+     multiple layers/implementations that need abstracting apart. --&gt;
+
+I{ClassName}({param}: {Type})
+------
+{owned_property}: {Type}
+{plain_property}: {Type}
+----
+{operation_name}({param}: {Type}): {ReturnType}
+{another_operation}(): {ReturnType}
+
+## {ClassName}                                                    &lt;!-- Md (default, no interface) / S --&gt;
+
++ {ClassName}({param}: {Type})
+------
++ &lt;&lt; composition &gt;&gt; {owned_property}: {Type}
+	Invariant: {constraint sentence.}
++ &lt;&lt; aggregation &gt;&gt; {collected_property}: list[{Type}]
++ &lt;&lt; association &gt;&gt; {referenced_property}: {Type}
+----
++ {operation_name}({param}: {Type}): {ReturnType}
+	Invariant: {constraint sentence applicable to this operation.}
+	Interaction:
+		{variable}: {Type} = {other}.{call}({args})
+		return {variable}
+- _{private_helper}({param}: {Type}): {Type}
+
+## I{ChildClass}                                                  &lt;!-- Md, optional --&gt;
+
+I{ChildClass}({param}: {Type})
+------
+----
+{delta_operation}({param}: {Type}): {ReturnType}
+
+## {ChildClass}                                                   &lt;!-- Md (default, no interface) / S --&gt;
+
++ {ChildClass}({param}: {Type})
+------
++ {child_specific_property}: {Type}
+	Invariant: {constraint sentence.}
+----
++ {delta_operation}({param}: {Type}): {ReturnType}
 
 ---
 
-## Model fidelity                                                 &lt;!-- Md --&gt;
+# {next_module_path}                                              &lt;!-- Mu --&gt;
 
-### **I{ClassName}**                                              &lt;!-- Md --&gt;
+- **Purpose:** {one paragraph}
+- **Seam (terms):** {ClassName}, ...
+- **Dependencies (one-way):** *(none)*
 
-I{ClassName}({param}: {Type})                                     &lt;!-- Md --&gt;
+## I{NextClassName}                                               &lt;!-- Md, optional --&gt;
+
+I{NextClassName}({param}: {Type})
 ------
-{owned_property}: {Type}                                          &lt;!-- Md --&gt;
-{plain_property}: {Type}                                          &lt;!-- Md --&gt;
+{property}: {Type}
 ----
-{operation_name}({param}: {Type}): {ReturnType}                   &lt;!-- Md --&gt;
-{another_operation}(): {ReturnType}                               &lt;!-- Md --&gt;
+{operation_name}({param}: {Type}): {ReturnType}
 
-### **I{ChildClass}**                                             &lt;!-- Md --&gt;
+## {NextClassName}                                                &lt;!-- Md (default, no interface) / S --&gt;
 
-I{ChildClass}({param}: {Type})                                    &lt;!-- Md --&gt;
++ {NextClassName}({param}: {Type})
 ------
++ {property}: {Type}
 ----
-{delta_operation}({param}: {Type}): {ReturnType}                  &lt;!-- Md --&gt;
++ {operation_name}({param}: {Type}): {ReturnType}
 
 ---
 
-## Specification fidelity                                         &lt;!-- S --&gt;
-
-### **{ClassName} : I{ClassName}**                                &lt;!-- S --&gt;
-
-+ {ClassName}({param}: {Type})                                    &lt;!-- S --&gt;
-------
-+ {owned_property}: {Type}                                        &lt;!-- S --&gt;
-	Invariant: {constraint sentence.}                             &lt;!-- S --&gt;
-+ &lt;&lt; composition &gt;&gt; {owned_property}: {Type}                      &lt;!-- S --&gt;
-+ &lt;&lt; aggregation &gt;&gt; {collected_property}: list[{Type}]            &lt;!-- S --&gt;
-+ &lt;&lt; association &gt;&gt; {referenced_property}: {Type}                 &lt;!-- S --&gt;
-----
-+ {operation_name}({param}: {Type}): {ReturnType}                 &lt;!-- S --&gt;
-	Invariant: {constraint sentence applicable to this operation.} &lt;!-- S --&gt;
-	Interaction:                                                   &lt;!-- S --&gt;
-		{variable}: {Type} = {other}.{call}({args})               &lt;!-- S --&gt;
-		return {variable}                                         &lt;!-- S --&gt;
-- _{private_helper}({param}: {Type}): {Type}                      &lt;!-- S --&gt;
-
-### **{ChildClass} : I{ChildClass}**                              &lt;!-- S --&gt;
-
-+ {ChildClass}({param}: {Type})                                   &lt;!-- S --&gt;
-------
-+ {child_specific_property}: {Type}                               &lt;!-- S --&gt;
-	Invariant: {constraint sentence.}                             &lt;!-- S --&gt;
-----
-+ {delta_operation}({param}: {Type}): {ReturnType}                &lt;!-- S --&gt;
-
-### **Example factory (when Stories-bound) — separate file**      &lt;!-- Md/S --&gt;
+### Example factory (when Stories-bound) — separate file           &lt;!-- Md/S --&gt;
 
 Write factories in `{type_slug}_example_factory.md` (or code sibling), **not** in the production family file.
 Do not sketch Fake{ClassName} / Isolated{ClassName} / Production{ClassName} types.
 
-### **I{ClassName}ExampleFactory**                                &lt;!-- Md --&gt;
+## I{ClassName}ExampleFactory                                     &lt;!-- Md, optional — same opt-in rule --&gt;
 
-+ load_{example_key}(mode): I{ClassName}                          &lt;!-- Md --&gt;
+I{ClassName}ExampleFactory()
+------
+----
+load_{example_key}(mode): I{ClassName}
 
-### **{ClassName}ExampleFactory : I{ClassName}ExampleFactory**    &lt;!-- S --&gt;
+## {ClassName}ExampleFactory                                      &lt;!-- Md (default, no interface) / S --&gt;
 
-+ load_{example_key}(mode): I{ClassName}                          &lt;!-- S --&gt;
-	// examples[{example_key}] multi-type bundle                  &lt;!-- S --&gt;
-	// Fake: mock/stub framework + feed examples                  &lt;!-- S --&gt;
-	// Isolated: new {ClassName}(ctor-injected mocks/stubs)       &lt;!-- S --&gt;
-	// Production: new {ClassName}(real collaborators)            &lt;!-- S --&gt;
++ {ClassName}ExampleFactory()
+------
+----
++ load_{example_key}(mode): I{ClassName}
+	// examples[{example_key}] multi-type bundle
+	// Fake: mock/stub framework + feed examples
+	// Isolated: new {ClassName}(ctor-injected mocks/stubs)
+	// Production: new {ClassName}(real collaborators)
 </code></pre></section>
 <section class="skill-cr-single illustrated-example"><h2>Illustrated example</h2><p>No illustrated example configured yet.</p></section>
 

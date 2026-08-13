@@ -94,9 +94,10 @@
 <li>Resource <code>active</code>; instruction <code>session_guidance</code></li>
 <li>Class knobs: <code>default_workspace_folder</code>, <code>context_index_key</code></li>
 <li>Lifecycle actions: <code>generate</code>, <code>validate</code>, <code>satisfy</code>, <code>document</code>, <code>grill</code>, <code>sketch</code>, <code>iterate</code>, <code>generate_output</code>, <code>add_generate_header_to_generated</code></li>
+<li>Eval capture: <code>self.eval</code> (<code>eval.Session</code>); <code>@log</code> → <code>record_tool_call</code>; <code>log_mistake</code> / <code>log_correction</code> dual-write to eval; <code>finish_eval_turn</code> for the chat-reply boundary</li>
 </ul>
 <h2>Dependencies</h2>
-<p>Session (composed via <code>workspace()</code>), Scan (composed instances); Sketcher, GrillContext, Iterator, RecordDecisions (composed); PartitionPipeline, Repair (methods injected by explicit binding — not MI; prose lookup stays in their source dirs)</p></section>
+<p>Session / workspace kits under <code>context_tools/actions/workspace</code>; Scan under <code>utilities/scanners</code>; Sketcher, GrillContext, Iterator, Partition, Repair under <code>context_tools/actions/</code>; RecordDecisions under <code>utilities/record_decisions</code> (composed via providers — not MI; prose lookup stays in their source dirs)</p></section>
 
 </div>
 </div>

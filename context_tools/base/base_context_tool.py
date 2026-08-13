@@ -48,8 +48,31 @@ class BaseContextTool(AgenticToolset):
     SPEC: ClassVar[str] = "spec"
     ENGINEER: ClassVar[str] = "engineer"
 
+    # Chat/command stage names → canonical stage keys used in ``fidelities``.
+    STAGE_ALIASES: ClassVar[dict[str, str]] = {
+        "discovery": DISCOVERY,
+        "specification": SPEC,
+        "spec": SPEC,
+        "engineering": ENGINEER,
+        "engineer": ENGINEER,
+    }
+
     fidelities: ClassVar[dict[str, str] | None] = None
     _fidelity_format_defaults: ClassVar[dict[str, str]] = {}
+
+    @classmethod
+    def resolve_fidelity(cls, fidelity: str) -> str:
+        """Map a CDD stage name to this tool's concrete fidelity.
+
+        Accepts stage command names (``discovery`` / ``specification`` /
+        ``engineering``), short stage keys (``spec`` / ``engineer``), or an
+        already-concrete fidelity. Stage names look up ``cls.fidelities``.
+        """
+        stage = cls.STAGE_ALIASES.get(fidelity, fidelity)
+        mapping = cls.fidelities or {}
+        if stage in mapping:
+            return mapping[stage]
+        return fidelity
 
     def __init__(
         self,
@@ -169,14 +192,16 @@ class BaseContextTool(AgenticToolset):
 
         Used by generated fidelity methods (generate_{f}, validate_{f}, …) to
         switch fidelity at runtime without reconstructing the toolset instance.
-        Format is only updated when fidelity_name appears in the subclass's
-        ``_fidelity_format_defaults`` class dict; otherwise self.format is
-        left unchanged.
+        Stage names (discovery / specification / engineering) are mapped via
+        ``resolve_fidelity`` first. Format is only updated when the resolved
+        name appears in the subclass's ``_fidelity_format_defaults``; otherwise
+        self.format is left unchanged.
         """
-        self.fidelity = fidelity_name
+        resolved = type(self).resolve_fidelity(fidelity_name)
+        self.fidelity = resolved
         defaults: dict[str, str] = getattr(type(self), "_fidelity_format_defaults", {})
-        if fidelity_name in defaults:
-            self.format = defaults[fidelity_name]
+        if resolved in defaults:
+            self.format = defaults[resolved]
 
     # -- workspace  ----------------
     default_workspace_folder: str = "."

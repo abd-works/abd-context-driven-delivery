@@ -75,7 +75,7 @@
 <div class="wrap skill-detail-page">
 <header class="page-hero--detail fidelity-detail-header"><p class="s-name">Lifecycle action</p><h1 class="page-headline">satisfy</h1></header>
 <section class="install-block action-invoke" aria-labelledby="action-invoke-heading"><h2 id="action-invoke-heading">Request</h2><p class="install-hint">used as action: <code>satisfy</code> in the request</p><p class="install-source"><a href="../manifests/actions/satisfy.html" id="raw-manifest">Raw manifest format →</a></p></section>
-<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><p>Calls nothing else directly.</p></section>
+<section class="install-block action-section" aria-label="Tools / actions called"><h2>Tools / actions called</h2><ul><li><a href="actions/validate.html">validate</a></li><li><a href="https://github.com/abd-works/abd-context-driven-delivery/blob/4d01623dadcd0a757141f9f54c96dab611b3b557/context_tools/base/base_context_tool.py#L348-L355">generate_fixes_from_validate</a> <span class="tag">(tool, no page)</span></li></ul></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Markdown instructions"><h2>Markdown instructions</h2><p>No dedicated guide - see module overview below.</p></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>BaseContextTool (composer + lifecycle)</h1>
 <p><strong>Purpose:</strong> Shared base for every concrete context domain — partition/repair peers + generate/validate/satisfy/document (+ grill/sketch/iterate). Domains subclass it directly.</p>
@@ -94,9 +94,10 @@
 <li>Resource <code>active</code>; instruction <code>session_guidance</code></li>
 <li>Class knobs: <code>default_workspace_folder</code>, <code>context_index_key</code></li>
 <li>Lifecycle actions: <code>generate</code>, <code>validate</code>, <code>satisfy</code>, <code>document</code>, <code>grill</code>, <code>sketch</code>, <code>iterate</code>, <code>generate_output</code>, <code>add_generate_header_to_generated</code></li>
+<li>Eval capture: <code>self.eval</code> (<code>eval.Session</code>); <code>@log</code> → <code>record_tool_call</code>; <code>log_mistake</code> / <code>log_correction</code> dual-write to eval; <code>finish_eval_turn</code> for the chat-reply boundary</li>
 </ul>
 <h2>Dependencies</h2>
-<p>Session (composed via <code>workspace()</code>), Scan (composed instances); Sketcher, GrillContext, Iterator, RecordDecisions (composed); PartitionPipeline, Repair (methods injected by explicit binding — not MI; prose lookup stays in their source dirs)</p></section>
+<p>Session / workspace kits under <code>context_tools/actions/workspace</code>; Scan under <code>utilities/scanners</code>; Sketcher, GrillContext, Iterator, Partition, Repair under <code>context_tools/actions/</code>; RecordDecisions under <code>utilities/record_decisions</code> (composed via providers — not MI; prose lookup stays in their source dirs)</p></section>
 
 </div>
 </div>

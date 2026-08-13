@@ -54,11 +54,6 @@ example-of: none
                 then the AI Chat requests a semantic re-pass of the Markdown Document
                     and Tag Content By View is not called until the re-pass returns
         * approx 1-2 more stories (multi-file error handling, partial-conversion recovery)
-    (E) Capture From Live App                    // Increment 2 — User-chosen capture path, deferred
-        (S) User --> Capture From Live App
-        (S) Tool --> Stub External Dependencies
-        (S) Tool --> Capture App Pages
-        (S) AI Chat --> Review Capture Coverage
         * approx 2-3 more stories (human approval gate, reasonableness review, retry on incomplete capture)
     (E) Prepare Content For Retrieval
         (S) Tool --> Tag Content By View
@@ -120,7 +115,12 @@ example-of: none
                 given ranked Chunks and Scores from Search Memory
                 when the AI Chat reads each Chunk's chunk_type front matter to weight results
                 then an Answer is composed that cites source.path and section per Chunk used
-        * approx 1-2 more stories (empty-index fallback, multi-corpus query)
+        * approx 1-2 more stories (empty-index fallback, multi-corpus query)\
+     (E) Capture From Live App                    // Increment 2 — User-chosen capture path, deferred
+        (S) User --> Capture From Live App
+        (S) Tool --> Stub External Dependencies
+        (S) Tool --> Capture App Pages
+        (S) AI Chat --> Review Capture Coverage
 
 ---
 

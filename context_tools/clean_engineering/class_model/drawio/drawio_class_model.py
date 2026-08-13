@@ -1842,22 +1842,12 @@ def _route_waypoints(
     highways = _row_highways(placements)
     leave = _capped_outward_point(src, exit_side, exit_frac, max_clear, highways)
     approach = _capped_outward_point(tgt, entry_side, entry_frac, max_clear, highways)
-    gap_room = max(12.0, ROW_GAP - 24)
-    sep = 12.0
+    # Parallel separation: scanners use ~12px proximity; 12px lanes fit three
+    # highways in a typical INNER_ROW_GAP (~44px). Do not modulo-wrap into ROW_GAP.
+    lane_sep = 12.0
 
-    if exit_side == "bottom":
-        src_hw = src[1] + src[3] + 10 + (lane_i * sep) % gap_room
-    elif exit_side == "top":
-        src_hw = src[1] - 10 - (lane_i * sep) % gap_room
-    else:
-        src_hw = leave[1]
-
-    if entry_side == "top":
-        tgt_hw = tgt[1] - 10 - (lane_i * sep) % gap_room
-    elif entry_side == "bottom":
-        tgt_hw = tgt[1] + tgt[3] + 10 + (lane_i * sep) % gap_room
-    else:
-        tgt_hw = approach[1]
+    exit_pt = _point_on_side(src, exit_side, exit_frac)
+    entry_pt = _point_on_side(tgt, entry_side, entry_frac)
 
     def _is_clear(pts: List[Tuple[float, float]], check_edges: bool) -> bool:
         if _polyline_hits_obstacle(pts, obstacles, margin=3.0):
@@ -1874,63 +1864,234 @@ def _route_waypoints(
             return False
         return True
 
-    exit_pt = _point_on_side(src, exit_side, exit_frac)
-    entry_pt = _point_on_side(tgt, entry_side, entry_frac)
-    candidates: List[List[Tuple[float, float]]] = []
+    def _occupied_horiz_ys() -> List[float]:
+        ys: List[float] = []
+        for segs in avoid_segments:
+            for (a, b) in segs:
+                if abs(a[1] - b[1]) < 2.0 and abs(a[0] - b[0]) > 12.0:
+                    ys.append((a[1] + b[1]) / 2.0)
+        return ys
 
-    # Prefer a single-bend route in the inter-row gap (no shared side gutter).
-    if exit_side in ("top", "bottom") and entry_side in ("top", "bottom"):
-        candidates.append(
-            [
-                (exit_pt[0], src_hw),
-                (entry_pt[0], src_hw),
-            ]
-        )
-        candidates.append(
-            [
-                (exit_pt[0], src_hw),
-                (entry_pt[0], src_hw),
-                (entry_pt[0], tgt_hw),
-            ]
-        )
+    def _sorted_free_ys(cands: List[float]) -> List[float]:
+        occupied = _occupied_horiz_ys()
 
-    # Gutter routes when the direct column drop would hit an intervening class.
-    for gx in sorted(gutters, key=lambda g: abs(g - (exit_pt[0] + entry_pt[0]) / 2)):
-        gx_lane = gx + (lane_i - 2) * 8
-        candidates.append(
-            [
-                (exit_pt[0], src_hw),
-                (gx_lane, src_hw),
-                (gx_lane, tgt_hw),
-                (entry_pt[0], tgt_hw),
-            ]
-        )
+        def _score(y: float) -> Tuple[float, float]:
+            if not occupied:
+                return (0.0, abs(y - cands[0]))
+            dist = min(abs(y - o) for o in occupied)
+            penalty = 0.0 if dist >= lane_sep else (lane_sep - dist)
+            return (penalty, -dist)
 
-    # Outer margins.
-    for ox in (gutters[0] - 40 - lane_i * 10, gutters[-1] + 40 + lane_i * 10):
-        candidates.append(
-            [
-                (exit_pt[0], src_hw),
-                (ox, src_hw),
-                (ox, tgt_hw),
-                (entry_pt[0], tgt_hw),
-            ]
-        )
+        uniq: List[float] = []
+        for y in cands:
+            if all(abs(y - e) >= 1.0 for e in uniq):
+                uniq.append(y)
+        return sorted(uniq, key=_score)
 
-    for check_edges in (True, False):
-        for path in candidates:
+    def _fan_y(base: float, outward: float, count: int = 8) -> List[float]:
+        order = [lane_i] + [i for i in range(count) if i != lane_i]
+        vals: List[float] = []
+        for step in order:
+            y = base + outward * float(step) * lane_sep
+            if outward > 0 and y < base - 0.5:
+                continue
+            if outward < 0 and y > base + 0.5:
+                continue
+            if all(abs(y - e) >= lane_sep - 0.5 for e in vals):
+                vals.append(y)
+        return vals or [base]
+
+    def _channels(extra: float = 0.0) -> List[float]:
+        xs = [gx + (lane_i - 2) * 8 for gx in gutters]
+        near_left = src[0] - 16.0 - extra
+        near_right = src[0] + src[2] + 16.0 + extra
+        far_left = [
+            gutters[0] - 40 - lane_i * 10 - extra,
+            gutters[0] - 80 - lane_i * 14 - extra,
+            gutters[0] - 140 - lane_i * 18 - extra,
+        ]
+        far_right = [
+            gutters[-1] + 40 + lane_i * 10 + extra,
+            gutters[-1] + 80 + lane_i * 14 + extra,
+            gutters[-1] + 140 + lane_i * 18 + extra,
+        ]
+        # If other classes sit in the vertical span between src and tgt, keep the
+        # long vertical outside their shared bounding box so sibling routes that
+        # later cross that band are not blocked by a mid-band channel.
+        span_top = min(src[1], tgt[1])
+        span_bot = max(src[1] + src[3], tgt[1] + tgt[3])
+        intervening = [
+            geo
+            for geo in placements.values()
+            if geo != src
+            and geo != tgt
+            and geo[1] < span_bot
+            and geo[1] + geo[3] > span_top
+        ]
+        if intervening:
+            band_lo = min(g[0] for g in intervening) - 20.0 - extra
+            band_hi = max(g[0] + g[2] for g in intervening) + 20.0 + extra
+            # Prefer the outside nearest the exit so the stub does not sweep across
+            # other bottom-exit anchors on the same parent.
+            if exit_pt[0] >= src[0] + src[2] * 0.5:
+                outside = [band_hi, band_hi + 40.0, band_lo, band_lo - 40.0]
+            else:
+                outside = [band_lo, band_lo - 40.0, band_hi, band_hi + 40.0]
+            return outside + far_right + far_left + [near_right, near_left] + xs
+        if entry_pt[0] >= exit_pt[0]:
+            return far_right + [near_right] + xs + [near_left] + far_left
+        return far_left + [near_left] + xs + [near_right] + far_right
+
+    def _candidates(extra: float = 0.0) -> List[List[Tuple[float, float]]]:
+        paths: List[List[Tuple[float, float]]] = []
+        channels = _channels(extra)
+
+        if exit_side in ('left', 'right') or entry_side in ('left', 'right'):
+            y_vals = _sorted_free_ys(
+                _fan_y(leave[1], 1.0, count=6)
+                + [leave[1] - (i + 1) * lane_sep for i in range(5)]
+            )
+            for y in y_vals[:8]:
+                for cx in channels[:8]:
+                    paths.append(
+                        [leave, (leave[0], y), (cx, y), (approach[0], y), approach]
+                    )
+                    paths.append(
+                        [
+                            leave,
+                            (cx, leave[1]),
+                            (cx, y),
+                            (approach[0], y),
+                            approach,
+                        ]
+                    )
+            paths.append([leave, (approach[0], leave[1]), approach])
+            paths.append([leave, approach])
+            return paths
+
+        out_exit = 1.0 if exit_side == 'bottom' else -1.0
+        out_entry = -1.0 if entry_side == 'top' else 1.0
+        # Minimal stub so long verticals sit in gutters, not on exit X.
+        stub_y = exit_pt[1] + out_exit * 10.0
+        src_ys = _sorted_free_ys(_fan_y(stub_y, out_exit, count=6))
+        tgt_ys = _sorted_free_ys(
+            _fan_y(entry_pt[1] + out_entry * 10.0, out_entry, count=6)
+        )
+        tgt_ys = [
+            y
+            for y in tgt_ys
+            if (entry_side != 'top' or y <= entry_pt[1])
+            and (entry_side != 'bottom' or y >= entry_pt[1])
+        ] or [entry_pt[1] + out_entry * 10.0]
+        # Keep approach highways inside the src→tgt gap so entry verticals stay short
+        # and do not get crossed by wrap-around routes in the same band.
+        if exit_side == 'bottom' and entry_side == 'top':
+            gap_lo = exit_pt[1] + 10.0
+            gap_hi = entry_pt[1] - 10.0
+            in_gap = [y for y in tgt_ys if gap_lo - 0.5 <= y <= gap_hi + 0.5]
+            if in_gap:
+                tgt_ys = in_gap
+            src_in_gap = [y for y in src_ys if gap_lo - 0.5 <= y <= gap_hi + 0.5]
+            if src_in_gap:
+                src_ys = src_in_gap
+        src_ys = [
+            y
+            for y in src_ys
+            if (exit_side != 'bottom' or y >= exit_pt[1])
+            and (exit_side != 'top' or y <= exit_pt[1])
+        ] or [stub_y]
+
+        channel_paths: List[List[Tuple[float, float]]] = []
+        gap_paths: List[List[Tuple[float, float]]] = []
+        for tgt_hw in tgt_ys:
+            for cx in channels[:8]:
+                channel_paths.append(
+                    [
+                        (exit_pt[0], stub_y),
+                        (cx, stub_y),
+                        (cx, tgt_hw),
+                        (entry_pt[0], tgt_hw),
+                    ]
+                )
+            for src_hw in src_ys[:4]:
+                for cx in channels[:6]:
+                    channel_paths.append(
+                        [
+                            (exit_pt[0], src_hw),
+                            (cx, src_hw),
+                            (cx, tgt_hw),
+                            (entry_pt[0], tgt_hw),
+                        ]
+                    )
+        for src_hw in src_ys[:6]:
+            gap_paths.append([(exit_pt[0], src_hw), (entry_pt[0], src_hw)])
+            for tgt_hw in tgt_ys[:4]:
+                if abs(tgt_hw - src_hw) >= lane_sep * 0.5:
+                    gap_paths.append(
+                        [
+                            (exit_pt[0], src_hw),
+                            (entry_pt[0], src_hw),
+                            (entry_pt[0], tgt_hw),
+                        ]
+                    )
+
+        if avoid_segments:
+            return channel_paths + gap_paths
+        return gap_paths + channel_paths
+
+    def _search(extra: float, check_edges: bool) -> Optional[List[Tuple[float, float]]]:
+        for path in _candidates(extra):
             pts = _dedupe_points(path)
-            if _is_clear(pts, check_edges=check_edges):
+            if pts and _is_clear(pts, check_edges=check_edges):
                 return pts
+        return None
 
+    found = _search(0.0, check_edges=True)
+    if found is not None:
+        return found
+
+    if not avoid_segments:
+        found = _search(0.0, check_edges=False)
+        if found is not None:
+            return found
+    else:
+        for extra in (40.0, 100.0, 180.0, 280.0):
+            found = _search(extra, check_edges=True)
+            if found is not None:
+                return found
+
+    best: Optional[List[Tuple[float, float]]] = None
+    best_conflicts = 10**9
+    for path in _candidates(280.0):
+        pts = _dedupe_points(path)
+        if not pts or not _is_clear(pts, check_edges=False):
+            continue
+        segs = _segments_from_route(
+            src, tgt, exit_side, entry_side, exit_frac, entry_frac, pts
+        )
+        conflicts = sum(
+            1 for prior in avoid_segments if _segment_pair_conflicts(segs, prior)
+        )
+        if conflicts < best_conflicts:
+            best = pts
+            best_conflicts = conflicts
+            if conflicts == 0:
+                return pts
+    if best is not None:
+        return best
+
+    out_exit = 1.0 if exit_side == 'bottom' else -1.0
+    out_entry = -1.0 if entry_side == 'top' else 1.0
+    ox = _channels(280.0)[0]
     return _dedupe_points(
         [
-            (exit_pt[0], src_hw),
-            (gutters[0] - 60 - lane_i * 10, src_hw),
-            (gutters[0] - 60 - lane_i * 10, tgt_hw),
-            (entry_pt[0], tgt_hw),
+            (exit_pt[0], exit_pt[1] + out_exit * 10.0),
+            (ox, exit_pt[1] + out_exit * 10.0),
+            (ox, entry_pt[1] + out_entry * 10.0),
+            (entry_pt[0], entry_pt[1] + out_entry * 10.0),
         ]
     )
+
 
 
 def _parse_class_html(value: str) -> Tuple[Optional[str], List[Property], List[Operation]]:

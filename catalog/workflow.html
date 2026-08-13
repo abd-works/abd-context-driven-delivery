@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var r=new URLSearchParams(location.search).get('kanbanScroll');if(!r)return;var y=parseFloat(r);if(isNaN(y))return;window.__foundryPendingScrollY=y;document.documentElement.classList.add('foundry-scroll-pending');}catch(e){}})();
+</script>
+<title>CDD Workflow — ABD Foundry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="commons/site.css?v=foundry-33">
+<link rel="stylesheet" href="commons/foundry-catalog.css?v=cdd-13">
+<link rel="stylesheet" href="commons/cdd-board.css?v=cdd-13">
+
+<script src="commons/catalog-nav.js?v=foundry-11"></script>
+</head>
+<body data-nav-prefix="" data-nav-current="hub" data-nav-site-base="https://abd.works/">
+<main id="main-content">
+
+
+<div class="page-hero page-hero--foundry">
+  <div class="wrap">
+    <table class="page-hero__table" role="presentation">
+      <tr>
+        <td class="page-hero__cell page-hero__cell--title">
+          <h1 class="page-headline">CDD Workflow</h1>
+          <p class="body-lead">Scenario-based steps for using context tools, actions, and fidelities. <a href="index.html">Back to catalog</a>.</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+
+<div class="catalog-body">
+<div class="wrap">
+<article class="catalog-workflow-page"><p>Browse the <a href="index.html">catalog</a> for the full map of tools, actions, fidelities, and utilities.</p>
+<h2>What the pieces are</h2>
+<p><strong>Context tools</strong> are lenses on the work. Each one owns a perspective.</p>
+<ul>
+<li><a href="context-tools/stories.html">/stories</a> — who does what, in what sequence.</li>
+<li><a href="context-tools/clean_engineering.html">/clean-engineering</a> — module boundaries and OO design.</li>
+<li><a href="context-tools/ux.html">/ux</a> — navigation, screens, front end.</li>
+<li><a href="context-tools/bdd.html">/bdd</a> — observable behavior and tests.</li>
+<li><a href="context-tools/ddd.html">/ddd</a> — bounded contexts and domain building blocks.</li>
+<li><a href="context-tools/cdd.html">/cdd</a> — orchestrates all child tools at one stage.</li>
+</ul>
+<p><strong>Actions</strong> are what you do with a context tool. Every tool shares the same lifecycle verbs.</p>
+<ul>
+<li><a href="actions/partition.html">/partition</a> — index source material and extract chunks.</li>
+<li><a href="actions/document.html">/document</a> — describe existing code, tests, or docs.</li>
+<li><a href="actions/generate.html">/generate</a> — produce the full formal artifact in one shot.</li>
+<li><a href="actions/grill.html">/grill</a> — context-grounded Q&amp;A.</li>
+<li><a href="actions/sketch.html">/sketch</a> — grill plus create a rough draft.</li>
+<li><a href="actions/iterate.html">/iterate</a> — generate one small slice at a time.</li>
+<li><a href="actions/validate.html">/validate</a> — scan and report pass/fail.</li>
+<li><a href="actions/satisfy.html">/satisfy</a> — validate, fix, validate again until clean.</li>
+<li><a href="actions/repair.html">/repair</a> — root-cause and fix why the tool produced a violation.</li>
+<li><a href="actions/improve.html">/improve</a> — log mistake, repair, capture regression.</li>
+</ul>
+<p><strong>Fidelities</strong> control how deep you go. Each context tool maps three stages to its own concrete names.</p>
+<ul>
+<li><a href="fidelities/cdd-discovery.html">/discovery</a> — wide and shallow (Stories: <code>story_map</code>, CE: <code>modules</code>, UX: <code>ia</code>, DDD: <code>bounded_context</code>).</li>
+<li><a href="fidelities/cdd-spec.html">/specification</a> — narrower and deeper (Stories: <code>scenarios</code>, CE: <code>model</code>, UX: <code>mockup</code>, BDD: <code>behavior</code>, DDD: <code>building_blocks</code>).</li>
+<li><a href="fidelities/cdd-engineer.html">/engineering</a> — narrowest and deep (Stories: <code>acceptance_tests</code>, CE: <code>code</code>, UX: <code>front_end_code</code>, BDD: <code>development</code>, DDD: <code>tactics</code>).</li>
+</ul>
+<p><strong>Utilities</strong> are session helpers, not lenses.</p>
+<ul>
+<li><a href="utilities/handoff.html">/handoff</a> — compact the session for a fresh agent.</li>
+<li><a href="utilities/diagnose.html">/diagnose</a> — stuck RED / bug-fix loop.</li>
+</ul>
+<h2>How to use them</h2>
+<p>Compose a command as <strong><code>/{context tool} /{action} /{fidelity}</code></strong>.</p>
+<p>Example: <a href="actions/sketch.html">/stories /sketch /discovery</a> — sketch the Stories tool at discovery (resolves to <code>story_map</code>).</p>
+<p>You can also pass the tool&#x27;s concrete fidelity directly: <a href="actions/sketch.html">/stories /sketch story_map</a>.</p>
+<hr>
+<h2>Scenario 1 — Turn source documentation into context</h2>
+<p>Use when you have a handbook, spec, wiki, or any prose you want the system to reason from.</p>
+<ul>
+<li><strong><a href="actions/partition.html">Partition</a> the docs through your first lens.</strong><br>Pick the lens that matters most right now and run <a href="actions/partition.html">partition</a> to index the source and extract verbatim chunks.<br><a href="actions/partition.html">/clean-engineering /partition modules</a> — indexes by module boundaries.<br><a href="actions/partition.html">/stories /partition story_map</a> — indexes by epics and user interactions.<br><a href="actions/partition.html">/ux /partition ia</a> — indexes by screens and navigation.</li>
+</ul>
+<ul>
+<li><strong>Add more lenses to the same index.</strong><br>Each subsequent <a href="actions/partition.html">partition</a> adds its own columns and chunks to the existing index. Nothing is wiped.<br>Run <a href="actions/partition.html">partition</a> again with a different tool for each perspective you need.</li>
+</ul>
+<ul>
+<li><strong><a href="actions/sketch.html">Sketch</a> the design from those chunks.</strong><br>Once partitioned, draft a rough shape interactively before committing to formal output.<br><a href="actions/sketch.html">/clean-engineering /sketch modules</a><br><a href="actions/sketch.html">/stories /sketch story_map</a><br><a href="actions/sketch.html">/ux /sketch ia</a></li>
+</ul>
+<ul>
+<li><strong><a href="actions/generate.html">Generate</a> the formal artifact.</strong><br>Produce the real deliverable at the chosen fidelity.<br><a href="actions/generate.html">/clean-engineering /generate modules</a></li>
+</ul>
+<ul>
+<li><strong>Close the gaps with <a href="actions/satisfy.html">satisfy</a>.</strong><br><a href="actions/validate.html">Validate</a> the artifact, fix every reported violation, and validate again until it passes.<br><a href="actions/satisfy.html">/clean-engineering /satisfy modules</a></li>
+</ul>
+<ul>
+<li><strong>Deepen fidelity and repeat the loop.</strong><br>When <a href="fidelities/cdd-discovery.html">discovery</a> is solid, move to the next stage and <a href="actions/sketch.html">sketch</a> → <a href="actions/generate.html">generate</a> → <a href="actions/satisfy.html">satisfy</a> again — same steps, tighter scope.<br><a href="actions/sketch.html">/stories /sketch scenarios</a> → <a href="actions/generate.html">/stories /generate scenarios</a><br><a href="actions/sketch.html">/clean-engineering /sketch model</a> → <a href="actions/generate.html">/clean-engineering /generate model</a><br>Or set the stage with <a href="fidelities/cdd-spec.html">/specification</a> or <a href="fidelities/cdd-engineer.html">/engineering</a> on the tool already in scope.</li>
+</ul>
+<hr>
+<h2>Scenario 2 — Document an existing codebase or test suite</h2>
+<p>Use when the system already exists and you want to add structured context files without inventing a new design.</p>
+<ul>
+<li><strong>Observe and describe what is there with <a href="actions/document.html">document</a>.</strong><br>Document reads the code and produces a neutral description. Scanner violations are flagged but not fixed.<br><a href="actions/document.html">/clean-engineering /document code</a><br><a href="actions/document.html">/bdd /document development</a></li>
+</ul>
+<ul>
+<li><strong>Add context files based on what you observed.</strong><br>Create or update <code>.context/module-context.md</code> files using the document output as your source of truth.</li>
+</ul>
+<ul>
+<li><strong><a href="actions/generate.html">Generate</a> or <a href="actions/satisfy.html">satisfy</a> against those context files.</strong><br>Now that context exists, generate formal artifacts or run satisfy to close gaps.<br><a href="actions/generate.html">/clean-engineering /generate modules</a><br><a href="actions/satisfy.html">/bdd /satisfy development</a></li>
+</ul>
+<hr>
+<h2>Scenario 3 — Design something new (greenfield)</h2>
+<p>Use when nothing exists yet and you need to shape the solution before building it.</p>
+<ul>
+<li><strong><a href="actions/sketch.html">Sketch</a> the shape.</strong><br><a href="actions/grill.html">Grill</a> open decisions and create a rough draft. The sketch is saved to disk after each refinement — never left only in chat.<br><a href="actions/sketch.html">/stories /sketch story_map</a></li>
+</ul>
+<ul>
+<li><strong><a href="actions/generate.html">Generate</a> the formal artifact.</strong><br>Produce the deliverable from the sketch and context.<br><a href="actions/generate.html">/stories /generate story_map</a></li>
+</ul>
+<ul>
+<li><strong><a href="actions/iterate.html">Iterate</a> one slice at a time.</strong><br>For large artifacts, iterate generates one small validated slice per tick instead of dumping everything at once.<br><a href="actions/iterate.html">/stories /iterate scenarios</a></li>
+</ul>
+<ul>
+<li><strong>Run all child tools at one stage with <a href="context-tools/cdd.html">CDD</a>.</strong><br>When you want every lens at the same depth, use the CDD orchestrator.<br><a href="actions/sketch.html">/cdd /sketch discovery</a> — sketches Stories + Clean Engineering + UX + DDD at discovery.<br><a href="actions/generate.html">/cdd /generate spec</a> — generates all child tools at spec fidelity.</li>
+</ul>
+<hr>
+<h2>Scenario 4 — Fix and improve existing artifacts</h2>
+<p>Use when artifacts already exist but have violations or need refinement.</p>
+<ul>
+<li><strong><a href="actions/validate.html">Validate</a> without editing.</strong><br>Scan and report pass/fail per rule. Nothing is changed.<br><a href="actions/validate.html">/clean-engineering /validate modules</a></li>
+</ul>
+<ul>
+<li><strong><a href="actions/satisfy.html">Satisfy</a> all violations.</strong><br>Fix the <strong>artifact</strong> — validate, close every gap, validate again until it passes.<br><a href="actions/satisfy.html">/clean-engineering /satisfy modules</a></li>
+</ul>
+<ul>
+<li><strong><a href="actions/repair.html">Repair</a> the root cause.</strong><br>Fix <strong>why the context tool produced the violation</strong> (context, example, template, or scanner) — not the asset in isolation. Requires a scan/validate signal; drafts a surgical change and waits for approval.<br><a href="actions/repair.html">/clean-engineering /repair modules</a></li>
+</ul>
+<ul>
+<li><strong><a href="actions/improve.html">Improve</a> when the mistake should stick.</strong><br>Log the mistake, log the correction, then launch repair and capture a regression fixture so the same failure does not recur.<br><a href="actions/improve.html">/clean-engineering /improve modules</a></li>
+</ul>
+<hr>
+<h2>Quick reference — context tools and fidelities</h2>
+<table class="catalog-md-table">
+<thead><tr><th>Tool</th><th>Discovery</th><th>Spec</th><th>Engineer</th></tr></thead>
+<tbody>
+<tr><td><a href="context-tools/cdd.html">/cdd</a> — orchestrate all child tools at one stage</td><td><a href="fidelities/cdd-discovery.html">discovery</a></td><td><a href="fidelities/cdd-spec.html">spec</a></td><td><a href="fidelities/cdd-engineer.html">engineer</a></td></tr>
+<tr><td><a href="context-tools/stories.html">/stories</a> — who does what, in what sequence</td><td><a href="fidelities/stories-story_map.html">story_map</a></td><td><a href="fidelities/stories-scenarios.html">scenarios</a></td><td><a href="fidelities/stories-acceptance_tests.html">acceptance_tests</a></td></tr>
+<tr><td><a href="context-tools/clean_engineering.html">/clean-engineering</a> — module boundaries and OO design</td><td><a href="fidelities/clean_engineering-modules.html">modules</a></td><td><a href="fidelities/clean_engineering-model.html">model</a></td><td><a href="fidelities/clean_engineering-code.html">code</a></td></tr>
+<tr><td><a href="context-tools/ux.html">/ux</a> — navigation, screens, front end</td><td><a href="fidelities/ux-ia.html">ia</a></td><td><a href="fidelities/ux-mockup.html">mockup</a></td><td><a href="fidelities/ux-front_end_code.html">front_end_code</a></td></tr>
+<tr><td><a href="context-tools/bdd.html">/bdd</a> — observable behavior and tests</td><td>—</td><td><a href="fidelities/bdd-behavior.html">behavior</a></td><td><a href="fidelities/bdd-development.html">development</a></td></tr>
+<tr><td><a href="context-tools/ddd.html">/ddd</a> — bounded contexts and domain building blocks</td><td><a href="fidelities/ddd-bounded_context.html">bounded_context</a></td><td><a href="fidelities/ddd-building_blocks.html">building_blocks</a></td><td><a href="fidelities/ddd-tactics.html">tactics</a></td></tr>
+</tbody>
+</table>
+<h2>Quick reference — actions</h2>
+<table class="catalog-md-table">
+<thead><tr><th>Action</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><a href="actions/partition.html">/partition</a></td><td>Index source material and extract verbatim chunks. Re-run with another tool to add a lens.</td></tr>
+<tr><td><a href="actions/document.html">/document</a></td><td>Describe existing code, tests, or docs. Flags violations without correcting them.</td></tr>
+<tr><td><a href="actions/generate.html">/generate</a></td><td>Produce the full formal artifact in one shot.</td></tr>
+<tr><td><a href="actions/grill.html">/grill</a></td><td>Context-grounded Q&amp;A. Writes <code>grill-answers.md</code>. Does not produce the artifact.</td></tr>
+<tr><td><a href="actions/sketch.html">/sketch</a></td><td>Grill plus create a rough draft. Shape only — not the formal artifact.</td></tr>
+<tr><td><a href="actions/iterate.html">/iterate</a></td><td>Grill, generate one small slice, validate, fix. Repeat per slice.</td></tr>
+<tr><td><a href="actions/validate.html">/validate</a></td><td>Judge only. Scan and report pass/fail. Do not edit.</td></tr>
+<tr><td><a href="actions/satisfy.html">/satisfy</a></td><td>Validate, fix every gap in the artifact, validate again until it passes.</td></tr>
+<tr><td><a href="actions/repair.html">/repair</a></td><td>Root-cause why the context tool produced the violation; fix the tool (context / example / template / scanner), not the asset alone.</td></tr>
+<tr><td><a href="actions/improve.html">/improve</a></td><td>Log mistake → log correction → launch repair → capture regression so it sticks.</td></tr>
+</tbody>
+</table>
+<h2>Quick reference — session helpers</h2>
+<table class="catalog-md-table">
+<thead><tr><th>Utility</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><a href="utilities/handoff.html">/handoff</a></td><td>Compact the session for a fresh agent.</td></tr>
+<tr><td><a href="utilities/diagnose.html">/diagnose</a></td><td>Stuck RED / bug-fix loop.</td></tr>
+</tbody>
+</table></article>
+</div>
+</div>
+</main>
+<script src="commons/catalog-foundry-tour.js?v=cdd-13"></script>
+<script src="commons/catalog-foundry-skill-nav.js?v=cdd-13"></script>
+</body>
+</html>

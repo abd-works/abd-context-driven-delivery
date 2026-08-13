@@ -83,27 +83,41 @@
 <h2>acceptance-tests</h2>
 <p><strong>Default format:</strong> python</p>
 <p><strong>Goal:</strong> Turn locked scenarios into runnable acceptance coverage; CE runs alongside to produce matching production code.</p>
-<p><strong>Produce:</strong> <code><em>_spec</code> + <code></em>_spec.{tier}</code> — CE runs alongside to produce matching production code.</p>
+<p><strong>Produce:</strong> <code><em>_story</code> (declares a helper interface, calls its methods only) + <code></em>_test_helper.{tier}</code> per tier (implements the interface; every tier is named explicitly, including <code>domain</code> — no implicit no-suffix tier) — CE runs alongside to produce matching production code.</p>
 <h3>Rules</h3>
 <ul>
 <li><strong><code>behavioral-observable-outcomes</code></strong> — same rule as <strong>scenarios</strong>: assertions stay in domain-observable terms, never internals.</li>
+<li><strong><code>explore-full-interaction-surface</code></strong> — same rule as <strong>scenarios</strong>: acceptance_tests must cover the explored interaction surface, not just translate the first main-flow scenario into Playwright. Trace react-hook-form rules, shared validation components, and stubbed failure modes during the sandbox walk-through; add a <code>scenario()</code> per distinct behavior.</li>
 </ul>
 <hr></section>
-<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>python</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/99e466ee89549a00a7e14582e440fc3d35f5fc64/context_tools/stories/templates/py/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_spec.py.tpl">templates/py/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_spec.py.tpl</a></p><pre class="code-fence"><code class="language-python"># ---
+<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>python</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/4d01623dadcd0a757141f9f54c96dab611b3b557/context_tools/stories/templates/py/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_test_helper.domain.py">templates/py/{epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_test_helper.domain.py</a></p><pre class="code-fence"><code class="language-py"># ---
 # fidelity: [engineering]
-# artifact: [isolated-spec]
+# artifact: [test-helper]
 # format: py
 # ---
 #
-# Isolated objects — same story, ExampleFactory builds {Type} with injected deps.
+# Tier: domain - {EpicVerbNoun}Helper backed by direct domain-class calls.
+# Real: domain-core class. Stubbed: nothing.
 
-&quot;&quot;&quot;Isolated spec for `{Story Name}`.&quot;&quot;&quot;
+&quot;&quot;&quot;Domain tier test-helper for `{Story Name}`.&quot;&quot;&quot;
 
 from __future__ import annotations
 
 from {story_verb_noun}_story import create_{story_verb_noun}_story
 
-create_{story_verb_noun}_story(&quot;isolated&quot;)
+
+class DomainHelper:
+    def given_precondition(self) -&gt; None:
+        raise NotImplementedError(&quot;not implemented: given_precondition&quot;)
+
+    def when_action(self) -&gt; None:
+        raise NotImplementedError(&quot;not implemented: when_action&quot;)
+
+    def then_outcome(self) -&gt; None:
+        raise NotImplementedError(&quot;not implemented: then_outcome&quot;)
+
+
+globals().update(create_{story_verb_noun}_story(DomainHelper()))
 </code></pre></section>
 <section class="skill-cr-single illustrated-example"><h2>Illustrated example</h2><p>No illustrated example configured yet.</p></section>
 
