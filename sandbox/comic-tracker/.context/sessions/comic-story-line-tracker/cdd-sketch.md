@@ -57,6 +57,23 @@ scope: multi-increment engagement (see "Increment plan" in Sources / context)
     - Replaces the dim-vs-bright rendering with SHOW / HIDE. Only the
       "true" stops render; the rest are simply not drawn.
       `Palette.FADED_OPACITY` retired.
+  - **Tech stack for Increment 1: Express + Angular + Node** (redirect
+    2026-08-13):
+    - "Increment 1 impl using express angular and node"
+    - Server: Node.js + Express. Web: Angular (implies TypeScript for the
+      whole workspace since Angular effectively requires it). One
+      monorepo under `sandbox/comic-tracker/` with `server/` and `web/`
+      workspaces plus a shared `catalog/fixtures/` directory.
+    - By implication (until stated otherwise): I3+ subway-map tracker
+      will land in the same Angular workspace. `sandbox/tests/` and
+      `sandbox/src/*` continue to coexist under `sandbox/` but the
+      tracker's stack is its own monorepo.
+    - Working defaults for sub-decisions (each still up for grill):
+      · TypeScript across server and web (`#i1-language` = TS).
+      · npm workspaces for the monorepo layout (`#i1-monorepo-layout`).
+      · Server tests: `tsx --test` (matches existing sandbox pattern).
+      · Web tests: Angular's default (Karma + Jasmine) unless we
+        migrate to Jest. (`#i1-testing-framework`.)
   - **Increment plan** (redirect 2026-08-10, post-research):
     - "Increment 1 - load small sample of data from sources; create a
       query, view results; view imported; query browse results"
@@ -276,6 +293,9 @@ flow:
     # --- Increment 1 (current front of work) ---
     - TODO pick data source(s) for the I1 sample slice                    #i1-sources
     - TODO decide what "small sample" means — issue count / time window   #i1-slice-shape
+    - TODO confirm language = TypeScript across server + web              #i1-language
+    - TODO confirm monorepo layout — root package.json + npm workspaces   #i1-monorepo-layout
+    - TODO pick server test framework (tsx --test vs vitest vs jest)      #i1-testing-framework
     - TODO grill + sketch I1: Load Sample sub-epic (ux/ce/bdd/stories/ddd) #i1-load-sample
     - TODO grill + sketch I1: Query sub-epic                              #i1-query
     - TODO grill + sketch I1: View Results sub-epic                       #i1-view-results
@@ -315,6 +335,7 @@ flow:
     - pass #mu-deeplink                # scheme-only, no fallback (Q10, option 3)
     - pass #filter-compose             # content OR + refiners AND (Q11)
     - pass #increment-plan             # I1 data + query + browse; I2 AI scanner tool; I3+ tracker (2026-08-10)
+    - pass #i1-stack                   # Node + Express (server) + Angular (web); TS across (2026-08-13)
     - skip #single-point-rule          # dissolved by metaphor swap
 
 =========
@@ -340,33 +361,73 @@ stories:
 ce:
     Fidelity: modules
 
-    // TODO — grill first (#i1-load-sample). Working shape from Q10 research:
-    //   loader/
-    //     metron_client     — thin HTTP wrapper (or via Mokkari)
-    //     marvel_mirror_client — reads cached mirror for digital_id
-    //     baseline_ingest -> loader/metron_client, marvel_mirror_client
-    //     fixture_writer  — emits catalog/fixtures/marvel-canon.json
-    //   No editorial-field derivation yet — that's Increment 2.
+    ## Working monorepo shape (Node + Express + Angular; TS across)
+
+    sandbox/comic-tracker/
+      package.json                            # root: npm workspaces
+      tsconfig.base.json                      # shared strict TS config
+      catalog/fixtures/
+        marvel-canon.json                     # I1 runtime source (Q2)
+      server/                                 # Node + Express workspace
+        package.json
+        tsconfig.json
+        src/
+          catalog/                            # canonical types + repo
+            catalog                           # aggregate exposing allSeries,
+                                              #   allEvents, allIssues, allTeams
+            catalog_repository -> catalog     # reads/queries the fixture JSON
+          loader/                             # THIS THEME's work
+            metron_client                     # thin HTTP wrapper for Metron
+                                              #   (fetch-based; ~30/min bucket)
+            marvel_mirror_client              # thin HTTP wrapper for a Marvel
+                                              #   API mirror; digital_id lookup
+            baseline_ingest -> metron_client,
+                               marvel_mirror_client
+            fixture_writer -> catalog         # writes marvel-canon.json
+          load_sample_service -> loader
+            triggerLoad slice                 # kicks off baseline_ingest
+            status                            # in-progress / done / error
+        No editorial-field derivation this cycle — that's Increment 2.
+
+    // Invariant: server never fabricates fields; missing data stays None.
+    // Invariant: server-side types mirror the Q4 hard-numbered rule —
+    //            no derivation from publicationDate for ordering.
 ---
 ux:
-    Fidelity: ia
+    Fidelity: ia (Angular components)
 
-    // TODO — grill first (#i1-load-sample). Working shape:
-    //   [ Load Sample ] screen:
-    //     · pick source(s)  · pick slice window  · run  · progress log
-    //   Result: a summary panel showing counts of Series / Issues /
-    //     Characters / StoryArcs / Teams pulled, plus any load warnings.
+    web/                                      # Angular workspace
+      src/app/
+        load-sample/
+          load-sample.component               # form + submit + progress
+          load-sample.component.html/.css
+          load-sample.service                 # HTTP client for /api/load-sample
+      // [ Load Sample ] screen:
+      //   · pick source(s)  · pick slice window (from/to date)
+      //   · [ Run ] button
+      //   · progress log (SSE / polling — grill later)
+      // Result panel: counts of Series / Issues / Characters / StoryArcs /
+      //   Teams pulled + any load warnings.
+      // TODO — grill first (#i1-load-sample) for interaction detail.
 ---
 bdd:
-    Fidelity: behavior
+    Fidelity: behavior (server: tsx --test; web: Karma/Jasmine or Jest)
 
-    // TODO — grill first. Working scaffold:
-    //   a baseline ingest
+    // TODO — grill first. Working scaffold in Node/TS terms:
+    //   a baseline ingest (server)
     //     that has been asked to load the "2000..2006" slice from Metron
-    //       it should return SeriesRosterEntries for each series in-window
+    //       it should call MetronClient with the correct date-range params
+    //       it should return one Series per volume in-window
     //       it should return Issues in issueNumber order per series
-    //       it should attach marvelDigitalId from the Marvel mirror when found
-    //       it should leave marvelDigitalId as None when no mirror hit
+    //       it should attach marvelDigitalId from MarvelMirrorClient when
+    //         found; leave undefined when no mirror hit
+    //   a load-sample service (server)
+    //     that has been triggered
+    //       it should stream progress events until fixture_writer completes
+    //   a load-sample component (Angular)
+    //     that submits the form
+    //       it should call LoadSampleService.triggerLoad(slice)
+    //       it should render progress events in the log
 =========
 
 =========
@@ -382,35 +443,47 @@ stories:
 ce:
     Fidelity: modules
 
-    // TODO — grill first (#i1-query). Working shape:
-    //   query/
-    //     query_input     — free-text + filter facets (year range,
-    //                        publisher, kind: series|event|issue|character)
-    //     query_executor -> catalog/catalog
-    //     query_result   — grouped result set (series/events/issues/characters)
-    //
-    // NOTE: the Q8 UnifiedSearchView semantics can be reused here at a
-    //   lower fidelity — I1 doesn't need drag or roster interactions yet.
+    server/src/
+      query/
+        query_input                           # DTO: query string + filter facets
+                                              #   (year range, publisher, kind)
+        query_executor -> catalog_repository  # runs query against loaded catalog
+        query_result                          # grouped DTO:
+                                              #   { series, events, issues, characters }
+      routes/
+        query_routes                          # POST /api/query
+                                              #   body: QueryInput → 200 QueryResult
+
+    // NOTE: Q8 SearchQuery semantics reused at a lower fidelity — I1
+    //   doesn't need drag or roster interactions yet. Just: input →
+    //   grouped result.
+    // TODO — grill first (#i1-query) to lock filter facets and matching
+    //   rules before generate.
 ---
 ux:
-    Fidelity: ia
+    Fidelity: ia (Angular components)
 
-    // TODO — grill first. Working shape:
-    //   [ Query ] screen:
-    //     [ search box ] + facet chips (year / publisher / kind)
-    //     [ Run ] button
-    //     → results view (below)
+    web/src/app/query/
+      query.component                         # search input + facet chips
+      query.component.html/.css
+      query.service                           # HTTP client for POST /api/query
+    // [ Query ] screen: [ search ▷ ] + facet chips (year / publisher /
+    //   kind) + [ Run ] button. Result view is a sibling route (see
+    //   next theme).
+    // TODO — grill first.
 ---
 bdd:
     Fidelity: behavior
 
     // TODO — grill first. Working scaffold:
-    //   a query
-    //     that has been executed against the loaded catalog
-    //       it should return matching Series in `results.series`
-    //       it should return matching Events in `results.events`
-    //       it should return matching Issues in `results.issues`
-    //       it should return matching Characters in `results.characters`
+    //   POST /api/query (server)
+    //     that has been called with { q: "spider-man", kind: "any" }
+    //       it should return { series: […], events: […], issues: […],
+    //                          characters: […] }
+    //   a query component (Angular)
+    //     that has been submitted with a non-empty query
+    //       it should call QueryService.execute(input)
+    //       it should navigate to the results route on 200 OK
 =========
 
 =========
@@ -426,23 +499,40 @@ stories:
 ce:
     Fidelity: modules
 
-    // TODO — grill first (#i1-view-results). Working shape:
-    //   view/
-    //     query_results_view — renders grouped list (series, events, issues, characters)
-    //     result_detail_view — renders a single record's canonical fields
+    server/src/
+      // No new server modules — query_routes already returns the grouped
+      // result. Detail lookup reuses catalog_repository via existing
+      // routes (GET /api/catalog/{kind}/{id}).
 ---
 ux:
-    Fidelity: ia
+    Fidelity: ia (Angular components)
 
-    // TODO — grill first. Working shape:
-    //   [ Results ] screen: four grouped result columns (Series / Events /
-    //     Issues / Characters), each with count + list of rows.
-    //   Click any row → detail view with the record's full fields.
+    web/src/app/results/
+      results.component                       # four grouped columns:
+                                              #   Series (n) / Events (n) /
+                                              #   Issues (n) / Characters (n)
+      results.component.html/.css
+      result-detail.component                 # renders one record's fields
+      result-detail.component.html/.css
+    // Click any row → route to /results/:kind/:id → result-detail.
+    // TODO — grill first (#i1-view-results) to decide detail panel
+    //   contents per kind (Series shows issue list; Event shows readingOrder
+    //   if present; etc.).
 ---
 bdd:
     Fidelity: behavior
 
-    // TODO — grill first.
+    // TODO — grill first. Working scaffold:
+    //   a results component (Angular)
+    //     that has been rendered with { series: [3], events: [1],
+    //                                    issues: [12], characters: [5] }
+    //       it should render four column headers with counts (3, 1, 12, 5)
+    //       it should render one row per record in each column
+    //   a result-detail component (Angular)
+    //     that has been routed to /results/series/26104
+    //       it should call CatalogService.getSeries(26104)
+    //       it should render title, volume, protagonist, issue count,
+    //         and a list of issues (from GET /api/catalog/series/:id)
 =========
 
 =========
@@ -459,19 +549,40 @@ stories:
 ce:
     Fidelity: modules
 
+    server/src/
+      browse/
+        browse_index -> catalog_repository    # precomputed indexes:
+                                              #   byPublisher, bySeries,
+                                              #   byYear, byKind
+      routes/
+        browse_routes                         # GET /api/browse?by=publisher
+                                              # GET /api/browse?by=year&year=2005
+                                              # …
+
+    // Purely for confirming what the load produced — no filter/refiner
+    // semantics from Q11 apply here.
     // TODO — grill first (#i1-browse-imported).
 ---
 ux:
-    Fidelity: ia
+    Fidelity: ia (Angular components)
 
-    // TODO — grill first. Working shape:
-    //   [ Browse ] screen: nav rail (Publisher / Series / Year / Kind)
-    //     + inventory list. Purely for confirming what the load produced.
+    web/src/app/browse/
+      browse.component                        # left nav rail + inventory list
+      browse.component.html/.css
+      browse.service                          # HTTP client for /api/browse
+    // Nav rail: [ Publisher | Series | Year | Kind ]. Selecting a group
+    //   yields a flat list of records in the main area. Purely inventory.
 ---
 bdd:
     Fidelity: behavior
 
-    // TODO — grill first.
+    // TODO — grill first. Working scaffold:
+    //   GET /api/browse?by=publisher (server)
+    //     it should return { groups: [{ name, count, ids }, …] }
+    //   a browse component (Angular)
+    //     that has selected "Publisher" in the nav rail
+    //       it should call BrowseService.list("publisher")
+    //       it should render one row per group with count and expandable list
 =========
 
 =========

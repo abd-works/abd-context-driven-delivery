@@ -10,6 +10,11 @@
   from any stop and transfer across lines at the crossovers.
   (Metaphor swap 2026-08-08: was segmented / constellation-style; see
   `grill-answers.md` § "Visual metaphor swap".)
+- **I1 tech stack (2026-08-13):** Node.js + Express (server) + Angular
+  (web); TypeScript across; npm-workspaces monorepo under
+  `sandbox/comic-tracker/` with `server/` + `web/` workspaces and a
+  shared `catalog/fixtures/` directory. Existing `sandbox/tests/` and
+  `sandbox/src/*` coexist unchanged.
 - **increment plan (2026-08-10 redirect):**
   · I1 (current front of work) — Load a small sample of catalog data from
     public sources (Metron baseline + Marvel API mirror for `digitalId`);

@@ -544,6 +544,54 @@ delivered, the user set the increment plan explicitly.
 
 ---
 
+### I1 tech stack locked (2026-08-13)
+
+**User answer (verbatim):** "Increment 1 impl using express angular and
+node".
+
+**Applied.** Server = Node.js + Express. Web = Angular (which implies
+TypeScript across the whole tracker workspace since Angular effectively
+requires it). Working monorepo shape recorded in every I1 theme's `ce:`
+block.
+
+**Concrete layout committed to the sketch.**
+
+```
+sandbox/comic-tracker/
+  package.json                    (root: npm workspaces)
+  tsconfig.base.json
+  catalog/fixtures/
+    marvel-canon.json             (I1 runtime source, per Q2)
+  server/                         (Node + Express workspace)
+    package.json  tsconfig.json
+    src/
+      catalog/  loader/  query/  browse/  routes/
+      app.ts  server.ts
+  web/                            (Angular workspace)
+    src/app/
+      catalog/  load-sample/  query/  results/  browse/
+```
+
+**Sub-decisions surfaced (each still open for grill):**
+- `#i1-language` — TypeScript across server + web (working default;
+  Angular forces the web side).
+- `#i1-monorepo-layout` — npm workspaces (working default; alternatives:
+  pnpm workspaces, turborepo, nx).
+- `#i1-testing-framework` — server: `tsx --test` (matches existing
+  sandbox pattern) vs `vitest` vs `jest`; web: Karma+Jasmine (Angular
+  default) vs Jest.
+
+**Implication for later increments.** I3+ subway-map tracker will land
+in the same Angular workspace unless explicitly decided otherwise. The
+subway-map SeriesLine/Stop/TransferConnection render layer becomes
+Angular components + an SVG (or Canvas) rendering surface. The Q6/Q7
+decisions on colour + rendering translate directly. No new stack
+decisions required at this level.
+
+**Passes logged:** `pass #i1-stack`.
+
+---
+
 ### Character demoted from first-class to string tag (2026-08-08)
 
 **Frame.** User redirect (verbatim): "character is a sub of series an
