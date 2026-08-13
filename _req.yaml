@@ -1,0 +1,10 @@
+toolset: context_tools.stories.stories:Stories
+context:
+  fidelity: story_map
+  session: context-setup
+  path: utilities/context_setup
+tool: write_grill_answer
+arguments:
+  root: utilities/context_setup/.context/sessions/context-setup
+  question: "How should Stub External Dependencies decompose on the map?"
+  answer: "Three stories: AI Chat --> Classify External Dependencies (reads codebase, marks each dependency external vs in-scope, produces classification table) / Tool --> Write External Stubs (writes stub code at outermost boundary per classification) / Tool --> Smoke Test App (starts app, drives smoke test, confirms every screen reachable). The complex-stub-strategy trigger (5+ externals or domain-shaped returns) is a scenario variation within Classify External Dependencies, not a new sub-epic."
