@@ -99,7 +99,7 @@ with description("Render Fidelity Page With Quick-Invoke And Illustrated Example
         with it("lists all ten lifecycle actions as hyperlinks"):
             for name in (
                 "partition", "grill", "sketch", "generate", "document",
-                "iterate", "validate", "satisfy", "repair", "improve",
+                "iterate", "validate", "satisfy", "repair", "createRule",
             ):
                 expect(f">{name}<" in self.page).to(be_true)
 
@@ -259,7 +259,7 @@ with description("Render Flat Grid Pages"):
         with it("lists every context tool, action, and utility card on its own grid page"):
             for page_name, expected in (
                 ("context-tools.html", "Context-driven delivery"),
-                ("actions.html", "improve"),
+                ("actions.html", "createRule"),
                 ("utilities.html", "diagnose"),
             ):
                 content = (self.tmp / page_name).read_text(encoding="utf-8")

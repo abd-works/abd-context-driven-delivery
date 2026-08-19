@@ -15,7 +15,7 @@ from pathlib import Path
 
 from primitives.actions.action import action, agentic_toolset
 from primitives.instructions import Instruction, instruction
-from repair.repair import Repair
+from eval.session import Repair
 from scanners.scan import Scan
 from scanners.scanner_collection import ScannerCollection
 from sub_agent.sub_agent import sub_agent
@@ -50,7 +50,12 @@ class Drawio:
     def __init__(self, workspace=None) -> None:
         self.workspace = workspace
         self.scanner = _DrawioScan(self.module_dir)
-        self.repairer = Repair(workspace=workspace, scanner=self.scanner)
+        self.repairer = Repair(
+            session=getattr(workspace, "eval", None),
+            scanner=self.scanner,
+            host=self,
+            workspace=workspace,
+        )
 
     @property
     def module_dir(self) -> Path:
@@ -165,6 +170,5 @@ class Drawio:
     @sub_agent
     @tool
     def verify_regression(self, examples_root: str = "") -> str:
-        """Re-scan faultyAsset/repairedAsset pairs under this kit's examples/evals."""
-        root = examples_root or str(self.module_dir / "examples" / "evals")
-        return self.repairer.verify_regression(root)
+        """Eval the repair (scan before/after + judge); examples_root is unused."""
+        return self.repairer.eval()

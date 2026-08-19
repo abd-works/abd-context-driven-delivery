@@ -58,6 +58,10 @@ CLASS_STYLE = (
     "verticalAlign=top;align=left;overflow=fill;"
     "fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;"
 )
+IMPORTED_CLASS_STYLE = (
+    CLASS_STYLE
+    + "dashed=1;dashPattern=8 8;strokeColor=#666666;"
+)
 
 EDGE_STYLES = {
     "inheritance": (
@@ -78,19 +82,19 @@ EDGE_STYLES = {
 }
 DEFAULT_EDGE_STYLE = EDGE_STYLES["association"]
 
-CLUSTER_GAP_X = 280
-CLUSTER_GAP_Y = 220
-INNER_COLS = 3
-INNER_COL_GAP = 28
-INNER_ROW_GAP = 44
+CLUSTER_GAP_X = 360
+CLUSTER_GAP_Y = 420
+INNER_COLS = 2
+INNER_COL_GAP = 20
+INNER_ROW_GAP = 28
 COLS_PER_ROW = INNER_COLS  # used by leaf-row heuristics / gutters
 COL_GAP = INNER_COL_GAP
 ROW_GAP = INNER_ROW_GAP
 START_X = 40
 START_Y = 40
-ROUTE_CLEARANCE = 28
-ROUTE_LANE_STEP = 12
-OVERLAP_GAP = 28
+ROUTE_CLEARANCE = 24
+ROUTE_LANE_STEP = 10
+OVERLAP_GAP = 24
 
 # ---------------------------------------------------------------------------
 # Modules-diagram layout (system-context style)
@@ -171,6 +175,9 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         mxcells = list(root_el.iter("mxCell"))
         if _looks_like_modules_diagram(mxcells):
             return cls._parse_modules(mxcells)
+        diagrams = list(root_el.findall("diagram"))
+        if len(diagrams) > 1:
+            return cls._parse_classes_multipage(diagrams)
         return cls._parse_classes(mxcells)
 
     @classmethod
@@ -275,6 +282,77 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
             tgt_name = tgt_cls.name if tgt_cls else tgt_id
             kind = _classify_edge(cell.get("style", ""))
             src_cls.relationships.append(Relationship(target=tgt_name, kind=kind))
+
+        return model
+
+    @classmethod
+    def _parse_classes_multipage(
+        cls, diagrams: List[ET.Element]
+    ) -> "DrawIOCleanEngineeringModel":
+        """One Draw.io page → one module; skip dashed «from:» import cards."""
+        model = cls(name="", sequential_order=1)
+        order = 1
+        seen_names: set[str] = set()
+        # Global id→class for edge wiring (local + imported names)
+        id_to_class: dict[str, OoadClass] = {}
+        id_to_name: dict[str, str] = {}
+
+        for diagram in diagrams:
+            page_name = diagram.get("name") or f"module-{order}"
+            module = DrawIOModule(name=page_name, sequential_order=order)
+            page_cells = list(diagram.iter("mxCell"))
+            for cell in page_cells:
+                if cell.get("vertex") != "1":
+                    continue
+                style = cell.get("style", "")
+                value = cell.get("value", "")
+                name, props, ops = _parse_class_html(value)
+                if not name:
+                    continue
+                cell_id = cell.get("id", "")
+                id_to_name[cell_id] = name
+                if "dashed=1" in style:
+                    # Imported card — name only for edge targets, not a local class.
+                    continue
+                plain = _plain_class_name(name)
+                if plain in seen_names:
+                    continue
+                seen_names.add(plain)
+                oclass = DrawIOOoadClass(
+                    name=name,
+                    sequential_order=len(module.classes) + 1,
+                    properties=props,
+                    operations=ops,
+                )
+                module.classes.append(oclass)
+                id_to_class[cell_id] = oclass
+            if module.classes:
+                model.modules.append(module)
+                order += 1
+
+            for cell in page_cells:
+                if cell.get("edge") != "1":
+                    continue
+                src_id = cell.get("source", "")
+                tgt_id = cell.get("target", "")
+                src_cls = id_to_class.get(src_id)
+                if src_cls is None:
+                    continue
+                tgt_cls = id_to_class.get(tgt_id)
+                tgt_name = (
+                    tgt_cls.name
+                    if tgt_cls is not None
+                    else id_to_name.get(tgt_id, tgt_id)
+                )
+                kind = _classify_edge(cell.get("style", ""))
+                already = any(
+                    r.target == tgt_name and (r.kind or "association") == kind
+                    for r in src_cls.relationships
+                )
+                if not already:
+                    src_cls.relationships.append(
+                        Relationship(target=tgt_name, kind=kind)
+                    )
 
         return model
 
@@ -409,6 +487,88 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         previous: Optional[str] = None,
         keep_positioning: bool = False,
     ) -> str:
+        name_to_id: dict[str, str] = {}
+        id_to_oclass: Dict[str, OoadClass] = {}
+        for oclass in canonical.classes:
+            cell_id = _slug(oclass.name)
+            name_to_id[oclass.name] = cell_id
+            plain = _plain_class_name(oclass.name)
+            if plain and plain != oclass.name:
+                name_to_id.setdefault(plain, cell_id)
+            id_to_oclass[cell_id] = oclass
+
+        relationships = _collect_relationships(canonical.classes, name_to_id)
+        id_to_module = _class_module_labels(canonical.modules)
+        named_modules = [m for m in canonical.modules if m.classes]
+
+        # One Draw.io tab per aggregate/module (drawio.md); fall back to a
+        # single page when the model is not partitioned.
+        if len(named_modules) < 2:
+            return cls._render_classes_single_page(
+                canonical,
+                name_to_id,
+                id_to_oclass,
+                relationships,
+                previous=previous,
+                keep_positioning=keep_positioning,
+            )
+
+        mxfile = ET.Element("mxfile")
+        mxfile.set("host", "CleanEngineering.diagram.drawio")
+        for module in named_modules:
+            page_name = module.name.strip()
+            root_el = _add_diagram_page(mxfile, page_name)
+            local_ids = [_slug(c.name) for c in module.classes]
+            local_set = set(local_ids)
+            import_ids = _direct_import_ids(
+                local_set, relationships, id_to_module, page_name
+            )
+            placements = _layout_page_with_imports(
+                local_ids, import_ids, id_to_oclass, relationships
+            )
+            for iid in import_ids:
+                oclass = id_to_oclass[iid]
+                from_mod = id_to_module.get(iid, "other")
+                x, y, _w, _h = placements[iid]
+                _create_imported_class_cell(
+                    root_el,
+                    oclass,
+                    cell_id=iid,
+                    from_module=from_mod,
+                    x=int(round(x)),
+                    y=int(round(y)),
+                )
+            for lid in local_ids:
+                oclass = id_to_oclass[lid]
+                x, y, _w, _h = placements[lid]
+                _create_class_cell(
+                    root_el,
+                    oclass,
+                    cell_id=lid,
+                    x=int(round(x)),
+                    y=int(round(y)),
+                )
+            _render_edges_on_page(
+                root_el,
+                relationships,
+                placements,
+                local_set | set(import_ids),
+                local_ids=local_set,
+            )
+
+        ET.indent(ET.ElementTree(mxfile), space="  ")
+        return ET.tostring(mxfile, encoding="unicode", xml_declaration=False)
+
+    @classmethod
+    def _render_classes_single_page(
+        cls,
+        canonical: CleanEngineeringModel,
+        name_to_id: dict[str, str],
+        id_to_oclass: Dict[str, OoadClass],
+        relationships: List[Tuple[str, str, str]],
+        previous: Optional[str] = None,
+        keep_positioning: bool = False,
+    ) -> str:
         mxfile = ET.Element("mxfile")
         mxfile.set("host", "CleanEngineering.diagram.drawio")
         diagram = ET.SubElement(mxfile, "diagram")
@@ -422,28 +582,6 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
         cell1 = ET.SubElement(root_el, "mxCell")
         cell1.set("id", "1")
         cell1.set("parent", "0")
-
-        name_to_id: dict[str, str] = {}
-        id_to_oclass: Dict[str, OoadClass] = {}
-        # canonical.classes is a flat property that already aggregates all classes
-        # from every module (see CleanEngineeringModel.classes).
-        for oclass in canonical.classes:
-            cell_id = _slug(oclass.name)
-            name_to_id[oclass.name] = cell_id
-            # Also register the plain name (bold/stereotype markers stripped) so that
-            # relationship targets written as bare identifiers ("Identity") resolve
-            # even when the class was declared as "**Identity** <<Value Object>>".
-            plain = _plain_class_name(oclass.name)
-            if plain and plain != oclass.name:
-                name_to_id.setdefault(plain, cell_id)
-            id_to_oclass[cell_id] = oclass
-
-        relationships = [
-            (name_to_id[c.name], name_to_id[rel.target], rel.kind or "association")
-            for c in canonical.classes
-            for rel in c.relationships
-            if rel.target in name_to_id
-        ]
 
         prev_pos = _read_positions(previous) if previous else {}
         prev_edges = _read_edges(previous) if (keep_positioning and previous) else {}
@@ -483,81 +621,14 @@ class DrawIOCleanEngineeringModel(CleanEngineeringModel):
                 _append_copied_edge(root_el, existing)
                 kept_pairs.add((src_id, tgt_id))
 
-        edge_specs: List[dict] = []
-        for src_id, tgt_id, kind in relationships:
-            if (src_id, tgt_id) in kept_pairs:
-                continue
-            exit_side, entry_side = _preferred_sides(
-                placements[src_id], placements[tgt_id]
-            )
-            edge_specs.append(
-                {
-                    "src_id": src_id,
-                    "tgt_id": tgt_id,
-                    "kind": kind,
-                    "exit_side": exit_side,
-                    "entry_side": entry_side,
-                }
-            )
-
-        _assign_distinct_anchors(edge_specs)
-        # Route left-to-right targets first so highway lanes fan out cleanly.
-        edge_specs.sort(
-            key=lambda spec: (
-                placements[spec["tgt_id"]][0],
-                placements[spec["tgt_id"]][1],
-                spec["src_id"],
-            )
+        page_rels = [
+            (s, t, k)
+            for s, t, k in relationships
+            if (s, t) not in kept_pairs
+        ]
+        _render_edges_on_page(
+            root_el, page_rels, placements, set(placements.keys())
         )
-
-        used_ids = {cell.get("id", "") for cell in root_el.iter("mxCell")}
-        numeric_ids = [int(i) for i in used_ids if i.isdigit()]
-        edge_counter = max(numeric_ids) if numeric_ids else len(canonical.classes) + 10
-        routed_segments: List[List[Tuple[Tuple[float, float], Tuple[float, float]]]] = []
-        for lane_idx, spec in enumerate(edge_specs):
-            edge_counter += 1
-            exit_x, exit_y = _side_anchor(spec["exit_side"], spec["exit_frac"])
-            entry_x, entry_y = _side_anchor(spec["entry_side"], spec["entry_frac"])
-            obstacles = [
-                geo
-                for cid, geo in placements.items()
-                if cid not in (spec["src_id"], spec["tgt_id"])
-            ]
-            waypoints = _route_waypoints(
-                placements[spec["src_id"]],
-                placements[spec["tgt_id"]],
-                spec["exit_side"],
-                spec["entry_side"],
-                spec["exit_frac"],
-                spec["entry_frac"],
-                obstacles=obstacles,
-                lane=lane_idx * ROUTE_LANE_STEP,
-                avoid_segments=routed_segments,
-                all_placements=placements,
-            )
-            _create_edge(
-                root_el,
-                src_id=spec["src_id"],
-                tgt_id=spec["tgt_id"],
-                kind=spec["kind"],
-                edge_id=str(edge_counter),
-                exit_x=exit_x,
-                exit_y=exit_y,
-                entry_x=entry_x,
-                entry_y=entry_y,
-                waypoints=waypoints,
-            )
-            routed_segments.append(
-                _segments_from_route(
-                    placements[spec["src_id"]],
-                    placements[spec["tgt_id"]],
-                    spec["exit_side"],
-                    spec["entry_side"],
-                    spec["exit_frac"],
-                    spec["entry_frac"],
-                    waypoints,
-                )
-            )
 
         ET.indent(ET.ElementTree(mxfile), space="  ")
         return ET.tostring(mxfile, encoding="unicode", xml_declaration=False)
@@ -632,16 +703,27 @@ def _slug(name: str) -> str:
 def _plain_class_name(name: str) -> str:
     """Extract the bare identifier from a CE OOAD class name.
 
-    Strips Markdown bold markers (**) and UML stereotype annotations (<<...>>)
-    so that "**Identity** <<Value Object>>" becomes "Identity".
-    Used to build name aliases that let relationship targets (which use the
-    plain name) resolve to the correct DrawIO cell.
+    Strips Markdown bold markers (**), UML stereotype annotations (<<...>>), and
+    trailing ``extends Base`` clauses so that
+    "**Subscriber** <<Aggregate Root>> <<Entity>> extends Customer" becomes
+    "Subscriber". Used to build name aliases that let relationship targets
+    (which use the plain name) resolve to the correct DrawIO cell.
     """
     # Strip bold markers
     n = re.sub(r"\*+", "", name)
     # Strip stereotype annotations like "<< Value Object >>"
     n = re.sub(r"<<[^>]+>>", "", n)
+    # Strip inheritance clause: "Subscriber extends Customer" -> "Subscriber"
+    n = re.sub(r"\s+extends\s+.+$", "", n, flags=re.IGNORECASE)
     return n.strip()
+
+
+def _extends_base_name(name: str) -> Optional[str]:
+    """Return the base type from an ``extends Base`` clause on a class heading, if any."""
+    n = re.sub(r"\*+", "", name)
+    n = re.sub(r"<<[^>]+>>", "", n)
+    m = re.search(r"\bextends\s+([A-Z]\w*)", n, flags=re.IGNORECASE)
+    return m.group(1) if m else None
 
 
 def _is_module_style(style: str) -> bool:
@@ -1131,15 +1213,25 @@ def _parse_module_html(value: str) -> Tuple[Optional[str], str, List[str]]:
     return name, purpose, terms
 
 
+def _display_class_name(name: str) -> str:
+    """Human-facing class title: plain name plus stereotypes, without ``extends``."""
+    n = re.sub(r"\*+", "", name)
+    base = _plain_class_name(name)
+    stereotypes = re.findall(r"<<[^>]+>>", n)
+    if stereotypes:
+        return f"{base} {' '.join(s.strip() for s in stereotypes)}"
+    return base
+
+
 def _build_class_html(oclass: OoadClass) -> str:
-    name_html = html.escape(oclass.name)
+    name_html = html.escape(_display_class_name(oclass.name))
     props_html = "".join(
         f"+ {html.escape(p.name)}{': ' + html.escape(p.type_hint) if p.type_hint else ''}<br/>"
         for p in oclass.properties
     ) or "<br/>"
     ops_html = "".join(
         f"{'- ' if op.name.startswith('_') else '+ '}{html.escape(op.name)}"
-        f"({''.join(op.parameters)})"
+        f"({', '.join(op.parameters)})"
         f"{': ' + html.escape(op.return_type) if op.return_type else ''}<br/>"
         for op in oclass.operations
     ) or "<br/>"
@@ -1172,6 +1264,407 @@ def _create_class_cell(
     geo.set("height", str(_class_height(oclass)))
     geo.set("as", "geometry")
     return cell
+
+
+def _module_tab_label(module_name: str) -> str:
+    """Short label for «from: …» (leading part of an H1 heading)."""
+    name = module_name.strip()
+    for sep in (" — ", " – ", " - ", "—", "–"):
+        if sep in name:
+            return name.split(sep, 1)[0].strip()
+    return name
+
+
+def _class_module_labels(modules: List[Module]) -> dict[str, str]:
+    """Map class cell id → owning module short label for import stereotypes."""
+    out: dict[str, str] = {}
+    for module in modules:
+        label = _module_tab_label(module.name)
+        for oclass in module.classes:
+            out[_slug(oclass.name)] = label
+            plain = _plain_class_name(oclass.name)
+            if plain:
+                out.setdefault(_slug(plain), label)
+    return out
+
+
+def _collect_relationships(
+    classes: List[OoadClass],
+    name_to_id: dict[str, str],
+) -> List[Tuple[str, str, str]]:
+    relationships = [
+        (name_to_id[c.name], name_to_id[rel.target], rel.kind or "association")
+        for c in classes
+        for rel in c.relationships
+        if rel.target in name_to_id
+    ]
+    for oclass in classes:
+        base = _extends_base_name(oclass.name)
+        if base and base in name_to_id:
+            pair = (name_to_id[oclass.name], name_to_id[base], "inheritance")
+            if pair not in relationships:
+                relationships.append(pair)
+    return relationships
+
+
+def _direct_import_ids(
+    local_ids: set[str],
+    relationships: List[Tuple[str, str, str]],
+    id_to_module: dict[str, str],
+    local_module_name: str,
+) -> List[str]:
+    """Foreign class ids with a direct link from this aggregate.
+
+    Imports:
+    - targets of edges that leave a local class (local → foreign)
+    - foreign subtypes that inherit into a local base (foreign → local, inheritance)
+
+    Inbound association sources stay on the other aggregate's tab.
+    """
+    local_label = _module_tab_label(local_module_name)
+    imports: set[str] = set()
+    for src, tgt, kind in relationships:
+        kind_l = (kind or "association").lower()
+        if src in local_ids and tgt not in local_ids:
+            if id_to_module.get(tgt, "") != local_label:
+                imports.add(tgt)
+        elif (
+            tgt in local_ids
+            and src not in local_ids
+            and kind_l == "inheritance"
+            and id_to_module.get(src, "") != local_label
+        ):
+            imports.add(src)
+    return sorted(imports)
+
+
+def _build_imported_class_html(oclass: OoadClass, from_module: str) -> str:
+    """Compact imported card: «from: Module», name, key properties only."""
+    name_html = html.escape(_display_class_name(oclass.name))
+    from_html = html.escape(f"«from: {from_module}»")
+    key_props = oclass.properties[:4]
+    props_html = "".join(
+        f"+ {html.escape(p.name)}"
+        f"{': ' + html.escape(p.type_hint) if p.type_hint else ''}<br/>"
+        for p in key_props
+    ) or "<br/>"
+    return (
+        f'<p style="margin:0px;margin-top:2px;text-align:center;font-size:10px;">'
+        f"<i>{from_html}</i></p>"
+        f'<p style="margin:0px;text-align:center;"><b>{name_html}</b></p>'
+        f'<hr size="1"/>'
+        f'<p style="margin:0px;margin-left:4px;font-size:10px;">{props_html}</p>'
+        f'<hr size="1"/>'
+        f'<p style="margin:0px;margin-left:4px;font-size:10px;"><br/></p>'
+    )
+
+
+def _imported_class_height(oclass: OoadClass) -> int:
+    n = min(4, len(oclass.properties)) + 2
+    return max(CELL_MIN_HEIGHT - 10, 30 + n * LINE_HEIGHT + 2 * SECTION_PAD)
+
+
+def _create_imported_class_cell(
+    root_el: ET.Element,
+    oclass: OoadClass,
+    cell_id: str,
+    from_module: str,
+    x: int,
+    y: int,
+) -> ET.Element:
+    cell = ET.SubElement(root_el, "mxCell")
+    cell.set("id", cell_id)
+    cell.set("value", _build_imported_class_html(oclass, from_module))
+    cell.set("style", IMPORTED_CLASS_STYLE)
+    cell.set("vertex", "1")
+    cell.set("parent", "1")
+    geo = ET.SubElement(cell, "mxGeometry")
+    geo.set("x", str(x))
+    geo.set("y", str(y))
+    geo.set("width", str(CELL_WIDTH))
+    geo.set("height", str(_imported_class_height(oclass)))
+    geo.set("as", "geometry")
+    return cell
+
+
+def _layout_page_with_imports(
+    local_ids: List[str],
+    import_ids: List[str],
+    id_to_oclass: Dict[str, OoadClass],
+    relationships: List[Tuple[str, str, str]],
+) -> Dict[str, Tuple[float, float, float, float]]:
+    """Pack locals tightly; inheritance imports above, others beside linkers."""
+    local_set = set(local_ids)
+    page_rels = [
+        (s, t, k)
+        for s, t, k in relationships
+        if s in local_set and t in local_set
+    ]
+    local_map, _width, _height = _pack_cluster(
+        local_ids,
+        id_to_oclass,
+        float(START_X),
+        float(START_Y),
+        page_rels,
+        cols=3,
+    )
+    placements: Dict[str, Tuple[float, float, float, float]] = dict(local_map)
+
+    if not import_ids:
+        return _resolve_class_overlaps(placements)
+
+    def _linkers_for(iid: str) -> List[Tuple[str, str]]:
+        out: List[Tuple[str, str]] = []
+        for s, t, k in relationships:
+            kind = (k or "association").lower()
+            if s == iid and t in placements:
+                out.append((t, kind))
+            elif t == iid and s in placements:
+                out.append((s, kind))
+        return out
+
+    inheritance_parents = []  # import is base — sit above locals
+    inheritance_children = []  # import is subtype — sit below local base
+    for iid in import_ids:
+        links = _linkers_for(iid)
+        if any(k == "inheritance" for _lid, k in links):
+            # child → parent: if import is source, it's the subtype.
+            if any(
+                s == iid and t in placements and (k or "").lower() == "inheritance"
+                for s, t, k in relationships
+            ):
+                inheritance_children.append(iid)
+            else:
+                inheritance_parents.append(iid)
+    beside_ids = [
+        iid
+        for iid in import_ids
+        if iid not in inheritance_parents and iid not in inheritance_children
+    ]
+
+    if inheritance_parents:
+        band_h = (
+            max(
+                float(_imported_class_height(id_to_oclass[i]))
+                for i in inheritance_parents
+            )
+            + INNER_ROW_GAP * 2
+        )
+        placements = {
+            cid: (x, y + band_h, w, h) for cid, (x, y, w, h) in placements.items()
+        }
+        used: List[Tuple[float, float, float, float]] = []
+        for iid in inheritance_parents:
+            h = float(_imported_class_height(id_to_oclass[iid]))
+            links = _linkers_for(iid)
+            primary = min(
+                (lid for lid, _k in links),
+                key=lambda lid: (placements[lid][1], placements[lid][0]),
+            )
+            x = placements[primary][0]
+            y = float(START_Y)
+            candidate = (x, y, float(CELL_WIDTH), h)
+            for _ in range(12):
+                if all(
+                    not _rects_overlap(candidate, geo, gap=OVERLAP_GAP)
+                    for geo in used
+                ):
+                    break
+                x += CELL_WIDTH + INNER_COL_GAP
+                candidate = (x, y, float(CELL_WIDTH), h)
+            placements[iid] = candidate
+            used.append(candidate)
+
+    # Subtype imports sit just below their local base (base-above-derived).
+    child_slots: dict[str, int] = {}
+    for iid in inheritance_children:
+        h = float(_imported_class_height(id_to_oclass[iid]))
+        links = _linkers_for(iid)
+        primary = min(
+            (lid for lid, _k in links),
+            key=lambda lid: (placements[lid][1], placements[lid][0]),
+        )
+        px, py, _pw, ph = placements[primary]
+        slot = child_slots.get(primary, 0)
+        child_slots[primary] = slot + 1
+        x = px + slot * (CELL_WIDTH + INNER_COL_GAP)
+        y = py + ph + INNER_ROW_GAP
+        placements[iid] = (x, y, float(CELL_WIDTH), h)
+
+    # Association imports: fan into a compact 2-col grid to the right of each hub.
+    from collections import defaultdict
+
+    by_hub: dict[str, List[str]] = defaultdict(list)
+    orphan_imports: List[str] = []
+    for iid in beside_ids:
+        links = _linkers_for(iid)
+        if not links:
+            orphan_imports.append(iid)
+            continue
+        ys = sorted(placements[lid][1] for lid, _k in links)
+        mid_y = ys[len(ys) // 2]
+        primary = min(
+            (lid for lid, _k in links),
+            key=lambda lid: (
+                abs(placements[lid][1] - mid_y),
+                placements[lid][0],
+            ),
+        )
+        by_hub[primary].append(iid)
+
+    fan_cols = 2
+    for hub, iids in by_hub.items():
+        hx, hy, _hw, _hh = placements[hub]
+        for idx, iid in enumerate(iids):
+            h = float(_imported_class_height(id_to_oclass[iid]))
+            col = idx % fan_cols
+            row = idx // fan_cols
+            x = hx + CELL_WIDTH + INNER_COL_GAP + col * (CELL_WIDTH + INNER_COL_GAP)
+            y = hy + row * (h + INNER_ROW_GAP)
+            candidate = (x, y, float(CELL_WIDTH), h)
+            # If blocked, drop to the next free row under the hub fan.
+            guard = 0
+            while any(
+                _rects_overlap(candidate, geo, gap=OVERLAP_GAP)
+                for oid, geo in placements.items()
+                if oid != iid
+            ) and guard < 20:
+                guard += 1
+                row += 1
+                y = hy + row * (h + INNER_ROW_GAP)
+                candidate = (x, y, float(CELL_WIDTH), h)
+            placements[iid] = candidate
+
+    for iid in orphan_imports:
+        h = float(_imported_class_height(id_to_oclass[iid]))
+        placements[iid] = (
+            float(START_X),
+            float(START_Y),
+            float(CELL_WIDTH),
+            h,
+        )
+
+    return _resolve_class_overlaps(placements, prefer_move=set(import_ids))
+
+
+def _add_diagram_page(mxfile: ET.Element, page_name: str) -> ET.Element:
+    diagram = ET.SubElement(mxfile, "diagram")
+    diagram.set("name", page_name)
+    diagram.set("id", f"page-{_slug(page_name)}")
+    model_el = ET.SubElement(diagram, "mxGraphModel")
+    _set_graph_attrs(model_el)
+    root_el = ET.SubElement(model_el, "root")
+    cell0 = ET.SubElement(root_el, "mxCell")
+    cell0.set("id", "0")
+    cell1 = ET.SubElement(root_el, "mxCell")
+    cell1.set("id", "1")
+    cell1.set("parent", "0")
+    return root_el
+
+
+def _render_edges_on_page(
+    root_el: ET.Element,
+    relationships: List[Tuple[str, str, str]],
+    placements: Dict[str, Tuple[float, float, float, float]],
+    page_ids: set[str],
+    local_ids: Optional[set[str]] = None,
+) -> None:
+    """Wire edges present on this page.
+
+    When *local_ids* is set (per-aggregate tabs), only draw:
+    - edges that leave a local class (local → local/import)
+    - inheritance into a local base (import → local, inheritance)
+
+    Never import↔import, and never inbound association from an import.
+    """
+    page_rels = [
+        (s, t, k)
+        for s, t, k in relationships
+        if s in page_ids
+        and t in page_ids
+        and (
+            local_ids is None
+            or s in local_ids
+            or (
+                t in local_ids
+                and (k or "").lower() == "inheritance"
+            )
+        )
+    ]
+    edge_specs: List[dict] = []
+    for src_id, tgt_id, kind in page_rels:
+        exit_side, entry_side = _preferred_sides(
+            placements[src_id], placements[tgt_id]
+        )
+        edge_specs.append(
+            {
+                "src_id": src_id,
+                "tgt_id": tgt_id,
+                "kind": kind,
+                "exit_side": exit_side,
+                "entry_side": entry_side,
+            }
+        )
+    _assign_distinct_anchors(edge_specs)
+
+    def _edge_sort_key(spec: dict) -> Tuple[int, float, str]:
+        s = placements[spec["src_id"]]
+        t = placements[spec["tgt_id"]]
+        dist = abs((s[0] + s[2] / 2) - (t[0] + t[2] / 2)) + abs(
+            (s[1] + s[3] / 2) - (t[1] + t[3] / 2)
+        )
+        ownership = 0 if _ownership_kinds(spec["kind"]) else 1
+        return (ownership, dist, spec["src_id"])
+
+    edge_specs.sort(key=_edge_sort_key)
+    used_ids = {cell.get("id", "") for cell in root_el.iter("mxCell")}
+    numeric_ids = [int(i) for i in used_ids if i.isdigit()]
+    edge_counter = max(numeric_ids) if numeric_ids else len(page_ids) + 10
+    routed_segments: List[List[Tuple[Tuple[float, float], Tuple[float, float]]]] = []
+    for lane_idx, spec in enumerate(edge_specs):
+        edge_counter += 1
+        exit_x, exit_y = _side_anchor(spec["exit_side"], spec["exit_frac"])
+        entry_x, entry_y = _side_anchor(spec["entry_side"], spec["entry_frac"])
+        obstacles = [
+            geo
+            for cid, geo in placements.items()
+            if cid not in (spec["src_id"], spec["tgt_id"])
+        ]
+        waypoints = _route_waypoints(
+            placements[spec["src_id"]],
+            placements[spec["tgt_id"]],
+            spec["exit_side"],
+            spec["entry_side"],
+            spec["exit_frac"],
+            spec["entry_frac"],
+            obstacles=obstacles,
+            lane=lane_idx * ROUTE_LANE_STEP,
+            avoid_segments=routed_segments,
+            all_placements=placements,
+        )
+        _create_edge(
+            root_el,
+            src_id=spec["src_id"],
+            tgt_id=spec["tgt_id"],
+            kind=spec["kind"],
+            edge_id=str(edge_counter),
+            exit_x=exit_x,
+            exit_y=exit_y,
+            entry_x=entry_x,
+            entry_y=entry_y,
+            waypoints=waypoints,
+        )
+        routed_segments.append(
+            _segments_from_route(
+                placements[spec["src_id"]],
+                placements[spec["tgt_id"]],
+                spec["exit_side"],
+                spec["entry_side"],
+                spec["exit_frac"],
+                spec["entry_frac"],
+                waypoints,
+            )
+        )
 
 
 def _create_edge(
@@ -1241,8 +1734,14 @@ def _rects_overlap(
 
 def _resolve_class_overlaps(
     placements: Dict[str, Tuple[float, float, float, float]],
+    prefer_move: Optional[set[str]] = None,
 ) -> Dict[str, Tuple[float, float, float, float]]:
-    """Push overlapping class boxes down until none intersect."""
+    """Push overlapping class boxes apart — prefer sideways on the same row.
+
+    *prefer_move* ids (e.g. imports) are shifted right instead of shoving local
+    packs down into long vertical spines.
+    """
+    prefer_move = prefer_move or set()
     ids = list(placements.keys())
     for _ in range(len(ids) * len(ids) + 1):
         moved = False
@@ -1252,11 +1751,21 @@ def _resolve_class_overlaps(
                     continue
                 ax, ay, aw, ah = placements[a]
                 bx, by, bw, bh = placements[b]
-                # Keep the higher box; push the lower (or tied) one down.
-                if ay <= by:
-                    placements[b] = (bx, ay + ah + OVERLAP_GAP, bw, bh)
+                if a in prefer_move and b not in prefer_move:
+                    placements[a] = (bx + bw + OVERLAP_GAP, ay, aw, ah)
+                elif b in prefer_move and a not in prefer_move:
+                    placements[b] = (ax + aw + OVERLAP_GAP, by, bw, bh)
                 else:
-                    placements[a] = (ax, by + bh + OVERLAP_GAP, aw, ah)
+                    same_row = abs(ay - by) <= max(ah, bh) * 0.6
+                    if same_row:
+                        if ax <= bx:
+                            placements[b] = (ax + aw + OVERLAP_GAP, by, bw, bh)
+                        else:
+                            placements[a] = (bx + bw + OVERLAP_GAP, ay, aw, ah)
+                    elif ay <= by:
+                        placements[b] = (bx, ay + ah + OVERLAP_GAP, bw, bh)
+                    else:
+                        placements[a] = (ax, by + bh + OVERLAP_GAP, aw, ah)
                 moved = True
         if not moved:
             break
@@ -1546,50 +2055,293 @@ def _pack_cluster(
     origin_x: float,
     origin_y: float,
     relationships: List[Tuple[str, str, str]],
+    cols: int = INNER_COLS,
 ) -> Tuple[Dict[str, Tuple[float, float, float, float]], float, float]:
-    """Pack one cluster tightly. Returns placements, width, height."""
+    """Pack one package/aggregate tightly: owners above their invariants.
+
+    Composition children sit immediately under their owner (short diamonds).
+    Aggregation parts (non-repository) sit under their owner similarly.
+    Remaining association peers fill the next rows. Inter-module distance is
+    handled by the caller via CLUSTER_GAP_*.
+    """
     if not members:
         return {}, 0.0, 0.0
+    member_set = set(members)
+    col_count = max(1, cols)
 
-    # Prefer the ownership root at the top of the cluster.
-    child_set = {
-        tgt
-        for src, tgt, kind in relationships
-        if _ownership_kinds(kind) and src in members and tgt in members
-    }
-    roots = [m for m in members if m not in child_set]
-    ordered = roots + [m for m in members if m not in roots]
+    from collections import defaultdict
 
+    composition: Dict[str, List[str]] = defaultdict(list)
+    aggregation: Dict[str, List[str]] = defaultdict(list)
+    for src, tgt, kind in relationships:
+        if src not in member_set or tgt not in member_set or src == tgt:
+            continue
+        k = (kind or "").lower()
+        if k == "composition":
+            composition[src].append(tgt)
+        elif k == "aggregation" and "repository" not in src:
+            # Repo◇→Aggregate is navigational; keep aggregate as visual root.
+            aggregation[src].append(tgt)
+
+    owned = {c for kids in composition.values() for c in kids}
+    owned |= {c for kids in aggregation.values() for c in kids}
+
+    def _is_repo(cid: str) -> bool:
+        return "repository" in cid
+
+    roots = [
+        m
+        for m in members
+        if m not in owned and (composition.get(m) or aggregation.get(m))
+    ]
+    if not roots:
+        roots = [
+            m
+            for m in members
+            if m not in owned and not _is_repo(m)
+        ] or list(members)
+
+    def _root_score(cid: str) -> Tuple[int, int, str]:
+        return (
+            -(len(composition.get(cid, ())) + len(aggregation.get(cid, ()))),
+            0 if "aggregate" in cid or "entity" in cid else 1,
+            cid,
+        )
+
+    roots = sorted(set(roots), key=_root_score)
+    placed: set[str] = set()
     placements: Dict[str, Tuple[float, float, float, float]] = {}
-    y = origin_y
+    cursor_y = origin_y
     max_x = origin_x
 
-    if roots:
-        root = ordered[0]
-        h = float(_class_height(id_to_oclass[root]))
-        # Center root over the member grid width.
-        body = [m for m in ordered[1:]]
-        body_cols = min(INNER_COLS, max(1, len(body))) if body else 1
-        body_width = body_cols * CELL_WIDTH + max(0, body_cols - 1) * INNER_COL_GAP
-        root_x = origin_x + max(0.0, (body_width - CELL_WIDTH) / 2.0)
-        placements[root] = (root_x, y, float(CELL_WIDTH), h)
-        max_x = max(max_x, root_x + CELL_WIDTH)
-        y += h + INNER_ROW_GAP
-        ordered = ordered[1:]
-
-    for row_start in range(0, len(ordered), INNER_COLS):
-        row = ordered[row_start : row_start + INNER_COLS]
-        row_h = max(float(_class_height(id_to_oclass[cid])) for cid in row)
-        for col, cid in enumerate(row):
-            x = origin_x + col * (CELL_WIDTH + INNER_COL_GAP)
+    def _place_row(cids: List[str], y: float) -> float:
+        nonlocal max_x
+        if not cids:
+            return y
+        row_cols = min(col_count, max(1, len(cids)))
+        row_h = 0.0
+        x = origin_x
+        col = 0
+        row_y = y
+        for cid in cids:
+            if cid in placed:
+                continue
             h = float(_class_height(id_to_oclass[cid]))
-            placements[cid] = (x, y, float(CELL_WIDTH), h)
+            if col >= row_cols:
+                x = origin_x
+                row_y += row_h + INNER_ROW_GAP
+                row_h = 0.0
+                col = 0
+            placements[cid] = (x, row_y, float(CELL_WIDTH), h)
+            placed.add(cid)
             max_x = max(max_x, x + CELL_WIDTH)
-        y += row_h + INNER_ROW_GAP
+            row_h = max(row_h, h)
+            x += CELL_WIDTH + INNER_COL_GAP
+            col += 1
+        return row_y + row_h
+
+    def _place_owner_tree(owner: str, y: float) -> float:
+        nonlocal max_x
+        if owner in placed:
+            return y
+        oh = float(_class_height(id_to_oclass[owner]))
+        placements[owner] = (origin_x, y, float(CELL_WIDTH), oh)
+        placed.add(owner)
+        max_x = max(max_x, origin_x + CELL_WIDTH)
+        kids: List[str] = []
+        for kid in list(composition.get(owner, ())) + list(aggregation.get(owner, ())):
+            if kid not in placed and kid in member_set:
+                kids.append(kid)
+        seen_k: set[str] = set()
+        uniq_kids: List[str] = []
+        for k in kids:
+            if k not in seen_k:
+                seen_k.add(k)
+                uniq_kids.append(k)
+        if not uniq_kids:
+            # Still park repositories beside a leaf-less owner.
+            repo_x = origin_x + CELL_WIDTH + INNER_COL_GAP
+            bottom = y + oh
+            for src, tgt, kind in relationships:
+                if tgt != owner or src in placed or src not in member_set:
+                    continue
+                if (kind or "").lower() != "aggregation" or "repository" not in src:
+                    continue
+                rh = float(_class_height(id_to_oclass[src]))
+                placements[src] = (repo_x, y, float(CELL_WIDTH), rh)
+                placed.add(src)
+                max_x = max(max_x, repo_x + CELL_WIDTH)
+                bottom = max(bottom, y + rh)
+                repo_x += CELL_WIDTH + INNER_COL_GAP
+            return bottom
+        # Repositories that aggregate this owner sit immediately to the right
+        # before composition leaves, so◇ edges stay short.
+        repo_x = origin_x + CELL_WIDTH + INNER_COL_GAP
+        bottom = y + oh
+        for src, tgt, kind in relationships:
+            if tgt != owner or src in placed or src not in member_set:
+                continue
+            if (kind or "").lower() != "aggregation" or "repository" not in src:
+                continue
+            rh = float(_class_height(id_to_oclass[src]))
+            placements[src] = (repo_x, y, float(CELL_WIDTH), rh)
+            placed.add(src)
+            max_x = max(max_x, repo_x + CELL_WIDTH)
+            bottom = max(bottom, y + rh)
+            repo_x += CELL_WIDTH + INNER_COL_GAP
+        nested = [k for k in uniq_kids if composition.get(k) or aggregation.get(k)]
+        leaves = [k for k in uniq_kids if k not in nested]
+        # Beside placement: one nested child and leaves share the owner's row,
+        # wrapping under when the row is full so far-right gaps stay small.
+        side_kids = list(leaves)
+        deep_nested = list(nested)
+        if nested and not leaves:
+            side_kids = [nested[0]]
+            deep_nested = nested[1:]
+        if side_kids:
+            x = repo_x
+            row_y = y
+            row_h = oh
+            col = int(round((x - origin_x) / (CELL_WIDTH + INNER_COL_GAP)))
+            # Owner + one side slot, then wrap — avoids long same-row gaps
+            # through intervening siblings (Customer→Address past Identity).
+            leaf_cols = min(2, col_count)
+            for kid in side_kids:
+                if kid in placed:
+                    continue
+                if kid in nested:
+                    nest_bottom = _place_owner_tree_at(kid, x, row_y)
+                    bottom = max(bottom, nest_bottom)
+                    max_x = max(max_x, x + CELL_WIDTH)
+                    x += CELL_WIDTH + INNER_COL_GAP
+                    col += 1
+                    if col >= leaf_cols:
+                        x = origin_x
+                        row_y = bottom + INNER_ROW_GAP
+                        row_h = 0.0
+                        col = 0
+                    continue
+                kh = float(_class_height(id_to_oclass[kid]))
+                if col >= leaf_cols:
+                    x = origin_x
+                    row_y = bottom + INNER_ROW_GAP
+                    row_h = 0.0
+                    col = 0
+                placements[kid] = (x, row_y, float(CELL_WIDTH), kh)
+                placed.add(kid)
+                max_x = max(max_x, x + CELL_WIDTH)
+                row_h = max(row_h, kh)
+                bottom = max(bottom, row_y + row_h)
+                x += CELL_WIDTH + INNER_COL_GAP
+                col += 1
+        nest_y = bottom + INNER_ROW_GAP
+        for nest in deep_nested:
+            if nest in placed:
+                continue
+            nest_y = _place_owner_tree(nest, nest_y) + INNER_ROW_GAP
+        return max(bottom, nest_y - INNER_ROW_GAP)
+
+    def _place_owner_tree_at(owner: str, x: float, y: float) -> float:
+        """Place an owner tree rooted at (x, y); returns bottom y."""
+        nonlocal max_x
+        if owner in placed:
+            return y
+        oh = float(_class_height(id_to_oclass[owner]))
+        placements[owner] = (x, y, float(CELL_WIDTH), oh)
+        placed.add(owner)
+        max_x = max(max_x, x + CELL_WIDTH)
+        kids: List[str] = []
+        for kid in list(composition.get(owner, ())) + list(aggregation.get(owner, ())):
+            if kid not in placed and kid in member_set:
+                kids.append(kid)
+        if not kids:
+            return y + oh
+        nested = [k for k in kids if composition.get(k) or aggregation.get(k)]
+        leaves = [k for k in kids if k not in nested]
+        bottom = y + oh
+        cx = x + CELL_WIDTH + INNER_COL_GAP
+        for kid in leaves:
+            kh = float(_class_height(id_to_oclass[kid]))
+            placements[kid] = (cx, y, float(CELL_WIDTH), kh)
+            placed.add(kid)
+            max_x = max(max_x, cx + CELL_WIDTH)
+            bottom = max(bottom, y + kh)
+            cx += CELL_WIDTH + INNER_COL_GAP
+        ny = bottom + INNER_ROW_GAP
+        for nest in nested:
+            ny = _place_owner_tree_at(nest, x, ny) + INNER_ROW_GAP
+        return max(bottom, ny - INNER_ROW_GAP)
+    for root in roots:
+        if root in placed:
+            continue
+        cursor_y = _place_owner_tree(root, cursor_y) + INNER_ROW_GAP
+
+    # Repositories sit beside their aggregate root (short white-diamond edge).
+    for src, tgt, kind in relationships:
+        if (kind or "").lower() != "aggregation":
+            continue
+        if "repository" not in src:
+            continue
+        if src not in member_set or src in placed or tgt not in placements:
+            continue
+        tx, ty, _tw, _th = placements[tgt]
+        rh = float(_class_height(id_to_oclass[src]))
+        rx = tx + CELL_WIDTH + INNER_COL_GAP
+        candidate = (rx, ty, float(CELL_WIDTH), rh)
+        guard = 0
+        while any(
+            _rects_overlap(candidate, geo, gap=OVERLAP_GAP)
+            for oid, geo in placements.items()
+        ) and guard < 8:
+            guard += 1
+            rx += CELL_WIDTH + INNER_COL_GAP
+            candidate = (rx, ty, float(CELL_WIDTH), rh)
+        placements[src] = candidate
+        placed.add(src)
+        max_x = max(max_x, candidate[0] + CELL_WIDTH)
+
+    leftovers = [m for m in members if m not in placed]
+    while leftovers:
+        best_i = 0
+        best_score = -1
+        for i, cid in enumerate(leftovers):
+            links = 0
+            for src, tgt, kind in relationships:
+                # Count associations; also repo◇→root so repos co-locate.
+                if _ownership_kinds(kind) and "repository" not in src:
+                    continue
+                if (src == cid and tgt in placed) or (tgt == cid and src in placed):
+                    links += 1
+            if links > best_score:
+                best_score = links
+                best_i = i
+        batch = [leftovers.pop(best_i)]
+        # Prefer peers linked to the same neighborhood, then fill the row.
+        for cid in list(leftovers):
+            if len(batch) >= col_count:
+                break
+            linked = any(
+                (src == cid and tgt in placed)
+                or (tgt == cid and src in placed)
+                or (src == cid and tgt in batch)
+                or (tgt == cid and src in batch)
+                for src, tgt, kind in relationships
+                if not _ownership_kinds(kind) or "repository" in src
+            )
+            if linked:
+                leftovers.remove(cid)
+                batch.append(cid)
+        while leftovers and len(batch) < col_count:
+            batch.append(leftovers.pop(0))
+        cursor_y = _place_row(batch, cursor_y) + INNER_ROW_GAP
+
+    still = [m for m in members if m not in placed]
+    if still:
+        cursor_y = _place_row(still, cursor_y) + INNER_ROW_GAP
 
     width = max_x - origin_x
-    height = y - origin_y - INNER_ROW_GAP
-    return placements, width, max(height, 0.0)
+    height = max(0.0, cursor_y - origin_y - INNER_ROW_GAP)
+    return placements, width, height
 
 
 def _layout_classes_clustered(
@@ -1641,6 +2393,23 @@ def _layout_classes_clustered(
     cluster_of = {
         cid: index for index, members in enumerate(clusters) for cid in members
     }
+
+    # Module-driven layouts follow H1 / sequential order (lifecycle bands),
+    # not size — Customer → Prospect → Subscriber → Billing stay readable top-down.
+    if module_driven:
+        placements: Dict[str, Tuple[float, float, float, float]] = {}
+        cursor_y = float(START_Y)
+        for index in range(len(clusters)):
+            _local, _width, height = _pack_cluster(
+                clusters[index],
+                id_to_oclass,
+                float(START_X),
+                cursor_y,
+                relationships,
+            )
+            placements.update(_local)
+            cursor_y += height + CLUSTER_GAP_Y
+        return placements
 
     # Which clusters are owned (via composition) by another cluster?
     # Skip this hierarchy-building when clusters come from named modules — all
@@ -1831,7 +2600,7 @@ def _route_waypoints(
     ] = None,
     all_placements: Optional[Dict[str, Tuple[float, float, float, float]]] = None,
 ) -> List[Tuple[float, float]]:
-    """Orthogonal channel router: unique highway lane + side gutter as needed."""
+    """Orthogonal channel router: prefer no/few waypoints; highway only if needed."""
     avoid_segments = avoid_segments or []
     placements = all_placements or {
         str(i): geo for i, geo in enumerate([src, tgt, *obstacles])
@@ -1863,6 +2632,41 @@ def _route_waypoints(
         ):
             return False
         return True
+
+    # Prefer empty waypoints (one orthogonal bend via edge style) when clear.
+    if _is_clear([], check_edges=True):
+        return []
+    # Single mid-point L when sides are opposite and span is short.
+    if {exit_side, entry_side} <= {"top", "bottom"}:
+        mid = [(exit_pt[0], (leave[1] + approach[1]) / 2.0)]
+        if _is_clear(mid, check_edges=True):
+            return mid
+    if {exit_side, entry_side} <= {"left", "right"}:
+        mid = [((leave[0] + approach[0]) / 2.0, exit_pt[1])]
+        if _is_clear(mid, check_edges=True):
+            return mid
+    # Two-point elbow via leave/approach — still short when neighbors are close.
+    elbow = [leave, approach]
+    if _is_clear(elbow, check_edges=True):
+        return elbow
+
+    # Close endpoints: accept a short route even if it grazes another edge —
+    # prefer-short-routes beats parallel-lane highways for nearby boxes.
+    scx, scy = src[0] + src[2] / 2.0, src[1] + src[3] / 2.0
+    tcx, tcy = tgt[0] + tgt[2] / 2.0, tgt[1] + tgt[3] / 2.0
+    if abs(scx - tcx) + abs(scy - tcy) < 420:
+        if _is_clear([], check_edges=False):
+            return []
+        if {exit_side, entry_side} <= {"top", "bottom"}:
+            mid = [(exit_pt[0], (leave[1] + approach[1]) / 2.0)]
+            if _is_clear(mid, check_edges=False):
+                return mid
+        if {exit_side, entry_side} <= {"left", "right"}:
+            mid = [((leave[0] + approach[0]) / 2.0, exit_pt[1])]
+            if _is_clear(mid, check_edges=False):
+                return mid
+        if _is_clear(elbow, check_edges=False):
+            return elbow
 
     def _occupied_horiz_ys() -> List[float]:
         ys: List[float] = []

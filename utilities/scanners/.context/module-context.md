@@ -10,6 +10,8 @@
 
 **Public API:** `Scan.scan`; `Scan._scanner_collection`; engine types/helpers
 
+Eval Repair (sketch) consumes the scan result as **ScanReport**: `ok`, `matches(mistake)`; overloads `scan(paths)` and `scan(paths, root, rule)`.
+
 **Dependencies:** (none)
 
 **Mechanism:** Concrete mergeable `Scan` class in the same package as the engine (one test tier — no separate interface). `Scanner.is_skipped_path` skips demo dirs such as `examples/`, except repair fixtures (`faultyAsset` / `repairedAsset`, or files under `faultyAssets/` / `repairedAssets/`) which stay scannable for regression. Paths the caller names in `scan(paths=…)` are also exempt for that call — via `Scanner.explicitly_requested` — so an agent that asks about a fixture is not told it is clean because the path was filtered out.

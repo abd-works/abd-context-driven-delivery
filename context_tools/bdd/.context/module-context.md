@@ -8,6 +8,6 @@
 
 **Seam:** `Bdd`
 
-**Public API:** constructor (`fidelity`, `format`, `path`, `session`, `workspace`); providers `ce()`, `diagnostic()`; lifecycle actions `generate`, `grill`, `sketch`, `iterate`, `satisfy`, `validate`, `repair`; tool `transform`; scan rules discovered from `scanners/` (`missing-spec` plus ported abd-skills rules: `plain-english-only`, `business-readable-language`, `signature-markers`, `no-remaining-signatures`, `observable-behavior`, `layer-isolation`)
+**Public API:** constructor (`fidelity`, `format`, `path`, `session`, `workspace`); providers `ce()`, `diagnostic()`; lifecycle actions `generate`, `grill`, `sketch`, `iterate`, `satisfy`, `validate`, `repair`; tools `transform`, `render(format, content)` (calls `transform` from the current format); scan rules discovered from `scanners/` (`missing-spec` plus ported abd-skills rules: `plain-english-only`, `business-readable-language`, `signature-markers`, `no-remaining-signatures`, `observable-behavior`, `layer-isolation`)
 
 **Dependencies:** BaseContextTool (lifecycle); CleanEngineering (lazy via `ce()` / `transform`); Diagnose (lazy via `diagnostic()`)

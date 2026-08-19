@@ -43,7 +43,7 @@ with description("an action that is annotated with log"):
                 "scan",
                 "satisfy",
                 "repair",
-                "improve",
+                "createRule",
                 "log_mistake",
                 "log_correction",
             ):

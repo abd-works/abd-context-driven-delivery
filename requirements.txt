@@ -1,0 +1,3 @@
+# Runtime deps for `python -m tools` (install into .venv via setup.ps1).
+expects>=0.9.0
+PyYAML>=6.0

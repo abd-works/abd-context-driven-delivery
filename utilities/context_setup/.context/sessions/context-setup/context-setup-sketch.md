@@ -30,7 +30,7 @@ example-of: none
 ---
 
 (E) Set Up Context Memory
-    * approx 20-24 total stories
+    * approx 28-34 total stories
     (E) Capture From Documents                   // Increment 1 — User-chosen capture path
         (S) User --> Capture From Documents
             source-folder-capture-begins
@@ -116,11 +116,82 @@ example-of: none
                 when the AI Chat reads each Chunk's chunk_type front matter to weight results
                 then an Answer is composed that cites source.path and section per Chunk used
         * approx 1-2 more stories (empty-index fallback, multi-corpus query)\
-     (E) Capture From Live App                    // Increment 2 — User-chosen capture path, deferred
+     (E) Capture From Live App                    // Increment 2 — User-chosen capture path
         (S) User --> Capture From Live App
-        (S) Tool --> Stub External Dependencies
-        (S) Tool --> Capture App Pages
-        (S) AI Chat --> Review Capture Coverage
+            live-app-capture-begins
+                given a Target Repo at repo.path and a Surface Type (web | desktop | api)
+                when the User requests capture from the live app
+                then the AI Chat records the repo.path and surface.type
+                    and calls Classify External Dependencies with repo.path
+        (E) Stub External Dependencies
+            // Sources: abd-context-app-sandbox/SKILL.md
+            (S) AI Chat --> Classify External Dependencies
+                deps-classified-simple-path
+                    given a Target Repo at repo.path with fewer than 5 distinct external services
+                    when the AI Chat scans the repo for third-party call sites, SDK initialisations,
+                        and external-URL env-vars
+                    then each dependency is classified as external (needs a stub) or
+                        in-scope (skipped) in a Classification Table
+                        and the AI Chat calls Write External Stubs with the Classification Table
+                deps-classified-complex-path
+                    given a Target Repo at repo.path with 5 or more distinct external services
+                        or any dependency requiring a domain-shaped stub return (more than 3 fields)
+                    when the AI Chat scans the repo and detects the complex-stub trigger
+                    then a story-map, acceptance-criteria, and domain-glossary pre-pass is produced
+                        at docs/stubs/ before any stubs are written
+                        and Write External Stubs is not called until all three documents are complete
+            (S) Tool --> Write External Stubs
+                stubs-written-at-boundary
+                    given a Classification Table from Classify External Dependencies
+                    when write_stubs(repo.path, classification_table) is called
+                    then each external dependency has a stub at its outermost boundary
+                        (HTTP adapter, SDK factory, or module export — not deep protocol internals)
+                        and a Stub Inventory at docs/stubs/stub-inventory.md is produced
+                        with one row per stub: service, boundary point, hardcoded values, BDD step refs
+            (S) Tool --> Smoke Test App
+                app-starts-and-every-screen-reachable
+                    given a Stub Inventory with all externals stubbed
+                    when smoke_test(repo.path, surface.type) is called
+                    then the application starts cleanly without uncaught external-service errors
+                        and every significant screen is navigated with a PASS result
+                        and each screen slug and reachability result is appended to the Stub Inventory
+                smoke-test-fails-triggers-stub-repair
+                    given a Stub Inventory and a screen that returned a non-PASS result
+                    when the AI Chat reviews the Smoke Test results
+                    then the AI Chat identifies the boundary point that caused the failure
+                        and requests a targeted stub correction before re-running the smoke test
+        (E) Capture App Pages
+            // Sources: abd-context-app-extractor/SKILL.md
+            (S) Tool --> Scout App Pages
+                phase-0-scout-produces-extraction-overview
+                    given a Target Repo at repo.path proven reachable by the smoke test
+                        and a Surface Type (web | desktop | api)
+                    when scout_app(repo.path, surface.type) is called
+                    then 10-20 representative pages or endpoints are captured
+                        and each page has a screenshot.png and aria.yaml under pages/<slug>/
+                        and an Extraction Overview at docs/extracted-context/app-extraction/
+                        extraction-overview.md is written with one section per captured page
+            (S) AI Chat --> Review Capture Coverage
+                capture-coverage-accepted-full-capture-begins
+                    given an Extraction Overview from Scout App Pages
+                    when the AI Chat reads each page's aria.yaml and screenshot
+                    then each page receives a PASS, WARN, or FAIL verdict
+                        and FAIL and WARN pages are identified for re-capture or exclusion
+                        and the AI Chat calls Complete App Capture with the approved overview
+                        and the missing-pages list
+                scout-deemed-sufficient-no-deeper-capture
+                    given an Extraction Overview where all significant views are present with PASS verdicts
+                    when the AI Chat reviews the coverage
+                    then the AI Chat reports capture complete and rejoins Prepare Content For Retrieval
+                        without calling Complete App Capture
+            (S) Tool --> Complete App Capture
+                remaining-pages-captured-and-added-to-overview
+                    given a missing-pages list from Review Capture Coverage
+                    when complete_capture(repo.path, missing_pages, surface.type) is called
+                    then each missing page is captured with screenshot.png and aria.yaml
+                        and the Extraction Overview is updated with the new page sections
+                        and the Capture is handed off to Prepare Content For Retrieval
+            * approx 1-2 more stories (multi-surface hybrid, API + web combined capture)
 
 ---
 
@@ -158,16 +229,17 @@ example-of: none
 
 **Outcome:** Same preparation and answer pipeline, but the entry point is a live app — User chooses `Capture From Live App`.
 
-**Slicing notes:** `Stub External Dependencies` and `Capture App Pages` are each multi-step, judgment-heavy flows. Candidates for `mode="tool"` deferral (called actions, not inlined recipes) — flagged as `?` pending the BDD/Clean-Engineering pass.
+**Slicing notes:** `Stub External Dependencies` and `Capture App Pages` are expanded into nested sub-epics. `mode="tool"` deferral decisions for `Smoke Test App` and `Scout App Pages` are flagged for the BDD/Clean-Engineering pass.
 
-**Stories in this increment:**
+**Stories in this increment** *(flow order)*:
 - User --> Capture From Live App
-- Tool --> Stub External Dependencies
-- Tool --> Capture App Pages
+- AI Chat --> Classify External Dependencies
+- Tool --> Write External Stubs
+- Tool --> Smoke Test App
+- Tool --> Scout App Pages
 - AI Chat --> Review Capture Coverage
+- Tool --> Complete App Capture
 - *(rejoins Prepare Content For Retrieval / Answer From Memory unchanged)*
-
-* approx 2-4 more stories once BDD detail surfaces edge cases
 
 ---
 
@@ -179,7 +251,7 @@ example-of: none
 
 ---
 
-## Resolved this pass
+## Resolved this pass (2026-08-04)
 
 - **Capture paths are separate epics, User-initiated.** `AI Chat --> Choose Capture Path` and `Action --> Orchestrate Capture` removed. Each path is its own sub-epic with distinct stories.
 - **Story-level tool boundary for the preparation stage.** `Run Preparation Step (×3)` split into `Tag Content By View`, `Draft Chunking Spec`, `Review Chunking Spec`, `Apply Chunking Spec`, `Embed Chunks` per `branch-on-mechanical-uniqueness`. Confirmed against `abd-context-chunk/SKILL.md` (two distinct scripts; explicit strategy-pass vs straight-through judgment step).
@@ -187,6 +259,15 @@ example-of: none
 - **"Ask" independence from "setup."** Confirmed against `abd-context-db-ask/SKILL.md` line 37: path-addressed, no stored session dependency.
 - **Package location.** Confirmed: `utilities/context_setup/` — matches `echo`/`agent_skills` plain-toolset precedent.
 
+## Resolved this pass (2026-08-13)
+
+- **Stub External Dependencies splits into three stories.** `AI Chat --> Classify External Dependencies` (classification table + complex-stub-strategy gate) / `Tool --> Write External Stubs` (code at outermost boundary per classification) / `Tool --> Smoke Test App` (start + navigate + complete inventory). The sandbox complex-stub trigger (5+ externals or domain-shaped returns) is a scenario variation within Classify, not a separate sub-epic.
+- **Surface detection is part of the user entry story.** The User states or AI Chat infers the surface type (web/desktop/API) at `User --> Capture From Live App`; no separate detection story is needed. Surface type flows as a parameter to downstream tool calls.
+- **Capture App Pages splits into two Tool stories + one AI Chat story.** `Tool --> Scout App Pages` (Phase 0, 10-20 pages, produces extraction-overview) / `AI Chat --> Review Capture Coverage` (per-page PASS/WARN/FAIL verdict) / `Tool --> Complete App Capture` (Phase N, fills missing pages). The scout-then-review cadence is explicit on the map.
+- **Nested sub-epics confirmed.** `(E) Stub External Dependencies` and `(E) Capture App Pages` are sub-epics inside `(E) Capture From Live App`. The user entry story sits at the parent sub-epic level, above both nested epics.
+
 ## Unresolved / flagged for next pass
 
-- `?` Which stages in `Capture From Live App` get `mode="tool"` deferral vs stay inlined — flagged for BDD/Clean-Engineering pass when Increment 2 activates.
+- `?` `mode="tool"` deferral decisions: `Smoke Test App` and `Scout App Pages` are strong candidates (multi-step, judgment-adjacent) — confirm during BDD/Clean-Engineering pass.
+- `?` `Complete App Capture` — decide whether re-capture of FAIL pages is a recursive call to `scout_app` or a separate `complete_capture` function.
+- `?` Multi-surface hybrid (web API + browser): clarify whether a single capture call can name multiple surface types or requires separate runs.

@@ -48,6 +48,7 @@ class Ux(BaseContextTool):
     default_workspace_folder: str = "ux"
     context_index_key: str = "ux"
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+    supported_formats = _SUPPORTED_FORMATS
 
 
     fidelities = {
@@ -91,6 +92,16 @@ class Ux(BaseContextTool):
         canonical = source_cls.parse(content)
         rendered = target_cls.render(canonical)
         return {"format": target_format, "content": rendered}
+
+    @tool
+    def render(self, format: str, content: str = "") -> dict:
+        """Render already-generated UX output into ``format`` via channel parse/render."""
+        if not content:
+            raise ValueError("content is required — pass the already-generated artifact")
+        source = self.format
+        if not source:
+            raise ValueError("source format is not set")
+        return self.transform(source, format, content)
 
     @tool
     def ensure_javascript(self, generator: str, source_format: str, content: Any) -> dict:

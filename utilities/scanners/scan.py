@@ -2,12 +2,43 @@
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
+from typing import Any
 
 from tools.tool import tool
 
 from .scanner import Scanner
 from .scanner_collection import ScannerCollection
+
+
+class ScanReport:
+    """Scan result consumed by eval Repair: ``ok`` plus ``matches(mistake)``."""
+
+    def __init__(self, payload: dict[str, Any]) -> None:
+        self.ok = bool(payload.get("ok", True))
+        self.violations = list(payload.get("violations") or [])
+        self.payload = payload
+
+    @classmethod
+    def from_scan(cls, raw: str | dict[str, Any]) -> ScanReport:
+        payload = ast.literal_eval(raw) if isinstance(raw, str) else raw
+        return cls(payload)
+
+    def matches(self, mistake: Any) -> bool:
+        """True when a violation is already this Mistake (rule + artifact)."""
+        rule = str(getattr(mistake, "rule", "") or "")
+        artifact = str(getattr(mistake, "artifact", "") or "")
+        artifact_name = Path(artifact).name if artifact else ""
+        for violation in self.violations:
+            if rule and str(violation.get("rule") or "") != rule:
+                continue
+            location = str(violation.get("location") or "")
+            if artifact and artifact not in location and artifact_name not in location:
+                if location:
+                    continue
+            return True
+        return False
 
 
 class Scan:

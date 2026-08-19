@@ -50,6 +50,7 @@ class CleanEngineering(BaseContextTool):
     default_workspace_folder: str = "src"
     context_index_key: str = "clean_engineering"
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+    supported_formats = _SUPPORTED_FORMATS
 
 
     fidelities = {
@@ -137,3 +138,25 @@ class CleanEngineering(BaseContextTool):
         else:
             rendered = _CHANNELS[target_format].render(canonical)
         return {"format": target_format, "content": rendered}
+
+    @tool
+    def render(
+        self,
+        format: str,
+        content: str = "",
+        previous: str = "",
+        keep_positioning: bool = False,
+    ) -> dict:
+        """Render already-generated output into ``format`` via channel parse/render."""
+        if not content:
+            raise ValueError("content is required — pass the already-generated artifact")
+        source = self.format
+        if not source:
+            raise ValueError("source format is not set")
+        return self.transform(
+            source,
+            format,
+            content,
+            previous=previous,
+            keep_positioning=keep_positioning,
+        )

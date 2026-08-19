@@ -19,13 +19,38 @@ from mamba import after, before, context, description, it
 
 from eval.session import (
     CDDRepo,
+    Correction,
     Mistake,
+    NullCDDRepo,
     NullWorkspaceRepo,
+    Repair,
     Session,
     ToolCall,
     WorkspaceRepo,
     find_git_root,
+    repos_for_workspace,
 )
+
+
+class _FakeScan:
+    def __init__(self, reports: list[str] | None = None) -> None:
+        self.calls: list[tuple] = []
+        self.reports = list(reports or ['{"ok": True, "violations": []}'])
+
+    def scan(self, paths, root=None, rule=None):
+        self.calls.append((list(paths), root, rule))
+        if self.reports:
+            return self.reports.pop(0)
+        return '{"ok": True, "violations": []}'
+
+
+class _FakeHost:
+    def __init__(self) -> None:
+        self.create_rule_calls: list[tuple[str, str]] = []
+        self.contexts = "contexts"
+
+    def createRule(self, failed: str, wanted: str) -> None:
+        self.create_rule_calls.append((failed, wanted))
 
 
 def _workspace(tmp: Path, name: str = "sprint") -> SimpleNamespace:
@@ -75,6 +100,10 @@ with description("a session"):
             expect(self.session.branch).to(equal("session/sprint"))
             expect(self.repo.current_branch()).to(equal("session/sprint"))
 
+        with it("should link cddAt from cddRepo.headSha once"):
+            # Assert
+            expect(self.session.cdd_at).to(equal("cddsha0"))
+
     with context("that a first-order tool or action runs before the chat turn is finished"):
         with before.each:
             self.tmp = Path(tempfile.mkdtemp())
@@ -103,8 +132,9 @@ with description("a session"):
     with context("that a mistake is pointed out before the chat turn is finished"):
         with before.each:
             self.tmp = Path(tempfile.mkdtemp())
+            self.ws = _workspace(self.tmp)
             self.session = Session(
-                workspace=_workspace(self.tmp),
+                workspace=self.ws,
                 is_dirty=lambda: True,
             )
             self.mistake = Mistake(
@@ -114,12 +144,23 @@ with description("a session"):
                 _wrong="w",
                 _original="o",
             )
-            self.session.record_mistake(self.mistake)
+            self.mistake.record(self.session)
 
-        with it("should record a Mistake on the open Turn"):
+        with it("should have that Mistake record itself onto the session"):
+            # Assert
+            expect(len(self.session.mistakes)).to(equal(1))
+            expect(self.session.mistakes[0].entry_id).to(equal("abc12345"))
+
+        with it("should have that Mistake add itself to the open Turn"):
             # Assert
             expect(len(self.session.open_turn.mistakes)).to(equal(1))
             expect(self.session.open_turn.mistakes[0].entry_id).to(equal("abc12345"))
+
+        with it("should write that Mistake under the session mistakes folder named after the mistake"):
+            folder = Path(self.ws.folder) / "mistakes" / "r"
+            expect(folder.is_dir()).to(equal(True))
+            expect((folder / "faultyAsset").read_text(encoding="utf-8")).to(equal("o"))
+            expect((folder / "repairedAsset").exists()).to(equal(False))
 
         with it("should leave Correction open on that Mistake"):
             # Assert
@@ -127,33 +168,132 @@ with description("a session"):
                 equal("open")
             )
 
+        with it("should leave that Mistake with no Repair"):
+            # Assert
+            expect(self.session.mistakes[0].repair).to(be_none)
+
+        with context("that the same Mistake's asset is repaired"):
+            with before.each:
+                self.repairer = Repair(
+                    session=self.session,
+                    scanner=_FakeScan(),
+                    host=_FakeHost(),
+                )
+                self.repairer._begin([self.mistake])
+
+            with it("should begin a Repair"):
+                expect(len(self.session.repairs)).to(equal(1))
+                expect(self.session.repairs[0]).to(equal(self.repairer))
+
+            with it("should set that Mistake.repair to the Repair"):
+                expect(self.mistake.repair).to(equal(self.repairer))
+
+            with it("should open a WorkspaceSession on the CDD clone"):
+                expect(self.repairer.cdd_session is not None).to(equal(True))
+                expect(self.repairer.cdd_session.workspace.name).to(equal("sprint"))
+
+            with it("should bring the project mistakes onto that CDD session as copies"):
+                cdd = self.repairer.cdd_session
+                expect(len(cdd.mistakes)).to(equal(1))
+                expect(cdd.mistakes[0].entry_id).to(equal(self.mistake.entry_id))
+                expect(cdd.mistakes[0] is self.mistake).to(equal(False))
+
+            with it("should write those mistakes under the CDD session folder"):
+                dest = (
+                    Path(self.repairer.cdd_session.workspace.folder) / "mistakes" / "r"
+                )
+                expect((dest / "faultyAsset").read_text(encoding="utf-8")).to(equal("o"))
+
+            with it("should keep the project mistake files on the project session"):
+                dest = Path(self.ws.folder) / "mistakes" / "r"
+                expect((dest / "faultyAsset").read_text(encoding="utf-8")).to(equal("o"))
+
+            with it("should write a landing correction under the CDD session as well"):
+                self.repairer.log_correction(
+                    mistakes=[self.mistake],
+                    correction=Correction(_improved="good"),
+                )
+                dest = (
+                    Path(self.repairer.cdd_session.workspace.folder) / "mistakes" / "r"
+                )
+                expect((dest / "repairedAsset").read_text(encoding="utf-8")).to(
+                    equal("good")
+                )
+
+            with context("with further Mistakes collected into the same Repair"):
+                with before.each:
+                    self.second = Mistake(
+                        _entry_id="def67890",
+                        _artifact="b.md",
+                        _rule="r2",
+                        _wrong="w2",
+                        _original="o2",
+                    )
+                    self.second.record(self.session)
+                    self.second.repair = self.repairer
+
+                with it("should attach those Mistakes to the same Repair"):
+                    expect(len(self.repairer.mistakes)).to(equal(2))
+
+                with it("should keep each Mistake on exactly one Repair"):
+                    expect(self.mistake.repair).to(equal(self.repairer))
+                    expect(self.second.repair).to(equal(self.repairer))
+
+            with context("with a scan violation for that Mistake"):
+                with before.each:
+                    matching = (
+                        '{"ok": False, "violations": '
+                        '[{"rule": "r", "location": "a.md"}]}'
+                    )
+                    self.host = _FakeHost()
+                    self.repairer = Repair(
+                        session=self.session,
+                        scanner=_FakeScan(reports=[matching]),
+                        host=self.host,
+                    )
+                    self.repairer._run(asset="a.md", violation="r")
+
+                with it("should not call createRule"):
+                    expect(self.host.create_rule_calls).to(equal([]))
+
+                with it("should have ScanReport.matches true for that Mistake before root-causing"):
+                    from scanners.scan import ScanReport
+
+                    report = ScanReport.from_scan(
+                        '{"ok": False, "violations": '
+                        '[{"rule": "r", "location": "a.md"}]}'
+                    )
+                    expect(report.matches(self.mistake)).to(equal(True))
+
         with context("that the same Mistake is fixed in a later Turn"):
             with before.each:
                 self.session.finish_turn(prompt="spot", result="noted", context="")
                 self.session.record_tool_call(
                     ToolCall(_toolset="bdd", _name="satisfy", _summary="fix")
                 )
-                self.session.record_correction("abc12345", improved="good")
-                self.fix_turn = self.session.finish_turn(
-                    prompt="fix", result="done", context=""
+                Correction(_improved="good").apply(
+                    [self.mistake], self.session.open_turn
                 )
+                self.session.finish_turn(prompt="fix", result="done", context="")
 
-            with it("should set Correction.improved and status=fixed on that Mistake"):
+            with it("should have that Correction apply onto the Mistake"):
                 # Assert
                 mist = self.session.turns[0].mistakes[0]
                 expect(mist.correction.improved).to(equal("good"))
                 expect(mist.correction.status).to(equal("fixed"))
 
             with it("should set Correction.fixedIn to the Turn that did the fix"):
-                # Assert
-                mist = self.session.turns[0].mistakes[0]
-                expect(mist.correction.fixed_in.id).to(equal(self.fix_turn.id))
+                expect(self.mistake.correction.fixed_in).to(equal(self.session.turns[1]))
 
             with it("should keep the same Mistake.entryId"):
                 # Assert
                 expect(self.session.turns[0].mistakes[0].entry_id).to(
                     equal("abc12345")
                 )
+
+            with it("should store the Correction as repairedAsset beside that Mistake"):
+                repaired = Path(self.ws.folder) / "mistakes" / "r" / "repairedAsset"
+                expect(repaired.read_text(encoding="utf-8")).to(equal("good"))
 
     with context("that an agent chat turn has finished"):
         with context("with changes to the working area"):
@@ -189,12 +329,14 @@ with description("a session"):
                 expect(len(self.repo.commits)).to(equal(1))
                 expect(self.repo.current_branch()).to(equal("session/sprint"))
 
-            with it("should record WorkspaceRepo commit and CDDRepo branch/SHA on that Turn"):
-                # Assert
+            with it("should write a TurnCommit as that commit"):
                 turn = self.session.turns[0]
-                expect(turn.change_commit).to(equal("commit-1"))
-                expect(turn.tool_branch).to(equal("main"))
-                expect(turn.tool_sha).to(equal("cddsha0"))
+                expect(turn.change_commit is not None).to(equal(True))
+                expect(turn.change_commit.sha).to(equal("commit-1"))
+                expect(turn.change_commit.tool_names).to(equal(["sketch"]))
+
+            with it("should set Turn.changeCommit to that TurnCommit"):
+                expect(self.closed.change_commit.sha).to(equal("commit-1"))
 
             with it("should save session.yaml"):
                 # Assert
@@ -228,7 +370,104 @@ with description("a session"):
                 expect(len(self.repo.commits)).to(equal(0))
 
 
-with description("a session on this repo's sandbox with real git"):
+with description("an eval session"):
+    with context("that an asset is repaired with no Mistake on the session"):
+        with before.each:
+            self.tmp = Path(tempfile.mkdtemp())
+            self.session = Session(workspace=_workspace(self.tmp, name="sprint"))
+            self.host = _FakeHost()
+            self.repairer = Repair(
+                session=self.session,
+                scanner=_FakeScan(
+                    reports=[
+                        '{"ok": True, "violations": []}',
+                        '{"ok": False, "violations": '
+                        '[{"rule": "plain-english-only", "location": "draft.md"}]}',
+                    ]
+                ),
+                host=self.host,
+            )
+            self.repairer._run(asset="draft.md", violation="plain-english-only")
+
+        with it("should take the Mistake from context"):
+            expect(len(self.session.mistakes)).to(equal(1))
+            expect(self.session.mistakes[0].artifact).to(equal("draft.md"))
+
+        with it("should have that Mistake record itself onto the session"):
+            expect(self.session.mistakes[0].entry_id).not_to(equal(""))
+            expect(len(self.session.open_turn.mistakes)).to(equal(1))
+
+        with it("should call createRule when scan does not already match"):
+            expect(self.host.create_rule_calls).to(equal(
+                [("plain-english-only", "plain-english-only")]
+            ))
+
+        with context("that the fix lands with no Correction"):
+            with before.each:
+                self.correction = Correction(_improved="fixed draft")
+                self.repairer.log_correction(
+                    mistakes=list(self.session.mistakes),
+                    correction=self.correction,
+                )
+
+            with it("should take the Correction from context"):
+                expect(self.session.mistakes[0].correction.improved).to(
+                    equal("fixed draft")
+                )
+
+            with it("should have that Correction apply onto the Mistake collection"):
+                expect(self.session.mistakes[0].correction.status).to(equal("fixed"))
+                expect(self.session.mistakes[0].correction.fixed_in).to(
+                    equal(self.session.open_turn)
+                )
+
+
+with description("repos for a workspace"):
+    with context("that lives in a project clone separate from the tools"):
+        with before.each:
+            self.project = Path(tempfile.mkdtemp())
+            (self.project / ".git").mkdir()
+            self.ws = _workspace(self.project, name="pml-domain-tests")
+            self.ws_repo, self.cdd_repo = repos_for_workspace(self.ws)
+
+        with after.each:
+            shutil.rmtree(self.project, ignore_errors=True)
+
+        with it("should root WorkspaceRepo at the project clone"):
+            expect(self.ws_repo.root).to(equal(self.project.resolve()))
+
+        with it("should root CDDRepo at the tools clone"):
+            expect(_REPO_ROOT is not None).to(equal(True))
+            expect(self.cdd_repo.root).to(equal(_REPO_ROOT))
+            expect(self.cdd_repo.root).not_to(equal(self.ws_repo.root))
+            expect(type(self.cdd_repo)).to(equal(CDDRepo))
+
+    with context("that lives inside the tools clone"):
+        with it("should share that clone's git root for both repos"):
+            ws = SimpleNamespace(path=str(Path(__file__).parent), folder=None, name="inside-cdd")
+            ws_repo, cdd_repo = repos_for_workspace(ws)
+            expect(ws_repo.root).to(equal(_REPO_ROOT))
+            expect(cdd_repo.root).to(equal(_REPO_ROOT))
+            expect(type(cdd_repo)).to(equal(CDDRepo))
+
+    with context("that has no git clone"):
+        with before.each:
+            self.tmp = Path(tempfile.mkdtemp())
+            self.ws = _workspace(self.tmp)
+            self.ws_repo, self.cdd_repo = repos_for_workspace(self.ws)
+
+        with after.each:
+            shutil.rmtree(self.tmp, ignore_errors=True)
+
+        with it("should use null repos"):
+            expect(type(self.ws_repo)).to(equal(NullWorkspaceRepo))
+            expect(type(self.cdd_repo)).to(equal(NullCDDRepo))
+
+
+_GIT_ON_PATH = shutil.which("git") is not None
+
+if _GIT_ON_PATH:
+  with description("a session on this repo's sandbox with real git"):
     with before.each:
         from eval.session import _git
 
@@ -253,7 +492,7 @@ with description("a session on this repo's sandbox with real git"):
         self.probe = self.wt / "sandbox" / _PROBE_NAME
         self.probe.mkdir(parents=True)
         ws = _workspace(self.probe, name=_PROBE_NAME)
-        # Same clone for working-area + tool identity.
+        # Working area is a linked worktree of THIS (tools) clone — share the root.
         self.ws_repo = WorkspaceRepo(self.wt)
         self.cdd_repo = CDDRepo(self.wt)
         self.session = Session(
@@ -263,10 +502,14 @@ with description("a session on this repo's sandbox with real git"):
         )
 
     with after.each:
-        assert _REPO_ROOT is not None
-        _remove_worktree(self.repo_root, self.wt)
-        # Main worktree must never have moved.
-        expect(WorkspaceRepo(self.repo_root).current_branch()).to(
+        repo_root = getattr(self, "repo_root", None)
+        wt = getattr(self, "wt", None)
+        if repo_root is None or wt is None:
+            return
+        _remove_worktree(repo_root, wt)
+        if getattr(self, "main_branch", None) is None:
+            return
+        expect(WorkspaceRepo(repo_root).current_branch()).to(
             equal(self.main_branch)
         )
 
@@ -274,7 +517,7 @@ with description("a session on this repo's sandbox with real git"):
         expect(self.session.branch).to(equal(f"session/{_PROBE_NAME}"))
         expect(self.ws_repo.current_branch()).to(equal(f"session/{_PROBE_NAME}"))
 
-    with it("should use the same git root for WorkspaceRepo and CDDRepo"):
+    with it("should share this clone's git root when the working area is a linked worktree"):
         expect(self.ws_repo.root).to(equal(self.cdd_repo.root))
         # Worktree is linked to this clone (not a separate repo).
         from eval.session import _git
@@ -307,14 +550,14 @@ with description("a session on this repo's sandbox with real git"):
             expect(self.session.open_turn).to(be_none)
             expect(len(self.session.turns)).to(equal(1))
             turn = self.session.turns[0]
-            expect(turn.change_commit).not_to(equal(""))
-            expect(turn.change_commit).not_to(equal(self.start_sha))
-            expect(turn.tool_branch).to(equal(f"session/{_PROBE_NAME}"))
-            expect(turn.tool_sha).to(equal(turn.change_commit))
+            expect(turn.change_commit is not None).to(equal(True))
+            expect(turn.change_commit.sha).not_to(equal(""))
+            expect(turn.change_commit.sha).not_to(equal(self.start_sha))
+            expect(self.session.cdd_at).to(equal(self.start_sha))
             yaml_path = Path(self.session.workspace.folder) / "session.yaml"
             expect(yaml_path.is_file()).to(equal(True))
             names = _git(
-                self.wt, "show", "--pretty=", "--name-only", turn.change_commit
+                self.wt, "show", "--pretty=", "--name-only", turn.change_commit.sha
             )
             expect(f"sandbox/{_PROBE_NAME}/probe.txt" in names.replace("\\", "/")).to(
                 equal(True)

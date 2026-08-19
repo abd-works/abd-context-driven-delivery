@@ -8,7 +8,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from expects import contain, expect
+from expects import contain, equal, expect
 from mamba import before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -104,3 +104,28 @@ with description("Scan"):
             result = self.scan.scan([str(self.fixture)])
             # Assert
             expect(result).not_to(contain("other.py"))
+
+
+with description("ScanReport"):
+    with context("that holds a violation for a Mistake"):
+        with it("should match when rule and artifact location agree"):
+            from scanners.scan import ScanReport
+            from types import SimpleNamespace
+
+            report = ScanReport.from_scan(
+                '{"ok": False, "violations": '
+                '[{"rule": "plain-english-only", "location": "draft.md"}]}'
+            )
+            mistake = SimpleNamespace(rule="plain-english-only", artifact="draft.md")
+            expect(report.matches(mistake)).to(equal(True))
+
+        with it("should not match a different rule"):
+            from scanners.scan import ScanReport
+            from types import SimpleNamespace
+
+            report = ScanReport.from_scan(
+                '{"ok": False, "violations": '
+                '[{"rule": "plain-english-only", "location": "draft.md"}]}'
+            )
+            mistake = SimpleNamespace(rule="other-rule", artifact="draft.md")
+            expect(report.matches(mistake)).to(equal(False))

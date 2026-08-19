@@ -1,8 +1,0 @@
-toolset: context_tools.stories.stories:Stories
-context:
-  fidelity: story_map
-  path: C:\dev\paradise-mobile\pml-my
-  session: pml-my-src-demo
-tool: explore_context_files
-arguments:
-  root: C:\dev\paradise-mobile\pml-my

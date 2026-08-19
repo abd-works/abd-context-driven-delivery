@@ -6,9 +6,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from agent_bdd import build_runbook, read_manifest
-from tools.tool import _ManifestYaml, RunError, Toolset, _ToolsetLoader, _ToolsetRunner
-
+# Bootstrap repo paths BEFORE any project imports so `python -m tools` works
+# without a pre-set PYTHONPATH (mirrors utilities/manifest_hook/manifest_gate.py).
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
@@ -17,6 +16,8 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+from agent_bdd import build_runbook, read_manifest  # noqa: E402
+from tools.tool import _ManifestYaml, RunError, Toolset, _ToolsetLoader, _ToolsetRunner  # noqa: E402
 from utilities.manifest_hook import manifest_gate_conf  # noqa: E402
 
 try:
@@ -62,6 +63,8 @@ class _ToolsCli:
     def _print_usage(self) -> None:
         print(
             "usage: python -m tools manifest <module>:<Class> [--json] [--plain]\n"
+            "       python -m tools run <module>:<Class> --tool NAME [--context k=v] [--arg k=v]\n"
+            "       python -m tools run <module>:<Class> --action NAME [--fidelity NAME] [--context k=v] [--arg k=v]\n"
             "       python -m tools run <request.yaml|-> [-o response.yaml] [--plain]\n"
             "       python -m tools agent-spec <spec.py> [--plain]",
             file=sys.stderr,
@@ -108,14 +111,12 @@ class _ToolsCli:
 
     def _run_main(self, argv: list[str]) -> int:
         if not argv:
-            print(
-                "usage: python -m tools run <request.yaml|-> [-o response.yaml] [--plain]",
-                file=sys.stderr,
-            )
+            self._print_usage()
             return 1
-        source, output, plain = self._parse_run_args(argv)
+        output: str | None = None
+        plain = False
         try:
-            request = self._read_request_yaml(source)
+            request, output, plain = self._parse_run_invocation(argv)
             response = self._runner.run_request(request)
             self._write_response_yaml(response, output, plain=plain)
             return 0
@@ -126,10 +127,17 @@ class _ToolsCli:
             self._write_response_yaml({"ok": False, "error": str(exc)}, output, plain=plain)
             return 1
 
-    def _parse_run_args(self, argv: list[str]) -> tuple[str, str | None, bool]:
-        source = argv[0]
+    def _parse_run_invocation(
+        self, argv: list[str]
+    ) -> tuple[dict[str, Any], str | None, bool]:
+        target = argv[0]
         output: str | None = None
         plain = False
+        tool_name: str | None = None
+        action_name: str | None = None
+        fidelity: str | None = None
+        context: dict[str, Any] = {}
+        arguments: dict[str, Any] = {}
         index = 1
         while index < len(argv):
             token = argv[index]
@@ -138,19 +146,113 @@ class _ToolsCli:
                 index += 1
                 continue
             if token in ("-o", "--output"):
-                if index + 1 >= len(argv):
-                    raise RunError(
-                        "missing output path after -o",
-                        response={"ok": False, "error": "missing output path"},
-                    )
-                output = argv[index + 1]
-                index += 2
+                output, index = self._take_flag_value(argv, index, token)
+                continue
+            if token == "--tool":
+                tool_name, index = self._take_flag_value(argv, index, token)
+                continue
+            if token == "--action":
+                action_name, index = self._take_flag_value(argv, index, token)
+                continue
+            if token == "--fidelity":
+                fidelity, index = self._take_flag_value(argv, index, token)
+                continue
+            if token == "--context":
+                key, value, index = self._take_kv_flag(argv, index, token)
+                context[key] = value
+                continue
+            if token in ("--arg", "--argument"):
+                key, value, index = self._take_kv_flag(argv, index, token)
+                arguments[key] = value
                 continue
             raise RunError(
                 f"unknown argument {token!r}",
                 response={"ok": False, "error": f"unknown argument: {token}"},
             )
-        return source, output, plain
+        if self._is_toolset_ref(target):
+            return (
+                self._direct_request(
+                    target, tool_name, action_name, fidelity, context, arguments
+                ),
+                output,
+                plain,
+            )
+        if tool_name or action_name or fidelity or context or arguments:
+            raise RunError(
+                "class flags require a module:Class target",
+                response={"ok": False, "error": "class flags require a module:Class target"},
+            )
+        return self._read_request_yaml(target), output, plain
+
+    def _is_toolset_ref(self, token: str) -> bool:
+        if token == "-" or Path(token).is_file():
+            return False
+        if "\\" in token or token.startswith("/"):
+            return False
+        if len(token) >= 2 and token[1] == ":" and token[0].isalpha():
+            return False
+        return ":" in token
+
+    def _direct_request(
+        self,
+        toolset: str,
+        tool_name: str | None,
+        action_name: str | None,
+        fidelity: str | None,
+        context: dict[str, Any],
+        arguments: dict[str, Any],
+    ) -> dict[str, Any]:
+        if tool_name and action_name:
+            raise RunError(
+                "request must use tool or action, not both",
+                response={"ok": False, "error": "tool and action are mutually exclusive"},
+            )
+        if not tool_name and not action_name:
+            raise RunError(
+                "request missing tool or action",
+                response={"ok": False, "error": "request missing tool or action"},
+            )
+        request: dict[str, Any] = {"toolset": toolset}
+        merged_context = dict(context)
+        if fidelity is not None:
+            merged_context["fidelity"] = fidelity
+        if merged_context:
+            request["context"] = merged_context
+        if action_name:
+            request["action"] = action_name
+        else:
+            request["tool"] = tool_name
+        if arguments:
+            request["arguments"] = arguments
+        return request
+
+    def _take_flag_value(
+        self, argv: list[str], index: int, flag: str
+    ) -> tuple[str, int]:
+        if index + 1 >= len(argv):
+            raise RunError(
+                f"missing value after {flag}",
+                response={"ok": False, "error": f"missing value after {flag}"},
+            )
+        return argv[index + 1], index + 2
+
+    def _take_kv_flag(
+        self, argv: list[str], index: int, flag: str
+    ) -> tuple[str, Any, int]:
+        raw, next_index = self._take_flag_value(argv, index, flag)
+        if "=" not in raw:
+            raise RunError(
+                f"{flag} must be key=value",
+                response={"ok": False, "error": f"{flag} must be key=value"},
+            )
+        key, value = raw.split("=", 1)
+        return key, self._coerce_cli_value(value), next_index
+
+    def _coerce_cli_value(self, value: str) -> Any:
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return value
 
     def _read_request_yaml(self, source: str) -> dict[str, Any]:
         if yaml is None:

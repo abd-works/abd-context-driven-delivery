@@ -57,12 +57,13 @@ Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 - **`cdd-owns-grill-sketch`** — Grill and sketch at CDD level. When following a child `tools run`, skip nested child grill/sketch; apply the child generate body only.
 - **`views-agree-before-proceed`** — Recommend proceed only when the views in play for the current scope agree; otherwise more at the same stage. User can override.
 - **`todo-trail-in-sketch`** — Persist actions as TODO/doing/pass #label in the sketch; archive passes under `## log`.
+- **`scaffold-before-content`** — **Hard gate.** Do not write `cdd-sketch.md` (or a file called `sketch.md`) until you have (1) **read** `templates/cdd-sketch.md` and each active child's `sketch_template` from `resolve_targets`, and (2) **AskQuestion** has confirmed which lenses are in play (`confirm-lenses-before-sketch`). Free prose instead of the scaffold is a defect.
 
 ---
 # Generate
 
 1. Confirm CDD fidelity and **run scope** (defaults above); set `context.fidelity` if needed.
-2. **Grill + sketch** — follow `sketch.md` rules: confirm lenses, scaffold if needed, grill per theme, fill lens blocks from child `sketch_template` notation only.
+2. **Grill + sketch** — **`scaffold-before-content` first.** Read `templates/cdd-sketch.md` and each active child's `sketch_template`. AskQuestion to confirm lenses. Only then follow `sketch.md`: scaffold if needed, grill per theme, fill lens blocks from child `sketch_template` notation only. Do not dump free prose into the sketch file.
 3. For each chosen row (your order):
    - Mark `doing #…` in the sketch.
    - Pipe `run` to `python -m tools run -`; follow that response (skip nested grill/sketch — CDD already sketched).

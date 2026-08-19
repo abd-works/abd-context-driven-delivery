@@ -7,7 +7,7 @@
 Peer-kit expansion lives with the kits:
 - ``context_tools/actions/workspace/workspace_session_spec.py``
 - ``context_tools/actions/partition/partition_spec.py``
-- ``context_tools/actions/repair/repair_spec.py``
+- ``utilities/eval/session_spec.py``
 
 Meta generator face (scaffold templates / create_context_tool.md) lives in
 ``create_context_tool/create_context_tool_spec.py``.
@@ -194,14 +194,16 @@ with description("BaseContextTool composer"):
             with it("should inline the full Contexts section as rubric"):
                 _assert_contexts_inlined(self.response["instructions"], self.contexts)
 
-            with it("should name open session tools then scan"):
+            with it("should name open session tools then begin_eval_turn, scan, finish_eval_turn"):
                 expect(self.response["tools"]).to(
                     equal(
                         [
                             "ensure_session",
                             "read_context_index",
                             "record_context_root",
+                            "begin_eval_turn",
                             "scan",
+                            "finish_eval_turn",
                         ]
                     )
                 )
@@ -394,10 +396,121 @@ with description("BaseContextTool public host face"):
         expect("create_session" in self.host.tools).to(be_true)
         expect("close_session" in self.host.tools).to(be_true)
 
+    with it("should expose render as a host tool"):
+        expect("render" in self.host.tools).to(be_true)
+        expect(self.host.tools["render"].signature_entry["kind"]).to(equal("tool"))
+
+    with it("should default supported_formats to empty"):
+        expect(type(self.host).supported_formats).to(equal(frozenset()))
+
+    with it("should reject render of an unsupported format"):
+        expect(lambda: self.host.render("markdown", content="# x")).to(raise_error(ValueError))
+
     with it("should prepend a BDD-capable generate header"):
         header = self.host.add_generate_header_to_generated()
         expect("@toolset-manifest" in header).to(be_true)
         expect("invoke-edit: action satisfy" in header).to(be_true)
+
+
+# ---------------------------------------------------------------------------
+# render — host tool; channel tools override and call transform
+# ---------------------------------------------------------------------------
+
+_STORY_MAP_MD = """\
+(E) Manage Customer Orders
+    (E) Place New Order
+        (S) Customer --> Browse Product Catalog
+"""
+
+_CE_MD = """\
+# Shop
+
+*Shop* is the cart module.
+
+## Cart
+
+*Cart* holds line items and places orders.
+
+Cart(owner: str)
+------
+owner: str
+----
+place_order(): Order
+"""
+
+
+with description("BaseContextTool.render on channel tools"):
+    with context("Stories"):
+        with before.each:
+            self.stories = Stories(fidelity="story_map", format="markdown")
+
+        with it("should list markdown, json, and drawio among supported formats"):
+            for name in ("markdown", "json", "drawio"):
+                expect(name in self.stories.supported_formats).to(be_true)
+
+        with it("should expose render as a tool, not an action"):
+            expect("render" in self.stories.tools).to(be_true)
+            expect("render" in self.stories.actions).to(be_false)
+
+        with it("should reject an unsupported format"):
+            expect(
+                lambda: self.stories.render("yaml", content=_STORY_MAP_MD)
+            ).to(raise_error(ValueError))
+
+        with it("should render already-generated markdown into json via transform"):
+            result = self.stories.render("json", content=_STORY_MAP_MD)
+            expect(result["format"]).to(equal("json"))
+            expect("Manage Customer Orders" in result["content"]).to(be_true)
+
+    with context("CleanEngineering"):
+        with before.each:
+            self.ce = CleanEngineering(fidelity="modules", format="markdown")
+
+        with it("should list markdown, json, and drawio among supported formats"):
+            for name in ("markdown", "json", "drawio"):
+                expect(name in self.ce.supported_formats).to(be_true)
+
+        with it("should render already-generated markdown into json via transform"):
+            result = self.ce.render("json", content=_CE_MD)
+            expect(result["format"]).to(equal("json"))
+            expect("Cart" in result["content"]).to(be_true)
+
+    with context("Ux"):
+        with before.each:
+            self.ux = Ux(fidelity="ia", format="json")
+
+        with it("should list drawio, html, markdown, and json as supported formats"):
+            expect(self.ux.supported_formats).to(
+                equal(frozenset({"drawio", "html", "markdown", "json"}))
+            )
+
+        with it("should render already-generated json into markdown via transform"):
+            from context_tools.ux.document.json.nodes import JsonUxMap
+            from context_tools.ux.ux_model.nodes import Screen
+            from context_tools.ux.ux_model.ux_map import UxMap
+
+            ux_map = UxMap(name="demo")
+            ux_map.scope = "Place New Order"
+            screen = Screen("Catalog", 0)
+            screen.apply_layout("stack")
+            ux_map.append_screen(screen)
+            result = self.ux.render("markdown", content=JsonUxMap.render(ux_map))
+            expect(result["format"]).to(equal("markdown"))
+            expect("Place New Order" in result["content"]).to(be_true)
+
+    with context("Ddd"):
+        with it("should render via CleanEngineering transform"):
+            result = Ddd(format="python").render(
+                "markdown", content="class Foo:\n    pass\n"
+            )
+            expect(result["format"]).to(equal("markdown"))
+
+    with context("Bdd"):
+        with it("should render via CleanEngineering transform"):
+            result = Bdd(format="python").render(
+                "markdown", content="class Foo:\n    pass\n"
+            )
+            expect(isinstance(result, dict)).to(be_true)
 
 
 # ---------------------------------------------------------------------------
@@ -412,7 +525,6 @@ with description("BaseContextTool.log_mistake tool/fidelity auto-injection"):
 
         self.tmp_dir = Path(tempfile.mkdtemp())
         self.host = Stories(fidelity="story_map", path=str(self.tmp_dir), session="test")
-        self.log_path = self.tmp_dir / ".context" / "sessions" / "test" / "mistakes.log"
         self._shutil = shutil
 
     with it("should tag the entry with the host class name and current fidelity"):
@@ -422,9 +534,11 @@ with description("BaseContextTool.log_mistake tool/fidelity auto-injection"):
             wrong="bad thing happened",
             original="old",
         )
-        content = self.log_path.read_text(encoding="utf-8")
-        expect("tool: Stories" in content).to(be_true)
-        expect("fidelity: story_map" in content).to(be_true)
+        mist = self.host.eval.open_turn.mistakes[0]
+        expect(mist.tool).to(equal("Stories"))
+        expect(mist.fidelity).to(equal("story_map"))
+        folder = Path(self.host.workspace.folder) / "mistakes" / "test-rule"
+        expect((folder / "faultyAsset").read_text(encoding="utf-8")).to(equal("old"))
         self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
 
     with it("should re-tag with the fidelity in effect at call time, not construction time"):
@@ -435,11 +549,11 @@ with description("BaseContextTool.log_mistake tool/fidelity auto-injection"):
             wrong="bad thing happened",
             original="old",
         )
-        content = self.log_path.read_text(encoding="utf-8")
-        expect("fidelity: scenarios" in content).to(be_true)
+        mist = self.host.eval.open_turn.mistakes[0]
+        expect(mist.fidelity).to(equal("scenarios"))
         self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
 
-    with it("should complete the entry via log_correction, forwarded to the repairer"):
+    with it("should complete the entry via log_correction on the eval Turn"):
         entry_id = self.host.log_mistake(
             artifact="some/file.md",
             rule="test-rule",
@@ -447,12 +561,13 @@ with description("BaseContextTool.log_mistake tool/fidelity auto-injection"):
             original="old",
         )
         self.host.log_correction(entry_id=entry_id, improved="new")
-        content = self.log_path.read_text(encoding="utf-8")
-        expect("status: fixed" in content).to(be_true)
+        mist = self.host.eval.open_turn.mistakes[0]
+        expect(mist.correction.status).to(equal("fixed"))
+        expect(mist.correction.improved).to(equal("new"))
         self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
 
 
-with description("BaseContextTool.improve action"):
+with description("BaseContextTool.createRule action"):
     with before.all:
         cls = _ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
         self.host = cls()
@@ -460,23 +575,24 @@ with description("BaseContextTool.improve action"):
             _ActionRunRequest(
                 request={"toolset": _CAR_CHRONICLE_TOOLSET, "context": {}},
                 toolset_path=_CAR_CHRONICLE_TOOLSET,
-                action_name="improve",
+                action_name="createRule",
                 context={},
-                arguments={},
+                arguments={"failed": "wrong", "wanted": "right"},
                 instance=self.host,
             )
         )
 
-    with it("should set action to improve"):
-        expect(self.response["action"]).to(equal("improve"))
+    with it("should set action to createRule"):
+        expect(self.response["action"]).to(equal("createRule"))
 
-    with it("should inline the improve.md roadmap via the repairer"):
+    with it("should inline the createRule guide"):
         instructions = self.response["instructions"]
-        expect("Log the mistake, the moment it's spotted" in instructions).to(be_true)
-        expect("Offer to archive, once satisfied" in instructions).to(be_true)
+        expect("Do not call this if **scan** already reports a failure" in instructions).to(
+            be_true
+        )
 
 
-with description("BaseContextTool regression and archive forwarding"):
+with description("BaseContextTool repairer forwarding"):
     with before.each:
         import shutil
         import tempfile
@@ -485,29 +601,16 @@ with description("BaseContextTool regression and archive forwarding"):
         self.host = Stories(fidelity="story_map", path=str(self.tmp_dir), session="test")
         self._shutil = shutil
 
-    with it("should forward verify_regression to the repairer"):
-        examples_root = self.tmp_dir / "empty-examples"
-        summary = self.host.verify_regression(str(examples_root))
-        expect(f"No regression examples found under {examples_root}." in summary).to(be_true)
+    with it("should compose Repair on the eval session"):
+        expect(self.host.repairer.session).to(equal(self.host.eval))
         self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
 
-    with it("should forward archive_mistakes to the repairer"):
-        entry_id = self.host.log_mistake(
-            artifact="a.md", rule="r1", wrong="w1", original="o1"
-        )
-        self.host.log_correction(entry_id=entry_id, improved="i1")
-        repo_root = self.tmp_dir / "repo"
-        destination = self.host.archive_mistakes(str(repo_root))
-        expect(Path(destination).is_file()).to(be_true)
-        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
-
-    with it("should discover repair, verify_regression, and archive_mistakes as non-blocking sub-agents on the host"):
+    with it("should discover repair as a non-blocking sub-agent on the host"):
         from sub_agent.sub_agent import discover_sub_agent_tools
 
         discovered = discover_sub_agent_tools(self.host)
-        for name in ("repair", "verify_regression", "archive_mistakes"):
-            expect(name in discovered).to(be_true)
-            expect(discovered[name].signature_entry["kind"]).to(equal("sub_agent"))
+        expect("repair" in discovered).to(be_true)
+        expect(discovered["repair"].signature_entry["kind"]).to(equal("sub_agent"))
         self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
 
 

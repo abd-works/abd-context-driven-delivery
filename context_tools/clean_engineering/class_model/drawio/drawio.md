@@ -25,6 +25,7 @@ An edge relates exactly two classes. Routing that cuts a third class, stacks on 
 
 ### Routing rules
 
+- **`prefer-short-routes`** — Related classes sit near each other so arrows stay short. Prefer **0–2** explicit waypoints; more than 2 across a short gap is a violation. Endpoint boxes should leave only a small clear gap (≲320px — about one intervening card or row gutter). Do not park imports far from the locals they link to, and do not stretch a tall single-column stack when a 2–3 column pack would keep ownership edges short. Cross-boundary length is a signal only when two *modules* share one page — on a single-module / per-aggregate page, every edge should be short.
 - **`edges-do-not-cross-classes`** — No edge segment may enter the bounding box of any class except its two endpoints. Prefer exit/entry sides that keep obstacles off the direct path; otherwise add explicit waypoints so the edge dog-legs around the obstacle. Do not rely on Draw.io’s auto-router for long inheritance edges across siblings.
 - **`edges-do-not-overlap-edges`** — Two orthogonal edges must not share the same column or row for more than ~12px. Spread parallel runs ~20–40px apart with waypoints, and give each edge a unique exit/entry on a shared side.
 - **`edges-do-not-cross-other-edges`** — Transverse crossings (one segment through another) are distinct from collinear overlap — both fail readability; crossings are definitive.
@@ -36,8 +37,9 @@ An edge relates exactly two classes. Routing that cuts a third class, stacks on 
 - **`run-audit-after-every-render`** — After every generate or layout change, run Drawio **scan** / `audit_diagram_report` and iterate until done. Priority:
   1. class box overlap → **must be zero**
   2. **`edges-do-not-cross-classes`** → **must be zero**
-  3. **`edges-do-not-overlap-edges`** / **`edges-do-not-cross-other-edges`** → **minimize** / definitive
-  4. **`distinct-anchor-points`** / **`edges-approach-perpendicular`** → **minimize**
+  3. **`prefer-short-routes`** → **must be zero** (excessive gap / >2 waypoints)
+  4. **`edges-do-not-overlap-edges`** / **`edges-do-not-cross-other-edges`** → **minimize** / definitive
+  5. **`distinct-anchor-points`** / **`edges-approach-perpendicular`** → **minimize**
 
   Use orthogonal inheritance routing when a subtype is not directly under its parent. Do not skip the audit because the layout “looks right” during generation.
 

@@ -30,7 +30,7 @@ from primitives.actions.action import action
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from record_decisions.record_decisions import RecordDecisions
-from repair.repair import Repair
+from eval.session import Repair
 from scanners.scan import Scan
 from sub_agent.sub_agent import sub_agent
 from workspace.session_log import log
@@ -59,6 +59,7 @@ class BaseContextTool(AgenticToolset):
 
     fidelities: ClassVar[dict[str, str] | None] = None
     _fidelity_format_defaults: ClassVar[dict[str, str]] = {}
+    supported_formats: ClassVar[frozenset[str]] = frozenset()
 
     @classmethod
     def resolve_fidelity(cls, fidelity: str) -> str:
@@ -100,8 +101,8 @@ class BaseContextTool(AgenticToolset):
         self.iterator = Iterator()
         self.decisions = RecordDecisions()
         self.partitioner = Partition()
-        self.repairer = Repair(workspace=self.workspace, scanner=self.scanner)
         self._bind_eval()
+        self.repairer = Repair(session=self.eval, scanner=self.scanner, host=self)
 
     def _bind_eval(self) -> None:
         """Attach ``self.eval`` when the workspace session has path/folder/name.
@@ -117,16 +118,22 @@ class BaseContextTool(AgenticToolset):
             self.eval = None
             if hasattr(self.workspace, "eval"):
                 self.workspace.eval = None  # type: ignore[attr-defined]
+            if getattr(self, "repairer", None) is not None:
+                self.repairer.session = None
             return
         try:
             _ = self.workspace.folder
         except ValueError:
             self.eval = None
+            if getattr(self, "repairer", None) is not None:
+                self.repairer.session = None
             return
         try:
             self.eval = EvalSession(workspace=self.workspace)
         except Exception:
             self.eval = None
+            if getattr(self, "repairer", None) is not None:
+                self.repairer.session = None
             return
         self.workspace.eval = self.eval  # type: ignore[attr-defined]
         # Bind SessionLog so @log-decorated runs forward ToolCalls to the eval Turn.
@@ -135,6 +142,9 @@ class BaseContextTool(AgenticToolset):
         SessionLog.instance().bind(self.workspace)
         # Persist context so the Cursor stop hook can call finish_eval_turn.
         self._write_eval_state()
+        if getattr(self, "repairer", None) is not None:
+            self.repairer.session = self.eval
+            self.repairer.host = self
 
     def _write_eval_state(self) -> None:
         """Write ~/.cursor/cdd_eval_state.json so the stop hook can close the turn."""
@@ -303,9 +313,11 @@ class BaseContextTool(AgenticToolset):
         self.active
         self.session_guidance
         self.contexts
+        self.begin_eval_turn()
         self.partitioner.partition(
             context, mode, out_root, slug=self.domain_slug, scaffold=self.scaffold
         )
+        self.finish_eval_turn()
         return (
             "Partition of {{context}} finished (mode {{mode}}); "
             "docs under {session.path}/.context/. "
@@ -337,12 +349,14 @@ class BaseContextTool(AgenticToolset):
     @action
     def generate(self) -> str:
         self.workspace.open()
+        self.begin_eval_turn()
         self.decisions.record_decisions_session()
         self.contexts
         self.examples
         self.templates
         self.generate_output()
         self.add_generate_header_to_generated()
+        self.finish_eval_turn()
         return "When done, run validate."
 
     @action
@@ -377,11 +391,13 @@ class BaseContextTool(AgenticToolset):
     @action
     def document(self, paths: list[str]) -> str:
         self.workspace.open()
+        self.begin_eval_turn()
         self.contexts
         self.templates
         self.scanner.scan(paths)
         self.generate_output()
         self.add_generate_header_to_generated()
+        self.finish_eval_turn()
         return "Document existing state under {session.path}/ - violations flagged, none corrected."
 
     @log
@@ -398,8 +414,10 @@ class BaseContextTool(AgenticToolset):
     @action
     def validate(self) -> str:
         self.workspace.open()
+        self.begin_eval_turn()
         self.contexts
         self.scanner.scan()
+        self.finish_eval_turn()
         return "Validation report for artifacts under {session.path}/."
 
     @log
@@ -407,6 +425,24 @@ class BaseContextTool(AgenticToolset):
     def scan(self, paths: list[str]) -> str:
         """scan"""
         return self.scanner.scan(paths)
+
+    @tool
+    def render(self, format: str, content: str = "") -> dict:
+        """Render already-generated output into ``format``.
+
+        ``format`` must be one this tool supports (markdown, json, drawio, …).
+        ``content`` is the already-generated artifact in the current format
+        (``self.format``). Subclasses with channel/transform code override
+        this method and convert in-process — do not use a generic rewrite.
+        """
+        supported = type(self).supported_formats
+        if format not in supported:
+            raise ValueError(
+                f"Unsupported format {format!r}. Choose from: {sorted(supported)}"
+            )
+        raise ValueError(
+            f"{type(self).__name__} has no programmatic renderer for {format!r}"
+        )
 
     @log
     @action
@@ -421,11 +457,13 @@ class BaseContextTool(AgenticToolset):
     @action
     def repair(self, asset: str, violation: str) -> str:
         """repair"""
+        self.begin_eval_turn()
         self.scan()
         self.contexts
         self.examples
         self.templates
         self.repairer.repair(asset, violation)
+        self.finish_eval_turn()
         return "Repair {{asset}} under {session.path}/ until validate passes."
 
     @log
@@ -438,48 +476,42 @@ class BaseContextTool(AgenticToolset):
         original: str,
         when: str = "",
     ) -> str:
-        """log_mistake"""
+        """log_mistake — records through Repair onto session.yaml and session/mistakes/."""
+        if self.eval is None:
+            raise ValueError("No eval session — open a named session first")
         tool_name = type(self).__name__
         fidelity = getattr(self, "fidelity", "") or ""
-        entry_id = self.repairer.log_mistake(
+        return self.repairer.log_mistake(
             artifact=artifact,
             rule=rule,
             wrong=wrong,
             original=original,
-            when=when,
             tool=tool_name,
             fidelity=fidelity,
         )
-        if self.eval is not None:
-            from eval.session import Mistake
-
-            self.eval.record_mistake(
-                Mistake(
-                    _entry_id=entry_id,
-                    _artifact=artifact,
-                    _rule=rule,
-                    _wrong=wrong,
-                    _original=original,
-                    _tool=tool_name,
-                    _fidelity=fidelity,
-                )
-            )
-        return entry_id
 
     @log
     @tool
     def log_correction(self, entry_id: str, improved: str, status: str = "fixed") -> str:
-        """log_correction"""
-        path = self.repairer.log_correction(entry_id, improved, status)
-        if self.eval is not None:
-            self.eval.record_correction(entry_id, improved)
-        return path
+        """log_correction — Correction.apply through Repair; writes repairedAsset beside the Mistake."""
+        if self.eval is None:
+            raise ValueError("No eval session — open a named session first")
+        return self.repairer.log_correction(
+            entry_id=entry_id, improved=improved, status=status
+        )
+
+    @tool
+    def begin_eval_turn(self) -> str:
+        """Open the eval Turn. Listed on generate / validate / document / partition / repair / createRule."""
+        if self.eval is None:
+            return ""
+        return self.eval.begin_turn().id
 
     @tool
     def finish_eval_turn(
         self, prompt: str = "", result: str = "", context: str = ""
     ) -> str:
-        """Close the open eval Turn at the chat-reply boundary (hook/host calls once)."""
+        """Close the open eval Turn. Listed on generate / validate / document / partition / repair / createRule."""
         if self.eval is None:
             return ""
         closed = self.eval.finish_turn(prompt, result, context)
@@ -487,25 +519,18 @@ class BaseContextTool(AgenticToolset):
 
     @log
     @action
-    def improve(self) -> str:
-        """improve"""
+    def createRule(self, failed: str, wanted: str) -> str:
+        """createRule"""
+        self.begin_eval_turn()
         self.contexts
         self.examples
         self.templates
-        self.repairer.improve()
-        return "Read the roadmap above for log_mistake -> log_correction -> repair -> regression -> archive."
-
-    @sub_agent
-    @tool
-    def verify_regression(self, examples_root: str) -> str:
-        """verify_regression"""
-        return self.repairer.verify_regression(examples_root)
-
-    @sub_agent
-    @tool
-    def archive_mistakes(self, repo_root: str) -> str:
-        """archive_mistakes"""
-        return self.repairer.archive_mistakes(repo_root)
+        self.finish_eval_turn()
+        return (
+            "Write a new named rule and matching scanner into this tool. "
+            "Then run that rule via scan on the asset and detect a failure "
+            "that matches the Mistake."
+        )
 
 BaseContextTool._is_context = True  # type: ignore[attr-defined]
 BaseContextTool._is_toolset = True  # type: ignore[attr-defined]

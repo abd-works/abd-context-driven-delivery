@@ -20,6 +20,7 @@ Constraint: do not restate CleanEngineering class/module analysis in DDD artifac
 - `contexts` instruction
 - Actions: `generate_output`, `validate`, `satisfy`, `repair(asset, violation)`
 - Tool: `transform(source_format, target_format, content)`
+- Tool: `render(format, content)` — calls `transform` from the current format via CE channels
 
 ## Dependencies
 

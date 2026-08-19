@@ -1,6 +1,6 @@
 # Instructions
 
-**BaseContextTool** is the shared base for every concrete domain (subclass it): peer-kit composer + artifact lifecycle (`generate` / `validate` / `satisfy` / `document`, plus `grill` / `sketch` / `iterate`).
+**BaseContextTool** is the shared base for every concrete domain (subclass it): peer-kit composer + artifact lifecycle (`generate` / `validate` / `satisfy` / `document` / `createRule`, plus `grill` / `sketch` / `iterate`).
 ---
 # Generate
 
@@ -49,3 +49,12 @@ Take the persona of a **neutral observer** — describe what exists, do not pres
 4. Do not apply, suggest, or imply rules or best practices in the generated output.
 5. Call **`scan`** and append all violations to the document as-is — flag them, do not correct them.
 6. Save the artifact under the session layout from `session_guidance`.
+
+---
+# Create Rule
+
+One action. Do not call this if **scan** already reports a failure that matches the mistake.
+
+Take **failed** (what went wrong on the asset) and **wanted** (what should have happened). Using **contexts**, **examples**, and **template**, evaluate a new named rule and a matching scanner that can detect that failure deterministically.
+
+Write the rule and the scanner into **this tool** (the context tool's own guidance and `scanners/`). Then **run that rule** via **scan** on the asset and **detect a failure that matches the mistake**. If scan is clean, or the failures are not this mistake, the rule/scanner is not done.

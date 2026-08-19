@@ -93,6 +93,7 @@ When sketching across multiple lenses (Stories / DDD / UX / Modules / BDD):
 ### Rules
 
 - **`confirm-lenses-before-sketch`** — **Hard gate.** Before any scaffold or sketch, use AskQuestion (allow_multiple: true) to confirm which lenses are active. Present them by sketch label. Do not proceed until confirmed. All active lenses are recommended by default; user removes out-of-scope ones.
+- **`scaffold-before-content`** — **Hard gate.** Read the engagement sketch template (`templates/cdd-sketch.md` for CDD) and each active child's `sketch_template` **before** writing the sketch file. Do not invent a free-prose `sketch.md`.
 - **`grill-before-theme-detail`** — **Hard gate.** Before writing any non-scaffold content for a theme, run at least one grill round on that theme's open questions. The session-level lens confirmation does NOT substitute for this per-theme grill.
 - **`one-sketch-per-engagement`** — One sketch file per engagement. Deepening fidelity updates `fidelity:` at the top and deepens blocks in place. Never create a new file for a new fidelity level.
 - **`scaffold-before-detail`** — A scaffold pass is required when the ask is greenfield, spans multiple themes/epics/modules, or no whole-design scaffold exists. Not required for a single narrow theme in an already-scaffolded design. Mark every scaffold line `< scaffold`. Never scaffold and detail in the same pass.
@@ -113,6 +114,7 @@ When sketching across multiple lenses (Stories / DDD / UX / Modules / BDD):
 ### Common mistakes (multi-lens)
 
 ❌ Skipping the lens confirmation gate before scaffold or sketch
+❌ Writing the sketch file before reading the sketch template and child `sketch_template`s
 ❌ Skipping the per-theme grill — lens confirmation does not substitute for it
 ❌ Creating a new sketch file when moving to a deeper fidelity — deepen in place
 ❌ Creating a new theme block when detailing — update scaffold lines in the existing block

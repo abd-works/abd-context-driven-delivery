@@ -111,14 +111,16 @@ with description("AgentBdd action expansion"):
                     context={"format": "python"},
                 )
 
-            with it("should name open session tools then scan"):
+            with it("should name open session tools then begin_eval_turn, scan, finish_eval_turn"):
                 expect(self.response["tools"]).to(
                     equal(
                         [
                             "ensure_session",
                             "read_context_index",
                             "record_context_root",
+                            "begin_eval_turn",
                             "scan",
+                            "finish_eval_turn",
                         ]
                     )
                 )

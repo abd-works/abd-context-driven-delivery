@@ -53,6 +53,7 @@ class Ddd(BaseContextTool):
     """
 
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+    supported_formats = _SUPPORTED_FORMATS
 
     fidelities = {
         BaseContextTool.DISCOVERY: "bounded_context",
@@ -160,3 +161,13 @@ class Ddd(BaseContextTool):
         """Sideways format conversion at the same fidelity.
         Delegates to clean_engineering.transform - DDD adds no separate channel model."""
         return self.ce().transform(source_format, target_format, content)
+
+    @tool
+    def render(self, format: str, content: str = "") -> dict:
+        """Render already-generated DDD output into ``format`` via CleanEngineering channels."""
+        if not content:
+            raise ValueError("content is required — pass the already-generated artifact")
+        source = self.format
+        if not source:
+            raise ValueError("source format is not set")
+        return self.transform(source, format, content)

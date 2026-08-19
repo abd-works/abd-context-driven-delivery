@@ -21,6 +21,12 @@ Section separators (model / specification fidelity inside a `##` class block):
     ------  (6 dashes)  constructor / properties boundary
     ----    (4 dashes)  properties / operations boundary
     -       (prefix)    private operation
+
+Relationships:
+  - Property lines with ``<< composition|aggregation|association >>`` become edges.
+  - Operation return types and PascalCase parameter types also become edges
+    (default association). An optional stereotype on the op line applies to
+    the return type (e.g. ``+ << composition >> continueToForm(): PortabilityForm``).
 """
 from __future__ import annotations
 
@@ -342,13 +348,14 @@ def _parse_class(name: str, body: str, order: int, cls: type) -> OoadClass:
     ops_text = parts4[1] if len(parts4) > 1 else ""
 
     props, rels = _parse_properties_and_relationships(props_text)
+    ops, op_rels = _parse_operations_and_relationships(ops_text)
     return cls(
         name=name,
         sequential_order=order,
         intent=intent,
         properties=props,
-        operations=_parse_operations(ops_text),
-        relationships=rels,
+        operations=ops,
+        relationships=_dedupe_relationships(rels + op_rels),
     )
 
 
@@ -404,7 +411,8 @@ def _parse_properties_and_relationships(text: str) -> tuple[List[Property], List
         # Skip lines that look like operations
         if re.match(r"^_?\w+\s*\(", stripped):
             continue
-        m = re.match(r"^(\w+):\s*(.+)", stripped)
+        # Optional props may be written `name?: Type` or `name: Type | null`.
+        m = re.match(r"^(\w+)\??:\s*(.+)", stripped)
         if m:
             prop_name = m.group(1)
             # Strip array marker and optional suffix (e.g. "Subscription[]" → "Subscription")
@@ -425,23 +433,87 @@ def _parse_properties(text: str) -> List[Property]:
 
 
 def _parse_operations(text: str) -> List[Operation]:
-    ops = []
+    ops, _ = _parse_operations_and_relationships(text)
+    return ops
+
+
+_NON_DOMAIN_TYPE_NAMES = frozenset({
+    "String", "Number", "Boolean", "Void", "Any", "Unknown", "Object",
+    "Record", "Array", "Promise", "Partial", "Omit", "Pick", "RegExp",
+    "Date", "Error", "Map", "Set", "Readonly", "Required", "NonNullable",
+})
+
+
+def _domain_type_names(type_raw: str) -> List[str]:
+    """PascalCase type names from a CE type hint (returns, params, props)."""
+    if not type_raw:
+        return []
+    names: List[str] = []
+    for m in re.finditer(r"\b([A-Z][A-Za-z0-9]*)\b", type_raw):
+        name = m.group(1)
+        if name in _NON_DOMAIN_TYPE_NAMES or name in names:
+            continue
+        names.append(name)
+    return names
+
+
+def _dedupe_relationships(rels: List[Relationship]) -> List[Relationship]:
+    """One edge per target; stronger ownership (composition > aggregation > association) wins."""
+    rank = {"composition": 3, "aggregation": 2, "association": 1}
+    best: dict[str, Relationship] = {}
+    for rel in rels:
+        kind = (rel.kind or "association").lower()
+        if kind not in rank:
+            kind = "association"
+        prev = best.get(rel.target)
+        if prev is None or rank[kind] > rank.get((prev.kind or "association").lower(), 1):
+            best[rel.target] = Relationship(
+                kind=kind,
+                target=rel.target,
+                cardinality=rel.cardinality,
+                description=rel.description,
+            )
+    return list(best.values())
+
+
+def _parse_operations_and_relationships(
+    text: str,
+) -> tuple[List[Operation], List[Relationship]]:
+    """Parse operations and infer association edges from return/param types.
+
+    Property stereotypes remain the place for composition/aggregation. Method
+    signatures default to association so return types like ``viewPortability():
+    Portability`` and params like ``portNumber(info: PortingInfo)`` become edges.
+    An optional ``<< composition|aggregation|association >>`` on the op line
+    applies to the return type only.
+    """
+    ops: List[Operation] = []
+    rels: List[Relationship] = []
     for line in text.splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
-        # Skip comment / implementation-note lines
         if stripped.startswith("//") or stripped.startswith("->"):
             continue
-        # CE format uses "-" prefix for private ops; standard format already handles it
         private = stripped.startswith("- ")
         body = stripped[2:].strip() if private else stripped
-        # Strip CE OOAD "+" visibility marker (and any stereotype, discarded for ops)
-        body, _ = _strip_ce_prefix(body)
+        body, ret_kind = _strip_ce_prefix(body)
         m = re.match(r"^(_?\w+)\(([^)]*)\)(?::\s*(.+))?", body)
-        if m:
-            op_name = ("_" if private and not m.group(1).startswith("_") else "") + m.group(1)
-            params = [p.strip() for p in m.group(2).split(",") if p.strip()]
-            ret = (m.group(3) or "").strip()
-            ops.append(Operation(name=op_name, parameters=params, return_type=ret))
-    return ops
+        if not m:
+            continue
+        op_name = ("_" if private and not m.group(1).startswith("_") else "") + m.group(1)
+        params = [p.strip() for p in m.group(2).split(",") if p.strip()]
+        ret = (m.group(3) or "").strip()
+        ops.append(Operation(name=op_name, parameters=params, return_type=ret))
+
+        kind = ret_kind or "association"
+        for target in _domain_type_names(ret):
+            rels.append(Relationship(kind=kind, target=target))
+        for param in params:
+            # name: Type  or  name?: Type
+            pm = re.match(r"^(\w+)\??:\s*(.+)$", param)
+            if not pm:
+                continue
+            for target in _domain_type_names(pm.group(2)):
+                rels.append(Relationship(kind="association", target=target))
+    return ops, rels

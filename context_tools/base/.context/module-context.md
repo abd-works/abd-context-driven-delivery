@@ -1,6 +1,6 @@
 # BaseContextTool (composer + lifecycle)
 
-**Purpose:** Shared base for every concrete context domain — partition/repair peers + generate/validate/satisfy/document (+ grill/sketch/iterate). Domains subclass it directly.
+**Purpose:** Shared base for every concrete context domain — partition/repair peers + generate/validate/satisfy/document/createRule (+ grill/sketch/iterate). Domains subclass it directly.
 
 **Primary use case:** Subclass once per domain toolset; call kit providers and lifecycle actions from the host face without composing Session/Scan yourself.
 
@@ -18,14 +18,17 @@
 - `_set_fidelity(fidelity_name)` — updates `self.fidelity` and `self.format` at runtime
 - Kit providers: `workspace()`, `scanner()`, `sketcher()`, `grill_context()`, `iterator()`, `decisions()`
 - Forwarded session/scan tools: `ensure_session`, `create_session`, `close_session`, `read_context_index`, `record_context_root`, `scan`
+- `supported_formats: ClassVar[frozenset[str]]` — formats this tool can render into; empty on the base
+- `render(format, content="")` — `@tool` that renders already-generated output into `format`. Default rejects unknown formats. Channel tools override and call their parse/render (or `transform`) in-process.
 - Resource `active`; instruction `session_guidance`
 - Class knobs: `default_workspace_folder`, `context_index_key`
-- Lifecycle actions: `generate`, `validate`, `satisfy`, `document`, `grill`, `sketch`, `iterate`, `generate_output`, `add_generate_header_to_generated`
-- Eval capture: `self.eval` (`eval.Session`); `@log` → `record_tool_call`; `log_mistake` / `log_correction` dual-write to eval; `finish_eval_turn` for the chat-reply boundary
+- Lifecycle actions: `generate`, `validate`, `satisfy`, `document`, `grill`, `sketch`, `iterate`, `createRule`, `generate_output`, `add_generate_header_to_generated`
+- Eval capture: `self.eval` (`eval.EvalSession`); host tools `begin_eval_turn` / `finish_eval_turn` / `log_mistake` / `log_correction` (YAML index plus `{session.folder}/mistakes/{name}/`). Direct lifecycle actions (`generate`, `validate`, `document`, `partition`, `repair`, `eval`, `createRule`) register begin then finish on the action so the agent runs them. `grill` / `sketch` / `iterate` / `satisfy` do not add their own — they delegate. No `improve`.
 
 ## Dependencies
 
 Session / workspace kits under `context_tools/actions/workspace`; Scan under
-`utilities/scanners`; Sketcher, GrillContext, Iterator, Partition, Repair under
-`context_tools/actions/`; RecordDecisions under `utilities/record_decisions`
-(composed via providers — not MI; prose lookup stays in their source dirs)
+`utilities/scanners`; Repair under `utilities/eval`; Sketcher, GrillContext,
+Iterator, Partition under `context_tools/actions/`; RecordDecisions under
+`utilities/record_decisions` (composed via providers — not MI; prose lookup
+stays in their source dirs)

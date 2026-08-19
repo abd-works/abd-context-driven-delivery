@@ -4,7 +4,7 @@
 
 **Seam:** `Stories` toolset (`context_tools.stories.stories:Stories`)
 
-**Public API:** fidelity/format construction; lifecycle actions (`generate` / `validate` / `satisfy` / `iterate` / …); `transform`; `diagnostic()` Diagnose companion; `contexts` instruction
+**Public API:** fidelity/format construction; lifecycle actions (`generate` / `validate` / `satisfy` / `iterate` / …); `transform`; `render(format, content)` (calls `transform` from the current format); `diagnostic()` Diagnose companion; `contexts` instruction
 
 **Dependencies:** `BaseContextTool`; format channel classes under `document` / `diagram` / `code`; `utilities.diagnose.Diagnose` (via `diagnostic()`)
 

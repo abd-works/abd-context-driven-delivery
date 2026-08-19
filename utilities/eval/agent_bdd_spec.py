@@ -47,8 +47,11 @@ def _remove_worktree(repo_root: Path, wt: Path) -> None:
         pass
 
 
+_GIT_ON_PATH = shutil.which("git") is not None
+
 with description("an eval Session"):
-    with context("with a real context-tool run and git on this clone"):
+    if _GIT_ON_PATH:
+      with context("with a real context-tool run and git on this clone"):
         with it("records the tool run and commits the sandbox turn"):
             expect(_REPO_ROOT is not None).to(be_true)
             assert _REPO_ROOT is not None

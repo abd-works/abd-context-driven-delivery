@@ -111,10 +111,10 @@ First deepenable theme = ring 1. Later rings are consumers of ring 1’s placeme
 
 - **Locked:**
   - **workspace:** path / folder / open / ContextIndex / docs_dir
-  - **eval:** Session YAML, Turn, ToolCall, Mistake, Correction, WorkspaceRepo, CDDRepo, ArchivePromoter, absorb repair
+  - **eval:** Session YAML, Turn, ToolCall, Mistake, Correction, WorkspaceRepo, CDDRepo, Archive, absorb repair
   - **leave:** record_decisions, scanners
   - **edges:** `eval → workspace` only
-  - **names:** `workspace.Session` = locations; `eval.Session` = domain; Base: `self.workspace` + `self.eval`
+  - **names:** `workspace.Session` = locations (`WorkspaceSession`); `EvalSession` = eval domain; Base: `self.workspace` + `self.eval`
 
 ## Open Turn / finish Turn (theme close)
 
@@ -124,8 +124,62 @@ First deepenable theme = ring 1. Later rings are consumers of ring 1’s placeme
 
 ## Theme status
 
-- **Ring 1 capture + placement:** ready to code (see CE “First coding slice”)
+- **Ring 1 capture + placement:** coded (Session/Turn/Mistake YAML; Base `self.eval`; `@log` → ToolCall; `log_mistake`/`log_correction` → eval only)
+- **Next theme (locked 2026-08-17):** Absorb Repair into eval
 - Archive promote, rings 2–5: scaffold
+
+## Absorb Repair into eval (theme open)
+
+- **Asked:** Next theme after ring-1 capture — absorb Repair / ring 2 / keep peer kit / scaffold rings 3–4 only
+- **Recommendation:** Absorb Repair into eval now
+- **Answered:** **1 — Absorb Repair into eval now** — Repair (improve / repair / verify_regression / archive) becomes first-class under `utilities/eval` on Session/Turn/Mistake; peer kit is not the long-term home
+
+- **Asked:** What is in this absorption coding slice?
+- **Recommendation:** Eval owns the repair loop on Session YAML; Archive deferred
+- **Correction (2026-08-18):** No `improve`. Repair is atomic. If no Mistake or Correction exists, repair takes them from context and wires them. `eval` is a separate tool the agent (or contribute) runs after repair.
+
+- **Asked:** How does Base expose the repair loop after absorption?
+- **Recommendation:** `Repair` type under `utilities/eval`; Base keeps `self.repairer`
+- **Answered:** **1** — `eval.Repair(session=self.eval, scanner=…)`; Base `self.repairer` stays the composed kit; host face unchanged; kit talks only to Session YAML
+
+- **Asked:** Who owns `log_mistake` / `log_correction` after absorption?
+- **Recommendation:** `eval.Repair` owns them; Base forwards to `self.repairer`
+- **Answered:** **1** — One path: host tool → Repair → `session.recordMistake` / `recordCorrection`; Base does not write eval directly
+- **Correction (2026-08-18):** EvalSession orchestrates turn lifecycle + persist only. Repair → `Mistake.record` / `Correction.apply`. Session does not record mistakes, apply corrections, or begin repairs.
+
+- **Asked:** What happens to `context_tools/actions/repair`?
+- **Answered:** **Kill it.** Move into `utilities/eval`; **no shim, no re-export, no legacy path.** Wipe old imports; update all callers. No parallel package left behind.
+
+- **Note (2026-08-18):** EvalSession owns collections of Mistakes and Repairs it created. A Mistake has 0..1 Repair; a Repair may collect many Mistakes. Repair still knows its EvalSession; the collection lives on EvalSession. Behavior lives on the objects: Mistake.record / repair setter / correct; Correction.apply; Repair._begin + loop; Turn.add.
+
+## Contributing to evals (theme open)
+
+- **Asked:** When a mechanical repair finishes, how should it contribute to the eval corpus?
+- **Recommendation:** Separate opt-in step after repair
+- **Answered:** **1** — Repair only fixes. A later action (or improve tick) captures broken vs clean into the tool’s examples/evals corpus and can run `verify_regression`. Contribute is its own concern (near ring 5).
+
+- **Asked:** When that opt-in contribute step runs, what does it store?
+- **Recommendation:** `examples/evals` file pairs plus links to session-branch commits
+- **Answered:** **1** — then **superseded** below
+
+- **Correction (2026-08-18):** Contribute is **not mechanical-only**. Judgment/instruction fixes belong too. Regression includes AI validate, not scan-only.
+
+- **Asked:** For judgment-based contribute, what goes in the corpus? (options included file pairs vs git-only)
+- **Answered:** **3 — session-branch commit links only** — and this is the **same for every fix type** (scanner, utility, primitive, judge/guidance). Link what was broken before and what the fix changed. **No separate faulty/repaired file corpus** under `examples/evals`.
+
+- **Asked:** When regression runs after a fix is in place, what does it do?
+- **Answered:** **Two runs, whenever a fix lands** (code or markdown changed) — **independent of evals**:
+  1. **Vanilla / scanner BDD** — incorrect (before) fails; correct (after) passes.
+  2. **Agentic validate** —
+     - AI judge passes
+     - AI generate produces a similar successful result; **hold the last generate for human review**
+     - May bypass an agentic “want to ask the user” via the **AskQuestion** tool
+- **Locked:** Regression is part of finishing the fix — **not** part of evals.
+- **Only connection to evals:** after contribute-to-evals **creates** the latest eval entry, **run that latest eval**.
+
+- **Asked:** How do we harness the two regression lanes (scanner BDD + agentic validate)?
+- **Recommendation:** Thin helpers on `agent_bdd` + `Bdd`
+- **Answered:** **1 — in `utilities/eval`** — **not helpers.** Explicit **vanilla BDD specs** and explicit **agent-BDD specs** for eval, in the eval package. Same kind of tests as existing `*_spec.py` / `agent_bdd_spec.py`. Fixed pattern every time: before fails, after passes; agentic judge + generate-for-review. Uses the existing Bdd / AgentBdd harnesses; no wrapper API.
 
 ## Notes from ask (pre-theme)
 

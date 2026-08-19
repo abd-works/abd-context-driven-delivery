@@ -14,13 +14,14 @@ create_context_tool
 ddd
 diagnose
 echo
-engineering_specification
+eval
 examples
 focus
 grill_context
 handoff
 instructions
 iterate
+manifest_hook
 partition
 primitives
 record_decisions
@@ -28,7 +29,6 @@ repair
 sandbox
 scanners
 sketch
-src
 stories
 sub_agent
 tools

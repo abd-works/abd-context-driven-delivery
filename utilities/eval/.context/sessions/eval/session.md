@@ -10,6 +10,6 @@
 
 ## End
 
-- **ended:** 2026-08-10
-- **outcome:** handoff written
-- **handoff:** handoffs/handoff-2026-08-10-wire-base-eval-log.md
+- **ended:** 2026-08-18
+- **outcome:** Repair absorb coded; handoff written
+- **handoff:** handoffs/handoff-2026-08-18-absorb-repair.md

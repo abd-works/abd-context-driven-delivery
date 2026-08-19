@@ -2,7 +2,7 @@
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
-"""eval Session domain — model contracts + production from eval-ce-sketch.
+"""eval EvalSession domain — production from eval-ce-sketch.
 
 Sources / context:
 utilities/eval/.context/sessions/eval/eval-ce-sketch.md
@@ -11,13 +11,40 @@ utilities/eval/.context/module-context.md
 from __future__ import annotations
 
 import subprocess
+import tempfile
 import uuid
-from abc import ABC, abstractmethod
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Protocol, runtime_checkable
+from types import SimpleNamespace
+from typing import Any, Callable
 
 import yaml
+from primitives.actions.action import action, agentic_toolset
+from scanners.scan import Scan, ScanReport
+from sub_agent.sub_agent import sub_agent
+from tools.tool import tool
+from workspace.workspace_session import WorkspaceSession
+
+
+def _mistake_slug(rule: str, wrong: str, taken: set[str]) -> str:
+    raw = rule.strip()
+    if raw.lower().startswith("(process)"):
+        raw = raw[9:].strip()
+    for sep in (" — ", " – ", " - "):
+        if sep in raw:
+            raw = raw.split(sep, 1)[0].strip()
+            break
+    slug = re.sub(r"[^a-z0-9]+", "-", raw.lower()).strip("-")
+    if not slug:
+        slug = re.sub(r"[^a-z0-9]+", "-", wrong.lower()).strip("-")
+    slug = (slug or "mistake")[:60]
+    candidate = slug
+    n = 2
+    while candidate in taken:
+        candidate = f"{slug}-{n}"
+        n += 1
+    return candidate
 
 
 def find_git_root(start: str | Path) -> Path | None:
@@ -46,193 +73,8 @@ def _git(root: Path, *args: str) -> str:
     return (completed.stdout or "").strip()
 
 
-@runtime_checkable
-class IWorkspaceArea(Protocol):
-    """Seam to workspace.Session — path, folder, and session name only."""
-
-    path: str
-    name: str
-    folder: Path | str
-
-
-class IToolCall(ABC):
-    """*ToolCall* is one first-order tool or action run on an open Turn."""
-
-    @property
-    @abstractmethod
-    def toolset(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def name(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def summary(self) -> str: ...
-
-
-class ICorrection(ABC):
-    """*Correction* is the fix record for a Mistake, pointing at the fixing Turn."""
-
-    @property
-    @abstractmethod
-    def improved(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def status(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def fixed_in(self) -> ITurn | None: ...
-
-
-class IMistake(ABC):
-    """*Mistake* is a pointed-out error nested on the Turn where it was spotted."""
-
-    @property
-    @abstractmethod
-    def entry_id(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def artifact(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def rule(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def wrong(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def original(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def tool(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def fidelity(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def correction(self) -> ICorrection: ...
-
-
-class ITurn(ABC):
-    """*Turn* is one finished (or open) chat reply on a Session."""
-
-    @property
-    @abstractmethod
-    def id(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def tool_calls(self) -> list[IToolCall]: ...
-
-    @property
-    @abstractmethod
-    def context(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def prompt(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def result(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def mistakes(self) -> list[IMistake]: ...
-
-    @property
-    @abstractmethod
-    def change_commit(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def tool_branch(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def tool_sha(self) -> str: ...
-
-
-class IWorkspaceRepo(ABC):
-    """*WorkspaceRepo* is git identity for the working-area repository."""
-
-    @abstractmethod
-    def ensure_session_branch(self, session_name: str) -> str: ...
-
-    @abstractmethod
-    def commit_on_session_branch(self, paths: list[str], message: str) -> str: ...
-
-    @abstractmethod
-    def current_commit(self) -> str: ...
-
-    @abstractmethod
-    def current_branch(self) -> str: ...
-
-
-class ICDDRepo(ABC):
-    """*CDDRepo* is git identity for the CDD / tool repository (not the workspace repo)."""
-
-    @abstractmethod
-    def current_branch_and_sha(self) -> tuple[str, str]: ...
-
-
-class ISession(ABC):
-    """*Session* is the eval domain document: turns, mistakes, one YAML file."""
-
-    @property
-    @abstractmethod
-    def workspace(self) -> IWorkspaceArea: ...
-
-    @property
-    @abstractmethod
-    def path(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def branch(self) -> str: ...
-
-    @property
-    @abstractmethod
-    def turns(self) -> list[ITurn]: ...
-
-    @property
-    @abstractmethod
-    def open_turn(self) -> ITurn | None: ...
-
-    @abstractmethod
-    def begin_turn(self) -> ITurn: ...
-
-    @abstractmethod
-    def record_tool_call(self, tool_call: IToolCall) -> None: ...
-
-    @abstractmethod
-    def record_mistake(self, mistake: IMistake) -> None: ...
-
-    @abstractmethod
-    def record_correction(self, mistake_id: str, improved: str) -> None: ...
-
-    @abstractmethod
-    def finish_turn(self, prompt: str, result: str, context: str) -> ITurn | None: ...
-
-    @abstractmethod
-    def save(self) -> str: ...
-
-    @abstractmethod
-    def load(self) -> None: ...
-
-
 @dataclass
-class ToolCall(IToolCall):
+class ToolCall:
     """*ToolCall* is one first-order tool or action run on an open Turn."""
 
     _toolset: str
@@ -253,12 +95,23 @@ class ToolCall(IToolCall):
 
 
 @dataclass
-class Correction(ICorrection):
-    """*Correction* is the fix record for a Mistake, pointing at the fixing Turn."""
+class TurnCommit:
+    """*TurnCommit* is the session-branch commit for a finished Turn."""
+
+    turn_id: str
+    session_name: str
+    tool_names: list[str]
+    mistake_ids: list[str]
+    sha: str
+
+
+@dataclass
+class Correction:
+    """*Correction* is the fix record nested on a Mistake."""
 
     _improved: str = ""
     _status: str = "open"
-    _fixed_in: ITurn | None = None
+    _fixed_in: Turn | None = None
 
     @property
     def improved(self) -> str:
@@ -269,12 +122,19 @@ class Correction(ICorrection):
         return self._status
 
     @property
-    def fixed_in(self) -> ITurn | None:
+    def fixed_in(self) -> Turn | None:
         return self._fixed_in
+
+    def apply(self, mistakes: list[Mistake], turn: Turn) -> None:
+        self._status = "fixed"
+        self._fixed_in = turn
+        for mistake in mistakes:
+            mistake.correct(self)
+            mistake.write_files()
 
 
 @dataclass
-class Mistake(IMistake):
+class Mistake:
     """*Mistake* is a pointed-out error nested on the Turn where it was spotted."""
 
     _entry_id: str
@@ -285,6 +145,9 @@ class Mistake(IMistake):
     _tool: str = ""
     _fidelity: str = ""
     _correction: Correction = field(default_factory=Correction)
+    _repair: Repair | None = None
+    _folder: str = ""
+    _session_folder: str = ""
 
     @property
     def entry_id(self) -> str:
@@ -315,30 +178,102 @@ class Mistake(IMistake):
         return self._fidelity
 
     @property
-    def correction(self) -> ICorrection:
+    def correction(self) -> Correction:
         return self._correction
+
+    @property
+    def repair(self) -> Repair | None:
+        return self._repair
+
+    @repair.setter
+    def repair(self, value: Repair | None) -> None:
+        self._repair = value
+        if value is not None and self not in value.mistakes:
+            value.mistakes.append(self)
+        if value is not None and value.cdd_session is not None:
+            value._bring_mistakes([self])
+
+    @property
+    def folder(self) -> str:
+        return self._folder
+
+    def record(self, session: EvalSession) -> None:
+        turn = session.begin_turn()
+        if self not in session._mistakes:
+            session._mistakes.append(self)
+        turn.add(self)
+        self._session_folder = str(session.workspace.folder)
+        self.write_files()
+
+    def copy_for(self, session: EvalSession) -> Mistake:
+        replica = Mistake(
+            _entry_id=self.entry_id,
+            _artifact=self.artifact,
+            _rule=self.rule,
+            _wrong=self.wrong,
+            _original=self.original,
+            _tool=self.tool,
+            _fidelity=self.fidelity,
+            _correction=Correction(
+                _improved=self.correction.improved,
+                _status=self.correction.status,
+            ),
+            _folder=self.folder,
+        )
+        replica.record(session)
+        return replica
+
+    def correct(self, correction: Correction) -> None:
+        self._correction = correction
+
+    def write_files(self) -> None:
+        if not self._session_folder:
+            return
+        root = Path(self._session_folder) / "mistakes"
+        taken = {path.name for path in root.iterdir()} if root.is_dir() else set()
+        if self._folder:
+            slug = Path(self._folder).name
+        else:
+            slug = _mistake_slug(self.rule, self.wrong, taken)
+            self._folder = f"mistakes/{slug}"
+        dest = Path(self._session_folder) / self._folder
+        dest.mkdir(parents=True, exist_ok=True)
+        (dest / "faultyAsset").write_text(self.original, encoding="utf-8")
+        if self.correction.improved:
+            (dest / "repairedAsset").write_text(
+                self.correction.improved, encoding="utf-8"
+            )
+        (dest / "mistake.md").write_text(self._mistake_md(), encoding="utf-8")
+
+    def _mistake_md(self) -> str:
+        return (
+            f"# {Path(self._folder).name or self.rule}\n\n"
+            f"- **entry_id:** {self.entry_id}\n"
+            f"- **artifact:** {self.artifact}\n"
+            f"- **rule:** {self.rule}\n"
+            f"- **wrong:** {self.wrong}\n"
+            f"- **status:** {self.correction.status}\n"
+        )
 
 
 @dataclass
-class Turn(ITurn):
-    """*Turn* is one finished (or open) chat reply on a Session."""
+class Turn:
+    """*Turn* is one finished (or open) chat reply on an EvalSession."""
 
     _id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
-    _tool_calls: list[IToolCall] = field(default_factory=list)
+    _tool_calls: list[ToolCall] = field(default_factory=list)
     _context: str = ""
     _prompt: str = ""
     _result: str = ""
-    _mistakes: list[IMistake] = field(default_factory=list)
-    _change_commit: str = ""
-    _tool_branch: str = ""
-    _tool_sha: str = ""
+    _mistakes: list[Mistake] = field(default_factory=list)
+    _change_commit: TurnCommit | None = None
 
     @property
     def id(self) -> str:
         return self._id
 
     @property
-    def tool_calls(self) -> list[IToolCall]:
+    def tool_calls(self) -> list[ToolCall]:
         return list(self._tool_calls)
 
     @property
@@ -354,58 +289,21 @@ class Turn(ITurn):
         return self._result
 
     @property
-    def mistakes(self) -> list[IMistake]:
+    def mistakes(self) -> list[Mistake]:
         return list(self._mistakes)
 
     @property
-    def change_commit(self) -> str:
+    def change_commit(self) -> TurnCommit | None:
         return self._change_commit
 
-    @property
-    def tool_branch(self) -> str:
-        return self._tool_branch
-
-    @property
-    def tool_sha(self) -> str:
-        return self._tool_sha
+    def add(self, item: ToolCall | Mistake) -> None:
+        if isinstance(item, ToolCall):
+            self._tool_calls.append(item)
+        else:
+            self._mistakes.append(item)
 
 
-class NullWorkspaceRepo(IWorkspaceRepo):
-    """No-op WorkspaceRepo for isolated unit tests."""
-
-    def __init__(self) -> None:
-        self.commits: list[tuple[list[str], str]] = []
-        self._commit = ""
-        self._branch = ""
-
-    def ensure_session_branch(self, session_name: str) -> str:
-        self._branch = f"session/{session_name}"
-        return self._branch
-
-    def commit_on_session_branch(self, paths: list[str], message: str) -> str:
-        self.commits.append((list(paths), message))
-        self._commit = f"commit-{len(self.commits)}"
-        return self._commit
-
-    def current_commit(self) -> str:
-        return self._commit
-
-    def current_branch(self) -> str:
-        return self._branch
-
-
-class NullCDDRepo(ICDDRepo):
-    """Stub CDDRepo for isolated unit tests."""
-
-    def __init__(self, branch: str = "main", sha: str = "cddsha0") -> None:
-        self._branch = branch
-        self._sha = sha
-
-    def current_branch_and_sha(self) -> tuple[str, str]:
-        return self._branch, self._sha
-
-
-class WorkspaceRepo(IWorkspaceRepo):
+class WorkspaceRepo:
     """Thin real-git WorkspaceRepo for the working-area repository."""
 
     def __init__(self, root: str | Path) -> None:
@@ -453,59 +351,153 @@ class WorkspaceRepo(IWorkspaceRepo):
             return str(resolved).replace("\\", "/")
 
 
-class CDDRepo(ICDDRepo):
-    """Thin real-git CDD / tool repository identity.
+class NullWorkspaceRepo(WorkspaceRepo):
+    """No-op WorkspaceRepo for isolated unit tests."""
 
-    When the workspace lives inside the same clone as the tools (sandbox in
-    this repo), pass the same root used for ``WorkspaceRepo``.
-    """
+    def __init__(self) -> None:
+        self.root = Path(".")
+        self.commits: list[tuple[list[str], str]] = []
+        self._commit = ""
+        self._branch = ""
 
-    def __init__(self, root: str | Path) -> None:
-        self.root = Path(root).resolve()
+    def ensure_session_branch(self, session_name: str) -> str:
+        self._branch = f"session/{session_name}"
+        return self._branch
+
+    def commit_on_session_branch(self, paths: list[str], message: str) -> str:
+        self.commits.append((list(paths), message))
+        self._commit = f"commit-{len(self.commits)}"
+        return self._commit
+
+    def current_commit(self) -> str:
+        return self._commit
+
+    def current_branch(self) -> str:
+        return self._branch
+
+    def is_dirty(self, path: str | Path | None = None) -> bool:
+        return False
+
+
+class CDDRepo(WorkspaceRepo):
+    """WorkspaceRepo for the tool clone. Asset sessions link ``cddAt`` once."""
+
+    @property
+    def head_sha(self) -> str:
+        return self.current_commit()
 
     def current_branch_and_sha(self) -> tuple[str, str]:
-        branch = _git(self.root, "rev-parse", "--abbrev-ref", "HEAD")
-        sha = _git(self.root, "rev-parse", "HEAD")
-        return branch, sha
+        return self.current_branch(), self.head_sha
+
+    def link(self, session: EvalSession) -> None:
+        session.cdd_at = self.head_sha
+
+    def open_session(self, name: str) -> EvalSession:
+        workspace = WorkspaceSession(path=str(self.root), name=name)
+        return EvalSession(workspace=workspace, workspace_repo=self, cdd_repo=self)
 
 
-def repos_for_workspace(workspace: IWorkspaceArea) -> tuple[IWorkspaceRepo, ICDDRepo]:
-    """Same git root for workspace + tool when *workspace.path* is in a clone."""
-    root = find_git_root(workspace.path)
-    if root is None:
+class NullCDDRepo(CDDRepo):
+    """Stub CDDRepo for isolated unit tests."""
+
+    def __init__(self, branch: str = "main", sha: str = "cddsha0") -> None:
+        self.root = Path(".")
+        self.commits: list[tuple[list[str], str]] = []
+        self._commit = sha
+        self._branch = branch
+        self._sha = sha
+        self._opened: list[EvalSession] = []
+
+    def ensure_session_branch(self, session_name: str) -> str:
+        self._branch = f"session/{session_name}"
+        return self._branch
+
+    def commit_on_session_branch(self, paths: list[str], message: str) -> str:
+        self.commits.append((list(paths), message))
+        self._commit = f"commit-{len(self.commits)}"
+        return self._commit
+
+    def current_commit(self) -> str:
+        return self._sha if not self._commit else self._commit
+
+    def current_branch(self) -> str:
+        return self._branch
+
+    def is_dirty(self, path: str | Path | None = None) -> bool:
+        return False
+
+    @property
+    def head_sha(self) -> str:
+        return self._sha
+
+    def open_session(self, name: str) -> EvalSession:
+        folder = Path(tempfile.mkdtemp()) / ".context" / "sessions" / name
+        folder.mkdir(parents=True)
+        workspace = SimpleNamespace(path=str(folder.parents[2]), folder=folder, name=name)
+        opened = EvalSession(
+            workspace=workspace,
+            workspace_repo=NullWorkspaceRepo(),
+            cdd_repo=NullCDDRepo(branch=self._branch, sha=self._sha),
+        )
+        self._opened.append(opened)
+        return opened
+
+
+def find_cdd_root() -> Path | None:
+    """Git root of the running tools clone (this package)."""
+    return find_git_root(Path(__file__))
+
+
+def repos_for_workspace(workspace: WorkspaceSession) -> tuple[WorkspaceRepo, CDDRepo]:
+    """WorkspaceRepo at the working-area clone; CDDRepo at the tools clone.
+
+    Share one root only when the working area sits inside the tools clone
+    (e.g. ``sandbox/…``). Isolated paths with no git stay Null*.
+    """
+    workspace_root = find_git_root(workspace.path)
+    cdd_root = find_cdd_root()
+    if workspace_root is None:
         return NullWorkspaceRepo(), NullCDDRepo()
-    return WorkspaceRepo(root), CDDRepo(root)
+    workspace_repo = WorkspaceRepo(workspace_root)
+    if cdd_root is None:
+        return workspace_repo, NullCDDRepo()
+    if workspace_root == cdd_root:
+        return workspace_repo, CDDRepo(workspace_root)
+    return workspace_repo, CDDRepo(cdd_root)
 
 
-class Session(ISession):
-    """*Session* is the eval domain document: turns, mistakes, one YAML file."""
+class EvalSession:
+    """*EvalSession* is the eval domain document: turns, mistakes, repairs, one YAML file."""
 
     def __init__(
         self,
-        workspace: IWorkspaceArea,
-        workspace_repo: IWorkspaceRepo | None = None,
-        cdd_repo: ICDDRepo | None = None,
+        workspace: WorkspaceSession,
+        workspace_repo: WorkspaceRepo | None = None,
+        cdd_repo: CDDRepo | None = None,
         is_dirty: Callable[[], bool] | None = None,
     ) -> None:
         self._workspace = workspace
-        self._turns: list[ITurn] = []
+        self._turns: list[Turn] = []
         self._open_turn: Turn | None = None
+        self._mistakes: list[Mistake] = []
+        self._repairs: list[Repair] = []
+        self._cdd_at = ""
         if workspace_repo is None and cdd_repo is None:
             workspace_repo, cdd_repo = repos_for_workspace(workspace)
         self._workspace_repo = workspace_repo or NullWorkspaceRepo()
         self._cdd_repo = cdd_repo or NullCDDRepo()
         if is_dirty is not None:
             self._is_dirty = is_dirty
-        elif isinstance(self._workspace_repo, WorkspaceRepo):
-            self._is_dirty = lambda: self._workspace_repo.is_dirty(self.path)
         else:
-            self._is_dirty = lambda: False
+            self._is_dirty = lambda: self._workspace_repo.is_dirty(self.path)
         session_name = str(getattr(workspace, "name", "") or "default")
         self._branch = self._workspace_repo.ensure_session_branch(session_name)
         self.load()
+        if not self._cdd_at:
+            self._cdd_repo.link(self)
 
     @property
-    def workspace(self) -> IWorkspaceArea:
+    def workspace(self) -> WorkspaceSession:
         return self._workspace
 
     @property
@@ -517,48 +509,46 @@ class Session(ISession):
         return self._branch
 
     @property
-    def turns(self) -> list[ITurn]:
+    def turns(self) -> list[Turn]:
         return list(self._turns)
 
     @property
-    def open_turn(self) -> ITurn | None:
+    def open_turn(self) -> Turn | None:
         return self._open_turn
 
     @property
-    def workspace_repo(self) -> IWorkspaceRepo:
+    def mistakes(self) -> list[Mistake]:
+        return list(self._mistakes)
+
+    @property
+    def repairs(self) -> list[Repair]:
+        return list(self._repairs)
+
+    @property
+    def workspace_repo(self) -> WorkspaceRepo:
         return self._workspace_repo
 
     @property
-    def cdd_repo(self) -> ICDDRepo:
+    def cdd_repo(self) -> CDDRepo:
         return self._cdd_repo
 
-    def begin_turn(self) -> ITurn:
+    @property
+    def cdd_at(self) -> str:
+        return self._cdd_at
+
+    @cdd_at.setter
+    def cdd_at(self, value: str) -> None:
+        self._cdd_at = value
+
+    def begin_turn(self) -> Turn:
         if self._open_turn is None:
             self._open_turn = Turn()
         return self._open_turn
 
-    def record_tool_call(self, tool_call: IToolCall) -> None:
-        turn = self.begin_turn()
-        assert isinstance(turn, Turn)
-        turn._tool_calls.append(tool_call)
+    def record_tool_call(self, tool_call: ToolCall) -> None:
+        self.begin_turn().add(tool_call)
 
-    def record_mistake(self, mistake: IMistake) -> None:
-        turn = self.begin_turn()
-        assert isinstance(turn, Turn)
-        turn._mistakes.append(mistake)
-
-    def record_correction(self, mistake_id: str, improved: str) -> None:
-        mistake = self._find_mistake(mistake_id)
-        if mistake is None:
-            raise KeyError(f"No mistake with entry_id={mistake_id!r}")
-        fix_turn = self._open_turn or (self._turns[-1] if self._turns else None)
-        assert isinstance(mistake, Mistake)
-        assert isinstance(mistake._correction, Correction)
-        mistake._correction._improved = improved
-        mistake._correction._status = "fixed"
-        mistake._correction._fixed_in = fix_turn
-
-    def finish_turn(self, prompt: str, result: str, context: str) -> ITurn | None:
+    def finish_turn(self, prompt: str, result: str, context: str) -> Turn | None:
         open_turn = self._open_turn
         if open_turn is None:
             open_turn = Turn()
@@ -567,17 +557,20 @@ class Session(ISession):
         if not dirty:
             self._open_turn = None
             return None
-        assert isinstance(open_turn, Turn)
         open_turn._prompt = prompt
         open_turn._result = result
         open_turn._context = context
-        commit = self._workspace_repo.commit_on_session_branch(
+        sha = self._workspace_repo.commit_on_session_branch(
             [self.path], f"turn {open_turn.id}"
         )
-        tool_branch, tool_sha = self._cdd_repo.current_branch_and_sha()
-        open_turn._change_commit = commit
-        open_turn._tool_branch = tool_branch
-        open_turn._tool_sha = tool_sha
+        session_name = str(getattr(self._workspace, "name", "") or "")
+        open_turn._change_commit = TurnCommit(
+            turn_id=open_turn.id,
+            session_name=session_name,
+            tool_names=[call.name for call in open_turn.tool_calls],
+            mistake_ids=[mist.entry_id for mist in open_turn.mistakes],
+            sha=sha,
+        )
         self._turns.append(open_turn)
         self._open_turn = None
         self.save()
@@ -590,9 +583,13 @@ class Session(ISession):
         payload = {
             "branch": self._branch,
             "path": self.path,
+            "cdd_at": self._cdd_at,
             "turns": [self._turn_dict(turn) for turn in self._turns],
         }
-        path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+        path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
         return str(path.resolve())
 
     def load(self) -> None:
@@ -601,15 +598,15 @@ class Session(ISession):
             return
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         self._branch = str(data.get("branch", self._branch))
+        self._cdd_at = str(data.get("cdd_at", self._cdd_at))
         self._turns = []
+        self._mistakes = []
         for raw in data.get("turns") or []:
             turn = Turn(_id=str(raw.get("id", uuid.uuid4().hex[:8])))
             turn._prompt = str(raw.get("prompt", ""))
             turn._result = str(raw.get("result", ""))
             turn._context = str(raw.get("context", ""))
-            turn._change_commit = str(raw.get("change_commit", ""))
-            turn._tool_branch = str(raw.get("tool_branch", ""))
-            turn._tool_sha = str(raw.get("tool_sha", ""))
+            turn._change_commit = self._load_turn_commit(raw.get("change_commit"), turn.id)
             for call in raw.get("tool_calls") or []:
                 turn._tool_calls.append(
                     ToolCall(
@@ -623,21 +620,26 @@ class Session(ISession):
                     _improved=str((mist.get("correction") or {}).get("improved", "")),
                     _status=str((mist.get("correction") or {}).get("status", "open")),
                 )
-                turn._mistakes.append(
-                    Mistake(
-                        _entry_id=str(mist.get("entry_id", "")),
-                        _artifact=str(mist.get("artifact", "")),
-                        _rule=str(mist.get("rule", "")),
-                        _wrong=str(mist.get("wrong", "")),
-                        _original=str(mist.get("original", "")),
-                        _tool=str(mist.get("tool", "")),
-                        _fidelity=str(mist.get("fidelity", "")),
-                        _correction=correction,
-                    )
+                mistake = Mistake(
+                    _entry_id=str(mist.get("entry_id", "")),
+                    _artifact=str(mist.get("artifact", "")),
+                    _rule=str(mist.get("rule", "")),
+                    _wrong=str(mist.get("wrong", "")),
+                    _original=str(mist.get("original", "")),
+                    _tool=str(mist.get("tool", "")),
+                    _fidelity=str(mist.get("fidelity", "")),
+                    _correction=correction,
+                    _folder=str(mist.get("folder", "")),
+                    _session_folder=str(self._workspace.folder),
                 )
+                turn._mistakes.append(mistake)
+                self._mistakes.append(mistake)
             self._turns.append(turn)
 
-    def _find_mistake(self, mistake_id: str) -> IMistake | None:
+    def _find_mistake(self, mistake_id: str) -> Mistake | None:
+        for mistake in self._mistakes:
+            if mistake.entry_id == mistake_id:
+                return mistake
         for turn in list(self._turns) + ([self._open_turn] if self._open_turn else []):
             for mistake in turn.mistakes:
                 if mistake.entry_id == mistake_id:
@@ -645,15 +647,42 @@ class Session(ISession):
         return None
 
     @staticmethod
-    def _turn_dict(turn: ITurn) -> dict[str, Any]:
+    def _load_turn_commit(raw: Any, turn_id: str) -> TurnCommit | None:
+        if not raw:
+            return None
+        if isinstance(raw, dict):
+            return TurnCommit(
+                turn_id=str(raw.get("turn_id", turn_id)),
+                session_name=str(raw.get("session_name", "")),
+                tool_names=[str(name) for name in (raw.get("tool_names") or [])],
+                mistake_ids=[str(mid) for mid in (raw.get("mistake_ids") or [])],
+                sha=str(raw.get("sha", "")),
+            )
+        return TurnCommit(
+            turn_id=turn_id,
+            session_name="",
+            tool_names=[],
+            mistake_ids=[],
+            sha=str(raw),
+        )
+
+    @staticmethod
+    def _turn_dict(turn: Turn) -> dict[str, Any]:
+        commit = turn.change_commit
         return {
             "id": turn.id,
             "prompt": turn.prompt,
             "result": turn.result,
             "context": turn.context,
-            "change_commit": turn.change_commit,
-            "tool_branch": turn.tool_branch,
-            "tool_sha": turn.tool_sha,
+            "change_commit": None
+            if commit is None
+            else {
+                "turn_id": commit.turn_id,
+                "session_name": commit.session_name,
+                "tool_names": commit.tool_names,
+                "mistake_ids": commit.mistake_ids,
+                "sha": commit.sha,
+            },
             "tool_calls": [
                 {
                     "toolset": call.toolset,
@@ -671,16 +700,198 @@ class Session(ISession):
                     "original": mist.original,
                     "tool": mist.tool,
                     "fidelity": mist.fidelity,
+                    "folder": mist.folder,
                     "correction": {
                         "improved": mist.correction.improved,
                         "status": mist.correction.status,
-                        "fixed_in": (
-                            mist.correction.fixed_in.id
-                            if mist.correction.fixed_in is not None
-                            else None
-                        ),
                     },
                 }
                 for mist in turn.mistakes
             ],
         }
+
+
+Session = EvalSession
+
+
+@agentic_toolset
+class Repair:
+    """Repair loop on an EvalSession. ``repair`` is atomic; ``eval`` is separate."""
+
+    def __init__(
+        self,
+        session: EvalSession | None = None,
+        scanner: Scan | None = None,
+        host: Any | None = None,
+        workspace: Any | None = None,
+    ) -> None:
+        self.session = session if session is not None else getattr(workspace, "eval", None)
+        self.scanner = scanner or Scan()
+        self.host = host
+        self.cdd_session: EvalSession | None = None
+        self.mistakes: list[Mistake] = []
+
+    @tool
+    def log_mistake(
+        self,
+        artifact: str,
+        rule: str,
+        wrong: str,
+        original: str,
+        tool: str = "",
+        fidelity: str = "",
+    ) -> str:
+        if self.session is None:
+            raise ValueError("No eval session — open a named session first")
+        entry_id = uuid.uuid4().hex[:8]
+        Mistake(
+            _entry_id=entry_id,
+            _artifact=artifact,
+            _rule=rule,
+            _wrong=wrong,
+            _original=original,
+            _tool=tool,
+            _fidelity=fidelity,
+        ).record(self.session)
+        return entry_id
+
+    @tool
+    def log_correction(
+        self,
+        mistakes: list[Mistake] | None = None,
+        correction: Correction | None = None,
+        entry_id: str = "",
+        improved: str = "",
+        status: str = "fixed",
+    ) -> str:
+        if self.session is None:
+            raise ValueError("No eval session — open a named session first")
+        turn = self.session.begin_turn()
+        if correction is None:
+            correction = Correction(_improved=improved, _status=status)
+        if mistakes is None:
+            if entry_id:
+                found = self.session._find_mistake(entry_id)
+                mistakes = [found] if found is not None else []
+            else:
+                mistakes = list(self.session.mistakes)
+        correction.apply(mistakes, turn)
+        self._correct_cdd_copies(mistakes, correction)
+        return entry_id or (mistakes[0].entry_id if mistakes else "")
+
+    def _bring_mistakes(self, mistakes: list[Mistake]) -> None:
+        cdd = self.cdd_session
+        if cdd is None:
+            return
+        have = {item.entry_id for item in cdd.mistakes}
+        for mistake in mistakes:
+            if mistake.entry_id in have:
+                continue
+            mistake.copy_for(cdd)
+            have.add(mistake.entry_id)
+
+    def _correct_cdd_copies(
+        self, mistakes: list[Mistake], correction: Correction
+    ) -> None:
+        cdd = self.cdd_session
+        if cdd is None:
+            return
+        copies = []
+        for mistake in mistakes:
+            found = cdd._find_mistake(mistake.entry_id)
+            if found is not None:
+                copies.append(found)
+        if not copies:
+            return
+        Correction(
+            _improved=correction.improved,
+            _status=correction.status,
+        ).apply(copies, cdd.begin_turn())
+
+    def _begin(self, mistakes: list[Mistake]) -> Repair:
+        if self.session is None:
+            raise ValueError("No eval session — open a named session first")
+        if self not in self.session._repairs:
+            self.session._repairs.append(self)
+        for mistake in mistakes:
+            mistake.repair = self
+        name = str(getattr(self.session.workspace, "name", "") or "repair")
+        self.cdd_session = self.session.cdd_repo.open_session(name)
+        self._bring_mistakes(list(self.session.mistakes))
+        return self
+
+    def _kind(self, asset: str, violation: str) -> str:
+        text = f"{asset} {violation}".lower()
+        if "judgment" in text:
+            return "judgment"
+        return "mechanical"
+
+    def _run(self, asset: str, violation: str) -> None:
+        if self.session is None:
+            return
+        if not self.session.mistakes:
+            if self.host is not None:
+                getattr(self.host, "contexts", None)
+            self.log_mistake(
+                artifact=asset,
+                rule=violation,
+                wrong=violation,
+                original="",
+            )
+        self._begin(list(self.session.mistakes))
+        mistake = self.mistakes[0] if self.mistakes else None
+        if mistake is not None and self.scanner is not None:
+            paths = [asset] if asset else []
+            scan_report = ScanReport.from_scan(self.scanner.scan(paths))
+            if (
+                not scan_report.matches(mistake)
+                and self._kind(asset, violation) == "mechanical"
+                and self.host is not None
+                and hasattr(self.host, "createRule")
+            ):
+                self.host.createRule(failed=mistake.wrong, wanted=violation)
+                ScanReport.from_scan(
+                    self.scanner.scan(paths, root=None, rule=mistake.rule)
+                ).matches(mistake)
+
+    def _ensure_cdd_session(self) -> None:
+        if self.session is None or self.cdd_session is not None:
+            return
+        name = str(getattr(self.session.workspace, "name", "") or "eval")
+        self.cdd_session = self.session.cdd_repo.open_session(name)
+        self._bring_mistakes(list(self.session.mistakes))
+
+    @tool
+    def start(self, asset: str, violation: str) -> str:
+        """Open the CDD session and copy project mistakes onto it."""
+        self._run(asset, violation)
+        if self.cdd_session is None:
+            return ""
+        return str(getattr(self.cdd_session.workspace, "name", "") or "")
+
+    @sub_agent
+    @action
+    def repair(self, asset: str, violation: str) -> str:
+        """repair"""
+        self.start(asset, violation)
+        return (
+            "Repair {{asset}} under {session.path}/ until validate passes. "
+            "Do not run eval from this action."
+        )
+
+    @sub_agent
+    @action
+    def eval(self) -> str:
+        """eval"""
+        return (
+            "Eval the repair: fail scan on the before version, pass scan on the "
+            "after version, pass the AI judge, generate a similar successful result, "
+            "and hold that last generate for human review."
+        )
+
+    @tool
+    def contribute(self, before_commit: str = "", after_commit: str = "") -> str:
+        self._ensure_cdd_session()
+        return (
+            f"Linked session-branch commits {before_commit} -> {after_commit}; ran eval."
+        )

@@ -19,25 +19,29 @@ from agent_bdd.agent_bdd_common import (  # noqa: F401
     build_runbook,
     read_manifest,
 )
-from agent_bdd.spec_helpers import (  # noqa: F401
-    combined_capture_text,
-    dump_run_yaml,
-    expect_capture_mentions,
-    expect_instructions_contain,
-    expect_instructions_contain_any,
-    expect_ok_action,
-    expect_ok_tool,
-    expect_tools_exclude,
-    expect_tools_include,
-    follow_instructions,
-    manifest_command_from_header,
-    read_workspace,
-    repo_root_from,
-    run_manifest_from_header,
-    run_toolset,
-    sessions_dir,
-    tools_run_captures,
-    tools_run_prompt,
+
+# Spec helpers (expects/mamba) are lazy — `python -m tools` must not require test deps.
+_SPEC_HELPER_EXPORTS = frozenset(
+    {
+        "combined_capture_text",
+        "dump_run_yaml",
+        "expect_capture_mentions",
+        "expect_instructions_contain",
+        "expect_instructions_contain_any",
+        "expect_ok_action",
+        "expect_ok_tool",
+        "expect_tools_exclude",
+        "expect_tools_include",
+        "follow_instructions",
+        "manifest_command_from_header",
+        "read_workspace",
+        "repo_root_from",
+        "run_manifest_from_header",
+        "run_toolset",
+        "sessions_dir",
+        "tools_run_captures",
+        "tools_run_prompt",
+    }
 )
 
 __all__ = [
@@ -51,25 +55,16 @@ __all__ = [
     "AgentSpecRunbook",
     "build_runbook",
     "read_manifest",
-    "combined_capture_text",
-    "dump_run_yaml",
-    "expect_capture_mentions",
-    "expect_instructions_contain",
-    "expect_instructions_contain_any",
-    "expect_ok_action",
-    "expect_ok_tool",
-    "expect_tools_exclude",
-    "expect_tools_include",
-    "follow_instructions",
-    "manifest_command_from_header",
-    "read_workspace",
-    "repo_root_from",
-    "run_manifest_from_header",
-    "run_toolset",
-    "sessions_dir",
-    "tools_run_captures",
-    "tools_run_prompt",
+    *_SPEC_HELPER_EXPORTS,
 ]
+
+
+def __getattr__(name: str) -> Any:
+    if name in _SPEC_HELPER_EXPORTS:
+        from agent_bdd import spec_helpers
+
+        return getattr(spec_helpers, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 _local = threading.local()
 

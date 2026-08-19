@@ -108,7 +108,7 @@ with description("Resolve Lifecycle Action Source Dir And Calls Via AST Walk"):
             names = [r.name for r in self.resolutions]
             expect(names).to(equal([
                 "partition", "grill", "sketch", "generate", "document",
-                "iterate", "validate", "satisfy", "repair", "improve",
+                "iterate", "validate", "satisfy", "repair", "createRule",
             ]))
             expect("generate_fixes_from_validate" in names).to(equal(False))
 
@@ -128,13 +128,13 @@ with description("Resolve Lifecycle Action Source Dir And Calls Via AST Walk"):
             expect(self.by_name["iterate"].source_dir.name).to(equal("iterate"))
             expect(self.by_name["iterate"].calls).to(contain("generate"))
 
-        with it("resolves repair to context_tools/actions/repair/ with no same-instance action call"):
-            expect(self.by_name["repair"].source_dir.name).to(equal("repair"))
+        with it("resolves repair to utilities/eval/ with no same-instance action call"):
+            expect(self.by_name["repair"].source_dir.name).to(equal("eval"))
             expect(self.by_name["repair"].calls).to(equal([]))
 
-        with it("resolves improve to context_tools/actions/repair/ after repair, still no same-instance action call"):
-            expect(self.by_name["improve"].source_dir.name).to(equal("repair"))
-            expect(self.by_name["improve"].calls).to(equal([]))
+        with it("falls back createRule to context_tools/base/"):
+            expect(self.by_name["createRule"].source_dir.name).to(equal("base"))
+            expect(self.by_name["createRule"].calls).to(equal([]))
 
         with it("falls back generate/document/validate/satisfy to context_tools/base/"):
             for name in ("generate", "document", "validate", "satisfy"):

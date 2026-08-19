@@ -148,12 +148,14 @@ def _extract_class_name(value):
     The name is in the <b> tag. Stereotype (if any) is in a separate <i> tag."""
     if not value:
         return None
-    match = re.search(r"<b>([^<]+)</b>", unescape(value))
+    # Stereotypes use <<…>> — after unescape those look like tags to [^<]+, so
+    # match through </b> instead of stopping at the first '<'.
+    match = re.search(r"<b[^>]*>(.*?)</b>", unescape(value), re.IGNORECASE | re.DOTALL)
     if match:
-        name = match.group(1).strip()
+        name = re.sub(r"\s+", " ", match.group(1)).strip()
         if " : " in name:
             name = name.split(" : ")[0].strip()
-        return name
+        return name or None
     return None
 
 
@@ -178,7 +180,7 @@ def find_cell_by_id(root, cell_id):
 def get_all_classes(root):
     """Return list of (cell_id, class_name, x, y, w, h) for all class cells."""
     classes = []
-    for cell in root.findall("mxCell"):
+    for cell in root.iter("mxCell"):
         if cell.get("vertex") != "1":
             continue
         name = _extract_class_name(cell.get("value", ""))
@@ -202,6 +204,87 @@ def get_all_edges(root):
         edge_type = _classify_edge(style)
         edges.append((cell.get("id"), edge_type, source, target))
     return edges
+
+
+def rect_clear_gap(
+    a: tuple[float, float, float, float],
+    b: tuple[float, float, float, float],
+) -> float:
+    """Exterior gap between two axis-aligned boxes (0 if they touch/overlap)."""
+    ax, ay, aw, ah = a
+    bx, by, bw, bh = b
+    dx = max(0.0, max(ax - (bx + bw), bx - (ax + aw)))
+    dy = max(0.0, max(ay - (by + bh), by - (ay + ah)))
+    x_overlap = not (ax + aw < bx or bx + bw < ax)
+    y_overlap = not (ay + ah < by or by + bh < ay)
+    if x_overlap and y_overlap:
+        return 0.0
+    if x_overlap:
+        return dy
+    if y_overlap:
+        return dx
+    return (dx ** 2 + dy ** 2) ** 0.5
+
+
+def edge_waypoint_count(edge_cell) -> int:
+    geo = edge_cell.find("mxGeometry")
+    if geo is None:
+        return 0
+    arr = geo.find("Array")
+    if arr is None:
+        return 0
+    return len(list(arr))
+
+
+# Soft ceilings for prefer-short-routes (single-module / per-aggregate pages).
+SHORT_ROUTE_MAX_WAYPOINTS = 2
+SHORT_ROUTE_MAX_BOX_GAP = 320
+
+
+def check_prefer_short_routes(root) -> list[tuple[str, str]]:
+    """Return (edge_desc, reason) for edges that are unnecessarily long/doglegged."""
+    id_to_geo: dict[str, tuple[float, float, float, float]] = {}
+    id_to_name: dict[str, str] = {}
+    for cell in root.iter("mxCell"):
+        if cell.get("vertex") != "1":
+            continue
+        geo = get_geometry(cell)
+        if not geo:
+            continue
+        cid = cell.get("id") or ""
+        if not cid:
+            continue
+        id_to_geo[cid] = geo
+        id_to_name[cid] = _extract_class_name(cell.get("value", "")) or cid
+    violations: list[tuple[str, str]] = []
+    for cell in root.iter("mxCell"):
+        if cell.get("edge") != "1":
+            continue
+        src = cell.get("source", "")
+        tgt = cell.get("target", "")
+        if src not in id_to_geo or tgt not in id_to_geo:
+            continue
+        sn = id_to_name.get(src, src)
+        tn = id_to_name.get(tgt, tgt)
+        desc = f"{sn} → {tn}"
+        nwp = edge_waypoint_count(cell)
+        gap = rect_clear_gap(id_to_geo[src], id_to_geo[tgt])
+        # Doglegs on near pairs are the clear smell; far pairs are caught by gap.
+        if nwp > SHORT_ROUTE_MAX_WAYPOINTS and gap <= SHORT_ROUTE_MAX_BOX_GAP:
+            violations.append(
+                (
+                    desc,
+                    f"{nwp} waypoints across a {gap:.0f}px gap (max {SHORT_ROUTE_MAX_WAYPOINTS}) — prefer a short orthogonal route",
+                )
+            )
+        if gap > SHORT_ROUTE_MAX_BOX_GAP:
+            violations.append(
+                (
+                    desc,
+                    f"endpoint gap {gap:.0f}px (max {SHORT_ROUTE_MAX_BOX_GAP}) — place related classes closer",
+                )
+            )
+    return violations
 
 
 def _classify_edge(style):

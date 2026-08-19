@@ -65,6 +65,7 @@ class Bdd(BaseContextTool):
     default_workspace_folder: str = "src"
     context_index_key: str = "bdd"
     _fidelity_format_defaults = dict(_FIDELITY_FORMAT_DEFAULTS)
+    supported_formats = _SUPPORTED_FORMATS
 
 
     fidelities = {
@@ -186,3 +187,13 @@ class Bdd(BaseContextTool):
         from context_tools.clean_engineering.clean_engineering import CleanEngineering
 
         return CleanEngineering().transform(source_format, target_format, content)
+
+    @tool
+    def render(self, format: str, content: str = "") -> dict:
+        """Render already-generated BDD output into ``format`` via CleanEngineering channels."""
+        if not content:
+            raise ValueError("content is required — pass the already-generated artifact")
+        source = self.format
+        if not source:
+            raise ValueError("source format is not set")
+        return self.transform(source, format, content)

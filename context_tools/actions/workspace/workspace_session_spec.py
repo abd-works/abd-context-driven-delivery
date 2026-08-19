@@ -78,16 +78,18 @@ with description("WorkspaceSession on a BaseContextTool host"):
                 self.host, "generate", toolset_path=_CAR_CHRONICLE_TOOLSET
             )
 
-        with it("should name open's session tools then CDR tools"):
+        with it("should name open's session tools then eval begin, CDR tools, eval finish"):
             expect(self.response["tools"]).to(
                 equal(
                     [
                         "ensure_session",
                         "read_context_index",
                         "record_context_root",
+                        "begin_eval_turn",
                         "read_cdr_format",
                         "list_cdrs",
                         "write_cdr",
+                        "finish_eval_turn",
                     ]
                 )
             )
@@ -137,10 +139,12 @@ with description("WorkspaceSession on a BaseContextTool host"):
                         "ensure_session",
                         "read_context_index",
                         "record_context_root",
+                        "begin_eval_turn",
                         "read_cdr_format",
                         "list_cdrs",
                         "write_cdr",
                         "add_epic",
+                        "finish_eval_turn",
                     ]
                 )
             )

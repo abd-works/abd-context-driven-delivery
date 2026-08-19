@@ -1,0 +1,23 @@
+---
+description: Always run python -m tools via the repo venv with UTF-8 — never the Windows Store python stub
+alwaysApply: true
+---
+
+# Python Tools Environment
+
+`python` / `python3` on PATH are often the **Windows Store stub** (exit 9009 / "Python was not found"). Never use them for this repo.
+
+## Rule
+
+From `abd-context-driven-delivery`, **only** use `.\tools.ps1` — it sets venv Python, UTF-8, and PYTHONPATH.
+
+First time (or after clone): `.\setup.ps1`
+
+```powershell
+.\tools.ps1 manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
+.\tools.ps1 run _req.yaml
+```
+
+**Never** use bare `python` / `python3` / `py` — Windows Store stubs fail with exit 9009.
+**Never** hand-roll PYTHONPATH — `tools.ps1` mirrors `manifest_gate._pythonpath_env()`.
+**Never** call `python -m tools` directly unless you duplicate what `tools.ps1` does.

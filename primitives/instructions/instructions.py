@@ -418,6 +418,19 @@ def _framework_action_prose(
                 locations.append((py_file.parent, py_file))
             except (TypeError, OSError):
                 continue
+        # Composed peer kits (``self.repairer``, ``self.partitioner``, …) keep
+        # prose in their own source dir — not the host's ``module_dir``.
+        for peer in instance.__dict__.values():
+            if peer is None or peer is instance:
+                continue
+            member = getattr(type(peer), action_name, None)
+            if member is None or not callable(member):
+                continue
+            try:
+                py_file = Path(inspect.getfile(member)).resolve()
+            except (TypeError, OSError):
+                continue
+            locations.append((py_file.parent, py_file))
     seen: set[Path] = set()
     for module_dir, py_file in locations:
         if module_dir in seen:

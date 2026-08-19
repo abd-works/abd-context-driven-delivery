@@ -70,6 +70,7 @@ class Stories(BaseContextTool):
     default_workspace_folder: str = "tests"
     context_index_key: str = "stories"
     _fidelity_format_defaults = _FIDELITY_FORMAT_DEFAULTS
+    supported_formats = _SUPPORTED_FORMATS
 
 
     fidelities = {
@@ -174,3 +175,13 @@ class Stories(BaseContextTool):
         canonical = source.parse(parsed_input)
         rendered = target.render(canonical)
         return {"format": target_format, "content": rendered}
+
+    @tool
+    def render(self, format: str, content: str = "") -> dict:
+        """Render already-generated story output into ``format`` via channel parse/render."""
+        if not content:
+            raise ValueError("content is required — pass the already-generated artifact")
+        source = self.format
+        if not source:
+            raise ValueError("source format is not set")
+        return self.transform(source, format, content)

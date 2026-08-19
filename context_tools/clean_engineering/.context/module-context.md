@@ -10,7 +10,7 @@ Multi-fidelity OO design and implementation generator — modules, model, specif
 
 ## Public API
 
-`CleanEngineering` — fidelity + format constructor; `contexts`; `transform`; inherited BaseContextTool lifecycle and session tools.
+`CleanEngineering` — fidelity + format constructor; `contexts`; `transform`; `render(format, content)` (calls `transform` from the current format); inherited BaseContextTool lifecycle and session tools.
 
 ## Dependencies
 
