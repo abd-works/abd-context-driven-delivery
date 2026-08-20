@@ -1,7 +1,0 @@
-# reconcile-live
-
-- **entry_id:** b7e21f4d
-- **artifact:** .context/cdd-sketch.md#Validate Email + tests/onboard-a-customer/validate-email/ (Playwright acceptance-test story, built during Phase 3 sandbox walk-through)
-- **rule:** (process) reconcile-live — any mismatch between what the app actually does and what cdd-sketch.md says gets fixed in the sketch immediately during the per-scenario acceptance-test workflow
-- **wrong:** The "Validate Email" scenario in cdd-sketch.md said the prospect is "redirected to /onboarding (line number step)" after Cognito confirmSignUp() succeeds. Built the first acceptance-test assertion against that text (waiting for the LineNumberSelector heading "Time to pick your number."), and it timed out for 30s against the live sandbox. Debugged live via a scratch Playwright script (not guessing from static code reading) and confirmed the real app redirects to /onboarding/select-plan ("Please select your plan"), not the Line Number step. Root cause: the plan chosen earlier on the pre-account /sign-up Catalog step is only a client-side SelectedPlan atom (no persistence) — it is not written to the customer's cart.bundle until the onboarding Select Plan step runs (usePlanSelect.savePlanSelected -> PATCH cart.bundle). Until that persists, getCurrentOnboardingStepUrl (src/pages/Protected/hooks/useStepRedirect.ts) sees no cart.bundle and computes 'select-plan' as the next resume step -- ahead of the Line Number step in resume precedence, even though Line Number is actually the /onboarding index route.
-- **status:** open

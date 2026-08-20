@@ -173,3 +173,7 @@ with description("a CDD orchestrator"):
                     "Separate tools run — toolset: `context_tools.ddd.ddd:Ddd` action: `sketch`"
                     in self.joined
                 ).to(equal(False))
+
+    with context("whose contexts slot is expanded"):
+        with it("should include the order-themes-by-journey rule slug"):
+            expect("order-themes-by-journey" in Cdd().contexts().expand()).to(be_true)

@@ -8,10 +8,12 @@
 
 # Bounded Context Map — {{project_name}}
 
+<!-- User-facing / wrapping system first. Vendors and systems of record sit downstream. -->
+
 ## {{ContextName}}
 
 - **Owning team:** {{team_name}}
-- **Scope:** {{what this context owns}}
+- **Scope:** {{what this context owns — language and change-frequency, not a UI theme}}
 - **Implementation:** {{monolith module | microservice | shared library | legacy system | external vendor}}
 
 ### {{AggregateRoot}}
@@ -66,7 +68,7 @@
 ## {{AnotherContext}}
 
 - **Owning team:** {{team_name}}
-- **Scope:** {{what this context owns}}
+- **Scope:** {{what this context owns — language and change-frequency, not a UI theme}}
 - **Implementation:** {{implementation type}}
 
 ### {{AggregateRoot}}
@@ -77,6 +79,8 @@
 - **Cross-aggregate refs:** {{OtherRoot}} (by ID) — consistency: {{immediate | eventual | snapshot}}; rule: {{…}}
 
 ## Dependencies
+
+<!-- Hang each arc on the owning Source → Target pair. Do not invent a Cross-Context Relationships dump. -->
 
 ### {{SourceContext}} → {{TargetContext}}
 

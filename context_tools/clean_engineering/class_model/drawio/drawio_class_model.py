@@ -1213,14 +1213,22 @@ def _parse_module_html(value: str) -> Tuple[Optional[str], str, List[str]]:
     return name, purpose, terms
 
 
-def _display_class_name(name: str) -> str:
-    """Human-facing class title: plain name plus stereotypes, without ``extends``."""
+def _tactical_stereotypes(name: str) -> list[str]:
     n = re.sub(r"\*+", "", name)
-    base = _plain_class_name(name)
-    stereotypes = re.findall(r"<<[^>]+>>", n)
-    if stereotypes:
-        return f"{base} {' '.join(s.strip() for s in stereotypes)}"
-    return base
+    return [s.strip() for s in re.findall(r"<<[^>]+>>", n)]
+
+
+def _display_class_name(name: str) -> str:
+    """Plain class title. Stereotypes render above the name, not in it."""
+    return _plain_class_name(name)
+
+
+def _stereotype_html(name: str) -> str:
+    stereotypes = _tactical_stereotypes(name)
+    if not stereotypes:
+        return ""
+    label = " ".join(stereotypes)
+    return f'<i style="font-size:9px;color:#888;">{html.escape(label)}</i><br/>'
 
 
 def _build_class_html(oclass: OoadClass) -> str:
@@ -1236,7 +1244,9 @@ def _build_class_html(oclass: OoadClass) -> str:
         for op in oclass.operations
     ) or "<br/>"
     return (
-        f'<p style="margin:0px;margin-top:4px;text-align:center;"><b>{name_html}</b></p>'
+        f'<p style="margin:0px;margin-top:4px;text-align:center;">'
+        f"{_stereotype_html(oclass.name)}"
+        f"<b>{name_html}</b></p>"
         f'<hr size="1"/>'
         f'<p style="margin:0px;margin-left:4px;font-size:10px;">{props_html}</p>'
         f'<hr size="1"/>'
@@ -1351,7 +1361,9 @@ def _build_imported_class_html(oclass: OoadClass, from_module: str) -> str:
     return (
         f'<p style="margin:0px;margin-top:2px;text-align:center;font-size:10px;">'
         f"<i>{from_html}</i></p>"
-        f'<p style="margin:0px;text-align:center;"><b>{name_html}</b></p>'
+        f'<p style="margin:0px;text-align:center;">'
+        f"{_stereotype_html(oclass.name)}"
+        f"<b>{name_html}</b></p>"
         f'<hr size="1"/>'
         f'<p style="margin:0px;margin-left:4px;font-size:10px;">{props_html}</p>'
         f'<hr size="1"/>'

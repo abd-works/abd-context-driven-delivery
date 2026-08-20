@@ -32,6 +32,16 @@ class Iterator:
         return "iterate-tick"
 
     @action
+    def iterate(self, tools: list) -> str:
+        """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
+        for tool in tools:
+            tool.workspace.open()
+            tool.decisions.record_decisions_session()
+            self.iterate_session()
+            tool.generate()
+        return "Iterate complete; generate instructions applied."
+
+    @action
     def iterate_session(self, plan: str = "") -> str:
         """Iterate host generate output through an explicit grill_with_context call. Question shape (frame + options) comes from grill_with_context - do not restate bare options here. Each tick writes ONLY the slice unlocked by the last 2-3 answers, then validates and applies one fix pass. Filling the whole map/artifact from index, memory, or templates in one tick is a DEFECT - it defeats this tool."""
         """Step 0 - Grill the iterate plan (concept-grounded questions via grill_with_context). Ask ONE question at a time. Do not pre-author artifacts while grilling. grill_with_context prove-read applies every question: Read every relevant referenced context (segment, module-context, grill-answers, story-context, build-order, cited paths, ...) before options; index stubs are not inventory."""

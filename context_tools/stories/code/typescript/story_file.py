@@ -14,7 +14,8 @@ the story file owns no assertions and no tier mechanism itself:
         scenario("...", ({ given, when, then }) => {
           given("a cart with items", () => h.givenACartWithItems());
           when("the customer submits the order", () => h.whenTheCustomerSubmitsTheOrder());
-          then("the order is confirmed", () => h.thenTheOrderIsConfirmed());
+          then("the order is confirmed", () => h.thenTheOrderIsConfirmed())
+            .and("an order number is returned", () => h.thenAnOrderNumberIsReturned());
         });
       });
     }
@@ -92,11 +93,17 @@ def _render_scenario(scenario, method_for) -> List[str]:
             lines.append(
                 f"      when({_ts_string(method.display_text)}, () => h.{method.name}());"
             )
-        for clause in interaction.then:
+        then_lines: List[str] = []
+        for i, clause in enumerate(interaction.then):
             method = method_for("then", clause.text)
-            lines.append(
-                f"      then({_ts_string(method.display_text)}, () => h.{method.name}());"
+            verb = "then" if i == 0 else ".and"
+            indent = "      " if i == 0 else "        "
+            then_lines.append(
+                f"{indent}{verb}({_ts_string(method.display_text)}, () => h.{method.name}())"
             )
+        if then_lines:
+            then_lines[-1] += ";"
+            lines.extend(then_lines)
     lines.append("    });")
     lines.append("")
     return lines

@@ -8,7 +8,7 @@ Sketch increments next if there will be more than one.
 
 Then detail groups of related stories together — e.g. stories for a sub-epic in a particular increment. Narrate in e2e flow order.
 
-When detailing stories, start with the main-flow scenario (including domain objects usable for examples); then other scenarios, real example data, etc.
+When detailing stories, start with the main-flow scenario (including domain objects usable for examples); then other scenarios, real example data, etc. Given names only conditions the running system actually checks. When is the domain operation. Then asserts; further outcomes are `And` / `.and()`.
 
 **Unmapped areas** live here as `* approx N–M stories…` lines — not in a separate outline map. Discovery materializes named stories; drop approx lines once those stories are named on the real map.
 
@@ -36,13 +36,13 @@ Do **not** tag lines with fidelity markers. Depth is what you fill:
         {Actor} --> {Confirming story verb-noun}
             given {shared setup}                    // specification only
             {main scenario name}
-                given {precondition with object.field}
+                given {precondition the running system actually checks}
                     and {precondition with object.object.field}
                     and …
-                when {action}
+                when {the domain operation}
                     and …
                 then {observable outcome {object.field=descriptive term}}
-                    and …
+                    and {next observable outcome}
             {next scenario name}                    // specification only
                 …
         {Actor} --> {Confirming story verb-noun}

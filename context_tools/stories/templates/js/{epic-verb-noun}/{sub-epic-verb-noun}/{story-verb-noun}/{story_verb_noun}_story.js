@@ -15,6 +15,7 @@
  * @property {function(): (void|Promise<void>)} givenPrecondition
  * @property {function(): (void|Promise<void>)} whenAction
  * @property {function(): (void|Promise<void>)} thenOutcome
+ * @property {function(): (void|Promise<void>)} thenAndOutcome
  */
 
 import { scenario, story } from "../../../story-test.js";
@@ -25,7 +26,8 @@ export function create{StoryVerbNoun}Story(h) {
     scenario("{main-flow outcome name}", ({ given, when, then }) => {
       given("{given step text}", () => h.givenPrecondition());
       when("{when step text}", () => h.whenAction());
-      then("{then step text}", () => h.thenOutcome());
+      then("{then step text}", () => h.thenOutcome())
+        .and("{and step text}", () => h.thenAndOutcome());
     });
   });
 }

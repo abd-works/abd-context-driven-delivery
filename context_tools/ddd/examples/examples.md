@@ -7,7 +7,7 @@
 ## Catalog
 
 - **Owning team:** Merchandising
-- **Scope:** Product identity and pricing.
+- **Scope:** Product identity and pricing. Changes slower than carts and checkout — its own context, not a "Catalog page" theme.
 - **Implementation:** monolith module
 
 ### Product
@@ -20,7 +20,7 @@
 ## Sales
 
 - **Owning team:** Checkout
-- **Scope:** Shopping carts, checkout, discounts.
+- **Scope:** Shopping carts, checkout, discounts. Faster-changing than Catalog identity; cart and payment live here — not under a slow Customer identity context, and not under an "Onboarding" UI theme.
 - **Implementation:** monolith module
 
 ### ShoppingCart

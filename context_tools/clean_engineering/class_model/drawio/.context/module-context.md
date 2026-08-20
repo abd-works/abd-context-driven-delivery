@@ -18,4 +18,4 @@ Miniature kit for Clean Engineering Draw.io class / modules diagrams: create the
 
 ## Known scan notes
 
-Judgment rules in `drawio.md` (e.g. `module-spatial-cohesion`, `ull-bullets-become-rows`) have no scanner — validate covers them as critical-judge prose.
+Judgment rules in `drawio.md` (e.g. `module-spatial-cohesion`, `ull-bullets-become-rows`, `aggregate-layout-cohesion`) have no scanner — validate covers them as critical-judge prose. `stereotype-above-class-name` is mechanical and has a scanner.

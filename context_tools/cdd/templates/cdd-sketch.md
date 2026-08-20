@@ -22,6 +22,8 @@ Grill and sketch work **finer** than the stage run scope. AI recommends theme ki
 A theme is what ties a cluster: **epic**, **module**, **user goal (screens)**, **entire increment**, or any one of those.  
 Ask the user which kind for the next cluster; lead with a recommendation from stage + context.
 
+When the theme **is** the customer journey / epic, list themes in **story-map / customer-experience order** (`order-themes-by-journey`) — Onboarding before Selfcare — not UX IA / sitemap order.
+
 Under a theme, include only the concept blocks you are advancing this cycle. When present, prefer order: stories → ddd → ux → clean_engineering → bdd (bdd from explore on).
 
 ### Lens blocks — child generator notation only

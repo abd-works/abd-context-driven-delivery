@@ -160,5 +160,38 @@ with description("Stories"):
         with it("should include the verb-noun-format rule slug"):
             expect("verb-noun-format" in self.contexts).to(be_true)
 
+        with it("should include the gwt-steps-trace-to-domain-operations rule slug"):
+            expect("gwt-steps-trace-to-domain-operations" in self.contexts).to(be_true)
+
+        with it("should include the reconcile-live-immediately rule slug"):
+            expect("reconcile-live-immediately" in self.contexts).to(be_true)
+
+        with it("should include the explain-deep-link-arrival rule slug"):
+            expect("explain-deep-link-arrival" in self.contexts).to(be_true)
+
+        with it("should include the then-and-chaining rule slug"):
+            expect("then-and-chaining" in self.contexts).to(be_true)
+
+        with it("should include the when-holds-the-operation rule slug"):
+            expect("when-holds-the-operation" in self.contexts).to(be_true)
+
+        with it("should include the given-only-what-the-system-checks rule slug"):
+            expect("given-only-what-the-system-checks" in self.contexts).to(be_true)
+
+        with it("should include the load-with-identity-in-hand rule slug"):
+            expect("load-with-identity-in-hand" in self.contexts).to(be_true)
+
+        with it("should include the reuse-owning-aggregate-stubs rule slug"):
+            expect("reuse-owning-aggregate-stubs" in self.contexts).to(be_true)
+
+        with it("should include the infrastructure-in-lifecycle-hooks rule slug"):
+            expect("infrastructure-in-lifecycle-hooks" in self.contexts).to(be_true)
+
+        with it("should include the extract-assertion-helper rule slug"):
+            expect("extract-assertion-helper" in self.contexts).to(be_true)
+
+        with it("should include the seed-prior-story-as-given rule slug"):
+            expect("seed-prior-story-as-given" in self.contexts).to(be_true)
+
         with it("should name the story_map fidelity"):
             expect("story_map" in self.contexts).to(be_true)

@@ -74,6 +74,27 @@ with description("a TypeScript runnable-story Story Map") as self:
         with it("should include story-test shared helper"):
             expect("tests/story-test.ts" in self.tree).to(be_true)
 
+    with context("a scenario with two Then outcomes"):
+        with it("should chain the second outcome with .and()"):
+            story = Story("Select Plan", 1, StoryType.USER)
+            sc = Scenario(name="catalog listed", sequential_order=1)
+            sc.given = [Clause(text="plans exist", phase=Phase.GIVEN)]
+            sc.interactions = [
+                Interaction(
+                    when=[Clause(text="they view the catalog", phase=Phase.WHEN)],
+                    then=[
+                        Clause(text="names are shown", phase=Phase.THEN),
+                        Clause(text="prices are shown", phase=Phase.THEN),
+                    ],
+                )
+            ]
+            story.scenarios.append(sc)
+            from context_tools.stories.code.typescript.story_file import render_story_file
+
+            src = render_story_file(story)
+            expect(".and(" in src).to(be_true)
+            expect(src.count("then(")).to(equal(1))
+
     with context("round-trip"):
         with before.each:
             self.parsed = self.ts.parse(self.ts.render(_story_map_with_stories()))

@@ -47,6 +47,7 @@ Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 
 - **One file per engagement** — deepening fidelity (discovery → explore → spec → engineer) updates `fidelity:` at the top and deepens blocks in place. Never create a new file for a new fidelity.
 - **Themes** — group lens blocks under one theme (epic, module, user goal, increment, or sub-epic).
+- **`order-themes-by-journey`** — When the theme **is** the customer journey / epic, list themes in story-map experience order (Onboarding before Selfcare). Do not follow UX IA / sitemap order.
 - **Beside each other** — lens blocks under a theme stay close and comparable; not separate files.
 - **Flow** — after each chunk: more at this stage, or proceed. Recommend proceed only when views agree.
 - **Trail** — `TODO` → `doing` → `pass #label` (or `skip #why`). Move passes to `## log` as `stage / scope / theme / …`.
@@ -58,6 +59,7 @@ Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 - **`views-agree-before-proceed`** — Recommend proceed only when the views in play for the current scope agree; otherwise more at the same stage. User can override.
 - **`todo-trail-in-sketch`** — Persist actions as TODO/doing/pass #label in the sketch; archive passes under `## log`.
 - **`scaffold-before-content`** — **Hard gate.** Do not write `cdd-sketch.md` (or a file called `sketch.md`) until you have (1) **read** `templates/cdd-sketch.md` and each active child's `sketch_template` from `resolve_targets`, and (2) **AskQuestion** has confirmed which lenses are in play (`confirm-lenses-before-sketch`). Free prose instead of the scaffold is a defect.
+- **`order-themes-by-journey`** — When the theme is the customer journey / epic, order themes by the story map / customer experience (Onboarding before Selfcare), not by UX IA.
 
 ---
 # Generate

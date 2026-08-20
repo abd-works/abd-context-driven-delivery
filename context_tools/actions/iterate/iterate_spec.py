@@ -54,3 +54,39 @@ with description("an Iterator"):
             expect(joined).to(contain("Do not chain ticks"))
             expect(joined).to(contain("Hard gate"))
             expect(joined).to(contain("Ask ONE question at a time"))
+
+
+class _ContextTool:
+    def __init__(self, steps: list[str]) -> None:
+        self.steps = steps
+        self.workspace = self
+        self.decisions = self
+
+    def open(self) -> None:
+        self.steps.append("open")
+
+    def record_decisions_session(self) -> None:
+        self.steps.append("record_decisions")
+
+    def generate(self) -> str:
+        self.steps.append("generate")
+        return "ok"
+
+
+class _Iterator(Iterator):
+    def __init__(self, steps: list[str]) -> None:
+        self.steps = steps
+
+    def iterate_session(self, plan: str = "") -> str:
+        self.steps.append("iterate_session")
+        return "ok"
+
+
+with description("an iterate action"):
+    with context("that is given one context tool"):
+        with it("should open the workspace, record decisions, run iterate_session, and generate"):
+            steps: list[str] = []
+            _Iterator(steps).iterate(tools=[_ContextTool(steps)])
+            expect(steps).to(
+                equal(["open", "record_decisions", "iterate_session", "generate"])
+            )

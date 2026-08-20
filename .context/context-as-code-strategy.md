@@ -62,7 +62,7 @@ One increment at a time. Green, then the next, until the outline is covered.
 
 ### 1 — Set up the sandbox
 
-Isolate the app with [ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/utilities/context_setup). Classify externals, write the **minimum** stubs (canned neighbor bodies) at the outermost boundary, smoke-test, scout pages. Do not stub the seam you are proving. Point it at the **application repository on disk**. That writes `tests/stubs/{system}/` (global) or `domain/{aggregate}/stubs/{system}/` (domain-owned) and `sandbox/extracted-context/app-extraction/` in the **capture repo**. Never a domain folder inside `tests/` or inside `tests/stubs/`.
+Isolate the app with [ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/utilities/context_setup). Classify externals, write the **minimum** stubs (canned neighbor bodies) at the outermost boundary, smoke-test, scout pages. Do not stub the seam you are proving. For a **non-core** aggregate, take stubs from **that aggregate's folder / source repository** (`domain/{bounded-context}/{aggregate}/stubs/{system}/`) — do not invent a stub inside the story test. Point it at the **application repository on disk**. That writes `tests/stubs/{system}/` (global) or `domain/{aggregate}/stubs/{system}/` (domain-owned) and `sandbox/extracted-context/app-extraction/` in the **capture repo**. Never a domain folder inside `tests/` or inside `tests/stubs/`.
 
 ```
 /context-setup /capture_from_live_app

@@ -12,6 +12,7 @@ export interface {StoryVerbNoun}Helper {
   givenPrecondition(): void | Promise<void>;
   whenAction(): void | Promise<void>;
   thenOutcome(): void | Promise<void>;
+  thenAndOutcome(): void | Promise<void>;
 }
 
 export function create{StoryVerbNoun}Story(h: {StoryVerbNoun}Helper): void {
@@ -19,7 +20,8 @@ export function create{StoryVerbNoun}Story(h: {StoryVerbNoun}Helper): void {
     scenario("{main-flow outcome}", ({ given, when, then }) => {
       given("{given step text}", () => h.givenPrecondition());
       when("{when step text}", () => h.whenAction());
-      then("{then step text}", () => h.thenOutcome());
+      then("{then step text}", () => h.thenOutcome())
+        .and("{and step text}", () => h.thenAndOutcome());
     });
   });
 }

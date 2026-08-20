@@ -145,6 +145,30 @@ with description("a Ddd toolset"):
             prose = Ddd().contexts().expand()
             expect("experts-words-preferred" in prose).to(be_true)
 
+        with it("should include the bc-by-lifecycle-not-ui-themes rule slug"):
+            prose = Ddd().contexts().expand()
+            expect("bc-by-lifecycle-not-ui-themes" in prose).to(be_true)
+
+        with it("should include the repository-is-collection-lifecycle rule slug"):
+            prose = Ddd().contexts().expand()
+            expect("repository-is-collection-lifecycle" in prose).to(be_true)
+
+        with it("should include the shared-identity-is-generalisation rule slug"):
+            prose = Ddd().contexts().expand()
+            expect("shared-identity-is-generalisation" in prose).to(be_true)
+
+        with it("should include the hang-deps-on-owning-bc rule slug"):
+            prose = Ddd().contexts().expand()
+            expect("hang-deps-on-owning-bc" in prose).to(be_true)
+
+        with it("should include the user-facing-system-first rule slug"):
+            prose = Ddd().contexts().expand()
+            expect("user-facing-system-first" in prose).to(be_true)
+
+        with it("should include the load-with-identity-in-hand rule slug"):
+            prose = Ddd().contexts().expand()
+            expect("load-with-identity-in-hand" in prose).to(be_true)
+
         with it("should name the bounded_context fidelity"):
             prose = Ddd().contexts().expand()
             expect("bounded_context" in prose).to(be_true)
