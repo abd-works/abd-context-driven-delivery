@@ -10,18 +10,17 @@
 #   {ScenarioLabel}   context label (e.g. "with agent and generate action")
 #   {SetupPath}       workspace-relative path the agent should read first
 #   {ExpectedKeyword} substring the response.instructions must contain
+#   {PassFixturePath}  pass-file fixture (repairedAsset / examples/evals/.../pass.md)
 #   {JudgeRubric}     one sentence describing PASS criteria
 # =============================================================================
 
-from expects import be_true, expect
 from mamba import context, description, it
 
 from agent_bdd import (
     agent,
-    ai_judge,
     expect_instructions_contain,
     expect_ok_action,
-    follow_instructions,
+    generate_and_judge,
     read_workspace,
     repo_root_from,
     run_toolset,
@@ -45,9 +44,4 @@ with description("{Description}"):
                 expect_ok_action(response, "{ActionName}")
                 expect_instructions_contain(response, "{ExpectedKeyword}")
 
-                artifact = follow_instructions(
-                    "Follow the {ActionName} instructions and produce the artifact.",
-                    timeout_seconds=300,
-                ).text
-                expect(len(artifact) > 0).to(be_true)
-                ai_judge(artifact, "{JudgeRubric}")
+                generate_and_judge("{PassFixturePath}", "{JudgeRubric}")

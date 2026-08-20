@@ -30,6 +30,15 @@ class PhysicalFolderScanner(ModuleScanner):
                 )
             )
             return violations
+        if ".context/sessions" in module.context_file.as_posix():
+            violations.append(
+                self.violation(
+                    f"Module '{module.folder.name}' has module-context.md under "
+                    f".context/sessions/; that file belongs beside the module source, "
+                    f"not in the session folder.",
+                    location=str(module.context_file),
+                )
+            )
         if not module.python_files:
             violations.append(
                 self.violation(

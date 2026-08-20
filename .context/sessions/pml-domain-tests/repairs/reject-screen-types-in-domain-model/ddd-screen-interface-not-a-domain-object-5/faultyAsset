@@ -1,0 +1,6 @@
+export interface PaymentMethodPage {
+  open(): Promise<void>
+  currentCardLastFour(): Promise<string | null>
+  startChangeCard(): Promise<void>
+  isUpdateStepShown(): Promise<boolean>
+}

@@ -1,0 +1,3 @@
+transform used only ## CE Domain slice (Customer, Cart, Portability, PersonaResponse, accountAtom + simplified Subscription/Billing).
+Sketch Selfcare DDD also defines Metadata, Identity, EnterpriseIdentity, Address, Bundle, Plan/PlanResponse, Payment, InvoicesInfo, Session/Credential, etc.
+User: way more entities in the sketch — big mistake.

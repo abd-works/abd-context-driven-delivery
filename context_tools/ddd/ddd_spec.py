@@ -46,9 +46,9 @@ _support = _DddSpecSupport()
 
 with description("a Ddd toolset"):
     with context("that is created"):
-        with context("with bounded_context fidelity"):
+        with context("with scaffold fidelity"):
             with it("should default to markdown format"):
-                expect(Ddd(fidelity="bounded_context").format).to(equal("markdown"))
+                expect(Ddd(fidelity="scaffold").format).to(equal("markdown"))
 
         with context("with building_blocks fidelity"):
             with it("should default to markdown format"):
@@ -67,6 +67,41 @@ with description("a Ddd toolset"):
                 expect(
                     lambda: Ddd(fidelity="bounded_context", format="yaml")
                 ).to(raise_error(ValueError))
+
+    with context("whose document action chooses a working folder"):
+        with it("should keep src as the generate default"):
+            expect(Ddd().workspace.default_workspace_folder).to(equal("src"))
+            expect(Path(Ddd().workspace.path).name).to(equal("src"))
+
+        with it("should switch the working folder to domain"):
+            ddd = Ddd()
+            ddd.apply_document_workspace_default()
+            expect(ddd.workspace.default_workspace_folder).to(equal("domain"))
+            expect(Path(ddd.workspace.path).name).to(equal("domain"))
+
+        with it("should keep an explicit path"):
+            ddd = Ddd(path="wraps")
+            ddd.apply_document_workspace_default()
+            expect(ddd.workspace.path).to(equal("wraps"))
+
+        with it("should keep an overwritten default_workspace_folder"):
+            ddd = Ddd()
+            ddd.workspace.default_workspace_folder = "packages"
+            ddd.workspace.path = str(Path(ddd.workspace.workspace_root) / "packages")
+            ddd.apply_document_workspace_default()
+            expect(Path(ddd.workspace.path).name).to(equal("packages"))
+
+        with it("should tell document to apply the domain default first"):
+            steps = _support.tool_steps(_support.ddd(), "document")
+            names = tuple(step.split("(")[0] for step in steps)
+            expect("apply_document_workspace_default" in names).to(be_true)
+
+        with it("should pass DDD's working path into CleanEngineering without changing CE's default"):
+            ddd = Ddd()
+            ddd.apply_document_workspace_default()
+            ce = ddd.ce()
+            expect(Path(ce.workspace.path).name).to(equal("domain"))
+            expect(CleanEngineering.default_workspace_folder).to(equal("src"))
 
     with context("that provides a CleanEngineering companion"):
         with context("with bounded_context fidelity"):

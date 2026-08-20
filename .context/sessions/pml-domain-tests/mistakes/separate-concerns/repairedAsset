@@ -1,0 +1,1 @@
+given seeds the outcome; and prospect.cart.selectSim('eSIM') (now at ProfileKyc because cart.simType is set); when prospect.verifyIdentity(); then assert on the same prospect. Service stays underneath the prospect method. seedOutcome remains on the service as test seeding.

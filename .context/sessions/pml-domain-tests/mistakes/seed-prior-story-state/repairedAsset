@@ -1,0 +1,6 @@
+// Seed the subscriber repository. seed() returns the signed-in aggregate.
+// No Sign In UI, no authenticate(), no second load.
+
+given('a customer is signed in', async () => {
+  subscriber = await aSignedInCustomer(paradise)
+})

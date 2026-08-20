@@ -1,0 +1,1 @@
+Every dependency edge is labeled pattern + entities (Shared Kernel: Customer; ACL: Customer, Plan, Cart…; Conformist: …; Customer/Supplier: BulkOperation). Same Pattern/Entities fields added on each Depends on in bounded-context-map.md.

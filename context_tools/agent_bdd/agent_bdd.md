@@ -26,7 +26,7 @@ The **`bdd`** generator supplies the underlying test discipline (RED-GREEN, AAA,
 ## Assertions
 
 - **`assert-on-response-fields`** — Structural checks target `response.ok`, `response.action`, `response.tools`, `response.arguments`, and substrings in `response.instructions`. These are cheap and deterministic.
-- **`judge-qualitative-outcomes`** — Free-form outputs (generated markdown, natural-language artifacts) go through `ai_judge(output, rubric)` inside the `with agent(...)` block. `ai_judge` raises `AssertionError(reason)` on FAIL — it is self-contained like `expect`. No return value to store or check.
+- **`judge-qualitative-outcomes`** — Free-form outputs (generated markdown, natural-language artifacts) go through `ai_judge(output, rubric)` inside the `with agent(...)` block. `ai_judge` raises `AssertionError(reason)` on FAIL — it is self-contained like `expect`. No return value to store or check. For a **pass fixture** (mistake / generate regression), call `generate_and_judge(pass_path)` — it generates something similar to that file, judges it, and returns the artifact to hold for human review.
 - **`no-mocking-the-harness`** — Agent specs test the real agent end-to-end. Never mock `agent()`, the block, the harness helpers, or the agent's output.
 
 ## Timeouts

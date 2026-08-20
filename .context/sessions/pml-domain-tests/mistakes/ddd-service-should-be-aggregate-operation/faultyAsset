@@ -1,0 +1,4 @@
+export interface CheckoutService {
+  seedPayment(options: { status?: 'completed' | 'failed'; payUpFront?: boolean }): Promise<void>
+  capturePayment(): Promise<OrderResult>
+}

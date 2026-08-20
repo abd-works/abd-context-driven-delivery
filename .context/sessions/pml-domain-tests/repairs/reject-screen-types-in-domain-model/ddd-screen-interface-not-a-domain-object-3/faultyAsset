@@ -1,0 +1,9 @@
+export interface Dashboard {
+  open(): Promise<void>
+  isShowing(): Promise<boolean>
+  dataSectionTitle(): Promise<string | null>
+  dataConsumptionText(): Promise<string | null>
+  unlimitedLabelVisible(): Promise<boolean>
+  billsSectionTitle(): Promise<string | null>
+  latestInvoiceAmount(): Promise<string | null>
+}

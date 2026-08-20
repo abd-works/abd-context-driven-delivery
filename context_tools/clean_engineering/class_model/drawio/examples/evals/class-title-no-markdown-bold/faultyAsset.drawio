@@ -1,0 +1,13 @@
+<mxfile host="eval">
+  <diagram name="Page">
+    <mxGraphModel>
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="2" vertex="1" parent="1" value="&lt;b&gt;**Prospect** &amp;lt;&amp;lt;Aggregate Root&amp;gt;&amp;gt;&lt;/b&gt;">
+          <mxGeometry x="40" y="40" width="200" height="80" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

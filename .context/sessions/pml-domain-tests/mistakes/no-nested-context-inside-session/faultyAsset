@@ -1,0 +1,1 @@
+User: nested context inside context makes no sense. Session root should be the session folder; .context belongs under workspace root only.

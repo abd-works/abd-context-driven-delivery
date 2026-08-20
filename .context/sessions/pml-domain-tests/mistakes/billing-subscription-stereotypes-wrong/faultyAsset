@@ -1,0 +1,1 @@
+Billing is an Entity accessed only via Subscriber (lifecycle tied to Subscriber) — not an AR. Subscription is an invariant of Subscriber — Entity, not AR. Invoice, Transaction, Payment all have their own ids — they are Entities not Value Objects.

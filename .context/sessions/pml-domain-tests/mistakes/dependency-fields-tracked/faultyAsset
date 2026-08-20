@@ -1,0 +1,2 @@
+Sketch Cross-Context Relationships e.g. Billing → Customer as Conformist while billing data is nested on Customer payload; Portability/Customer and Catalog arcs similarly need clear upstream/downstream naming on both sides.
+Agent did not challenge or correct direction vs integrate mechanism before drawing conclusions.

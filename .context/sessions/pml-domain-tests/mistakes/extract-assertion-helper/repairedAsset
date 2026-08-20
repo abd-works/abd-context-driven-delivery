@@ -1,0 +1,1 @@
+Added expectActualToEqualExpectedPlan(actual, expected) helper at module scope; expected is a plain data bag { name, price, totalPrice, features: string[][] }; each .and() block is now a single call passing the plan and its expected values

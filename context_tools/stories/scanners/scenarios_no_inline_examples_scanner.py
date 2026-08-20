@@ -38,8 +38,8 @@ class ScenariosNoInlineExamplesScanner(StoryWorkspaceScanner):
             example_clause = offending[0]
             yield self.violation(
                 f"Scenario {sc.name!r}: step {example_clause.text!r} contains "
-                f"a concrete example value - load it from {{Type}}ExampleFactory "
-                f"(helper.given... / load*) instead of inventing values in the story",
+                f"a concrete example value - load it from examples/ or givens.ts "
+                f"at the lowest shared epic/sub-epic/story folder instead of inventing values in the story",
                 location=self.loc(sc, f"scenario {sc.name!r}"),
                 severity="warning",
             )

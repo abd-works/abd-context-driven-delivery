@@ -1,0 +1,1 @@
+when('the prospect opens the catalog', async () => { // getAvailablePlans() handles navigation internally })

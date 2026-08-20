@@ -8,9 +8,15 @@ itself; Correction owns applying a fix (status=fixed, fixedIn the closing Turn);
 Repair owns the repair loop (including opening a CDD session) and a separate
 eval tool. Host `createRule` writes a new rule and matching scanner when scan
 does not already match the Mistake. Persist
-as one session.yaml plus `{session.folder}/mistakes/{mistake-name}/`
-(faultyAsset / repairedAsset, named after the mistake — not a theme). Eval
-fixtures stay under `evals/` and are a later, separate step.
+as one session.yaml plus `{session.folder}/mistakes/{mistake-name}/` while
+open (`faultyAsset` is a copy of the artifact file — the `.drawio` / source
+/ sketch — not a diagnosis; `mistake.md` holds rule / wrong). A correction creates
+`{session.folder}/repairs/{theme}/` (sibling of `mistakes/`, named after the
+improvement/problem theme) with `improvement.md` and the Mistake folders
+nested inside. Same-theme mistakes share that folder. A batch of open
+mistakes writes `{session.folder}/batch-improvements.md` (theme / already in
+the tool / why it failed / improvement) before applying. Eval fixtures stay
+under `evals/` and are a later, separate step.
 
 ## Primary use case
 While an agent chat reply is in progress, attach tool calls and mistakes to an
@@ -25,9 +31,9 @@ Locations stay in workspace; eval owns the domain story used for RCA and evals.
 `EvalSession`, `Turn`, `ToolCall`, `Mistake`, `Correction`, `WorkspaceRepo`,
 `CDDRepo` (extends WorkspaceRepo), `TurnCommit`, `Repair`, `Archive`. An asset
 EvalSession holds `workspaceRepo`, `cddRepo`, and `cddAt` (tool checkout linked
-once). Repair opens a WorkspaceSession on the CDD clone. Eval package also holds
-explicit vanilla BDD specs and agent-BDD specs (before-fail / after-pass +
-agentic validate).
+once). Repair opens a WorkspaceSession on the CDD clone. Mistake regression uses Bdd
+`expect_scan_fails` / `expect_scan_passes` and AgentBdd `generate_and_judge` —
+not a parallel spec harness in this package.
 
 ## Constraint
 Callers construct `EvalSession` with a workspace area that already has
@@ -49,7 +55,8 @@ Callers construct `EvalSession` with a workspace area that already has
 - BaseContextTool holds `self.eval` (this EvalSession) beside `self.workspace`
 - Host wiring: `@log` → `SessionLog.append` → `record_tool_call`; Base
   `log_mistake` / `log_correction` forward to `self.repairer` (session.yaml
-  plus `{session.folder}/mistakes/{name}/`; not mistakes.log).
+  plus `{session.folder}/mistakes/{name}/` until a correction nests them
+  under `{session.folder}/repairs/{theme}/`; not mistakes.log).
   Base registers `begin_eval_turn` / `finish_eval_turn` on generate, validate,
   document, partition, repair, eval, and createRule so the agent runs them. grill /
   sketch / iterate / satisfy do not register their own — they delegate.
@@ -70,5 +77,7 @@ clone holds a consumable `mistakes/` record. Logging on the project does not
 mirror in real time — the bring-over happens when repair starts.
 `eval` is a separate tool that may open its own session on that clone if repair
 has not. When the working area sits inside this clone (e.g. `sandbox/…`), both
-share that **same** git root. Isolated paths with no git stay `Null*`. `Null*`
-variants remain for isolated unit tests only.
+share that **same** git root. If either clone cannot be connected,
+`repos_for_workspace` raises `EvalGitConnectError` — do not proceed unless the
+user says to continue without git. `Null*` variants remain for isolated unit
+tests that inject them explicitly; live bind never falls back to Null.

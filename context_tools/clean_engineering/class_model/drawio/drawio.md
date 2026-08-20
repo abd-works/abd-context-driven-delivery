@@ -10,6 +10,8 @@ Rules for rendering and auditing UML class diagrams in Draw.io under clean engin
 
 One page per module / Key Abstraction (KA). Page name matches the module/KA name. Local classes live on that page; cross-boundary types appear as **imported** cards at the top.
 
+- **`class-title-no-markdown-bold`** — Class titles are plain text inside the HTML `<b>` tag. Do not bake markdown `**name**` into the label; bold is already the `<b>` wrapper. `**Prospect**` displayed inside `<b>` shows the asterisks.
+
 ### Hierarchy rules
 
 - **`base-above-derived`** — Base and imported ancestor classes sit at higher vertical positions (lower `y`) than their derived classes. Inheritance arrows point **upward** (child → parent). Sibling subtypes share a `y` row side by side below the parent. Do not put a base below its children, and do not flatten grandchild and grandparent onto the same row.

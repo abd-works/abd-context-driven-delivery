@@ -1,0 +1,1 @@
+User asked that from now on all mistakes be logged using a sub-agent so the main agent does not block. Prior turn called log_mistake inline in the parent agent.

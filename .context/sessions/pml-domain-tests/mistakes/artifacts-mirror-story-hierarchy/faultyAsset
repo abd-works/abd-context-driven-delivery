@@ -1,0 +1,7 @@
+When each story maps to exactly one e2e file, do not nest tests/{epic}/{story}/ just to hold that file and a scenario.md. Place both artifacts flat at the epic level, named after the story slug:
+  tests/onboard-a-customer/select-plan-onboarding.e2e.ts
+  tests/onboard-a-customer/select-plan-onboarding.md
+Not:
+  tests/onboard-a-customer/select-plan-onboarding/select_plan_onboarding.e2e.ts
+  tests/onboard-a-customer/select-plan-onboarding/scenario.md
+The artifacts-mirror-story-hierarchy rule requires epic/story path segments in the file path — not a wrapper folder per story when that folder would contain only one artifact pair. Story markdown should be named {story-slug}.md at the epic folder, not scenario.md buried in a nested folder.

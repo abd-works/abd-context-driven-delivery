@@ -1,0 +1,8 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: discovery
+  format: null
+  path: null
+  session: null
+  workspace: sandbox
+action: sketch

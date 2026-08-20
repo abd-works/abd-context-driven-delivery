@@ -1,4 +1,4 @@
-"""TypeScriptStoryMap - runnable `*_story.ts` per Story."""
+"""TypeScriptStoryMap - runnable `{story}.{tier}.ts` under epic / sub-epic."""
 
 from __future__ import annotations
 
@@ -16,9 +16,31 @@ from context_tools.stories.story_model.nodes import Epic, Story, SubEpic
 from context_tools.stories.story_model.scenario import Scenario
 from context_tools.stories.story_model.story_map import StoryMap
 
+_SKIP_NAMES = frozenset({"story-test.ts", "givens.ts"})
+
+
+def _is_gwt_leaf(path: str) -> bool:
+    name = path.replace("\\", "/").rsplit("/", 1)[-1]
+    if name in _SKIP_NAMES or name.endswith("-helper.ts"):
+        return False
+    if "/examples/" in path.replace("\\", "/"):
+        return False
+    if not name.endswith(".ts"):
+        return False
+    return "." in name[:-3]
+
+
+def _story_slug_from_filename(name: str) -> str | None:
+    if not name.endswith(".ts"):
+        return None
+    stem = name[:-3]
+    if "." not in stem:
+        return None
+    return stem.rsplit(".", 1)[0]
+
 
 class TypeScriptStoryMap(CodeStoryMap):
-    LEAF_EXTENSION = "_story.ts"
+    LEAF_EXTENSION = ".ts"
     LANGUAGE_LINE_COMMENT = "//"
 
     def _make_story_map(self) -> _TypeScriptStoryMap:
@@ -36,12 +58,12 @@ class TypeScriptStoryMap(CodeStoryMap):
         tree = render_ts_tree(canonical, tests_root=self.tests_root, include_shared=True)
         if previous:
             for path, body in list(tree.items()):
-                if path in previous and path.endswith(self.LEAF_EXTENSION):
+                if path in previous and _is_gwt_leaf(path):
                     tree[path] = self._preserve_hand_written(previous[path], body)
         return tree
 
     def leaf_files_of(self, tree: Dict[str, str]) -> List[str]:
-        return sorted(p for p in tree if p.endswith(self.LEAF_EXTENSION))
+        return sorted(p for p in tree if _is_gwt_leaf(p))
 
     def _render_leaf_file(self, sub_epic: SubEpic, owning_epic: Epic) -> str:
         raise NotImplementedError("TypeScriptStoryMap.render uses render_ts_tree")
@@ -50,17 +72,26 @@ class TypeScriptStoryMap(CodeStoryMap):
         if not isinstance(external, dict):
             raise CodeStoryMapError("TypeScript story map parse expects a path->content dict")
         story_map = self._make_story_map()
+        seen: set[tuple[str, ...]] = set()
         for path, content in sorted(external.items()):
-            if not path.endswith(self.LEAF_EXTENSION):
+            if not _is_gwt_leaf(path):
                 continue
-            parts = path.strip("/").split("/")
+            parts = path.strip("/").replace("\\", "/").split("/")
             if parts and parts[0] == self.tests_root:
                 parts = parts[1:]
-            if len(parts) < 4:
+            if len(parts) < 3:
                 continue
-            epic_slug, story_slug, sub_slugs = parts[0], parts[-2], parts[1:-2]
+            filename = parts[-1]
+            story_slug = _story_slug_from_filename(filename)
+            if not story_slug:
+                continue
+            epic_slug, sub_slugs = parts[0], parts[1:-1]
             if not sub_slugs:
                 continue
+            key = (epic_slug, *sub_slugs, story_slug)
+            if key in seen:
+                continue
+            seen.add(key)
             epic = self._ensure_epic(story_map, epic_slug)
             sub = self._ensure_sub_path(epic, sub_slugs)
             story = self._parse_story_file(content, story_slug)
@@ -92,7 +123,7 @@ class TypeScriptStoryMap(CodeStoryMap):
     def _parse_story_file(self, content: str, story_slug: str) -> Story | None:
         name_match = re.search(r"\*\s*Story:\s*(.+)", content)
         story_name = name_match.group(1).strip() if name_match else story_slug.replace("-", " ").title()
-        story_name = re.sub(r"\s*\(tier-neutral\)\.?\s*$", "", story_name).strip()
+        story_name = re.sub(r"\s*\([^)]*\)\.?\s*$", "", story_name).strip()
         story = Story(story_name, 1)
         actor_match = re.search(r"\*\s*Actor:\s*(.+)", content)
         if actor_match:

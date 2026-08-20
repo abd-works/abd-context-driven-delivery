@@ -22,9 +22,10 @@ if TYPE_CHECKING:
     from utilities.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
+    "scaffold": "markdown",
     "story_map": "markdown",
-    "scenarios": "markdown",
-    "acceptance_tests": "python",
+    "scenarios": "typescript",
+    "acceptance_tests": "typescript",
 }
 
 # Adapter class path per format - peer channels, same CLI surface.
@@ -74,6 +75,7 @@ class Stories(BaseContextTool):
 
 
     fidelities = {
+        BaseContextTool.SHAPING:   "scaffold",
         BaseContextTool.DISCOVERY: "story_map",
         BaseContextTool.SPEC:      "scenarios",
         BaseContextTool.ENGINEER:  "acceptance_tests",
@@ -135,9 +137,10 @@ class Stories(BaseContextTool):
     @action
     def generate(self) -> str:
         """Generate story artifacts at the current fidelity.
+        At scaffold fidelity: write epic, sub-epic, and story names only.
         At story_map fidelity: write the story map and thin-slice only.
-        At scenarios fidelity: write main-flow scenarios (single or multiple per story) with optional variations; use ExampleFactory fakes where available.
-        At acceptance_tests fidelity: write *_spec and *_spec.{tier} acceptance test files. When spec files are written, call ce().generate() to produce or update the matching production class implementations and wire any supporting code changes."""
+        At scenarios fidelity: write main-flow scenarios (single or multiple per story) with optional variations; fixtures live in examples/ and givens.ts at the lowest shared epic/sub-epic/story folder.
+        At acceptance_tests fidelity: write tests/{epic}/{sub-epic}/{story}.{tier}.ts (one GWT file per story per seam, no story folder). When those files are written, call ce().generate() to produce or update matching wrap classes under domain/."""
         super().generate()
         self.ce().generate()
         return "When done, run validate."

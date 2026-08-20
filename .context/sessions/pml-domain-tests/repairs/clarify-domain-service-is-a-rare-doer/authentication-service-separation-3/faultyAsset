@@ -1,0 +1,1 @@
+authentication(): Credentials on ParadiseMobile; signIn(), register(), signOut(), requestPasswordReset(), resetPassword() all on the Credentials interface

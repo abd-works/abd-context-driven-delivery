@@ -1,0 +1,1 @@
+default: 'eSIM' with disabled={!selected} on Continue

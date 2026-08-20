@@ -6,7 +6,7 @@ Declare fidelity once at the top. Use only the sketch for that fidelity — do n
 
 ## bounded_context
 
-Name each BC, the aggregates it holds, and each dependency with relationship pattern. No class flesh-out yet. Use experts' words.
+Name each **bounded context** (language / team / model boundary), then the **aggregates it holds** (consistency clusters — usually more than one). A context is not an aggregate; do not wrap each root in its own BC. No class flesh-out yet. Use experts' words.
 
 ```
 fidelity: bounded_context
@@ -14,7 +14,7 @@ fidelity: bounded_context
 {{ContextName}}
   aggregates: {{Root}}, {{Root}}
 {{ContextName}}
-  aggregates: {{Root}}
+  aggregates: {{Root}}, {{Root}}
 
 {{Source}} → {{Target}}
   direction: {{upstream / downstream | mutual}}
@@ -28,6 +28,13 @@ fidelity: bounded_context
 ## building_blocks
 
 Flesh out each aggregate under its BC. Root, invariants, cross-agg and cross-BC deps, sync objects. Stereotypes as you decide them.
+
+- **`building-blocks-fidelity-requires-tactical-stereotype`** — Every class name carries a tag (`<<Aggregate Root>>`, `<<Entity>>`, `<<Value Object>>`, `<<Repository>>`, …). Bare names are incomplete.
+- **`flaccid-data-object-no-behavior`** — A type is not a field bag; give it *its* operations. Not a repository dump, not someone else’s verbs on a value.
+- **`service-is-homeless`** — Domain Service = rare **doer**, only when the operation will not sit cleanly on one domain object. Not SOA `FooService`.
+- **`screen-interface-not-a-domain-object`** — `open()` / `isShowing()` screens are not domain types.
+- **`private-method-naming`** — Public `+name`; private `- _name`.
+- **`no-orphaned-objects`** — Every type has at least one relationship.
 
 ```
 fidelity: building_blocks

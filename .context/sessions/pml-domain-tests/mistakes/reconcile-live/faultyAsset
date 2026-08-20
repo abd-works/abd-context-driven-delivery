@@ -1,0 +1,2 @@
+Then Cognito confirmSignUp() verifies their account
+  And they are redirected to /onboarding (line number step)

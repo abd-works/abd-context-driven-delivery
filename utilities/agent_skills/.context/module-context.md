@@ -11,8 +11,9 @@ Packages under `context_tools/actions/` are **not** deployed as kit-manifest ski
 
 - **Host-action skills + commands** named after the BaseContextTool action
   (`partition`, `grill`, `sketch`, `generate`, `document`, `iterate`, `validate`,
-  `satisfy`, `repair`, `improve`). If a context tool is already in scope — passed
-  in or named in chat — run **that** tool's matching `action:`. Cursor commands
+  `satisfy`, `repair`, `improve`). If one or more context tools are already in
+  scope — passed in or named in chat (for example `/stories /ddd /iterate`) —
+  run **each** tool's matching `action:` in that order. Cursor commands
   (`.cursor/commands/{action}.md`) and VS Code prompts get the same text.
 - **CDD stage-fidelity commands** (`discovery`, `specification`, `engineering`) that
   only set `context.fidelity` on the in-scope context tool. Each tool maps the

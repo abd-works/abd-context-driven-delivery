@@ -22,6 +22,16 @@ Constraint: do not restate CleanEngineering class/module analysis in DDD artifac
 - Tool: `transform(source_format, target_format, content)`
 - Tool: `render(format, content)` — calls `transform` from the current format via CE channels
 
+## Scanners
+
+Discovered under `context_tools/ddd/scanners/` (`*_scanner.py`, same kit as other context tools):
+
+- `screen-interface-not-a-domain-object`
+- `private-method-naming`
+- `building-blocks-fidelity-requires-tactical-stereotype`
+- `flaccid-data-object-no-behavior`
+- `no-orphaned-objects`
+
 ## Dependencies
 
-BaseContextTool; CleanEngineering (lazy via `ce()` / `transform`); Diagnose (lazy via `diagnostic()`)
+BaseContextTool; CleanEngineering (lazy via `ce()` / `transform`); Diagnose (lazy via `diagnostic()`); Scan (`_DddScan` binds this package's `scanners/`)

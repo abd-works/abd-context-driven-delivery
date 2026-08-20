@@ -1,0 +1,10 @@
+export interface ProfileKyc {
+  open(): Promise<void>
+  isShowing(): Promise<boolean>
+  submitProfile(data: ProfileFormData): Promise<void>
+  failureStateIsShown(): Promise<boolean>
+}
+export interface IdentityVerificationService {
+  seedOutcome(options: { verified: boolean; inquiryId?: string }): Promise<void>
+  waitForCompletion(): Promise<IdentityVerification>
+}

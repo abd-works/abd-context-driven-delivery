@@ -22,7 +22,9 @@ agent-facing discovery, not the underlying method.
   call (e.g. via `BaseContextTool.repair()` -> `self.repairer.repair(...)`)
   keeps the default `mode="action"` and still inlines the full loop.
 - `MistakeEntry` — props: `entry_id`, `artifact`, `rule`, `wrong`, `original`,
-  `improved`, `status`, `when`, `tool`, `fidelity` (`entry_id` correlates a
+  `improved`, `status`, `when`, `tool`, `fidelity` (`original` / `improved`
+  are the artifact file contents, not a diagnosis of the problem; `wrong` is
+  the one-line diagnosis. `entry_id` correlates a
   `log_mistake` call to its later `log_correction` — several can stay open at
   once; `tool`/`fidelity` name whichever context tool/fidelity produced the
   entry; auto-injected by the calling host, never supplied by the agent);

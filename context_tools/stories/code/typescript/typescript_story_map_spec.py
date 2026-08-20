@@ -53,16 +53,23 @@ with description("a TypeScript runnable-story Story Map") as self:
             self.tree = self.ts.render(_story_map_with_stories())
             self.leaf_paths = self.ts.leaf_files_of(self.tree)
 
-        with it("should emit `*_story.ts` under story folders"):
+        with it("should emit `{story}.{tier}.ts` under epic/sub-epic, not a story folder"):
             for path in self.leaf_paths:
-                expect(path.endswith("_story.ts")).to(be_true)
-                expect("/redeem-a-voucher/" in path).to(be_true)
+                expect(path.endswith(".front-end.ts") or path.endswith(".back-end.ts")).to(
+                    be_true
+                )
+                expect("/redeem-a-voucher/" in path).to(equal(False))
+                expect("redeem-a-voucher." in path).to(be_true)
+
+        with it("should include givens.ts at epic and sub-epic"):
+            expect(any(p.endswith("/givens.ts") for p in self.tree)).to(be_true)
 
         with it("should export createRedeemAVoucherStory"):
             for path in self.leaf_paths:
-                expect(self.tree[path]).to(
-                    contain("export function createRedeemAVoucherStory(mode")
-                )
+                expect(self.tree[path]).to(contain("export function createRedeemAVoucherStory("))
+
+        with it("should include examples/ at epic and sub-epic"):
+            expect(any("/examples/" in p for p in self.tree)).to(be_true)
 
         with it("should include story-test shared helper"):
             expect("tests/story-test.ts" in self.tree).to(be_true)

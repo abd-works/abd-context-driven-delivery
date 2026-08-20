@@ -1,0 +1,5 @@
+Fix applied:
+1. sandbox/stubs/vendors/aws-amplify.ts: added a module-scoped isAuthenticated flag defaulting to false. currentAuthenticatedUser() now throws when not authenticated (matching real Amplify's reject-on-no-session contract) and only resolves the stub user after Auth.signIn() has been called (which now sets the flag). Auth.signOut() clears the flag.
+2. src/pages/Protected/hooks/useRedirectLoggedUser.ts: wrapped getUser() in try/catch (mirroring the already-correct SignIn page pattern) so a rejected/unauthenticated call correctly falls through to setIsChecking(false) instead of hanging.
+
+Category/lesson: Stub fidelity matters - stubs that are "more permissive" than the real API (e.g. always resolving instead of rejecting) can mask real app bugs and introduce nondeterministic test behavior. When a stub is made more faithful to the real API contract, re-audit all call sites for missing error handling, since previously-unreachable rejection paths may now execute for the first time.

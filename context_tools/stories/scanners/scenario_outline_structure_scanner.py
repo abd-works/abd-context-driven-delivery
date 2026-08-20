@@ -30,7 +30,7 @@ class ScenarioOutlineStructureScanner(StoryWorkspaceScanner):
                     yield self.violation(
                         f"Scenario {sc.name!r} uses placeholders "
                         f"{sorted(placeholders)} - resolve them via "
-                        f"{{Type}}ExampleFactory.load* (not a story-local examples table)",
+                        f"examples/ or givens.ts (not inline values in the story)",
                         location=self.loc(sc, f"scenario {sc.name!r}"),
                         severity="warning",
                     )

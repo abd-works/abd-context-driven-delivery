@@ -24,6 +24,10 @@ def _home() -> Path:
     """User home directory. Patchable in tests."""
     return Path.home()
 
+_CHAIN_TOOLS = """\
+If the chat names **one or more** context tools (for example `/stories /ddd /iterate`), run **each** named toolset **in that order** with the same action and fidelity. Do not pick only the first. If AskQuestion is needed, the user may select more than one — still run them in the order listed.
+"""
+
 _SHIM_TEMPLATE = """\
 ---
 name: {skill_slug}
@@ -32,6 +36,8 @@ disable-model-invocation: true
 ---
 
 # {class_name}
+
+This skill **is** this context tool. Do not ask which context tool to run.
 
 **Step 1 — Identify the action.**
 Check whether an action was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose:
@@ -114,8 +120,9 @@ _STALE_ACTION_SKILL_SLUGS: tuple[str, ...] = (
 _ACTION_INVOKE_BODY = """\
 Do not run this as its own toolset.
 
-**Step 1 — Identify the context tool.**
-Check whether a context tool is already in scope — passed in (path / session / toolset) or named in this chat. If one is found, use it. If not, use the `AskQuestion` tool to let the user choose:
+""" + _CHAIN_TOOLS + """
+**Step 1 — Identify the context tool(s).**
+Check whether one or more context tools are already in scope — passed in (path / session / toolset) or named in this chat. If one or more are found, use them. If none is found, use the `AskQuestion` tool to let the user choose:
 
 ```
 Question: "Which context tool should run `{action}`?"
@@ -132,16 +139,16 @@ Options:
 Check whether a fidelity was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose from the selected context tool's available fidelities (see the quick-reference table), or from the CDD stage names (`discovery`, `specification`, `engineering`).
 
 **Step 3 — Run the action.**
-Invoke the context tool with `action: {action}` and the chosen fidelity:
+For **each** selected context tool, in the order named, invoke with `action: {action}` and the chosen fidelity:
 
 ```yaml
-toolset: <selected context tool>
+toolset: <this context tool>
 context:
   fidelity: <selected fidelity>
 action: {action}
 ```
 
-Follow that context-tool skill's instructions: run its manifest, obey `response.instructions`, then invoke via `_req.yaml` + `python -m tools run`. Read `examples/` before guessing field shape.
+Follow that context-tool skill's instructions: run its manifest, obey `response.instructions`, then invoke via `_req.yaml` + `python -m tools run`. Then the next named tool. Do not skip remaining tools after the first. Read `examples/` before guessing field shape.
 """
 
 _ACTION_SKILL_TEMPLATE = """\
@@ -257,14 +264,22 @@ action: <action from this companion's manifest>
 Delete the request file after the call. Read `examples/` before guessing field shape.
 """
 
-# CDD stage fidelities — chat command names map onto BaseContextTool stage keys.
-# Each context tool resolves these via its ``fidelities`` table (e.g. Stories:
-# discovery→story_map; CleanEngineering: specification→model).
+# Fidelity slash commands — CDD stage names plus concrete fidelities.
+# Each context tool resolves stage names via its ``fidelities`` table (e.g. Stories:
+# discovery→story_map; CleanEngineering: specification→model). Concrete slugs
+# (scaffold, story_map, …) are passed through unchanged.
 _STAGE_FIDELITY_COMMANDS: tuple[tuple[str, str], ...] = (
     # (command_slug, fidelity value passed in context.fidelity)
+    ("scaffold", "scaffold"),
     ("discovery", "discovery"),
     ("specification", "specification"),
     ("engineering", "engineering"),
+    ("story_map", "story_map"),
+    ("scenarios", "scenarios"),
+    ("acceptance_tests", "acceptance_tests"),
+    ("bounded_context", "bounded_context"),
+    ("building_blocks", "building_blocks"),
+    ("tactics", "tactics"),
 )
 
 _STAGE_FIDELITY_INVOKE_BODY = """\
@@ -272,8 +287,9 @@ Do not run this as its own toolset. This command sets the CDD stage to `{fidelit
 
 The context tool maps this stage name to its own concrete fidelity (Stories: discovery→story_map, specification→scenarios, engineering→acceptance_tests; CleanEngineering: discovery→modules, specification→model, engineering→code; and so on).
 
-**Step 1 — Identify the context tool.**
-Check whether a context tool is already in scope — passed in (path / session / toolset) or named in this chat. If one is found, use it. If not, use the `AskQuestion` tool to let the user choose:
+""" + _CHAIN_TOOLS + """
+**Step 1 — Identify the context tool(s).**
+Check whether one or more context tools are already in scope — passed in (path / session / toolset) or named in this chat. If one or more are found, use them. If none is found, use the `AskQuestion` tool to let the user choose:
 
 ```
 Question: "Which context tool should work at the `{fidelity}` stage?"
@@ -305,16 +321,16 @@ Options:
 ```
 
 **Step 3 — Run the action at this stage.**
-Invoke the context tool with the chosen action and `{fidelity}` as fidelity:
+For **each** selected context tool, in the order named, invoke with the chosen action and `{fidelity}` as fidelity:
 
 ```yaml
-toolset: <selected context tool>
+toolset: <this context tool>
 context:
   fidelity: {fidelity}
 action: <selected action>
 ```
 
-Follow that context-tool skill's instructions: run its manifest, obey `response.instructions`, then invoke via `_req.yaml` + `python -m tools run`. Read `examples/` before guessing field shape.
+Follow that context-tool skill's instructions: run its manifest, obey `response.instructions`, then invoke via `_req.yaml` + `python -m tools run`. Then the next named tool. Do not skip remaining tools after the first. Read `examples/` before guessing field shape.
 """
 
 _CURSOR_STAGE_COMMAND_TEMPLATE = """\
@@ -957,9 +973,9 @@ class AgentSkills:
 
     @tool
     def write_stage_fidelity_command(self, stage: str, fidelity: str, ide: str) -> str:
-        """Write a CDD stage-fidelity command/prompt (discovery / specification / engineering).
-        Sets context.fidelity on the in-scope context tool; that tool maps the stage
-        to its concrete fidelity via BaseContextTool.resolve_fidelity.
+        """Write a fidelity command/prompt (CDD stages and concrete fidelities).
+        Sets context.fidelity on the in-scope context tool; that tool maps stage
+        names to concrete fidelities via BaseContextTool.resolve_fidelity.
         ide=cursor -> .cursor/commands/{stage}.md
         ide=vscode -> .github/prompts/{stage}.prompt.md
         Returns the absolute path of the primary (repo) written file."""

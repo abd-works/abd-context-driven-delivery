@@ -1,0 +1,1 @@
+catalog.select(plan): Promise<AccountCredentials> — returns the AccountCredentials form object that the prospect fills in next; the fact that it is returned confirms navigation succeeded and the test can immediately use it for the next step

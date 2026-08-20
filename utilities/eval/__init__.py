@@ -3,6 +3,7 @@
 from eval.session import (
     CDDRepo,
     Correction,
+    EvalGitConnectError,
     EvalSession,
     Mistake,
     NullCDDRepo,
@@ -21,6 +22,7 @@ from eval.session import (
 __all__ = [
     "CDDRepo",
     "Correction",
+    "EvalGitConnectError",
     "EvalSession",
     "Mistake",
     "NullCDDRepo",

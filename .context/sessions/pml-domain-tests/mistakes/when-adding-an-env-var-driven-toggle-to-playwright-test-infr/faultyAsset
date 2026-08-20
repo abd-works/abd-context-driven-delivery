@@ -1,0 +1,7 @@
+function getBrowser(): Promise<Browser> {
+  browserPromise ??= chromium.launch({
+    headless: !process.env.PWDEBUG,
+    slowMo: process.env.PWDEBUG ? Number(process.env.PWDEBUG) || 500 : 0,
+  })
+  return browserPromise
+}

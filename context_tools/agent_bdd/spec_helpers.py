@@ -237,3 +237,42 @@ def expect_capture_mentions(combined: str, *needles: str) -> None:
     haystack = combined.lower()
     for needle in needles:
         expect(needle.lower() in haystack).to(be_true)
+
+
+def generate_similar_prompt(pass_path: str | Path) -> str:
+    """Ask the agent to generate something similar to the passing fixture."""
+    location = Path(pass_path).as_posix()
+    return (
+        f"Read {location}. Generate a similar successful result — the same kind of "
+        "artifact, close in shape and content, not a copy. Hold this generate for "
+        "human review."
+    )
+
+
+def generate_similar_rubric(pass_path: str | Path) -> str:
+    """AI-judge rubric: generated output is close to the passing fixture."""
+    location = Path(pass_path).as_posix()
+    return (
+        f"The output is a similar successful result to {location}: same kind of "
+        "artifact, close in shape and intent, not an unrelated rewrite."
+    )
+
+
+def generate_and_judge(
+    pass_path: str | Path,
+    rubric: str | None = None,
+    *,
+    timeout_seconds: int = 300,
+) -> str:
+    """Generate against the pass fixture, judge it, return the artifact for review.
+
+    Must be called inside ``with agent(...)``.
+    """
+    from agent_bdd import ai_judge, follow_instructions
+
+    artifact = follow_instructions(
+        generate_similar_prompt(pass_path),
+        timeout_seconds=timeout_seconds,
+    ).text
+    ai_judge(artifact, rubric or generate_similar_rubric(pass_path))
+    return artifact

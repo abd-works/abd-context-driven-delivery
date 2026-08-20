@@ -1,0 +1,9 @@
+export interface AuthenticationService {
+  fillEmail(value: string): Promise<void>
+  fillPassword(value: string): Promise<void>
+  fillConfirmPassword(value: string): Promise<void>
+  submitRegistration(): Promise<void>
+  fillOtp(code: VerificationCode): Promise<void>
+  submitEmailVerification(): Promise<void>
+  // ...plus signIn, register, verifyEmail, signOut
+}

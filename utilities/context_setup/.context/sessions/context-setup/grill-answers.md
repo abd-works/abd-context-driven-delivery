@@ -11,7 +11,7 @@
 - `AI Chat --> Classify External Dependencies` — reads the codebase and every external-facing
   call site, marks each dependency external (needs a stub) or in-scope (skip), and produces a
   classification table. The complex-stub-strategy trigger (5+ externals or domain-shaped returns)
-  is a scenario variation within this story — it gates whether a story-map + AC + glossary
+  is a scenario variation within this story — it gates whether a stub-focus-map + AC + glossary
   pre-pass is required before writing any stubs.
 - `Tool --> Write External Stubs` — writes stub code at the outermost boundary (HTTP adapter,
   SDK factory, module export) for every dependency classified as external.

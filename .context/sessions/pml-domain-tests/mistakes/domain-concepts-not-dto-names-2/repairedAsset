@@ -1,0 +1,1 @@
+Initially renamed Acquisition Customer to Prospect *(onboarding Customer subset)* using UI vocabulary. Superseded: consolidated Customer BC uses Onboard state (metadata.onboard.done?) for not-yet-onboarded vs onboarded; Prospect remains UI-only. No separate Prospect aggregate/BC.

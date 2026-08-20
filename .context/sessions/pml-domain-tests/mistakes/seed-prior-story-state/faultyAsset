@@ -1,0 +1,12 @@
+// Manage Profile is not Sign In. Seeding the customer then clicking
+// through authenticate() replays the prior story to reach a given.
+
+given('a customer is signed in', async () => {
+  subscriberRepository = paradise.subscriberRepository()
+  await subscriberRepository.seed([stubSubscriberExample])
+  credentials = paradise.authentication().enterAccountCredentials()
+  credentials.email = prospectCredentialsExample.email
+  credentials.password = prospectCredentialsExample.password
+  await paradise.authentication().authenticate(credentials)
+  subscriber = await subscriberRepository.load()
+})

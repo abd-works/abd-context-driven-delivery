@@ -49,7 +49,7 @@ an eval session
     that lives inside the tools clone
       it should share that clone's git root for both repos
     that has no git clone
-      it should use null repos
+      it should report that it cannot connect
 
   that a first-order tool or action runs before the chat turn is finished
     it should attach a ToolCall to the open Turn
@@ -66,6 +66,7 @@ an eval session
     it should have that Mistake record itself onto the session
         it should have that Mistake add itself to the open Turn
         it should write that Mistake under the session mistakes folder named after the mistake
+        it should not write an improvement folder when no improvement was made
         it should leave Correction open on that Mistake
     it should leave that Mistake with no Repair
     that the same Mistake's asset is repaired
@@ -126,6 +127,12 @@ an eval session
         it should set Correction.fixedIn to the Turn that did the fix
         it should keep the same Mistake.entryId
         it should store the Correction as repairedAsset beside that Mistake
+        it should write an improvement folder named after the problem theme under repairs
+        it should write which tool was improved, how, and what the error was
+        it should drop that Mistake folder into that improvement folder
+        it should not leave that Mistake under the session mistakes folder
+        that a second Mistake of the same problem is also fixed
+          it should drop both Mistake folders into the same improvement folder
 
   that an agent chat turn has finished
     with changes to the working area
@@ -155,6 +162,10 @@ an eval session
         it should ask via AskQuestion
 ```
 
+Mistake specs do **not** live in this package. Mechanical: Bdd
+`expect_scan_fails` / `expect_scan_passes`. Judgment: AgentBdd
+`generate_and_judge` on the pass file.
+
 ## Theme: contribute to evals (open)
 
 ```
@@ -180,3 +191,4 @@ an eval session
 - CDDRepo extends WorkspaceRepo; link once (cddAt); repair is a WorkspaceSession on the CDD clone — no stampTurn
 - ScanReport.matches(mistake): scan already matching the Mistake skips createRule; after createRule the new rule must match
 - eval is a separate tool after repair; repair does not call it
+- Mistake regression: Bdd `expect_scan_fails` / `expect_scan_passes`; AgentBdd `generate_and_judge` — no eval-package harness

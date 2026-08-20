@@ -1,0 +1,2 @@
+const cart = await paradise.cartRepository().current()
+await cart.pickNumber(msisdn)

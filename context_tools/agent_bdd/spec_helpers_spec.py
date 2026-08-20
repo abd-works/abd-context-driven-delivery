@@ -6,6 +6,8 @@ from mamba import context, description, it
 
 from agent_bdd.spec_helpers import (
     dump_run_yaml,
+    generate_similar_prompt,
+    generate_similar_rubric,
     manifest_command_from_header,
     repo_root_from,
     sessions_dir,
@@ -52,7 +54,9 @@ with description("spec_helpers"):
     with context("path helpers"):
         with it("should resolve sessions beside the spec file"):
             fake = Path(__file__).resolve()
-            expect(sessions_dir(fake)).to(equal(fake.parent / ".agent_bdd_sessions"))
+            expect(sessions_dir(fake)).to(
+                equal(fake.parent / ".context" / ".agent_bdd_sessions")
+            )
 
         with it("should resolve repo root from this package"):
             root = repo_root_from(__file__, parents=2)
@@ -65,3 +69,14 @@ with description("spec_helpers"):
             expect(command).to(
                 equal("python -m tools manifest context_tools.bdd.bdd:Bdd")
             )
+
+    with context("a pass fixture handed to generate"):
+        with it("should ask the agent to generate something similar"):
+            prompt = generate_similar_prompt(Path("repairedAsset.md"))
+            expect("similar" in prompt.lower()).to(equal(True))
+            expect("repairedAsset.md" in prompt.replace("\\", "/")).to(equal(True))
+
+        with it("should judge the generate against that pass file"):
+            rubric = generate_similar_rubric(Path("repairedAsset.md"))
+            expect("repairedAsset.md" in rubric.replace("\\", "/")).to(equal(True))
+            expect("similar" in rubric.lower()).to(equal(True))

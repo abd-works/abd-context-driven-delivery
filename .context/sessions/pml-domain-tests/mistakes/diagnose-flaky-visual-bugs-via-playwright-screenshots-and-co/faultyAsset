@@ -1,0 +1,1 @@
+purchasable-plans.fixture.ts seeded exactly 3 sellable plans (Basic, Plus, Pro) plus 1 zero-price/non-sellable plan — fewer sellable plans than PlanSelector's hardcoded defaultSettings (slidesToShow: 4, initialSlide: 2) assumes when numberOfCards is not passed by Catalog.tsx.

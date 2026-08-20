@@ -1,0 +1,12 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: model
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+tool: log_mistake
+arguments:
+  artifact: tests/domain/.context/domain-model.md
+  rule: value-object-composition-misuse
+  wrong: "<< composition >> used between Value Objects: Metadata->OnboardMetadata, Transaction->Money, Bundle->Feature[], NumberPort->PortingInfo"
+  original: Value objects are shareable and immutable — composition implies lifecycle ownership and is only valid from an Entity/Aggregate Root TO a Value Object. VO-to-VO relationships are plain associations/references. Also Money does not exist in code (Transaction.totalAmount is inline { unit, value }).
+  when: DDD model review Aug 2026

@@ -26,6 +26,15 @@ with description("a session"):
     with context("that a context tool records through eval"):
         with before.each:
             self.tmp = Path(tempfile.mkdtemp())
+            import subprocess
+            from eval.session import _git_executable
+
+            subprocess.run(
+                [_git_executable(), "init"],
+                cwd=self.tmp,
+                check=True,
+                capture_output=True,
+            )
             self.context_tool = Stories(
                 fidelity="story_map", path=str(self.tmp), session="eval-context-tool"
             )

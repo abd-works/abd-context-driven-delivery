@@ -1,0 +1,3 @@
+Markdown transform used type-only properties (cart: Cart | None) which stay as Property; markdown channel never populates relationships[].
+Drawio only draws edges from relationships[]; stereotypes in templates are unimplemented in markdown parser.
+Result: boxes with fields, no association/composition arrows. Fix path: JSON→drawio with explicit relationships[] (or parser fix).

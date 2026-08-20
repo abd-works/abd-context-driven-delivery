@@ -1,0 +1,12 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: model
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+tool: log_mistake
+arguments:
+  artifact: tests/domain/.context/domain-model.md
+  rule: checkout-service-misplaced
+  wrong: CheckoutService <<Domain Service>> with placeOrder(cart, prospect, payment) as a top-level domain service; OrderResult <<Value Object>> as a separate type
+  original: Checkout is owned by Cart — cart.checkout(payment) places the order. Checkout is the UI wizard domain object (open, isShowingReview, capturePayment). OrderResult is not a VO (specific to a customer's order); its fields (payUpFront, verified) belong on Order.
+  when: DDD model review Aug 2026

@@ -6,8 +6,8 @@
 
 **Rationale:** BDD owns the observation hierarchy and test cycle; CleanEngineering owns OO class deepening at the matching fidelity. Diagnose stays a separate tool so the six-phase loop is not inlined into satisfy/iterate markdown.
 
-**Seam:** `Bdd`
+**Seam:** `Bdd`; `spec_helpers.expect_scan_fails` / `expect_scan_passes` for fail-file / pass-file scan pairs.
 
-**Public API:** constructor (`fidelity`, `format`, `path`, `session`, `workspace`); providers `ce()`, `diagnostic()`; lifecycle actions `generate`, `grill`, `sketch`, `iterate`, `satisfy`, `validate`, `repair`; tools `transform`, `render(format, content)` (calls `transform` from the current format); scan rules discovered from `scanners/` (`missing-spec` plus ported abd-skills rules: `plain-english-only`, `business-readable-language`, `signature-markers`, `no-remaining-signatures`, `observable-behavior`, `layer-isolation`)
+**Public API:** constructor (`fidelity`, `format`, `path`, `session`, `workspace`); providers `ce()`, `diagnostic()`; lifecycle actions `generate`, `grill`, `sketch`, `iterate`, `satisfy`, `validate`, `repair`; tools `transform`, `render(format, content)` (calls `transform` from the current format); scan rules discovered from `scanners/` (`missing-spec` plus ported abd-skills rules: `plain-english-only`, `business-readable-language`, `signature-markers`, `no-remaining-signatures`, `observable-behavior`, `layer-isolation`); spec helpers `expect_scan_fails(scan, path, *, rule, root)` and `expect_scan_passes(scan, path, *, rule, root)` — mistake specs use these instead of a parallel eval harness.
 
 **Dependencies:** BaseContextTool (lifecycle); CleanEngineering (lazy via `ce()` / `transform`); Diagnose (lazy via `diagnostic()`)

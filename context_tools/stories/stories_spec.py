@@ -33,6 +33,16 @@ def _expanded(stories, action_name):
 
 
 with description("Stories"):
+    with context("that is constructed with fidelity scaffold"):
+        with before.each:
+            self.stories = Stories(fidelity="scaffold")
+
+        with it("should default format to markdown"):
+            expect(self.stories.format).to(equal("markdown"))
+
+        with it("should retain fidelity scaffold"):
+            expect(self.stories.fidelity).to(equal("scaffold"))
+
     with context("that is constructed with fidelity story_map"):
         with before.each:
             self.stories = Stories(fidelity="story_map")
@@ -47,19 +57,19 @@ with description("Stories"):
         with before.each:
             self.stories = Stories(fidelity="scenarios")
 
-        with it("should default format to markdown"):
-            expect(self.stories.format).to(equal("markdown"))
+        with it("should default format to typescript"):
+            expect(self.stories.format).to(equal("typescript"))
 
         with it("should retain fidelity scenarios"):
             expect(self.stories.fidelity).to(equal("scenarios"))
 
     with context("that is constructed with fidelity acceptance_tests"):
-        with it("should default format to python"):
-            expect(Stories(fidelity="acceptance_tests").format).to(equal("python"))
+        with it("should default format to typescript"):
+            expect(Stories(fidelity="acceptance_tests").format).to(equal("typescript"))
 
     with context("that is constructed with an unsupported fidelity"):
         with it("should raise ValueError"):
-            expect(lambda: Stories(fidelity="discovery")).to(raise_error(ValueError))
+            expect(lambda: Stories(fidelity="not-a-fidelity")).to(raise_error(ValueError))
 
         with it("should raise ValueError for unknown names"):
             expect(lambda: Stories(fidelity="nope")).to(raise_error(ValueError))
@@ -107,6 +117,15 @@ with description("Stories"):
         with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):
             prose = _expanded(Stories(), "iterate")
             expect("diagnostic().diagnose()" in prose).to(be_true)
+
+    with context("whose generate action is expanded"):
+        with it("should name `{story}.{tier}.ts` at acceptance_tests"):
+            prose = _expanded(Stories(fidelity="acceptance_tests"), "generate")
+            expect("{story}.{tier}.ts" in prose).to(be_true)
+
+        with it("should tell the agent to write epic/sub-epic/story names only at scaffold"):
+            prose = _expanded(Stories(fidelity="scaffold"), "generate")
+            expect("names only" in prose).to(be_true)
 
     with context("whose transform tool converts markdown to python"):
         with before.each:

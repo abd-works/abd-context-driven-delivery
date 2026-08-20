@@ -1,0 +1,11 @@
+Scenario: Onboarding already complete
+Given metadata.verified is true
+When they submit valid email and password
+Then they are signed in
+  And they are taken to their Dashboard
+
+Scenario: Resume onboarding
+Given metadata.verified is false
+When they submit valid email and password
+Then they are signed in
+  And they are taken back to the appropriate onboarding step to continue onboarding

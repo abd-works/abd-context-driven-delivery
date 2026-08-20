@@ -10,6 +10,7 @@ utilities/eval/.context/module-context.md
 """
 from __future__ import annotations
 
+import shutil
 import subprocess
 import tempfile
 import uuid
@@ -47,6 +48,15 @@ def _mistake_slug(rule: str, wrong: str, taken: set[str]) -> str:
     return candidate
 
 
+_DO_NOT_PROCEED = (
+    "Do not proceed unless the user tells you to continue without a git connection."
+)
+
+
+class EvalGitConnectError(RuntimeError):
+    """Raised when eval cannot bind the project clone and/or the CDD tools clone."""
+
+
 def find_git_root(start: str | Path) -> Path | None:
     """Walk up from *start* until a ``.git`` directory is found."""
     current = Path(start).resolve()
@@ -58,18 +68,43 @@ def find_git_root(start: str | Path) -> Path | None:
     return None
 
 
+def _git_executable() -> str:
+    found = shutil.which("git")
+    if found:
+        return found
+    for candidate in (
+        Path(r"C:\Program Files\Git\cmd\git.exe"),
+        Path(r"C:\Program Files\Git\bin\git.exe"),
+    ):
+        if candidate.is_file():
+            return str(candidate)
+    raise EvalGitConnectError(
+        f"Cannot connect eval git: `git` is not available. {_DO_NOT_PROCEED}"
+    )
+
+
 def _git(root: Path, *args: str) -> str:
     """Run ``git -C root …`` and return stripped stdout; raise on failure."""
-    completed = subprocess.run(
-        ["git", "-C", str(root), *args],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            [_git_executable(), "-C", str(root), *args],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
+        )
+    except EvalGitConnectError:
+        raise
+    except OSError as exc:
+        raise EvalGitConnectError(
+            f"Cannot connect eval git: {exc}. {_DO_NOT_PROCEED}"
+        ) from exc
     if completed.returncode != 0:
         err = (completed.stderr or completed.stdout or "").strip()
-        raise RuntimeError(f"git {' '.join(args)} failed in {root}: {err}")
+        raise EvalGitConnectError(
+            f"Cannot connect eval git: git {' '.join(args)} failed in {root}: "
+            f"{err}. {_DO_NOT_PROCEED}"
+        )
     return (completed.stdout or "").strip()
 
 
@@ -110,12 +145,17 @@ class Correction:
     """*Correction* is the fix record nested on a Mistake."""
 
     _improved: str = ""
+    _how: str = ""
     _status: str = "open"
     _fixed_in: Turn | None = None
 
     @property
     def improved(self) -> str:
         return self._improved
+
+    @property
+    def how(self) -> str:
+        return self._how
 
     @property
     def status(self) -> str:
@@ -131,6 +171,42 @@ class Correction:
         for mistake in mistakes:
             mistake.correct(self)
             mistake.write_files()
+        self._write_improvement(mistakes)
+
+    def _write_improvement(self, mistakes: list[Mistake]) -> None:
+        ready = [
+            mistake
+            for mistake in mistakes
+            if mistake.folder and mistake._session_folder
+        ]
+        if not ready or not self.improved:
+            return
+        theme_root = Path(ready[0]._session_folder) / Path(ready[0].folder).parent
+        theme_root.mkdir(parents=True, exist_ok=True)
+        (theme_root / "improvement.md").write_text(
+            self._theme_md(ready), encoding="utf-8"
+        )
+
+    def _theme_md(self, mistakes: list[Mistake]) -> str:
+        theme = Path(mistakes[0].folder).parent.name or mistakes[0].rule
+        tools: list[str] = []
+        rules: list[str] = []
+        errors = [mistake.wrong for mistake in mistakes if mistake.wrong]
+        for mistake in mistakes:
+            if mistake.tool and mistake.tool not in tools:
+                tools.append(mistake.tool)
+            if mistake.rule and mistake.rule not in rules:
+                rules.append(mistake.rule)
+        lines = [f"# {theme}", "", f"- **tool:** {', '.join(tools) or '(unspecified)'}"]
+        if len(errors) == 1:
+            lines.append(f"- **error:** {errors[0]}")
+        else:
+            lines.append("- **error:**")
+            lines.extend(f"  - {error}" for error in errors)
+        lines.append(f"- **rule:** {'; '.join(rules)}")
+        lines.append(f"- **how:** {self.how}")
+        lines.append("")
+        return "\n".join(lines)
 
 
 @dataclass
@@ -216,6 +292,7 @@ class Mistake:
             _fidelity=self.fidelity,
             _correction=Correction(
                 _improved=self.correction.improved,
+                _how=self.correction.how,
                 _status=self.correction.status,
             ),
             _folder=self.folder,
@@ -229,14 +306,19 @@ class Mistake:
     def write_files(self) -> None:
         if not self._session_folder:
             return
-        root = Path(self._session_folder) / "mistakes"
-        taken = {path.name for path in root.iterdir()} if root.is_dir() else set()
-        if self._folder:
-            slug = Path(self._folder).name
-        else:
-            slug = _mistake_slug(self.rule, self.wrong, taken)
-            self._folder = f"mistakes/{slug}"
-        dest = Path(self._session_folder) / self._folder
+        session_root = Path(self._session_folder)
+        previous = session_root / self._folder if self._folder else None
+        dest = self._destination(session_root)
+        if (
+            previous is not None
+            and previous.exists()
+            and previous.resolve() != dest.resolve()
+        ):
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if dest.exists():
+                shutil.rmtree(previous)
+            else:
+                shutil.move(str(previous), str(dest))
         dest.mkdir(parents=True, exist_ok=True)
         (dest / "faultyAsset").write_text(self.original, encoding="utf-8")
         if self.correction.improved:
@@ -244,6 +326,30 @@ class Mistake:
                 self.correction.improved, encoding="utf-8"
             )
         (dest / "mistake.md").write_text(self._mistake_md(), encoding="utf-8")
+
+    def _destination(self, session_root: Path) -> Path:
+        if self.correction.improved:
+            theme = _mistake_slug(self.rule, self.wrong, set())
+            theme_root = session_root / "repairs" / theme
+            taken = (
+                {path.name for path in theme_root.iterdir() if path.is_dir()}
+                if theme_root.is_dir()
+                else set()
+            )
+            if self._folder:
+                slug = Path(self._folder).name
+                already_here = self._folder == f"repairs/{theme}/{slug}"
+                if slug in taken and not already_here:
+                    slug = _mistake_slug(self.rule, self.wrong, taken)
+            else:
+                slug = _mistake_slug(self.rule, self.wrong, taken)
+            self._folder = f"repairs/{theme}/{slug}"
+        elif not self._folder:
+            root = session_root / "mistakes"
+            taken = {path.name for path in root.iterdir()} if root.is_dir() else set()
+            slug = _mistake_slug(self.rule, self.wrong, taken)
+            self._folder = f"mistakes/{slug}"
+        return session_root / self._folder
 
     def _mistake_md(self) -> str:
         return (
@@ -452,15 +558,22 @@ def repos_for_workspace(workspace: WorkspaceSession) -> tuple[WorkspaceRepo, CDD
     """WorkspaceRepo at the working-area clone; CDDRepo at the tools clone.
 
     Share one root only when the working area sits inside the tools clone
-    (e.g. ``sandbox/…``). Isolated paths with no git stay Null*.
+    (e.g. ``sandbox/…``). Cannot connect → ``EvalGitConnectError`` (no Null*).
+    ``Null*`` is only for tests that inject those doubles explicitly.
     """
     workspace_root = find_git_root(workspace.path)
     cdd_root = find_cdd_root()
     if workspace_root is None:
-        return NullWorkspaceRepo(), NullCDDRepo()
-    workspace_repo = WorkspaceRepo(workspace_root)
+        raise EvalGitConnectError(
+            "Cannot connect eval git: "
+            f"{workspace.path} is not inside a git clone. {_DO_NOT_PROCEED}"
+        )
     if cdd_root is None:
-        return workspace_repo, NullCDDRepo()
+        raise EvalGitConnectError(
+            "Cannot connect eval git: the CDD tools clone has no git root. "
+            f"{_DO_NOT_PROCEED}"
+        )
+    workspace_repo = WorkspaceRepo(workspace_root)
     if workspace_root == cdd_root:
         return workspace_repo, CDDRepo(workspace_root)
     return workspace_repo, CDDRepo(cdd_root)
@@ -618,6 +731,7 @@ class EvalSession:
             for mist in raw.get("mistakes") or []:
                 correction = Correction(
                     _improved=str((mist.get("correction") or {}).get("improved", "")),
+                    _how=str((mist.get("correction") or {}).get("how", "")),
                     _status=str((mist.get("correction") or {}).get("status", "open")),
                 )
                 mistake = Mistake(
@@ -703,6 +817,7 @@ class EvalSession:
                     "folder": mist.folder,
                     "correction": {
                         "improved": mist.correction.improved,
+                        "how": mist.correction.how,
                         "status": mist.correction.status,
                     },
                 }
@@ -712,6 +827,64 @@ class EvalSession:
 
 
 Session = EvalSession
+
+
+def _looks_like_asset(text: str) -> bool:
+    body = text.strip()
+    if not body:
+        return False
+    if body[0] in "<{[`#":
+        return True
+    if "mxfile" in body or "mxGraphModel" in body:
+        return True
+    if "\n" in body:
+        return True
+    return len(body) > 200
+
+
+def _resolve_artifact_file(workspace: Any, artifact: str) -> Path | None:
+    candidates = [Path(artifact)]
+    root = getattr(workspace, "path", None)
+    if root:
+        candidates.append(Path(root) / artifact)
+    folder = getattr(workspace, "folder", None)
+    if folder:
+        candidates.append(Path(folder) / artifact)
+    seen: set[Path] = set()
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except OSError:
+            continue
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        try:
+            if candidate.is_file():
+                return candidate
+        except OSError:
+            continue
+    return None
+
+
+def _read_artifact_file(workspace: Any, artifact: str) -> str | None:
+    path = _resolve_artifact_file(workspace, artifact)
+    if path is None:
+        return None
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def _asset_body(provided: str, disk: str | None, *, prefer_disk: bool) -> str:
+    if prefer_disk and disk is not None:
+        return disk
+    if disk is None:
+        return provided
+    if _looks_like_asset(disk) and not _looks_like_asset(provided):
+        return disk
+    return provided if provided.strip() else disk
 
 
 @agentic_toolset
@@ -731,6 +904,7 @@ class Repair:
         self.cdd_session: EvalSession | None = None
         self.mistakes: list[Mistake] = []
 
+    @sub_agent
     @tool
     def log_mistake(
         self,
@@ -744,6 +918,11 @@ class Repair:
         if self.session is None:
             raise ValueError("No eval session — open a named session first")
         entry_id = uuid.uuid4().hex[:8]
+        original = _asset_body(
+            original,
+            _read_artifact_file(self.session.workspace, artifact),
+            prefer_disk=False,
+        )
         Mistake(
             _entry_id=entry_id,
             _artifact=artifact,
@@ -762,19 +941,29 @@ class Repair:
         correction: Correction | None = None,
         entry_id: str = "",
         improved: str = "",
+        how: str = "",
         status: str = "fixed",
     ) -> str:
         if self.session is None:
             raise ValueError("No eval session — open a named session first")
         turn = self.session.begin_turn()
-        if correction is None:
-            correction = Correction(_improved=improved, _status=status)
         if mistakes is None:
             if entry_id:
                 found = self.session._find_mistake(entry_id)
                 mistakes = [found] if found is not None else []
             else:
                 mistakes = list(self.session.mistakes)
+        provided = improved if correction is None else correction.improved
+        disk = (
+            _read_artifact_file(self.session.workspace, mistakes[0].artifact)
+            if mistakes
+            else None
+        )
+        body = _asset_body(provided, disk, prefer_disk=False)
+        if correction is None:
+            correction = Correction(_improved=body, _how=how, _status=status)
+        else:
+            correction._improved = body
         correction.apply(mistakes, turn)
         self._correct_cdd_copies(mistakes, correction)
         return entry_id or (mistakes[0].entry_id if mistakes else "")
@@ -805,6 +994,7 @@ class Repair:
             return
         Correction(
             _improved=correction.improved,
+            _how=correction.how,
             _status=correction.status,
         ).apply(copies, cdd.begin_turn())
 
@@ -828,7 +1018,10 @@ class Repair:
 
     def _run(self, asset: str, violation: str) -> None:
         if self.session is None:
-            return
+            raise EvalGitConnectError(
+                "Cannot connect eval git: no eval session. "
+                f"{_DO_NOT_PROCEED}"
+            )
         if not self.session.mistakes:
             if self.host is not None:
                 getattr(self.host, "contexts", None)
@@ -863,7 +1056,11 @@ class Repair:
 
     @tool
     def start(self, asset: str, violation: str) -> str:
-        """Open the CDD session and copy project mistakes onto it."""
+        """Open the CDD session and copy project mistakes onto it.
+
+        Raises EvalGitConnectError if project/CDD git cannot be connected.
+        Do not proceed unless the user tells you to continue without git.
+        """
         self._run(asset, violation)
         if self.cdd_session is None:
             return ""
@@ -876,7 +1073,12 @@ class Repair:
         self.start(asset, violation)
         return (
             "Repair {{asset}} under {session.path}/ until validate passes. "
-            "Do not run eval from this action."
+            "Fail-first: mechanical specs call expect_scan_fails / "
+            "expect_scan_passes (context_tools.bdd.spec_helpers) on the fail "
+            "file and the pass file; judgment specs call generate_and_judge "
+            "(agent_bdd.spec_helpers) on the pass file. Do not add an "
+            "eval-package spec harness. After the fix, those same helpers are "
+            "the eval. If a test cannot fail, defer — do not repair."
         )
 
     @sub_agent
@@ -884,9 +1086,14 @@ class Repair:
     def eval(self) -> str:
         """eval"""
         return (
-            "Eval the repair: fail scan on the before version, pass scan on the "
-            "after version, pass the AI judge, generate a similar successful result, "
-            "and hold that last generate for human review."
+            "Eval the repair with the existing spec helpers — not a new eval "
+            "package. The pair lives under {session.folder}/repairs/{theme}/ "
+            "(sibling of mistakes/). Mechanical: expect_scan_fails on the "
+            "before file, expect_scan_passes on the after file "
+            "(context_tools.bdd.spec_helpers). Judgment: generate_and_judge "
+            "on the same pass file (agent_bdd.spec_helpers); hold that "
+            "generate for human review. If you need to confirm with the user, "
+            "ask via AskQuestion."
         )
 
     @tool

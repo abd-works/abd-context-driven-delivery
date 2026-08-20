@@ -96,50 +96,29 @@ adding new test methods when the spec grows.
 
 ## File Layout (per story)
 
+TypeScript is the default acceptance-test channel.
+
 ```
 tests/
-+-- story-test.<ext>                         <- GWT helpers (story / scenario / given / when / then)
++-- story-test.ts
 +-- <epic-slug>/
-    +-- <epic-slug>-helper.<ext>             <- ExampleFactory accessors (used by tier files, not the story file)
+    +-- examples/
+    +-- givens.ts
     +-- <sub-epic-slug>/
-        +-- <story-slug>/
-            +-- <story_snake>_story.<ext>                    <- scenario fidelity: helper interface + GWT wiring, no suffix
-            +-- <story_snake>_test_helper.<tier>.<ext>        <- one per tier (write-once); every tier is named explicitly
+        +-- examples/
+        +-- givens.ts
+        +-- <story-slug>.<tier>.ts     <- one GWT file per story per seam
+        +-- examples/                  <- only if this story alone owns the fixtures
 ```
 
-**Language variation — story / test-helper:**
+`{tier}` is `front-end`, `back-end`, or another system name. No per-story folder. No `*_story` / `*_test_helper` split.
 
-| Language | Story (scenario fidelity, no suffix) | Tier test-helper |
-| --- | --- | --- |
-| JavaScript | `<story_snake>_story.js` | `<story_snake>_test_helper.<tier>.js` |
-| Python | `<story_snake>_story.py` | `<story_snake>_test_helper.<tier>.py` |
-| TypeScript | `<story_snake>_story.ts` | `<story_snake>_test_helper.<tier>.ts` |
-| Java | `<StorySlug>Story.java` | `<StorySlug>Story` + `TestHelper` + `<Tier>` PascalCase, e.g. `<StorySlug>StoryTestHelperDomain.java` |
+Other language channels still exist (Python / JavaScript / Java) and may keep their older helper-split trees until those backends are migrated.
 
-`<tier>` is project-specific, discovered from the caller's tier list — typically
-`domain | client | server | e2e`, or another layer name the AI chooses from
-context (e.g. `api`, `db`). There is no implicit no-suffix baseline tier: even
-the `domain` tier gets an explicit `_test_helper.domain.<ext>` file. Java's
-file-name-matches-class-name rule is the one exception — it cannot use a
-literal `.` before the tier segment, so the tier PascalCase is concatenated
-onto the class name instead of dot-separated (mirrors the existing
-Python-only snake-case epic-helper exception below).
+Concrete values live in `examples/` and `givens.ts` at the lowest shared folder — not inventable inline tables in the GWT file.
 
-The `<story_snake>_story.<ext>` file (scenario fidelity, no suffix) declares
-one helper-interface method per distinct Given/When/Then clause and wires
-`story()` / `scenario()` blocks that call those methods only — no assertions,
-no tier mechanism, no ExampleFactory import. Concrete values live in
-`{Type}ExampleFactory` — not inventable `examples: [{ … }]` tables in the story
-file. Every `<story_snake>_test_helper.<tier>.<ext>` file implements that
-interface with the tier's real mechanism (domain class call, Supertest route,
-Testing Library render, Playwright page, …) and calls
-`create<StoryName>Story(new TierHelper())`.
+The `context_tools/stories/examples/{ts,py}/process-payments/` trees are historical examples of document-mode layout, not the acceptance-test tree above.
 
-The `context_tools/stories/examples/{ts,py}/process-payments/` trees are the canonical
-reference of what a fully-expanded code example looks like: root document-mode
-`story-context.md`, one sub-epic folder per sub-epic, and exactly one
-`<slug>-stories.<ext>` per sub-epic. No test files live in the story examples —
-tests are a different concern with their own examples elsewhere.
 
 **Python-only naming exception — snake-case epic helper:**
 
@@ -166,17 +145,9 @@ Java is unaffected because its file-per-class rule already forces PascalCase
 place. Python is the only backend where the kebab-everywhere rule collides
 with the language's identifier grammar, hence the single exception.
 
-### Example factories (Clean Engineering link)
-
-When a tier's implementation needs domain objects from CE, its test-helper
-class **imports `{Type}ExampleFactory`** and calls `load*({ mode })` inside the
-helper-interface method bodies it implements — never inside the story file,
-which stays tier-neutral. Which `{Type}` collaborators are real vs.
-constructor-injected mocks is a per-tier choice the test-helper class makes
-(e.g. a `domain`/`server` tier passes `Isolated` or `Production` mode to the
-factory; a `client` tier renders against the real client domain with the HTTP
-client mocked; an `e2e` tier uses nothing but the real stack). See `stories.md`
-§ Example factories.
+When a seam needs example data, load it from `examples/` or `givens.ts` at the
+lowest shared epic / sub-epic / story folder — not inline in the GWT file.
+See `stories.md`.
 
 JSON is emitted as `stories.json` — one file per project, pure data, round-trip
 by design. See `../document/json/` for details.

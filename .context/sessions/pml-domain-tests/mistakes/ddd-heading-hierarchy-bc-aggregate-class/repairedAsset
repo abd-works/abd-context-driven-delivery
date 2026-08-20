@@ -1,0 +1,1 @@
+DDD hierarchy is now ## BC → ### Name (aggregate) → #### Class. Removed **Aggregates:** lines.

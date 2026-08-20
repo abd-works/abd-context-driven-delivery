@@ -1,0 +1,1 @@
+SubscriptionRepository, PortabilityRequestRepository, BillingRepository, CartRepository, MsisdnInventory, OrderRepository shown with no stereotype and no aggregation connector to their aggregate

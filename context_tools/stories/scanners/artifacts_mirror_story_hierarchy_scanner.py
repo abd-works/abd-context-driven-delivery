@@ -79,7 +79,7 @@ class ArtifactsMirrorStoryHierarchyScanner(StoryWorkspaceScanner):
             if not matched:
                 yield self.violation(
                     f"Code file {rel!r} is not under its story map hierarchy "
-                    f"({'{epic}/{sub-epic}/{story-slug}/'} folder structure required)",
+                    f"({'{epic}/{sub-epic}/{story}.{tier}.ts'} required; no per-story folder)",
                     location=self.loc(suite, rel),
                     severity="error",
                 )

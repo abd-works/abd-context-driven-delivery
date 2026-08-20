@@ -1,0 +1,10 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: discovery
+  path: sandbox/heroes-handbook
+  session: heroes-handbook-web
+  workspace: sandbox/heroes-handbook
+tool: record_context_root
+arguments:
+  root: sandbox/heroes-handbook
+  note: Clean Engineering discovery for Heroes Handbook web sim; source sandbox/HeroesHandbook.md

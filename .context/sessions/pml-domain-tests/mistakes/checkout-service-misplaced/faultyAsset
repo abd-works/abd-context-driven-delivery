@@ -1,0 +1,1 @@
+Checkout is owned by Cart — cart.checkout(payment) places the order. Checkout is the UI wizard domain object (open, isShowingReview, capturePayment). OrderResult is not a VO (specific to a customer's order); its fields (payUpFront, verified) belong on Order.

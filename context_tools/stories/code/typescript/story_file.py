@@ -45,7 +45,7 @@ def render_story_file(
 
     lines: List[str] = [
         "/**",
-        f" * Story: {story.name} (scenario fidelity - tier-neutral).",
+        f" * Story: {story.name}",
     ]
     if actor:
         lines.append(f" * Actor: {actor}")
@@ -102,14 +102,10 @@ def _render_scenario(scenario, method_for) -> List[str]:
     return lines
 
 
-def render_test_helper_file(story: Story, *, tier: str) -> str:
-    """Write-once skeleton for `{story}_test_helper.{tier}.ts`.
-
-    Scaffolds a class implementing the story's helper interface with
-    `not implemented` stub bodies (code path). The AI/human path fills each
-    stub with that tier's real mechanism - domain class call, Supertest route,
-    Testing Library render, Playwright page, etc.
-    """
+def render_test_helper_file(
+    story: Story, *, tier: str, same_file: bool = False
+) -> str:
+    """Seam helper for `{story}.{tier}.ts`."""
     fn = f"create{to_pascal(story.name)}Story"
     helper_iface = f"{to_pascal(story.name)}Helper"
     tier_class = f"{to_pascal(tier)}Helper"
@@ -121,10 +117,13 @@ def render_test_helper_file(story: Story, *, tier: str) -> str:
         " */",
         "",
         'import { describe } from "vitest";',
-        f'import {{ {fn}, type {helper_iface} }} from "./{_snake(story.name)}_story";',
-        "",
-        f"class {tier_class} implements {helper_iface} {{",
     ]
+    if not same_file:
+        lines.append(
+            f'import {{ {fn}, type {helper_iface} }} from "./{_snake(story.name)}_story";'
+        )
+        lines.append("")
+    lines.append(f"class {tier_class} implements {helper_iface} {{")
     for method in methods:
         lines.append(f"  {method.name}(): void | Promise<void> {{")
         lines.append(f'    throw new Error("not implemented: {method.name}");')

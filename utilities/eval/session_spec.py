@@ -14,12 +14,13 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
-from expects import be_none, equal, expect
+from expects import be_none, be_true, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from eval.session import (
     CDDRepo,
     Correction,
+    EvalGitConnectError,
     Mistake,
     NullCDDRepo,
     NullWorkspaceRepo,
@@ -57,6 +58,15 @@ def _workspace(tmp: Path, name: str = "sprint") -> SimpleNamespace:
     folder = tmp / ".context" / "sessions" / name
     folder.mkdir(parents=True)
     return SimpleNamespace(path=str(tmp), folder=folder, name=name)
+
+
+def _isolated_session(ws, **kwargs):
+    return Session(
+        workspace=ws,
+        workspace_repo=NullWorkspaceRepo(),
+        cdd_repo=NullCDDRepo(),
+        **kwargs,
+    )
 
 
 _REPO_ROOT = find_git_root(Path(__file__))
@@ -107,7 +117,7 @@ with description("a session"):
     with context("that a first-order tool or action runs before the chat turn is finished"):
         with before.each:
             self.tmp = Path(tempfile.mkdtemp())
-            self.session = Session(workspace=_workspace(self.tmp))
+            self.session = _isolated_session(_workspace(self.tmp))
 
         with it("should attach a ToolCall to the open Turn"):
             # Act
@@ -133,16 +143,14 @@ with description("a session"):
         with before.each:
             self.tmp = Path(tempfile.mkdtemp())
             self.ws = _workspace(self.tmp)
-            self.session = Session(
-                workspace=self.ws,
-                is_dirty=lambda: True,
-            )
+            self.session = _isolated_session(self.ws, is_dirty=lambda: True)
             self.mistake = Mistake(
                 _entry_id="abc12345",
                 _artifact="a.md",
                 _rule="r",
                 _wrong="w",
                 _original="o",
+                _tool="Bdd",
             )
             self.mistake.record(self.session)
 
@@ -161,6 +169,11 @@ with description("a session"):
             expect(folder.is_dir()).to(equal(True))
             expect((folder / "faultyAsset").read_text(encoding="utf-8")).to(equal("o"))
             expect((folder / "repairedAsset").exists()).to(equal(False))
+
+        with it("should not write an improvement folder when no improvement was made"):
+            expect(
+                (Path(self.ws.folder) / "repairs" / "r" / "improvement.md").exists()
+            ).to(equal(False))
 
         with it("should leave Correction open on that Mistake"):
             # Assert
@@ -214,7 +227,10 @@ with description("a session"):
                     correction=Correction(_improved="good"),
                 )
                 dest = (
-                    Path(self.repairer.cdd_session.workspace.folder) / "mistakes" / "r"
+                    Path(self.repairer.cdd_session.workspace.folder)
+                    / "repairs"
+                    / "r"
+                    / "r"
                 )
                 expect((dest / "repairedAsset").read_text(encoding="utf-8")).to(
                     equal("good")
@@ -271,7 +287,7 @@ with description("a session"):
                 self.session.record_tool_call(
                     ToolCall(_toolset="bdd", _name="satisfy", _summary="fix")
                 )
-                Correction(_improved="good").apply(
+                Correction(_improved="good", _how="wired rule r into the scanner").apply(
                     [self.mistake], self.session.open_turn
                 )
                 self.session.finish_turn(prompt="fix", result="done", context="")
@@ -292,8 +308,62 @@ with description("a session"):
                 )
 
             with it("should store the Correction as repairedAsset beside that Mistake"):
-                repaired = Path(self.ws.folder) / "mistakes" / "r" / "repairedAsset"
+                repaired = (
+                    Path(self.ws.folder) / "repairs" / "r" / "r" / "repairedAsset"
+                )
                 expect(repaired.read_text(encoding="utf-8")).to(equal("good"))
+
+            with it("should write an improvement folder named after the problem theme under repairs"):
+                theme = Path(self.ws.folder) / "repairs" / "r"
+                expect(theme.is_dir()).to(equal(True))
+                expect((theme / "improvement.md").is_file()).to(equal(True))
+
+            with it("should write which tool was improved, how, and what the error was"):
+                details = (
+                    Path(self.ws.folder) / "repairs" / "r" / "improvement.md"
+                ).read_text(encoding="utf-8")
+                expect("Bdd" in details).to(equal(True))
+                expect("wired rule r into the scanner" in details).to(equal(True))
+                expect("w" in details).to(equal(True))
+                expect("good" in details).to(equal(False))
+
+            with it("should drop that Mistake folder into that improvement folder"):
+                nested = Path(self.ws.folder) / "repairs" / "r" / "r"
+                expect((nested / "faultyAsset").read_text(encoding="utf-8")).to(
+                    equal("o")
+                )
+                expect((nested / "repairedAsset").read_text(encoding="utf-8")).to(
+                    equal("good")
+                )
+
+            with it("should not leave that Mistake under the session mistakes folder"):
+                expect((Path(self.ws.folder) / "mistakes" / "r").exists()).to(
+                    equal(False)
+                )
+
+            with context("that a second Mistake of the same problem is also fixed"):
+                with before.each:
+                    self.second = Mistake(
+                        _entry_id="def67890",
+                        _artifact="b.md",
+                        _rule="r",
+                        _wrong="w2",
+                        _original="o2",
+                    )
+                    self.second.record(self.session)
+                    Correction(_improved="good").apply(
+                        [self.mistake, self.second], self.session.open_turn
+                    )
+
+                with it("should drop both Mistake folders into the same improvement folder"):
+                    theme = Path(self.ws.folder) / "repairs" / "r"
+                    expect((theme / "r" / "faultyAsset").read_text(encoding="utf-8")).to(
+                        equal("o")
+                    )
+                    expect(
+                        (theme / "r-2" / "faultyAsset").read_text(encoding="utf-8")
+                    ).to(equal("o2"))
+                    expect((theme / "improvement.md").is_file()).to(equal(True))
 
     with context("that an agent chat turn has finished"):
         with context("with changes to the working area"):
@@ -374,7 +444,7 @@ with description("an eval session"):
     with context("that an asset is repaired with no Mistake on the session"):
         with before.each:
             self.tmp = Path(tempfile.mkdtemp())
-            self.session = Session(workspace=_workspace(self.tmp, name="sprint"))
+            self.session = _isolated_session(_workspace(self.tmp, name="sprint"))
             self.host = _FakeHost()
             self.repairer = Repair(
                 session=self.session,
@@ -454,14 +524,14 @@ with description("repos for a workspace"):
         with before.each:
             self.tmp = Path(tempfile.mkdtemp())
             self.ws = _workspace(self.tmp)
-            self.ws_repo, self.cdd_repo = repos_for_workspace(self.ws)
 
         with after.each:
             shutil.rmtree(self.tmp, ignore_errors=True)
 
-        with it("should use null repos"):
-            expect(type(self.ws_repo)).to(equal(NullWorkspaceRepo))
-            expect(type(self.cdd_repo)).to(equal(NullCDDRepo))
+        with it("should report that it cannot connect"):
+            expect(lambda: repos_for_workspace(self.ws)).to(
+                raise_error(EvalGitConnectError)
+            )
 
 
 _GIT_ON_PATH = shutil.which("git") is not None
@@ -564,3 +634,65 @@ if _GIT_ON_PATH:
             )
             # Only the probe tree — not unrelated staged WIP from the main worktree.
             expect("context_tools/actions/echo" in names).to(equal(False))
+
+
+with description("Repair.log_mistake"):
+    with before.each:
+        self.tmp = Path(tempfile.mkdtemp())
+        self.repairer = Repair(session=_isolated_session(_workspace(self.tmp)))
+
+    with after.each:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    with it("should be a non-blocking sub-agent like repair and eval"):
+        from sub_agent.sub_agent import discover_sub_agent_tools
+
+        discovered = discover_sub_agent_tools(self.repairer)
+        expect("log_mistake" in discovered).to(be_true)
+        expect(discovered["log_mistake"].signature_entry["kind"]).to(equal("sub_agent"))
+        expect(discovered["repair"].signature_entry["kind"]).to(equal("sub_agent"))
+        expect(discovered["eval"].signature_entry["kind"]).to(equal("sub_agent"))
+
+    with it("should store the artifact file as faultyAsset, not a diagnosis of the problem"):
+        drawio = (
+            '<mxfile host="app.diagrams.net"><diagram id="1" name="Page-1">'
+            "<mxGraphModel><root/></mxGraphModel></diagram></mxfile>"
+        )
+        (Path(self.repairer.session.workspace.path) / "map.drawio").write_text(
+            drawio, encoding="utf-8"
+        )
+        self.repairer.log_mistake(
+            artifact="map.drawio",
+            rule="edges-do-not-overlap-edges",
+            wrong="orthogonal edges stacked on the same lane",
+            original="create_diagram wrote unlabeled module edges with no waypoints",
+        )
+        folder = Path(self.repairer.session.workspace.folder) / "mistakes" / (
+            "edges-do-not-overlap-edges"
+        )
+        expect((folder / "faultyAsset").read_text(encoding="utf-8")).to(equal(drawio))
+
+    with it("should store the repaired artifact file as repairedAsset, not a description of the redraw"):
+        drawio = (
+            '<mxfile host="app.diagrams.net"><diagram id="1" name="Page-1">'
+            "<mxGraphModel><root/></mxGraphModel></diagram></mxfile>"
+        )
+        repaired = drawio.replace("<root/>", "<root><mxCell id='ok'/></root>")
+        root = Path(self.repairer.session.workspace.path)
+        (root / "map.drawio").write_text(drawio, encoding="utf-8")
+        entry_id = self.repairer.log_mistake(
+            artifact="map.drawio",
+            rule="edges-do-not-overlap-edges",
+            wrong="orthogonal edges stacked on the same lane",
+            original=drawio,
+        )
+        (root / "map.drawio").write_text(repaired, encoding="utf-8")
+        self.repairer.log_correction(
+            entry_id=entry_id,
+            improved="Redrawn with distinct exit/entry on every edge.",
+            how="emit distinct exitX/entryX per edge",
+        )
+        dest = Path(self.repairer.session.workspace.folder) / "repairs"
+        assets = list(dest.rglob("repairedAsset"))
+        expect(len(assets)).to(equal(1))
+        expect(assets[0].read_text(encoding="utf-8")).to(equal(repaired))

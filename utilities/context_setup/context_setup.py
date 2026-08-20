@@ -101,6 +101,21 @@ class CaptureResult:
 # ── Toolset ───────────────────────────────────────────────────────────────────
 
 _SUPPORTED = frozenset({".docx", ".doc", ".pdf", ".pptx", ".ppt", ".txt", ".md", ".html", ".htm"})
+_STUBS_DIR = ("tests", "stubs")
+_SCOUT_DIR = ("sandbox", "extracted-context", "app-extraction")
+
+
+def _write_root(repo_path: str, capture_repo: str = "") -> Path:
+    chosen = (capture_repo or "").strip() or repo_path
+    return Path(chosen)
+
+
+def _stubs_root(repo: Path) -> Path:
+    return repo.joinpath(*_STUBS_DIR)
+
+
+def _scout_root(repo: Path) -> Path:
+    return repo.joinpath(*_SCOUT_DIR)
 
 
 @toolset
@@ -169,19 +184,19 @@ class ContextSetup:
         repo_path: str,
         surface: str = "web",
         base_url: str = "",
+        capture_repo: str = "",
         entry_paths: Optional[list[str]] = None,
     ) -> SmokeTestResult:
         """Test that the application at repo_path is reachable on its primary screens.
         surface: 'web' | 'desktop' | 'api'.
+        capture_repo: where to write tests/stubs (blank = repo_path).
         base_url: e.g. 'http://localhost:3000' — auto-detected from common ports if blank.
         entry_paths: URL paths to probe, e.g. ['/', '/login', '/dashboard'].
             Defaults to ['/'] when blank.
-        Appends smoke-test results to docs/stubs/stub-inventory.md under repo_path.
+        Appends smoke-test results to tests/stubs/stub-inventory.md under capture_repo.
         Returns SmokeTestResult. passed=True when every probed path returns HTTP 2xx/3xx."""
-        import requests as _requests
-
-        root = Path(repo_path)
-        out_dir = root / "docs" / "stubs"
+        root = _write_root(repo_path, capture_repo)
+        out_dir = _stubs_root(root)
         out_dir.mkdir(parents=True, exist_ok=True)
         inventory_path = str(out_dir / "stub-inventory.md")
         paths = entry_paths or ["/"]
@@ -207,20 +222,22 @@ class ContextSetup:
         repo_path: str,
         surface: str = "web",
         base_url: str = "",
+        capture_repo: str = "",
         entry_points: Optional[list[str]] = None,
     ) -> ScoutResult:
         """Phase 0 scout: capture 10-20 representative pages from the application.
         surface: 'web' | 'desktop' | 'api'.
+        capture_repo: where to write sandbox/extracted-context (blank = repo_path).
         base_url: e.g. 'http://localhost:3000' — auto-detected if blank.
         entry_points: URL paths to visit, e.g. ['/', '/login', '/dashboard'].
             Defaults to ['/'] when blank.
         Writes per page: screenshot.png and aria.yaml under
-            docs/extracted-context/app-extraction/pages/<slug>/.
+            sandbox/extracted-context/app-extraction/pages/<slug>/.
         Writes extraction-overview.md at
-            docs/extracted-context/app-extraction/extraction-overview.md.
+            sandbox/extracted-context/app-extraction/extraction-overview.md.
         Returns ScoutResult with overview_path, pages_dir, and page_captures."""
-        root = Path(repo_path)
-        out_root = root / "docs" / "extracted-context" / "app-extraction"
+        root = _write_root(repo_path, capture_repo)
+        out_root = _scout_root(root)
         pages_root = out_root / "pages"
         out_root.mkdir(parents=True, exist_ok=True)
         pages_root.mkdir(parents=True, exist_ok=True)
@@ -247,18 +264,20 @@ class ContextSetup:
         repo_path: str,
         missing_pages: list[str],
         surface: str = "web",
+        capture_repo: str = "",
         base_url: str = "",
     ) -> CaptureResult:
         """Phase N: capture specific missing or failed pages and update extraction-overview.md.
         missing_pages: list of URL paths or slugs to (re-)capture.
         surface: 'web' | 'desktop' | 'api'.
+        capture_repo: where to write sandbox/extracted-context (blank = repo_path).
         base_url: e.g. 'http://localhost:3000' — auto-detected if blank.
         Writes screenshot.png and aria.yaml for each page under
-            docs/extracted-context/app-extraction/pages/<slug>/.
+            sandbox/extracted-context/app-extraction/pages/<slug>/.
         Updates extraction-overview.md with the new page sections.
         Returns CaptureResult with added_captures and updated overview path."""
-        root = Path(repo_path)
-        out_root = root / "docs" / "extracted-context" / "app-extraction"
+        root = _write_root(repo_path, capture_repo)
+        out_root = _scout_root(root)
         pages_root = out_root / "pages"
         pages_root.mkdir(parents=True, exist_ok=True)
         overview_path = str(out_root / "extraction-overview.md")
@@ -284,10 +303,13 @@ class ContextSetup:
     def capture_from_live_app(
         self,
         repo_path: str,
+        capture_repo: str = "",
         surface: str = "web",
     ) -> str:
         """Capture context memory from a live application at repo_path.
-        repo_path={repo_path}  surface={surface} (one of web | desktop | api).
+        repo_path={repo_path}  capture_repo={capture_repo}  surface={surface} (one of web | desktop | api).
+        capture_repo is where stubs and scout land (tests/stubs/{system}/, domain/{aggregate}/stubs/{system}/, sandbox/extracted-context).
+        Blank capture_repo means the same folder as repo_path.
         Collaborators (compile-time references): ContextIndex.
 
         Step 1 — Classify External Dependencies (AI judgment, no tool):
@@ -299,27 +321,32 @@ class ContextSetup:
         Complex-stub trigger: if 5 or more distinct external services are found, OR any
         dependency requires a domain-shaped stub return (more than 3 fields), STOP and
         produce three pre-pass documents before writing any stubs:
-          1. docs/stubs/story-map.md — stub-focus story map
-          2. docs/stubs/acceptance-criteria.md — stub-focus acceptance criteria
-          3. docs/stubs/domain-glossary.md — domain term → minimum fields mapping
+          1. tests/stubs/stub-focus-map.md — stub-focus map (not Stories story-map.md)
+          2. tests/stubs/acceptance-criteria.md — stub-focus acceptance criteria
+          3. tests/stubs/domain-glossary.md — domain term → minimum fields mapping
+        Write those files under capture_repo (or repo_path if capture_repo is blank).
         Only proceed to Step 2 once all three documents are written.
 
         Step 2 — Write External Stubs (AI judgment, no tool):
-        For each dependency classified as 'external', write a stub at its outermost
-        boundary — the HTTP client adapter, SDK factory, or module export. DO NOT stub
-        OAuth token flows, deep SDK internals, or protocol-layer methods.
+        For each dependency classified as 'external', write a canned neighbor stub under capture_repo.
+        Global systems (no owning domain): tests/stubs/{system}/.
+        Domain-owned neighbors: domain/{aggregate}/stubs/{system}/.
+        Never a domain folder inside tests/.
+        Write at the outermost boundary — the HTTP client adapter, SDK factory, or module export.
+        DO NOT stub OAuth token flows, deep SDK internals, or protocol-layer methods.
         Record every hardcoded value introduced by each stub.
-        Write the Stub Inventory to docs/stubs/stub-inventory.md under repo_path with
+        Write the Stub Inventory to tests/stubs/stub-inventory.md under capture_repo with
         one row per stub: service, boundary point (file + symbol), hardcoded values,
         BDD step phrase references (When / And / Then).
 
-        Step 3 — Smoke Test: call smoke_test(repo_path=repo_path, surface=surface).
+        Step 3 — Smoke Test: call smoke_test(repo_path=repo_path, capture_repo=capture_repo, surface=surface).
         If smoke_test_result.passed is False, identify which screens failed, trace the
         boundary point from the stub inventory, repair the stub (Step 2), and call
         smoke_test again. Do not proceed to Step 4 until passed is True.
 
-        Step 4 — Scout App Pages: call scout_app(repo_path=repo_path, surface=surface).
-        This runs a Phase 0 thin capture (10-20 representative pages or endpoints) and
+        Step 4 — Scout App Pages: call scout_app(repo_path=repo_path, capture_repo=capture_repo, surface=surface).
+        This runs a Phase 0 thin capture (10-20 representative pages or endpoints) under
+        capture_repo/sandbox/extracted-context/app-extraction/ and
         returns a ScoutResult with overview_path, pages_dir, and page_slugs.
 
         Step 5 — Review Capture Coverage (AI judgment):
@@ -336,7 +363,7 @@ class ContextSetup:
 
         Step 6 — Complete App Capture (only when Step 5 found FAIL or WARN pages):
         Collect the URLs or slugs of FAIL and WARN pages into missing_pages.
-        Call complete_capture(repo_path=repo_path, missing_pages=missing_pages,
+        Call complete_capture(repo_path=repo_path, capture_repo=capture_repo, missing_pages=missing_pages,
         surface=surface).
         After capture, call context_index.embed(segments_paths=[capture_result.overview_path])
         to index the updated overview and report all pages captured."""

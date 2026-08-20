@@ -1,0 +1,7 @@
+Story: Sign Up — Create Account
+Scenario: Prospect creates an account after selecting a plan
+  Given the prospect is unauthenticated (no session)
+  Given a prospect has selected a plan
+  When they submit email + password (meets PasswordRules)
+  Then Cognito signUp() creates their account
+  Then they are redirected to /validate-email

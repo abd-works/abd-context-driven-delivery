@@ -50,6 +50,7 @@ class BaseContextTool(AgenticToolset):
 
     # Chat/command stage names → canonical stage keys used in ``fidelities``.
     STAGE_ALIASES: ClassVar[dict[str, str]] = {
+        "scaffold": SHAPING,
         "discovery": DISCOVERY,
         "specification": SPEC,
         "spec": SPEC,
@@ -128,13 +129,7 @@ class BaseContextTool(AgenticToolset):
             if getattr(self, "repairer", None) is not None:
                 self.repairer.session = None
             return
-        try:
-            self.eval = EvalSession(workspace=self.workspace)
-        except Exception:
-            self.eval = None
-            if getattr(self, "repairer", None) is not None:
-                self.repairer.session = None
-            return
+        self.eval = EvalSession(workspace=self.workspace)
         self.workspace.eval = self.eval  # type: ignore[attr-defined]
         # Bind SessionLog so @log-decorated runs forward ToolCalls to the eval Turn.
         from workspace.session_log import SessionLog
@@ -464,9 +459,13 @@ class BaseContextTool(AgenticToolset):
         self.templates
         self.repairer.repair(asset, violation)
         self.finish_eval_turn()
-        return "Repair {{asset}} under {session.path}/ until validate passes."
+        return (
+            "Repair {{asset}} under {session.path}/ until validate passes. "
+            "Fail-first test before any tool change. Write evals after the fix."
+        )
 
     @log
+    @sub_agent
     @tool
     def log_mistake(
         self,
@@ -492,12 +491,14 @@ class BaseContextTool(AgenticToolset):
 
     @log
     @tool
-    def log_correction(self, entry_id: str, improved: str, status: str = "fixed") -> str:
-        """log_correction — Correction.apply through Repair; writes repairedAsset beside the Mistake."""
+    def log_correction(
+        self, entry_id: str, improved: str, how: str = "", status: str = "fixed"
+    ) -> str:
+        """log_correction — Correction.apply through Repair; writes repairedAsset and improvement.md."""
         if self.eval is None:
             raise ValueError("No eval session — open a named session first")
         return self.repairer.log_correction(
-            entry_id=entry_id, improved=improved, status=status
+            entry_id=entry_id, improved=improved, how=how, status=status
         )
 
     @tool

@@ -11,16 +11,21 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
+from pathlib import Path
+
 from primitives.actions.action import action
 from context_tools.base.base_context_tool import BaseContextTool
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
+from scanners.scan import Scan
+from scanners.scanner_collection import ScannerCollection
 from tools.tool import tool  # noqa: F401
 
 if TYPE_CHECKING:
     from utilities.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
+    "scaffold": "markdown",
     "bounded_context": "markdown",
     "building_blocks": "markdown",
     "tactics": "python",
@@ -28,6 +33,7 @@ _FIDELITY_FORMAT_DEFAULTS = {
 
 # DDD fidelity -> clean_engineering fidelity (CE owns OO ladder; DDD overlays domain/strategic).
 _CE_FIDELITY = {
+    "scaffold": "modules",
     "bounded_context": "modules",
     "building_blocks": "model",
     "tactics": "code",
@@ -45,6 +51,19 @@ class TransformResult(TypedDict):
     content: str
 
 
+class _DddScan(Scan):
+    """Discover DDD scanners under ``context_tools/ddd/scanners``."""
+
+    def __init__(self, module_dir: Path) -> None:
+        self._module_dir = Path(module_dir)
+
+    def _scanner_collection(self) -> ScannerCollection:
+        return ScannerCollection(
+            module_dir=self._module_dir,
+            root_path=self._module_dir / "scanners",
+        )
+
+
 class Ddd(BaseContextTool):
     """# Instructions
 
@@ -56,13 +75,16 @@ class Ddd(BaseContextTool):
     supported_formats = _SUPPORTED_FORMATS
 
     fidelities = {
+        BaseContextTool.SHAPING:   "scaffold",
         BaseContextTool.DISCOVERY: "bounded_context",
         BaseContextTool.SPEC:      "building_blocks",
         BaseContextTool.ENGINEER:  "tactics",
     }
 
+    # Generate / new work: src/. /document defaults to domain/ unless path or folder is set.
     default_workspace_folder: str = "src"
     context_index_key: str = "ddd"
+    _DOCUMENT_WORKSPACE_FOLDER: str = "domain"
 
     def __init__(
         self,
@@ -78,6 +100,7 @@ class Ddd(BaseContextTool):
             format=resolved_format, path=path, session=session, workspace=workspace
         )
         self._fidelity = fidelity
+        self.scanner = _DddScan(self.module_dir)
 
     @property
     def fidelity(self) -> str:
@@ -102,7 +125,7 @@ class Ddd(BaseContextTool):
         instance = CleanEngineering(
             fidelity=_CE_FIDELITY.get(self.fidelity, "modules"),
             format=self.format,
-            path=self._raw_path,
+            path=self.workspace.path,
             session=self.workspace.name,
             workspace=self.workspace.workspace_root,
         )
@@ -114,6 +137,30 @@ class Ddd(BaseContextTool):
         from utilities.diagnose.diagnose import Diagnose
 
         return Diagnose()
+
+    @tool
+    def apply_document_workspace_default(self) -> str:
+        """Set the durable working area to `domain/` for /document.
+
+        Does not change CleanEngineering's own default folder. Skip when `path`
+        was passed or `default_workspace_folder` is already not the generate
+        default (`src`). Returns the working path in force.
+        """
+        generate_folder = type(self).default_workspace_folder
+        if self._raw_path is not None:
+            return self.workspace.path
+        if self.workspace.default_workspace_folder != generate_folder:
+            return self.workspace.path
+        self.workspace.default_workspace_folder = type(self)._DOCUMENT_WORKSPACE_FOLDER
+        self.workspace.path = self.workspace._resolve_working_area(None)
+        return self.workspace.path
+
+    @action
+    def document(self, paths: list[str]) -> str:
+        """Default working folder is `domain/` unless path or folder was overridden."""
+        self.apply_document_workspace_default()
+        super().document(paths)
+        return "Document existing state under {session.path}/ - violations flagged, none corrected."
 
     @instruction
     def contexts(self) -> Instruction: ...

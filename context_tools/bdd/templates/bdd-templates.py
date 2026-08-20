@@ -56,3 +56,16 @@ with description('{DomainEntity}'):
             self.entity.{action}({local_setup})
             # Assert
             expect(self.entity.{property}).to(equal({expected_value}))
+
+
+# Scan fixture pair — mechanical mistake specs use these helpers, not an eval harness.
+from context_tools.bdd.spec_helpers import expect_scan_fails, expect_scan_passes
+
+with description('a scan fixture pair'):
+    with context('a file that violates the rule'):
+        with it('should fail scan'):
+            expect_scan_fails({scan}, '{FailFixturePath}', rule='{Rule}')
+
+    with context('a file that satisfies the rule'):
+        with it('should pass scan'):
+            expect_scan_passes({scan}, '{PassFixturePath}', rule='{Rule}')

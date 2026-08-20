@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # CatalogGenerator
 
+This skill **is** this context tool. Do not ask which context tool to run.
+
 **Step 1 — Identify the action.**
 Check whether an action was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose:
 

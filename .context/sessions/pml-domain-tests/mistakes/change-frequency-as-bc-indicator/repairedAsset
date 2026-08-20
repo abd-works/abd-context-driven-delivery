@@ -1,0 +1,1 @@
+Subscription is its own BC (higher lifecycle cadence than Customer). Catalog rarest, Customer occasional, Subscription/line frequent. Reflected in consolidated # DDD (see 16d02616): Customer / Catalog / Subscription by frequency + product/transaction/purchaser — not nested Subscription-only under Customer.

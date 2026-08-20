@@ -1,0 +1,1 @@
+First outcome uses then(); remaining four outcomes chain as .and() on the returned StepChain; indented consistently under the opening then()

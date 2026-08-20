@@ -1,0 +1,1 @@
+Selfcare/Onboarding DDD deps now depender→dependee (Customer→Auth, Customer→Billing, Subscription→Catalog, Cart→Catalog, Cart→Portability, Portability→Subscription, Acquisition→Identity, Acquisition→Customer, Cart→Catalog). Removed inverted Billing→Customer Conformist claim that contradicted Customer.billing nesting.

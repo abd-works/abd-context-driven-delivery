@@ -1,24 +1,39 @@
-"""TypeScript tree - `*_story.ts` per Story folder."""
+"""TypeScript tree - `{story}.{tier}.ts` under epic / sub-epic (no story folder)."""
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Sequence
 
-from context_tools.stories.code.code_story_map import to_kebab, to_pascal, to_snake
-from context_tools.stories.code.example_factories import collect_example_factories
-from context_tools.stories.code.typescript.story_file import render_story_file
+from context_tools.stories.code.code_story_map import to_kebab
+from context_tools.stories.code.typescript.story_file import (
+    render_story_file,
+    render_test_helper_file,
+)
 from context_tools.stories.story_model.nodes import Epic, Story, SubEpic
 from context_tools.stories.story_model.story_map import StoryMap
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "seeds"
 
+DEFAULT_TIERS: Sequence[str] = ("front-end", "back-end")
+
+_GIVENS = (
+    "export async function given(_name: string): Promise<void> {\n"
+    "  // reusable seeds for this folder\n"
+    "}\n"
+)
+
 
 def render_ts_tree(
-    story_map: StoryMap, *, tests_root: str = "tests", include_shared: bool = True
+    story_map: StoryMap,
+    *,
+    tests_root: str = "tests",
+    include_shared: bool = True,
+    tiers: Sequence[str] | None = None,
 ) -> Dict[str, str]:
     tree: Dict[str, str] = {}
     root = tests_root.strip("/") or "tests"
+    seam_tiers = tuple(tiers) if tiers else DEFAULT_TIERS
     if include_shared:
         test_path = TEMPLATES_DIR / "story-test.ts"
         if test_path.exists():
@@ -26,58 +41,58 @@ def render_ts_tree(
         else:
             tree[f"{root}/story-test.ts"] = _default_story_test()
     for epic in getattr(story_map, "epics", []) or []:
-        _render_epic(epic, root=root, tree=tree)
+        _render_epic(epic, root=root, tree=tree, tiers=seam_tiers)
     return tree
 
 
-def _render_epic(epic: Epic, *, root: str, tree: Dict[str, str]) -> None:
-    epic_slug = to_kebab(epic.name)
-    tree[f"{root}/{epic_slug}/{epic_slug}-helper.ts"] = _helper(epic)
+def _ensure_fixtures(folder: str, tree: Dict[str, str]) -> None:
+    tree.setdefault(f"{folder}/givens.ts", _GIVENS)
+    tree.setdefault(f"{folder}/examples/.keep", "")
+
+
+def _render_epic(
+    epic: Epic, *, root: str, tree: Dict[str, str], tiers: Sequence[str]
+) -> None:
+    epic_folder = f"{root}/{to_kebab(epic.name)}"
+    _ensure_fixtures(epic_folder, tree)
     for sub in getattr(epic, "sub_epics", []) or []:
-        _render_sub_epic(sub, parent=f"{root}/{epic_slug}", depth=2, tree=tree, epic=epic)
-
-
-def _helper(epic: Epic) -> str:
-    factories = collect_example_factories(epic)
-    helper_class = f"{to_pascal(epic.name)}Helper"
-    lines = [
-        "/** Epic helper - ExampleFactory accessors; AI fills given_* bodies. */",
-        "",
-    ]
-    if factories:
-        lines.append(
-            f"import {{ {', '.join(factories)} }} from '../example-factories';"
-        )
-        lines.append("")
-    lines.append(f"export class {helper_class} {{")
-    lines.append(
-        "  // Shared ExampleFactory accessors. Tier test-helpers import this to build real collaborators."
-    )
-    for name in factories:
-        method = name[0].lower() + name[1:]
-        lines.append(f"  {method}() {{ return new {name}(); }}")
-    if not factories:
-        lines.append(f"  // No example_factories on epic {epic.name!r}")
-    lines.append("}")
-    lines.append("")
-    return "\n".join(lines)
+        _render_sub_epic(sub, parent=epic_folder, depth=2, tree=tree, tiers=tiers)
 
 
 def _render_sub_epic(
-    sub: SubEpic, *, parent: str, depth: int, tree: Dict[str, str], epic: Epic
+    sub: SubEpic,
+    *,
+    parent: str,
+    depth: int,
+    tree: Dict[str, str],
+    tiers: Sequence[str],
 ) -> None:
     folder = f"{parent}/{to_kebab(sub.name)}"
+    _ensure_fixtures(folder, tree)
     for nested in getattr(sub, "sub_epics", []) or []:
-        _render_sub_epic(nested, parent=folder, depth=depth + 1, tree=tree, epic=epic)
+        _render_sub_epic(
+            nested, parent=folder, depth=depth + 1, tree=tree, tiers=tiers
+        )
     for story in getattr(sub, "stories", []) or []:
         if not story.scenarios:
             continue
-        story_folder = f"{folder}/{to_kebab(story.name)}"
-        relative_test = "../" * depth + "story-test"
-        tree[f"{story_folder}/{to_snake(story.name)}_story.ts"] = render_story_file(
-            story,
-            relative_story_test_path=relative_test,
-        )
+        _render_story(story, folder=folder, depth=depth, tree=tree, tiers=tiers)
+
+
+def _render_story(
+    story: Story,
+    *,
+    folder: str,
+    depth: int,
+    tree: Dict[str, str],
+    tiers: Sequence[str],
+) -> None:
+    relative_test = "../" * depth + "story-test"
+    slug = to_kebab(story.name)
+    gwt = render_story_file(story, relative_story_test_path=relative_test)
+    for tier in tiers:
+        helper = render_test_helper_file(story, tier=tier, same_file=True)
+        tree[f"{folder}/{slug}.{tier}.ts"] = gwt + helper
 
 
 def _default_story_test() -> str:

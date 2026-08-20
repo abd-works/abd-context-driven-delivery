@@ -1,0 +1,4 @@
+export interface PlanRepository {
+  findAvailable(filter: PlanFilter): Promise<Plan[]>
+  findById(planId: string): Promise<Plan>
+}

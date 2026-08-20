@@ -1,0 +1,1 @@
+signIn(), register(), signOut(), requestPasswordReset(), resetPassword() all on Credentials interface and CredentialsE2e

@@ -1,0 +1,1 @@
+Removed ### Cross-Context Relationships sections; each **→ Target** block sits on the owning aggregate (Customer, Subscription, Cart, Portability, Acquisition Customer/Cart) next to the field/interaction.

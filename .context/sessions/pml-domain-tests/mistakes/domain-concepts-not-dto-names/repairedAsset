@@ -1,0 +1,1 @@
+Renamed DDD/CE domain concept PersonaResponse → IdentityVerification (KYC / identity-check outcome). Code type PersonaResponse retained only as implementation note on IdentityVerification and personaDataAtom.

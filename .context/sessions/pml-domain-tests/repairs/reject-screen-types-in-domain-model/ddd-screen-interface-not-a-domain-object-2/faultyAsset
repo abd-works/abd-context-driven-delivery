@@ -1,0 +1,14 @@
+export interface PickNumber {
+  open(): Promise<void>
+  isShowing(): Promise<boolean>
+  availableNumbers(): Promise<string[]>
+  pickNewNumber(msisdn: string): Promise<void>
+  goToPortNumber(): Promise<void>
+}
+export interface PortNumber {
+  isShowing(): Promise<boolean>
+  port(info: PortingInfo): Promise<void>
+  isSmsVerificationShowing(): Promise<boolean>
+  verifySms(code: string): Promise<void>
+  resendSms(): Promise<void>
+}

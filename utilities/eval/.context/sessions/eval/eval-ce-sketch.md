@@ -13,16 +13,18 @@
 ```
 utilities/
   workspace/                    ← KEEP — locations only (now at context_tools/actions/workspace)
-  eval/                         ← OWN — EvalSession domain + Repair + eval BDD specs + agent-BDD specs
+  eval/                         ← OWN — EvalSession domain + Repair
   record_decisions/             ← KEEP — CDRs ≠ turns
   scanners/                     ← KEEP — Scan; Repair uses it to confirm mechanical violations
 
 context_tools/
+  bdd/                          ← KEEP — expect_scan_fails / expect_scan_passes (mistake fail/pass files)
+  agent_bdd/                    ← KEEP — generate_and_judge (same pass file)
   base/                         ← self.workspace + self.eval + self.repairer (eval.Repair)
   actions/repair/               ← DELETE — no shim, no re-export; update all imports
 ```
 
-**Build order:** workspace → eval (EvalSession) → eval.Repair → Base wiring. Specs live beside the domain in `utilities/eval/` (`*_spec.py` vanilla BDD, `agent_bdd_spec.py` agent-BDD).
+**Build order:** workspace → eval (EvalSession) → eval.Repair → Base wiring. Domain specs stay in `utilities/eval/` (`session_spec.py`, `agent_bdd_spec.py`). Mistake fail/pass scan and generate+judge live on Bdd / AgentBdd spec helpers — not a new eval harness.
 
 ## Placement (locked)
 
@@ -116,6 +118,7 @@ eval/
       ----
       Correction
         improved
+        how                           // what changed in the context tool
         status                        // open | fixed
         fixedIn                       // → Turn that closed it
         apply(mistakes, turn): None
@@ -219,10 +222,10 @@ eval/
       -> examples: Instruction
       -> templates: Instruction
 
-  session_spec.py                     // explicit vanilla BDD for eval
-  agent_bdd_spec.py                   // explicit agent-BDD for eval
-    // same two lanes every time: scanner before-fail / after-pass;
-    // agentic judge + generate similar success + hold last generate
+  session_spec.py                     // eval domain (session/git/repair)
+  agent_bdd_spec.py                   // eval domain (real-git agent path)
+    // mistake regression is NOT here — Bdd expect_scan_fails/passes +
+    // AgentBdd generate_and_judge
 
   Archive                             < scaffold
     sessions                          // composition — EvalSessions this Archive has promoted
@@ -270,11 +273,11 @@ workspace/
 - Composition only when the owner owns the part's lifetime. WorkspaceRepo, CDDRepo, Scan, and WorkspaceSession fail that test — associations.  
 - Repair.repair does not call eval. Agent (or contribute) runs eval after a repair.  
 - createRule only when scan does not already match the Mistake; then run that rule and detect a failure that matches the Mistake.  
-- CDDRepo **extends** WorkspaceRepo. Asset session **links once** (`cddAt` = headSha). Repair **opens a WorkspaceSession on the CDD clone**. `repos_for_workspace` roots CDDRepo at the running tools clone, not `find_git_root(workspace)` — share one root only when the working area sits inside that clone. No stampTurn on every generate.  
+- CDDRepo **extends** WorkspaceRepo. Asset session **links once** (`cddAt` = headSha). Repair **opens a WorkspaceSession on the CDD clone**. `repos_for_workspace` roots CDDRepo at the running tools clone, not `find_git_root(workspace)` — share one root only when the working area sits inside that clone. Cannot connect → `EvalGitConnectError`; no live Null fallback. No stampTurn on every generate.  
 - Dirty finish → git commit + append Turn on **this** session's WorkspaceRepo; clean finish → no Turn, no commit.  
 - Turn.changeCommit is this session's TurnCommit. Asset session does not store a per-turn CDD commit.  
 - `eval → workspace` only.  
-- Eval tests are **specs in this package**, not a helper API.
+- Eval tests are **specs in this package** for the eval domain. Mistake fail/pass scan and generate+judge are Bdd / AgentBdd helpers, not an eval harness.
 
 ## Grill log
 

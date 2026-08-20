@@ -33,6 +33,8 @@ for _cat in ("utilities", "primitives", "context_tools"):
 from expects import be_a, be_empty, be_false, be_true, contain, equal, expect, have_len
 from mamba import after, before, context, description, it
 
+from inspect import signature
+
 from context_setup.context_setup import (
     CaptureResult,
     ContextSetup,
@@ -42,6 +44,7 @@ from context_setup.context_setup import (
     ScreenResult,
     SmokeTestResult,
     StructureNote,
+    _write_root,
 )
 from primitives.actions.action import _ActionExpander
 
@@ -126,6 +129,16 @@ with description("a ContextSetup"):
     with context("that is created"):
         with it("should be a ContextSetup instance"):
             expect(ContextSetup()).to(be_a(ContextSetup))
+
+    with context("that chooses where capture artifacts are written"):
+        with it("should write under repo_path when capture_repo is blank"):
+            app = Path(tempfile.mkdtemp())
+            expect(_write_root(str(app), "").resolve()).to(equal(app.resolve()))
+
+        with it("should write under capture_repo when it is given"):
+            app = Path(tempfile.mkdtemp())
+            capture = Path(tempfile.mkdtemp())
+            expect(_write_root(str(app), str(capture)).resolve()).to(equal(capture.resolve()))
 
     # ── Tool: Convert To Markdown ─────────────────────────────────────────────
 
@@ -308,9 +321,39 @@ with description("a ContextSetup"):
             prose = _expanded_capture_from_live_app()
             expect("5" in prose and "external" in prose.lower()).to(be_true)
 
+        with it("should write the complex-stub pre-pass as stub-focus-map.md not Stories story-map.md"):
+            prose = _expanded_capture_from_live_app()
+            expect("tests/stubs/stub-focus-map.md" in prose).to(be_true)
+            expect("tests/stubs/story-map.md" in prose).to(be_false)
+
         with it("should instruct the AI to write external stubs"):
             prose = _expanded_capture_from_live_app()
             expect("stub" in prose.lower()).to(be_true)
+
+        with it("should tell the AI to write global stubs under tests/stubs/{system}/"):
+            prose = _expanded_capture_from_live_app()
+            expect("tests/stubs/{system}/" in prose).to(be_true)
+
+        with it("should tell the AI domain-owned stubs go on the aggregate"):
+            prose = _expanded_capture_from_live_app()
+            expect("domain/{aggregate}/stubs/{system}/" in prose).to(be_true)
+
+        with it("should forbid a domain folder inside tests"):
+            prose = _expanded_capture_from_live_app()
+            expect("never" in prose.lower() and "domain folder" in prose.lower()).to(be_true)
+
+        with it("should scout under sandbox/extracted-context"):
+            prose = _expanded_capture_from_live_app()
+            expect("sandbox/extracted-context" in prose).to(be_true)
+
+        with it("should accept capture_repo on capture_from_live_app"):
+            expect("capture_repo" in signature(ContextSetup.capture_from_live_app).parameters).to(
+                be_true
+            )
+
+        with it("should pass capture_repo into smoke_test scout_app and complete_capture"):
+            prose = _expanded_capture_from_live_app()
+            expect("capture_repo=capture_repo" in prose).to(be_true)
 
         with it("should list smoke_test as a tool to call"):
             prose = _expanded_capture_from_live_app()
@@ -390,6 +433,11 @@ with description("a ContextSetup"):
         with it("should write an inventory file"):
             expect(Path(self._result.inventory_path).exists()).to(be_true)
 
+        with it("should write the inventory under tests/stubs/"):
+            expect(Path(self._result.inventory_path).as_posix()).to(
+                contain("tests/stubs/stub-inventory.md")
+            )
+
     with context("whose smoke_test tool is probing a non-existent server"):
         with before.each:
             self._tmp = tempfile.TemporaryDirectory()
@@ -465,6 +513,11 @@ with description("a ContextSetup"):
 
         with it("should write the extraction-overview.md"):
             expect(Path(self._result.overview_path).exists()).to(be_true)
+
+        with it("should write capture under sandbox/extracted-context/app-extraction"):
+            expect(Path(self._result.overview_path).as_posix()).to(
+                contain("sandbox/extracted-context/app-extraction")
+            )
 
         with it("should report the correct page count via page_count property"):
             expect(self._result.page_count).to(equal(2))

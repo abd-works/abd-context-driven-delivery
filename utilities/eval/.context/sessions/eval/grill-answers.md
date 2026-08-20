@@ -180,6 +180,9 @@ First deepenable theme = ring 1. Later rings are consumers of ring 1’s placeme
 - **Asked:** How do we harness the two regression lanes (scanner BDD + agentic validate)?
 - **Recommendation:** Thin helpers on `agent_bdd` + `Bdd`
 - **Answered:** **1 — in `utilities/eval`** — **not helpers.** Explicit **vanilla BDD specs** and explicit **agent-BDD specs** for eval, in the eval package. Same kind of tests as existing `*_spec.py` / `agent_bdd_spec.py`. Fixed pattern every time: before fails, after passes; agentic judge + generate-for-review. Uses the existing Bdd / AgentBdd harnesses; no wrapper API.
+- **Correction:** If this is only for mistakes, **do not create an eval harness.** Extend Bdd and AgentBdd. Mechanical specs call `expect_scan_fails` / `expect_scan_passes` (`context_tools.bdd.spec_helpers`) with the fail file and the pass file. Judgment specs call `generate_and_judge` (`agent_bdd.spec_helpers`) on the same pass file. Specs inherit / mostly just use those helpers — they are not a new eval package.
+
+- **Correction:** Open mistakes stay under `{session.folder}/mistakes/{name}/`. A correction creates one folder under `{session.folder}/repairs/` named after the **improvement/problem theme**. `improvement.md` records **tool**, **error**, and **how** the context tool changed — not the regenerated asset (`repairedAsset` / `correction.improved`). Same-theme mistakes share that folder. No improvement → no repairs folder.
 
 ## Notes from ask (pre-theme)
 

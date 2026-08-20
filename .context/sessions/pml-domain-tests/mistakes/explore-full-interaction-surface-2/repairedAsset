@@ -1,0 +1,1 @@
+Live exploration recorded: simTypeHelperAtom defaults to 'eSIM' so Continue is enabled on first paint. Scenario 1 does not assert Continue gating (surface-only). Scenario 2 (eSIM Continue) must treat eSIM as pre-selected and assert navigation to /onboarding/verify-id, not a disabled Continue button.

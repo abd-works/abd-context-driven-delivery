@@ -524,6 +524,15 @@ with description("BaseContextTool.log_mistake tool/fidelity auto-injection"):
         import tempfile
 
         self.tmp_dir = Path(tempfile.mkdtemp())
+        import subprocess
+        from eval.session import _git_executable
+
+        subprocess.run(
+            [_git_executable(), "init"],
+            cwd=self.tmp_dir,
+            check=True,
+            capture_output=True,
+        )
         self.host = Stories(fidelity="story_map", path=str(self.tmp_dir), session="test")
         self._shutil = shutil
 
@@ -598,6 +607,15 @@ with description("BaseContextTool repairer forwarding"):
         import tempfile
 
         self.tmp_dir = Path(tempfile.mkdtemp())
+        import subprocess
+        from eval.session import _git_executable
+
+        subprocess.run(
+            [_git_executable(), "init"],
+            cwd=self.tmp_dir,
+            check=True,
+            capture_output=True,
+        )
         self.host = Stories(fidelity="story_map", path=str(self.tmp_dir), session="test")
         self._shutil = shutil
 
@@ -611,6 +629,14 @@ with description("BaseContextTool repairer forwarding"):
         discovered = discover_sub_agent_tools(self.host)
         expect("repair" in discovered).to(be_true)
         expect(discovered["repair"].signature_entry["kind"]).to(equal("sub_agent"))
+        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
+
+    with it("should discover log_mistake as a non-blocking sub-agent on the host"):
+        from sub_agent.sub_agent import discover_sub_agent_tools
+
+        discovered = discover_sub_agent_tools(self.host)
+        expect("log_mistake" in discovered).to(be_true)
+        expect(discovered["log_mistake"].signature_entry["kind"]).to(equal("sub_agent"))
         self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
 
 
@@ -650,6 +676,9 @@ with description("BaseContextTool.resolve_fidelity"):
         with it("should leave a concrete fidelity unchanged"):
             expect(Stories.resolve_fidelity("story_map")).to(equal("story_map"))
 
+        with it("should map scaffold to scaffold"):
+            expect(Stories.resolve_fidelity("scaffold")).to(equal("scaffold"))
+
     with context("on CleanEngineering"):
         with it("should map discovery to modules"):
             expect(CleanEngineering.resolve_fidelity("discovery")).to(equal("modules"))
@@ -677,6 +706,9 @@ with description("BaseContextTool.resolve_fidelity"):
 
 with description("BaseContextTool.fidelities class variable"):
     with context("on Stories"):
+        with it("should map SHAPING to scaffold"):
+            expect(Stories.fidelities[BaseContextTool.SHAPING]).to(equal("scaffold"))
+
         with it("should map DISCOVERY to story_map"):
             expect(Stories.fidelities[BaseContextTool.DISCOVERY]).to(equal("story_map"))
 
@@ -697,6 +729,9 @@ with description("BaseContextTool.fidelities class variable"):
             expect(Bdd.fidelities[BaseContextTool.ENGINEER]).to(equal("development"))
 
     with context("on Ddd"):
+        with it("should map SHAPING to scaffold"):
+            expect(Ddd.fidelities[BaseContextTool.SHAPING]).to(equal("scaffold"))
+
         with it("should map DISCOVERY to bounded_context"):
             expect(Ddd.fidelities[BaseContextTool.DISCOVERY]).to(equal("bounded_context"))
 
@@ -740,9 +775,9 @@ with description("BaseContextTool._set_fidelity"):
             self.stories._set_fidelity("scenarios")
             expect(self.stories.fidelity).to(equal("scenarios"))
 
-        with it("should update format to markdown when set to scenarios"):
+        with it("should update format to typescript when set to scenarios"):
             self.stories._set_fidelity("scenarios")
-            expect(self.stories.format).to(equal("markdown"))
+            expect(self.stories.format).to(equal("typescript"))
 
         with it("should update fidelity to acceptance_tests"):
             self.stories._set_fidelity("acceptance_tests")

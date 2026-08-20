@@ -1,0 +1,5 @@
+#### PersonaResponse
+- verified: boolean
+- inquiryId: string
+- fields: object (Persona KYC payload)
+User: unsure why this is in the domain model; not a good domain concept as named — rename in Domain Concepts (e.g. verification status or similar); definitely not PersonaResponse.

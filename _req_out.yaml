@@ -1,0 +1,355 @@
+```yaml
+ok: true
+toolset: context_tools.ddd.ddd:Ddd
+action: generate
+result: When done, run validate.
+instructions: "# Generate\n\n1. Follow **`session_guidance`** and the session tools\
+  \ (`read_context_index`, `record_context_root`, `create_session` when needed). Resolve\
+  \ workspace + tool root, then use the **`active`** resource for `active.path` /\
+  \ `active.folder`.\n2. **MUST — prove-read before asking.** Before any grill/iterate\
+  \ question (and before inventing options or story/module names):\n   - Identify\
+  \ **every relevant context file referenced or implied** by the decision — not one\
+  \ favorite type. Typical set: `{workspace}/.context/context-index.md`, owning `*-segment.md`,\
+  \ `module-context.md`, session grill-answers / sketches / handoff, peer story-context,\
+  \ build-order, and any path the plan or prior answers cite. Include index/overlay\
+  \ only for structure hints; **never** treat mid-epic stub columns as inventory.\n\
+  \   - **Read each of those files with the Read tool** (chunk through large ones).\
+  \ Grep, title lists, memory, or primer-only skims **do not count**.\n   - **Prove\
+  \ it in the question turn:** name the path(s) read and ground options in concrete\
+  \ terms from them. If you cannot cite specifics from the relevant files, you have\
+  \ not read them — go read before asking.\n   - Asking from a skim is a **defect**,\
+  \ same class as dumping a whole artifact in one iterate tick.\n2b. **`do-not-invent-requirements`**\
+  \ — Do not invent requirements, status/maintenance signals, or competing command\
+  \ surfaces absent from source / the ask. Prefer the existing gap/fallback (or the\
+  \ already-specified invoke surface) over minting a new state or a second co-equal\
+  \ how-to-call block.\n3. **`sources-scoped-to-generated-context`** — Hang `**Sources\
+  \ / context:**` on the node they ground: epic / sub-epic / feature / module, or\
+  \ a lower item (scenario, class, screen, component, …). Root or parent-level Sources\
+  \ are fine when those files apply to the **entire** artifact or subtree.\n4. Apply\
+  \ all guidance and named rules in each **context** — each bullet is a requirement.\n\
+  5. Match **examples** for shape, depth, and tone.\n6. Fill the **template** scaffold\
+  \ and save the artifact under the session layout from `session_guidance`.\n7. Follow\
+  \ any extra build steps included in your instructions when present.\n8. Run **validate**.\
+  \ If it fails, fix the artifact and **validate** again until it passes.\n\n---\n\
+  \n# Generate\n\n1. Confirm fidelity (`bounded_context` → `building_blocks` → `tactics`)\
+  \ and format.\n2. Read the active fidelity section above (including its Rules).\
+  \ Do not re-author CE OO theory.\n3. Use peer actions when useful (`grill`, `sketch`,\
+  \ `iterate`; `templates/ddd-sketch.md`).\n4. Fill / deepen `bounded-context-map.md`;\
+  \ at **tactics**, resolve architecture first.\n5. Call clean_engineering at the\
+  \ mapped fidelity (`generate_output`).\n6. Run **validate**.\n\nOpen the workspace\
+  \ session in one step: set path (durable root), ensure the sprint exists (create\
+  \ if missing), load context index if present, record this tool's root when keyed.\
+  \ Follow session_guidance. Scope durable work to path and sprint docs to folder.\n\
+  \n# Session Guidance\n\n`Session` tracks three things:\n\n| Name | Meaning | Example\
+  \ |\n|------|---------|---------|\n| **path** | Durable tool root (`active.path`)\
+  \ | `…/sandbox` |\n| **folder** | Sprint folder (`active.folder`) | `…/sandbox/.context/sessions/{name}/`\
+  \ |\n| **context_index** | `{workspace_root}/.context/context-index.md` when present\
+  \ | tool → root map |\n\n## Constructor / run context\n\n- `workspace` — workspace\
+  \ root where `context-index.md` lives (default `\".\"`)\n- `path` — durable tool\
+  \ root\n- `session` — sprint slug under `{path}/.context/sessions/{name}/`\n\n##\
+  \ One call to open\n\n**`open`** — single action before generate / grill / sketch\
+  \ / iterate / validate:\n\n1. Resolve durable root (`path`)\n2. Ensure sprint exists\
+  \ (load or create)\n3. Load context index if present\n4. Record this tool's root\
+  \ when `context_index_key` is set\n\n```yaml\naction: open   # via self.workspace.open()\
+  \ from BaseContextTool\n```\n\nDo **not** separately chain bind + read_context_index\
+  \ + record_context_root from lifecycle bodies — `open` already does that.\n\n##\
+  \ Layout\n\n- **path** — docs → `{path}/.context/`; code/modules → `{path}/`\n-\
+  \ **folder** — `session.md`, grill-answers, engagement sketches, handoff, `mistakes.log`\n\
+  - **context-index** — `{workspace_root}/.context/context-index.md`\n\n## Root when\
+  \ `path` omitted\n\n1. context-index entry for `context_index_key`\n2. else `{workspace_root}/{default_workspace_folder}`\n\
+  \nResource `active` = Session(path='C:\\\\dev\\\\paradise-mobile\\\\pml-my', name='pml-my-current-state').\n\
+  \nOffer and write Context Decision Records (CDRs) sparingly as decisions crystallise\
+  \ during the wrapped action - never batch; never invent decisions.\n\nStep 1 - Read\
+  \ the format once via read_cdr_format. Internalise the three-criteria gate and the\
+  \ minimal template.\n\nStep 2 - Optionally call list_cdrs(root) so you do not re-record\
+  \ an already-captured decision.\n\nStep 3 - During the session (grill, sketch, or\
+  \ generate), watch for decisions that meet ALL three: hard to reverse, surprising\
+  \ without context, and a real trade-off. If any criterion is missing, skip the CDR.\n\
+  \nStep 4 - When a qualifying decision crystallises, offer a CDR briefly (title +\
+  \ one-line gist). If the user accepts, call write_cdr immediately with a kebab slug\
+  \ and content matching CDR-FORMAT.md. Do not batch; do not wait until the end.\n\
+  \nStep 5 - Keep CDRs short. Prefer a single paragraph. Add Status / Considered Options\
+  \ / Consequences only when they add genuine value.\n\n# Contexts\n\n\n\n## bounded_context\n\
+  \n**Default format:** markdown\n\n**Goal:** Draw context boundaries, dependency\
+  \ arcs, and the aggregates that protect invariants — naming everything in the experts'\
+  \ vocabulary.\n\nA **bounded context** is an explicitly set boundary in which a\
+  \ model applies and is managed to be uniform — organizational (owning team) and\
+  \ implementation (codebase / deployable). Within it, every term has one meaning.\
+  \ Across boundaries, the same word may mean different things.\n\nFailure modes:\
+  \ **duplicate concepts** (same real-world thing modeled twice) and **false cognates**\
+  \ (same term, different meaning).\n\n**Context map:** identify contexts → name them\
+  \ → describe contact points with translation.\n\n**What gets tracked on a dependency:**\
+  \ direction (upstream/downstream/mutual, naming both sides); what crosses (concepts\
+  \ + translation); how they integrate — name the concrete mechanism and call site\
+  \ (e.g. synchronous call to `Catalog.Product.unit_price` at `add_item`, domain event\
+  \ `PriceChanged`, nightly batch extract). Categories like Events / Messaging / REST/API\
+  \ / Batch / Shared DB / File Transfer / Shared Kernel help, but \"in-process\" or\
+  \ \"module seam\" alone is not enough; relationship pattern from the catalogue below.\
+  \ Undecided items get owner + target date.\n\n**Patterns:** Shared Kernel (shared\
+  \ subset, consult on change); Customer/Supplier (one-way, joint acceptance tests);\
+  \ Conformist (downstream adopts upstream); Anticorruption Layer (translate/isolate\
+  \ legacy); Open Host / Published Language (published protocol); Separate Ways (no\
+  \ integration). No ad hoc labels like \"loose coupling.\"\n\n**Boundary heuristics:**\
+  \ larger vs smaller (~ten people upper bound); external systems usually Separate\
+  \ Ways / Conformist / ACL; formalize informal internal sharing; transform boundaries\
+  \ with clear current/end state.\n\nAn **Aggregate** is a cluster treated as a single\
+  \ unit for data changes — one **root** Entity, a **boundary**, and the invariants\
+  \ that boundary protects. Decide aggregates here, with context_tools. Boundaries\
+  \ exist for invariant protection, not relatedness; keep aggregates small.\n\nAsk:\
+  \ what must be consistent in one transaction? what can tolerate lag? cost of brief\
+  \ inconsistency? who is the single access point (root)?\n\n**Cross-aggregate:**\
+  \ when roots reference by ID — if A changes, does B need to know and how soon (immediate\
+  \ / eventual / snapshot)? copy or reference? what does the business do today? Outside\
+  \ the boundary, only through the root.\n\n**Input traps:** hidden coupling; ownership\
+  \ ambiguity; false cognates; missing unnamed contexts; unclear direction.\n\n**Produce:**\
+  \ one `bounded-context-map.md` — inventory, dependencies, aggregates per context\
+  \ (root, members, invariants, cross-agg consistency); every inventoried context\
+  \ on an arc or declared standalone. Fill `templates/bounded-context-template.md`.\
+  \ Call clean_engineering at **modules**.\n\n**Rules:**\n\n- **`experts-words-preferred`**\
+  \ — Prefer the words domain experts use; do not invent technical synonyms when a\
+  \ domain word already exists.\n- **`domain-concepts-not-technical-names`** — Every\
+  \ class/module names a domain concept (or honest boundary collaborator). Reject\
+  \ `Manager`, `Helper`, `Processor`, and similar layer names.\n- **`one-meaning-per-context`**\
+  \ — Inside a context, one definition per term; false cognates across contexts are\
+  \ named and translated.\n- **`dependency-fields-tracked`** — Every arc states direction\
+  \ (named sides or mutual), what crosses, how they integrate (concrete mechanism),\
+  \ and catalogue relationship pattern — or a dated follow-up with owner.\n- **`no-orphan-contexts`**\
+  \ — Every inventoried context appears in a dependency arc or is declared standalone\
+  \ with rationale.\n- **`aggregate-protects-invariants`** — Name root, members, and\
+  \ the business invariants that require the boundary; do not cluster by relatedness\
+  \ alone.\n- **`invariants-from-business-logic`** — Invariants come from domain rules\
+  \ and expert statements, not convenient code shape.\n\n---\n\n## building_blocks\n\
+  \n**Default format:** markdown\n\n**Goal:** Deepen the same context map — under\
+  \ each owning context, add CE compact class detail with DDD stereotypes. Not a separate\
+  \ BB document; added detail on the aggregates already placed in the BC.\n\n| Stereotype\
+  \ | Business question |\n|---|---|\n| **Entity** | Can we tell them apart over time\
+  \ when attributes change? Identity transcends attributes — not \"importance.\" |\n\
+  | **Value Object** | Fully described by values — interchangeable, replaceable, immutable?\
+  \ Prefer VO unless tracked identity is required. |\n| **Repository** | How does\
+  \ the business find, store, and retire this aggregate? Collection-style seam only\
+  \ here. |\n| **Factory** | Complex birth / invariants at creation / subtype choice?\
+  \ |\n| **Service** | Homeless operation — placing it on a concept would distort\
+  \ that concept? Stateless, domain-named. |\n| **Domain Event** | Significant past-tense\
+  \ moment — trigger and consumers as invariants; payload as properties. Facts, not\
+  \ commands. |\n| **Specification** | Named, reusable true/false business rule (query\
+  \ / validate / construct)? |\n\nHonour aggregate boundaries from bounded_context;\
+  \ do not redraw by relatedness. Same class shape as clean_engineering — stereotypes\
+  \ layered on. Every source concept classified (or Unresolved) with supporting model\
+  \ content.\n\n**Input traps:** identity by habit; aggregate redrawn by relatedness;\
+  \ VO as Entity; Service as dump; silent consistency.\n\n**Produce:** Update `bounded-context-map.md`\
+  \ — CE compact blocks + stereotypes under each owning context (`templates/bounded-context-template.md`).\
+  \ Call clean_engineering at **specification**. No tables, brokers, frameworks, or\
+  \ REST endpoints here — infrastructure at **tactics**.\n\n**Rules:**\n\n- **`identity-test-entity-vs-vo`**\
+  \ — Entity vs VO by identity that transcends attributes; prefer Value Object.\n\
+  - **`every-concept-classified`** — Every source concept classified with supporting\
+  \ model content (or Unresolved); multiple stereotypes per concept are fine.\n- **`service-is-homeless`**\
+  \ — Service only when no concept can own the operation without distortion; domain-named,\
+  \ typically stateless.\n- **`domain-events-past-tense`** — Past-tense domain name;\
+  \ trigger and consumers as invariants; not commands or infra names.\n- **`no-premature-infrastructure`**\
+  \ — Design intent only: no tables, brokers, framework annotations, or endpoints.\n\
+  \n---\n\n## tactics\n\n**Default format:** Python\n\n**Goal:** Implement the domain\
+  \ and building-block seams (repos, events, factories, …) against a chosen architecture.\n\
+  \n- Preserve names from the CE / building-blocks model.\n- Implement repository\
+  \ persistence, event publication/handling, factories, services as decided upstream.\n\
+  - **Architecture** — from project context (`.context/`, ADRs, stack). If none, **ask**.\
+  \ If none available, default: Node-shaped app + **JSON file persistence** (package\
+  \ TBD).\n- Domain model free of UI/transport; persistence and messaging behind ports.\n\
+  - Call clean_engineering at **code**.\n\n---\n\n## examples.md\n\n# Examples — DDD\n\
+  \n---\n\n# Bounded Context Map — Shop\n\n## Catalog\n\n- **Owning team:** Merchandising\n\
+  - **Scope:** Product identity and pricing.\n- **Implementation:** monolith module\n\
+  \n### Product\n\n- **Root:** Product\n- **Boundary members:** none beyond Product\n\
+  - **Protected invariants:** price always non-negative\n- **Cross-aggregate refs:**\
+  \ ShoppingCart (by ID) — consistency: snapshot; unit price locked at add_item\n\n\
+  ## Sales\n\n- **Owning team:** Checkout\n- **Scope:** Shopping carts, checkout,\
+  \ discounts.\n- **Implementation:** monolith module\n\n### ShoppingCart\n\n- **Root:**\
+  \ ShoppingCart\n- **Boundary members:** CartItem, Discount — total and checkout\
+  \ invariants span the cart\n- **Protected invariants:** once checked out, cart may\
+  \ not be modified; discount may not reduce total below zero\n- **Cross-aggregate\
+  \ refs:** Customer (by ID), Inventory (by ID) — consistency: eventual on stock\n\
+  \n#### **ShoppingCart** <<Aggregate Root>> <<Entity>>\n\n+ ShoppingCart(customer:\
+  \ CustomerId)\n------\n+ << identifier >> customer: CustomerId                 #\
+  \ by ID — cross-aggregate\n+ << composition >> items: list[CartItem]\n+ << association\
+  \ >> discount: Discount | None\n+ checked_out: bool\n\tInvariant: Once true, never\
+  \ reverts to false.\n----\n+ add_item(product: ProductId, quantity: int, unit_price:\
+  \ Decimal): None\n\tInvariant: Cart may not be modified after checkout.\n\tInvariant:\
+  \ Quantity must be at least 1.\n+ remove_item(product: ProductId): None\n\tInvariant:\
+  \ Cart may not be modified after checkout.\n+ apply_discount(discount: Discount):\
+  \ None\n\tInvariant: Cart may not be modified after checkout.\n+ compute_total():\
+  \ Decimal\n+ checkout(inventory: Inventory): None\n\tInvariant: May not be called\
+  \ when already checked out.\n- _find_item(product: ProductId): CartItem | None\n\
+  \n#### **CartItem** <<Value Object>>\n\n+ CartItem(product: ProductId, quantity:\
+  \ int, unit_price: Decimal)\n------\n+ product: ProductId                      \
+  \              # by ID — snapshot at add time\n+ quantity: int\n\tInvariant: quantity\
+  \ >= 1.\n+ unit_price: Decimal\n\tInvariant: unit_price >= 0. Immutable — replace,\
+  \ do not update in place.\n----\n+ line_total(): Decimal\n+ update_quantity(quantity:\
+  \ int): None\n\n#### **Discount** <<Value Object>> <<Specification>>\n\n+ Discount(code:\
+  \ str, reduction: Decimal)\n------\n+ code: str\n+ reduction: Decimal\n\tInvariant:\
+  \ reduction > 0.\n----\n+ is_valid(cart: ShoppingCart): bool\n+ compute_reduction(subtotal:\
+  \ Decimal): Decimal\n\tInvariant: Total may not be reduced below zero.\n\n#### **ShoppingCartRepository**\
+  \ <<Repository>>\n\n+ ShoppingCartRepository()\n------\n----\n+ add(cart: ShoppingCart):\
+  \ None\n+ remove(cart: ShoppingCart): None\n+ update(cart: ShoppingCart): None\n\
+  + find_by_customer(customer: CustomerId): ShoppingCart | None\n\n#### **CartCheckedOut**\
+  \ <<Domain Event>>\n\n+ CartCheckedOut(cart_id: CartId, customer: CustomerId, total:\
+  \ Decimal, checked_out_at: DateTime)\n------\n+ cart_id: CartId\n+ customer: CustomerId\n\
+  + total: Decimal\n+ checked_out_at: DateTime\n\tInvariant: Raised when ShoppingCart.checkout\
+  \ succeeds.\n\tInvariant: Consumers are Inventory (assert/reserve) and Notifications\
+  \ (receipt).\n----\n\n## Dependencies\n\n### Catalog → Sales\n\n- **Direction:**\
+  \ Catalog is upstream; Sales is downstream\n- **What crosses:** product identity\
+  \ and unit price into cart lines\n- **How they integrate:** Synchronous call — at\
+  \ `add_item`, Sales reads `Catalog.Product.unit_price` and stores a snapshot on\
+  \ the line\n- **Relationship pattern:** Customer/Supplier\n- **Rationale:** Later\
+  \ Catalog price changes do not rewrite open carts\n\n\n## bounded-context-template.md\n\
+  \n<!--\n  Bounded Context Map — matches context_tools/ddd/examples/examples.md\n\
+  \n  One artifact. Aggregates are direct children of the context (no Aggregates\n\
+  \  wrapper). Building-blocks = CE compact classes + stereotypes as #### under\n\
+  \  each ### aggregate. Dependencies name a concrete integrate call site.\n-->\n\n\
+  # Bounded Context Map — {{project_name}}\n\n## {{ContextName}}\n\n- **Owning team:**\
+  \ {{team_name}}\n- **Scope:** {{what this context owns}}\n- **Implementation:**\
+  \ {{monolith module | microservice | shared library | legacy system | external vendor}}\n\
+  \n### {{AggregateRoot}}\n\n- **Root:** {{Entity}}\n- **Boundary members:** {{member}}\
+  \ — {{why inside}}\n- **Protected invariants:** {{business rule that requires atomic\
+  \ change}}\n- **Cross-aggregate refs:** {{OtherRoot}} (by ID) — consistency: {{immediate\
+  \ | eventual | snapshot}}; rule: {{what happens when this changes}}\n\n#### **{{AggregateRoot}}**\
+  \ <<Aggregate Root>> <<Entity>>\n\n+ {{AggregateRoot}}({{ctor params}})\n------\n\
+  + << identifier >> {{id_property}}: {{IdType}}\n+ << composition >> {{owned}}: list[{{Part}}]\n\
+  + << association >> {{ref}}: {{OtherId}} | None\n+ {{plain}}: {{Type}}\n\tInvariant:\
+  \ {{business rule}}\n----\n+ {{operation}}({{params}}): {{Return}}\n\tInvariant:\
+  \ {{rule}}\n- _{{private_helper}}({{params}}): {{Return}}\n\n#### **{{Part}}** <<Value\
+  \ Object>>\n\n+ {{Part}}({{params}})\n------\n+ {{property}}: {{Type}}\n\tInvariant:\
+  \ {{rule — e.g. immutable: replace, do not update in place}}\n----\n+ {{operation}}({{params}}):\
+  \ {{Return}}\n\n#### **{{AggregateRoot}}Repository** <<Repository>>\n\n+ {{AggregateRoot}}Repository()\n\
+  ------\n----\n+ add({{root}}: {{AggregateRoot}}): None\n+ remove({{root}}: {{AggregateRoot}}):\
+  \ None\n+ update({{root}}: {{AggregateRoot}}): None\n+ find_by_{{criteria}}({{params}}):\
+  \ {{AggregateRoot}} | None\n\n#### **{{SomethingHappened}}** <<Domain Event>>\n\n\
+  + {{SomethingHappened}}({{payload fields}})\n------\n+ {{field}}: {{Type}}\n\tInvariant:\
+  \ Raised when {{trigger}}.\n\tInvariant: Consumers are {{who}}.\n----\n\n## {{AnotherContext}}\n\
+  \n- **Owning team:** {{team_name}}\n- **Scope:** {{what this context owns}}\n- **Implementation:**\
+  \ {{implementation type}}\n\n### {{AggregateRoot}}\n\n- **Root:** {{Entity}}\n-\
+  \ **Boundary members:** {{members}}\n- **Protected invariants:** {{rules}}\n- **Cross-aggregate\
+  \ refs:** {{OtherRoot}} (by ID) — consistency: {{immediate | eventual | snapshot}};\
+  \ rule: {{…}}\n\n## Dependencies\n\n### {{SourceContext}} → {{TargetContext}}\n\n\
+  - **Direction:** {{Source is upstream; Target is downstream | mutual — what flows\
+  \ each way}}\n- **What crosses:** {{concepts + translation}}\n- **How they integrate:**\
+  \ {{concrete mechanism + call site — e.g. Synchronous call — at `add_item`, Sales\
+  \ reads `Catalog.Product.unit_price` and stores a snapshot}}\n- **Relationship pattern:**\
+  \ {{Shared Kernel | Customer/Supplier | Conformist | Anticorruption Layer | Open\
+  \ Host/Published Language | Separate Ways}}\n- **Rationale:** {{why; trade-offs}}\n\
+  \n\n## ddd-sketch.md\n\n# DDD sketch\n\nDeclare fidelity once at the top. Use only\
+  \ the sketch for that fidelity — do not fill later-fidelity detail early.\n\n---\n\
+  \n## bounded_context\n\nName each BC, the aggregates it holds, and each dependency\
+  \ with relationship pattern. No class flesh-out yet. Use experts' words.\n\n```\n\
+  fidelity: bounded_context\n\n{{ContextName}}\n  aggregates: {{Root}}, {{Root}}\n\
+  {{ContextName}}\n  aggregates: {{Root}}\n\n{{Source}} → {{Target}}\n  direction:\
+  \ {{upstream / downstream | mutual}}\n  crosses: {{concepts}}\n  integrate: {{concrete\
+  \ call site}}\n  pattern: {{Shared Kernel | Customer/Supplier | Conformist | ACL\
+  \ | Open Host | Separate Ways}}\n```\n\n---\n\n## building_blocks\n\nFlesh out each\
+  \ aggregate under its BC. Root, invariants, cross-agg and cross-BC deps, sync objects.\
+  \ Stereotypes as you decide them.\n\n```\nfidelity: building_blocks\n\n{{ContextName}}\n\
+  \  {{Root}} <<Aggregate Root>> <<Entity>>\n    invariants: {{rule}}; {{rule}}\n\
+  \    members: {{Part}} <<Value Object|Entity>>; {{Part}}\n    cross-agg:\n     \
+  \ → {{OtherRoot}} (by {{IdType}}) — {{immediate | eventual | snapshot}}; {{rule}}\n\
+  \    cross-bc:\n      → {{OtherContext}}.{{Root}} via {{SyncObject}} — {{how / when}}\n\
+  \    repo: {{Root}}Repository\n    events: {{SomethingHappened}} — consumers: {{who}}\n\
+  \  {{Root}}\n    …\n\n{{Source}} → {{Target}}\n  sync objects: {{ProductId}}, {{unit_price\
+  \ snapshot}}, …\n  integrate: {{concrete call site using those objects}}\n  pattern:\
+  \ {{catalogue pattern}}\n```\n\n---\n\n## tactics\n\nArchitecture + which seams\
+  \ get real adapters.\n\n```\nfidelity: tactics\n\narchitecture: {{from context |\
+  \ asked | default node+json}}\n  repos: {{Root}}Repository → {{persistence}}\n \
+  \ events: {{SomethingHappened}} → {{publish / handle}}\n  sync across BC: {{SyncObject}}\
+  \ via {{mechanism}}\n```\n\n\nWhen DDD scaffolding is ready, call ce().generate()\
+  \ for matching OO artifacts.\n\nSeparate tools run — toolset: `context_tools.clean_engineering.clean_engineering:CleanEngineering`\
+  \ action: `generate` context.fidelity: `modules`\n\nPrepend the following block\
+  \ verbatim as the very first lines of the file you are writing - before any imports,\
+  \ before any code.\n\nEvery tool call uses this shape - set `tool` and `arguments`,\
+  \ pipe to CLI:\n\n```yaml\ntoolset: context_tools.ddd.ddd:Ddd\ncontext:\n  fidelity:\
+  \ bounded_context\n  format: drawio\n  path: c:\\Users\\jeffa\\OneDrive - abd.works\\\
+  personal\\paradise-mobile\\pml-my\n  session: pml-my-current-state\n  workspace:\
+  \ c:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-my\ntool:\
+  \ <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m tools run -\n\n\
+  Suggested flow (repeat and reorder as the story needs):\n\n1. tool: ensure_session\n\
+  \   arguments:\n     name: <value>\n     goal: <value>\n     fidelities: <value>\n\
+  \     contexts: <value>\n     path: <value>\n\n2. tool: read_context_index\n\n3.\
+  \ tool: record_context_root\n   arguments:\n     root: <value>\n     note: <value>\n\
+  \n4. tool: read_cdr_format\n\n5. tool: list_cdrs\n\n6. tool: write_cdr\n\n7. tool:\
+  \ generate\n\nRead `resources` from each response before choosing the next tool."
+arguments: {}
+tools:
+- ensure_session
+- read_context_index
+- record_context_root
+- read_cdr_format
+- list_cdrs
+- write_cdr
+- generate
+resources:
+  active:
+    path: C:\dev\paradise-mobile\pml-my
+    name: pml-my-current-state
+    folder: C:\dev\paradise-mobile\pml-my\.context\sessions\pml-my-current-state
+    goal: 'Sandbox Walk-Through → Playwright Acceptance Tests — per scenario, confirm
+      live against the sandbox + `cdd-sketch.md`, then codify as a runnable `tests/`
+      acceptance test (CE-packaged domain model, one `*_story.ts` + one `*_test_helper.<tier>.ts`
+      per story). Strategy: `acceptance-test-strategy.md`.'
+    fidelities: discovery → solution (DDD at `building_blocks`)
+    contexts: app-extraction, src, architecture-context
+    started: 2026-08-11 → ongoing
+    ended: '2026-08-14'
+    outcome: handoff written
+    handoff: handoffs/handoff-2026-08-14-fix-failing-e2e-tests.md
+    body: "## Phase 3 — Sandbox Walk-Through → Playwright Acceptance Tests\n\nProgress\
+      \ (per `acceptance-test-strategy.md`'s per-scenario workflow):\n\n- [x] `Sign\
+      \ Up — Select Plan` (2 scenarios) — built, green.\n- [x] `Sign Up — Create Account`\
+      \ (1 scenario) — built, green.\n- [x] `Validate Email` (2 scenarios) — built,\
+      \ green. Extended `AuthenticationService`\n  (`tests/domain/customer/customer.ts`)\
+      \ with `verifyEmail()` / `resendVerificationCode()`\n  and their `customer.e2e.ts`\
+      \ implementations. Added\n  `tests/onboard-a-customer/validate-email/` (`validate_email_story.ts`,\n\
+      \  `validate_email_test_helper.e2e.ts`, `valid-otp.fixture.ts`).\n  - **Reconciled\
+      \ live**: `cdd-sketch.md`'s scenario said the post-verification\n    redirect\
+      \ lands on the Line Number step; the live sandbox actually redirects\n    to\
+      \ the Select Plan (Onboarding) step (`/onboarding/select-plan`, \"Please\n \
+      \   select your plan\"), because the plan picked pre-account on the Catalog\
+      \ step\n    is only a client-side atom until `usePlanSelect.savePlanSelected()`\
+      \ persists\n    it to `cart.bundle` — which only happens once the Select Plan\
+      \ onboarding step\n    runs. Confirmed by scripting the live flow directly with\
+      \ Playwright (not\n    guesswork) and observing the actual landed URL/heading.\
+      \ Sketch corrected,\n    mistake logged via background subagent (see `mistakes.log`).\n\
+      - **9/9 tests passing** (`npx vitest run tests`), `tests/tsconfig.json` typecheck\
+      \ clean.\n- [x] `Select Plan (Onboarding)` (2 scenarios) — built, green.\n-\
+      \ [ ] `Select Sim` (1/3 scenarios) — first scenario green: prospect sees eSIM\
+      \ and physical SIM **cards** (live is cards, not tabs; eSIM is pre-selected).\
+      \ Remaining: choose eSIM Continue; choose physical SIM + ICCID.\n\n### Story-file\
+      \ shape changed (this session, supersedes `*_story.ts` split for `onboard-a-customer`)\n\
+      \nEvery `onboard-a-customer` story collapsed to **one file**, `tests/onboard-a-customer/{story}.e2e.ts`\
+      \ — no Helper interface, no `*_story.ts`/`*_test_helper.<tier>.ts` split; `given`/`when`/`then`\
+      \ call named domain objects directly. Full rule set landed in `acceptance-test-strategy.md`'s\
+      \ new **\"Current story-file conventions\"** section — read that section, not\
+      \ this bullet, for the details:\n\n- `*Repository` variable naming everywhere\
+      \ (`planRepository`, `cartRepository`, `prospectRepository`).\n- Repositories\
+      \ load/save only — never passed into another domain object, never operated on\
+      \ by another service. `ProspectRepository.load()`, not `current()`.\n- Domain\
+      \ services (`AuthenticationService`, `CheckoutService`, `MsisdnInventory`) sit\
+      \ **underneath** a step, never report position — only the aggregate answers\
+      \ \"which step\" (`prospect.isAtOnboardingStep(step)`).\n- **A Prospect exists\
+      \ from Create Account onward**, not only once a backend record/session exists.\
+      \ `OnboardingStep` (`tests/domain/prospect/prospect.ts`) now includes `CreateAccount`/`ValidateEmail`\
+      \ ahead of `SelectPlan..Done`. `ProspectRepository.load()` (`prospect.e2e.ts`)\
+      \ tags those two directly from screen/URL signals (`atOnboardingStep`) pre-confirmation,\
+      \ and derives the rest from `GET /mv/customer` (`deriveOnboardingStep`/`withOnboardingStep`)\
+      \ same as before. `AuthenticationService.isCreateAccountShowing()`/`isValidateEmailShowing()`\
+      \ were removed — call sites now load the `Prospect` and assert `isAtOnboardingStep(...)`\
+      \ instead.\n- Every scenario must have an explicit `when`; assert concrete known\
+      \ values, never loop generically over example data.\n- New **`background()`**\
+      \ in `story-test.ts` — Gherkin's `Background:`. No label param. `scenario`/nested\
+      \ `background` calls go **inside** the same callback as the Given chain (not\
+      \ a separate argument) — nesting in code matches nesting of the suite; nested\
+      \ backgrounds cascade because vitest runs an ancestor suite's `beforeAll` before\
+      \ a descendant's. Applied to `sign-up-select-plan`, `sign-up-create-account`\
+      \ (nested), `validate-email`, `select-plan-onboarding`, `select-sim`.\n- **New\
+      \ rule, not yet executed:** run an explicit OOAD second pass on tier helpers\
+      \ (`tests/domain/*/*.e2e.ts`) via `/clean-engineering` once a story is green\
+      \ — behavior-green does not prove class design is sound. Not yet run against\
+      \ `customer`, `prospect`, `plan`, `cart`, or `catalog`.\n\n- **Next**: `Select\
+      \ Sim` remaining scenarios (eSIM Continue, physical SIM + ICCID); then `Pick\
+      \ Number`."
+  mode: action
+```

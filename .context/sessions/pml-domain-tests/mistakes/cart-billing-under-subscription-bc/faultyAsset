@@ -1,0 +1,2 @@
+Customer had cart?: Cart, billing: Billing, plus Cart/Billing subsections and Customer→Catalog via Cart.
+User: Cart and Billing belong under Subscription - think conceptually (purchase/change of a line and paying for the service).

@@ -1,0 +1,12 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: model
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+tool: log_mistake
+arguments:
+  artifact: tests/domain/.context/domain-model.md
+  rule: billing-subscription-stereotypes-wrong
+  wrong: "Billing marked <<Aggregate Root>> <<Entity>>; Subscription marked <<Aggregate Root>> <<Entity>>; Invoice/Transaction/Payment marked <<Value Object>>"
+  original: Billing is an Entity accessed only via Subscriber (lifecycle tied to Subscriber) — not an AR. Subscription is an invariant of Subscriber — Entity, not AR. Invoice, Transaction, Payment all have their own ids — they are Entities not Value Objects.
+  when: DDD model review Aug 2026

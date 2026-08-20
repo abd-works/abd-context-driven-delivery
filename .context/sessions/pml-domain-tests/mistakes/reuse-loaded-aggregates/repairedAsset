@@ -1,0 +1,1 @@
+let prospect at story scope; load once after verifyEmail (or first time the prospect exists); later steps use prospect.cart / prospect.isAtOnboardingStep. Second load only after an operation on a different object (verifyEmail, checkout.pay) or first load after register.

@@ -1,0 +1,1 @@
+Scanner class-title-no-markdown-bold flags markdown ** in class titles; Drawio rule documents plain text inside <b>. Generator already strips via _display_class_name.

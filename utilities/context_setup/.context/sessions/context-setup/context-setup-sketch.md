@@ -137,8 +137,8 @@ example-of: none
                     given a Target Repo at repo.path with 5 or more distinct external services
                         or any dependency requiring a domain-shaped stub return (more than 3 fields)
                     when the AI Chat scans the repo and detects the complex-stub trigger
-                    then a story-map, acceptance-criteria, and domain-glossary pre-pass is produced
-                        at docs/stubs/ before any stubs are written
+                    then a stub-focus-map, acceptance-criteria, and domain-glossary pre-pass is produced
+                        at tests/stubs/ before any stubs are written
                         and Write External Stubs is not called until all three documents are complete
             (S) Tool --> Write External Stubs
                 stubs-written-at-boundary

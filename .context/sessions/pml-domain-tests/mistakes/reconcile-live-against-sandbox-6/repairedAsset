@@ -1,0 +1,1 @@
+Reconciled live: after reserving MSISDN, useReserveNumber.ts navigates to ../onboarding/select-sim (not select-plan). pick-number.e2e.ts asserts prospect.isAtOnboardingStep('SelectSim') and URL contains /onboarding/select-sim for both pick-new and port scenarios.

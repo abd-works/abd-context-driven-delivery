@@ -1,0 +1,12 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: model
+  path: c:\dev\paradise-mobile\pml-my
+  session: pml-my-current-state
+tool: log_mistake
+arguments:
+  artifact: tests/domain/.context/domain-model.md
+  rule: invented-types-not-in-code
+  wrong: "Session <<Value Object>> and EnterpriseIdentity <<Value Object>> listed as domain concepts"
+  original: Neither type exists in any .ts file. AuthenticationService.signIn() returns void, not Session. EnterpriseIdentity was speculative.
+  when: DDD model review Aug 2026

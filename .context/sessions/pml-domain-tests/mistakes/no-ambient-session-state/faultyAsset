@@ -1,0 +1,1 @@
+prospect = await prospectRepository.load() after catalog.select(plan) with no credential or identity reference

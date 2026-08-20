@@ -15,12 +15,17 @@ _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE))
 
 from complexity_absorption_scanner import ComplexityAbsorptionScanner  # noqa: E402
+from context_tools.bdd.spec_helpers import (  # noqa: E402
+    expect_scan_fails,
+    expect_scan_passes,
+)
 from deep_module_scanner import DeepModuleScanner  # noqa: E402
 from information_hiding_scanner import InformationHidingScanner  # noqa: E402
 from low_coupling_scanner import LowCouplingScanner  # noqa: E402
 from module_scanner import collect_module_files  # noqa: E402
 from named_seam_and_constraint_scanner import NamedSeamAndConstraintScanner  # noqa: E402
 from physical_folder_scanner import PhysicalFolderScanner  # noqa: E402
+from scanners import Scan, ScannerCollection  # noqa: E402
 
 
 def _write(path: Path, content: str) -> None:
@@ -52,6 +57,16 @@ _GOOD_CONTEXT = """
 _MINIMAL_CONTEXT = "# Cart\n\nA cart.\n"
 
 
+_SCANNERS_DIR = Path(__file__).resolve().parent
+
+
+class _PhysicalFolderScan(Scan):
+    def _scanner_collection(self) -> ScannerCollection:
+        return ScannerCollection(
+            module_dir=_SCANNERS_DIR, root_path=_SCANNERS_DIR
+        )
+
+
 def _run(scanner_class, rule: str, root: Path):
     scanner = scanner_class(rule)
     files = collect_module_files(root)
@@ -66,8 +81,12 @@ with description("physical-folder scanner"):
             _make_module(self.root, "cart", _GOOD_CONTEXT, {"cart.py": "class Cart:\n    pass\n"})
 
         with it("should produce no violations"):
-            violations = _run(PhysicalFolderScanner, "physical-folder", self.root)
-            expect(violations).to(equal([]))
+            expect_scan_passes(
+                _PhysicalFolderScan(),
+                self.root / "cart" / "cart.py",
+                rule="physical-folder",
+                root=self.root,
+            )
 
     with context("a module folder with context file but no Python files"):
         with before.each:
@@ -80,6 +99,28 @@ with description("physical-folder scanner"):
             (self.root / "empty_module" / "seed.py").unlink()
             violations = _run(PhysicalFolderScanner, "physical-folder", self.root)
             expect(len(violations) >= 1).to(be_true)
+
+
+    with context("a module-context.md living under .context/sessions"):
+        with before.each:
+            self.tmp = tempfile.TemporaryDirectory()
+            self.root = Path(self.tmp.name)
+            self.session_mod = (
+                self.root / ".context" / "sessions" / "sprint" / "config"
+            )
+            _write(
+                self.session_mod / ".context" / "module-context.md",
+                _GOOD_CONTEXT,
+            )
+            _write(self.session_mod / "controller.py", "class Controller:\n    pass\n")
+
+        with it("should flag module-context written in the session folder"):
+            expect_scan_fails(
+                _PhysicalFolderScan(),
+                self.session_mod / "controller.py",
+                rule="physical-folder",
+                root=self.root,
+            )
 
 
 with description("named-seam-and-constraint scanner"):

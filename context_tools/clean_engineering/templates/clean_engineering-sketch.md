@@ -70,7 +70,7 @@ ClassName : BaseClass
 | `----` | separator between the primary class block and a peer class it relates to |
 | `-> collaborator.operation` | interaction — a real operation on a property, peer, or `super` |
 | `-> _private_helper` | rare — only when no public collaborator operation exists and the helper is essential to the story |
-| `// …` | invariant or sequencing note |
+| `// …` | invariant or sequencing note (`ce-comments-are-for-invariants-and-sequencing-notes-only` — must/never/before/after only; not descriptive prose) |
 
 ## Interaction rules (read these)
 

@@ -158,6 +158,8 @@ with description("write_action_command tool"):
             expect(content).to(contain("AskQuestion"))
             expect(content).to(contain("Identify the context tool"))
             expect(content).to(contain("Identify the fidelity"))
+            expect(content).to(contain("one or more"))
+            expect(content).to(contain("/stories /ddd"))
 
 
 with description("write_stage_fidelity_command tool"):
@@ -187,7 +189,23 @@ with description("write_stage_fidelity_command tool"):
             expect(content).to(contain("AskQuestion"))
             expect(content).to(contain("Identify the context tool"))
             expect(content).to(contain("Identify the action"))
+            expect(content).to(contain("one or more"))
+            expect(content).to(contain("/stories /ddd"))
+            expect(content).to(contain("What action should run at `discovery`?"))
+            expect(content).not_to(contain("If no action was named, run generate"))
             expect(path).to(contain("discovery.md"))
+
+        with it("writes a scaffold fidelity command that still asks for the action"):
+            self.skills.write_stage_fidelity_command(
+                stage="scaffold", fidelity="scaffold", ide="cursor"
+            )
+            content = (
+                self.root / ".cursor" / "commands" / "scaffold.md"
+            ).read_text(encoding="utf-8")
+            expect(content).to(contain("fidelity: scaffold"))
+            expect(content).to(contain("AskQuestion"))
+            expect(content).to(contain("What action should run at `scaffold`?"))
+            expect(content).not_to(contain("If no action was named, run generate"))
 
     with context("ide=vscode"):
         with it("writes a prompt file named after the stage"):
@@ -228,6 +246,8 @@ with description("write_action_skill_shim tool"):
             expect(content).to(contain("named in this chat"))
             expect(content).to(contain("action: grill"))
             expect(content).to(contain("AskQuestion"))
+            expect(content).to(contain("one or more"))
+            expect(content).to(contain("/stories /ddd"))
             expect(content).not_to(contain("grill_context.grill_context:GrillContext"))
             expect(path).to(contain("SKILL.md"))
 
@@ -261,9 +281,18 @@ with description("_deploy_entries writes action skills and commands"):
         expect("discovery" in deployed_commands).to(be_true)
         expect("specification" in deployed_commands).to(be_true)
         expect("engineering" in deployed_commands).to(be_true)
+        expect("scaffold" in deployed_commands).to(be_true)
+        expect("story_map" in deployed_commands).to(be_true)
+        expect("scenarios" in deployed_commands).to(be_true)
+        expect("acceptance_tests" in deployed_commands).to(be_true)
+        expect("bounded_context" in deployed_commands).to(be_true)
+        expect("building_blocks" in deployed_commands).to(be_true)
+        expect("tactics" in deployed_commands).to(be_true)
         expect((self.root / ".cursor" / "commands" / "discovery.md").is_file()).to(be_true)
         expect((self.root / ".cursor" / "commands" / "specification.md").is_file()).to(be_true)
         expect((self.root / ".cursor" / "commands" / "engineering.md").is_file()).to(be_true)
+        expect((self.root / ".cursor" / "commands" / "scaffold.md").is_file()).to(be_true)
+        expect((self.root / ".cursor" / "commands" / "story_map.md").is_file()).to(be_true)
         expect((self.root / ".cursor" / "skills" / "grill-context").exists()).not_to(be_true)
         expect((self.root / ".cursor" / "skills" / "echo" / "SKILL.md").is_file()).to(be_true)
         expect((self.root / ".cursor" / "commands" / "echo.md").is_file()).to(be_true)
@@ -514,6 +543,10 @@ with description("write_skill_shim tool"):
             expect(content).to(contain("AskQuestion"))
             expect(content).to(contain("Identify the action"))
             expect(content).to(contain("Identify the fidelity"))
+            expect(content).to(contain("This skill **is** this context tool"))
+            expect(content).not_to(contain("Identify the context tool"))
+            expect(content).not_to(contain("selected context tool"))
+            expect(content).not_to(contain("/stories /ddd"))
             expect(path).to(contain("SKILL.md"))
 
     with context("ide=vscode"):
