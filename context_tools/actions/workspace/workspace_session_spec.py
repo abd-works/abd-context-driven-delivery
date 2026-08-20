@@ -13,7 +13,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_false, be_none, be_true, equal, expect
+from expects import be_false, be_none, be_true, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
@@ -255,6 +255,127 @@ with description("a Session that is started"):
         expect(md.is_file()).to(be_true)
         content = md.read_text(encoding="utf-8")
         expect("build feature" in content).to(be_true)
+
+
+with description("a Session that is started in a git working area"):
+    with it("should create a branch named for this session"):
+        import shutil
+        import tempfile
+        from workspace.workspace_repo import WorkspaceRepo, _git, find_git_root
+        from workspace.workspace_session import Session
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_git_started_"))
+        _git(tmp, "init")
+        _git(tmp, "config", "user.email", "test@example.com")
+        _git(tmp, "config", "user.name", "test")
+        _git(tmp, "commit", "--allow-empty", "-m", "init")
+        session = Session(path=str(tmp), name="sprint")
+        session.ensure_started()
+        root = find_git_root(tmp)
+        expect(root).to(equal(tmp.resolve()))
+        expect(WorkspaceRepo(tmp).current_branch()).to(equal("session/sprint"))
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    with context("that is started again while already on the session branch"):
+        with it("should stay on that branch when the tree is dirty"):
+            import shutil
+            import tempfile
+            from workspace.workspace_repo import WorkspaceRepo, _git
+            from workspace.workspace_session import Session
+
+            tmp = Path(tempfile.mkdtemp(prefix="session_git_already_on_"))
+            _git(tmp, "init")
+            _git(tmp, "config", "user.email", "test@example.com")
+            _git(tmp, "config", "user.name", "test")
+            _git(tmp, "commit", "--allow-empty", "-m", "init")
+            session = Session(path=str(tmp), name="sprint")
+            session.ensure_started()
+            (tmp / "wip.txt").write_text("in progress", encoding="utf-8")
+            session.ensure_started()
+            expect(WorkspaceRepo(tmp).current_branch()).to(equal("session/sprint"))
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    with context("that is an existing session whose branch we are not on"):
+        with it("should not switch when the tree is dirty"):
+            import shutil
+            import tempfile
+            from workspace.workspace_repo import (
+                DirtyBranchSwitchError,
+                WorkspaceRepo,
+                _git,
+            )
+            from workspace.workspace_session import Session
+
+            tmp = Path(tempfile.mkdtemp(prefix="session_git_resume_dirty_"))
+            _git(tmp, "init")
+            _git(tmp, "config", "user.email", "test@example.com")
+            _git(tmp, "config", "user.name", "test")
+            _git(tmp, "commit", "--allow-empty", "-m", "init")
+            started_on = WorkspaceRepo(tmp).current_branch()
+            session = Session(path=str(tmp), name="sprint")
+            session.ensure_started()
+            _git(tmp, "checkout", started_on)
+            (tmp / "wip.txt").write_text("in progress", encoding="utf-8")
+            expect(lambda: session.ensure_started()).to(
+                raise_error(DirtyBranchSwitchError)
+            )
+            expect(WorkspaceRepo(tmp).current_branch()).to(equal(started_on))
+            shutil.rmtree(tmp, ignore_errors=True)
+
+        with it("should switch to the existing session branch from another branch"):
+            import shutil
+            import tempfile
+            from workspace.workspace_repo import WorkspaceRepo, _git
+            from workspace.workspace_session import Session
+
+            tmp = Path(tempfile.mkdtemp(prefix="session_git_resume_clean_"))
+            _git(tmp, "init")
+            _git(tmp, "config", "user.email", "test@example.com")
+            _git(tmp, "config", "user.name", "test")
+            _git(tmp, "commit", "--allow-empty", "-m", "init")
+            started_on = WorkspaceRepo(tmp).current_branch()
+            session = Session(path=str(tmp), name="sprint")
+            session.ensure_started()
+            (tmp / "handoff-marker.txt").write_text("user-one-handoff", encoding="utf-8")
+            _git(tmp, "add", "handoff-marker.txt")
+            _git(tmp, "add", ".context")
+            _git(tmp, "commit", "-m", "handoff")
+            _git(tmp, "checkout", started_on)
+            session.ensure_started()
+            expect(WorkspaceRepo(tmp).current_branch()).to(equal("session/sprint"))
+            expect((tmp / "handoff-marker.txt").read_text(encoding="utf-8")).to(
+                equal("user-one-handoff")
+            )
+            shutil.rmtree(tmp, ignore_errors=True)
+
+        with it("should return to the first session branch after a later session was created from main"):
+            import shutil
+            import tempfile
+            from workspace.workspace_repo import WorkspaceRepo, _git
+            from workspace.workspace_session import Session
+
+            tmp = Path(tempfile.mkdtemp(prefix="session_git_two_sprints_"))
+            _git(tmp, "init")
+            _git(tmp, "config", "user.email", "test@example.com")
+            _git(tmp, "config", "user.name", "test")
+            _git(tmp, "commit", "--allow-empty", "-m", "init")
+            main = WorkspaceRepo(tmp).current_branch()
+            first = Session(path=str(tmp), name="first")
+            first.ensure_started()
+            (tmp / "first-handoff.txt").write_text("first-session-work", encoding="utf-8")
+            _git(tmp, "add", "first-handoff.txt")
+            _git(tmp, "add", ".context")
+            _git(tmp, "commit", "-m", "first handoff")
+            _git(tmp, "checkout", main)
+            Session(path=str(tmp), name="second").ensure_started()
+            expect(WorkspaceRepo(tmp).current_branch()).to(equal("session/second"))
+            expect((tmp / "first-handoff.txt").exists()).to(be_false)
+            first.ensure_started()
+            expect(WorkspaceRepo(tmp).current_branch()).to(equal("session/first"))
+            expect((tmp / "first-handoff.txt").read_text(encoding="utf-8")).to(
+                equal("first-session-work")
+            )
+            shutil.rmtree(tmp, ignore_errors=True)
 
 
 with description("a Session that is closed"):

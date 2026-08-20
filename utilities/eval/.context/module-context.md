@@ -28,8 +28,8 @@ One hierarchical document beats parallel trail files (events / mistakes / spine)
 Locations stay in workspace; eval owns the domain story used for RCA and evals.
 
 ## Seam
-`EvalSession`, `Turn`, `ToolCall`, `Mistake`, `Correction`, `WorkspaceRepo`,
-`CDDRepo` (extends WorkspaceRepo), `TurnCommit`, `Repair`, `Archive`. An asset
+`EvalSession`, `Turn`, `ToolCall`, `Mistake`, `Correction`,
+`CDDRepo` (extends workspace `WorkspaceRepo`), `TurnCommit`, `Repair`, `Archive`. An asset
 EvalSession holds `workspaceRepo`, `cddRepo`, and `cddAt` (tool checkout linked
 once). Repair opens a WorkspaceSession on the CDD clone. Mistake regression uses Bdd
 `expect_scan_fails` / `expect_scan_passes` and AgentBdd `generate_and_judge` —
@@ -37,8 +37,9 @@ not a parallel spec harness in this package.
 
 ## Constraint
 Callers construct `EvalSession` with a workspace area that already has
-`path`, `folder`, and `name`. Do not pass a git branch — `EvalSession` ensures
-`session/{name}` via `WorkspaceRepo` on construct.
+`path`, `folder`, and `name`. Do not pass a git branch — the workspace session
+creates `session/{name}` via `WorkspaceRepo.ensure_session_branch` when the
+sprint is started. Eval records that name and **commits** turn deltas on it.
 
 ## Public API
 - `EvalSession.begin_turn` / `record_tool_call` / `finish_turn` / `save` / `load`
@@ -66,18 +67,21 @@ Callers construct `EvalSession` with a workspace area that already has
 `scanners.Scan` for regression only. Base composes workspace + eval.
 
 ## Git (thin)
-`WorkspaceRepo` is the session-tracked git seam (session branch, TurnCommit).
-`CDDRepo` **extends** it. `repos_for_workspace` roots `WorkspaceRepo` at
-`find_git_root(workspace.path)` and `CDDRepo` at the running tools clone
-(`find_cdd_root` — this package's git root). An asset session **links once**
-(`cddAt` = `headSha`) — which tools this session used. It does not stamp CDD
-on every Turn. Repair **opens a WorkspaceSession** whose path is the CDD clone and **copies**
-project Mistakes onto that session (new objects, same entry ids) so the tools
-clone holds a consumable `mistakes/` record. Logging on the project does not
-mirror in real time — the bring-over happens when repair starts.
-`eval` is a separate tool that may open its own session on that clone if repair
-has not. When the working area sits inside this clone (e.g. `sandbox/…`), both
-share that **same** git root. If either clone cannot be connected,
-`repos_for_workspace` raises `EvalGitConnectError` — do not proceed unless the
-user says to continue without git. `Null*` variants remain for isolated unit
-tests that inject them explicitly; live bind never falls back to Null.
+`WorkspaceRepo` lives under `context_tools/actions/workspace` — session branch
+create/checkout is a **workspace** side effect of starting a session.
+Eval **commits** finished Turns (`commit_on_session_branch`) including eval
+YAML. `CDDRepo` **extends** WorkspaceRepo. `repos_for_workspace` roots
+`WorkspaceRepo` at `find_git_root(workspace.path)` and `CDDRepo` at the running
+tools clone (`find_cdd_root` — this package's git root). An asset session
+**links once** (`cddAt` = `headSha`) — which tools this session used. It does
+not stamp CDD on every Turn. Repair **opens a WorkspaceSession** whose path is
+the CDD clone and **copies** project Mistakes onto that session (new objects,
+same entry ids) so the tools clone holds a consumable `mistakes/` record.
+Logging on the project does not mirror in real time — the bring-over happens
+when repair starts. `eval` is a separate tool that may open its own session on
+that clone if repair has not. When the working area sits inside this clone
+(e.g. `sandbox/…`), both share that **same** git root. If either clone cannot
+be connected, `repos_for_workspace` raises `EvalGitConnectError` — do not
+proceed unless the user says to continue without git. `Null*` variants remain
+for isolated unit tests that inject them explicitly; live bind never falls
+back to Null.

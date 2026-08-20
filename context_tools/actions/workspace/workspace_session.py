@@ -11,6 +11,7 @@ from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from workspace.context_index import ContextIndex
 from workspace.session import SessionPaths
+from workspace.workspace_repo import WorkspaceRepo, find_git_root
 from tools.tool import resource, tool
 
 # Re-export for ``from workspace.workspace_session import SessionPaths.docs_dir``
@@ -220,6 +221,7 @@ class Session:
             self.contexts = contexts
         if not self.started:
             self.started = date.today().isoformat()
+        self._ensure_session_branch()
         self.folder.mkdir(parents=True, exist_ok=True)
         if not self.session_md.is_file():
             self.session_md.write_text(self._render(), encoding="utf-8")
@@ -227,6 +229,12 @@ class Session:
             if not self.ended:
                 self.session_md.write_text(self._render(), encoding="utf-8")
         return self.session_md
+
+    def _ensure_session_branch(self) -> None:
+        root = find_git_root(self.path)
+        if root is None:
+            return
+        WorkspaceRepo(root).ensure_session_branch(self.name)
 
     def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
         """Write End section (and handoff link) into session.md."""

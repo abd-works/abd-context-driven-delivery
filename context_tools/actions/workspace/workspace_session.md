@@ -40,6 +40,21 @@ Do **not** separately chain bind + read_context_index + record_context_root from
 1. context-index entry for `context_index_key`
 2. else `{workspace_root}/{default_workspace_folder}`
 
+## Git branch on every session start
+
+Handoff is only one way a session comes back later. **Every** `open` / `ensure_session` / `create_session` does this check — new sprint or resume of an existing one.
+
+**Reuse `session/{name}`.** Do not mint `session/{name}-2` just because we started again. After a handoff you may be on `main`, or on a later session branch that was created from `main` (so it does not have this session's commits). Restart still checks out `session/{name}` when that branch already exists — same machine or another person who has the session name. You would have to be on that branch to see the work anyway; the start check is how we get there.
+
+1. Compare HEAD to `session/{name}`.
+2. Already on that branch → continue (dirty tree is fine; you are already there).
+3. Not on it, **and the working tree is dirty** → **do not checkout**. Ask:
+   - bring this work onto the existing session branch (merge / pull latest into it), or
+   - start a continuation branch `session/{name}-2` (then `-3`, …) — only if they choose that.
+4. Not on it, tree clean → checkout `session/{name}` if it exists, otherwise create it.
+
+Eval still only **commits** after a turn. It does not decide the switch.
+
 # Ensure Session
 
 Load `{path}/.context/sessions/{name}/session.md` if present; otherwise create it. `name` defaults to the constructor session.

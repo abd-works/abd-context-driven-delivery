@@ -37,4 +37,16 @@ def __getattr__(name: str):
         from workspace.workspace_session import Session, WorkspaceSession
 
         return Session if name == "Session" else WorkspaceSession
+    if name in ("WorkspaceRepo", "NullWorkspaceRepo", "find_git_root"):
+        from workspace.workspace_repo import (
+            NullWorkspaceRepo,
+            WorkspaceRepo,
+            find_git_root,
+        )
+
+        return {
+            "WorkspaceRepo": WorkspaceRepo,
+            "NullWorkspaceRepo": NullWorkspaceRepo,
+            "find_git_root": find_git_root,
+        }[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

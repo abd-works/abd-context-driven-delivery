@@ -105,10 +105,9 @@ with description("a session"):
                 # Assert
                 expect(self.session.path).to(equal(str(self.tmp)))
 
-        with it("should create a WorkspaceRepo branch named for this session"):
+        with it("should name its branch after the workspace session"):
             # Assert
             expect(self.session.branch).to(equal("session/sprint"))
-            expect(self.repo.current_branch()).to(equal("session/sprint"))
 
         with it("should link cddAt from cddRepo.headSha once"):
             # Assert
@@ -397,7 +396,7 @@ with description("a session"):
             with it("should commit the working-area delta on the WorkspaceRepo session branch"):
                 # Assert
                 expect(len(self.repo.commits)).to(equal(1))
-                expect(self.repo.current_branch()).to(equal("session/sprint"))
+                expect(self.session.branch).to(equal("session/sprint"))
 
             with it("should write a TurnCommit as that commit"):
                 turn = self.session.turns[0]
