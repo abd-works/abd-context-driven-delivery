@@ -370,6 +370,8 @@ with description("a Session that is started in a git working area"):
             Session(path=str(tmp), name="second").ensure_started()
             expect(WorkspaceRepo(tmp).current_branch()).to(equal("session/second"))
             expect((tmp / "first-handoff.txt").exists()).to(be_false)
+            _git(tmp, "add", ".context")
+            _git(tmp, "commit", "-m", "second handoff")
             first.ensure_started()
             expect(WorkspaceRepo(tmp).current_branch()).to(equal("session/first"))
             expect((tmp / "first-handoff.txt").read_text(encoding="utf-8")).to(
