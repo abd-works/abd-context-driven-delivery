@@ -401,7 +401,6 @@ class BaseContextTool(AgenticToolset):
         """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
         self.workspace.open()
         self.decisions.record_decisions_session()
-        self.iterator.iterate_session()
         self.generate()
         return "Iterate complete; generate instructions applied."
 

@@ -90,3 +90,34 @@ with description("an iterate action"):
             expect(steps).to(
                 equal(["open", "record_decisions", "iterate_session", "generate"])
             )
+
+    with context("that is given two context tools"):
+        with it("should run the host iterate body once per tool"):
+            steps: list[str] = []
+            _Iterator(steps).iterate(
+                tools=[_ContextTool(steps), _ContextTool(steps)]
+            )
+            expect(steps).to(
+                equal(
+                    [
+                        "open",
+                        "record_decisions",
+                        "iterate_session",
+                        "generate",
+                        "open",
+                        "record_decisions",
+                        "iterate_session",
+                        "generate",
+                    ]
+                )
+            )
+
+
+with description("a BaseContextTool iterate action"):
+    with it("should not compose Iterator"):
+        import inspect
+
+        from context_tools.base.base_context_tool import BaseContextTool
+
+        source = inspect.getsource(BaseContextTool.iterate)
+        expect("iterator" in source).to(equal(False))

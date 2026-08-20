@@ -14,7 +14,17 @@ from __future__ import annotations
 
 from grill_context.grill_context import GrillContext
 from primitives.actions.action import action
-from tools.tool import tool, toolset
+from tools.tool import _ToolsetLoader, tool, toolset
+
+
+def context_tool(item: object) -> object:
+    """Resolve a tools item to a context-tool instance (path, mapping, or already loaded)."""
+    if isinstance(item, str):
+        return _ToolsetLoader.instance().load(item)()
+    if isinstance(item, dict):
+        loaded = _ToolsetLoader.instance().load(str(item["toolset"]))
+        return loaded(**(item.get("context") or {}))
+    return item
 
 
 @toolset
@@ -34,11 +44,12 @@ class Iterator:
     @action
     def iterate(self, tools: list) -> str:
         """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
-        for tool in tools:
-            tool.workspace.open()
-            tool.decisions.record_decisions_session()
+        for item in tools:
+            host = context_tool(item)
+            host.workspace.open()
+            host.decisions.record_decisions_session()
             self.iterate_session()
-            tool.generate()
+            host.generate()
         return "Iterate complete; generate instructions applied."
 
     @action

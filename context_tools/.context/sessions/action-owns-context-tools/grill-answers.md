@@ -8,3 +8,7 @@ Add one extra operation on Iterator that takes a collection of context tools. Mo
 
 ### First tool
 BDD only for this tick (`context_tools/bdd/.context/module-context.md` — development iterate: one test RED, then production GREEN). CleanEngineering pairing waits until the concept is proven.
+### Next slice — host is not the call site
+
+Stop BaseContextTool.iterate from composing Iterator. /iterate runs iterate.iterate:Iterator with arguments.tools listing the in-scope context tool(s). Also prove agent skills/commands use that call site, with an agentic BDD spec plus ai_judge that Iterator.iterate actually owned the run. Sources: context_tools/base/.context/module-context.md, context_tools/actions/iterate/.context/module-context.md, utilities/agent_skills/.context/module-context.md, user: option A plus agent-skill validation.
+

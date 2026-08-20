@@ -369,20 +369,9 @@ class Session:
                 "need session name — confirm working path and kebab slug with the user, "
                 "then call ensure_session (or create_session) before grill/sketch"
             )
-        if (
-            self.name == effective_name
-            and self.path == effective_path
-            and self.session_md.is_file()
-        ):
-            self._bind_session_log()
-            return str(self.session_md.resolve())
         loaded = type(self).load(effective_path, effective_name)
         if loaded.session_md.is_file():
             self._take_from(loaded)
-            if goal or fidelities or contexts:
-                self.ensure_started(
-                    goal=goal, fidelities=fidelities, contexts=contexts
-                )
         else:
             self.path = effective_path
             self.name = effective_name
@@ -393,9 +382,9 @@ class Session:
             self.outcome = ""
             self.handoff = ""
             self.started = date.today().isoformat()
-            self.ensure_started(
-                goal=goal, fidelities=fidelities, contexts=contexts
-            )
+        self.ensure_started(
+            goal=goal, fidelities=fidelities, contexts=contexts
+        )
         self._bind_session_log()
         return str(self.session_md.resolve())
 

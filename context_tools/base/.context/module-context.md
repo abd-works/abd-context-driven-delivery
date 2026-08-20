@@ -22,7 +22,7 @@
 - `render(format, content="")` — `@tool` that renders already-generated output into `format`. Default rejects unknown formats. Channel tools override and call their parse/render (or `transform`) in-process.
 - Resource `active`; instruction `session_guidance`
 - Class knobs: `default_workspace_folder`, `context_index_key`
-- Lifecycle actions: `generate`, `validate`, `satisfy`, `document`, `grill`, `sketch`, `iterate`, `createRule`, `generate_output`, `add_generate_header_to_generated`
+- Lifecycle actions: `generate`, `validate`, `satisfy`, `document`, `grill`, `sketch`, `iterate`, `createRule`, `generate_output`, `add_generate_header_to_generated`. Host `iterate` does not compose `Iterator` — `/iterate` runs `Iterator.iterate(tools=...)`.
 - Eval capture: `self.eval` (`eval.EvalSession`); host tools `begin_eval_turn` / `finish_eval_turn` / `log_mistake` / `log_correction` (YAML index plus `{session.folder}/mistakes/{name}/`). Direct lifecycle actions (`generate`, `validate`, `document`, `partition`, `repair`, `eval`, `createRule`) register begin then finish on the action so the agent runs them. `grill` / `sketch` / `iterate` / `satisfy` do not add their own — they delegate. No `improve`.
 
 ## Dependencies
