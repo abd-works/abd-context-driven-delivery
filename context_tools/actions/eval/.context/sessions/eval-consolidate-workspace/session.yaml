@@ -1,4 +1,16 @@
 branch: session/eval-consolidate-workspace
 path: context_tools/actions/eval
 cdd_at: 1dd12f306c7b24f34f8cfd7556801cde302a2287
-turns: []
+turns:
+- id: d6b80c15
+  prompt: log corrections — CE diagram layout and sketch associations
+  result: closed 7 mistakes via log_correction; repairs/ and session.yaml written
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: d6b80c15
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: d7ac6d8358dfa133c3ce20dd3651040279669797
+  tool_calls: []
+  mistakes: []

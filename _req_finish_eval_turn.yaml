@@ -5,6 +5,6 @@ context:
   session: eval-consolidate-workspace
 tool: finish_eval_turn
 arguments:
-  prompt: "log corrections — CE diagram layout and sketch associations"
-  result: "closed 7 mistakes via log_correction; repairs/ and session.yaml written"
+  prompt: "persist session.yaml turn index after corrections commit"
+  result: "session.yaml records turn d6b80c15 with change_commit sha"
   context: eval-consolidate-workspace
