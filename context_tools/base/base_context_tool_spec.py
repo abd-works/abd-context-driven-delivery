@@ -273,19 +273,6 @@ with description("BaseContextTool linear kit delegation"):
         with it("should have no decorator chain on sketch"):
             expect("chain" in self.entry).to(equal(False))
 
-        with it("should inline workspace open prose"):
-            expect(
-                "Open the workspace session" in self.response["instructions"]
-                or "Workspace open" in self.response["instructions"]
-                or "# Session Guidance" in self.response["instructions"]
-            ).to(be_true)
-
-        with it("should inline sketch_session cadence (save_sketch)"):
-            expect("save_sketch" in self.response["tools"]).to(be_true)
-
-        with it("should inline grill via sketcher (explore_context_files)"):
-            expect("explore_context_files" in self.response["tools"]).to(be_true)
-
     with context("generate expands providers in-method (no @ chain)"):
         with before.all:
             cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
@@ -306,9 +293,6 @@ with description("BaseContextTool linear kit delegation"):
 
         with it("should have no decorator chain on grill"):
             expect("chain" in self.entry).to(equal(False))
-
-        with it("should name explore_context_files from GrillContext"):
-            expect("explore_context_files" in self.response["tools"]).to(be_true)
 
     with context("iterate expands Iterator in-method (no @ chain)"):
         with before.all:

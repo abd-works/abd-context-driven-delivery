@@ -3,9 +3,9 @@
 ## Resume
 
 - **Stage:** development
-- **Last work:** (see session progress below)
-- **Next action:** grill complete replace
-- **Next focus:** grill complete replace
+- **Last work:** grill complete replace — GrillContext.grill(tools) owns /grill; specs and agent_skills aligned with iterate/sketch
+- **Next action:** (session slice complete — hand off or pick next host action)
+- **Next focus:** review branch; merge when ready
 
 ## Session
 

@@ -44,3 +44,12 @@ turns:
     sha: 33e77a6b70cad33456697c9411321d15ac2dfb6d
   tool_calls: []
   mistakes: []
+- id: grill-complete
+  prompt: /bdd /iterate — grill complete replace
+  result: GrillContext.grill(tools) owns /grill; grill_context_spec + grill_agent_spec;
+    base_context_tool_spec and agent_skills_spec updated; module-context docs aligned.
+    181 examples green on affected specs.
+  context: action-owns-context-tools
+  change_commit: {}
+  tool_calls: []
+  mistakes: []

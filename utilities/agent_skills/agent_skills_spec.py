@@ -185,6 +185,18 @@ with description("write_action_command tool"):
             expect(content).to(contain("Do not invoke each context tool with `action: sketch`"))
             expect(content).not_to(contain("Do not run this as its own toolset"))
 
+    with context("grill owns the run"):
+        with it("should tell the agent to invoke GrillContext with the context tools as arguments"):
+            self.skills.write_action_command(action="grill", ide="cursor")
+            content = (self.root / ".cursor" / "commands" / "grill.md").read_text(
+                encoding="utf-8"
+            )
+            expect(content).to(contain("grill_context.grill_context:GrillContext"))
+            expect(content).to(contain("arguments:"))
+            expect(content).to(contain("tools:"))
+            expect(content).to(contain("Do not invoke each context tool with `action: grill`"))
+            expect(content).not_to(contain("Do not run this as its own toolset"))
+
 
 with description("write_stage_fidelity_command tool"):
     with before.each:
@@ -260,20 +272,30 @@ with description("write_action_skill_shim tool"):
 
     with context("ide=cursor"):
         with it("writes a skill shim that routes to the in-scope context tool action"):
-            path = self.skills.write_action_skill_shim(action="grill", ide="cursor")
-            target = self.root / ".cursor" / "skills" / "grill" / "SKILL.md"
+            path = self.skills.write_action_skill_shim(action="generate", ide="cursor")
+            target = self.root / ".cursor" / "skills" / "generate" / "SKILL.md"
             expect(target.is_file()).to(be_true)
             content = target.read_text(encoding="utf-8")
-            expect(content).to(contain("name: grill"))
+            expect(content).to(contain("name: generate"))
             expect(content).to(contain("Do not run this as its own toolset"))
             expect(content).to(contain("already in scope"))
             expect(content).to(contain("named in this chat"))
-            expect(content).to(contain("action: grill"))
+            expect(content).to(contain("action: generate"))
             expect(content).to(contain("AskQuestion"))
             expect(content).to(contain("one or more"))
             expect(content).to(contain("/stories /ddd"))
-            expect(content).not_to(contain("grill_context.grill_context:GrillContext"))
             expect(path).to(contain("SKILL.md"))
+
+        with it("writes a grill skill shim that invokes GrillContext with tools as arguments"):
+            self.skills.write_action_skill_shim(action="grill", ide="cursor")
+            content = (self.root / ".cursor" / "skills" / "grill" / "SKILL.md").read_text(
+                encoding="utf-8"
+            )
+            expect(content).to(contain("grill_context.grill_context:GrillContext"))
+            expect(content).to(contain("arguments:"))
+            expect(content).to(contain("tools:"))
+            expect(content).to(contain("Do not invoke each context tool with `action: grill`"))
+            expect(content).not_to(contain("Do not run this as its own toolset"))
 
 
 with description("_deploy_entries writes action skills and commands"):

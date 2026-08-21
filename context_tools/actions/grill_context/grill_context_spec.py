@@ -38,6 +38,10 @@ with description("GrillContext toolset"):
             sig = GrillContext.manifest.signature
             expect(sig["write_grill_answer"]["kind"]).to(equal("tool"))
 
+        with it("should expose grill as an action"):
+            sig = GrillContext.manifest.signature
+            expect(sig["grill"]["kind"]).to(equal("action"))
+
         with it("should expose grill_with_context as an action"):
             sig = GrillContext.manifest.signature
             expect(sig["grill_with_context"]["kind"]).to(equal("action"))
@@ -186,3 +190,71 @@ with description("GrillContext toolset"):
         with it("should carry instructions referencing the grilling workflow"):
             joined = "\n".join(self.body.prose_parts)
             expect(joined).to(contain("grill"))
+
+
+class _ContextTool:
+    def __init__(self, steps: list[str]) -> None:
+        self.steps = steps
+        self.workspace = self
+        self.decisions = self
+
+    def open(self) -> None:
+        self.steps.append("open")
+
+    def record_decisions_session(self) -> None:
+        self.steps.append("record_decisions")
+
+    def generate(self) -> str:
+        self.steps.append("generate")
+        return "ok"
+
+
+class _GrillContext(GrillContext):
+    def __init__(self, steps: list[str]) -> None:
+        super().__init__()
+        self.steps = steps
+
+    def grill_with_context(self, plan: str = "") -> str:
+        self.steps.append("grill_with_context")
+        return "ok"
+
+
+with description("a grill action"):
+    with context("that is given one context tool"):
+        with it("should open the workspace, record decisions, run grill_with_context, and generate"):
+            steps: list[str] = []
+            _GrillContext(steps).grill(tools=[_ContextTool(steps)])
+            expect(steps).to(
+                equal(["open", "record_decisions", "grill_with_context", "generate"])
+            )
+
+    with context("that is given two context tools"):
+        with it("should run the host grill body once per tool"):
+            steps: list[str] = []
+            _GrillContext(steps).grill(
+                tools=[_ContextTool(steps), _ContextTool(steps)]
+            )
+            expect(steps).to(
+                equal(
+                    [
+                        "open",
+                        "record_decisions",
+                        "grill_with_context",
+                        "generate",
+                        "open",
+                        "record_decisions",
+                        "grill_with_context",
+                        "generate",
+                    ]
+                )
+            )
+
+
+with description("a BaseContextTool grill action"):
+    with it("should not compose GrillContext"):
+        import inspect
+
+        from context_tools.base.base_context_tool import BaseContextTool
+
+        source = inspect.getsource(BaseContextTool.grill)
+        expect("grill_context" in source).to(equal(False))

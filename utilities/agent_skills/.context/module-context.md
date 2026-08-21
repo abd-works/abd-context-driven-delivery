@@ -13,9 +13,10 @@ Packages under `context_tools/actions/` are **not** deployed as kit-manifest ski
   (`partition`, `grill`, `sketch`, `generate`, `document`, `iterate`, `validate`,
   `satisfy`, `repair`, `improve`). If one or more context tools are already in
   scope — passed in or named in chat (for example `/stories /ddd /iterate`) —
-  run **each** tool's matching `action:` in that order, **except iterate and sketch**:
+  run **each** tool's matching `action:` in that order, **except iterate, sketch, and grill**:
   `/iterate` runs `iterate.iterate:Iterator` once with `arguments.tools` listing
-  those context tools; `/sketch` runs `sketch.sketch:Sketcher` the same way. Cursor commands
+  those context tools; `/sketch` runs `sketch.sketch:Sketcher` the same way; `/grill`
+  runs `grill_context.grill_context:GrillContext` the same way. Cursor commands
   (`.cursor/commands/{action}.md`) and VS Code prompts get the same text.
 - **CDD stage-fidelity commands** (`discovery`, `specification`, `engineering`) that
   only set `context.fidelity` on the in-scope context tool. Each tool maps the
