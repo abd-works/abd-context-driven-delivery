@@ -5,6 +5,6 @@ context:
   session: eval-consolidate-workspace
 tool: finish_eval_turn
 arguments:
-  prompt: Workspace owns many WorkSessions — current and past
-  result: sketch + CE diagram — Workspace.workSessions list; composition edge Workspace ◆— WorkSession; host.workspace remains active sprint only
+  prompt: Workspace model — paths direct, currentWorkSession, no ContextIndex
+  result: sketch + CE diagram — BaseContextTool→Workspace; pathOverrides on Workspace; currentWorkSession; removed active/sprint language; PathOverride row type
   context: eval-consolidate-workspace

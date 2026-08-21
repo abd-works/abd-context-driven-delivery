@@ -8,9 +8,9 @@ Session **eval-consolidate-workspace**. CE sources: `context_tools/actions/works
 
 Workspace and eval both use **Session** vocabulary, compose each other through **BaseContextTool** (`_bind_eval`, `repairer`), and split git/logging seams inconsistently — while slash commands invert other kits (`/repair`, `/partition`, …) to **kit owns run, tools are arguments**. The CE diagrams encode extra types (`WorkspaceSession` stub, `Repair` twice) that do not match code.
 
-**Vocabulary (target):** a **workspace** is the folder you chose to work in — the **parent of `.context/`** (not the whole git repo). It owns **many work sessions** over time (past and present) under `{workspace}/.context/sessions/{name}/`, plus a sparse **context index**. A **work session** is one named sprint in that tree and holds **turns**. **Turns** hold **mistakes**; mistakes group into **repairs**. **`ContextIndex`** is **`(tool, fidelity, path)`** rows when that combo differs from the host default. **`GitRepo`** is git at `find_git_root(...)` — separate from workspace boundary. At runtime **`host.workspace`** is the **active** work session (property name is wrong — see §2).
+**Vocabulary (target):** a **workspace** is the folder you chose to work in — the **parent of `.context/`** (not the whole git repo). It owns **many work sessions**, a **`currentWorkSession`**, and a sparse **`pathOverrides`** list. A **context tool** composes **`Workspace`** directly — **`lookupPath`**, **`path`**, overrides — without going through a work session. Turn/git/repair state lives on **`workspace.currentWorkSession`**. **`GitRepo`** is at `find_git_root(...)` — separate from workspace boundary. *Code today: `host.workspace` is a misnamed **`WorkSession`**, not **`Workspace`**.*
 
-**Naming (locked):** **`Workspace`** = parent of `.context/`. **`WorkSession`** = one sprint bout. See §2 rename table for today's Python names.
+**Naming (locked):** **`Workspace`** = parent of `.context/`. **`WorkSession`** = one work session. See §2 rename table for today's Python names.
 
 **No aliases, no legacy (locked):** this refactor does **not** ship compatibility shims, rename aliases, dual decorators, import aliases (`Session = …`), or gradual migration. **One name per concept.** Delete old names in the same pass — do not re-export under a second name. See §4.
 
@@ -18,84 +18,99 @@ Workspace and eval both use **Session** vocabulary, compose each other through *
 
 ## 2. Target model — workspace
 
-From `workspace-ce.drawio` + `workspace_session.py`. **The diagram below is the domain we want** — not a line-for-line copy of today's Python.
+From `workspace_session.py` + `context_index.py`. **The model below is the domain we want** — not a line-for-line copy of today's Python. CE diagrams are illustrative; **this block is source of truth**. No separate **`ContextIndex`** type — today's `context_index.py` helpers fold into **`Workspace`** load/save/lookup.
 
 **Renames from today's Python** (migration only — not part of the runtime model):
 
 | In this sketch | In code now |
 |---|---|
 | `Workspace` | no class yet — folder path stored as `Session.workspace_root` |
+| `Workspace.workSessions` | folders under `{workspace_root}/.context/sessions/*` — no aggregate yet |
+| `Workspace.pathOverrides` | `## Current` rows in `{workspace_root}/.context/context-index.md` — no list on a class yet |
 | `WorkSession` | class `Session` in `workspace_session.py` |
-| `host.workspace` | property on `BaseContextTool` — holds a `Session` (should read as WorkSession) |
-| `ContextIndex` | module `context_index.py` — static helpers, not a class yet |
+| `host.workspace` | target: **`Workspace`** aggregate — code today: property holds a **`Session`** (`WorkSession`) |
+| `Workspace.currentWorkSession` | today's current work session on that `Session` object |
+| `context_index.py` | delete as a separate domain type — persistence + lookup live on **`Workspace`** |
 | `WorkspaceSession` | delete — was an export alias |
+
+**Three levels (locked):**
+
+1. **`Workspace`** — parent of `.context/`; **`pathOverrides`**, **`workSessions`**, **`currentWorkSession`**.
+2. **`WorkSession`** — one named work session; owns turns, git, repairs for that bout.
+3. **`BaseContextTool.workspace`** — composed **`Workspace`** — paths/overrides **direct**; current work session via **`workspace.currentWorkSession`**.
 
 ```
 Workspace
-  path                                  // parent of .context/ — where you dropped the workspace
-  contextIndex ContextIndex             // at path/.context/context-index.md — sparse (tool, fidelity, path)
-  workSessions: list[WorkSession]        // all sprints under {path}/.context/sessions/ — past and present
+  path                                  // parent of .context/
+  workSessions: list[WorkSession]        // every work session folder — current and past
+  currentWorkSession: WorkSession | None // current work session — set on open
+  pathOverrides: list[PathOverride]      // sparse — only when path ≠ host default for (tool, fidelity)
+  load() save()
+  lookupPath(tool, fidelity) path
+  upsertPath(tool, fidelity, path)
+  openWorkSession(name, goal, fidelities, contexts, path)
+    -> currentWorkSession = load or create in workSessions
+    -> load(); currentWorkSession.open(...); upsertPath when ≠ default
   ----
-  // layout (not all types — illustrative):
-  //   {path}/.context/context-index.md
-  //   {path}/.context/sessions/{name}/   ← one WorkSession each (current or closed)
-  //   {path}/src/ | domain/ | tests/ | stories/ … ← tool defaults + your source tree
-  ----
-ContextIndex
-  entries: list[ContextIndexEntry]      // only rows where path ≠ host default for (tool, fidelity)
-  load(workspace) save(workspace)
-  lookup(tool, fidelity) path
-  upsert(tool, fidelity, path)          // remove row when path matches default again
-  ----
-ContextIndexEntry
-  tool: str                             // context_index_key — e.g. stories, bdd
-  fidelity: str                         // e.g. story_map, modules, model
+PathOverride                            // one row — not a separate aggregate
+  tool: str
+  fidelity: str
   path: str                             // folder under Workspace.path (workspace-relative)
   ----
-BaseContextTool (each host declares defaults)
-  context_index_key: str                // → ContextIndexEntry.tool
-  default_workspace_folder: str         // used when no index row for (tool, fidelity)
-  // resolved working path when path omitted:
-  //   1. ContextIndex.lookup(context_index_key, fidelity)
-  //   2. else {Workspace.path}/{default_workspace_folder}
-  ----
 WorkSession
-  workspace Workspace                     // back-ref — parent workspace owns this sprint in workSessions
+  workspace Workspace                     // back-ref — listed in parent workSessions
   path name folder goal fidelities contexts
+  session_branch scope_paths dirty
+  git GitRepo                             // find_git_root(workspace.path) — may be above workspace.path
+  openTurn Turn | None
+  turns list[Turn]
+  repairs list[Repair]
   // path = durable tool root for this bout (where generate/validate edit)
   // folder = {workspace.path}/.context/sessions/{name}/
-  open / close …
-  // open: checkout session branch (git root may be ancestor of workspace.path)
-  //      → workspace.contextIndex.load()
-  //      → upsert(tool, fidelity, path) only when ≠ default
+  open(name, goal, fidelities, contexts, path) / close(outcome, handoff) save() load()
+  // open: checkout session branch (git on this session)
   ----
-SessionPaths
-  docs_dir(destination)
-  GitRepo                                 // at find_git_root(workspace.path) — not Workspace.path itself
-    root current_branch current_commit    // read — properties
-    branch                                // property: get=HEAD branch; set=switch to existing
-    create_branch checkout_or_create commit
-    // create_branch internal; branch= switches only; checkout_or_create=create ref + switch
+GitRepo                                 // at find_git_root(workspace.path)
+  root branch current_branch current_commit
+  create_branch checkout_or_create commit push is_dirty
   NullGitRepo
-  SessionLog                 ← binds WorkSession; append audit events (expand + explicit run)
-  GitConnectError / DirtyBranchSwitchError
+  ----
+SessionPaths                            // path helpers for a work session
+  docs_dir(destination): Path
+  ----
+SessionLog                              // binds one WorkSession; not composed on it
+  bind(workSession) append(...)
+  ----
+BaseContextTool (each host declares defaults)
+  workspace Workspace                     // paths + overrides direct; turn/git via currentWorkSession
+  turn Turn
+  context_index_key str                   // → PathOverride.tool
+  default_workspace_folder str
+  // resolved edit path — direct from workspace, not via work session:
+  //   1. workspace.lookupPath(context_index_key, fidelity)
+  //   2. else {workspace.path}/{default_workspace_folder}
+  // turn / git / repairs — via workspace.currentWorkSession
+  ----
+GitConnectError / DirtyBranchSwitchError
 ```
 
 **Delete in refactor:** type name `Session`, export `WorkspaceSession`, and every import path that used either name without saying `WorkSession`.
 
 **Relationships**
 
-- **`Workspace.path`** — parent of `.context/`; index and **all work sessions** live under `.context/`
-- `Workspace` ◆— `ContextIndex` — `{workspace.path}/.context/context-index.md`
-- `Workspace` ◆— `WorkSession` — **one or many** sprints under `{workspace.path}/.context/sessions/{name}/` (current and past); host binds **one active** via `BaseContextTool.workspace`
-- `WorkSession.path` — where **this tool** edits for the bout (default folder or a row in `ContextIndex`)
-- `WorkSession` ◆— `GitRepo` via `git` — git root via `find_git_root` (may be above `workspace.path`)
-- `SessionLog` → binds `WorkSession`, appends under `{folder}/logs/`
-- `BaseContextTool.workspace` → composed **`WorkSession`** (property name is misleading — see rename table above)
+- **`Workspace.path`** — parent of `.context/`; **`pathOverrides`** persisted at `{path}/.context/context-index.md`; **all `WorkSession` folders** under `{path}/.context/sessions/`
+- `Workspace` ◆— `WorkSession` via **`workSessions`** — one or many (open or closed)
+- `Workspace.currentWorkSession` → **`WorkSession`** — the **current work session** (must be one of `workSessions`)
+- `Workspace.pathOverrides` — **`list[PathOverride]`**
+- `BaseContextTool` ◆— **`Workspace`** — paths/overrides **direct** on host
+- `WorkSession` ◆— `GitRepo` via `git`
+- `WorkSession` ◆— `Turn` via `openTurn`; `turns` holds closed turns
+- `WorkSession` ◆— domain `Repair` via `repairs`
+- `SessionLog` → binds **`workspace.currentWorkSession`**
 
-### Context index (example)
+### Path overrides (example)
 
-File: **`{workspace.path}/.context/context-index.md`**. Domain: a list of **`ContextIndexEntry`** — **tool**, **fidelity**, **path**. Only include a row when that path differs from the host's `default_workspace_folder` for that fidelity.
+File: **`{workspace.path}/.context/context-index.md`** — just persistence for **`Workspace.pathOverrides`**. Each row is **`tool`, `fidelity`, `path`**. Only include a row when that path differs from the host's `default_workspace_folder` for that fidelity.
 
 | tool | fidelity | path |
 |---|---|---|
@@ -110,10 +125,10 @@ If everything uses defaults, the file is empty (or omit the file). **No separate
 **Resolution on `open`:**
 
 1. explicit `path` argument
-2. else `ContextIndex.lookup(context_index_key, fidelity)`
+2. else `workspace.lookupPath(context_index_key, fidelity)`
 3. else `{workspace.path}/{default_workspace_folder}`
 
-**On `open`:** `upsert(tool, fidelity, path)` when resolved path ≠ default; remove the row when it matches default again. (Today `record_context_root` always writes — tighten in refactor.)
+**On `open`:** `workspace.upsertPath(tool, fidelity, path)` when resolved path ≠ default; remove the row when it matches default again. (Today `record_context_root` always writes — tighten in refactor.)
 
 ### Workspace leaks
 
@@ -238,14 +253,14 @@ Remove `@log`, `is_logged`, `member_is_logged`, runner run-branch logging, **`co
 - Any `@agent_instructions` body may **run** plain code — hosts and kits alike.
 - Plain code is just code — any callable in the body may run; no receiver whitelist.
 - **`self.turn.finish_turn(tools, prompt, result, context)`** — **`@agent_tool`** on **Turn**. Last line in **`generate` / `validate`** recipe. Agent supplies params after work. Not inline `finish_eval_turn` on host.
-- **Session prelude** — **`self.workspace.open()`** — work session (branch, index, root). **`self.turn.open(self)`** — turn for this run. Same verb, different receiver. Both **plain**; no `@agent_tool`. Drop `ensure_session` / `create_session` / `read_context_index` / `record_context_root` as agent tools (folded into `workspace.open`; agent BDD specs update to prelude summary).
+- **Session prelude** — **`self.workspace.openWorkSession(...)`** — sets **`currentWorkSession`**, loads overrides, opens the work session branch. **`self.turn.open(self)`** — turn on **`workspace.currentWorkSession`**. Both **plain**. *Code today: `self.workspace.open()` on the misnamed WorkSession property.*
 - **`Turn.open(host)`** — plain; **opens a turn** for this generate/validate run. Default: new `Turn` on `openTurn` (`finish_turn` cleared it last time). **Edge case only:** if `openTurn` still set (agent never finished — failure/recovery), reuse existing — do not clobber.
 - **`Turn.finish` always pushes** — after turn close, **`workSession.git.push()`** runs every time (session branch → `origin`). Commit when dirty first; push regardless so remote always tracks the session branch before the agent moves on.
 
 **Turn envelope (locked):**
 
 ```
-open turn          -> self.workspace.open() + self.turn.open(self)   // plain — session then turn
+open turn          -> self.workspace.openWorkSession(...) + self.turn.open(self)   // workspace then turn
 agent work         -> domain steps; optional record_mistake / record_correction @agent_tool
 close turn         -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
                       -> openTurn.finish(...)        // commit if dirty; push session branch; openTurn = None
@@ -296,12 +311,14 @@ BaseContextTool.generate @agent_instructions   // /generate → Bdd.generate dir
 
 Host **`generate` / `validate`** — prelude plain run, domain steps, **`self.turn.finish_turn(tools, prompt, result, context)`** in recipe.
 
-**Read top-down:** **`BaseContextTool`** is the entry point (Bdd, Cdd, …). **`host.workspace`** is the composed **`WorkSession`** (sprint under `{workspace.path}/.context/sessions/`). **`workSession.workspace`** is the **`Workspace`** (parent of `.context/`). Turn **state** lives on **`workSession.openTurn`**. **`host.turn`** is the Turn kit — prelude + `@agent_tool` manifest only.
+**Read top-down:** **`BaseContextTool`** composes **`Workspace`** — paths/overrides direct. **Current work session:** **`host.workspace.currentWorkSession`**. Turn state: **`currentWorkSession.openTurn`**. **`host.turn`** is the Turn kit.
+
+*Pseudocode in §5–§8: **`host.workspace.currentWorkSession`** for turn/git/repairs; **`host.workspace.lookupPath`** for paths. Code today uses misnamed `host.workspace` as the WorkSession itself.*
 
 ```
-BaseContextTool : AgenticToolset          // START HERE — Bdd, Cdd, Stories, … the host
-  workspace WorkSession                   // composed session state for this tool
-  turn Turn                               // composed Turn kit — Turn.open(host) + @agent_tool surface; state on workspace.openTurn
+BaseContextTool : AgenticToolset
+  workspace Workspace                     // paths + overrides; currentWorkSession for turn/git
+  turn Turn
   generate() @agent_instructions
     -> self.workspace.open()                   // plain
     -> self.turn.open(self)             // plain
@@ -351,26 +368,23 @@ BaseContextTool : AgenticToolset          // START HERE — Bdd, Cdd, Stories, �
   //   log_mistake, log_correction, repair
   // subclasses: contexts, examples, templates, scan, generate_output, …
 
-  ---- host.workspace (WorkSession)
+  ---- host.workspace (Workspace)
 WorkSession
-  workspace Workspace                     // association — parent-of-.context folder
+  workspace Workspace                     // back-ref — one of parent.workSessions
   path name folder goal fidelities contexts
-  // path = durable tool root for this bout (generate/validate edit tree)
-  // folder = {workspace.path}/.context/sessions/{name}/
   turns openTurn repairs
-  git GitRepo                             // find_git_root(workspace.path) — may be above workspace
+  git GitRepo
   session_branch scope_paths dirty
   open(name, goal, fidelities, contexts, path)
     -> git.checkout_or_create(session_branch)
-    -> workspace.contextIndex.load()
-    -> workspace.contextIndex.upsert(tool, fidelity, path)  // only when ≠ default
   close(outcome, handoff) save() load()
   ----
   Workspace
-    path                                  // parent of .context/
-    contextIndex ContextIndex
-      entries: list[ContextIndexEntry]    // tool, fidelity, path
-    workSessions: list[WorkSession]        // past + present sprints
+    path
+    workSessions list[WorkSession]
+    currentWorkSession WorkSession | None
+    pathOverrides list[PathOverride]
+    openWorkSession(...) load() save() lookupPath() upsertPath()
   SessionPaths
   ----
   ToolCall
@@ -498,13 +512,14 @@ Draw **associations** (who calls whom) and **composition** (who owns whom).
 
 | CE edge | Meaning |
 |---|---|
-| `BaseContextTool` ◆— `WorkSession` | Active sprint only — property name `workspace` today (not the `Workspace` aggregate) |
-| `Workspace` ◆— `WorkSession` | **One or many** sprints under `{workspace.path}/.context/sessions/` — current and past |
-| `Workspace` ◆— `ContextIndex` | `{tool, fidelity, path}` entries at `{workspace.path}/.context/context-index.md` |
+| `BaseContextTool` ◆— `Workspace` | Paths/overrides direct — **`lookupPath`**, **`path`**, **`pathOverrides`** |
+| `Workspace.currentWorkSession` → `WorkSession` | Current work session — turn, git, repairs |
+| `Workspace` ◆— `WorkSession` via `workSessions` | All work sessions under `.context/sessions/` |
+| `Workspace.pathOverrides` | `{tool, fidelity, path}` rows — file `{workspace.path}/.context/context-index.md` |
 | `WorkSession` ◆— `Turn` via `openTurn` | Turn **state** — prompt, toolCalls, mistakes, commit |
 | `WorkSession` ◆— `GitRepo` via `git` | Git at `find_git_root(workspace.path)` — not necessarily `workspace.path` |
 | `Turn` → `GitRepo` via `workSession.git` | **Association** — `finish` calls `commit` / `push` (dashed arrow; not composition) |
-| `WorkSession` → `SessionPaths` | Sprint-local path helpers (`docs_dir`) |
+| `WorkSession` → `SessionPaths` | Work-session path helpers (`docs_dir`) |
 | `SessionLog` → binds `WorkSession` | Audit trail under `{folder}/logs/` |
 | `Turn` ◆— `ToolCall`, `Mistake`; `Turn` → `TurnCommit` | Turn contents |
 | `Mistake` → `Correction`, domain `Repair` | Eval domain chain |
@@ -521,7 +536,7 @@ Draw **associations** (who calls whom) and **composition** (who owns whom).
 
 Turn does not **own** a `GitRepo` — it **uses** the session's via `workSession.git`. Draw both: composition **`WorkSession` ◆— `GitRepo`**, and association **`Turn` → `GitRepo`** labeled `workSession.git`.
 
-**`host.turn` vs `workspace.openTurn`:** one `Turn` class, two call sites. **`Turn.open(host)`** and **`finish_turn` / `record_*` `@agent_tool`** run through the composed kit on the host; they always read and write **`host.workspace.openTurn`**. The kit handle may appear on the host class box for implementation; **do not draw a structural CE association** from `BaseContextTool` to `Turn` alongside `WorkSession` → `Turn` — that would read as duplicate ownership. **Improvement** stays a peer kit (slash/manifest only, not composed on host).
+**`host.turn` vs `currentWorkSession.openTurn`:** **`Turn.open(host)`** reads/writes **`host.workspace.currentWorkSession.openTurn`**. Do not draw **BaseContextTool → Turn** as structural ownership alongside **WorkSession → Turn**.
 
 ---
 
@@ -795,7 +810,7 @@ turn
 ## 9. Refactor slices (order)
 
 1. **Annotations** — **`@agent_instructions` / `@agent_tool` only**; delete `@action`, `@tool`, `@log`, `@plain_operation` (no aliases); explicit **`SessionLog.append(...)`** in auditable recipe bodies.
-2. **Naming** — **`WorkSession` only**; delete `Session`, `WorkspaceSession`, `EvalSession`, and `Session = EvalSession`; domain **Repair** vs toolsets **Turn** + **Improvement**.
+2. **Naming** — **`WorkSession` only**; **`host.workspace`** → **`Workspace`** (code today holds WorkSession); **`workspace.currentWorkSession`** for the current work session; delete `Session`, `WorkspaceSession`, `EvalSession`.
 3. **Session prelude** — `WorkSession.open` plain (load index; upsert when path ≠ default); **`Turn.open` plain**; **`finish_turn` `@agent_tool`**.
 4. **GitRepo seam** — rename `WorkspaceRepo` → `GitRepo`; drop `ensure_session_branch` / `commit_on_session_branch` / `CDDRepo extends`.
 5. **Turn on WorkSession** — `openTurn` is a **Turn** instance; commit in `Turn.finish`.
@@ -808,15 +823,16 @@ turn
 
 ### Workspace module checklist
 
-1. **`Workspace`** — `path` = parent of `.context/` (code: `workspace_root`); composed **`ContextIndex`** and **`workSessions: list[WorkSession]`** (all sprints under `.context/sessions/`).
-2. **`ContextIndex`** — `entries: list[ContextIndexEntry]` where each entry is **`tool`, `fidelity`, `path`**; sparse (no row when default applies). Drop `## Log` from file format.
-3. **`WorkSession`** — `workspace: Workspace`; **`path`** = edit root; **`folder`** under `.context/sessions/`.
-4. **`open`** — load index; **upsert only when path ≠ default** (refine today's always-write `record_context_root`).
-5. Rename `WorkspaceRepo` → `GitRepo`; `branch` property (set = switch); internal `create_branch`; `checkout_or_create`; **`push()`**.
-6. Move branch policy to `WorkSession.session_branch` property; dirty via `WorkSession.dirty`.
-7. `Turn.finish` uses `commitMessage`; calls `workSession.git.commit(scope_paths, message)` when dirty; **always** `workSession.git.push()` before clearing `openTurn`.
-8. **SessionLog** — keep as own workspace class; delete `@log` / runner run-branch / **`control`**; **`append` → events.log + openTurn.toolCalls** for **expand** (framework) and **run** (explicit); add **`role`** metadata; extend **ToolCall** with `ok`, `error`, `role`.
-9. Update `workspace-ce.drawio` + `module-context.md` — **`Workspace` ◆— `WorkSession`** (many), **`Workspace` ◆— `ContextIndex`**; remove free-floating ContextIndex on WorkSession.
+1. **`Workspace`** — `path`; `workSessions`; **`currentWorkSession`**; `pathOverrides`; `load` / `save` / `lookupPath` / `upsertPath` / **`openWorkSession`**.
+2. **`PathOverride`** — `tool`, `fidelity`, `path`; file `context-index.md` is persistence only.
+3. **`WorkSession`** — back-ref `workspace`; owns `openTurn`, `turns`, `repairs`, `git`.
+4. **`BaseContextTool.workspace`** → **`Workspace`** (code today holds WorkSession). Paths direct; turn/git via **`currentWorkSession`**.
+5. **`openWorkSession`** — load overrides; upsertPath when ≠ default; set **`currentWorkSession`**.
+6. Rename `WorkspaceRepo` → `GitRepo`; `branch` property (set = switch); internal `create_branch`; `checkout_or_create`; **`push()`**.
+7. Move branch policy to `WorkSession.session_branch` property; dirty via `WorkSession.dirty`.
+8. `Turn.finish` uses `commitMessage`; calls `workSession.git.commit(scope_paths, message)` when dirty; **always** `workSession.git.push()` before clearing `openTurn`.
+9. **SessionLog** — keep as own workspace class; delete `@log` / runner run-branch / **`control`**; **`append` → events.log + openTurn.toolCalls** for **expand** (framework) and **run** (explicit); add **`role`** metadata; extend **ToolCall** with `ok`, `error`, `role`.
+10. Update `module-context.md` — **`Workspace` ◆— `WorkSession`** (many). *(CE diagram: user-owned.)*
 
 ### Eval module checklist
 
