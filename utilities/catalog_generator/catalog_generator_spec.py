@@ -11,7 +11,7 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("context_tools", "primitives", "utilities"):
+for _cat in ("context_tools", "primitives", "utilities", "context_tools/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -30,15 +30,15 @@ from catalog_generator.catalog_generator import (
 )
 from context_tools.ddd.ddd import Ddd
 from context_tools.stories.stories import Stories
+from partition.partition import Partition
 
 
 with description("Build Run Request From Live Toolset Manifest"):
     with description("given a context tool class and an action name"):
         with it("fills toolset, constructor context, action, and action arguments from Cls.manifest"):
-            req = build_run_request(Stories, action="partition", fidelity="story_map")
-            expect(req["toolset"]).to(equal("context_tools.stories.stories:Stories"))
+            req = build_run_request(Partition, action="partition")
+            expect(req["toolset"]).to(equal("partition.partition:Partition"))
             expect(req["action"]).to(equal("partition"))
-            expect(req["context"]["fidelity"]).to(equal("story_map"))
             expect("context" in req["arguments"]).to(be_true)
             expect("mode" in req["arguments"]).to(be_true)
 
@@ -75,7 +75,7 @@ with description("Scrape Fidelity Keys, Format Defaults, And Guidance Sections")
 
         with it("resolves each fidelity to its key and default format"):
             keys = [g.key for g in self.guidances]
-            expect(keys).to(equal(["bounded_context", "building_blocks", "tactics"]))
+            expect(keys).to(equal(["scaffold", "bounded_context", "building_blocks", "tactics"]))
             formats = {g.key: g.default_format for g in self.guidances}
             expect(formats["bounded_context"]).to(equal("markdown"))
             expect(formats["tactics"]).to(equal("python"))
@@ -104,7 +104,7 @@ with description("Resolve Lifecycle Action Source Dir And Calls Via AST Walk"):
             self.resolutions = resolve_lifecycle_actions()
             self.by_name = {r.name: r for r in self.resolutions}
 
-        with it("walks every public @action in source order, skipping private ones and override hooks"):
+        with it("walks host @actions in source order plus kit-owned lifecycle actions"):
             names = [r.name for r in self.resolutions]
             expect(names).to(equal([
                 "partition", "grill", "sketch", "generate", "document",

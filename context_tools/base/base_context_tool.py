@@ -204,45 +204,7 @@ class BaseContextTool(AgenticToolset):
     @instruction
     def scaffold(self) -> Instruction: ...
 
-    # -- Lifecycle actions  -----------------------------------
-    @log
-    @action
-    def partition(
-        self,
-        context: str,
-        mode: str = "one_go",
-        out_root: str | None = None,
-    ) -> str:
-        """partition"""
-        self.open()
-        self.contexts
-        self.begin_eval_turn()
-        self.finish_eval_turn()
-        return (
-            "Partition of {{context}} finished (mode {{mode}}); "
-            "docs under {session.path}/.context/. "
-            "Hard fail if any new chunk fails named-entry completeness."
-        )
-
-    @log
-    @action
-    def grill(self) -> str:
-        """Grill then generate - pure grill loop, then the host generate body."""
-        self.open()
-        self.decisions.record_decisions_session()
-        self.generate()
-        return "Grill complete; generate instructions applied."
-
-    @log
-    @action
-    def sketch(self) -> str:
-        """Sketch then generate - grill + sketch cadence, then the host generate body."""
-        self.open()
-        self.decisions.record_decisions_session()
-        """Sketch under session.folder; pass agent_dir={{self.module_dir}} to find_template."""
-        self.generate()
-        return "Sketch complete; generate instructions applied."
-
+    # -- Lifecycle actions (core host only; grill/sketch/iterate/partition are kit-owned) ---
     @log
     @action
     def generate(self) -> str:
@@ -297,15 +259,6 @@ class BaseContextTool(AgenticToolset):
         self.add_generate_header_to_generated()
         self.finish_eval_turn()
         return "Document existing state under {session.path}/ - violations flagged, none corrected."
-
-    @log
-    @action
-    def iterate(self) -> str:
-        """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
-        self.open()
-        self.decisions.record_decisions_session()
-        self.generate()
-        return "Iterate complete; generate instructions applied."
 
     @log
     @action
@@ -405,7 +358,7 @@ class BaseContextTool(AgenticToolset):
 
     @tool
     def begin_eval_turn(self) -> str:
-        """Open the eval Turn. Listed on generate / validate / document / partition / repair / createRule."""
+        """Open the eval Turn. Listed on generate / validate / document / repair / createRule."""
         if self.eval is None:
             return ""
         return self.eval.begin_turn().id
@@ -414,7 +367,7 @@ class BaseContextTool(AgenticToolset):
     def finish_eval_turn(
         self, prompt: str = "", result: str = "", context: str = ""
     ) -> str:
-        """Close the open eval Turn. Listed on generate / validate / document / partition / repair / createRule."""
+        """Close the open eval Turn. Listed on generate / validate / document / repair / createRule."""
         if self.eval is None:
             return ""
         closed = self.eval.finish_turn(prompt, result, context)

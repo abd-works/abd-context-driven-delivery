@@ -13,7 +13,7 @@ turns:
     session_name: action-owns-context-tools
     tool_names: []
     mistake_ids: []
-    sha: 9cc460b6d50c677cb21ce640db1711148c2f23c4
+    sha: 1cd0101e21357f6621197de73d3449bafe70a649
   tool_calls: []
   mistakes: []
 - id: 75f3eb2d
@@ -27,7 +27,7 @@ turns:
     session_name: action-owns-context-tools
     tool_names: []
     mistake_ids: []
-    sha: 20fb9caeeae0b64e342db46d67bb9aef15f83625
+    sha: 1cd0101e21357f6621197de73d3449bafe70a649
   tool_calls: []
   mistakes: []
 - id: 42797be5
@@ -41,7 +41,7 @@ turns:
     session_name: action-owns-context-tools
     tool_names: []
     mistake_ids: []
-    sha: 33e77a6b70cad33456697c9411321d15ac2dfb6d
+    sha: 1cd0101e21357f6621197de73d3449bafe70a649
   tool_calls: []
   mistakes: []
 - id: grill-complete
@@ -50,7 +50,7 @@ turns:
     base_context_tool_spec and agent_skills_spec updated; module-context docs aligned.
     181 examples green on affected specs.
   context: action-owns-context-tools
-  change_commit: {}
+  change_commit: null
   tool_calls: []
   mistakes: []
 - id: bulk-kit-owned
@@ -60,7 +60,11 @@ turns:
     factory. 107 examples green on partition, host_lifecycle, agent_skills specs.
   context: action-owns-context-tools
   change_commit:
-    sha: a2659bdf8b7f2b9f9b8bbc57ee8fa1b6688caeaf
+    turn_id: bulk-kit-owned
+    session_name: ''
+    tool_names: []
+    mistake_ids: []
+    sha: 1cd0101e21357f6621197de73d3449bafe70a649
   tool_calls: []
   mistakes: []
 - id: agent-bdd-kit-owned
@@ -70,6 +74,20 @@ turns:
     Existing iterate/sketch/grill agent specs unchanged. Host-direct specs (bdd, clean_engineering,
     repair-action example) still valid.
   context: action-owns-context-tools
-  change_commit: {}
+  change_commit: null
+  tool_calls: []
+  mistakes: []
+- id: c0b346ce
+  prompt: remove host stubs — partition/grill/sketch/iterate kit-owned only
+  result: BaseContextTool drops partition/grill/sketch/iterate stubs; kits own context_tools(tools=…)
+    iteration; Bdd/Cdd/Stories delegate; catalog resolve_lifecycle_actions merges
+    kit AST; 228 specs green on affected files.
+  context: action-owns-context-tools
+  change_commit:
+    turn_id: c0b346ce
+    session_name: action-owns-context-tools
+    tool_names: []
+    mistake_ids: []
+    sha: 1cd0101e21357f6621197de73d3449bafe70a649
   tool_calls: []
   mistakes: []

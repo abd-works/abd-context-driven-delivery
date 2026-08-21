@@ -22,6 +22,7 @@ from mamba import before, context, description, it
 
 from primitives.actions.action import _ActionExpander
 from grill_context.grill_context import GrillContext
+from tools.tool import _ToolsetLoader
 
 
 with description("GrillContext toolset"):
@@ -250,11 +251,12 @@ with description("a grill action"):
             )
 
 
-with description("a BaseContextTool grill action"):
-    with it("should not compose GrillContext"):
-        import inspect
-
+with description("BaseContextTool host face for grill"):
+    with it("should not expose grill on the host composer"):
         from context_tools.base.base_context_tool import BaseContextTool
 
-        source = inspect.getsource(BaseContextTool.grill)
-        expect("grill_context" in source).to(equal(False))
+        cls = _ToolsetLoader.instance().load(
+            "context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+        )
+        host = cls()
+        expect("grill" in host.actions).to(equal(False))

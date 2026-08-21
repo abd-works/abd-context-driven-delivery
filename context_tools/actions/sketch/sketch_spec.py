@@ -22,6 +22,7 @@ from mamba import before, context, description, it
 
 from primitives.actions.action import _ActionExpander
 from sketch import Sketcher
+from tools.tool import _ToolsetLoader
 
 
 with description("Sketcher toolset"):
@@ -249,11 +250,12 @@ with description("a sketch action"):
             )
 
 
-with description("a BaseContextTool sketch action"):
-    with it("should not compose Sketcher"):
-        import inspect
-
+with description("BaseContextTool host face for sketch"):
+    with it("should not expose sketch on the host composer"):
         from context_tools.base.base_context_tool import BaseContextTool
 
-        source = inspect.getsource(BaseContextTool.sketch)
-        expect("sketcher" in source).to(equal(False))
+        cls = _ToolsetLoader.instance().load(
+            "context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+        )
+        host = cls()
+        expect("sketch" in host.actions).to(equal(False))

@@ -77,7 +77,9 @@ class MernDomainDriven(BaseContextTool):
         own ce().iterate() wires the minimum code until GREEN), then run this
         tool's own scan for MERN-specific naming/layering rules. Repeat - one
         test, one production change, one GREEN, one scan - until validate passes."""
-        super().iterate()
+        from iterate.iterate import Iterator
+
+        Iterator().iterate(tools=[self])
         self._stories().iterate()
         return "Iterate cycle complete for this slice. Run validate."
 

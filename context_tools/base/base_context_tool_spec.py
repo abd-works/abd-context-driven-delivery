@@ -259,18 +259,6 @@ with description("BaseContextTool composer"):
 
 
 with description("BaseContextTool linear kit delegation"):
-    with context("sketch expands providers in-method (no @ chain)"):
-        with before.all:
-            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
-            self.host = cls()
-            self.entry = self.host.actions["sketch"].signature_entry
-            self.response = _expand_action(
-                self.host, "sketch", toolset_path=_BASE_TOOLSET
-            )
-
-        with it("should have no decorator chain on sketch"):
-            expect("chain" in self.entry).to(equal(False))
-
     with context("generate expands providers in-method (no @ chain)"):
         with before.all:
             cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
@@ -278,30 +266,6 @@ with description("BaseContextTool linear kit delegation"):
             self.entry = self.host.actions["generate"].signature_entry
 
         with it("should have no decorator chain on generate"):
-            expect("chain" in self.entry).to(equal(False))
-
-    with context("grill expands GrillContext in-method (no @ chain)"):
-        with before.all:
-            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
-            self.host = cls()
-            self.entry = self.host.actions["grill"].signature_entry
-            self.response = _expand_action(
-                self.host, "grill", toolset_path=_BASE_TOOLSET
-            )
-
-        with it("should have no decorator chain on grill"):
-            expect("chain" in self.entry).to(equal(False))
-
-    with context("iterate expands Iterator in-method (no @ chain)"):
-        with before.all:
-            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
-            self.host = cls()
-            self.entry = self.host.actions["iterate"].signature_entry
-            self.response = _expand_action(
-                self.host, "iterate", toolset_path=_BASE_TOOLSET
-            )
-
-        with it("should have no decorator chain on iterate"):
             expect("chain" in self.entry).to(equal(False))
 
     with context("document expands providers in-method (no @ chain)"):
@@ -343,6 +307,10 @@ with description("BaseContextTool public host face"):
         from scanners.scan import Scan
 
         expect(isinstance(self.host.scanner, Scan)).to(be_true)
+
+    with it("should not expose kit-owned lifecycle actions on the host"):
+        for name in ("partition", "grill", "sketch", "iterate"):
+            expect(name in self.host.actions).to(equal(False))
 
     with it("should not compose Sketcher, GrillContext, Iterator, or Partition"):
         expect(hasattr(self.host, "sketcher")).to(be_false)
