@@ -97,4 +97,23 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 **Slice unlocked:** **yes** ΓÇö slice A boundary: `load` / `save` / `lookupPath` (absent ΓåÆ no override) / `upsertPath(tool, fidelity, path, default_path)` (sparse add/update/remove on default match); persistence `{workspace.path}/.context/context-index.md` without `## Log`; exclude `openWorkSession`, host resolution chain, `WorkSession`.
 
+---
+
+### Turn (grill tick 4 â€” slice B boundary)
+
+**Question:** Slice **B** â€” `Workspace.openWorkSession(name, goal, fidelities, contexts, path, default_path)` (OO lines 51â€“53). Which observables belong in B vs defer to slice **C** (`WorkSession.open` / git branch)?
+
+**Options:**
+
+- **A â€” Workspace open only:** `load()`; add/load session in `workSessions`; set `currentWorkSession`; `upsertPath` when explicit `path` â‰  `default_path`; **exclude** git checkout, branch naming, `WorkSession.open` innards.
+- **B â€” Include git branch checkout** in the same slice (WorkSession.open policy).
+- **C â€” Include host three-step path resolution** instead of openWorkSession.
+
+**Runner paths read:** `workspace-eval-oo-sketch.md` lines 51â€“53, 60â€“71, Â§9 items 3 and 5.
+
+**Judge answer:** *(pending)*
+
+**Citations:** *(pending)*
+
+**Slice unlocked:** *(pending)*
 
