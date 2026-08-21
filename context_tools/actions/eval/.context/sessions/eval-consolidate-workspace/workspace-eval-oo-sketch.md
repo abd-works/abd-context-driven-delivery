@@ -10,6 +10,8 @@ Workspace and eval both use **Session** vocabulary, compose each other through *
 
 **Vocabulary (target):** a **work session** holds **turns** (prompt, tools, commit). **Turns** hold **mistakes**. **Mistakes** group by theme into **repairs** — backlog or finished. **`GitRepo`** is a thin git facade (no domain vocabulary). **Prefer properties for derived/read state**; operations only for mutations and agent-facing tools.
 
+**No aliases, no legacy (locked):** this refactor does **not** ship compatibility shims, rename aliases, dual decorators, import aliases (`Session = …`), or gradual migration. **One name per concept.** Delete old names in the same pass — do not re-export under a second name. See §4.
+
 ---
 
 ## 2. Current model — workspace
@@ -17,12 +19,11 @@ Workspace and eval both use **Session** vocabulary, compose each other through *
 From `workspace-ce.drawio` + `workspace_session.py`:
 
 ```
-WorkSession (implicit — host composes Session)
-  Session                    ← alias: WorkspaceSession
-    path, name, goal, …
-    open / ensure_session / create_session / close_session
-    read_context_index / record_context_root
-    ----
+WorkSession (target — code today: Session)
+  path, name, goal, …
+  open / ensure_session / create_session / close_session
+  read_context_index / record_context_root
+  ----
   SessionPaths
     docs_dir(destination)
   ContextIndex
@@ -33,22 +34,24 @@ WorkSession (implicit — host composes Session)
     create_branch checkout_or_create commit
     // create_branch internal; branch= switches only; checkout_or_create=create ref + switch
   NullGitRepo
-  SessionLog                 ← binds Session; append runner audit events (today: @log-marked only)
+  SessionLog                 ← binds WorkSession; append runner audit events (today: @log-marked only)
   GitConnectError / DirtyBranchSwitchError
 ```
 
+**Delete in refactor:** type name `Session`, export `WorkspaceSession`, and every import path that used either name without saying `WorkSession`.
+
 **Relationships**
 
-- `SessionLog` → binds `Session`, appends under `{folder}/logs/`
-- `Session` → uses `ContextIndex`; git via ephemeral `GitRepo` with domain method names (`ensure_session_branch` ⚠)
-- `BaseContextTool.workspace` → composed `Session` instance
-- Eval imports `WorkspaceSession` (= `Session`) as **location** for `EvalSession` (to be removed — turns live on WorkSession)
+- `SessionLog` → binds `WorkSession`, appends under `{folder}/logs/`
+- `WorkSession` → uses `ContextIndex`; git via ephemeral `GitRepo` with domain method names (`ensure_session_branch` ⚠)
+- `BaseContextTool.workspace` → composed `WorkSession` instance
+- Eval today imports work `Session` as **location** for `EvalSession` (delete both — turns live on `WorkSession`)
 
 ### Workspace leaks
 
 | Issue | Symptom |
 |---|---|
-| **Name: Session** | Same word as eval domain (`EvalSession`, and `Session = EvalSession` in eval). Cannot tell work-session folder from eval document. |
+| **Duplicate `Session` name** | Work package and eval package both use `Session`; eval also exports `Session = EvalSession`. One word, three meanings. |
 | **Session does too much** | Lifecycle tools + path/index state + implied git. CE lists git ops on `Session` that belong on `GitRepo` + WorkSession policy. |
 | **GitRepo domain leak** | `ensure_session_branch` / `commit_on_session_branch` encode work-session branch naming — belongs on WorkSession. |
 | **Git on wrong aggregate** | `commit_on_session_branch` called from **EvalSession.finish_turn**; checkout vs commit not split cleanly. |
@@ -60,9 +63,9 @@ WorkSession (implicit — host composes Session)
 From `eval-ce.drawio` + `eval/session.py` — **target removes EvalSession as turn owner**.
 
 ```
-EvalSession (to remove)            ← alias: Session = EvalSession ⚠
-  workspace: WorkspaceSession
-  turns, openTurn, mistakes      ← turns should move to WorkSession
+EvalSession (delete — turn owner today)
+  workspace: WorkSession              // today: Session type in workspace package
+  turns, openTurn, mistakes      ← turns move to WorkSession
   repairs: list[Repair]          ← domain runs ⚠ same name as toolset
   begin_turn / finish_turn         ← move to Turn (WorkSession.openTurn)
   ----
@@ -71,9 +74,11 @@ EvalSession (to remove)            ← alias: Session = EvalSession ⚠
   Archive
 ```
 
+**Delete in refactor:** `EvalSession`, eval export `Session = EvalSession`, and any type or import that reused `Session` for eval.
+
 **Relationships (diagram)**
 
-- `EvalSession` ◆— `WorkspaceSession` (location)
+- `EvalSession` ◆— `WorkSession` (location — delete EvalSession)
 - `EvalSession` → `GitRepo` via domain wrappers (`commit_on_session_branch` ⚠)
 - `EvalSession` ◆— `Repair` toolset instances in `_repairs`
 - `Repair` → `cddSession`, `Scan`, `BaseContextTool`
@@ -84,7 +89,7 @@ EvalSession (to remove)            ← alias: Session = EvalSession ⚠
 
 | Issue | Symptom |
 |---|---|
-| **`Session = EvalSession`** | Import trap — work session vs eval session document. |
+| **`Session = EvalSession` export** | Import trap — delete; use `WorkSession` and domain types only. |
 | **EvalSession owns turns** | Turn lifecycle belongs on **Turn** (`WorkSession.openTurn`); eval package owns mistake/repair domain only. |
 | **Two “Repair” types** | Toolset bundles record + run; same name as themed repair bucket — split toolsets and domain **Repair**. |
 | **`Repair.eval()` action** | Overloads package/session vocabulary. |
@@ -93,7 +98,7 @@ EvalSession (to remove)            ← alias: Session = EvalSession ⚠
 | **CDDRepo extends GitRepo** | Eval/repair behavior on repo type — use second `GitRepo(tools_root)` at caller. |
 | **Nested EvalSession** | `cdd_session` on CDD clone — no primary vs clone stereotype in CE. |
 | **No turn toolset** | `begin_eval_turn` / `finish_eval_turn` on host; target: **Turn** kit owns turn **@agent_tool**s. |
-| **WorkspaceSession stub** | CE shows `{ path, folder, open }` — `open` is not a field. |
+| **CE stub type `WorkspaceSession`** | CE shows `{ path, folder, open }` — `open` is not a field; delete the stub name. |
 
 ---
 
@@ -103,28 +108,29 @@ Domain chain: **WorkSession → Turn → Mistake → Repair (themed, backlog | f
 
 **Resource-oriented split:** **Turn** is one class — agentic kit *and* `WorkSession.openTurn`. **Mistake** / **Correction** persist files only (`persist`). **Improvement** owns `/repair`.
 
-### Agent annotations & invoke semantics (target — changes from today)
+### Agent annotations & invoke semantics (target)
 
 **Only two author annotations:** `@agent_instructions`, `@agent_tool`. Everything else is plain Python or framework behavior — not a decorator authors apply.
 
-| Today (remove as author markers) | Target |
-|---|---|
-| `@action` | `@agent_instructions` (rename only during migration) |
-| `@tool` | `@agent_tool` (rename only during migration) |
-| `@log` | **drop** — explicit plain `SessionLog.append(...)` in the method body |
-| `@plain_operation` | **drop** — unmarked methods are plain; no decorator |
+**No legacy decorators.** Delete `@action`, `@tool`, `@log`, and `@plain_operation` from primitives, manifests, generator output, and docs in the **same** refactor pass. Do not keep them as aliases, shims, or “during migration” re-exports. Framework and runner recognize **`@agent_instructions`** and **`@agent_tool`** only.
 
-Legacy aliases during migration: `@action` → `@agent_instructions`, `@tool` → `@agent_tool`. Do **not** add new `@log` usage.
+| Annotation | Meaning |
+|---|---|
+| `@agent_instructions` | Recipe body — expand nested steps or run when invoked |
+| `@agent_tool` | Agent-invokable tool — listed on manifest; body runs on agent invoke |
+| *(none)* | Plain operation — Python callable; runs when a recipe calls it |
+
+**Logging is not a decorator.** Auditable `@agent_instructions` use explicit `SessionLog.append(...)` (run) and framework expand append — see below. Delete `@log`, `is_logged`, `member_is_logged`, and runner log branches entirely.
 
 When an **`@agent_instructions`** recipe is invoked, the framework walks the body. **What happens depends on the callee annotation — not on which class owns the recipe.**
 
 | Callee | Behavior | Agent sees |
 |---|---|---|
 | Plain method (no annotation) | **run** — execute as Python now; summary in prelude / response | Not on tool list |
-| `@agent_tool` | **expose** — list in expansion `tools`; agent invokes later (body runs on invoke) | Tool name + when-to-use from recipe prose |
+| `@agent_tool` | named in recipe; agent invokes (body runs when agent calls it) | Tool on manifest + when-to-use in instructions |
 | `@agent_instructions` | **expand** — inline nested recipe (callee `mode="tool"` → defer like a tool step) | Inlined instructions |
 
-**Logging — only change from today:** Drop `@log` decorator and invoke-runner log branching. **`SessionLog` stays its own class** in `context_tools/actions/workspace/session_log.py` — do not fold into `WorkSession`, do not move to the host.
+**SessionLog stays its own class** in `context_tools/actions/workspace/session_log.py` — do not fold into `WorkSession`, do not move to the host.
 
 **Two logging moments for auditable `@agent_instructions`** (`generate`, `validate`, `document`, `satisfy`, `scan`, `createRule`):
 
@@ -149,7 +155,7 @@ Both use the same **`SessionLog.append`** path and the same turn scoping (below)
 
 - **One call, same record, both places** — every `SessionLog.append` (framework expand **or** author run) writes **`events.log`** and **`openTurn.toolCalls`** (when turn is open). **Expansion included** — no session-only expansion trail.
 - **Log is an operation** — not a `@agent_tool`, not on the agent manifest.
-- **Drop invalid kinds from today:** no **`control`**. Retire `apply_log_control` / `log_full` control lines. Retire `@log` / `is_logged` / runner run-branch logging — replaced by explicit run append + framework expand append.
+- **Drop invalid kinds from today:** no **`control`**. Delete `apply_log_control` / `log_full` control lines. Delete `@log` / `is_logged` / runner run-branch logging — replaced by explicit run append + framework expand append.
 - **`tool` / `action` / `expansion` on `events.log`:** retire as **filters**; optional **`role`** metadata only.
 
 Run append: after prelude, before `return`. Expand append: in action expand path (today `_log_expansion` → unified `SessionLog.append`).
@@ -162,15 +168,27 @@ Remove `@log`, `is_logged`, `member_is_logged`, runner run-branch logging, **`co
 
 - Any `@agent_instructions` body may **run** plain code — hosts and kits alike.
 - Plain code is just code — any callable in the body may run; no receiver whitelist.
-- **`finish_turn`** stays **`@agent_tool`** — listed in orchestrator instructions; agent supplies prompt/result/context.
-- **Session prelude** (`open`, begin turn) — **plain only**; no `@agent_tool`. Resume-or-create, index, record root, branch checkout live inside `open` / `ensure_open`; return validation text when name/path missing. Drop `ensure_session` / `create_session` / `read_context_index` / `record_context_root` as agent tools (no standalone slash; agent BDD specs that assert them in generate **tools** list update to prelude summary).
+- **`self.turn.finish_turn(tools, prompt, result, context)`** — **`@agent_tool`** on **Turn**. Last line in **`generate` / `validate`** recipe. Agent supplies params after work. Not inline `finish_eval_turn` on host.
+- **Session prelude** — **`self.workspace.open()`** — work session (branch, index, root). **`self.turn.open(self)`** — turn for this run. Same verb, different receiver. Both **plain**; no `@agent_tool`. Drop `ensure_session` / `create_session` / `read_context_index` / `record_context_root` as agent tools (folded into `workspace.open`; agent BDD specs update to prelude summary).
+- **`Turn.open(host)`** — plain; **opens a turn** for this generate/validate run. Default: new `Turn` on `openTurn` (`finish_turn` cleared it last time). **Edge case only:** if `openTurn` still set (agent never finished — failure/recovery), reuse existing — do not clobber.
+
+**Turn envelope (locked):**
+
+```
+open turn          -> self.workspace.open() + self.turn.open(self)   // plain — session then turn
+agent work         -> domain steps; optional record_mistake / record_correction @agent_tool
+close turn         -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
+                      -> openTurn.finish(...)        // commit if dirty; openTurn = None
+```
+
+**Not gone** — was inline `finish_eval_turn` on host; now **`self.turn.finish_turn(tools, prompt, result, context)`**.
 
 **Generate envelope — on `BaseContextTool` (Bdd, Cdd, …), not a separate orchestrator class:**
 
 ```
 BaseContextTool.generate @agent_instructions   // /generate → Bdd.generate directly
-  -> self.workspace.open()                   // plain
-  -> self.turn.ensure_open(self)             // plain
+  -> self.workspace.open()                   // plain — work session: resume or create
+  -> self.turn.open(self)             // plain — open turn for this run
   -> self.decisions.record_decisions_session()  // plain
   -> self.contexts                            // expand
   -> self.examples                            // expand
@@ -178,7 +196,7 @@ BaseContextTool.generate @agent_instructions   // /generate → Bdd.generate dir
   -> self.generate_output()                   // expand
   -> self.add_generate_header_to_generated()  // plain
   -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
-  // expose finish_turn @agent_tool — agent invokes after work; not inline here
+  -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
 ```
 
 **Vocabulary:** **host** = `BaseContextTool` subclass (`Bdd`, `Cdd`, …). Lifecycle lives **on the host** — `generate`, `validate`, `document`, `satisfy` are `@agent_instructions` on `BaseContextTool` today and stay there.
@@ -206,17 +224,17 @@ BaseContextTool.generate @agent_instructions   // /generate → Bdd.generate dir
 
 **Keep kit-owned for real orchestrators only:** `iterate`, `sketch`, `grill`, `partition`, `repair` — actions that are not full recipes on `BaseContextTool`.
 
-Host **`generate` / `validate`** drop eval forwards; prelude **run** + domain **expand** + `finish_turn` **expose** live in the host `@agent_instructions` body.
+Host **`generate` / `validate`** — prelude plain run, domain steps, **`self.turn.finish_turn(tools, prompt, result, context)`** in recipe.
 
 **Read top-down:** **`BaseContextTool`** is the entry point (Bdd, Cdd, …). You start with the host; **`workspace`**, **`turn`**, git, and eval resources are composed **from** it — not parallel roots.
 
 ```
 BaseContextTool : AgenticToolset          // START HERE — Bdd, Cdd, Stories, … the host
   workspace WorkSession                   // composed session state for this tool
-  turn Turn                               // companion kit — finish/record @agent_tool; ensure_open plain
+  turn Turn                               // Turn toolset on host — open plain; finish/record @agent_tool
   generate() @agent_instructions
     -> self.workspace.open()                   // plain
-    -> self.turn.ensure_open(self)             // plain
+    -> self.turn.open(self)             // plain
     -> self.decisions.record_decisions_session()  // plain
     -> self.contexts                            // expand
     -> self.examples                            // expand
@@ -224,35 +242,40 @@ BaseContextTool : AgenticToolset          // START HERE — Bdd, Cdd, Stories, �
     -> self.generate_output()                   // expand
     -> self.add_generate_header_to_generated()  // plain
     -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
+    -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
   validate() @agent_instructions
     -> self.workspace.open()                   // plain
-    -> self.turn.ensure_open(self)             // plain
+    -> self.turn.open(self)             // plain
     -> self.contexts                            // expand
     -> self.scan()                              // expand
     -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
+    -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
   document(paths) @agent_instructions
     -> self.workspace.open()                   // plain
-    -> self.turn.ensure_open(self)             // plain
+    -> self.turn.open(self)             // plain
     -> self.contexts                            // expand
     -> self.templates                           // expand
     -> self.scan(paths)                         // expand
     -> self.generate_output()                   // expand
     -> self.add_generate_header_to_generated()  // plain
     -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
+    -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
   satisfy() @agent_instructions
     -> self.mode = "tool"                       // plain
-    -> self.validate()                          // expand
+    -> self.validate()                          // expand — includes finish_turn @agent_tool
     -> self.generate_fixes_from_validate()      // expand
     -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
+    -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
   scan(paths) @agent_tool
     -> self.scanner.scan(paths)                 // plain
     -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
   createRule(failed, wanted) @agent_instructions
-    -> self.turn.ensure_open(self)             // plain — session already open
+    -> self.turn.open(self)             // plain — session already open
     -> self.contexts                            // expand
     -> self.examples                            // expand
     -> self.templates                           // expand
     -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
+    -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
   // drop forwards: ensure_session, create_session, close_session,
   //   read_context_index, record_context_root, begin_eval_turn, finish_eval_turn,
   //   log_mistake, log_correction, repair
@@ -273,7 +296,6 @@ WorkSession
     -> read_context_index()
     -> record_context_root()                  // defaults root=host.path
     // missing name/path -> return validation message (not @agent_tool)
-  ensure_open_turn()                        // plain — openTurn = Turn(workSession=self) if None
   close(outcome, handoff)                     // plain — Handoff kit; not on host manifest
   save() load()
   ----
@@ -299,9 +321,10 @@ Turn : AgenticToolset                   // manifest: turn.turn:Turn
   prompt result context toolCalls changeCommit
   commitMessage
   mistakes Mistake
-  ensure_open(host)                         // plain — prelude from BaseContextTool.generate
+  open(host)                                // plain — open turn; reuse openTurn only on failure/recovery
     if host.workspace.openTurn is None:
       host.workspace.openTurn = Turn(workSession=host.workspace)
+    return host.workspace.openTurn
   finish_turn(tools, prompt, result, context) @agent_tool
     for host in context_tools(tools):
       host.workspace.openTurn.finish(prompt, result, context)
@@ -390,27 +413,29 @@ Improvement : AgenticToolset
 
 ---
 
-## 5. Future agent surface (clean — no compat shims)
+## 5. Future agent surface
 
-**Gone from host:** `log_mistake`, `log_correction`, `begin_eval_turn`, `finish_eval_turn`, `repair`, `self.repairer`, `host.eval`, `_bind_eval`, `WorkspaceSession` alias, eval `Repair` toolset.
+**No compat shims.** Delete removed APIs — do not re-export under old names on host or kit.
+
+**Gone from host:** `log_mistake`, `log_correction`, `begin_eval_turn`, `finish_eval_turn`, `repair`, `self.repairer`, `host.eval`, `_bind_eval`, `Session` / `WorkspaceSession` / `EvalSession` types and imports, eval `Repair` toolset.
 
 **Two agentic kits** for turn/eval (session prelude is plain on **WorkSession**, **run** from **BaseContextTool.generate** / **validate**):
 
 | Kit | `@agent_tool` (agent sees) | Plain (host runs in prelude) |
 |---|---|---|
-| **Turn** | `finish_turn`, `record_mistake`, `record_correction` | `ensure_open(host)` — prelude only |
+| **Turn** | `finish_turn`, `record_mistake`, `record_correction` | `open(host)` — plain; opens turn (prelude only) |
 | **Improvement** | `verify_fix` | — |
 | | `repair` is `@agent_instructions` | |
 
 **WorkSession** — plain `open` / `close` on `host.workspace`; **BaseContextTool.generate** calls `self.workspace.open()`; not on Bdd manifest as agent tools. No `@agent_tool` for `ensure_session`, `create_session`, `read_context_index`, `record_context_root` (folded into `open`).
 
-### How Turn is exposed (agent never touches `openTurn` directly)
+### How the agent uses Turn (never touches `openTurn` directly)
 
 `openTurn` is **internal state** on `host.workspace` — not a host `@tool`, not a host `@resource`, not on the Bdd manifest.
 
-The agent reaches turn behavior through the **Turn kit manifest** (`turn.turn:Turn`) for `record_mistake` / `record_correction`, and through **host `@agent_instructions`** for `finish_turn` listed in the generate/validate expansion.
+The agent invokes **`self.turn.finish_turn(tools, prompt, result, context)`**, **`Turn.record_mistake(...)`**, **`Turn.record_correction(...)`** — each **`@agent_tool`** on **Turn**.
 
-Interaction — Turn exposure (CE sketch notation; `->` = real call; `// plain | expand | expose` = invoke mode):
+Interaction (CE sketch notation; `->` = real call; `// plain | expand | @agent_tool`):
 
 ```
 # /generate — host @agent_instructions (not a separate lifecycle kit)
@@ -422,7 +447,7 @@ Agent
 BaseContextTool (Bdd)
   generate @agent_instructions
     -> self.workspace.open()                   // plain
-    -> self.turn.ensure_open(self)             // plain
+    -> self.turn.open(self)             // plain
     -> self.decisions.record_decisions_session()
     -> self.contexts                            // expand
     -> self.examples                            // expand
@@ -430,7 +455,7 @@ BaseContextTool (Bdd)
     -> self.generate_output()                   // expand
     -> self.add_generate_header_to_generated()
     -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
-  // finish_turn @agent_tool — listed in expansion; agent invokes after agent work
+    -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
 
 ----
 WorkSession
@@ -438,8 +463,10 @@ WorkSession
     -> checkout branch, index, record root
 
 Turn
-  ensure_open(host)                              // plain
-    -> host.workspace.openTurn = Turn(workSession=ws)
+  open(host)                                   // plain — open turn for this run
+    if host.workspace.openTurn is None:
+      host.workspace.openTurn = Turn(workSession=ws)
+    // else: failure/recovery — openTurn still set; reuse
   finish_turn tools … @agent_tool
     -> openTurn.finish prompt result context
 
@@ -458,8 +485,8 @@ Turn
 
 | Path | Agent invokes? | Lands on turn via |
 |---|---|---|
-| Turn prelude | no — **run** in `BaseContextTool.generate` | `openTurn = Turn(workSession=ws)` |
-| Turn envelope close | yes — `finish_turn` **@agent_tool** in instructions | `openTurn.finish(...)` |
+| Turn prelude | no — **run** in `BaseContextTool.generate` | `self.turn.open(self)` — open turn for this run |
+| Turn close | yes — **`self.turn.finish_turn(tools, prompt, result, context)`** `@agent_tool` | `openTurn.finish(...)` |
 | Instruction **expand** | no — framework on `@agent_instructions` expand | `SessionLog.append` → **events.log** + **openTurn.toolCalls** (`role=expansion`) |
 | Action **run** audit | no — explicit `SessionLog.append` at end of recipe | same record → **events.log** + **openTurn.toolCalls** (`role=run`) |
 | Mistake / correction | yes — `record_mistake` / `record_correction` **@agent_tool** | `openTurn.record_*` → `Correction.add(mistake)` |
@@ -482,7 +509,7 @@ Turn:
   finish_turn: { kind: tool, parameters: { tools, prompt, result, context } }
   record_mistake: { kind: tool, parameters: { tools, artifact, rule, wrong, original, tool, fidelity } }
   record_correction: { kind: tool, parameters: { tools, entry_id, improved, how, status } }
-  // ensure_open — plain; not on manifest
+  // open — plain; not on manifest
 
 Improvement:
   repair: { kind: action, parameters: { tools, asset, violation } }
@@ -492,19 +519,15 @@ Improvement:
 ### When things run
 
 ```
-Prerequisite: BaseContextTool.generate runs workspace.open + turn.ensure_open (prelude — not agent tools)
+Prerequisite: host run — self.workspace.open() + self.turn.open(self) (plain)
 
 /generate @agent_instructions (Bdd.generate):
-  -> self.workspace.open(); self.turn.ensure_open(self)  // plain
-  -> self.decisions.record_decisions_session()
-  -> self.contexts, self.examples, self.templates, self.generate_output()  // expand
-  -> self.add_generate_header_to_generated()
-  -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
-  // expose finish_turn @agent_tool
+  -> self.workspace.open(); self.turn.open(self)  // plain — open turn
+  -> … domain steps …
+  -> SessionLog.append(...)  // plain — run
+  -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
 
-/validate — same prelude + host.validate + finish_turn; record_* optional after
-
-Turn.record_mistake / record_correction @agent_tool — post-validate agent choice
+/validate — same: prelude, domain, SessionLog, self.turn.finish_turn in recipe
 ```
 
 ### Call chain (mistake)
@@ -534,9 +557,9 @@ Agent
     <- entry_id
 ```
 
-### Logging (replaces `@log`)
+### Logging
 
-**`SessionLog.append(...)`** — own workspace package class. **Expand:** framework on `@agent_instructions` expand. **Run:** explicit call at end of auditable recipe bodies. Not `@agent_tool`. Retire `@log` decorator and runner run hooks (see §4).
+**`SessionLog.append(...)`** — own workspace package class. **Expand:** framework on `@agent_instructions` expand. **Run:** explicit call at end of auditable recipe bodies. Not `@agent_tool`. Delete `@log` decorator and runner run hooks (see §4).
 
 Turn **@agent_tool**s and `openTurn` domain methods share names on the **same class**. **Mistake** / **Correction** are not agentic.
 
@@ -561,23 +584,23 @@ All Turn / Improvement ops require **WorkSession open** (`host.workspace.name` s
 
 Auditable `@agent_instructions`: framework logs **expand**; author logs **run** at end of body.
 
-**Typical `/generate` expansion:**
+**Typical `/generate` flow (open → work → close):**
 
 ```
 Bdd.generate() @agent_instructions
   -> self.workspace.open()                   // plain
-  -> self.turn.ensure_open(self)             // plain
+  -> self.turn.open(self)             // plain
   -> self.decisions.record_decisions_session()
-  -> self.contexts, self.examples, self.templates, self.generate_output()  // expand
+  -> self.contexts, self.examples, self.templates, self.generate_output()
   -> self.add_generate_header_to_generated()
-  -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
-  // expose finish_turn @agent_tool
+  -> SessionLog.append(...)                  // plain — run
+  -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
 
 Bdd.validate() @agent_instructions
-  -> self.workspace.open(); self.turn.ensure_open(self)
+  -> self.workspace.open(); self.turn.open(self)
   -> self.contexts; self.scan()
-  -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
-  // expose finish_turn @agent_tool
+  -> SessionLog.append(...)
+  -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
 ```
 
 ---
@@ -586,16 +609,22 @@ Bdd.validate() @agent_instructions
 
 ```
 Bdd.generate() @agent_instructions
-  -> self.workspace.open(); self.turn.ensure_open(self)
-  -> … domain expand steps …
-  -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
-  // expose finish_turn @agent_tool
+  -> self.workspace.open(); self.turn.open(self)
+  -> … domain steps …
+  -> SessionLog.append(...)
+  -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
+
+Turn.finish_turn(tools, prompt, result, context) @agent_tool
+  -> openTurn.finish(...)
 
 Bdd.validate() @agent_instructions
-  -> self.workspace.open(); self.turn.ensure_open(self)
+  -> self.workspace.open(); self.turn.open(self)
   -> self.contexts; self.scan()
-  -> SessionLog.append(toolset, name, summary, ok, error=..., payload=...)  // plain — run; not @agent_tool
-  // expose finish_turn @agent_tool
+  -> SessionLog.append(...)
+  -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
+
+Turn.finish_turn(tools, prompt, result, context) @agent_tool
+  -> openTurn.finish(...)
 
 Turn.record_mistake(tools, ...) @agent_tool
   -> openTurn.record_mistake(mistake)
@@ -617,7 +646,7 @@ Improvement.verify_fix(tools, theme) @agent_tool
 
 - **GitRepo** — git-shaped surface: `branch` setter switches to an **existing** ref; `create_branch` creates ref only (internal); `checkout_or_create` creates if missing then sets `branch`.
 - **WorkSession** — `session_branch`, `scope_paths`, `dirty` as properties; holds `openTurn` (**Turn** instance), turn index, repairs backlog.
-- **Turn** — one class: agentic kit *and* `WorkSession.openTurn`. **`ensure_open` plain**; **`finish_turn` / `record_mistake` / `record_correction` `@agent_tool`**. Logging is **`SessionLog`** (workspace package), plain run — not on Turn kit.
+- **Turn** — one class: agentic kit *and* `WorkSession.openTurn`. **`open(host)` plain** — open turn for this run; **`finish_turn` / `record_mistake` / `record_correction` `@agent_tool`**. Logging is **`SessionLog`** (workspace package), plain run — not on Turn kit.
 - **Mistake** / **Correction** — `Correction.add(mistake)` adds to `correction.mistakes` and sets `mistake.correction`; `persist` after adds.
 - **Repair** (domain) — themed bucket with `open`, `verify_fix`, `nest`, `finish`; holds optional `tools_git GitRepo`.
 - **Improvement** — thin `/repair` orchestrator over domain Repair resources; no runner/loop type.
@@ -630,9 +659,9 @@ Improvement.verify_fix(tools, theme) @agent_tool
 ```
 generate | validate | satisfy | document
   -> Bdd.generate | Bdd.validate | … @agent_instructions on BaseContextTool
-     -> workspace.open + turn.ensure_open  // plain
+     -> workspace.open + turn.open  // plain
      -> domain body                         // expand
-     -> finish_turn                         // expose @agent_tool
+     -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
   // delete HostLifecycle kit; revert agent_skills kit-owned routing for generate/validate/…
 
 repair
@@ -645,20 +674,21 @@ record_correction
   -> Turn.record_correction(tools, …) @agent_tool
 
 turn
-  -> Turn.finish_turn(tools, prompt, result, context) @agent_tool
+  -> self.turn.finish_turn(tools, prompt, result, context) @agent_tool
+    -> openTurn.finish(...)
 ```
 
 ---
 
 ## 9. Refactor slices (order)
 
-1. **Annotations** — only `@agent_instructions` / `@agent_tool`; drop `@log`; explicit **`SessionLog.append(...)` plain run** in method bodies; legacy `@action` / `@tool` aliases until migrated.
-2. **Naming** — `Session`→`WorkSession`; drop `EvalSession` / `Session=EvalSession`; domain **Repair** vs toolsets **Turn** + **Improvement**.
-3. **Session prelude** — `WorkSession.open` plain (fold ensure/create/index/record_root); drop session `@agent_tool`s and host forwards; **`Turn.ensure_open` plain**; **`finish_turn` `@agent_tool`**.
+1. **Annotations** — **`@agent_instructions` / `@agent_tool` only**; delete `@action`, `@tool`, `@log`, `@plain_operation` (no aliases); explicit **`SessionLog.append(...)`** in auditable recipe bodies.
+2. **Naming** — **`WorkSession` only**; delete `Session`, `WorkspaceSession`, `EvalSession`, and `Session = EvalSession`; domain **Repair** vs toolsets **Turn** + **Improvement**.
+3. **Session prelude** — `WorkSession.open` plain (fold ensure/create/index/record_root); drop session `@agent_tool`s and host forwards; **`Turn.open` plain**; **`finish_turn` `@agent_tool`**.
 4. **GitRepo seam** — rename `WorkspaceRepo` → `GitRepo`; drop `ensure_session_branch` / `commit_on_session_branch` / `CDDRepo extends`.
 5. **Turn on WorkSession** — `openTurn` is a **Turn** instance; commit in `Turn.finish`.
 6. **Resources** — domain `record_*` on openTurn; Mistake/Correction `persist`; domain **Repair** with `open` / `verify_fix` / `nest` / `finish`.
-7. **BaseContextTool lifecycle** — prelude **run** + domain **expand** + `finish_turn` **expose** on host `generate` / `validate`; **delete HostLifecycle** kit and kit-owned slash routing for lifecycle actions.
+7. **BaseContextTool lifecycle** — prelude **plain run** + domain steps + **`self.turn.finish_turn(tools, prompt, result, context)`** in `generate` / `validate` recipe; **delete HostLifecycle** kit and kit-owned routing for lifecycle actions.
 8. **Bind at open** — `WorkSession.open()` on each host; delete `_bind_eval` / `host.eval`.
 9. **Turn** + **Improvement** — delete host eval forwards and eval `Repair` toolset.
 10. **Host slim** — domain `@agent_instructions` only; no session/turn/repair re-exports.
@@ -666,12 +696,12 @@ turn
 
 ### Workspace module checklist
 
-1. Rename `Session` → `WorkSession`; delete `WorkspaceSession` alias.
+1. **`WorkSession`** — rename type from `Session`; delete `WorkspaceSession` export and every import alias; no second name.
 2. **`open` plain** — fold `ensure_session` / `create_session` / `read_context_index` / `record_context_root`; drop their `@agent_tool` annotations.
 3. Rename `WorkspaceRepo` → `GitRepo`; `branch` property (set = switch); internal `create_branch`; `checkout_or_create`.
 3. Move branch policy to `WorkSession.session_branch` property; dirty via `WorkSession.dirty`.
 4. `Turn.finish` uses `commitMessage`; calls `workSession.git.commit(scope_paths, message)`.
-5. **SessionLog** — keep as own workspace class; drop `@log` / runner run-branch / **`control`**; **`append` → events.log + openTurn.toolCalls** for **expand** (framework) and **run** (explicit); add **`role`** metadata; extend **ToolCall** with `ok`, `error`, `role`.
+5. **SessionLog** — keep as own workspace class; delete `@log` / runner run-branch / **`control`**; **`append` → events.log + openTurn.toolCalls** for **expand** (framework) and **run** (explicit); add **`role`** metadata; extend **ToolCall** with `ok`, `error`, `role`.
 6. Update `workspace-ce.drawio` + `module-context.md`.
 
 ### Eval module checklist
