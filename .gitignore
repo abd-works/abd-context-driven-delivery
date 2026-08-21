@@ -10,3 +10,7 @@ primitives/tools/hooks/manifest_gate.log
 
 # Sandbox Node toolchain
 sandbox/node_modules/
+
+# Generated Cursor skills and commands (agent_skills)
+.cursor/commands/
+.cursor/skills/

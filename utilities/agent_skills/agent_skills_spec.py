@@ -145,7 +145,7 @@ with description("write_action_command tool"):
             expect(target.is_file()).to(be_true)
             content = target.read_text(encoding="utf-8")
             expect(content).to(contain('name: "iterate"'))
-            expect(content).to(contain("action: iterate"))
+            expect(content).to(contain("iterate.iterate:Iterator"))
 
     with context("host-action wording"):
         with it("tells the agent not to run the kit and uses AskQuestion for missing params"):
@@ -160,6 +160,18 @@ with description("write_action_command tool"):
             expect(content).to(contain("Identify the fidelity"))
             expect(content).to(contain("one or more"))
             expect(content).to(contain("/stories /ddd"))
+
+    with context("iterate owns the run"):
+        with it("should tell the agent to invoke Iterator with the context tools as arguments"):
+            self.skills.write_action_command(action="iterate", ide="cursor")
+            content = (self.root / ".cursor" / "commands" / "iterate.md").read_text(
+                encoding="utf-8"
+            )
+            expect(content).to(contain("iterate.iterate:Iterator"))
+            expect(content).to(contain("arguments:"))
+            expect(content).to(contain("tools:"))
+            expect(content).to(contain("Do not invoke each context tool with `action: iterate`"))
+            expect(content).not_to(contain("Do not run this as its own toolset"))
 
 
 with description("write_stage_fidelity_command tool"):

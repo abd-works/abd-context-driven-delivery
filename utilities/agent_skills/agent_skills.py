@@ -151,6 +151,46 @@ action: {action}
 Follow that context-tool skill's instructions: run its manifest, obey `response.instructions`, then invoke via `_req.yaml` + `python -m tools run`. Then the next named tool. Do not skip remaining tools after the first. Read `examples/` before guessing field shape.
 """
 
+_ITERATE_INVOKE_BODY = """\
+The iterate kit owns the run. Context tools are arguments.
+
+""" + _CHAIN_TOOLS + """
+**Step 1 — Identify the context tool(s).**
+Check whether one or more context tools are already in scope — passed in (path / session / toolset) or named in this chat. If one or more are found, use them. If none is found, use the `AskQuestion` tool to let the user choose:
+
+```
+Question: "Which context tool should run `iterate`?"
+Options:
+  - /cdd — orchestrate all child tools at one stage
+  - /stories — who does what, in what sequence
+  - /clean-engineering — module boundaries and OO design
+  - /ux — navigation, screens, front end
+  - /bdd — observable behavior and tests
+  - /ddd — bounded contexts and domain building blocks
+```
+
+**Step 2 — Identify the fidelity.**
+Check whether a fidelity was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose from the selected context tool's available fidelities (see the quick-reference table), or from the CDD stage names (`discovery`, `specification`, `engineering`).
+
+**Step 3 — Run Iterator once, with those tools as arguments.**
+Do not invoke each context tool with `action: iterate`. Load the iterate manifest, then invoke:
+
+```
+python -m tools manifest iterate.iterate:Iterator
+```
+
+```yaml
+toolset: iterate.iterate:Iterator
+action: iterate
+arguments:
+  tools:
+    - <first context toolset ref>
+    - <second context toolset ref>
+```
+
+A tools item may be a toolset ref (`context_tools.bdd.bdd:Bdd`) or a mapping with `toolset` and `context` (fidelity / path / session). Follow `response.instructions`. Run via `_req.yaml` + `python -m tools run`. Read `examples/` before guessing field shape.
+"""
+
 _ACTION_SKILL_TEMPLATE = """\
 ---
 name: {action}
@@ -867,6 +907,11 @@ class AgentSkills:
             written.append(str(skill_md))
         return written[0]
 
+    def _action_invoke_body(self, action: str) -> str:
+        if action == "iterate":
+            return _ITERATE_INVOKE_BODY
+        return _ACTION_INVOKE_BODY.format(action=action)
+
     @tool
     def write_action_command(self, action: str, ide: str) -> str:
         """Write a host-action command/prompt composable with a context-tool skill.
@@ -875,7 +920,7 @@ class AgentSkills:
         For Cursor multi-folder workspaces, also writes to every deploy root.
         Returns the absolute path of the primary (repo) written file."""
         written: list[str] = []
-        body = _ACTION_INVOKE_BODY.format(action=action)
+        body = self._action_invoke_body(action)
         for ide_root in self._ide_config_roots(ide):
             if ide == "cursor":
                 target_dir = ide_root / "commands"
@@ -899,7 +944,7 @@ class AgentSkills:
         ide=vscode -> .github/skills/{action}/SKILL.md
         For Cursor multi-folder workspaces, also writes to every deploy root.
         Returns the absolute path of the primary (repo) written file."""
-        body = _ACTION_INVOKE_BODY.format(action=action)
+        body = self._action_invoke_body(action)
         content = _ACTION_SKILL_TEMPLATE.format(action=action, body=body)
         written: list[str] = []
         for ide_root in self._ide_config_roots(ide):
