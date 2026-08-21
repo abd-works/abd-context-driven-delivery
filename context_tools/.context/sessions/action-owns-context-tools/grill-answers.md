@@ -12,3 +12,7 @@ BDD only for this tick (`context_tools/bdd/.context/module-context.md` — devel
 
 Stop BaseContextTool.iterate from composing Iterator. /iterate runs iterate.iterate:Iterator with arguments.tools listing the in-scope context tool(s). Also prove agent skills/commands use that call site, with an agentic BDD spec plus ai_judge that Iterator.iterate actually owned the run. Sources: context_tools/base/.context/module-context.md, context_tools/actions/iterate/.context/module-context.md, utilities/agent_skills/.context/module-context.md, user: option A plus agent-skill validation.
 
+### Next tool — sketch, complete replace
+
+Invert sketch in one tick the way iterate ended: Sketcher.sketch(tools) is the host sketch body (open, record decisions, sketch_session, generate); BaseContextTool.sketch does not compose Sketcher; /sketch runs sketch.sketch:Sketcher with arguments.tools. Agent skills plus an agentic BDD spec with ai_judge. Sources: context_tools/base/base_context_tool.py (host sketch), context_tools/actions/sketch/.context/module-context.md, utilities/agent_skills/.context/module-context.md, user: next tool then complete replace.
+

@@ -189,3 +189,71 @@ with description("Sketcher toolset"):
             expect(joined).to(contain("(Recommended)"))
             expect(joined).to(contain("save_sketch"))
             expect(joined).to(contain("Grill the sketch plan"))
+
+
+class _ContextTool:
+    def __init__(self, steps: list[str]) -> None:
+        self.steps = steps
+        self.workspace = self
+        self.decisions = self
+
+    def open(self) -> None:
+        self.steps.append("open")
+
+    def record_decisions_session(self) -> None:
+        self.steps.append("record_decisions")
+
+    def generate(self) -> str:
+        self.steps.append("generate")
+        return "ok"
+
+
+class _Sketcher(Sketcher):
+    def __init__(self, steps: list[str]) -> None:
+        super().__init__()
+        self.steps = steps
+
+    def sketch_session(self, slug: str = "", destination: str = "", agent_dir: str = "") -> str:
+        self.steps.append("sketch_session")
+        return "ok"
+
+
+with description("a sketch action"):
+    with context("that is given one context tool"):
+        with it("should open the workspace, record decisions, run sketch_session, and generate"):
+            steps: list[str] = []
+            _Sketcher(steps).sketch(tools=[_ContextTool(steps)])
+            expect(steps).to(
+                equal(["open", "record_decisions", "sketch_session", "generate"])
+            )
+
+    with context("that is given two context tools"):
+        with it("should run the host sketch body once per tool"):
+            steps: list[str] = []
+            _Sketcher(steps).sketch(
+                tools=[_ContextTool(steps), _ContextTool(steps)]
+            )
+            expect(steps).to(
+                equal(
+                    [
+                        "open",
+                        "record_decisions",
+                        "sketch_session",
+                        "generate",
+                        "open",
+                        "record_decisions",
+                        "sketch_session",
+                        "generate",
+                    ]
+                )
+            )
+
+
+with description("a BaseContextTool sketch action"):
+    with it("should not compose Sketcher"):
+        import inspect
+
+        from context_tools.base.base_context_tool import BaseContextTool
+
+        source = inspect.getsource(BaseContextTool.sketch)
+        expect("sketcher" in source).to(equal(False))

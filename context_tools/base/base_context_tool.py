@@ -336,7 +336,6 @@ class BaseContextTool(AgenticToolset):
         self.workspace.open()
         self.decisions.record_decisions_session()
         """Sketch under session.folder; pass agent_dir={{self.module_dir}} to find_template."""
-        self.sketcher.sketch_session()
         self.generate()
         return "Sketch complete; generate instructions applied."
 
