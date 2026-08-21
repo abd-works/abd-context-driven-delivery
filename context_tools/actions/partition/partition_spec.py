@@ -65,77 +65,91 @@ with description("Partition kit prose"):
     with it("should document partition, index (Step 1), and segment (Step 2) in partition.md"):
         content = _section("partition")
         expect(content.startswith("# Partition")).to(be_true)
-        expect("# Step 1 — Index" in content).to(be_true)
-        expect("# Step 2 — Segment" in content).to(be_true)
+        expect("# Step 1 \u2014 Index" in content).to(be_true)
+        expect("# Step 2 \u2014 Segment" in content).to(be_true)
 
 
 with description("Partition on a BaseContextTool host"):
-    with context("partition expanded on CarChronicle"):
-        with before.all:
-            cls = _ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
-            self.host = cls()
-            self.response = _expand(
-                self.host,
-                "partition",
-                toolset_path=_CAR_CHRONICLE_TOOLSET,
-                arguments={"context": "corpus/", "mode": "one_go"},
+    with it("should not compose Partition"):
+        import inspect
+
+        from context_tools.base.base_context_tool import BaseContextTool
+
+        source = inspect.getsource(BaseContextTool.partition)
+        expect("partitioner" in source).to(equal(False))
+
+
+class _PartitionHost:
+    def __init__(self, steps: list[str]) -> None:
+        self.steps = steps
+        self.domain_slug = "test_domain"
+
+    @property
+    def active(self):
+        self.steps.append("active")
+        return self
+
+    @property
+    def session_guidance(self) -> Instruction:
+        self.steps.append("session_guidance")
+        return Instruction("", _KIT_DIR)
+
+    @property
+    def contexts(self) -> Instruction:
+        self.steps.append("contexts")
+        return Instruction("", _KIT_DIR)
+
+    @property
+    def scaffold(self) -> Instruction:
+        return Instruction("", _KIT_DIR)
+
+    def begin_eval_turn(self) -> str:
+        self.steps.append("begin_eval_turn")
+        return "ok"
+
+    def finish_eval_turn(self, prompt: str = "", result: str = "", context: str = "") -> str:
+        self.steps.append("finish_eval_turn")
+        return "ok"
+
+
+class _PartitionKit(Partition):
+    def __init__(self, steps: list[str]) -> None:
+        super().__init__()
+        self.steps = steps
+
+    def partition_corpus(
+        self,
+        context: str = "",
+        mode: str = "one_go",
+        out_root: str | None = None,
+        slug: str = "",
+        scaffold: str = "",
+    ) -> str:
+        self.steps.append("partition_corpus")
+        return "ok"
+
+
+with description("a partition action"):
+    with context("that is given one context tool"):
+        with it("should open eval, run partition_corpus, and finish eval"):
+            steps: list[str] = []
+            _PartitionKit(steps).partition(
+                tools=[_PartitionHost(steps)],
+                context="corpus/",
+                mode="one_go",
             )
-
-        with it("should set action to partition"):
-            expect(self.response["action"]).to(equal("partition"))
-
-        with it("should inline Partition section"):
-            expect("# Partition" in self.response["instructions"]).to(be_true)
-            expect(
-                "extracts the relevant passages as chunk files"
-                in self.response["instructions"]
-            ).to(be_true)
-
-        with it("should list index and segment as deferred tool steps"):
-            expect("index" in self.response["tools"]).to(be_true)
-            expect("segment" in self.response["tools"]).to(be_true)
-            expect(
-                "{artifact}-segment.md" in self.response["instructions"]
-            ).to(be_true)
-
-        with it("should inline default partition guidance when domain has no partition.md"):
-            expect(
-                _DEFAULT_PARTITION_SNIPPET in self.response["instructions"]
-            ).to(be_true)
-
-        with it("should name the index file after the corpus subject"):
-            expect("{subject}-index.md" in self.response["instructions"]).to(be_true)
-            expect(
-                "Not the context tool name" in self.response["instructions"]
-            ).to(be_true)
-            expect(
-                "car_chronicle-index.md" in self.response["instructions"]
-            ).to(be_false)
-
-    with context("partition expanded on Stories"):
-        with before.all:
-            cls = _ToolsetLoader.instance().load(_STORIES_TOOLSET)
-            self.host = cls()
-            self.response = _expand(
-                self.host,
-                "partition",
-                toolset_path=_STORIES_TOOLSET,
-                arguments={"context": "corpus/", "mode": "one_go"},
+            expect(steps).to(
+                equal(
+                    [
+                        "active",
+                        "session_guidance",
+                        "contexts",
+                        "begin_eval_turn",
+                        "partition_corpus",
+                        "finish_eval_turn",
+                    ]
+                )
             )
-
-        with it("should list index and segment as deferred tool steps, not inline them"):
-            expect("index" in self.response["tools"]).to(be_true)
-            expect("segment" in self.response["tools"]).to(be_true)
-
-        with it("should use the one shared partition.md guidance, no domain override"):
-            expect("# Partition" in self.response["instructions"]).to(be_true)
-
-        with it("should name the index after the corpus subject not the skill"):
-            expect("{subject}-index.md" in self.response["instructions"]).to(be_true)
-            expect(
-                "Not the context tool name" in self.response["instructions"]
-            ).to(be_true)
-            expect("stories-index.md" in self.response["instructions"]).to(be_false)
 
 
 # ---------------------------------------------------------------------------
@@ -437,7 +451,7 @@ with description("a PartitionIndex"):
 
 
 # ---------------------------------------------------------------------------
-# Partition â€” verify_segment_completeness tool
+# Partition - verify_segment_completeness tool
 # ---------------------------------------------------------------------------
 
 with description("Partition verifying segment completeness"):

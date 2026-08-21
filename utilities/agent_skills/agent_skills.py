@@ -151,15 +151,17 @@ action: {action}
 Follow that context-tool skill's instructions: run its manifest, obey `response.instructions`, then invoke via `_req.yaml` + `python -m tools run`. Then the next named tool. Do not skip remaining tools after the first. Read `examples/` before guessing field shape.
 """
 
-_ITERATE_INVOKE_BODY = """\
-The iterate kit owns the run. Context tools are arguments.
 
-""" + _CHAIN_TOOLS + """
+def _kit_owned_invoke_body(action: str, run_label: str, manifest_ref: str) -> str:
+    return f"""\
+The {action} kit owns the run. Context tools are arguments.
+
+""" + _CHAIN_TOOLS + f"""
 **Step 1 — Identify the context tool(s).**
 Check whether one or more context tools are already in scope — passed in (path / session / toolset) or named in this chat. If one or more are found, use them. If none is found, use the `AskQuestion` tool to let the user choose:
 
 ```
-Question: "Which context tool should run `iterate`?"
+Question: "Which context tool should run `{action}`?"
 Options:
   - /cdd — orchestrate all child tools at one stage
   - /stories — who does what, in what sequence
@@ -172,16 +174,16 @@ Options:
 **Step 2 — Identify the fidelity.**
 Check whether a fidelity was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose from the selected context tool's available fidelities (see the quick-reference table), or from the CDD stage names (`discovery`, `specification`, `engineering`).
 
-**Step 3 — Run Iterator once, with those tools as arguments.**
-Do not invoke each context tool with `action: iterate`. Load the iterate manifest, then invoke:
+**Step 3 — Run {run_label} once, with those tools as arguments.**
+Do not invoke each context tool with `action: {action}`. Load the manifest, then invoke:
 
 ```
-python -m tools manifest iterate.iterate:Iterator
+python -m tools manifest {manifest_ref}
 ```
 
 ```yaml
-toolset: iterate.iterate:Iterator
-action: iterate
+toolset: {manifest_ref}
+action: {action}
 arguments:
   tools:
     - <first context toolset ref>
@@ -191,85 +193,21 @@ arguments:
 A tools item may be a toolset ref (`context_tools.bdd.bdd:Bdd`) or a mapping with `toolset` and `context` (fidelity / path / session). Follow `response.instructions`. Run via `_req.yaml` + `python -m tools run`. Read `examples/` before guessing field shape.
 """
 
-_SKETCH_INVOKE_BODY = """\
-The sketch kit owns the run. Context tools are arguments.
 
-""" + _CHAIN_TOOLS + """
-**Step 1 — Identify the context tool(s).**
-Check whether one or more context tools are already in scope — passed in (path / session / toolset) or named in this chat. If one or more are found, use them. If none is found, use the `AskQuestion` tool to let the user choose:
-
-```
-Question: "Which context tool should run `sketch`?"
-Options:
-  - /cdd — orchestrate all child tools at one stage
-  - /stories — who does what, in what sequence
-  - /clean-engineering — module boundaries and OO design
-  - /ux — navigation, screens, front end
-  - /bdd — observable behavior and tests
-  - /ddd — bounded contexts and domain building blocks
-```
-
-**Step 2 — Identify the fidelity.**
-Check whether a fidelity was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose from the selected context tool's available fidelities (see the quick-reference table), or from the CDD stage names (`discovery`, `specification`, `engineering`).
-
-**Step 3 — Run Sketcher once, with those tools as arguments.**
-Do not invoke each context tool with `action: sketch`. Load the sketch manifest, then invoke:
-
-```
-python -m tools manifest sketch.sketch:Sketcher
-```
-
-```yaml
-toolset: sketch.sketch:Sketcher
-action: sketch
-arguments:
-  tools:
-    - <first context toolset ref>
-    - <second context toolset ref>
-```
-
-A tools item may be a toolset ref (`context_tools.bdd.bdd:Bdd`) or a mapping with `toolset` and `context` (fidelity / path / session). Follow `response.instructions`. Run via `_req.yaml` + `python -m tools run`. Read `examples/` before guessing field shape.
-"""
-
-_GRILL_INVOKE_BODY = """\
-The grill kit owns the run. Context tools are arguments.
-
-""" + _CHAIN_TOOLS + """
-**Step 1 — Identify the context tool(s).**
-Check whether one or more context tools are already in scope — passed in (path / session / toolset) or named in this chat. If one or more are found, use them. If none is found, use the `AskQuestion` tool to let the user choose:
-
-```
-Question: "Which context tool should run `grill`?"
-Options:
-  - /cdd — orchestrate all child tools at one stage
-  - /stories — who does what, in what sequence
-  - /clean-engineering — module boundaries and OO design
-  - /ux — navigation, screens, front end
-  - /bdd — observable behavior and tests
-  - /ddd — bounded contexts and domain building blocks
-```
-
-**Step 2 — Identify the fidelity.**
-Check whether a fidelity was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose from the selected context tool's available fidelities (see the quick-reference table), or from the CDD stage names (`discovery`, `specification`, `engineering`).
-
-**Step 3 — Run GrillContext once, with those tools as arguments.**
-Do not invoke each context tool with `action: grill`. Load the grill_context manifest, then invoke:
-
-```
-python -m tools manifest grill_context.grill_context:GrillContext
-```
-
-```yaml
-toolset: grill_context.grill_context:GrillContext
-action: grill
-arguments:
-  tools:
-    - <first context toolset ref>
-    - <second context toolset ref>
-```
-
-A tools item may be a toolset ref (`context_tools.bdd.bdd:Bdd`) or a mapping with `toolset` and `context` (fidelity / path / session). Follow `response.instructions`. Run via `_req.yaml` + `python -m tools run`. Read `examples/` before guessing field shape.
-"""
+_KIT_OWNED_INVOKE_BODIES: dict[str, str] = {
+    name: _kit_owned_invoke_body(name, run_label, manifest_ref)
+    for name, run_label, manifest_ref in (
+        ("iterate", "Iterator", "iterate.iterate:Iterator"),
+        ("sketch", "Sketcher", "sketch.sketch:Sketcher"),
+        ("grill", "GrillContext", "grill_context.grill_context:GrillContext"),
+        ("partition", "Partition", "partition.partition:Partition"),
+        ("generate", "HostLifecycle", "host_lifecycle.host_lifecycle:HostLifecycle"),
+        ("validate", "HostLifecycle", "host_lifecycle.host_lifecycle:HostLifecycle"),
+        ("document", "HostLifecycle", "host_lifecycle.host_lifecycle:HostLifecycle"),
+        ("satisfy", "HostLifecycle", "host_lifecycle.host_lifecycle:HostLifecycle"),
+        ("repair", "Repair", "eval.session:Repair"),
+    )
+}
 
 _ACTION_SKILL_TEMPLATE = """\
 ---
@@ -988,12 +926,9 @@ class AgentSkills:
         return written[0]
 
     def _action_invoke_body(self, action: str) -> str:
-        if action == "iterate":
-            return _ITERATE_INVOKE_BODY
-        if action == "sketch":
-            return _SKETCH_INVOKE_BODY
-        if action == "grill":
-            return _GRILL_INVOKE_BODY
+        owned = _KIT_OWNED_INVOKE_BODIES.get(action)
+        if owned is not None:
+            return owned
         return _ACTION_INVOKE_BODY.format(action=action)
 
     @tool

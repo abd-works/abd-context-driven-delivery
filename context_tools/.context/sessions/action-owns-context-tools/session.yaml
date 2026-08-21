@@ -53,3 +53,13 @@ turns:
   change_commit: {}
   tool_calls: []
   mistakes: []
+- id: bulk-kit-owned
+  prompt: invert majority of remaining host actions (partition, lifecycle, repair)
+  result: Partition.partition(tools), HostLifecycle for generate/validate/document/satisfy,
+    Repair.repair(tools) + repair_session rename; agent_skills _kit_owned_invoke_body
+    factory. 107 examples green on partition, host_lifecycle, agent_skills specs.
+  context: action-owns-context-tools
+  change_commit:
+    sha: a2659bdf8b7f2b9f9b8bbc57ee8fa1b6688caeaf
+  tool_calls: []
+  mistakes: []

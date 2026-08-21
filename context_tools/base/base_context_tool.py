@@ -309,9 +309,6 @@ class BaseContextTool(AgenticToolset):
         self.session_guidance
         self.contexts
         self.begin_eval_turn()
-        self.partitioner.partition(
-            context, mode, out_root, slug=self.domain_slug, scaffold=self.scaffold
-        )
         self.finish_eval_turn()
         return (
             "Partition of {{context}} finished (mode {{mode}}); "
@@ -454,7 +451,7 @@ class BaseContextTool(AgenticToolset):
         self.contexts
         self.examples
         self.templates
-        self.repairer.repair(asset, violation)
+        self.repairer.repair_session(asset, violation)
         self.finish_eval_turn()
         return (
             "Repair {{asset}} under {session.path}/ until validate passes. "

@@ -3,9 +3,9 @@
 ## Resume
 
 - **Stage:** development
-- **Last work:** grill complete replace — GrillContext.grill(tools) owns /grill; specs and agent_skills aligned with iterate/sketch
-- **Next action:** (session slice complete — hand off or pick next host action)
-- **Next focus:** review branch; merge when ready
+- **Last work:** bulk kit-owned inversion — partition, generate/validate/document/satisfy (HostLifecycle), repair; agent_skills factory
+- **Next action:** improve/createRule if needed; agent BDD for new kits
+- **Next focus:** merge branch when green
 
 ## Session
 

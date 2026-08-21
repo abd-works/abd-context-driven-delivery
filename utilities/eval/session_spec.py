@@ -649,7 +649,7 @@ with description("Repair.log_mistake"):
         discovered = discover_sub_agent_tools(self.repairer)
         expect("log_mistake" in discovered).to(be_true)
         expect(discovered["log_mistake"].signature_entry["kind"]).to(equal("sub_agent"))
-        expect(discovered["repair"].signature_entry["kind"]).to(equal("sub_agent"))
+        expect(discovered["repair_session"].signature_entry["kind"]).to(equal("sub_agent"))
         expect(discovered["eval"].signature_entry["kind"]).to(equal("sub_agent"))
 
     with it("should store the artifact file as faultyAsset, not a diagnosis of the problem"):

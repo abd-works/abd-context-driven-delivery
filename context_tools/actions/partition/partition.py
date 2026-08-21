@@ -102,7 +102,7 @@ class Partition:
         )
       
     @action
-    def partition(
+    def partition_corpus(
         self,
         context: str,
         mode: str = "one_go",
@@ -118,6 +118,34 @@ class Partition:
         self.verify_segment_completeness(
             segment_path="{artifact}-segment.md", index_path="{subject}-index.md"
         )
+        return (
+            "Partition of {{context}} finished (mode {{mode}}); "
+            "docs under {session.path}/.context/. "
+            "Hard fail if any new chunk fails named-entry completeness."
+        )
+
+    @action
+    def partition(
+        self,
+        tools: list,
+        context: str,
+        mode: str = "one_go",
+        out_root: str | None = None,
+    ) -> str:
+        """partition"""
+        for host in self.context_tools(tools):
+            host.active
+            host.session_guidance
+            host.contexts
+            host.begin_eval_turn()
+            self.partition_corpus(
+                context,
+                mode,
+                out_root,
+                slug=host.domain_slug,
+                scaffold=host.scaffold,
+            )
+            host.finish_eval_turn()
         return (
             "Partition of {{context}} finished (mode {{mode}}); "
             "docs under {session.path}/.context/. "

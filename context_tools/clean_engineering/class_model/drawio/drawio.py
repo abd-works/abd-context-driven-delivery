@@ -142,7 +142,7 @@ class Drawio:
         self.scan()
         self.contexts
         self.examples
-        self.repairer.repair(asset, violation)
+        self.repairer.repair_session(asset, violation)
         return "Repair {{asset}} until drawio validate/scan passes. Fix the layout generator — not a one-off diagram edit."
 
     @action

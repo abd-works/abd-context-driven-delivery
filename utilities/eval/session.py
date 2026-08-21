@@ -945,7 +945,7 @@ class Repair:
 
     @sub_agent
     @action
-    def repair(self, asset: str, violation: str) -> str:
+    def repair_session(self, asset: str, violation: str) -> str:
         """repair"""
         self.start(asset, violation)
         return (
@@ -956,6 +956,16 @@ class Repair:
             "(agent_bdd.spec_helpers) on the pass file. Do not add an "
             "eval-package spec harness. After the fix, those same helpers are "
             "the eval. If a test cannot fail, defer — do not repair."
+        )
+
+    @action
+    def repair(self, tools: list, asset: str, violation: str) -> str:
+        """Run repair on each passed context tool."""
+        for host in self.context_tools(tools):
+            host.repair(asset, violation)
+        return (
+            "Repair {{asset}} under {session.path}/ until validate passes. "
+            "Fail-first test before any tool change. Write evals after the fix."
         )
 
     @sub_agent

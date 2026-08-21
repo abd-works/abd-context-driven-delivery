@@ -149,12 +149,12 @@ with description("write_action_command tool"):
 
     with context("host-action wording"):
         with it("tells the agent not to run the kit and uses AskQuestion for missing params"):
-            self.skills.write_action_command(action="generate", ide="cursor")
-            content = (self.root / ".cursor" / "commands" / "generate.md").read_text(encoding="utf-8")
+            self.skills.write_action_command(action="improve", ide="cursor")
+            content = (self.root / ".cursor" / "commands" / "improve.md").read_text(encoding="utf-8")
             expect(content).to(contain("Do not run this as its own toolset"))
             expect(content).to(contain("already in scope"))
             expect(content).to(contain("named in this chat"))
-            expect(content).to(contain("action: generate"))
+            expect(content).to(contain("action: improve"))
             expect(content).to(contain("AskQuestion"))
             expect(content).to(contain("Identify the context tool"))
             expect(content).to(contain("Identify the fidelity"))
@@ -196,6 +196,42 @@ with description("write_action_command tool"):
             expect(content).to(contain("tools:"))
             expect(content).to(contain("Do not invoke each context tool with `action: grill`"))
             expect(content).not_to(contain("Do not run this as its own toolset"))
+
+    with context("partition owns the run"):
+        with it("should tell the agent to invoke Partition with the context tools as arguments"):
+            self.skills.write_action_command(action="partition", ide="cursor")
+            content = (self.root / ".cursor" / "commands" / "partition.md").read_text(
+                encoding="utf-8"
+            )
+            expect(content).to(contain("partition.partition:Partition"))
+            expect(content).to(contain("Do not invoke each context tool with `action: partition`"))
+
+    with context("generate owns the run"):
+        with it("should tell the agent to invoke HostLifecycle with the context tools as arguments"):
+            self.skills.write_action_command(action="generate", ide="cursor")
+            content = (self.root / ".cursor" / "commands" / "generate.md").read_text(
+                encoding="utf-8"
+            )
+            expect(content).to(contain("host_lifecycle.host_lifecycle:HostLifecycle"))
+            expect(content).to(contain("Do not invoke each context tool with `action: generate`"))
+
+    with context("validate owns the run"):
+        with it("should tell the agent to invoke HostLifecycle with the context tools as arguments"):
+            self.skills.write_action_command(action="validate", ide="cursor")
+            content = (self.root / ".cursor" / "commands" / "validate.md").read_text(
+                encoding="utf-8"
+            )
+            expect(content).to(contain("host_lifecycle.host_lifecycle:HostLifecycle"))
+            expect(content).to(contain("Do not invoke each context tool with `action: validate`"))
+
+    with context("repair owns the run"):
+        with it("should tell the agent to invoke Repair with the context tools as arguments"):
+            self.skills.write_action_command(action="repair", ide="cursor")
+            content = (self.root / ".cursor" / "commands" / "repair.md").read_text(
+                encoding="utf-8"
+            )
+            expect(content).to(contain("eval.session:Repair"))
+            expect(content).to(contain("Do not invoke each context tool with `action: repair`"))
 
 
 with description("write_stage_fidelity_command tool"):
@@ -272,15 +308,15 @@ with description("write_action_skill_shim tool"):
 
     with context("ide=cursor"):
         with it("writes a skill shim that routes to the in-scope context tool action"):
-            path = self.skills.write_action_skill_shim(action="generate", ide="cursor")
-            target = self.root / ".cursor" / "skills" / "generate" / "SKILL.md"
+            path = self.skills.write_action_skill_shim(action="improve", ide="cursor")
+            target = self.root / ".cursor" / "skills" / "improve" / "SKILL.md"
             expect(target.is_file()).to(be_true)
             content = target.read_text(encoding="utf-8")
-            expect(content).to(contain("name: generate"))
+            expect(content).to(contain("name: improve"))
             expect(content).to(contain("Do not run this as its own toolset"))
             expect(content).to(contain("already in scope"))
             expect(content).to(contain("named in this chat"))
-            expect(content).to(contain("action: generate"))
+            expect(content).to(contain("action: improve"))
             expect(content).to(contain("AskQuestion"))
             expect(content).to(contain("one or more"))
             expect(content).to(contain("/stories /ddd"))
