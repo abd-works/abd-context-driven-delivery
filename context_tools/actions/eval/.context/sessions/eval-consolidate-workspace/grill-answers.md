@@ -88,10 +88,13 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 - `workspace-eval-oo-sketch.md` line 131, lines 47ΓÇô50
 - `grill-answers.md` ticks 1ΓÇô2 (slice A, lookupPath absent ΓåÆ None)
 
-**Judge answer:** *(pending)*
+**Judge answer:** **Recommend A ΓÇö caller-supplied `default_path`.** OO line 131 describes behavior at **open** time when the host already knows the resolved path and its default ΓÇö passing `default_path` into `upsertPath` keeps `Workspace` free of host fields while making removal observable on the aggregate: equal ΓåÆ drop row; unequal ΓåÆ sparse upsert. Reject B (splits one policy across two slices unnecessarily). Reject C (drops locked requirement from line 131).
 
-**Citations:** *(pending)*
+**Citations:**
 
-**Slice unlocked:** *(pending)*
+- `workspace-eval-oo-sketch.md` lines 47ΓÇô50, 131
+- `grill-answers.md` ticks 1ΓÇô2 ΓÇö slice A, lookup absent ΓåÆ None, tool+fidelity+path
+
+**Slice unlocked:** **yes** ΓÇö slice A boundary: `load` / `save` / `lookupPath` (absent ΓåÆ no override) / `upsertPath(tool, fidelity, path, default_path)` (sparse add/update/remove on default match); persistence `{workspace.path}/.context/context-index.md` without `## Log`; exclude `openWorkSession`, host resolution chain, `WorkSession`.
 
 
