@@ -171,6 +171,7 @@ Remove `@log`, `is_logged`, `member_is_logged`, runner run-branch logging, **`co
 - **`self.turn.finish_turn(tools, prompt, result, context)`** — **`@agent_tool`** on **Turn**. Last line in **`generate` / `validate`** recipe. Agent supplies params after work. Not inline `finish_eval_turn` on host.
 - **Session prelude** — **`self.workspace.open()`** — work session (branch, index, root). **`self.turn.open(self)`** — turn for this run. Same verb, different receiver. Both **plain**; no `@agent_tool`. Drop `ensure_session` / `create_session` / `read_context_index` / `record_context_root` as agent tools (folded into `workspace.open`; agent BDD specs update to prelude summary).
 - **`Turn.open(host)`** — plain; **opens a turn** for this generate/validate run. Default: new `Turn` on `openTurn` (`finish_turn` cleared it last time). **Edge case only:** if `openTurn` still set (agent never finished — failure/recovery), reuse existing — do not clobber.
+- **`Turn.finish` always pushes** — after turn close, **`workSession.git.push()`** runs every time (session branch → `origin`). Commit when dirty first; push regardless so remote always tracks the session branch before the agent moves on.
 
 **Turn envelope (locked):**
 
@@ -178,7 +179,7 @@ Remove `@log`, `is_logged`, `member_is_logged`, runner run-branch logging, **`co
 open turn          -> self.workspace.open() + self.turn.open(self)   // plain — session then turn
 agent work         -> domain steps; optional record_mistake / record_correction @agent_tool
 close turn         -> self.turn.finish_turn(tools, prompt, result, context)  // @agent_tool on Turn; agent invokes after work
-                      -> openTurn.finish(...)        // commit if dirty; openTurn = None
+                      -> openTurn.finish(...)        // commit if dirty; push session branch; openTurn = None
 ```
 
 **Not gone** — was inline `finish_eval_turn` on host; now **`self.turn.finish_turn(tools, prompt, result, context)`**.
@@ -330,14 +331,15 @@ Turn : AgenticToolset                   // manifest: turn.turn:Turn
       host.workspace.openTurn.finish(prompt, result, context)
   finish(prompt, result, context)       // domain — called by finish_turn @agent_tool
     self.prompt = prompt; self.result = result; self.context = context
-    if not workSession.dirty:
-      workSession.openTurn = None
-      return None
-    sha = workSession.git.commit(workSession.scope_paths, commitMessage)
-    changeCommit = TurnCommit.from(self, sha)
-    workSession.turns.add(self)
+    changeCommit = None
+    if workSession.dirty:
+      sha = workSession.git.commit(workSession.scope_paths, commitMessage)
+      changeCommit = TurnCommit.from(self, sha)
+      workSession.turns.add(self)
+    workSession.git.push()                // always — session branch to origin
     workSession.openTurn = None
     workSession.save()
+    return changeCommit
   record_mistake(tools, artifact, rule, wrong, original, tool, fidelity) @agent_tool
     for host in context_tools(tools):
       if host.workspace.openTurn is None: host.workspace.openTurn = Turn(workSession=host.workspace)
@@ -370,6 +372,7 @@ GitRepo
   checkout_or_create(branch)            // if missing create_branch; then branch = branch
   is_dirty(scope_paths)                 // low-level; prefer WorkSession.dirty
   commit(paths, message) sha
+  push()                                // git push -u origin <current branch>; called from Turn.finish every turn
   // branch setter     ≈ git switch/checkout (existing branch)
   // create_branch     ≈ git branch (create ref, stay on current HEAD)
   // checkout_or_create ≈ git switch -c when new, else git switch
@@ -698,11 +701,11 @@ turn
 
 1. **`WorkSession`** — rename type from `Session`; delete `WorkspaceSession` export and every import alias; no second name.
 2. **`open` plain** — fold `ensure_session` / `create_session` / `read_context_index` / `record_context_root`; drop their `@agent_tool` annotations.
-3. Rename `WorkspaceRepo` → `GitRepo`; `branch` property (set = switch); internal `create_branch`; `checkout_or_create`.
-3. Move branch policy to `WorkSession.session_branch` property; dirty via `WorkSession.dirty`.
-4. `Turn.finish` uses `commitMessage`; calls `workSession.git.commit(scope_paths, message)`.
-5. **SessionLog** — keep as own workspace class; delete `@log` / runner run-branch / **`control`**; **`append` → events.log + openTurn.toolCalls** for **expand** (framework) and **run** (explicit); add **`role`** metadata; extend **ToolCall** with `ok`, `error`, `role`.
-6. Update `workspace-ce.drawio` + `module-context.md`.
+3. Rename `WorkspaceRepo` → `GitRepo`; `branch` property (set = switch); internal `create_branch`; `checkout_or_create`; **`push()`**.
+4. Move branch policy to `WorkSession.session_branch` property; dirty via `WorkSession.dirty`.
+5. `Turn.finish` uses `commitMessage`; calls `workSession.git.commit(scope_paths, message)` when dirty; **always** `workSession.git.push()` before clearing `openTurn`.
+6. **SessionLog** — keep as own workspace class; delete `@log` / runner run-branch / **`control`**; **`append` → events.log + openTurn.toolCalls** for **expand** (framework) and **run** (explicit); add **`role`** metadata; extend **ToolCall** with `ok`, `error`, `role`.
+7. Update `workspace-ce.drawio` + `module-context.md`.
 
 ### Eval module checklist
 
