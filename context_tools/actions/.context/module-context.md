@@ -8,7 +8,7 @@ Lifecycle and companion kits always used in the BaseContextTool frame. Deployed 
 in-scope context tool(s).
 
 ## Membership
-Host-action kits: `sketch`, `iterate`, `grill_context`, `partition`, `host_lifecycle`, `repair` (`eval.session:Repair`), `workspace`
+Host-action kits: `sketch`, `iterate`, `grill_context`, `partition`, `host_lifecycle`, `eval` (`eval.session:EvalSession`, `eval.session:Repair`), `workspace`
 Companions: `echo`, `handoff`
 
 Host-action skill/command names match the BaseContextTool operation (`grill`, not

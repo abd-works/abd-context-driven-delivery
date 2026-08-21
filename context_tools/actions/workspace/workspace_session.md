@@ -22,12 +22,19 @@
 2. Ensure sprint exists (load or create)
 3. Load context index if present
 4. Record this tool's root when `context_index_key` is set
+5. Bind eval turn capture when a host is attached
 
 ```yaml
-tool: open   # via self.open() from BaseContextTool
+tool: open
+arguments:
+  name: <optional kebab-slug; defaults to constructor session>
+  path: <optional; overrides durable root>
+  goal: <optional; first create only>
+  fidelities: <optional; first create only>
+  contexts: <optional; first create only>
 ```
 
-Do **not** separately chain bind + read_context_index + record_context_root from lifecycle bodies — `open` already does that.
+Do **not** separately chain `read_context_index` or `record_context_root` from lifecycle bodies — `open` already does that.
 
 ## Layout
 
@@ -42,7 +49,7 @@ Do **not** separately chain bind + read_context_index + record_context_root from
 
 ## Git branch on every session start
 
-Handoff is only one way a session comes back later. **Every** `open` / `ensure_session` / `create_session` does this check — new sprint or resume of an existing one.
+Handoff is only one way a session comes back later. **Every** `open` does this check — new sprint or resume of an existing one.
 
 **Reuse `session/{name}`.** Do not mint `session/{name}-2` just because we started again. After a handoff you may be on `main`, or on a later session branch that was created from `main` (so it does not have this session's commits). Restart still checks out `session/{name}` when that branch already exists — same machine or another person who has the session name. You would have to be on that branch to see the work anyway; the start check is how we get there.
 
@@ -55,36 +62,6 @@ Handoff is only one way a session comes back later. **Every** `open` / `ensure_s
 
 Eval still only **commits** after a turn. It does not decide the switch.
 
-# Ensure Session
-
-Load `{path}/.context/sessions/{name}/session.md` if present; otherwise create it. `name` defaults to the constructor session.
-
-```yaml
-tool: ensure_session
-arguments:
-  name: <kebab-slug; optional if constructor session set>
-  path: <optional; overrides durable root>
-  goal: <optional>
-  fidelities: <optional>
-  contexts: <optional>
-```
-
-`create_session` is the same tool (alias) for older call sites.
-
-# Create Session
-
-Same as **Ensure Session** — load or create the sprint under `path`.
-
-```yaml
-tool: create_session
-arguments:
-  name: <kebab-slug>
-  path: <optional; overrides durable root>
-  goal: <optional>
-  fidelities: <optional>
-  contexts: <optional>
-```
-
 # Close Session
 
 Write the End section on `{folder}/session.md`.
@@ -96,29 +73,18 @@ arguments:
   handoff: handoff.md
 ```
 
-# Read Context Index
-
-Read `{workspace_root}/.context/context-index.md` (creates nothing). Prefer an existing entry for this tool over guessing a root. Also called from **`open`**.
-
-```yaml
-tool: read_context_index
-```
-
-# Record Context Root
-
-Upsert this toolset's root into the context index after the durable path is known. Also called from **`open`** when `context_index_key` is set.
-
-```yaml
-tool: record_context_root
-arguments:
-  root: <optional; defaults to path>
-  note: <optional>
-```
-
 # Open
 
-One tool — ensure sprint + load context index + record root when keyed. Read **Session Guidance** for `path` / `folder` / `context_index` semantics and git branch rules. Do not chain `ensure_session`, `read_context_index`, and `record_context_root` separately when `open` is in the tool list.
+One tool — ensure sprint + load context index + record root when keyed + bind eval. Read **Session Guidance** for `path` / `folder` / `context_index` semantics and git branch rules.
+
+When no sprint slug exists yet: confirm path and kebab slug with the user, then call **`open`** with `name` (or set run context `session=` first).
 
 ```yaml
 tool: open
+arguments:
+  name: <optional kebab-slug>
+  path: <optional>
+  goal: <optional>
+  fidelities: <optional>
+  contexts: <optional>
 ```

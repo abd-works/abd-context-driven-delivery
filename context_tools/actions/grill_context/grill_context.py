@@ -67,7 +67,7 @@ class GrillContext:
     def write_grill_answer(self, root: str, heading: str, body: str) -> str:
         """Append one insight to grill-answers.md under the given heading.
         root defaults to session.folder ({path}/.context/sessions/{name}/) for engagement grilling.
-        If no sprint exists yet: confirm path, suggest slug, create_session, then use session.folder.
+        If no sprint exists yet: confirm path, suggest slug, open, then use session.folder.
         Creates the file if it does not exist. Call immediately when an insight is resolved - do not batch.
         heading: short title for the insight (e.g. 'How actions are discovered').
         body: 1-3 concise sentences. Reference file paths and names instead of repeating logic."""
@@ -90,7 +90,7 @@ class GrillContext:
     @action
     def grill_with_context(self, plan: str) -> str:
         """Conduct a relentless grilling interview about {plan} - ask each question with concept-grounded framing and option rationales (never bare choices), using the AskQuestion Cursor tool when available. Stage-specific show/persist/validate cadence belongs to the wrapping stage (sketch, iterate, ...), not here."""
-        """Step 0 - Resolve roots: explore under session.path; write grill-answers under session.folder. If no sprint exists yet, confirm path with the user, suggest a kebab slug from goal/context, create_session, then continue. Do not invent a divergent root."""
+        """Step 0 - Resolve roots: explore under session.path; write grill-answers under session.folder. If no sprint exists yet, confirm path with the user, suggest a kebab slug from goal/context, open, then continue. Do not invent a divergent root."""
         """Step 1 - Context discovery: call explore_context_files(root=session.path) and any folders referenced in the plan."""
         self.explore_context_files()
         """Step 2 - MUST prove-read before asking. Upward context is more general; downward is more specific. Read every relevant context file referenced or implied by the decision - owning `*-segment.md`, module-context, session grill-answers/sketches/handoff, peer story-context, build-order, and any path the plan or prior answers cite. Index/overlay mid-epic stubs are never enough for inventory. Call read_context_file (or Read) on each - chunk large files. Grep, titles, memory, or primer-only reads do not count."""

@@ -21,9 +21,6 @@ import inspect
 from pathlib import Path
 from typing import ClassVar
 
-from grill_context.grill_context import GrillContext
-from iterate.iterate import Iterator
-from partition.partition import Partition
 from primitives.actions.action import _ActionRunner
 from primitives.actions.action import AgenticToolset
 from primitives.actions.action import action
@@ -35,7 +32,6 @@ from scanners.scan import Scan
 from sub_agent.sub_agent import sub_agent
 from workspace.session_log import log
 from workspace.workspace_session import Session
-from sketch.sketch import Sketcher
 from tools.tool import resource
 from tools.tool import tool
 
@@ -96,70 +92,15 @@ class BaseContextTool(AgenticToolset):
                 type(self), "default_workspace_folder", "."
             ),
         )
+        self.workspace.attach_host(self)
         self.scanner = Scan()
-        self.sketcher = Sketcher(agent_dir=str(self.module_dir))
-        self.grill_context = GrillContext()
-        self.iterator = Iterator()
         self.decisions = RecordDecisions()
-        self.partitioner = Partition()
-        self._bind_eval()
         self.repairer = Repair(session=self.eval, scanner=self.scanner, host=self)
 
-    def _bind_eval(self) -> None:
-        """Attach ``self.eval`` when the workspace session has path/folder/name.
-
-        Also binds ``SessionLog`` to this workspace so that every subsequent
-        ``@log``-decorated tool or action forwards a ``ToolCall`` to the open
-        eval Turn (via ``SessionLog.append → eval.record_tool_call``).
-        """
-        from eval.session import Session as EvalSession
-
-        name = getattr(self.workspace, "name", None)
-        if not name:
-            self.eval = None
-            if hasattr(self.workspace, "eval"):
-                self.workspace.eval = None  # type: ignore[attr-defined]
-            if getattr(self, "repairer", None) is not None:
-                self.repairer.session = None
-            return
-        try:
-            _ = self.workspace.folder
-        except ValueError:
-            self.eval = None
-            if getattr(self, "repairer", None) is not None:
-                self.repairer.session = None
-            return
-        self.eval = EvalSession(workspace=self.workspace)
-        self.workspace.eval = self.eval  # type: ignore[attr-defined]
-        # Bind SessionLog so @log-decorated runs forward ToolCalls to the eval Turn.
-        from workspace.session_log import SessionLog
-
-        SessionLog.instance().bind(self.workspace)
-        # Persist context so the Cursor stop hook can call finish_eval_turn.
-        self._write_eval_state()
-        if getattr(self, "repairer", None) is not None:
-            self.repairer.session = self.eval
-            self.repairer.host = self
-
-    def _write_eval_state(self) -> None:
-        """Write ~/.cursor/cdd_eval_state.json so the stop hook can close the turn."""
-        import json as _json
-        import pathlib as _pathlib
-
-        state_dir = _pathlib.Path.home() / ".cursor"
-        state_dir.mkdir(parents=True, exist_ok=True)
-        state = {
-            "cdd_repo": str(_pathlib.Path(__file__).resolve().parent.parent.parent),
-            "toolset_path": f"{type(self).__module__}:{type(self).__name__}",
-            "path": self._raw_path,
-            "session": getattr(self.workspace, "name", None),
-        }
-        try:
-            (state_dir / "cdd_eval_state.json").write_text(
-                _json.dumps(state, indent=2), encoding="utf-8"
-            )
-        except Exception:
-            pass
+    @property
+    def eval(self):
+        """Eval session bound by workspace open (None until sprint is named and open)."""
+        return getattr(self.workspace, "eval", None)
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -228,14 +169,7 @@ class BaseContextTool(AgenticToolset):
         return Instruction.ref(self.workspace, "session_guidance")
 
     @tool
-    def open(self) -> str:
-        """open"""
-        result = self.workspace.open()
-        self._bind_eval()
-        return result
-
-    @tool
-    def ensure_session(
+    def open(
         self,
         name: str = "",
         goal: str = "",
@@ -243,36 +177,14 @@ class BaseContextTool(AgenticToolset):
         contexts: str = "",
         path: str = "",
     ) -> str:
-        """ensure_session"""
-        result = self.workspace.ensure_session(
+        """open"""
+        return self.workspace.open(
             name=name,
             goal=goal,
             fidelities=fidelities,
             contexts=contexts,
             path=path,
         )
-        self._bind_eval()
-        return result
-
-    @tool
-    def create_session(
-        self,
-        name: str,
-        goal: str = "",
-        fidelities: str = "",
-        contexts: str = "",
-        path: str = "",
-    ) -> str:
-        """create_session"""
-        result = self.workspace.create_session(
-            name=name,
-            goal=goal,
-            fidelities=fidelities,
-            contexts=contexts,
-            path=path,
-        )
-        self._bind_eval()
-        return result
 
     @tool
     def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:

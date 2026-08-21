@@ -124,7 +124,7 @@ follow [this strategy](acceptance-test-strategy.md) — write this story's scena
 
 Read the GWT, the named aggregate/operation, and the running app. Reject invented steps, screen-as-class, and replaying a prior story as a Given. Green tests can still encode the wrong story.
 
-this should be logged automatically but if it's not, each time youfind a mistake, [log the mistake](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/utilities/eval/log_mistake.md) **immediately** — once you have landed on a fix you can [log the correction](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/utilities/eval/log_correction.md) with the same `entry_id`.
+[this should be logged automatically but if it's not, each time youfind a mistake, [log the mistake](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/context_tools/actions/eval/log_mistake.md) **immediately** — once you have landed on a fix you can [log the correction](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/context_tools/actions/eval/log_correction.md) with the same `entry_id`.
 
 ```
 /log_mistake
@@ -196,6 +196,6 @@ AI should have the commands in Context so you can just use natural language.
 
 **[Stories](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/context_tools/stories)** and **[DDD](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/context_tools/ddd)** — `/stories /ddd /<action>`. Scenarios together with classes, operations, and relationships of aggregates inside a bounded context.
 
-[Eval](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/utilities/eval) — `/stories /ddd /log_mistake` then `/log_correction`. Not automatic on a human reject.
+[Eval](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/context_tools/actions/eval) — `/stories /ddd /log_mistake` then `/log_correction`. Not automatic on a human reject.
 
 Other tools (Clean Engineering, BDD, Diagnose, …) are in the [context-driven delivery docs](https://forge.abdworks.net/abd-context-driven-delivery/).

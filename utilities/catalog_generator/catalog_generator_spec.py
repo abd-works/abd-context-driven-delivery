@@ -128,7 +128,7 @@ with description("Resolve Lifecycle Action Source Dir And Calls Via AST Walk"):
             expect(self.by_name["iterate"].source_dir.name).to(equal("iterate"))
             expect(self.by_name["iterate"].calls).to(contain("generate"))
 
-        with it("resolves repair to utilities/eval/ with no same-instance action call"):
+        with it("resolves repair to context_tools/actions/eval/ with no same-instance action call"):
             expect(self.by_name["repair"].source_dir.name).to(equal("eval"))
             expect(self.by_name["repair"].calls).to(equal([]))
 

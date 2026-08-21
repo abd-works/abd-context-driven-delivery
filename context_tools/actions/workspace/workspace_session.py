@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import inspect
+import json
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
@@ -53,8 +55,11 @@ class Session:
         workspace: str | None = None,
         context_index_key: str | None = None,
         default_workspace_folder: str | None = None,
+        host: Any | None = None,
     ) -> None:
         self.format = format
+        self._host = host
+        self.eval: Any | None = None
         if context_index_key is not None:
             self.context_index_key = context_index_key
         if default_workspace_folder is not None:
@@ -114,6 +119,64 @@ class Session:
 
             SessionLog.instance().bind(self)
 
+    def attach_host(self, host: Any) -> None:
+        """Wire the domain host for eval bind and stop-hook state."""
+        self._host = host
+        self._bind_eval()
+
+    def _bind_eval(self) -> None:
+        """Attach ``self.eval`` when the sprint has path/folder/name and a host is wired."""
+        if self._host is None:
+            self.eval = None
+            return
+        from eval.session import Session as EvalSession
+
+        name = getattr(self, "name", None)
+        if not name:
+            self.eval = None
+            self._sync_host_repairer()
+            return
+        try:
+            _ = self.folder
+        except ValueError:
+            self.eval = None
+            self._sync_host_repairer()
+            return
+        self.eval = EvalSession(workspace=self)
+        self._bind_session_log()
+        self._write_eval_state()
+        self._sync_host_repairer()
+
+    def _sync_host_repairer(self) -> None:
+        host = self._host
+        if host is None:
+            return
+        repairer = getattr(host, "repairer", None)
+        if repairer is not None:
+            repairer.session = self.eval
+            repairer.host = host
+
+    def _write_eval_state(self) -> None:
+        """Write ~/.cursor/cdd_eval_state.json so the stop hook can close the turn."""
+        host = self._host
+        if host is None:
+            return
+        state_dir = Path.home() / ".cursor"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        cdd_repo = Path(inspect.getfile(type(host))).resolve().parent.parent.parent
+        state = {
+            "cdd_repo": str(cdd_repo),
+            "toolset_path": f"{type(host).__module__}:{type(host).__name__}",
+            "path": getattr(host, "_raw_path", None),
+            "session": getattr(self, "name", None),
+        }
+        try:
+            (state_dir / "cdd_eval_state.json").write_text(
+                json.dumps(state, indent=2), encoding="utf-8"
+            )
+        except Exception:
+            pass
+
     def _resolve_working_area(self, working_area: str | None) -> str:
         if working_area is not None:
             return working_area
@@ -141,7 +204,7 @@ class Session:
         if not self.name:
             raise ValueError(
                 "session name is not set - confirm working path and session slug with the "
-                "user, then call create_session before grill/sketch/handoff"
+                "user, then call open before grill/sketch/handoff"
             )
         return Path(self.path) / ".context" / "sessions" / self.name
 
@@ -335,22 +398,7 @@ class Session:
     # -- Open (one tool; hosts call self.open() which delegates here) ---------
 
     @tool
-    def open(self) -> str:
-        """open"""
-        self.ensure_session()
-        self.read_context_index()
-        self.record_context_root()
-        return (
-            "Workspace open. "
-            "durable root = path; "
-            "sprint docs = folder; "
-            "context index loaded when present."
-        )
-
-    # -- Session tools (usable alone; open runs these in order) --------------
-
-    @tool
-    def ensure_session(
+    def open(
         self,
         name: str = "",
         goal: str = "",
@@ -358,13 +406,41 @@ class Session:
         contexts: str = "",
         path: str = "",
     ) -> str:
-        """ensure_session"""
+        """open"""
+        sprint = self._ensure_sprint(
+            name=name,
+            goal=goal,
+            fidelities=fidelities,
+            contexts=contexts,
+            path=path,
+        )
+        if sprint.startswith("need session name"):
+            return sprint
+        self.read_context_index()
+        self.record_context_root()
+        self._bind_eval()
+        return (
+            "Workspace open. "
+            "durable root = path; "
+            "sprint docs = folder; "
+            "context index loaded when present."
+        )
+
+    def _ensure_sprint(
+        self,
+        name: str = "",
+        goal: str = "",
+        fidelities: str = "",
+        contexts: str = "",
+        path: str = "",
+    ) -> str:
+        """Load or create the sprint folder under path (internal; ``open`` calls this)."""
         effective_path = path.strip() or self.path
         effective_name = name.strip() or (self.name or "")
         if not effective_name:
             return (
                 "need session name — confirm working path and kebab slug with the user, "
-                "then call ensure_session (or create_session) before grill/sketch"
+                "then call open before grill/sketch"
             )
         loaded = type(self).load(effective_path, effective_name)
         if loaded.session_md.is_file():
@@ -386,30 +462,11 @@ class Session:
         return str(self.session_md.resolve())
 
     @tool
-    def create_session(
-        self,
-        name: str,
-        goal: str = "",
-        fidelities: str = "",
-        contexts: str = "",
-        path: str = "",
-    ) -> str:
-        """create_session"""
-        return self.ensure_session(
-            name=name,
-            goal=goal,
-            fidelities=fidelities,
-            contexts=contexts,
-            path=path,
-        )
-
-    @tool
     def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:
         """close_session"""
         md = self.close(outcome=outcome, handoff=handoff)
         return str(md.resolve())
 
-    @tool
     def read_context_index(self) -> str:
         """read_context_index"""
         path = ContextIndex.context_index_path(self.workspace_root)
@@ -420,7 +477,6 @@ class Session:
         self._context_index = text
         return text
 
-    @tool
     def record_context_root(self, root: str = "", note: str = "") -> str:
         """record_context_root"""
         key = getattr(self, "context_index_key", "") or ""

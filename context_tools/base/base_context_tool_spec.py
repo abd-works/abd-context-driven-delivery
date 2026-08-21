@@ -7,7 +7,7 @@
 Peer-kit expansion lives with the kits:
 - ``context_tools/actions/workspace/workspace_session_spec.py``
 - ``context_tools/actions/partition/partition_spec.py``
-- ``utilities/eval/session_spec.py``
+- ``context_tools/actions/eval/session_spec.py``
 
 Meta generator face (scaffold templates / create_context_tool.md) lives in
 ``create_context_tool/create_context_tool_spec.py``.
@@ -344,20 +344,11 @@ with description("BaseContextTool public host face"):
 
         expect(isinstance(self.host.scanner, Scan)).to(be_true)
 
-    with it("should hold a Sketcher as sketcher"):
-        from sketch.sketch import Sketcher
-
-        expect(isinstance(self.host.sketcher, Sketcher)).to(be_true)
-
-    with it("should hold a GrillContext as grill_context"):
-        from grill_context.grill_context import GrillContext
-
-        expect(isinstance(self.host.grill_context, GrillContext)).to(be_true)
-
-    with it("should hold an Iterator as iterator"):
-        from iterate.iterate import Iterator
-
-        expect(isinstance(self.host.iterator, Iterator)).to(be_true)
+    with it("should not compose Sketcher, GrillContext, Iterator, or Partition"):
+        expect(hasattr(self.host, "sketcher")).to(be_false)
+        expect(hasattr(self.host, "grill_context")).to(be_false)
+        expect(hasattr(self.host, "iterator")).to(be_false)
+        expect(hasattr(self.host, "partitioner")).to(be_false)
 
     with it("should hold RecordDecisions as decisions"):
         from record_decisions.record_decisions import RecordDecisions
@@ -374,9 +365,13 @@ with description("BaseContextTool public host face"):
             be_true
         )
 
-    with it("should expose create_session and close_session as host tools"):
-        expect("create_session" in self.host.tools).to(be_true)
+    with it("should expose open and close_session as host tools"):
+        expect("open" in self.host.tools).to(be_true)
         expect("close_session" in self.host.tools).to(be_true)
+
+    with it("should not expose ensure_session or create_session on the host"):
+        expect("ensure_session" in self.host.tools).to(be_false)
+        expect("create_session" in self.host.tools).to(be_false)
 
     with it("should expose render as a host tool"):
         expect("render" in self.host.tools).to(be_true)

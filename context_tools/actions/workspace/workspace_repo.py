@@ -2,7 +2,7 @@
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
-"""Working-area git: session branch create/checkout, path-limited commits."""
+"""Working-area git: session branch create/checkout and scoped commits."""
 from __future__ import annotations
 
 import shutil

@@ -1,27 +1,21 @@
-"""Example: open or resume a named sprint using Session.ensure_session."""
-
-from __future__ import annotations
+"""Example: open or resume a named sprint using Session.open."""
 
 from workspace.workspace_session import Session
 
 
-class SprintLifecycle(Session):
-    """Manage a named sprint workspace: open or resume in a single call."""
+class SprintLifecycle:
+    """Minimal pattern for starting or resuming a named sprint."""
 
     def open_sprint(self, workspace: str, name: str) -> str:
-        """Start or resume the sprint named *name* under *workspace*.
+        """Open a sprint under *workspace* with slug *name*.
 
-        Instantiates a ``Session`` bound to *workspace*, then calls
-        ``ensure_session`` with a descriptive goal so the sprint folder and
-        ``session.md`` are created when missing or left untouched when they
-        already exist.
-
-        Returns the absolute path to the ``session.md`` file.
+        Call ``open`` with a descriptive goal on first create so the sprint
+        folder and session.md Start block capture intent.
         """
-        session = Session(workspace=workspace)
-        return session.ensure_session(
+        session = Session(path=workspace, session=name, workspace=workspace)
+        return session.open(
             name=name,
-            goal="Deliver sprint increment for the named scope",
-            fidelities="context, stories, bdd",
-            path=workspace,
+            goal="Example sprint — replace with real goal text",
+            fidelities="model",
+            contexts="bdd",
         )

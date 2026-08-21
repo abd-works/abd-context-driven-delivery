@@ -1,0 +1,14 @@
+﻿Prove eval.Session + real git on THIS clone's linked worktree.
+Worktree root: C:/Users/thoma/AppData/Local/Temp/eval-agent-git-wt-mr0371tu
+Working-area path: C:/Users/thoma/AppData/Local/Temp/eval-agent-git-wt-mr0371tu/sandbox/eval-agent-git-probe
+Session name: eval-agent-git-probe
+1. Using shell/python with PYTHONPATH covering utilities + context_tools/actions + primitives, construct eval.Session with WorkspaceRepo and CDDRepo BOTH rooted at the worktree (same git root for workspace + tool).
+2. record_tool_call a ToolCall(toolset='echo.echo:Echoer', name='fence', summary='eval session git probe').
+3. Write probe.txt under the working-area path with one short line.
+4. finish_turn(prompt='agent-bdd', result='ok', context='sandbox').
+5. Reply with a short plain-text report including exactly these lines:
+BRANCH: <session branch>
+CHANGE_COMMIT: <sha>
+TOOL_SHA: <sha>
+SESSION_YAML: <absolute path>
+Do not delete the worktree or switch the main worktree branch.

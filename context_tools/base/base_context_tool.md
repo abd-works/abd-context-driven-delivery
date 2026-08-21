@@ -5,7 +5,7 @@
 ---
 # Open
 
-One tool before lifecycle work — ensures sprint, loads context index, records root when keyed. See **Session Guidance** (`session_guidance`). Do not chain `ensure_session`, `read_context_index`, or `record_context_root` when `open` is in the tool list.
+One tool before lifecycle work — ensures sprint, loads context index, records root when keyed. See **Session Guidance** (`session_guidance`). Do not chain `read_context_index` or `record_context_root` when `open` is in the tool list.
 
 ```yaml
 tool: open
@@ -14,7 +14,7 @@ tool: open
 ---
 # Generate
 
-1. Call **`open`** (or **`create_session`** first when no sprint slug exists). Follow **`session_guidance`**; use the **`active`** resource for `active.path` / `active.folder`.
+1. Call **`open`**. Confirm sprint slug with the user when run context has no `session=`; pass `name` / `goal` / `fidelities` on first create if needed. Follow **`session_guidance`**; use the **`active`** resource for `active.path` / `active.folder`.
 2. **MUST — prove-read before asking.** Before any grill/iterate question (and before inventing options or story/module names):
    - Identify **every relevant context file referenced or implied** by the decision — not one favorite type. Typical set: `{workspace}/.context/context-index.md`, owning `*-segment.md`, `module-context.md`, session grill-answers / sketches / handoff, peer story-context, build-order, and any path the plan or prior answers cite. Include index/overlay only for structure hints; **never** treat mid-epic stub columns as inventory.
    - **Read each of those files with the Read tool** (chunk through large ones). Grep, title lists, memory, or primer-only skims **do not count**.

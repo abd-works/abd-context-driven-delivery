@@ -20,10 +20,9 @@ from tools.tool import tool
 class Partition:
     """Corpus partition: index, segment, completeness.
 
-    Real toolset (not a mixin). Hosts get a real instance as a plain
-    attribute (e.g. ``self.partitioner``), so a cross-instance call like
-    ``self.partitioner.partition(...)`` expands inline as instruction text
-    (or defers as a tool step when ``mode="tool"``).
+    Real toolset (not a mixin). Slash ``/partition`` runs this kit with
+    ``arguments.tools``; each host is opened via ``host.open()`` inside
+    ``partition(tools)``, not via a composed attribute on BaseContextTool.
     """
 
 

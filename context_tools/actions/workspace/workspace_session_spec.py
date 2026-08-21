@@ -57,10 +57,10 @@ def _section(name: str) -> str:
 
 
 with description("WorkspaceSession kit prose"):
-    with it("should resolve create_session from workspace_session.md section"):
-        text = _section("create_session")
-        expect(text.startswith("# Create Session")).to(be_true)
-        expect("kebab-slug" in text).to(be_true)
+    with it("should resolve open from workspace_session.md section"):
+        text = _section("open")
+        expect(text.startswith("# Open")).to(be_true)
+        expect("Session Guidance" in text or "session" in text.lower()).to(be_true)
 
     with it("should resolve session guidance from workspace_session.md section"):
         text = _section("session_guidance")
@@ -106,20 +106,15 @@ with description("WorkspaceSession on a BaseContextTool host"):
                 in self.response["instructions"]
             ).to(be_false)
 
-        with it("should expand kit tool instructions from workspace_session.md"):
+        with it("should expand kit open instructions from workspace_session.md"):
             from workspace.workspace_session import Session
 
             tools = _discover_tools(self.host.workspace)
             expect(isinstance(self.host.workspace, Session)).to(be_true)
-            expect(tools["create_session"].instructions.startswith("# Create Session")).to(
+            expect(tools["open"].instructions.startswith("# Open")).to(be_true)
+            expect(tools["close_session"].instructions.startswith("# Close Session")).to(
                 be_true
             )
-            expect(
-                tools["read_context_index"].instructions.startswith("# Read Context Index")
-            ).to(be_true)
-            expect(
-                tools["ensure_session"].instructions.startswith("# Ensure Session")
-            ).to(be_true)
 
     with context("ChronicleWithOutput generate"):
         with before.all:
@@ -444,27 +439,20 @@ with description("a Session tool"):
             expect(idx.is_file()).to(be_true)
             expect("test-kit" in idx.read_text(encoding="utf-8")).to(be_true)
 
-    with context("ensure_session"):
+    with context("_ensure_sprint"):
         with it("should create the session folder and return the session.md path"):
             # Act
-            result = self.session.ensure_session(name="tool-sprint", goal="goal A",
-                                                  path=str(self.tmp))
+            result = self.session._ensure_sprint(
+                name="tool-sprint", goal="goal A", path=str(self.tmp)
+            )
             # Assert
             expect(Path(result).is_file()).to(be_true)
             expect(Path(result).name).to(equal("session.md"))
 
-    with context("create_session"):
-        with it("should create the session and return the session.md path"):
-            # Act
-            result = self.session.create_session(name="create-sprint",
-                                                  path=str(self.tmp))
-            # Assert
-            expect(Path(result).is_file()).to(be_true)
-
     with context("close_session"):
         with it("should write the End section and return the session.md path"):
             # Arrange
-            self.session.ensure_session(name="close-sprint", path=str(self.tmp))
+            self.session._ensure_sprint(name="close-sprint", path=str(self.tmp))
             # Act
             result = self.session.close_session(outcome="done")
             # Assert

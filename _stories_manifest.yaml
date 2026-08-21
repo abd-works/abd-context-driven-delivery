@@ -1,5 +1,4 @@
-﻿```yaml
----
+﻿---
 type: stories
 capabilities:
 - tool
@@ -24,34 +23,21 @@ signature:
       path: str | None
       session: str | None
       workspace: str | None
+  begin_eval_turn:
+    kind: tool
+    instructions: Open the eval Turn. Listed on generate / validate / document / partition
+      / repair / createRule.
+    returns: str
   close_session:
     kind: tool
     parameters:
       outcome: str
       handoff: str
     returns: str
-  create_session:
-    kind: tool
-    parameters:
-      name: str
-      goal: str
-      fidelities: str
-      contexts: str
-      path: str
-    returns: str
-  ensure_session:
-    kind: tool
-    parameters:
-      name: str
-      goal: str
-      fidelities: str
-      contexts: str
-      path: str
-    returns: str
   finish_eval_turn:
     kind: tool
-    instructions: Close the open eval Turn at the chat-reply boundary (hook/host calls
-      once).
+    instructions: Close the open eval Turn. Listed on generate / validate / document
+      / partition / repair / createRule.
     parameters:
       prompt: str
       result: str
@@ -59,29 +45,48 @@ signature:
     returns: str
   log_correction:
     kind: tool
+    instructions: log_correction ΓÇö Correction.apply through Repair; writes repairedAsset
+      and improvement.md.
     parameters:
       entry_id: str
       improved: str
+      how: str
       status: str
     returns: str
-  log_mistake:
+  open:
     kind: tool
+    instructions: '# Open
+
+
+      One tool before lifecycle work ΓÇö ensures sprint, loads context index, records
+      root when keyed. See **Session Guidance** (`session_guidance`). Do not chain
+      `ensure_session`, `read_context_index`, or `record_context_root` when `open`
+      is in the tool list.
+
+
+      ```yaml
+
+      tool: open
+
+      ```
+
+
+      ---'
     parameters:
-      artifact: str
-      rule: str
-      wrong: str
-      original: str
-      when: str
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
     returns: str
-  read_context_index:
+  render:
     kind: tool
-    returns: str
-  record_context_root:
-    kind: tool
+    instructions: Render already-generated story output into ``format`` via channel
+      parse/render.
     parameters:
-      root: str
-      note: str
-    returns: str
+      format: str
+      content: str
+    returns: dict
   scan:
     kind: tool
     parameters:
@@ -111,11 +116,45 @@ signature:
     instructions: Prepend the following block verbatim as the very first lines of
       the file you are writing - before any imports, before any code.
     returns: str
+  createRule:
+    kind: action
+    tools:
+    - begin_eval_turn
+    - finish_eval_turn
+    instructions: '# Create Rule
+
+
+      One action. Do not call this if **scan** already reports a failure that matches
+      the mistake. Do not call this to mint a ban-list rule for a one-off invented
+      shape, or until you have checked that the existing **contexts**, **examples**,
+      **template**, and generator/seed cannot steer the failure.
+
+
+      Take **failed** (what went wrong on the asset) and **wanted** (what should have
+      happened). Using **contexts**, **examples**, and **template**, evaluate a new
+      named rule and a matching scanner that can detect that failure deterministically
+      ΓÇö only when the failure is mechanical and that existing surface cannot carry
+      it.
+
+
+      Write the rule and the scanner into **this tool** (the context tool''s own guidance
+      and `scanners/`). Then **run that rule** via **scan** on the asset and **detect
+      a failure that matches the mistake**. If scan is clean, or the failures are
+      not this mistake, the rule/scanner is not done.
+
+      '
+    parameters:
+      failed: str
+      wanted: str
+    returns: str
   document:
     kind: action
     tools:
+    - open
+    - begin_eval_turn
     - generate_output
     - add_generate_header_to_generated
+    - finish_eval_turn
     instructions: '# Document
 
 
@@ -136,20 +175,29 @@ signature:
       5. Call **`scan`** and append all violations to the document as-is ΓÇö flag them,
       do not correct them.
 
-      6. Save the artifact under the session layout from `session_guidance`.'
+      6. Save the artifact under the session layout from `session_guidance`.
+
+      7. **Live-app wraps.** DDD `/document` defaults the working area to `domain/`
+      (overridable via `path` or `default_workspace_folder`). Put wraps under `{bounded-context}/{aggregate}/`
+      as `{class}.ts` + `{class}.{tier}.ts` + `stubs/{system}/`. **Generate** may
+      still use `src/`.
+
+
+      ---'
     parameters:
       paths: list[str]
     returns: str
   generate:
     kind: action
     tools: []
-    instructions: "Generate story artifacts at the current fidelity.\n        At story_map\
+    instructions: "Generate story artifacts at the current fidelity.\n        At scaffold\
+      \ fidelity: write epic, sub-epic, and story names only.\n        At story_map\
       \ fidelity: write the story map and thin-slice only.\n        At scenarios fidelity:\
       \ write main-flow scenarios (single or multiple per story) with optional variations;\
-      \ use ExampleFactory fakes where available.\n        At acceptance_tests fidelity:\
-      \ write *_spec and *_spec.{tier} acceptance test files. When spec files are\
-      \ written, call ce().generate() to produce or update the matching production\
-      \ class implementations and wire any supporting code changes."
+      \ fixtures live in examples/ and givens.ts at the lowest shared epic/sub-epic/story\
+      \ folder.\n        At acceptance_tests fidelity: write tests/{epic}/{sub-epic}/{story}.{tier}.ts\
+      \ (one GWT file per story per seam, no story folder). When those files are written,\
+      \ call ce().generate() to produce or update matching wrap classes under domain/."
     returns: str
   generate_fixes_from_validate:
     kind: action
@@ -163,12 +211,9 @@ signature:
   grill:
     kind: action
     tools:
+    - open
     - generate
     instructions: Grill then generate - pure grill loop, then the host generate body.
-    returns: str
-  improve:
-    kind: action
-    tools: []
     returns: str
   iterate:
     kind: action
@@ -183,7 +228,10 @@ signature:
     returns: str
   partition:
     kind: action
-    tools: []
+    tools:
+    - open
+    - begin_eval_turn
+    - finish_eval_turn
     parameters:
       context: str
       mode: str
@@ -209,13 +257,17 @@ signature:
   sketch:
     kind: action
     tools:
+    - open
     - generate
     instructions: Sketch then generate - grill + sketch cadence, then the host generate
       body.
     returns: str
   validate:
     kind: action
-    tools: []
+    tools:
+    - open
+    - begin_eval_turn
+    - finish_eval_turn
     instructions: '# Validate
 
 
@@ -235,17 +287,16 @@ signature:
 
       ---'
     returns: str
-  archive_mistakes:
+  log_mistake:
     kind: sub_agent
     launch: non_blocking
+    instructions: log_mistake ΓÇö records through Repair onto session.yaml and session/mistakes/.
     parameters:
-      repo_root: str
-    returns: str
-  verify_regression:
-    kind: sub_agent
-    launch: non_blocking
-    parameters:
-      examples_root: str
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      when: str
     returns: str
 ---
-```
+

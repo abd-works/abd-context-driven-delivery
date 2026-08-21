@@ -1,4 +1,4 @@
----
+﻿---
 type: bdd
 capabilities:
 - tool
@@ -24,34 +24,21 @@ signature:
       path: str | None
       session: str | None
       workspace: str | None
+  begin_eval_turn:
+    kind: tool
+    instructions: Open the eval Turn. Listed on generate / validate / document / partition
+      / repair / createRule.
+    returns: str
   close_session:
     kind: tool
     parameters:
       outcome: str
       handoff: str
     returns: str
-  create_session:
-    kind: tool
-    parameters:
-      name: str
-      goal: str
-      fidelities: str
-      contexts: str
-      path: str
-    returns: str
-  ensure_session:
-    kind: tool
-    parameters:
-      name: str
-      goal: str
-      fidelities: str
-      contexts: str
-      path: str
-    returns: str
   finish_eval_turn:
     kind: tool
-    instructions: Close the open eval Turn at the chat-reply boundary (hook/host calls
-      once).
+    instructions: Close the open eval Turn. Listed on generate / validate / document
+      / partition / repair / createRule.
     parameters:
       prompt: str
       result: str
@@ -59,29 +46,48 @@ signature:
     returns: str
   log_correction:
     kind: tool
+    instructions: log_correction ΓÇö Correction.apply through Repair; writes repairedAsset
+      and improvement.md.
     parameters:
       entry_id: str
       improved: str
+      how: str
       status: str
     returns: str
-  log_mistake:
+  open:
     kind: tool
+    instructions: '# Open
+
+
+      One tool before lifecycle work ΓÇö ensures sprint, loads context index, records
+      root when keyed. See **Session Guidance** (`session_guidance`). Do not chain
+      `ensure_session`, `read_context_index`, or `record_context_root` when `open`
+      is in the tool list.
+
+
+      ```yaml
+
+      tool: open
+
+      ```
+
+
+      ---'
     parameters:
-      artifact: str
-      rule: str
-      wrong: str
-      original: str
-      when: str
+      name: str
+      goal: str
+      fidelities: str
+      contexts: str
+      path: str
     returns: str
-  read_context_index:
+  render:
     kind: tool
-    returns: str
-  record_context_root:
-    kind: tool
+    instructions: Render already-generated BDD output into ``format`` via CleanEngineering
+      channels.
     parameters:
-      root: str
-      note: str
-    returns: str
+      format: str
+      content: str
+    returns: dict
   scan:
     kind: tool
     parameters:
@@ -108,15 +114,49 @@ signature:
     instructions: Prepend the following block verbatim as the very first lines of
       the file you are writing - before any imports, before any code.
     returns: str
+  createRule:
+    kind: action
+    tools:
+    - begin_eval_turn
+    - finish_eval_turn
+    instructions: '# Create Rule
+
+
+      One action. Do not call this if **scan** already reports a failure that matches
+      the mistake. Do not call this to mint a ban-list rule for a one-off invented
+      shape, or until you have checked that the existing **contexts**, **examples**,
+      **template**, and generator/seed cannot steer the failure.
+
+
+      Take **failed** (what went wrong on the asset) and **wanted** (what should have
+      happened). Using **contexts**, **examples**, and **template**, evaluate a new
+      named rule and a matching scanner that can detect that failure deterministically
+      ΓÇö only when the failure is mechanical and that existing surface cannot carry
+      it.
+
+
+      Write the rule and the scanner into **this tool** (the context tool''s own guidance
+      and `scanners/`). Then **run that rule** via **scan** on the asset and **detect
+      a failure that matches the mistake**. If scan is clean, or the failures are
+      not this mistake, the rule/scanner is not done.
+
+      '
+    parameters:
+      failed: str
+      wanted: str
+    returns: str
   document:
     kind: action
     tools:
+    - open
+    - begin_eval_turn
     - generate_output
     - add_generate_header_to_generated
+    - finish_eval_turn
     instructions: '# Document
 
 
-      Take the persona of a **neutral observer** — describe what exists, do not prescribe
+      Take the persona of a **neutral observer** ΓÇö describe what exists, do not prescribe
       what should exist.
 
 
@@ -124,29 +164,37 @@ signature:
 
       2. Read the **contexts** to understand the vocabulary and structure of the domain.
 
-      3. Fill the **template** scaffold with observed content — describe current state
+      3. Fill the **template** scaffold with observed content ΓÇö describe current state
       only.
 
       4. Do not apply, suggest, or imply rules or best practices in the generated
       output.
 
-      5. Call **`scan`** and append all violations to the document as-is — flag them,
+      5. Call **`scan`** and append all violations to the document as-is ΓÇö flag them,
       do not correct them.
 
-      6. Save the artifact under the session layout from `session_guidance`.'
+      6. Save the artifact under the session layout from `session_guidance`.
+
+      7. **Live-app wraps.** DDD `/document` defaults the working area to `domain/`
+      (overridable via `path` or `default_workspace_folder`). Put wraps under `{bounded-context}/{aggregate}/`
+      as `{class}.ts` + `{class}.{tier}.ts` + `stubs/{system}/`. **Generate** may
+      still use `src/`.
+
+
+      ---'
     parameters:
       paths: list[str]
     returns: str
   generate:
     kind: action
     tools: []
-    instructions: "At modules fidelity: delegate entirely to ce().generate() — no\
+    instructions: "At modules fidelity: delegate entirely to ce().generate() ΓÇö no\
       \ BDD spec file is written at this stage. Use this to bootstrap CE class structure\
       \ before writing tests.\n        At behavior fidelity: write all BDD test signatures\
       \ (SIGNATURE markers).\n        At development fidelity: write full test bodies\
       \ and production code.\n        When the target module already exists, scan\
       \ the production source for every public method and property and verify each\
-      \ has test coverage — add missing signatures for any gap before writing new\
+      \ has test coverage ΓÇö add missing signatures for any gap before writing new\
       \ ones.\n        BDD tests must conform to CE class structure: describe/it hierarchies\
       \ must map onto public CE interfaces and operations.\n        When BDD artifacts\
       \ are complete, call ce().generate() to produce the matching class skeletons."
@@ -167,24 +215,23 @@ signature:
       \   When BDD grill is complete, call ce().grill() to do the same for the matching\
       \ classes."
     returns: str
-  improve:
-    kind: action
-    tools: []
-    returns: str
   iterate:
     kind: action
     tools: []
     instructions: "Iterate one BDD cycle: write one test, confirm it is RED, then\
       \ call ce().iterate() to build the minimum production code until GREEN. Repeat\
-      \ — one test, one production change, one GREEN — until all tests pass.\n   \
-      \     If the same test is still RED after 2 consecutive fix attempts — stop\
+      \ ΓÇö one test, one production change, one GREEN ΓÇö until all tests pass.\n   \
+      \     If the same test is still RED after 2 consecutive fix attempts ΓÇö stop\
       \ guessing. Call diagnostic().diagnose() before a third fix (wrong exception,\
       \ wrong line, shifting failure mode, or a re-read of the code that does not\
       \ explain the failure)."
     returns: str
   partition:
     kind: action
-    tools: []
+    tools:
+    - open
+    - begin_eval_turn
+    - finish_eval_turn
     parameters:
       context: str
       mode: str
@@ -218,16 +265,16 @@ signature:
       \ BDD validation passes, call ce().validate() to validate the matching class\
       \ artifacts."
     returns: str
-  archive_mistakes:
+  log_mistake:
     kind: sub_agent
     launch: non_blocking
+    instructions: log_mistake ΓÇö records through Repair onto session.yaml and session/mistakes/.
     parameters:
-      repo_root: str
-    returns: str
-  verify_regression:
-    kind: sub_agent
-    launch: non_blocking
-    parameters:
-      examples_root: str
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      when: str
     returns: str
 ---
+
