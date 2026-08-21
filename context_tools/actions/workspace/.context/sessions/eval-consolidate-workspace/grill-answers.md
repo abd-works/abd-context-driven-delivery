@@ -71,3 +71,27 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 **Slice unlocked:** **partial** ΓÇö sketch may proceed for load / lookup / save / sparse rows; hold **`it should drop the row when path matches host default`** until tick 3.
 
+---
+
+### Turn 4d111cd1 ΓÇö grill tick 3
+
+**Question:** OO sketch line 131: `upsertPath` when resolved path **matches host default again** ΓåÆ remove the row. `Workspace` does not own `default_workspace_folder`. How should slice **A** Bdd express default-match **removal**?
+
+**Options:**
+
+- **A ΓÇö Caller-supplied default:** `upsertPath(tool, fidelity, path, default_path)` ΓÇö when `path == default_path`, remove the row; when path differs from default, upsert sparse row. Host passes its `default_workspace_folder`-resolved path at call time.
+- **B ΓÇö Explicit remove only:** `removePath(tool, fidelity)` on `Workspace`; slice A Bdd covers add/update + explicit remove; ΓÇ£matches defaultΓÇ¥ removal is host orchestration in a **later** slice (open / BaseContextTool).
+- **C ΓÇö Omit removal from slice A:** only add/update rows in this sketch; no `it should` for default-match removal anywhere yet.
+
+**Runner paths read:**
+
+- `workspace-eval-oo-sketch.md` line 131, lines 47ΓÇô50
+- `grill-answers.md` ticks 1ΓÇô2 (slice A, lookupPath absent ΓåÆ None)
+
+**Judge answer:** *(pending)*
+
+**Citations:** *(pending)*
+
+**Slice unlocked:** *(pending)*
+
+

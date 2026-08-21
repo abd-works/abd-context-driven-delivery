@@ -47,6 +47,18 @@ turns:
     session_name: eval-consolidate-workspace
     tool_names: []
     mistake_ids: []
-    sha: 99e2a14c5236c48e87d67831f91cdda78b8284eb
+    sha: 58bb179ec7ef4c81acc56b9f79da0b0f2c331154
+  tool_calls: []
+  mistakes: []
+- id: bea7a355
+  prompt: bdd grill tick 3 - upsertPath default-match removal
+  result: Question on sparse row removal
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: bea7a355
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 255f45e90e70d10ff6ca49525001adefcd94b9bc
   tool_calls: []
   mistakes: []
