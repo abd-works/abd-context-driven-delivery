@@ -79,4 +79,28 @@ with description("a workspace"):
                 pass
 
 
+with description("a work session"):
+    with context("that is opened on its workspace"):
+        with context("with HEAD already on its session branch"):
+            with it("should continue without switching branch"):
+                # BDD: SIGNATURE
+                pass
+
+        with context("with a clean working tree not on its session branch"):
+            with context("with an existing session branch"):
+                with it("should check out that session branch"):
+                    # BDD: SIGNATURE
+                    pass
+
+            with context("with no session branch yet"):
+                with it("should create its session branch"):
+                    # BDD: SIGNATURE
+                    pass
+
+        with context("with a dirty working tree not on its session branch"):
+            with it("should refuse to switch branch"):
+                # BDD: SIGNATURE
+                pass
+
+
 
