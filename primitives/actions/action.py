@@ -144,7 +144,7 @@ from primitives.instructions import (
     _inline,
     instruction_slot_names,
 )
-from tools.tool import _SignatureReader, resource, Toolset
+from tools.tool import _SignatureReader, _ToolsetLoader, resource, Toolset
 
 
 class AgenticToolset(Toolset):
@@ -181,6 +181,20 @@ class AgenticToolset(Toolset):
         if new_mode not in ("action", "tool"):
             raise ValueError(f"mode must be 'action' or 'tool', got {new_mode!r}")
         self._mode = new_mode
+
+    def context_tool(self, item: object) -> object:
+        """Resolve one tools item to a context-tool instance (path, mapping, or already loaded)."""
+        if isinstance(item, str):
+            return _ToolsetLoader.instance().load(item)()
+        if isinstance(item, dict):
+            loaded = _ToolsetLoader.instance().load(str(item["toolset"]))
+            return loaded(**(item.get("context") or {}))
+        return item
+
+    def context_tools(self, items: list | None = None) -> list:
+        """Resolve the action's context-tool arguments. Kits inherit this — do not copy it."""
+        raw = items if items is not None else getattr(self, "_context_tool_items", None) or []
+        return [self.context_tool(item) for item in raw]
 
 
 class ActionValidationError(Exception):
@@ -1050,6 +1064,8 @@ class _ActionExpander:
         return {"result": result, "instructions": instructions, "tools": list(dict.fromkeys(body.tool_steps))}
 
     def expand(self, request: _ActionExpandRequest) -> ActionExpansion:
+        if request.instance is not None and "tools" in request.arguments:
+            request.instance._context_tool_items = request.arguments["tools"]
         body = self.parse_body(request.action_func, request.instance)
         self._log_expansion(request, body.tool_steps)
         parameter_names = set(self._reader.simple_parameters(request.action_func))

@@ -12,6 +12,7 @@ def register() -> None:
     if _registered:
         return
     ToolsetExtensions.instance().register_signature_discoverer(discover_sub_agent_tools)
+    ToolsetExtensions.instance().register_members("sub_agent", discover_sub_agent_tools)
     _registered = True
 
 

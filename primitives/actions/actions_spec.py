@@ -622,3 +622,24 @@ with description("Action"):
             action_obj.add_to_signature(sig)
             expect("travelTo" in sig).to(be_true)
             expect(sig["travelTo"]["kind"]).to(equal("action"))
+
+
+@agentic_toolset
+class _ContextToolsKit:
+    @action
+    def run(self) -> str:
+        return "done"
+
+
+with description("an AgenticToolset"):
+    with context("that is given context tools"):
+        with it("should return an already-loaded instance unchanged"):
+            kit = _ContextToolsKit()
+            host = object()
+            expect(kit.context_tool(host)).to(equal(host))
+
+        with it("should resolve a list of instances via context_tools"):
+            kit = _ContextToolsKit()
+            first, second = object(), object()
+            expect(kit.context_tools([first, second])).to(equal([first, second]))
+

@@ -93,3 +93,25 @@ with description("python -m tools run"):
             code, response = _run_cli(["run", _CAR])
             expect(code).to(equal(1))
             expect(response.get("ok")).to(equal(False))
+
+
+_SUB_AGENT = "sub_agent.examples.parallel_runner.parallel_runner:ParallelRunner"
+
+
+with description("the tools CLI"):
+    with context("that is given a sub_agent tool name"):
+        with it("should invoke the method and return its result"):
+            code, response = _run_cli(
+                [
+                    "run",
+                    _SUB_AGENT,
+                    "--tool",
+                    "run_analysis",
+                    "--arg",
+                    "target=demo",
+                ]
+            )
+            expect(code).to(equal(0))
+            expect(response.get("ok")).to(equal(True))
+            expect(response.get("tool")).to(equal("run_analysis"))
+            expect(response.get("result")).to(equal("analysed:demo"))

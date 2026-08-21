@@ -28,6 +28,8 @@ The same surface is revealed by annotating methods with `@tool` / `@resource` an
 
 **`RunError`** — failure carrying a structured run-response document for CLI output.
 
+`run` with `tool:` dispatches `@tool` members and registered extension members that are not `@action` (currently `@sub_agent` via `ToolsetExtensions.members("sub_agent")`). Manifest kind stays `sub_agent`; the CLI still executes the Python body.
+
 **`read_toolset_header` / `ToolsetHeader`** — parse the `@toolset-manifest` header from a source file.
 
 ## Dependencies

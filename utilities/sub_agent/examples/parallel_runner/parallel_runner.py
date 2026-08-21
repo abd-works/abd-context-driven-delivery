@@ -27,3 +27,4 @@ class ParallelRunner:
         the calling agent launches it as a non-blocking background task
         and continues without waiting for the result.
         """
+        return f"analysed:{target}"

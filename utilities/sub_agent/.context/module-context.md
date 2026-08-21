@@ -10,4 +10,4 @@
 `tools.tool`
 
 ## Mechanism
-Decorator stacking — `@tool` runs first to capture the signature; `@sub_agent` then flips the routing flags so the method surfaces in the manifest with sub-agent semantics rather than inline-tool semantics.
+Decorator stacking — `@tool` runs first to capture the signature; `@sub_agent` then flips the routing flags so the method surfaces in the manifest with sub-agent semantics rather than inline-tool semantics. `register()` also attaches the same discoverer as `members("sub_agent")` so `python -m tools run` with `tool:` still executes the method.

@@ -484,14 +484,25 @@ class _ToolsetRunner:
             ) from exc
 
     def _invoke_tool(self, instance: Toolset, tool_name: str, arguments: dict[str, Any]) -> Any:
-        if tool_name not in instance.tools:
+        bound = self._resolve_runnable(instance, tool_name)
+        if bound is None:
             raise RunError(
                 f"unknown tool {tool_name!r}",
                 response={"ok": False, "tool": tool_name, "error": "unknown tool"},
             )
-        tool = instance.tools[tool_name]
-        self._validate_arguments(tool, arguments)
+        self._validate_arguments(bound, arguments)
         return getattr(instance, tool_name)(**arguments)
+
+    def _resolve_runnable(self, instance: Toolset, tool_name: str) -> Any:
+        """A @tool, or a registered extension member that is not an @action."""
+        if tool_name in instance.tools:
+            return instance.tools[tool_name]
+        from tools.extensions import ToolsetExtensions
+
+        members = ToolsetExtensions.instance().members("sub_agent", instance)
+        if tool_name in members:
+            return members[tool_name]
+        return None
 
     def _validate_arguments(self, tool: _Tool, arguments: dict[str, Any]) -> None:
         reader = _SignatureReader.instance()

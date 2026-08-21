@@ -191,6 +191,86 @@ arguments:
 A tools item may be a toolset ref (`context_tools.bdd.bdd:Bdd`) or a mapping with `toolset` and `context` (fidelity / path / session). Follow `response.instructions`. Run via `_req.yaml` + `python -m tools run`. Read `examples/` before guessing field shape.
 """
 
+_SKETCH_INVOKE_BODY = """\
+The sketch kit owns the run. Context tools are arguments.
+
+""" + _CHAIN_TOOLS + """
+**Step 1 — Identify the context tool(s).**
+Check whether one or more context tools are already in scope — passed in (path / session / toolset) or named in this chat. If one or more are found, use them. If none is found, use the `AskQuestion` tool to let the user choose:
+
+```
+Question: "Which context tool should run `sketch`?"
+Options:
+  - /cdd — orchestrate all child tools at one stage
+  - /stories — who does what, in what sequence
+  - /clean-engineering — module boundaries and OO design
+  - /ux — navigation, screens, front end
+  - /bdd — observable behavior and tests
+  - /ddd — bounded contexts and domain building blocks
+```
+
+**Step 2 — Identify the fidelity.**
+Check whether a fidelity was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose from the selected context tool's available fidelities (see the quick-reference table), or from the CDD stage names (`discovery`, `specification`, `engineering`).
+
+**Step 3 — Run Sketcher once, with those tools as arguments.**
+Do not invoke each context tool with `action: sketch`. Load the sketch manifest, then invoke:
+
+```
+python -m tools manifest sketch.sketch:Sketcher
+```
+
+```yaml
+toolset: sketch.sketch:Sketcher
+action: sketch
+arguments:
+  tools:
+    - <first context toolset ref>
+    - <second context toolset ref>
+```
+
+A tools item may be a toolset ref (`context_tools.bdd.bdd:Bdd`) or a mapping with `toolset` and `context` (fidelity / path / session). Follow `response.instructions`. Run via `_req.yaml` + `python -m tools run`. Read `examples/` before guessing field shape.
+"""
+
+_GRILL_INVOKE_BODY = """\
+The grill kit owns the run. Context tools are arguments.
+
+""" + _CHAIN_TOOLS + """
+**Step 1 — Identify the context tool(s).**
+Check whether one or more context tools are already in scope — passed in (path / session / toolset) or named in this chat. If one or more are found, use them. If none is found, use the `AskQuestion` tool to let the user choose:
+
+```
+Question: "Which context tool should run `grill`?"
+Options:
+  - /cdd — orchestrate all child tools at one stage
+  - /stories — who does what, in what sequence
+  - /clean-engineering — module boundaries and OO design
+  - /ux — navigation, screens, front end
+  - /bdd — observable behavior and tests
+  - /ddd — bounded contexts and domain building blocks
+```
+
+**Step 2 — Identify the fidelity.**
+Check whether a fidelity was provided alongside this command (in the user message or chat context). If one is found, use it. If not, use the `AskQuestion` tool to let the user choose from the selected context tool's available fidelities (see the quick-reference table), or from the CDD stage names (`discovery`, `specification`, `engineering`).
+
+**Step 3 — Run GrillContext once, with those tools as arguments.**
+Do not invoke each context tool with `action: grill`. Load the grill_context manifest, then invoke:
+
+```
+python -m tools manifest grill_context.grill_context:GrillContext
+```
+
+```yaml
+toolset: grill_context.grill_context:GrillContext
+action: grill
+arguments:
+  tools:
+    - <first context toolset ref>
+    - <second context toolset ref>
+```
+
+A tools item may be a toolset ref (`context_tools.bdd.bdd:Bdd`) or a mapping with `toolset` and `context` (fidelity / path / session). Follow `response.instructions`. Run via `_req.yaml` + `python -m tools run`. Read `examples/` before guessing field shape.
+"""
+
 _ACTION_SKILL_TEMPLATE = """\
 ---
 name: {action}
@@ -910,6 +990,10 @@ class AgentSkills:
     def _action_invoke_body(self, action: str) -> str:
         if action == "iterate":
             return _ITERATE_INVOKE_BODY
+        if action == "sketch":
+            return _SKETCH_INVOKE_BODY
+        if action == "grill":
+            return _GRILL_INVOKE_BODY
         return _ACTION_INVOKE_BODY.format(action=action)
 
     @tool

@@ -53,6 +53,8 @@ Every prose part (string literals in `@action` bodies, text loaded from `@instru
 
 Same-instance recipes can flip mode mid-body with `self.mode = "tool"` (or `"action"`). The expander applies that assignment for subsequent nested calls in the same walk, then restores the prior mode when the walk finishes — so a shared kit instance is not left stuck in tool mode. That is how one toolset defers a nested self-action without constructing a second copy of itself.
 
+`context_tool(item)` / `context_tools(items=None)` resolve action `tools` arguments (instance, toolset path string, or `{toolset, context}` mapping). Host-action kits inherit this — they loop `for host in self.context_tools(tools)` and do not copy the loader. When an action is expanded with `arguments.tools`, those items are bound on the instance so a no-arg `self.context_tools()` for-each also resolves.
+
 For-each over companions (`for child in self.context_tools(): …`) respects the same rule: `child.mode = "tool"` inside the loop is applied before `child.<action>()`, and mode=tool callees are deferred (with a `Separate tools run` hint naming toolset + action + fidelity) instead of inlined.
 
 Setting `mode` to any value other than `"action"` or `"tool"` raises `ValueError`.
