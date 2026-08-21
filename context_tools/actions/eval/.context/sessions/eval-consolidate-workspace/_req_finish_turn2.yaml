@@ -1,0 +1,10 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: modules
+  path: context_tools/actions/eval
+  session: eval-consolidate-workspace
+tool: finish_eval_turn
+arguments:
+  prompt: persist session.yaml turn index after turn 2677b8db
+  result: session.yaml records turn 2677b8db with change_commit sha
+  context: eval-consolidate-workspace
