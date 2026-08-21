@@ -48,3 +48,20 @@ a workspace
       it should record a path override for that tool and fidelity
     with an explicit path that equals the default path for the opening tool
       it should drop any path override for that tool and fidelity
+
+## Slice C â€” WorkSession.open (grill tick 5)
+
+Fidelity: behavior
+
+a work session
+  that is opened on its workspace
+    -> workSession.open(name, goal, fidelities, contexts, path)
+    with HEAD already on its session branch
+      it should continue without switching branch
+    with a clean working tree not on its session branch
+      with an existing session branch
+        it should check out that session branch
+      with no session branch yet
+        it should create its session branch
+    with a dirty working tree not on its session branch
+      it should refuse to switch branch
