@@ -488,3 +488,15 @@ turns:
     sha: ce4aeaff15f1cf1897768e6d952cff53dc6325e2
   tool_calls: []
   mistakes: []
+- id: 5a6e669c
+  prompt: persist session.yaml turn index after turn 2677b8db
+  result: session.yaml records turn 2677b8db with change_commit sha
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 5a6e669c
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: ef39c45ee6443abcc4c6e7b72efff7e30d81eff3
+  tool_calls: []
+  mistakes: []

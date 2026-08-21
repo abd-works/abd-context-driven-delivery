@@ -5,6 +5,6 @@ context:
   session: eval-consolidate-workspace
 tool: finish_eval_turn
 arguments:
-  prompt: Simplify ContextIndex model — tool, fidelity, path only
-  result: workspace-eval-oo-sketch.md and workspace-eval-target-ce.drawio updated; Workspace owns ContextIndex; ContextIndexEntry (tool, fidelity, path); removed overrides/changes split
+  prompt: Workspace owns many WorkSessions — current and past
+  result: sketch + CE diagram — Workspace.workSessions list; composition edge Workspace ◆— WorkSession; host.workspace remains active sprint only
   context: eval-consolidate-workspace
