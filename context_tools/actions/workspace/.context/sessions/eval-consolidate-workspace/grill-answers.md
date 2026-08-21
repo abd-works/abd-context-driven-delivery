@@ -24,8 +24,14 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 - `workspace-bdd-sketch.md` (existing draft ΓÇö slice 1 path overrides, deferred list)
 - `context_tools/bdd/.context/bdd-grill-sketch-workflow.md`
 
-**Judge answer:** *(pending)*
+**Judge answer:** **Recommend A ΓÇö path overrides only.** Checklist item 1 lists `load` / `save` / `lookupPath` / `upsertPath` on **`Workspace`** together with `pathOverrides`; item 2 isolates **`PathOverride`** row shape. Item 5 (`openWorkSession`) and item 4 (`BaseContextTool.workspace` resolution) are separate slices. OO sketch lines 125ΓÇô131 label the three-step chain as **resolution on `open`** ΓÇö that uses host `context_index_key` and `default_workspace_folder`, not bare `Workspace.lookupPath` in isolation. Option B would mix aggregates in one Bdd subject. Option C skips the usage-story prerequisite (overrides exist before a work session opens). Option D is wrong: existing `workspace-bdd-sketch.md` aligns with A but was never judge-validated ΓÇö keep the hierarchy direction, run validate after a proper sketch turn; do not void without a FAIL on the file.
 
-**Citations:** *(pending)*
+**Citations:**
 
-**Slice unlocked:** *(pending)*
+- `workspace-eval-oo-sketch.md` ┬º2 lines 47ΓÇô50, 55ΓÇô58, 111ΓÇô123 ΓÇö `pathOverrides`, `lookupPath`, `upsertPath`, sparse rows, `context-index.md` persistence
+- `workspace-eval-oo-sketch.md` ┬º2 lines 84ΓÇô91, 125ΓÇô131 ΓÇö host resolution on **open** (defer to later slice)
+- `workspace-eval-oo-sketch.md` ┬º9 lines 826ΓÇô830 ΓÇö checklist ordering: items 1ΓÇô2 before 5
+- `context_index.py` lines 15ΓÇô20 ΓÇö todayΓÇÖs index path `{workspace}/.context/context-index.md` (persistence seam to fold into `Workspace`)
+- `bdd-sketch.md` ΓÇö usage-story order: establish subject state before downstream open/session behaviors
+
+**Slice unlocked:** **no** ΓÇö tick 1 selects slice **family** (A). Tick 2 should lock observables inside A (e.g. `lookupPath` when no row: absent override vs todayΓÇÖs `lookup_root` returning `None`; row key shape `tool` + `fidelity` vs todayΓÇÖs single-key entries).
