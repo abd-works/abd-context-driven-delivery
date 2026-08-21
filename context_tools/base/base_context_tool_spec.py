@@ -194,13 +194,11 @@ with description("BaseContextTool composer"):
             with it("should inline the full Contexts section as rubric"):
                 _assert_contexts_inlined(self.response["instructions"], self.contexts)
 
-            with it("should name open session tools then begin_eval_turn, scan, finish_eval_turn"):
+            with it("should name open then begin_eval_turn, scan, finish_eval_turn"):
                 expect(self.response["tools"]).to(
                     equal(
                         [
-                            "ensure_session",
-                            "read_context_index",
-                            "record_context_root",
+                            "open",
                             "begin_eval_turn",
                             "scan",
                             "finish_eval_turn",

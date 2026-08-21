@@ -134,8 +134,7 @@ class Partition:
     ) -> str:
         """partition"""
         for host in self.context_tools(tools):
-            host.active
-            host.session_guidance
+            host.open()
             host.contexts
             host.begin_eval_turn()
             self.partition_corpus(

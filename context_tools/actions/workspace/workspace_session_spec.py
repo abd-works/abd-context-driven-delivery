@@ -78,13 +78,11 @@ with description("WorkspaceSession on a BaseContextTool host"):
                 self.host, "generate", toolset_path=_CAR_CHRONICLE_TOOLSET
             )
 
-        with it("should name open's session tools then eval begin, CDR tools, eval finish"):
+        with it("should name open then eval begin, CDR tools, eval finish"):
             expect(self.response["tools"]).to(
                 equal(
                     [
-                        "ensure_session",
-                        "read_context_index",
-                        "record_context_root",
+                        "open",
                         "begin_eval_turn",
                         "read_cdr_format",
                         "list_cdrs",
@@ -94,20 +92,19 @@ with description("WorkspaceSession on a BaseContextTool host"):
                 )
             )
 
-        with it("should inline Session Guidance from workspace_session.md"):
-            expect("# Session Guidance" in self.response["instructions"]).to(be_true)
-            expect(
-                "session.folder" in self.response["instructions"]
-                or "folder" in self.response["instructions"]
-                or "active.path" in self.response["instructions"]
-                or "path" in self.response["instructions"]
-            ).to(be_true)
+        with it("should resolve open instructions from workspace_session.md"):
+            from workspace.workspace_session import Session
 
-        with it("should expand session resource from the host instance"):
+            tools = _discover_tools(self.host.workspace)
+            expect(tools["open"].instructions.startswith("# Open")).to(be_true)
+            expect("Session Guidance" in tools["open"].instructions).to(be_true)
+            expect("# Session Guidance" in self.response["instructions"]).to(be_false)
+
+        with it("should not expand session active resource on the host generate composer"):
             expect(
                 f"Resource `active` = {self.host.active!r}."
                 in self.response["instructions"]
-            ).to(be_true)
+            ).to(be_false)
 
         with it("should expand kit tool instructions from workspace_session.md"):
             from workspace.workspace_session import Session
@@ -132,13 +129,11 @@ with description("WorkspaceSession on a BaseContextTool host"):
                 self.host, "generate", toolset_path=_CHRONICLE_WITH_OUTPUT_TOOLSET
             )
 
-        with it("should keep session tools ahead of nested generate_output tools"):
+        with it("should keep open ahead of nested generate_output tools"):
             expect(self.response["tools"]).to(
                 equal(
                     [
-                        "ensure_session",
-                        "read_context_index",
-                        "record_context_root",
+                        "open",
                         "begin_eval_turn",
                         "read_cdr_format",
                         "list_cdrs",
@@ -157,8 +152,8 @@ with description("WorkspaceSession on a BaseContextTool host"):
                 self.host, "generate", toolset_path=_BASE_TOOLSET
             )
 
-        with it("should inline session guidance on the composer"):
-            expect("# Session Guidance" in self.response["instructions"]).to(be_true)
+        with it("should not inline session guidance on the composer"):
+            expect("# Session Guidance" in self.response["instructions"]).to(be_false)
 
 
 with description("a Session with a name and path"):
@@ -429,6 +424,25 @@ with description("a Session tool"):
         SessionLog.set_instance(None)
         self.tmp = Path(tempfile.mkdtemp(prefix="session_tool_"))
         self.session = Session(path=str(self.tmp))
+
+    with context("open"):
+        with it("should ensure session, load index, and record root in one call"):
+            from workspace.context_index import ContextIndex
+            from workspace.workspace_session import Session
+
+            keyed = Session(
+                path=str(self.tmp),
+                name="open-sprint",
+                workspace=str(self.tmp),
+                context_index_key="test-kit",
+            )
+            result = keyed.open()
+            expect("Workspace open" in result).to(be_true)
+            expect(keyed.session_md.is_file()).to(be_true)
+            expect("missing:" not in keyed.read_context_index()).to(be_true)
+            idx = ContextIndex.context_index_path(str(self.tmp))
+            expect(idx.is_file()).to(be_true)
+            expect("test-kit" in idx.read_text(encoding="utf-8")).to(be_true)
 
     with context("ensure_session"):
         with it("should create the session folder and return the session.md path"):

@@ -6,7 +6,6 @@ import inspect
 from datetime import date
 from pathlib import Path
 
-from primitives.actions.action import action
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from workspace.context_index import ContextIndex
@@ -333,13 +332,11 @@ class Session:
             body=body,
         )
 
-    # -- One entry action ----------------------------------------------------
+    # -- Open (one tool; hosts call self.open() which delegates here) ---------
 
-    @action
+    @tool
     def open(self) -> str:
-        """Open the workspace session in one step: set path (durable root), ensure the sprint exists (create if missing), load context index if present, record this tool's root when keyed. Follow session_guidance. Scope durable work to path and sprint docs to folder."""
-        self.session_guidance
-        self.active
+        """open"""
         self.ensure_session()
         self.read_context_index()
         self.record_context_root()
@@ -350,7 +347,7 @@ class Session:
             "context index loaded when present."
         )
 
-    # -- Tools (usable alone; also pulled in by open) ------------------------
+    # -- Session tools (usable alone; open runs these in order) --------------
 
     @tool
     def ensure_session(

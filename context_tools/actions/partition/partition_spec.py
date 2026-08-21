@@ -84,15 +84,9 @@ class _PartitionHost:
         self.steps = steps
         self.domain_slug = "test_domain"
 
-    @property
-    def active(self):
-        self.steps.append("active")
-        return self
-
-    @property
-    def session_guidance(self) -> Instruction:
-        self.steps.append("session_guidance")
-        return Instruction("", _KIT_DIR)
+    def open(self) -> str:
+        self.steps.append("open")
+        return "ok"
 
     @property
     def contexts(self) -> Instruction:
@@ -141,8 +135,7 @@ with description("a partition action"):
             expect(steps).to(
                 equal(
                     [
-                        "active",
-                        "session_guidance",
+                        "open",
                         "contexts",
                         "begin_eval_turn",
                         "partition_corpus",

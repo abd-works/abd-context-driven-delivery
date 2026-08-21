@@ -16,7 +16,7 @@
 
 ## One call to open
 
-**`open`** — single action before generate / grill / sketch / iterate / validate:
+**`open`** — single tool before generate / grill / sketch / iterate / validate:
 
 1. Resolve durable root (`path`)
 2. Ensure sprint exists (load or create)
@@ -24,7 +24,7 @@
 4. Record this tool's root when `context_index_key` is set
 
 ```yaml
-action: open   # via self.workspace.open() from BaseContextTool
+tool: open   # via self.open() from BaseContextTool
 ```
 
 Do **not** separately chain bind + read_context_index + record_context_root from lifecycle bodies — `open` already does that.
@@ -113,4 +113,12 @@ tool: record_context_root
 arguments:
   root: <optional; defaults to path>
   note: <optional>
+```
+
+# Open
+
+One tool — ensure sprint + load context index + record root when keyed. Read **Session Guidance** for `path` / `folder` / `context_index` semantics and git branch rules. Do not chain `ensure_session`, `read_context_index`, and `record_context_root` separately when `open` is in the tool list.
+
+```yaml
+tool: open
 ```

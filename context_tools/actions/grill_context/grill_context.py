@@ -81,7 +81,7 @@ class GrillContext:
     def grill(self, tools: list) -> str:
         """Grill then generate - pure grill loop, then the host generate body."""
         for host in self.context_tools(tools):
-            host.workspace.open()
+            host.open()
             host.decisions.record_decisions_session()
             self.grill_with_context()
             host.generate()

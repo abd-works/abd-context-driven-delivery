@@ -228,14 +228,11 @@ class BaseContextTool(AgenticToolset):
         return Instruction.ref(self.workspace, "session_guidance")
 
     @tool
-    def read_context_index(self) -> str:
-        """read_context_index"""
-        return self.workspace.read_context_index()
-
-    @tool
-    def record_context_root(self, root: str = "", note: str = "") -> str:
-        """record_context_root"""
-        return self.workspace.record_context_root(root=root, note=note)
+    def open(self) -> str:
+        """open"""
+        result = self.workspace.open()
+        self._bind_eval()
+        return result
 
     @tool
     def ensure_session(
@@ -305,8 +302,7 @@ class BaseContextTool(AgenticToolset):
         out_root: str | None = None,
     ) -> str:
         """partition"""
-        self.active
-        self.session_guidance
+        self.open()
         self.contexts
         self.begin_eval_turn()
         self.finish_eval_turn()
@@ -320,7 +316,7 @@ class BaseContextTool(AgenticToolset):
     @action
     def grill(self) -> str:
         """Grill then generate - pure grill loop, then the host generate body."""
-        self.workspace.open()
+        self.open()
         self.decisions.record_decisions_session()
         self.generate()
         return "Grill complete; generate instructions applied."
@@ -329,7 +325,7 @@ class BaseContextTool(AgenticToolset):
     @action
     def sketch(self) -> str:
         """Sketch then generate - grill + sketch cadence, then the host generate body."""
-        self.workspace.open()
+        self.open()
         self.decisions.record_decisions_session()
         """Sketch under session.folder; pass agent_dir={{self.module_dir}} to find_template."""
         self.generate()
@@ -338,7 +334,7 @@ class BaseContextTool(AgenticToolset):
     @log
     @action
     def generate(self) -> str:
-        self.workspace.open()
+        self.open()
         self.begin_eval_turn()
         self.decisions.record_decisions_session()
         self.contexts
@@ -380,7 +376,7 @@ class BaseContextTool(AgenticToolset):
     @log
     @action
     def document(self, paths: list[str]) -> str:
-        self.workspace.open()
+        self.open()
         self.begin_eval_turn()
         self.contexts
         self.templates
@@ -394,7 +390,7 @@ class BaseContextTool(AgenticToolset):
     @action
     def iterate(self) -> str:
         """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
-        self.workspace.open()
+        self.open()
         self.decisions.record_decisions_session()
         self.generate()
         return "Iterate complete; generate instructions applied."
@@ -402,7 +398,7 @@ class BaseContextTool(AgenticToolset):
     @log
     @action
     def validate(self) -> str:
-        self.workspace.open()
+        self.open()
         self.begin_eval_turn()
         self.contexts
         self.scanner.scan()

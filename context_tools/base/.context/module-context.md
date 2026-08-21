@@ -17,7 +17,7 @@
 - `fidelities: ClassVar[dict[str, str] | None]` — subclasses declare stage → fidelity_name mapping; triggers auto-generated lifecycle methods
 - `_set_fidelity(fidelity_name)` — updates `self.fidelity` and `self.format` at runtime
 - Kit providers: `workspace()`, `scanner()`, `sketcher()`, `grill_context()`, `iterator()`, `decisions()`
-- Forwarded session/scan tools: `ensure_session`, `create_session`, `close_session`, `read_context_index`, `record_context_root`, `scan`
+- Forwarded session/scan tools: `open`, `ensure_session`, `create_session`, `close_session`, `scan`
 - `supported_formats: ClassVar[frozenset[str]]` — formats this tool can render into; empty on the base
 - `render(format, content="")` — `@tool` that renders already-generated output into `format`. Default rejects unknown formats. Channel tools override and call their parse/render (or `transform`) in-process.
 - Resource `active`; instruction `session_guidance`

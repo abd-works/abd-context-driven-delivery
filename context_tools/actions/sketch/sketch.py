@@ -88,7 +88,7 @@ class Sketcher:
     def sketch(self, tools: list) -> str:
         """Sketch then generate - grill + sketch cadence, then the host generate body."""
         for host in self.context_tools(tools):
-            host.workspace.open()
+            host.open()
             host.decisions.record_decisions_session()
             self.sketch_session()
             host.generate()

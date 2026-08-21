@@ -42,7 +42,7 @@ with description("a CarChronicle generator"):
                     timeout_seconds=120,
                 )
                 expect_ok_action(response, "generate")
-                expect_tools_include(response, ["read_context_index", "record_context_root"])
+                expect_tools_include(response, ["open"])
                 expect_instructions_contain_any(
                     response, "driving voice", "use-driving-voice"
                 )

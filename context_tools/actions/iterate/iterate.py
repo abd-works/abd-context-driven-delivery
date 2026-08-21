@@ -35,7 +35,7 @@ class Iterator:
     def iterate(self, tools: list) -> str:
         """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
         for host in self.context_tools(tools):
-            host.workspace.open()
+            host.open()
             host.decisions.record_decisions_session()
             self.iterate_session()
             host.generate()
