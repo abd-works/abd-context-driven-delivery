@@ -1,6 +1,6 @@
 # draw-association-for-caller-not-only-owner
 
 - **tool:** CleanEngineering
-- **error:** Model conflated composition with CE associations — omitted Turn→GitRepo because Turn uses workSession.git without owning GitRepo; Relationships (target CE) initially said "No Turn→GitRepo" though Turn.finish calls commit/push and callers need association edges in the model separate from ownership.
+- **error:** Correction declares + fixedIn: Turn | None and Correction.apply sets fixedIn to the closing Turn, but the diagram has no Correction→Turn association edge — only Mistake→Correction and Repair→Correction.
 - **rule:** (process) draw-association-for-caller-not-only-owner
-- **how:** Updated workspace-eval-oo-sketch.md Relationships and git caller table — added Turn→GitRepo association via workSession.git; clarified caller vs composition edges.
+- **how:** Manual draw.io edit — added Correction→Turn association edge (id=21) for fixedIn; routes via x=1040 to Turn entry.

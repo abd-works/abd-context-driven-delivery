@@ -12,3 +12,4 @@
 2026-08-21T19:10:12 kind=tool toolset=context_tools.clean_engineering.clean_engineering:CleanEngineering name=log_correction ok=true summary=entry_id=b3694bec,improved=,how=Manual draw.io edit — removed Turn→Turn...,status=fixed
 2026-08-21T19:10:13 kind=tool toolset=context_tools.clean_engineering.clean_engineering:CleanEngineering name=log_correction ok=true summary=entry_id=b3694bec,improved=,how=Manual draw.io edit — removed Turn→Turn...,status=fixed
 2026-08-21T19:10:13 kind=tool toolset=context_tools.clean_engineering.clean_engineering:CleanEngineering name=log_correction ok=true summary=entry_id=b3694bec,improved=,how=Manual draw.io edit — removed Turn→Turn...,status=fixed
+2026-08-21T19:13:33 kind=tool toolset=context_tools.clean_engineering.clean_engineering:CleanEngineering name=log_mistake ok=true summary=artifact=context_tools/actions/eval/.context/ses...,rule=(process) draw-association-for-caller-n...,wrong=Correction de...
