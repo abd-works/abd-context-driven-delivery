@@ -117,3 +117,15 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 **Slice unlocked:** **yes** â€” slice B: openWorkSession loads overrides, mutates workSessions/currentWorkSession, upsertPath on non-default explicit path; exclude WorkSession.open git.
 
+---
+
+### Turn (grill tick 5 â€” slice C)
+
+**Question:** Slice **C** â€” `WorkSession.open` git branch policy only?
+
+**Options:** **A** â€” branch checkout/create/refuse-when-dirty per `workspace_session.md` lines 50â€“61; exclude Turn/git commit. **B** â€” include Turn.finish commit.
+
+**Judge answer:** *(pending)*
+
+**Slice unlocked:** *(pending)*
+
