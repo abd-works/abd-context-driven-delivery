@@ -1,8 +1,8 @@
-﻿# BDD sketch ΓÇö workspace path overrides (slice A)
+﻿# BDD sketch â€” workspace (slices A + B)
 
-**Grill record:** `grill-answers.md` ticks 1ΓÇô3 (turns 9266b3db ΓÇª 92bd1931). **Slice unlocked:** yes.
+Design: `workspace-eval-oo-sketch.md` Â§2. Grill: `grill-answers.md`.
 
-**Sources:** `workspace-eval-oo-sketch.md` ┬º2 (Workspace, PathOverride, lines 47ΓÇô50, 55ΓÇô58, 111ΓÇô123, 131).
+## Slice A â€” path overrides (ticks 1â€“3)
 
 Fidelity: behavior
 
@@ -27,8 +27,6 @@ a workspace
       it should drop the path override row for that tool and fidelity
   that is saved after path overrides change
     it should write current override rows to context-index under its path without a change log section
-
-**Deferred (next slices):** `workSessions`, `currentWorkSession`, `openWorkSession`, `WorkSession.open`, BaseContextTool three-step resolution on open.
 
 ## Slice B â€” openWorkSession (grill tick 4)
 
@@ -65,3 +63,20 @@ a work session
         it should create its session branch
     with a dirty working tree not on its session branch
       it should refuse to switch branch
+
+## Slice D â€” host edit-path resolution (grill tick 6)
+
+Fidelity: behavior
+
+a context tool host
+  that opens on a workspace with a context index key and default workspace folder
+    with an explicit path argument
+      it should use that path as its durable edit root
+    with no explicit path argument
+      with a stored override for its tool and fidelity
+        it should use the override path as its durable edit root
+      with no stored override
+        it should use the path under its workspace default folder
+
+**Deferred:** Turn/git/repairs via currentWorkSession; SessionLog; GitRepo commit/push on Turn.finish.
+
