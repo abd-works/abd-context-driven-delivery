@@ -125,7 +125,7 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 **Options:** **A** â€” branch checkout/create/refuse-when-dirty per `workspace_session.md` lines 50â€“61; exclude Turn/git commit. **B** â€” include Turn.finish commit.
 
-**Judge answer:** *(pending)*
+**Judge answer:** **A.** Git branch rules are documented in workspace_session.md; Turn commit is checklist item 8 / eval slice.
 
-**Slice unlocked:** *(pending)*
+**Slice unlocked:** **yes**
 
