@@ -511,11 +511,76 @@ def _same_instance_action_calls(body: list[ast.stmt], action_names: set[str]) ->
     return calls
 
 
+def _host_action_calls(body: list[ast.stmt], action_names: set[str]) -> list[str]:
+    """Every ``host.<method>()`` call where ``<method>`` is a host action name."""
+    calls: list[str] = []
+    for stmt in body:
+        for node in ast.walk(stmt):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            if (
+                isinstance(func, ast.Attribute)
+                and isinstance(func.value, ast.Name)
+                and func.value.id == "host"
+                and func.attr in action_names
+                and func.attr not in calls
+            ):
+                calls.append(func.attr)
+    return calls
+
+
+_HOST_LIFECYCLE_ACTIONS = frozenset({
+    "generate",
+    "document",
+    "validate",
+    "satisfy",
+    "createRule",
+})
+
+
+def _resolve_actions_from_source(
+    path: Path,
+    *,
+    action_names: frozenset[str] | None = None,
+) -> list[tuple[str, ast.FunctionDef]]:
+    """Return ``(name, method)`` for public ``@action`` methods in ``path``."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    methods = _public_action_methods(tree)
+    if action_names is not None:
+        methods = [m for m in methods if m.name in action_names]
+    return [(m.name, m) for m in methods]
+
+
+def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
+    """AST-walk kit-owned lifecycle actions (partition, grill, sketch, iterate)."""
+    kit_specs: tuple[tuple[str, Path, str], ...] = (
+        ("partition", _REPO_ROOT / "context_tools" / "actions" / "partition" / "partition.py", "partition"),
+        ("grill", _REPO_ROOT / "context_tools" / "actions" / "grill_context" / "grill_context.py", "grill_context"),
+        ("sketch", _REPO_ROOT / "context_tools" / "actions" / "sketch" / "sketch.py", "sketch"),
+        ("iterate", _REPO_ROOT / "context_tools" / "actions" / "iterate" / "iterate.py", "iterate"),
+    )
+    results: list[ActionResolution] = []
+    for name, path, dir_name in kit_specs:
+        methods = _resolve_actions_from_source(path, action_names=frozenset({name}))
+        if not methods:
+            continue
+        _method_name, method = methods[0]
+        source_dir = _REPO_ROOT / "context_tools" / "actions" / dir_name
+        calls = _host_action_calls(method.body, {"generate"})
+        results.append(ActionResolution(name=name, source_dir=source_dir, calls=calls))
+    return results
+
+
 def resolve_lifecycle_actions(
     base_context_tool_path: Path | None = None,
 ) -> list[ActionResolution]:
     """AST-walk ``BaseContextTool``'s public ``@action`` methods, in source
     order, and resolve each one's delegate kit dir and same-instance calls.
+
+    Kit-owned lifecycle actions (``partition``, ``grill``, ``sketch``,
+    ``iterate``) are resolved from their action kits under
+    ``context_tools/actions/`` — not from the host composer.
 
     Delegate resolution has no hand-maintained per-action lookup table: a
     peer-kit ``(attr, method)`` call pair is that action's unique delegate
@@ -543,7 +608,7 @@ def resolve_lifecycle_actions(
         for pair in set(_double_attr_calls(method.body)):
             pair_actions.setdefault(pair, set()).add(method.name)
 
-    results: list[ActionResolution] = []
+    host_results: list[ActionResolution] = []
     for method in methods:
         called_pairs = set(_double_attr_calls(method.body))
         delegate_attr = next(
@@ -555,7 +620,9 @@ def resolve_lifecycle_actions(
             ),
             None,
         )
-        if delegate_attr is not None:
+        if method.name in _HOST_LIFECYCLE_ACTIONS:
+            source_dir = _REPO_ROOT / "context_tools" / "base"
+        elif delegate_attr is not None:
             class_name = peer_kit_attrs[delegate_attr]
             module_path = _import_module_for_class(tree, class_name)
             package_name = module_path.split(".")[0] if module_path else delegate_attr
@@ -566,8 +633,23 @@ def resolve_lifecycle_actions(
             source_dir = _REPO_ROOT / "context_tools" / "base"
 
         calls = _same_instance_action_calls(method.body, action_names - {method.name})
-        results.append(ActionResolution(name=method.name, source_dir=source_dir, calls=calls))
-    return results
+        host_results.append(ActionResolution(name=method.name, source_dir=source_dir, calls=calls))
+
+    kit_by_name = {r.name: r for r in _resolve_kit_lifecycle_actions()}
+    host_by_name = {r.name: r for r in host_results}
+    order = (
+        "partition",
+        "grill",
+        "sketch",
+        "generate",
+        "document",
+        "iterate",
+        "validate",
+        "satisfy",
+        "repair",
+        "createRule",
+    )
+    return [kit_by_name.get(name) or host_by_name[name] for name in order]
 
 
 # -- Skill slash-command map --------------------------------------------------

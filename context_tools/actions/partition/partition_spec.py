@@ -69,14 +69,13 @@ with description("Partition kit prose"):
         expect("# Step 2 \u2014 Segment" in content).to(be_true)
 
 
-with description("Partition on a BaseContextTool host"):
-    with it("should not compose Partition"):
-        import inspect
-
+with description("Partition kit on hosts"):
+    with it("should not expose partition on BaseContextTool hosts"):
         from context_tools.base.base_context_tool import BaseContextTool
 
-        source = inspect.getsource(BaseContextTool.partition)
-        expect("partitioner" in source).to(equal(False))
+        cls = _ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
+        host = cls()
+        expect("partition" in host.actions).to(equal(False))
 
 
 class _PartitionHost:

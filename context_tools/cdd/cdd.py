@@ -85,24 +85,32 @@ class Cdd(BaseContextTool):
 
     @action
     def grill(self) -> str:
-        """Inline each stage child's grill (high-level Q&A only)."""
+        """Inline each stage child's grill via the grill kit (high-level Q&A only)."""
+        from grill_context.grill_context import GrillContext
+
+        grill = GrillContext()
         for context_tool in self.context_tools():
-            context_tool.grill()
+            grill.grill(tools=[context_tool])
         return ""
 
     @action
     def sketch(self) -> str:
-        """Inline each stage child's sketch (high-level shape only)."""
+        """Inline each stage child's sketch via the sketch kit (high-level shape only)."""
+        from sketch.sketch import Sketcher
+
+        sketcher = Sketcher()
         for context_tool in self.context_tools():
-            context_tool.sketch()
+            sketcher.sketch(tools=[context_tool])
         return ""
 
     @action
     def iterate(self) -> str:
-        """Invoke each stage child's iterate as its own tools run."""
+        """Invoke each stage child's iterate via the iterate kit."""
+        from iterate.iterate import Iterator
+
+        iterator = Iterator()
         for context_tool in self.context_tools():
-            context_tool.mode = "tool"
-            context_tool.iterate()
+            iterator.iterate(tools=[context_tool])
         return "Invoke each Separate tools run above, one child at a time."
 
     @action

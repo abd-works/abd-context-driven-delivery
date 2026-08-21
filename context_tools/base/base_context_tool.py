@@ -21,9 +21,6 @@ import inspect
 from pathlib import Path
 from typing import ClassVar
 
-from grill_context.grill_context import GrillContext
-from iterate.iterate import Iterator
-from partition.partition import Partition
 from primitives.actions.action import _ActionRunner
 from primitives.actions.action import AgenticToolset
 from primitives.actions.action import action
@@ -35,7 +32,6 @@ from scanners.scan import Scan
 from sub_agent.sub_agent import sub_agent
 from workspace.session_log import log
 from workspace.workspace_session import Session
-from sketch.sketch import Sketcher
 from tools.tool import resource
 from tools.tool import tool
 
@@ -97,28 +93,17 @@ class BaseContextTool(AgenticToolset):
             ),
         )
         self.scanner = Scan()
-        self.sketcher = Sketcher(agent_dir=str(self.module_dir))
-        self.grill_context = GrillContext()
-        self.iterator = Iterator()
         self.decisions = RecordDecisions()
-        self.partitioner = Partition()
         self._bind_eval()
         self.repairer = Repair(session=self.eval, scanner=self.scanner, host=self)
 
     def _bind_eval(self) -> None:
-        """Attach ``self.eval`` when the workspace session has path/folder/name.
-
-        Also binds ``SessionLog`` to this workspace so that every subsequent
-        ``@log``-decorated tool or action forwards a ``ToolCall`` to the open
-        eval Turn (via ``SessionLog.append → eval.record_tool_call``).
-        """
+        """Attach ``self.eval`` when the workspace session has path/folder/name."""
         from eval.session import Session as EvalSession
 
         name = getattr(self.workspace, "name", None)
         if not name:
             self.eval = None
-            if hasattr(self.workspace, "eval"):
-                self.workspace.eval = None  # type: ignore[attr-defined]
             if getattr(self, "repairer", None) is not None:
                 self.repairer.session = None
             return
@@ -130,36 +115,12 @@ class BaseContextTool(AgenticToolset):
                 self.repairer.session = None
             return
         self.eval = EvalSession(workspace=self.workspace)
-        self.workspace.eval = self.eval  # type: ignore[attr-defined]
-        # Bind SessionLog so @log-decorated runs forward ToolCalls to the eval Turn.
         from workspace.session_log import SessionLog
 
         SessionLog.instance().bind(self.workspace)
-        # Persist context so the Cursor stop hook can call finish_eval_turn.
-        self._write_eval_state()
         if getattr(self, "repairer", None) is not None:
             self.repairer.session = self.eval
             self.repairer.host = self
-
-    def _write_eval_state(self) -> None:
-        """Write ~/.cursor/cdd_eval_state.json so the stop hook can close the turn."""
-        import json as _json
-        import pathlib as _pathlib
-
-        state_dir = _pathlib.Path.home() / ".cursor"
-        state_dir.mkdir(parents=True, exist_ok=True)
-        state = {
-            "cdd_repo": str(_pathlib.Path(__file__).resolve().parent.parent.parent),
-            "toolset_path": f"{type(self).__module__}:{type(self).__name__}",
-            "path": self._raw_path,
-            "session": getattr(self.workspace, "name", None),
-        }
-        try:
-            (state_dir / "cdd_eval_state.json").write_text(
-                _json.dumps(state, indent=2), encoding="utf-8"
-            )
-        except Exception:
-            pass
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -295,46 +256,7 @@ class BaseContextTool(AgenticToolset):
     @instruction
     def scaffold(self) -> Instruction: ...
 
-    # -- Lifecycle actions  -----------------------------------
-    @log
-    @action
-    def partition(
-        self,
-        context: str,
-        mode: str = "one_go",
-        out_root: str | None = None,
-    ) -> str:
-        """partition"""
-        self.active
-        self.session_guidance
-        self.contexts
-        self.begin_eval_turn()
-        self.finish_eval_turn()
-        return (
-            "Partition of {{context}} finished (mode {{mode}}); "
-            "docs under {session.path}/.context/. "
-            "Hard fail if any new chunk fails named-entry completeness."
-        )
-
-    @log
-    @action
-    def grill(self) -> str:
-        """Grill then generate - pure grill loop, then the host generate body."""
-        self.workspace.open()
-        self.decisions.record_decisions_session()
-        self.generate()
-        return "Grill complete; generate instructions applied."
-
-    @log
-    @action
-    def sketch(self) -> str:
-        """Sketch then generate - grill + sketch cadence, then the host generate body."""
-        self.workspace.open()
-        self.decisions.record_decisions_session()
-        """Sketch under session.folder; pass agent_dir={{self.module_dir}} to find_template."""
-        self.generate()
-        return "Sketch complete; generate instructions applied."
-
+    # -- Lifecycle actions (core host only; grill/sketch/iterate/partition are kit-owned) ---
     @log
     @action
     def generate(self) -> str:
@@ -389,15 +311,6 @@ class BaseContextTool(AgenticToolset):
         self.add_generate_header_to_generated()
         self.finish_eval_turn()
         return "Document existing state under {session.path}/ - violations flagged, none corrected."
-
-    @log
-    @action
-    def iterate(self) -> str:
-        """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
-        self.workspace.open()
-        self.decisions.record_decisions_session()
-        self.generate()
-        return "Iterate complete; generate instructions applied."
 
     @log
     @action
@@ -497,7 +410,7 @@ class BaseContextTool(AgenticToolset):
 
     @tool
     def begin_eval_turn(self) -> str:
-        """Open the eval Turn. Listed on generate / validate / document / partition / repair / createRule."""
+        """Open the eval Turn. Listed on generate / validate / document / repair / createRule."""
         if self.eval is None:
             return ""
         return self.eval.begin_turn().id
@@ -506,7 +419,7 @@ class BaseContextTool(AgenticToolset):
     def finish_eval_turn(
         self, prompt: str = "", result: str = "", context: str = ""
     ) -> str:
-        """Close the open eval Turn. Listed on generate / validate / document / partition / repair / createRule."""
+        """Close the open eval Turn. Listed on generate / validate / document / repair / createRule."""
         if self.eval is None:
             return ""
         closed = self.eval.finish_turn(prompt, result, context)

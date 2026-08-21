@@ -17,6 +17,7 @@ from mamba import context, description, it
 
 from primitives.actions.action import _ActionExpander
 from iterate import Iterator
+from tools.tool import _ToolsetLoader
 
 
 with description("an Iterator"):
@@ -113,11 +114,12 @@ with description("an iterate action"):
             )
 
 
-with description("a BaseContextTool iterate action"):
-    with it("should not compose Iterator"):
-        import inspect
-
+with description("BaseContextTool host face for iterate"):
+    with it("should not expose iterate on the host composer"):
         from context_tools.base.base_context_tool import BaseContextTool
 
-        source = inspect.getsource(BaseContextTool.iterate)
-        expect("iterator" in source).to(equal(False))
+        cls = _ToolsetLoader.instance().load(
+            "context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle"
+        )
+        host = cls()
+        expect("iterate" in host.actions).to(equal(False))

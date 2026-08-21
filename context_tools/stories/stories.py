@@ -150,10 +150,14 @@ class Stories(BaseContextTool):
         """Iterate then generate - grill + formal generate/validate/one-fix ticks.
         At acceptance_tests fidelity: after each spec cycle, call ce().iterate() to wire the minimum production code until GREEN.
         If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails)."""
-        super().iterate()
-        self.ce().iterate()
+        from iterate.iterate import Iterator
+
+        Iterator().iterate(tools=[self])
         self.diagnostic().diagnose()
-        return "Iterate complete; generate instructions applied."
+        return (
+            "Iterate complete for Stories; invoke ce() via /iterate as a separate tools run, "
+            "then validate."
+        )
 
     @action
     def satisfy(self) -> str:

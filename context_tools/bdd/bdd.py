@@ -129,27 +129,30 @@ class Bdd(BaseContextTool):
     @action
     def grill(self) -> str:
         """Run the BDD grill loop to surface assumptions and gaps.
-        When BDD grill is complete, call ce().grill() to do the same for the matching classes."""
-        super().grill()
-        self.ce().grill()
-        return "Grill complete; run generate."
+        When BDD grill is complete, invoke CleanEngineering via /grill (same session) for the matching classes."""
+        from grill_context.grill_context import GrillContext
+
+        GrillContext().grill(tools=[self])
+        return "Grill complete for BDD; invoke ce() via /grill as a separate tools run, then generate."
 
     @action
     def sketch(self) -> str:
         """Sketch the BDD hierarchy at the current fidelity.
-        When BDD sketch is complete, call ce().sketch() to sketch the matching classes."""
-        super().sketch()
-        self.ce().sketch()
-        return "Sketch complete; run generate."
+        When BDD sketch is complete, invoke CleanEngineering via /sketch for the matching classes."""
+        from sketch.sketch import Sketcher
+
+        Sketcher().sketch(tools=[self])
+        return "Sketch complete for BDD; invoke ce() via /sketch as a separate tools run, then generate."
 
     @action
     def iterate(self) -> str:
-        """Iterate one BDD cycle: write one test, confirm it is RED, then call ce().iterate() to build the minimum production code until GREEN. Repeat — one test, one production change, one GREEN — until all tests pass.
+        """Iterate one BDD cycle: write one test, confirm it is RED, then invoke CleanEngineering via /iterate to build the minimum production code until GREEN. Repeat — one test, one production change, one GREEN — until all tests pass.
         If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure)."""
-        super().iterate()
-        self.ce().iterate()
+        from iterate.iterate import Iterator
+
+        Iterator().iterate(tools=[self])
         self.diagnostic().diagnose()
-        return "Iterate complete; run validate."
+        return "Iterate complete for BDD; invoke ce() via /iterate as a separate tools run, then validate."
 
     @action
     def satisfy(self) -> str:
