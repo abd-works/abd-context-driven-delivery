@@ -1,7 +1,7 @@
 # sketch — module context
 
 ## Purpose
-`Sketcher` produces a rough, persisted draft of a formal artifact through an interactive grill loop before any generate step runs. It locates a sketch template via tiered discovery (caller-supplied → agent-dir convention → built-in default), writes interim `{slug}-sketch.md` files to the session docs dir after every two or three grill answers, and overwrites the same path on each refinement. Leaving a sketch only in chat is treated as a defect; the file under the docs dir is the working record. `sketch(tools)` is the host sketch body (open, record decisions, sketch_session, generate) run once per passed context tool. `/sketch` invokes this toolset — not each context tool's host `sketch`. A tools item may be an instance, a toolset path string, or `{toolset, context}`.
+`Sketcher` produces a rough, persisted draft of a formal artifact through an interactive grill loop before any generate step runs. It locates a sketch template via tiered discovery (caller-supplied → agent-dir convention → built-in default), writes interim `{slug}-sketch.md` files to the session docs dir after every two or three grill answers, and overwrites the same path on each refinement. Leaving a sketch only in chat is treated as a defect; the file under the docs dir is the working record. `sketch(tools)` is the host sketch body (open, record decisions, sketch_session, generate) run once per passed context tool via inherited `AgenticToolset.context_tools`. `/sketch` invokes this toolset — not each context tool's host `sketch`.
 
 ## Seam
 `Sketcher`

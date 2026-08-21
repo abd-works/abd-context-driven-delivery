@@ -7,12 +7,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from primitives.actions.action import action
-from tools.tool import tool, toolset
+from primitives.actions.action import action, agentic_toolset
+from tools.tool import tool
 from workspace import docs_dir
 
 
-@toolset
+@agentic_toolset
 class GrillContext:
     """Interview a plan relentlessly against the codebase context until reaching shared understanding."""
 
@@ -76,6 +76,16 @@ class GrillContext:
         existing = answers_path.read_text(encoding="utf-8") if answers_path.exists() else None
         answers_path.write_text(self._appended_answers_content(existing, heading, body), encoding="utf-8")
         return str(answers_path)
+
+    @action
+    def grill(self, tools: list) -> str:
+        """Grill then generate - pure grill loop, then the host generate body."""
+        for host in self.context_tools(tools):
+            host.workspace.open()
+            host.decisions.record_decisions_session()
+            self.grill_with_context()
+            host.generate()
+        return "Grill complete; generate instructions applied."
 
     @action
     def grill_with_context(self, plan: str) -> str:

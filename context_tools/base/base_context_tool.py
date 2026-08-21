@@ -325,7 +325,6 @@ class BaseContextTool(AgenticToolset):
         """Grill then generate - pure grill loop, then the host generate body."""
         self.workspace.open()
         self.decisions.record_decisions_session()
-        self.grill_context.grill_with_context()
         self.generate()
         return "Grill complete; generate instructions applied."
 

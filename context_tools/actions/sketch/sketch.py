@@ -11,25 +11,15 @@ from __future__ import annotations
 from pathlib import Path
 
 from grill_context.grill_context import GrillContext
-from primitives.actions.action import action
-from tools.tool import _ToolsetLoader, tool, toolset
+from primitives.actions.action import action, agentic_toolset
+from tools.tool import tool
 from workspace import docs_dir
-
-
-def context_tool(item: object) -> object:
-    """Resolve a tools item to a context-tool instance (path, mapping, or already loaded)."""
-    if isinstance(item, str):
-        return _ToolsetLoader.instance().load(item)()
-    if isinstance(item, dict):
-        loaded = _ToolsetLoader.instance().load(str(item["toolset"]))
-        return loaded(**(item.get("context") or {}))
-    return item
 
 
 _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 
 
-@toolset
+@agentic_toolset
 class Sketcher:
     """Sketch a solution interactively before generating the formal artifact."""
 
@@ -97,8 +87,7 @@ class Sketcher:
     @action
     def sketch(self, tools: list) -> str:
         """Sketch then generate - grill + sketch cadence, then the host generate body."""
-        for item in tools:
-            host = context_tool(item)
+        for host in self.context_tools(tools):
             host.workspace.open()
             host.decisions.record_decisions_session()
             self.sketch_session()

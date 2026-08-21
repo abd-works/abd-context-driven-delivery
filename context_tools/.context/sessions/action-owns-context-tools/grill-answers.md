@@ -16,3 +16,7 @@ Stop BaseContextTool.iterate from composing Iterator. /iterate runs iterate.iter
 
 Invert sketch in one tick the way iterate ended: Sketcher.sketch(tools) is the host sketch body (open, record decisions, sketch_session, generate); BaseContextTool.sketch does not compose Sketcher; /sketch runs sketch.sketch:Sketcher with arguments.tools. Agent skills plus an agentic BDD spec with ai_judge. Sources: context_tools/base/base_context_tool.py (host sketch), context_tools/actions/sketch/.context/module-context.md, utilities/agent_skills/.context/module-context.md, user: next tool then complete replace.
 
+### Shared resolve — AgenticToolset.context_tools
+
+Do not copy toolset loading into each kit. Iterator and Sketcher inherit `context_tool` / `context_tools` from AgenticToolset and loop `for host in self.context_tools(tools)`. Sources: primitives/actions/.context/module-context.md, user: every action should not reimplement search.
+
