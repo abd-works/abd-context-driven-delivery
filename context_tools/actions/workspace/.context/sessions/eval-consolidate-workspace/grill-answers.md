@@ -57,9 +57,17 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 - `context_index.py` `lookup_root`, `parse_current_entries`, `upsert_entry` (today: tool_key only; `## Log` section ΓÇö target drops Log per OO line 123)
 - `grill-answers.md` tick 1 judge recommendation (slice A)
 
-**Judge answer:** *(pending)*
+**Judge answer:** **Recommend A ΓÇö no override path.** Target `Workspace.lookupPath(tool, fidelity)` should behave like todayΓÇÖs absent-key case: `ContextIndex.lookup_root` returns **`None`** when the key is missing (lines 91ΓÇô94) ΓÇö not workspace root, not implicit host default. Step 3 of the open resolution chain (`{workspace.path}/{default_workspace_folder}`) belongs on **BaseContextTool** / **open**, not on `Workspace.lookupPath` (OO lines 127ΓÇô129). Reject B (host default on wrong aggregate), C (workspace root), D (error on miss).
 
-**Citations:** *(pending)*
+**Row shape:** Confirm **`tool` + `fidelity` + `path`** per PathOverride (OO lines 55ΓÇô58, 115ΓÇô118). TodayΓÇÖs `parse_current_entries` / `upsert_entry` use a **single `tool_key`** with no fidelity dimension ΓÇö Bdd describes the **target** model, not a line-for-line port. Persisted file drops **`## Log`** (OO line 123); todayΓÇÖs `render_index` still emits Log (lines 113ΓÇô117) ΓÇö out of scope for slice A observables except ΓÇ£save writes Current rows only.ΓÇ¥
 
-**Slice unlocked:** *(pending)*
+**Slice unlocked:** **partial ΓÇö yes for sketch draft** with one open branch: `upsertPath` ΓÇ£remove row when path matches host default againΓÇ¥ (OO line 131) needs tick 3 ΓÇö `Workspace` does not own `default_workspace_folder`.
+
+**Citations:**
+
+- `workspace-eval-oo-sketch.md` lines 47ΓÇô50, 55ΓÇô58, 115ΓÇô123, 127ΓÇô129
+- `context_index.py` lines 91ΓÇô94 (`lookup_root` ΓåÆ `None`), 136ΓÇô165 (`upsert_entry` / Log)
+- `grill-answers.md` tick 1 ΓÇö slice A family
+
+**Slice unlocked:** **partial** ΓÇö sketch may proceed for load / lookup / save / sparse rows; hold **`it should drop the row when path matches host default`** until tick 3.
 
