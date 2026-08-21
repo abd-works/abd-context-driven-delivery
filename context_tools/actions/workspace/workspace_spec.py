@@ -1,15 +1,9 @@
 ﻿# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
-"""BDD behavior signatures ΓÇö Workspace (slice A path overrides).
-
-Target: workspace-bdd-sketch.md slice A (grilled ticks 1ΓÇô3).
-"""
+"""BDD behavior signatures â€” Workspace target model (slices Aâ€“D)."""
 
 from mamba import context, description, it
-
-# from workspace.workspace import Workspace  # development fidelity
 
 
 with description("a workspace"):
@@ -50,3 +44,39 @@ with description("a workspace"):
         with it("should write current override rows to context-index under its path without a change log section"):
             # BDD: SIGNATURE
             pass
+
+    with context("that opens a work session"):
+        with it("should load path overrides from context-index before opening"):
+            # BDD: SIGNATURE
+            pass
+
+        with context("with a new session name"):
+            with it("should add the opened work session to its work sessions"):
+                # BDD: SIGNATURE
+                pass
+
+            with it("should set the current work session to the opened work session"):
+                # BDD: SIGNATURE
+                pass
+
+        with context("with an existing session name"):
+            with it("should load the existing work session from its sessions folder"):
+                # BDD: SIGNATURE
+                pass
+
+            with it("should set the current work session to that work session"):
+                # BDD: SIGNATURE
+                pass
+
+        with context("with an explicit path that differs from the default path for the opening tool"):
+            with it("should record a path override for that tool and fidelity"):
+                # BDD: SIGNATURE
+                pass
+
+        with context("with an explicit path that equals the default path for the opening tool"):
+            with it("should drop any path override for that tool and fidelity"):
+                # BDD: SIGNATURE
+                pass
+
+
+
