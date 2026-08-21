@@ -1,7 +1,7 @@
-﻿# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
-"""BDD behavior signatures â€” Workspace target model (slices Aâ€“D)."""
+"""BDD behavior signatures — Workspace target model (slices A–D)."""
 
 from mamba import context, description, it
 
@@ -103,4 +103,20 @@ with description("a work session"):
                 pass
 
 
+with description("a context tool host"):
+    with context("that opens on a workspace with a context index key and default workspace folder"):
+        with context("with an explicit path argument"):
+            with it("should use that path as its durable edit root"):
+                # BDD: SIGNATURE
+                pass
 
+        with context("with no explicit path argument"):
+            with context("with a stored override for its tool and fidelity"):
+                with it("should use the override path as its durable edit root"):
+                    # BDD: SIGNATURE
+                    pass
+
+            with context("with no stored override"):
+                with it("should use the path under its workspace default folder"):
+                    # BDD: SIGNATURE
+                    pass
