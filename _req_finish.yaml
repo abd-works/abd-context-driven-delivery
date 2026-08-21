@@ -1,0 +1,10 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: model
+  path: context_tools/actions/eval
+  session: eval-consolidate-workspace
+tool: finish_eval_turn
+arguments:
+  prompt: "persist session.yaml after fixedIn correction turn"
+  result: "turn c12fa32e indexed with mistake 54f63ba8"
+  context: eval-consolidate-workspace
