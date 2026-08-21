@@ -1,0 +1,10 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: model
+  path: context_tools/actions/eval
+  session: eval-consolidate-workspace
+tool: finish_eval_turn
+arguments:
+  prompt: "log corrections — CE diagram layout and sketch associations"
+  result: "closed 7 mistakes via log_correction; repairs/ and session.yaml written"
+  context: eval-consolidate-workspace
