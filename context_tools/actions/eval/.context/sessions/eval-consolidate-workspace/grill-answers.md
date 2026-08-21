@@ -129,3 +129,13 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 **Slice unlocked:** **yes**
 
+---
+
+### Turn (grill tick 6 â€” slice D)
+
+**Question:** Slice **D** â€” host edit-path resolution (OO lines 125â€“131) as subject **a context tool host**?
+
+**Judge answer:** *(pending)*
+
+**Slice unlocked:** *(pending)*
+
