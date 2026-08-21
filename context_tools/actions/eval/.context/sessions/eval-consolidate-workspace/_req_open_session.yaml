@@ -1,0 +1,9 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: modules
+  path: context_tools/actions/eval
+  session: eval-consolidate-workspace
+tool: open
+arguments:
+  name: eval-consolidate-workspace
+  path: context_tools/actions/eval

@@ -5,7 +5,7 @@ Workspace-relative roots for each context tool. Prefer these over defaults when 
 ## Current
 
 - bdd = ./context_tools/*
-- clean_engineering = ./../story-ui/*
+- clean_engineering = ./context_tools/actions/eval/*
 - stories = ./../story-ui/*
 
 ## Log
@@ -15,3 +15,4 @@ Workspace-relative roots for each context tool. Prefer these over defaults when 
 - 2026-08-04: stories = ./../story-ui/* (was ./utilities/repair/*) - Source sketch and story-ui target artifacts for story_map generation
 - 2026-08-04: clean_engineering = ./../story-ui/* - Modules-fidelity generation context rooted at story-ui sketch and artifacts
 - 2026-08-20: bdd = ./context_tools/* - action-owns-context-tools iterate
+- 2026-08-21: clean_engineering = ./context_tools/actions/eval/* (was ./../story-ui/*)

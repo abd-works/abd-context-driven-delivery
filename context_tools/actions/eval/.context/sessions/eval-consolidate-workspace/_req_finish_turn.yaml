@@ -1,0 +1,10 @@
+toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+context:
+  fidelity: modules
+  path: context_tools/actions/eval
+  session: eval-consolidate-workspace
+tool: finish_eval_turn
+arguments:
+  prompt: Simplify ContextIndex model — tool, fidelity, path only
+  result: workspace-eval-oo-sketch.md and workspace-eval-target-ce.drawio updated; Workspace owns ContextIndex; ContextIndexEntry (tool, fidelity, path); removed overrides/changes split
+  context: eval-consolidate-workspace

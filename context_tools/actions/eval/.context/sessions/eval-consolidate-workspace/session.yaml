@@ -462,3 +462,15 @@ turns:
       how: Manual draw.io edit — added Correction→Turn association edge (id=21) for
         fixedIn; routes via x=1040 to Turn entry.
       status: fixed
+- id: c9b3f592
+  prompt: persist session.yaml after fixedIn correction turn
+  result: turn c12fa32e indexed with mistake 54f63ba8
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: c9b3f592
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 1c174c524f1b36d339076016f7c430e09bbf178f
+  tool_calls: []
+  mistakes: []
