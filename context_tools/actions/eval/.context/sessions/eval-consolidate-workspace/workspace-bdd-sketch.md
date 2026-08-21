@@ -29,3 +29,22 @@ a workspace
     it should write current override rows to context-index under its path without a change log section
 
 **Deferred (next slices):** `workSessions`, `currentWorkSession`, `openWorkSession`, `WorkSession.open`, BaseContextTool three-step resolution on open.
+
+## Slice B â€” openWorkSession (grill tick 4)
+
+Fidelity: behavior
+
+a workspace
+  that opens a work session
+    -> workspace.openWorkSession(name, goal, fidelities, contexts, path, default_path, tool, fidelity)
+    it should load path overrides from context-index before opening
+    with a new session name
+      it should add the opened work session to its work sessions
+      it should set the current work session to the opened work session
+    with an existing session name
+      it should load the existing work session from its sessions folder
+      it should set the current work session to that work session
+    with an explicit path that differs from the default path for the opening tool
+      it should record a path override for that tool and fidelity
+    with an explicit path that equals the default path for the opening tool
+      it should drop any path override for that tool and fidelity
