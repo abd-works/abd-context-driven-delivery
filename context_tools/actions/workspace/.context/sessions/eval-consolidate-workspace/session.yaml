@@ -23,6 +23,18 @@ turns:
     session_name: eval-consolidate-workspace
     tool_names: []
     mistake_ids: []
-    sha: 39b427e9115c37ab15d6c121927bb2c4639f223b
+    sha: a2378dd0d43045f907fad1e793029c060df4d824
+  tool_calls: []
+  mistakes: []
+- id: 0c3be234
+  prompt: bdd grill tick 2 - lookupPath absent + row shape
+  result: Question on lookupPath when no row
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 0c3be234
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: dd1f240caebd660544c483e44e15e834156e5930
   tool_calls: []
   mistakes: []

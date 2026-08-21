@@ -35,3 +35,31 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 - `bdd-sketch.md` ΓÇö usage-story order: establish subject state before downstream open/session behaviors
 
 **Slice unlocked:** **no** ΓÇö tick 1 selects slice **family** (A). Tick 2 should lock observables inside A (e.g. `lookupPath` when no row: absent override vs todayΓÇÖs `lookup_root` returning `None`; row key shape `tool` + `fidelity` vs todayΓÇÖs single-key entries).
+
+---
+
+### Turn 27ae89d2 ΓÇö grill tick 2
+
+**Question:** Inside slice **A** (path overrides only), when `Workspace.lookupPath(tool, fidelity)` is called and **no** matching override row exists, what is the stakeholder-visible outcome?
+
+**Options:**
+
+- **A ΓÇö No override path:** `lookupPath` yields nothing (e.g. `None` / absent) ΓÇö the hostΓÇÖs default-folder fallback is **out of scope** for this slice (OO sketch puts that at resolution step 3 on **open**, lines 127ΓÇô129).
+- **B ΓÇö Implicit default path:** `lookupPath` returns `{workspace.path}/{default_workspace_folder}` even though `Workspace` does not carry host defaults in the target model (would duplicate checklist item 4).
+- **C ΓÇö Workspace root path:** return `{workspace.path}` when no row (todayΓÇÖs `root_glob_to_path` for `./*`).
+- **D ΓÇö Error:** raise when no row exists.
+
+**Secondary (index row shape):** persisted rows use **`tool` + `fidelity` + `path`** (OO sketch lines 115ΓÇô118, PathOverride lines 55ΓÇô58) ΓÇö **not** todayΓÇÖs single `tool_key = root_glob` entries in `ContextIndex.parse_current_entries` (one key per tool, no fidelity dimension).
+
+**Runner paths read:**
+
+- `workspace-eval-oo-sketch.md` ┬º2 lines 55ΓÇô58, 115ΓÇô118, 125ΓÇô129
+- `context_index.py` `lookup_root`, `parse_current_entries`, `upsert_entry` (today: tool_key only; `## Log` section ΓÇö target drops Log per OO line 123)
+- `grill-answers.md` tick 1 judge recommendation (slice A)
+
+**Judge answer:** *(pending)*
+
+**Citations:** *(pending)*
+
+**Slice unlocked:** *(pending)*
+
