@@ -111,9 +111,9 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 **Runner paths read:** `workspace-eval-oo-sketch.md` lines 51â€“53, 60â€“71, Â§9 items 3 and 5.
 
-**Judge answer:** *(pending)*
+**Judge answer:** **Recommend A.** OO line 53 sequences `load(); currentWorkSession.open(...); upsertPath` â€” Bdd slice B stops at **Workspace** outcomes before git/branch (slice C). Checklist item 5 is `openWorkSession`; item 3 is `WorkSession` with `openTurn`/git. Reject B (mixes aggregates). Reject C (checklist item 4).
 
-**Citations:** *(pending)*
+**Citations:** OO lines 45â€“53, 60â€“71; Â§9 lines 826â€“828.
 
-**Slice unlocked:** *(pending)*
+**Slice unlocked:** **yes** â€” slice B: openWorkSession loads overrides, mutates workSessions/currentWorkSession, upsertPath on non-default explicit path; exclude WorkSession.open git.
 
