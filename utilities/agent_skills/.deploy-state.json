@@ -54,52 +54,29 @@
     "handoff"
   ],
   "deploy_roots": [
-    "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\abd-context-driven-delivery\\.cursor",
-    "C:\\Users\\jeffa\\.cursor",
-    "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\.cursor"
+    "C:\\dev\\abd-context-driven-delivery\\.cursor",
+    "C:\\Users\\jeffa\\.cursor"
   ],
   "multi_folder_workspace": {
-    "workspace_file": "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\paradise-mobile.code-workspace",
+    "workspace_file": "C:\\dev\\abd-context-driven-delivery\\abd-context-driven-delivery.code-workspace",
     "folders": [
-      "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-cypress-automations",
-      "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-harmony",
-      "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-midtier",
-      "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-my",
-      "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-vouchera",
-      "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-onboarding",
-      "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-website",
-      "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-domain",
-      "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\abd-context-driven-delivery",
-      "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\.cursor"
+      "C:\\dev\\abd-context-driven-delivery",
+      "C:\\dev\\abd-skills",
+      "C:\\dev\\story-ui",
+      "C:\\dev\\you-tube-scraper"
     ],
-    "shared_root": "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile"
+    "shared_root": "C:\\dev\\abd-context-driven-delivery"
   },
   "multi_folder_workspaces": [
     {
-      "workspace_file": "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\abd-context-driven-delivery\\abd-context-driven-delivery.code-workspace",
+      "workspace_file": "C:\\dev\\abd-context-driven-delivery\\abd-context-driven-delivery.code-workspace",
       "folders": [
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\abd-context-driven-delivery",
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\abd-skills",
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\story-ui",
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\you-tube-scraper"
+        "C:\\dev\\abd-context-driven-delivery",
+        "C:\\dev\\abd-skills",
+        "C:\\dev\\story-ui",
+        "C:\\dev\\you-tube-scraper"
       ],
-      "shared_root": "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\abd-context-driven-delivery"
-    },
-    {
-      "workspace_file": "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\paradise-mobile.code-workspace",
-      "folders": [
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-cypress-automations",
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-harmony",
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-midtier",
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-my",
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-vouchera",
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-onboarding",
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-website",
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\pml-domain",
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\abd-context-driven-delivery",
-        "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile\\.cursor"
-      ],
-      "shared_root": "C:\\Users\\jeffa\\OneDrive - abd.works\\personal\\paradise-mobile"
+      "shared_root": "C:\\dev\\abd-context-driven-delivery"
     }
   ]
 }

@@ -63,3 +63,13 @@ turns:
     sha: a2659bdf8b7f2b9f9b8bbc57ee8fa1b6688caeaf
   tool_calls: []
   mistakes: []
+- id: agent-bdd-kit-owned
+  prompt: agent BDD for kit-owned slash routing
+  result: Added partition_agent_spec, host_lifecycle_agent_spec (generate/validate/document/satisfy),
+    repair_agent_spec; session JSON for iterate/sketch/partition/host_lifecycle/repair.
+    Existing iterate/sketch/grill agent specs unchanged. Host-direct specs (bdd, clean_engineering,
+    repair-action example) still valid.
+  context: action-owns-context-tools
+  change_commit: {}
+  tool_calls: []
+  mistakes: []

@@ -1,11 +1,11 @@
-# Handoff — action-owns-context-tools (2026-08-20)
+# Handoff — action-owns-context-tools (2026-08-21)
 
 ## Resume
 
 - **Stage:** development
-- **Last work:** bulk kit-owned inversion — partition, generate/validate/document/satisfy (HostLifecycle), repair; agent_skills factory
-- **Next action:** improve/createRule if needed; agent BDD for new kits
-- **Next focus:** merge branch when green
+- **Last work:** agent BDD owns-the-run specs for partition, HostLifecycle (generate/validate/document/satisfy), repair; session JSON for iterate/sketch
+- **Next action:** run full agent BDD suite (CLI harness); merge branch when green
+- **Next focus:** improve inversion if desired
 
 ## Session
 
