@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import inspect
+import json
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
+from typing import Any
 
+from primitives.instructions import Instruction
+from primitives.instructions import instruction
+from workspace.context_index import ContextIndex
 from workspace.git_repo import GitRepo, NullGitRepo, find_git_root
+from tools.tool import resource, tool
 
 
 @dataclass
@@ -56,7 +63,7 @@ class Turn:
         self.pending_correction: Correction | None = None
         self.artifact_path = ""
 
-    def open(self, host: BaseContextTool) -> Turn:
+    def open(self, host: ContextToolHost) -> Turn:
         session = host.workspace.current_work_session
         if session is None:
             raise RuntimeError("open turn requires currentWorkSession")
@@ -131,10 +138,10 @@ class Turn:
 
     def record_correction(
         self,
-        *,
         entry_ids: list[str],
+        *,
         improved: str,
-        how: str,
+        how: str = "",
         status: str = "fixed",
     ) -> Correction:
         session = self.work_session
@@ -244,7 +251,13 @@ class Correction:
 
 
 class WorkSession:
-    """One named work session — owns openTurn, turns, repairs, git."""
+    """One named work session — owns openTurn, turns, repairs, git; session.md kit."""
+
+    default_workspace_folder: str = "."
+    context_index_key: str = ""
+    _START_FIELD_KEYS = ("date", "path", "goal", "fidelities", "contexts")
+    _END_FIELD_KEYS = ("ended", "outcome", "handoff")
+    _END_HEADING = "## End"
 
     def __init__(
         self,
@@ -256,6 +269,16 @@ class WorkSession:
         contexts: str = "",
         path: str = "",
         git: GitRepo | None = None,
+        started: str | None = None,
+        ended: str = "",
+        outcome: str = "",
+        handoff: str = "",
+        body: str = "",
+        format: str | None = None,
+        workspace_root: str | None = None,
+        context_index_key: str | None = None,
+        default_workspace_folder: str | None = None,
+        host: Any | None = None,
     ) -> None:
         self.workspace = workspace
         self.name = name
@@ -263,13 +286,26 @@ class WorkSession:
         self.fidelities = fidelities
         self.contexts = contexts
         self.path = path or workspace.path
-        self.folder = str(Path(workspace.path) / ".context" / "sessions" / name)
+        self.workspace_root = workspace_root if workspace_root is not None else workspace.path
         self.git = git if git is not None else self._default_git()
         self.open_turn: Turn | None = None
         self.turns: list[Turn] = []
         self.repairs: list = []
         self.scope_paths: list[str] = [str(self.git.root)]
         self.trail: list[ToolCall] = []
+        self.format = format
+        self._host = host
+        self.eval: Any | None = None
+        self._context_index: str | None = None
+        if context_index_key is not None:
+            self.context_index_key = context_index_key
+        if default_workspace_folder is not None:
+            self.default_workspace_folder = default_workspace_folder
+        self.started = started if started is not None else date.today().isoformat()
+        self.ended = ended
+        self.outcome = outcome
+        self.handoff = handoff
+        self.body = body
 
     def _default_git(self) -> GitRepo:
         root = find_git_root(self.workspace.path)
@@ -285,6 +321,178 @@ class WorkSession:
     def dirty(self) -> bool:
         return self.git.is_dirty()
 
+    @property
+    def folder(self) -> Path:
+        if not self.name:
+            raise ValueError(
+                "session name is not set - confirm working path and session slug with the "
+                "user, then call open before grill/sketch/handoff"
+            )
+        return Path(self.workspace.path) / ".context" / "sessions" / self.name
+
+    @property
+    def log(self) -> Path:
+        return self.folder / "logs"
+
+    @property
+    def session_md(self) -> Path:
+        return self.folder / "session.md"
+
+    @property
+    def context_index(self) -> str:
+        return self._context_index or ""
+
+    @property
+    def module_dir(self) -> Path:
+        return Path(inspect.getfile(type(self))).resolve().parent
+
+    @property
+    def domain_slug(self) -> str:
+        return "workspace_session"
+
+    @instruction
+    def session_guidance(self) -> Instruction: ...
+
+    @property
+    @resource
+    def active(self) -> WorkSession:
+        return self
+
+    def _take_from(self, other: WorkSession) -> None:
+        self.path = other.path
+        self.name = other.name
+        self.goal = other.goal
+        self.fidelities = other.fidelities
+        self.contexts = other.contexts
+        self.started = other.started
+        self.ended = other.ended
+        self.outcome = other.outcome
+        self.handoff = other.handoff
+        self.body = other.body
+
+    def _bind_session_log(self) -> None:
+        if self.name:
+            from workspace.session_log import SessionLog
+
+            SessionLog.instance().bind(self)
+
+    def attach_host(self, host: Any) -> None:
+        self._host = host
+        self._bind_eval()
+
+    def _bind_eval(self) -> None:
+        if self._host is None:
+            self.eval = None
+            return
+        from eval.session import EvalSession
+
+        if not self.name:
+            self.eval = None
+            self._sync_host_repairer()
+            return
+        self.eval = EvalSession(workspace=self)
+        self._bind_session_log()
+        self._write_eval_state()
+        self._sync_host_repairer()
+
+    def _sync_host_repairer(self) -> None:
+        host = self._host
+        if host is None:
+            return
+        repairer = getattr(host, "repairer", None)
+        if repairer is not None:
+            repairer.session = self.eval
+            repairer.host = host
+
+    def _write_eval_state(self) -> None:
+        host = self._host
+        if host is None:
+            return
+        state_dir = Path.home() / ".cursor"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        cdd_repo = Path(inspect.getfile(type(host))).resolve().parent.parent.parent
+        state = {
+            "cdd_repo": str(cdd_repo),
+            "toolset_path": f"{type(host).__module__}:{type(host).__name__}",
+            "path": getattr(host, "_raw_path", None),
+            "session": getattr(self, "name", None),
+        }
+        try:
+            (state_dir / "cdd_eval_state.json").write_text(
+                json.dumps(state, indent=2), encoding="utf-8"
+            )
+        except Exception:
+            pass
+
+    def _resolve_working_area(self, working_area: str | None) -> str:
+        if working_area is not None:
+            return working_area
+        key = self.context_index_key or ""
+        indexed = ContextIndex.lookup_root(self.workspace_root, key) if key else None
+        if indexed:
+            return ContextIndex.root_glob_to_path(self.workspace_root, indexed)
+        folder = self.default_workspace_folder or "."
+        if folder in (".", ""):
+            return self.workspace_root
+        return str(Path(self.workspace_root) / folder)
+
+    def to_dict(self) -> dict[str, str | None]:
+        try:
+            folder = str(self.folder)
+        except ValueError:
+            folder = None
+        return {
+            "path": self.path,
+            "name": self.name,
+            "folder": folder,
+            "goal": self.goal or None,
+            "fidelities": self.fidelities or None,
+            "contexts": self.contexts or None,
+            "started": self.started or None,
+            "ended": self.ended or None,
+            "outcome": self.outcome or None,
+            "handoff": self.handoff or None,
+            "body": self.body or None,
+        }
+
+    def __repr__(self) -> str:
+        return f"WorkSession(path={self.path!r}, name={self.name!r})"
+
+    @classmethod
+    def load(cls, path: str, name: str) -> WorkSession:
+        parent = Workspace(path)
+        session = cls(parent, name, path=path, workspace_root=path)
+        md = session.session_md
+        if not md.is_file():
+            return session
+        return cls._parse(md.read_text(encoding="utf-8"), path=path, name=name)
+
+    def ensure_started(
+        self,
+        *,
+        goal: str = "",
+        fidelities: str = "",
+        contexts: str = "",
+    ) -> Path:
+        if not self.name:
+            raise ValueError("session name is required to create a sprint folder")
+        if goal:
+            self.goal = goal
+        if fidelities:
+            self.fidelities = fidelities
+        if contexts:
+            self.contexts = contexts
+        if not self.started:
+            self.started = date.today().isoformat()
+        self.git.checkout_or_create(self.session_branch)
+        self.folder.mkdir(parents=True, exist_ok=True)
+        if not self.session_md.is_file():
+            self.session_md.write_text(self._render(), encoding="utf-8")
+        elif goal or fidelities or contexts:
+            if not self.ended:
+                self.session_md.write_text(self._render(), encoding="utf-8")
+        return self.session_md
+
     def open(
         self,
         name: str = "",
@@ -295,9 +503,6 @@ class WorkSession:
     ) -> str:
         if name:
             self.name = name
-            self.folder = str(
-                Path(self.workspace.path) / ".context" / "sessions" / self.name
-            )
         if goal:
             self.goal = goal
         if fidelities:
@@ -306,24 +511,71 @@ class WorkSession:
             self.contexts = contexts
         if path:
             self.path = path
-        Path(self.folder).mkdir(parents=True, exist_ok=True)
-        md = Path(self.folder) / "session.md"
-        if not md.is_file():
-            md.write_text(
-                f"# {self.name}\n\n## Start\n- goal: {self.goal}\n",
-                encoding="utf-8",
+        if not self.name:
+            return (
+                "need session name — confirm working path and kebab slug with the user, "
+                "then call open before grill/sketch"
             )
-        self.git.checkout_or_create(self.session_branch)
-        return self.session_branch
+        self.ensure_started(goal=goal, fidelities=fidelities, contexts=contexts)
+        self._bind_session_log()
+        return (
+            "Workspace open. "
+            "durable root = path; "
+            "sprint docs = folder; "
+            "context index loaded when present."
+        )
 
-    def close(self, outcome: str = "", handoff: str = "") -> Path:
-        md = Path(self.folder) / "session.md"
-        with md.open("a", encoding="utf-8") as handle:
-            handle.write(f"\n## End\n- outcome: {outcome}\n- handoff: {handoff}\n")
-        return md
+    def _ensure_sprint(
+        self,
+        name: str = "",
+        goal: str = "",
+        fidelities: str = "",
+        contexts: str = "",
+        path: str = "",
+    ) -> str:
+        effective_path = path.strip() or self.path
+        effective_name = name.strip() or (self.name or "")
+        if not effective_name:
+            return (
+                "need session name — confirm working path and kebab slug with the user, "
+                "then call open before grill/sketch"
+            )
+        loaded = type(self).load(effective_path, effective_name)
+        if loaded.session_md.is_file():
+            self._take_from(loaded)
+        else:
+            self.path = effective_path
+            self.name = effective_name
+            self.goal = goal
+            self.fidelities = fidelities
+            self.contexts = contexts
+            self.ended = ""
+            self.outcome = ""
+            self.handoff = ""
+            self.started = date.today().isoformat()
+        self.ensure_started(goal=goal, fidelities=fidelities, contexts=contexts)
+        self._bind_session_log()
+        return str(self.session_md.resolve())
+
+    def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
+        if not self.session_md.is_file():
+            self.ensure_started()
+        self.ended = date.today().isoformat()
+        if handoff:
+            self.handoff = handoff
+        if not outcome and self.handoff:
+            outcome = "handoff written"
+        if outcome:
+            self.outcome = outcome
+        self.session_md.write_text(self._render(), encoding="utf-8")
+        return self.session_md
+
+    def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:
+        md = self.close(outcome=outcome, handoff=handoff)
+        return str(md.resolve())
 
     def save(self) -> Path:
-        path = Path(self.folder) / "session.yaml"
+        path = self.folder / "session.yaml"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
             f"name: {self.name}\nbranch: {self.session_branch}\npath: {self.path}\n",
@@ -331,13 +583,13 @@ class WorkSession:
         )
         return path
 
-    def load(self) -> None:
-        pass
+    def load_state(self) -> None:
+        """Instance load hook — bootstrap yaml only (git-primary association elsewhere)."""
+        return None
 
     def append_trail(self, call: ToolCall) -> None:
-        """SessionLog.append shape — events.log + openTurn.toolCalls."""
         self.trail.append(call)
-        log_dir = Path(self.folder) / "logs"
+        log_dir = self.log
         log_dir.mkdir(parents=True, exist_ok=True)
         ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
         line = (
@@ -352,6 +604,106 @@ class WorkSession:
             handle.write(line + "\n")
         if self.open_turn is not None:
             self.open_turn.tool_calls.append(call)
+
+    def read_context_index(self) -> str:
+        path = ContextIndex.context_index_path(self.workspace_root)
+        if not path.is_file():
+            self._context_index = None
+            return f"missing: {path.as_posix()} (no roots recorded yet)"
+        text = path.read_text(encoding="utf-8")
+        self._context_index = text
+        return text
+
+    def record_context_root(self, root: str = "", note: str = "") -> str:
+        key = getattr(self, "context_index_key", "") or ""
+        if not key:
+            return "skipped: this toolset has no context_index_key"
+        working = root if root else self.path
+        glob = ContextIndex.path_to_root_glob(self.workspace_root, working)
+        path = ContextIndex.upsert_entry(self.workspace_root, key, glob, note=note)
+        if path.is_file():
+            self._context_index = path.read_text(encoding="utf-8")
+        return str(path.resolve())
+
+    def _render(self) -> str:
+        lines = [
+            f"# Session: {self.name}",
+            "",
+            "## Start",
+            "",
+            f"- **date:** {self.started}",
+            f"- **path:** {self.path}",
+            f"- **goal:** {self.goal or '(unset)'}",
+            f"- **fidelities:** {self.fidelities or '(unset)'}",
+            f"- **contexts:** {self.contexts or '(unset)'}",
+            "",
+        ]
+        if self.body:
+            lines.append(self.body.strip("\n"))
+            lines.append("")
+        if self.ended or self.outcome or self.handoff:
+            lines.extend(
+                [
+                    "## End",
+                    "",
+                    f"- **ended:** {self.ended or '(unset)'}",
+                    f"- **outcome:** {self.outcome or '(unset)'}",
+                    f"- **handoff:** {self.handoff or '(unset)'}",
+                    "",
+                ]
+            )
+        return "\n".join(lines)
+
+    @classmethod
+    def _extract_body(cls, lines: list[str], end_idx: int | None) -> str:
+        scope_end = end_idx if end_idx is not None else len(lines)
+        last_start_field_idx = -1
+        for i in range(scope_end):
+            stripped = lines[i].strip()
+            if not stripped.startswith("- **") or ":**" not in stripped:
+                continue
+            key = stripped.partition(":**")[0].removeprefix("- **").strip()
+            if key in cls._START_FIELD_KEYS:
+                last_start_field_idx = i
+        body_start = last_start_field_idx + 1
+        if body_start < scope_end and not lines[body_start].strip():
+            body_start += 1
+        return "\n".join(lines[body_start:scope_end]).strip("\n")
+
+    @classmethod
+    def _parse(cls, text: str, *, path: str, name: str) -> WorkSession:
+        lines = text.splitlines()
+        end_idx = next(
+            (i for i, line in enumerate(lines) if line.strip() == cls._END_HEADING),
+            None,
+        )
+        fields: dict[str, str] = {}
+        for line in lines:
+            stripped = line.strip()
+            if not stripped.startswith("- **") or ":**" not in stripped:
+                continue
+            key, _, value = stripped.partition(":**")
+            key = key.removeprefix("- **").strip()
+            value = value.strip()
+            if value.startswith("(") and value.endswith(")"):
+                value = ""
+            fields[key] = value
+        body = cls._extract_body(lines, end_idx)
+        parent = Workspace(path)
+        return cls(
+            parent,
+            name,
+            path=fields.get("path") or path,
+            goal=fields.get("goal", ""),
+            fidelities=fields.get("fidelities", ""),
+            contexts=fields.get("contexts", ""),
+            started=fields.get("date", "") or date.today().isoformat(),
+            ended=fields.get("ended", ""),
+            outcome=fields.get("outcome", ""),
+            handoff=fields.get("handoff", ""),
+            body=body,
+            workspace_root=path,
+        )
 
 
 class Workspace:
@@ -372,7 +724,9 @@ class Workspace:
         for folder in sorted(sessions_root.iterdir()):
             if not folder.is_dir() or folder.name in known:
                 continue
-            self.work_sessions.append(WorkSession(self, folder.name))
+            self.work_sessions.append(
+                WorkSession(self, folder.name, workspace_root=self.path)
+            )
 
     def save(self) -> Path:
         path = Path(self.path) / ".context" / "context-index.md"
@@ -426,6 +780,10 @@ class Workspace:
         path: str = "",
         *,
         git: GitRepo | None = None,
+        context_index_key: str | None = None,
+        default_workspace_folder: str | None = None,
+        format: str | None = None,
+        host: Any | None = None,
     ) -> WorkSession:
         self.load()
         existing = next((s for s in self.work_sessions if s.name == name), None)
@@ -438,6 +796,11 @@ class Workspace:
                 contexts=contexts,
                 path=path or self.path,
                 git=git,
+                workspace_root=self.path,
+                context_index_key=context_index_key,
+                default_workspace_folder=default_workspace_folder,
+                format=format,
+                host=host,
             )
             self.work_sessions.append(session)
         else:
@@ -452,6 +815,14 @@ class Workspace:
                 session.contexts = contexts
             if path:
                 session.path = path
+            if context_index_key is not None:
+                session.context_index_key = context_index_key
+            if default_workspace_folder is not None:
+                session.default_workspace_folder = default_workspace_folder
+            if format is not None:
+                session.format = format
+            if host is not None:
+                session._host = host
         self.current_work_session = session
         session.open(
             name=name,
@@ -495,8 +866,8 @@ class Workspace:
         return rows
 
 
-class BaseContextTool:
-    """Host surface from OO — workspace direct; turn/git via currentWorkSession."""
+class ContextToolHost:
+    """Spec/host surface from OO — workspace direct; turn/git via currentWorkSession."""
 
     def __init__(
         self,
@@ -538,6 +909,8 @@ class BaseContextTool:
             fidelities=self.fidelity,
             path=path,
             git=self._git,
+            context_index_key=self.context_index_key,
+            default_workspace_folder=self.default_workspace_folder,
         )
         resolved = self.resolve_edit_path(explicit=path)
         self.artifact_path = resolved
@@ -570,3 +943,7 @@ class BaseContextTool:
         if session is None or session.open_turn is None:
             raise RuntimeError("no open turn")
         return session.open_turn.finish(result=result)
+
+
+# Back-compat for specs that imported the stub name during generation.
+BaseContextTool = ContextToolHost

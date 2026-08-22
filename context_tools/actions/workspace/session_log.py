@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 if TYPE_CHECKING:
-    from workspace.workspace_session import WorkSession
+    from workspace.workspace import WorkSession
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -122,14 +122,15 @@ class SessionLog(ISessionLog):
 
     @staticmethod
     def _session_cls():
-        from workspace.workspace_session import WorkSession
+        from workspace.workspace import WorkSession, Workspace
 
-        return WorkSession
+        return WorkSession, Workspace
 
     def __init__(self, sessions_root: Path | None = None) -> None:
         # Test override only: when set, log_dir = sessions_root / session.name
         self._sessions_root = sessions_root
-        self._session = SessionLog._session_cls()(path=".", name="default")
+        work_session_cls, workspace_cls = SessionLog._session_cls()
+        self._session = work_session_cls(workspace_cls("."), "default")
         self._verbose = False
         self._last_payload: _LastPayload | None = None
         self._event_count = 0

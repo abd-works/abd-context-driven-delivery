@@ -32,7 +32,7 @@ from workspace.git_repo import (
     _git_executable,
     find_git_root,
 )
-from workspace.workspace_session import WorkSession
+from workspace.workspace import Workspace, WorkSession
 
 
 def _mistake_slug(rule: str, wrong: str, taken: set[str]) -> str:
@@ -448,8 +448,8 @@ class CDDRepo(GitRepo):
         session.cdd_at = self.head_sha
 
     def open_session(self, name: str) -> EvalSession:
-        workspace = WorkSession(path=str(self.root), name=name)
-        workspace.ensure_started()
+        parent = Workspace(str(self.root))
+        workspace = parent.open_work_session(name)
         return EvalSession(workspace=workspace, git=self, cdd_repo=self)
 
 

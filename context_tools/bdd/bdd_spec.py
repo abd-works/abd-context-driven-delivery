@@ -80,7 +80,7 @@ with description("a Bdd toolset"):
         with context("with a session set"):
             with it("should carry the same session name to the CE companion"):
                 ce = Bdd(fidelity="development", session="satisfy").ce()
-                expect(ce.workspace.name).to(equal("satisfy"))
+                expect(ce.workspace.current_work_session.name if ce.workspace.current_work_session else None).to(equal("satisfy"))
 
         with it("should return a companion with mode set to tool"):
             ce = Bdd().ce()

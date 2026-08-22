@@ -93,7 +93,7 @@ with description("WorkSession on a BaseContextTool host"):
             )
 
         with it("should resolve open instructions from workspace_session.md"):
-            from workspace.workspace_session import WorkSession
+            from workspace.workspace import Workspace, WorkSession
 
             tools = _discover_tools(self.host.workspace)
             expect(tools["open"].instructions.startswith("# Open")).to(be_true)
@@ -107,10 +107,10 @@ with description("WorkSession on a BaseContextTool host"):
             ).to(be_false)
 
         with it("should expand kit open instructions from workspace_session.md"):
-            from workspace.workspace_session import WorkSession
+            from workspace.workspace import Workspace, WorkSession
 
             tools = _discover_tools(self.host.workspace)
-            expect(isinstance(self.host.workspace, WorkSession)).to(be_true)
+            expect(isinstance(self.host.workspace, Workspace)).to(be_true)
             expect(tools["open"].instructions.startswith("# Open")).to(be_true)
             expect(tools["close_session"].instructions.startswith("# Close Session")).to(
                 be_true
@@ -154,10 +154,10 @@ with description("WorkSession on a BaseContextTool host"):
 with description("a WorkSession with a name and path"):
     with before.each:
         self.tmp = Path(tempfile.mkdtemp(prefix="session_props_"))
-        from workspace.workspace_session import WorkSession
+        from workspace.workspace import Workspace, WorkSession
         from workspace.session_log import SessionLog
         SessionLog.set_instance(None)
-        self.session = WorkSession(path=str(self.tmp), name="my-sprint")
+        self.session = Workspace(str(self.tmp)).open_work_session("my-sprint")
 
     with it("should expose folder under .context/sessions/{name}"):
         # Act / Assert
@@ -179,9 +179,10 @@ with description("a WorkSession with a name and path"):
 
     with it("should return a dict with all fields via to_dict"):
         # Arrange
-        from workspace.workspace_session import WorkSession
-        s = WorkSession(path=str(self.tmp), name="sprint-1", goal="ship it",
-                    fidelities="behavior", contexts="bdd")
+        from workspace.workspace import Workspace, WorkSession
+        s = Workspace(str(self.tmp)).open_work_session(
+            "sprint-1", goal="ship it", fidelities="behavior", contexts="bdd"
+        )
         # Act
         d = s.to_dict()
         # Assert
@@ -194,9 +195,9 @@ with description("a WorkSession with a name and path"):
 
 with description("a WorkSession without a name"):
     with it("should raise ValueError when folder is accessed"):
-        from workspace.workspace_session import WorkSession
-        s = WorkSession(path=".")
-        # Act / Assert
+        from workspace.workspace import Workspace, WorkSession
+        s = WorkSession(Workspace("."), "")
+        # Act / Assert — empty name must refuse folder access
         raised = False
         try:
             _ = s.folder
@@ -209,7 +210,7 @@ with description("a WorkSession that is loaded"):
     with context("with no existing session.md"):
         with it("should return a Session with path and name set and no goal"):
             import tempfile
-            from workspace.workspace_session import WorkSession
+            from workspace.workspace import Workspace, WorkSession
             tmp = Path(tempfile.mkdtemp(prefix="session_load_"))
             # Act
             s = WorkSession.load(str(tmp), "no-file")
@@ -221,9 +222,9 @@ with description("a WorkSession that is loaded"):
     with context("with an existing session.md"):
         with it("should return a Session with fields parsed from the file"):
             import tempfile
-            from workspace.workspace_session import WorkSession
+            from workspace.workspace import Workspace, WorkSession
             tmp = Path(tempfile.mkdtemp(prefix="session_load_existing_"))
-            s = WorkSession(path=str(tmp), name="loaded-sprint", goal="test goal",
+            s = Workspace(str(tmp)).open_work_session("loaded-sprint", goal="test goal",
                         fidelities="development")
             s.ensure_started()
             # Act
@@ -236,9 +237,9 @@ with description("a WorkSession that is loaded"):
 with description("a WorkSession that is started"):
     with it("should create the session.md file at the sprint folder path"):
         import tempfile
-        from workspace.workspace_session import WorkSession
+        from workspace.workspace import Workspace, WorkSession
         tmp = Path(tempfile.mkdtemp(prefix="session_started_"))
-        s = WorkSession(path=str(tmp), name="start-test", goal="build feature")
+        s = Workspace(str(tmp)).open_work_session("start-test", goal="build feature")
         # Act
         md = s.ensure_started()
         # Assert
@@ -252,14 +253,14 @@ with description("a WorkSession that is started in a git working area"):
         import shutil
         import tempfile
         from workspace.git_repo import GitRepo, _git, find_git_root
-        from workspace.workspace_session import WorkSession
+        from workspace.workspace import Workspace, WorkSession
 
         tmp = Path(tempfile.mkdtemp(prefix="session_git_started_"))
         _git(tmp, "init")
         _git(tmp, "config", "user.email", "test@example.com")
         _git(tmp, "config", "user.name", "test")
         _git(tmp, "commit", "--allow-empty", "-m", "init")
-        session = WorkSession(path=str(tmp), name="sprint")
+        session = Workspace(str(tmp)).open_work_session("sprint")
         session.ensure_started()
         root = find_git_root(tmp)
         expect(root).to(equal(tmp.resolve()))
@@ -271,14 +272,14 @@ with description("a WorkSession that is started in a git working area"):
             import shutil
             import tempfile
             from workspace.git_repo import GitRepo, _git
-            from workspace.workspace_session import WorkSession
+            from workspace.workspace import Workspace, WorkSession
 
             tmp = Path(tempfile.mkdtemp(prefix="session_git_already_on_"))
             _git(tmp, "init")
             _git(tmp, "config", "user.email", "test@example.com")
             _git(tmp, "config", "user.name", "test")
             _git(tmp, "commit", "--allow-empty", "-m", "init")
-            session = WorkSession(path=str(tmp), name="sprint")
+            session = Workspace(str(tmp)).open_work_session("sprint")
             session.ensure_started()
             (tmp / "wip.txt").write_text("in progress", encoding="utf-8")
             session.ensure_started()
@@ -294,7 +295,7 @@ with description("a WorkSession that is started in a git working area"):
                 GitRepo,
                 _git,
             )
-            from workspace.workspace_session import WorkSession
+            from workspace.workspace import Workspace, WorkSession
 
             tmp = Path(tempfile.mkdtemp(prefix="session_git_resume_dirty_"))
             _git(tmp, "init")
@@ -302,7 +303,7 @@ with description("a WorkSession that is started in a git working area"):
             _git(tmp, "config", "user.name", "test")
             _git(tmp, "commit", "--allow-empty", "-m", "init")
             started_on = GitRepo(tmp).current_branch
-            session = WorkSession(path=str(tmp), name="sprint")
+            session = Workspace(str(tmp)).open_work_session("sprint")
             session.ensure_started()
             _git(tmp, "checkout", started_on)
             (tmp / "wip.txt").write_text("in progress", encoding="utf-8")
@@ -316,7 +317,7 @@ with description("a WorkSession that is started in a git working area"):
             import shutil
             import tempfile
             from workspace.git_repo import GitRepo, _git
-            from workspace.workspace_session import WorkSession
+            from workspace.workspace import Workspace, WorkSession
 
             tmp = Path(tempfile.mkdtemp(prefix="session_git_resume_clean_"))
             _git(tmp, "init")
@@ -324,7 +325,7 @@ with description("a WorkSession that is started in a git working area"):
             _git(tmp, "config", "user.name", "test")
             _git(tmp, "commit", "--allow-empty", "-m", "init")
             started_on = GitRepo(tmp).current_branch
-            session = WorkSession(path=str(tmp), name="sprint")
+            session = Workspace(str(tmp)).open_work_session("sprint")
             session.ensure_started()
             (tmp / "handoff-marker.txt").write_text("user-one-handoff", encoding="utf-8")
             _git(tmp, "add", "handoff-marker.txt")
@@ -342,7 +343,7 @@ with description("a WorkSession that is started in a git working area"):
             import shutil
             import tempfile
             from workspace.git_repo import GitRepo, _git
-            from workspace.workspace_session import WorkSession
+            from workspace.workspace import Workspace, WorkSession
 
             tmp = Path(tempfile.mkdtemp(prefix="session_git_two_sprints_"))
             _git(tmp, "init")
@@ -350,14 +351,14 @@ with description("a WorkSession that is started in a git working area"):
             _git(tmp, "config", "user.name", "test")
             _git(tmp, "commit", "--allow-empty", "-m", "init")
             main = GitRepo(tmp).current_branch
-            first = WorkSession(path=str(tmp), name="first")
+            first = Workspace(str(tmp)).open_work_session("first")
             first.ensure_started()
             (tmp / "first-handoff.txt").write_text("first-session-work", encoding="utf-8")
             _git(tmp, "add", "first-handoff.txt")
             _git(tmp, "add", ".context")
             _git(tmp, "commit", "-m", "first handoff")
             _git(tmp, "checkout", main)
-            WorkSession(path=str(tmp), name="second").ensure_started()
+            Workspace(str(tmp)).open_work_session("second").ensure_started()
             expect(GitRepo(tmp).current_branch).to(equal("session/second"))
             expect((tmp / "first-handoff.txt").exists()).to(be_false)
             _git(tmp, "add", ".context")
@@ -373,9 +374,9 @@ with description("a WorkSession that is started in a git working area"):
 with description("a WorkSession that is closed"):
     with it("should write an End section with outcome into session.md"):
         import tempfile
-        from workspace.workspace_session import WorkSession
+        from workspace.workspace import Workspace, WorkSession
         tmp = Path(tempfile.mkdtemp(prefix="session_closed_"))
-        s = WorkSession(path=str(tmp), name="close-test")
+        s = Workspace(str(tmp)).open_work_session("close-test")
         s.ensure_started()
         # Act
         md = s.close(outcome="all done", handoff="")
@@ -386,9 +387,9 @@ with description("a WorkSession that is closed"):
 
     with it("should preserve hand-written prose between Start and End (regression: closing must not clobber it)"):
         import tempfile
-        from workspace.workspace_session import WorkSession
+        from workspace.workspace import Workspace, WorkSession
         tmp = Path(tempfile.mkdtemp(prefix="session_closed_body_"))
-        s = WorkSession(path=str(tmp), name="close-body-test")
+        s = Workspace(str(tmp)).open_work_session("close-body-test")
         s.ensure_started()
         # Simulate an agent hand-writing progress notes directly into session.md
         # (outside the Session API), the way this session's Progress notes were added.
@@ -414,21 +415,19 @@ with description("a WorkSession that is closed"):
 
 with description("a WorkSession tool"):
     with before.each:
-        from workspace.workspace_session import WorkSession
+        from workspace.workspace import Workspace, WorkSession
         from workspace.session_log import SessionLog
         SessionLog.set_instance(None)
         self.tmp = Path(tempfile.mkdtemp(prefix="session_tool_"))
-        self.session = WorkSession(path=str(self.tmp))
+        self.session = WorkSession(Workspace(str(self.tmp)), "")
 
     with context("open"):
         with it("should ensure session, load index, and record root in one call"):
             from workspace.context_index import ContextIndex
-            from workspace.workspace_session import WorkSession
+            from workspace.workspace import Workspace, WorkSession
 
-            keyed = WorkSession(
-                path=str(self.tmp),
-                name="open-sprint",
-                workspace=str(self.tmp),
+            keyed = Workspace(str(self.tmp)).open_work_session(
+                "open-sprint",
                 context_index_key="test-kit",
             )
             result = keyed.open()
@@ -462,11 +461,11 @@ with description("a WorkSession tool"):
     with context("read_context_index"):
         with it("should return a missing message when no context-index.md exists"):
             # Arrange: session with workspace pointing at an empty tmp dir
-            from workspace.workspace_session import WorkSession
+            from workspace.workspace import Workspace, WorkSession
             from workspace.session_log import SessionLog
             SessionLog.set_instance(None)
             fresh_tmp = Path(tempfile.mkdtemp(prefix="session_read_idx_"))
-            session = WorkSession(path=str(fresh_tmp), workspace=str(fresh_tmp))
+            session = WorkSession(Workspace(str(fresh_tmp)), "", workspace_root=str(fresh_tmp))
             # Act
             result = session.read_context_index()
             # Assert
@@ -475,13 +474,13 @@ with description("a WorkSession tool"):
         with context("when a context-index.md exists"):
             with it("should return the file contents"):
                 # Arrange
-                from workspace.workspace_session import WorkSession
+                from workspace.workspace import Workspace, WorkSession
                 from workspace.session_log import SessionLog
                 from workspace.context_index import ContextIndex
                 SessionLog.set_instance(None)
                 idx_tmp = Path(tempfile.mkdtemp(prefix="session_read_idx_exist_"))
                 ContextIndex.upsert_entry(str(idx_tmp), "mytool", "fixtures/my-tool")
-                session = WorkSession(path=str(idx_tmp), workspace=str(idx_tmp))
+                session = WorkSession(Workspace(str(idx_tmp)), "", workspace_root=str(idx_tmp))
                 # Act
                 result = session.read_context_index()
                 # Assert

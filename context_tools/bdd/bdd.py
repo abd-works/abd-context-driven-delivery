@@ -99,8 +99,12 @@ class Bdd(BaseContextTool):
         instance = CleanEngineering(
             fidelity=_CE_FIDELITY.get(self.fidelity, "modules"),
             path=self._raw_path,
-            session=self.workspace.name,
-            workspace=self.workspace.workspace_root,
+            session=(
+                self.workspace.current_work_session.name
+                if self.workspace.current_work_session
+                else ""
+            ),
+            workspace=self.workspace.path,
         )
         instance.mode = "tool"
         return instance

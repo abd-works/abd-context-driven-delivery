@@ -1,8 +1,4 @@
-"""WorkSession model, logging, and binding.
-
-``WorkSession`` loads lazily so ``from workspace import log``
-does not re-enter ``primitives.actions.action`` while that module is still importing.
-"""
+"""Workspace aggregate, WorkSession, GitRepo, SessionLog."""
 
 from workspace.session import SessionPaths
 
@@ -20,7 +16,11 @@ from workspace.session_log import (
 
 __all__ = [
     "ISessionLog",
+    "Workspace",
     "WorkSession",
+    "ContextToolHost",
+    "GitRepo",
+    "NullGitRepo",
     "SessionLog",
     "docs_dir",
     "inherit_annotations",
@@ -33,10 +33,10 @@ __all__ = [
 
 
 def __getattr__(name: str):
-    if name == "WorkSession":
-        from workspace.workspace_session import WorkSession
+    if name in ("WorkSession", "Workspace", "ContextToolHost", "Turn", "Mistake", "Correction"):
+        from workspace import workspace as _w
 
-        return WorkSession
+        return getattr(_w, name)
     if name in ("GitRepo", "NullGitRepo", "find_git_root"):
         from workspace.git_repo import GitRepo, NullGitRepo, find_git_root
 
