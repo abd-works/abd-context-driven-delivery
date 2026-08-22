@@ -319,3 +319,24 @@ turns:
     name: log_correction
     summary: entry_id=1ad49040, status=fixed
   mistakes: []
+- id: f100ccc9
+  prompt: log correction — sketch action-first usage story entry
+  result: mistake 23dd937b fixed; sketch starts at action invoke; turn.open opens a turn for the run
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: f100ccc9
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - 23dd937b
+    sha: 5863f0c7f23b2021cc582be418bec47ead31ab82
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=23dd937b, rule=usage-order-behaviors
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=23dd937b, status=fixed
+  mistakes: []

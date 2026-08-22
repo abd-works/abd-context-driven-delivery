@@ -8,7 +8,7 @@ a context tool
   that is invoked to run an action
     -> workspace.openWorkSession(name, goal, fidelities, contexts, path, default_path, tool, fidelity)
     -> turn.open(host)
-    it should open its work session before domain steps
+    it should open a turn for the action run
     it should load path overrides from context-index before opening
     with an explicit path argument on open
       it should resolve its path to that argument
