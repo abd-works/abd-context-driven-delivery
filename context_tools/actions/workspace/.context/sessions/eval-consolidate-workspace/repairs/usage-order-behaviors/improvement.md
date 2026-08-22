@@ -1,9 +1,6 @@
 # usage-order-behaviors
 
 - **tool:** Bdd
-- **error:** Ran /bdd /sketch without grilling the consolidated usage story. Sketcher generate wrote workspace_spec.py and edited the hierarchy without grill tick classifying legitimate subjects, standing with conditions, enabling that events, and invalid patterns per describe line — repeated bad Bdd (logged state, API narration).
+- **error:** Hand-edited workspace_spec.py while the consolidated sketch is still in grill/sketch. bdd-grill-sketch-workflow.md: {module}_spec.py only after sketch is judge-clean and iterate unlocks generate — not during grill/sketch turns. Agent-finish slice belongs in workspace-bdd-sketch.md only until generate.
 - **rule:** usage-order-behaviors
-- **how:** |
-    Bdd: grill tick 8 in grill-answers.md before sketch edits; run audit under `that has finished its turn`.
-
-    Eval: mistake turn (`begin` → `log_mistake` → `finish`, one process) then correction turn (`begin` → `log_correction` → `finish`, one process) — never both tools on one turn. Turns `99079d1e` / `2245e8ec` orphaned by separate `tools.ps1 run` per tool within a single turn.
+- **how:** Revert premature spec edit; agent-finish slice stays in sketch until validate + generate.

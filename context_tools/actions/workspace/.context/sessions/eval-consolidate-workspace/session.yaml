@@ -1075,3 +1075,34 @@ turns:
     sha: 59867ae4af202f53476c609f2e6b9f0e2a61130c
   tool_calls: []
   mistakes: []
+- id: e5b802be
+  prompt: log mistake — spec edited during sketch phase
+  result: entry_id=32453ccf
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: e5b802be
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - 32453ccf
+    sha: 8d96d5670fef943985dcdbc17bf736bb73aa9517
+  tool_calls: []
+  mistakes:
+  - entry_id: 32453ccf
+    artifact: context_tools/actions/workspace/workspace_spec.py
+    rule: usage-order-behaviors
+    wrong: 'Hand-edited workspace_spec.py while the consolidated sketch is still in
+      grill/sketch. bdd-grill-sketch-workflow.md: {module}_spec.py only after sketch
+      is judge-clean and iterate unlocks generate — not during grill/sketch turns.
+      Agent-finish slice belongs in workspace-bdd-sketch.md only until generate.'
+    original: "            with context(\"that the agent is finished working with\
+      \ it\"):\n                with it(\"should finish its turn for the action\"\
+      ):\n                    # BDD: SIGNATURE\n                    pass\n\n     \
+      \       with context(\"that has finished its turn\"):\n"
+    tool: Bdd
+    fidelity: behavior
+    folder: mistakes/usage-order-behaviors-7
+    correction:
+      improved: ''
+      how: ''
+      status: open
