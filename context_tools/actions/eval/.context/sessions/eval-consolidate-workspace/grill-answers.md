@@ -223,25 +223,27 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 ---
 
-### Turn — grill tick 9 — slice F boundary (mistake / correction)
+### Turn — grill tick 9 — slice F design tree root (mistake / correction)
 
-**Question:** Slice **F** extends the workspace Bdd sketch for the mistake/correction chain (`workspace-eval-oo-sketch.md` §4 lines 264, 393–394, 427–446, 660–683; §9 item 6). Where should the **first** sketch extension boundary fall?
+**Question:** Slice **F** adds the OO mistake/correction chain (`workspace-eval-oo-sketch.md` §4: `Turn.mistakes`, mistake/correction record paths, `TurnCommit.mistakeIds`; §9 item 6). The consolidated sketch already reaches `that has a turn open` (expand, artifact I/O) and turn finish.
 
-**Options:**
+At the **highest level** still under `that has a turn open`, what **event or state change** should we model first?
 
-- **A — Mistake-only under open turn:** enabling event when recording a mistake → on open turn, persist under work session, nest in themed repair backlog. Exclude correction and TurnCommit.mistakeIds until later tick.
-- **B — Mistake + correction same open turn:** both sibling enabling events under `that has a turn open` in one action run, before finish_turn.
-- **C — Separate action runs:** mistake under one action run's open turn; correction under a **later** action run's open turn. TurnCommit mistakeIds only when mistakes recorded on that turn.
-- **D — Workspace sketch stops at turn envelope:** Mistake/Correction/Repair in eval-module Bdd sketch only; keep workspace deferred.
+**Options (design tree — next branch):**
+
+- **A — Enabling event: violation found** — `that finds a violation in an artifact` unlocks mistake substates (what is recorded, where it lands). Correction and Repair bucket deferred to later ticks.
+- **B — Enabling event: mistake recorded** — `that is recording a mistake` (agent invoked mistake path while turn is open). Unlocks substates to drill next: on open turn, work-session files, themed repair backlog.
+- **C — Standing state: mistakes on open turn** — `with mistakes on its open turn` before finish — unlocks turn-finish substates (`TurnCommit.mistakeIds`). Requires a prior tick to name how mistakes arrive on the turn.
+- **D — Standing state: repair backlog** — `with a themed repair in its backlog` — model Repair bucket first. Likely violates nest-by-enabling-events unless a prior event is named.
 
 **Runner paths read:**
 
-- `workspace-eval-oo-sketch.md` §4 turn envelope, call chains (mistake, correction)
-- `workspace-eval-oo-sketch.md` §9 item 6 — Resources on openTurn
-- `workspace-bdd-sketch.md` (through turn finish; slice E deferral)
-- `grill-answers.md` slice E
+- `workspace-eval-oo-sketch.md` §4 lines 393–394, 408, 427–446, 660–683; §191 domain chain
+- `workspace-bdd-sketch.md` — `that has a turn open` through turn finish
+- `context_tools/bdd/bdd.md` — hierarchy shape, nest-by-enabling-events, state-not-when
+- `grill-answers.md` tick 8 taxonomy
 
-**Answer (user):** **B — Mistake + correction same open turn** — sibling enabling events under `that has a turn open` in one action run.
+**Answer:** _(pending — user)_
 
-**Slice unlocked:** **no** — tick 10 should lock observable outcomes per enabling event (mistake vs correction) and whether TurnCommit.mistakeIds nests under turn finish.
+**Slice unlocked:** **no** — tick 10 drills **substates** under the chosen branch: nested `with` / `it should` that are legitimate tests; reject API steps and logged-state `that`.
 
