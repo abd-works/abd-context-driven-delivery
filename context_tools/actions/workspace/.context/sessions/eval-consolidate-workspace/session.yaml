@@ -1207,8 +1207,55 @@ turns:
       \      with a new work session name\n"
     tool: Bdd
     fidelity: behavior
-    folder: mistakes/usage-order-behaviors-7
+    folder: repairs/usage-order-behaviors/usage-order-behaviors-3
     correction:
-      improved: ''
-      how: ''
-      status: open
+      improved: "\uFEFF# BDD sketch — workspace module (usage story)\n\nDesign: `workspace-eval-oo-sketch.md`\
+        \ §2 (Workspace), §4 (turn envelope).\n\nFidelity: behavior\n\na context tool\n\
+        \  with a workspace\n    that has an action run against it\n      with a new\
+        \ work session name\n        it should add the opened work session to its\
+        \ work sessions\n        it should set the current work session to the opened\
+        \ work session\n      with an existing work session name\n        it should\
+        \ load the existing work session from its sessions folder\n        it should\
+        \ set the current work session to that work session\n      with HEAD already\
+        \ on its session branch\n        it should continue without switching branch\n\
+        \      with a clean working tree not on its session branch\n        with an\
+        \ existing session branch\n          it should check out that session branch\n\
+        \        with no session branch yet\n          it should create its session\
+        \ branch\n      with a dirty working tree not on its session branch\n    \
+        \    it should refuse to switch branch\n      it should open a turn for the\
+        \ action run\n      that has a turn open\n        that is reading or writing\
+        \ module artifacts\n          with an explicit path given on the run\n   \
+        \         it should use that path for its module artifacts\n          with\
+        \ no explicit path given on the run\n            with no path override for\
+        \ its tool and fidelity\n              it should use its default workspace\
+        \ folder for its module artifacts\n            with a path override for its\
+        \ tool and fidelity\n              it should use the override path for its\
+        \ module artifacts\n        with a path for the turn that differs from the\
+        \ default path\n          it should keep a path override for that tool and\
+        \ fidelity\n        with a path for the turn that equals the default path\n\
+        \          it should drop the path override for that tool and fidelity\n \
+        \       that is asked for its instructions\n          it should record the\
+        \ expansion on the session trail\n          it should attach the expansion\
+        \ record to its open turn\n      that the agent is finished working with it\n\
+        \        it should finish its turn for the action\n      that has finished\
+        \ its turn\n        it should record the action run on the session trail\n\
+        \        it should attach the action run record to its turn\n        it should\
+        \ commit its scoped changes on the session branch\n        it should push\
+        \ its session branch to origin\n\n**Deferred:** domain Repair / mistake /\
+        \ correction chain (eval module Bdd sketch).\n"
+      how: 'OO §2 three levels: BaseContextTool composes Workspace (with a workspace)
+        before action-run envelope; §4 openWorkSession + Turn.open then agent work.
+        Design cites workspace-eval-oo-sketch.md only.'
+      status: fixed
+- id: 9c9106ff
+  prompt: log correction — sketch hierarchy per OO §2
+  result: entry_id=3170dd3e fixed
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 9c9106ff
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: cabaeca0e0eb251e9e919373b505fe3b3eea6027
+  tool_calls: []
+  mistakes: []
