@@ -202,13 +202,13 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 | `that is reading or writing module artifacts` | **enabling event** | explicit-path / override `with` branches → edit-path outcomes | `lookupPath`, resolve-on-open |
 | `with a path for the turn that differs/equals…` | **standing `with`** (after path known) | keep/drop override outcomes | upsertPath call lines |
 | `that is asked for its instructions` | **enabling event** (expand) | expansion trail + openTurn attachment outcomes | `that has expanded…` |
-| `that has finished its turn` | **enabling event** (`finish_turn`) | action-run trail + turn attachment; then dirty `with` → commit; always push | `that has logged…`, recipe-run event |
+| `that has finished its turn` | **enabling event** (`finish_turn`) | action-run trail + turn attachment; commit scoped changes; push session branch | `that has logged…`, recipe-run event; optional dirty `with` on commit |
 
 **Locked behaviors from OO §4 (stakeholder-visible, not implementation):**
 
 - **Expand audit** — when instructions are **asked for** (framework expand), record on session trail and on **open** turn.
 - **Run audit** — when the turn is **finished** for the action (agent invokes `finish_turn` after work), record action run on session trail and on that turn — **not** under a “logged” state.
-- **Git on finish** — commit when dirty on session branch; **always** push session branch (OO lines 256–258).
+- **Git on finish** — commit scoped changes on the session branch; push session branch (turn finish implies work landed — not an optional dirty `with` branch).
 
 **Process correction:** `/bdd /sketch` must run **grill → sketch → generate** cadence (`Sketcher.sketch_session` / `bdd-grill-sketch-workflow.md`). Consolidated sketch was generated without tick 8 taxonomy — caused repeated nest-by-enabling-events failures.
 

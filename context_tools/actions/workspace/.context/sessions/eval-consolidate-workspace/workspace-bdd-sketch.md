@@ -42,8 +42,7 @@ a context tool
       that has finished its turn
         it should record the action run on the session trail
         it should attach the action run record to its turn
-        with a dirty working tree on its session branch
-          it should commit its scoped changes on the session branch
+        it should commit its scoped changes on the session branch
         it should push its session branch to origin
 
 **Deferred:** domain Repair / mistake / correction chain (eval module Bdd sketch).

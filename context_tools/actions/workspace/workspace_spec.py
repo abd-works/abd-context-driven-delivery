@@ -98,10 +98,9 @@ with description("a context tool"):
                     # BDD: SIGNATURE
                     pass
 
-                with context("with a dirty working tree on its session branch"):
-                    with it("should commit its scoped changes on the session branch"):
-                        # BDD: SIGNATURE
-                        pass
+                with it("should commit its scoped changes on the session branch"):
+                    # BDD: SIGNATURE
+                    pass
 
                 with it("should push its session branch to origin"):
                     # BDD: SIGNATURE
