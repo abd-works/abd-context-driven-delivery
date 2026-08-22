@@ -5,6 +5,6 @@ context:
   session: eval-consolidate-workspace
 tool: finish_eval_turn
 arguments:
-  prompt: bdd sketch — generate behavior signatures (slices A–E)
-  result: workspace_spec.py rewritten to match workspace-bdd-sketch usage story; 20 SIGNATURE markers; scan clean
+  prompt: session index sync — turn 8a3d60bb
+  result: session.yaml turn record; drop _req_finish.yaml from tree
   context: eval-consolidate-workspace

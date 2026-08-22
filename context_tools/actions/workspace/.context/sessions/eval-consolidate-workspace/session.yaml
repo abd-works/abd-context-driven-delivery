@@ -567,3 +567,18 @@ turns:
     tool_names: []
     mistake_ids: []
     sha: 85bf5a43dbd539023957ccfa83ac7c69644cb4d6
+  tool_calls: []
+  mistakes: []
+- id: 8a3d60bb
+  prompt: bdd sketch — generate behavior signatures (slices A–E)
+  result: workspace_spec.py rewritten to match workspace-bdd-sketch usage story; 20
+    SIGNATURE markers; scan clean
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 8a3d60bb
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 21bb5907b05929ca876fda900f60d0aaf60c90e0
+  tool_calls: []
+  mistakes: []
