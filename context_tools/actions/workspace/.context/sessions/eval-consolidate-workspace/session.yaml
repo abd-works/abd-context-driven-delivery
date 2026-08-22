@@ -880,3 +880,38 @@ turns:
         updated repairs/*/improvement.md and grill-answers tick 8 with orphan turn
         ids and replay pattern (turn 26ddc97e).
       status: fixed
+- id: fa8e4e6e
+  prompt: log mistake — same-turn mistake+correction doc error
+  result: entry_id=cb4724b1
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: fa8e4e6e
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - cb4724b1
+    sha: 9bb09d2b597ffc922f70a8b0a5c7d69eb0e653fa
+  tool_calls: []
+  mistakes:
+  - entry_id: cb4724b1
+    artifact: context_tools/bdd/.context/bdd-grill-sketch-workflow.md
+    rule: eval-turn-single-process
+    wrong: Documented log_mistake and log_correction in the same turn / same finish_eval_turn.
+      Mistake and correction are separate turns; only begin+tool+finish share one
+      process per turn.
+    original: 'bdd.begin_eval_turn()
+
+      entry_id = bdd.log_mistake(...)
+
+      bdd.log_correction(entry_id=entry_id, ...)
+
+      bdd.finish_eval_turn(...)
+
+      '
+    tool: Bdd
+    fidelity: behavior
+    folder: mistakes/eval-turn-single-process
+    correction:
+      improved: ''
+      how: ''
+      status: open
