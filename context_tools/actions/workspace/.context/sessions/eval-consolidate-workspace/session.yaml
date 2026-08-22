@@ -1101,8 +1101,86 @@ turns:
       \       with context(\"that has finished its turn\"):\n"
     tool: Bdd
     fidelity: behavior
-    folder: mistakes/usage-order-behaviors-7
+    folder: repairs/usage-order-behaviors/usage-order-behaviors
     correction:
-      improved: ''
-      how: ''
-      status: open
+      improved: "# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd\n\
+        # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd\n# invoke-check:\
+        \ action validate | toolset: context_tools.bdd.bdd:Bdd\n\"\"\"BDD behavior\
+        \ signatures — Workspace target model (slices A–E).\"\"\"\n\nfrom mamba import\
+        \ context, description, it\n\n\nwith description(\"a context tool\"):\n  \
+        \  with context(\"with a workspace\"):\n        with context(\"that has an\
+        \ action run against it\"):\n            with context(\"with a new work session\
+        \ name\"):\n                with it(\"should add the opened work session to\
+        \ its work sessions\"):\n                    # BDD: SIGNATURE\n          \
+        \          pass\n\n                with it(\"should set the current work session\
+        \ to the opened work session\"):\n                    # BDD: SIGNATURE\n \
+        \                   pass\n\n            with context(\"with an existing work\
+        \ session name\"):\n                with it(\"should load the existing work\
+        \ session from its sessions folder\"):\n                    # BDD: SIGNATURE\n\
+        \                    pass\n\n                with it(\"should set the current\
+        \ work session to that work session\"):\n                    # BDD: SIGNATURE\n\
+        \                    pass\n\n            with context(\"with HEAD already\
+        \ on its session branch\"):\n                with it(\"should continue without\
+        \ switching branch\"):\n                    # BDD: SIGNATURE\n           \
+        \         pass\n\n            with context(\"with a clean working tree not\
+        \ on its session branch\"):\n                with context(\"with an existing\
+        \ session branch\"):\n                    with it(\"should check out that\
+        \ session branch\"):\n                        # BDD: SIGNATURE\n         \
+        \               pass\n\n                with context(\"with no session branch\
+        \ yet\"):\n                    with it(\"should create its session branch\"\
+        ):\n                        # BDD: SIGNATURE\n                        pass\n\
+        \n            with context(\"with a dirty working tree not on its session\
+        \ branch\"):\n                with it(\"should refuse to switch branch\"):\n\
+        \                    # BDD: SIGNATURE\n                    pass\n\n      \
+        \      with it(\"should open a turn for the action run\"):\n             \
+        \   # BDD: SIGNATURE\n                pass\n\n            with context(\"\
+        that has a turn open\"):\n                with context(\"that is reading or\
+        \ writing module artifacts\"):\n                    with context(\"with an\
+        \ explicit path given on the run\"):\n                        with it(\"should\
+        \ use that path for its module artifacts\"):\n                           \
+        \ # BDD: SIGNATURE\n                            pass\n\n                 \
+        \   with context(\"with no explicit path given on the run\"):\n          \
+        \              with context(\"with no path override for its tool and fidelity\"\
+        ):\n                            with it(\"should use its default workspace\
+        \ folder for its module artifacts\"):\n                                # BDD:\
+        \ SIGNATURE\n                                pass\n\n                    \
+        \    with context(\"with a path override for its tool and fidelity\"):\n \
+        \                           with it(\"should use the override path for its\
+        \ module artifacts\"):\n                                # BDD: SIGNATURE\n\
+        \                                pass\n\n                with context(\"with\
+        \ a path for the turn that differs from the default path\"):\n           \
+        \         with it(\"should keep a path override for that tool and fidelity\"\
+        ):\n                        # BDD: SIGNATURE\n                        pass\n\
+        \n                with context(\"with a path for the turn that equals the\
+        \ default path\"):\n                    with it(\"should drop the path override\
+        \ for that tool and fidelity\"):\n                        # BDD: SIGNATURE\n\
+        \                        pass\n\n                with context(\"that is asked\
+        \ for its instructions\"):\n                    with it(\"should record the\
+        \ expansion on the session trail\"):\n                        # BDD: SIGNATURE\n\
+        \                        pass\n\n                    with it(\"should attach\
+        \ the expansion record to its open turn\"):\n                        # BDD:\
+        \ SIGNATURE\n                        pass\n\n            with context(\"that\
+        \ has finished its turn\"):\n                with it(\"should record the action\
+        \ run on the session trail\"):\n                    # BDD: SIGNATURE\n   \
+        \                 pass\n\n                with it(\"should attach the action\
+        \ run record to its turn\"):\n                    # BDD: SIGNATURE\n     \
+        \               pass\n\n                with it(\"should commit its scoped\
+        \ changes on the session branch\"):\n                    # BDD: SIGNATURE\n\
+        \                    pass\n\n                with it(\"should push its session\
+        \ branch to origin\"):\n                    # BDD: SIGNATURE\n           \
+        \         pass\n"
+      how: Revert premature spec edit; agent-finish slice stays in sketch until validate
+        + generate.
+      status: fixed
+- id: f9f4655c
+  prompt: log correction — spec reverted; sketch-only until generate
+  result: entry_id=32453ccf fixed
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: f9f4655c
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 53f251c408cdde07238457177c6999d068132c67
+  tool_calls: []
+  mistakes: []
