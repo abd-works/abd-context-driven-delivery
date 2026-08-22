@@ -556,3 +556,14 @@ turns:
     sha: 524c0cd21bfc88476e57ade47c116d4433eaf931
   tool_calls: []
   mistakes: []
+- id: db1c5376
+  prompt: bdd sketch tick — slice E deferred (SessionLog + Turn.finish)
+  result: slice E under turn open and turn finished; behavior observables only; Repair
+    deferred to eval sketch
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: db1c5376
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 85bf5a43dbd539023957ccfa83ac7c69644cb4d6
