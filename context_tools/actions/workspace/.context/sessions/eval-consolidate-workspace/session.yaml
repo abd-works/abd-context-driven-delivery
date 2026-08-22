@@ -1184,3 +1184,31 @@ turns:
     sha: 53f251c408cdde07238457177c6999d068132c67
   tool_calls: []
   mistakes: []
+- id: 6697559b
+  prompt: log mistake — sketch entry hierarchy inverted
+  result: entry_id=3170dd3e
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 6697559b
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - 3170dd3e
+    sha: d8b0068810a15b1f972fdd705cab1b5335a23464
+  tool_calls: []
+  mistakes:
+  - entry_id: 3170dd3e
+    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+    rule: usage-order-behaviors
+    wrong: 'Nested enabling event `that has an action run against it` before standing
+      `with a workspace`. Grill tick 8: subject `a context tool` → standing `with
+      a workspace` → domain entry event — not event-before-standing.'
+    original: "a context tool\n  that has an action run against it\n    with a workspace\n\
+      \      with a new work session name\n"
+    tool: Bdd
+    fidelity: behavior
+    folder: mistakes/usage-order-behaviors-7
+    correction:
+      improved: ''
+      how: ''
+      status: open
