@@ -139,5 +139,31 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 **Slice unlocked:** **yes** â€” Bdd workspace module checklist items 1â€“5 covered at behavior signature level.
 
+---
 
+### Turn 7643854d â€” grill tick 7 (deferred slice E)
+
+**Question:** `workspace-bdd-sketch.md` deferred line â€” Turn/git/repairs via `currentWorkSession`; SessionLog; GitRepo commit/push on `Turn.finish`. Where should slice **E** boundary fall for workspace Bdd?
+
+**Options:**
+
+- **A â€” Turn.finish git only:** when a turn finishes, commit scoped changes when the working tree is dirty on the session branch, always push the session branch; **exclude** SessionLog and domain Repair.
+- **B â€” Turn.finish + SessionLog:** add observables for action-run and instruction-expand audit on the session trail and on the open turn; commit/push on turn finish as in A; **exclude** domain Repair/mistake/correction (eval package).
+- **C â€” Include domain Repair chain:** mistake â†’ correction â†’ themed Repair on `WorkSession.repairs` in the same workspace sketch.
+- **D â€” Defer all to eval module:** workspace sketch stays closed at slice D; deferred items move to a separate eval Bdd sketch only.
+
+**Runner paths read:**
+
+- `workspace-eval-oo-sketch.md` Â§4 (SessionLog, Turn envelope, Turn.finish push)
+- `workspace-eval-oo-sketch.md` Â§9 workspace checklist items 8â€“9; eval checklist items 2â€“6
+- `workspace-bdd-sketch.md` deferred line
+- `mistakes/observable-behavior-2/mistake.md` â€” behavior under turn artifact I/O, not API operations
+
+**Slice unlocked:** **no** â€” await judge answer.
+
+**Judge answer:** **Recommend B â€” Turn.finish + SessionLog.** OO Â§4 locks SessionLog.append for expand (framework) and run (recipe body) â€” same record on session trail (`events.log`) and on `openTurn.toolCalls` when a turn is open. Turn.finish (checklist item 8) commits when dirty then **always** pushes session branch. Domain Repair/mistake/correction stays on eval package (`WorkSession.repairs`) â€” eval checklist items 2â€“6; reject C (mixes eval domain into workspace module sketch). Reject D (SessionLog and Turn.finish git are workspace checklist items 8â€“9, not eval-only). Reject A (drops locked SessionLog observables).
+
+**Citations:** OO Â§4 lines 217â€“240, 256â€“266; Â§9 lines 832â€“834; observable-behavior-2 correction â€” nest under turn events, not API calls.
+
+**Slice unlocked:** **yes** â€” slice E: SessionLog audit during open turn; turn finish commit-when-dirty + always push; exclude domain Repair (defer to eval Bdd sketch).
 

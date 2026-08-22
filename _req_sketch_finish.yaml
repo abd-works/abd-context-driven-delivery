@@ -1,0 +1,10 @@
+toolset: context_tools.bdd.bdd:Bdd
+context:
+  fidelity: behavior
+  path: context_tools/actions/workspace
+  session: eval-consolidate-workspace
+tool: finish_eval_turn
+arguments:
+  prompt: bdd sketch tick — slice E deferred (SessionLog + Turn.finish)
+  result: slice E under turn open and turn finished; behavior observables only; Repair deferred to eval sketch
+  context: eval-consolidate-workspace
