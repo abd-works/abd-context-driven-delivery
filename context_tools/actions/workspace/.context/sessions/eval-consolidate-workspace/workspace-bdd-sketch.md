@@ -39,6 +39,8 @@ a context tool
         that is asked for its instructions
           it should record the expansion on the session trail
           it should attach the expansion record to its open turn
+      that the agent is finished working with it
+        it should finish its turn for the action
       that has finished its turn
         it should record the action run on the session trail
         it should attach the action run record to its turn

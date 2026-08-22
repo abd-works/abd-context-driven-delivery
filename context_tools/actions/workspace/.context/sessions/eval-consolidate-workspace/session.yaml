@@ -998,3 +998,34 @@ turns:
     sha: 8a4f5e47908ccd521dd7e7f566b41bd93a1b27ae
   tool_calls: []
   mistakes: []
+- id: b7dda0c1
+  prompt: log mistake — turn finish commit not conditional on dirty
+  result: entry_id=4b1a8711
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: b7dda0c1
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - 4b1a8711
+    sha: b7679898d266ecc561610672e57892a6a53d1bd7
+  tool_calls: []
+  mistakes:
+  - entry_id: 4b1a8711
+    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+    rule: nest-by-enabling-events
+    wrong: Nested commit under `with a dirty working tree on its session branch` at
+      turn finish. Finishing a turn after work always commits scoped changes — dirty
+      is not an optional `with` branch.
+    original: "      that has finished its turn\n        it should record the action\
+      \ run on the session trail\n        it should attach the action run record to\
+      \ its turn\n        with a dirty working tree on its session branch\n      \
+      \    it should commit its scoped changes on the session branch\n        it should\
+      \ push its session branch to origin\n"
+    tool: Bdd
+    fidelity: behavior
+    folder: mistakes/nest-by-enabling-events-2
+    correction:
+      improved: ''
+      how: ''
+      status: open
