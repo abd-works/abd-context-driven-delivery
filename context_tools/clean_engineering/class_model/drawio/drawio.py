@@ -13,13 +13,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from primitives.actions.action import action, agentic_toolset
+from primitives.actions.action import agent_instructions, agentic_toolset
 from primitives.instructions import Instruction, instruction
 from eval.session import Repair
 from scanners.scan import Scan
 from scanners.scanner_collection import ScannerCollection
 from sub_agent.sub_agent import sub_agent
-from tools.tool import tool
+from tools.tool import agent_tool
 
 from context_tools.clean_engineering.class_model.drawio.drawio_class_model import (
     DrawIOCleanEngineeringModel,
@@ -71,7 +71,7 @@ class Drawio:
     @instruction
     def examples(self) -> Instruction: ...
 
-    @tool
+    @agent_tool
     def create_diagram(
         self,
         content: str,
@@ -122,13 +122,13 @@ class Drawio:
         out.write_text(rendered, encoding="utf-8")
         return str(out.resolve())
 
-    @tool
+    @agent_tool
     def scan(self, paths: list[str], root: str | None = None, rule: str | None = None) -> str:
         """scan layout rules on `.drawio` paths (drawio.md rule slugs)."""
         scan_root = root if root is not None else str(self.module_dir)
         return self.scanner.scan(paths, root=scan_root, rule=rule)
 
-    @action
+    @agent_instructions
     def validate(self) -> str:
         """Judge the diagram against drawio contexts; call scan on the asset paths under review."""
         self.contexts
@@ -136,7 +136,7 @@ class Drawio:
         return "Validation report for Draw.io layout rules (see contexts)."
 
     @sub_agent
-    @action
+    @agent_instructions
     def repair(self, asset: str, violation: str) -> str:
         """repair"""
         self.scan()
@@ -145,7 +145,7 @@ class Drawio:
         self.repairer.repair_session(asset, violation)
         return "Repair {{asset}} until drawio validate/scan passes. Fix the layout generator — not a one-off diagram edit."
 
-    @action
+    @agent_instructions
     def render(
         self,
         content: str = "",
@@ -168,7 +168,7 @@ class Drawio:
         )
 
     @sub_agent
-    @tool
+    @agent_tool
     def verify_regression(self, examples_root: str = "") -> str:
         """Eval the repair (scan before/after + judge); examples_root is unused."""
         return self.repairer.eval()

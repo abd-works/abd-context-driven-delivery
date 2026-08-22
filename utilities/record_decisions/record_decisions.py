@@ -7,8 +7,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from primitives.actions.action import action
-from tools.tool import tool, toolset
+from primitives.actions.action import agent_instructions
+from tools.tool import agent_tool, toolset
 
 _FORMAT_PATH = Path(__file__).parent / "CDR-FORMAT.md"
 _CDR_NAME_RE = re.compile(r"^(\d{4})-")
@@ -41,13 +41,13 @@ class RecordDecisions:
         n = number if number is not None else self._next_cdr_number(cdr_dir)
         return cdr_dir / f"{n:04d}-{slug}.md"
 
-    @tool
+    @agent_tool
     def read_cdr_format(self) -> str:
         """Return CDR-FORMAT.md - when to offer a CDR, template, numbering, and optional sections.
         Read this before offering or writing a CDR."""
         return _FORMAT_PATH.read_text(encoding="utf-8")
 
-    @tool
+    @agent_tool
     def list_cdrs(self, root: str) -> str:
         """List CDR files under {root}/.context/cdr/.
         Returns newline-separated paths sorted by filename; empty string if missing or empty."""
@@ -56,7 +56,7 @@ class RecordDecisions:
             return ""
         return "\n".join(str(path) for path in sorted(cdr_dir.glob("*.md")))
 
-    @tool
+    @agent_tool
     def write_cdr(self, root: str, slug: str, content: str) -> str:
         """Write one Context Decision Record to {root}/.context/cdr/{NNNN}-{slug}.md.
         NNNN is the next sequential number under .context/cdr/. Creates the directory lazily.
@@ -68,7 +68,7 @@ class RecordDecisions:
         target.write_text(content.strip() + "\n", encoding="utf-8")
         return str(target)
 
-    @action
+    @agent_instructions
     def record_decisions_session(self, root: str = ".") -> str:
         """Offer and write Context Decision Records (CDRs) sparingly as decisions crystallise during the wrapped action - never batch; never invent decisions."""
         """Step 1 - Read the format once via read_cdr_format. Internalise the three-criteria gate and the minimal template."""

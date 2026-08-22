@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 import context_tools  # noqa: F401 - Bdd merges with BaseContextTool at import
-from primitives.actions.action import action  # noqa: F401
+from primitives.actions.action import agent_instructions  # noqa: F401
 from context_tools.bdd.bdd import Bdd
 from context_tools.base.base_context_tool import BaseContextTool
 
@@ -22,30 +22,32 @@ class AgentBdd(BaseContextTool):
         super().__init__(format=format, path=path, session=session)
 
     def _bdd(self) -> Bdd:
-        sprint = self.active.name or None
-        return Bdd(format=self.format, path=self.active.path, session=sprint)
+        active = self.active
+        sprint = active.name if active is not None else None
+        path = active.path if active is not None else self._raw_path
+        return Bdd(format=self.format, path=path, session=sprint)
 
-    @action
+    @agent_instructions
     def generate_output(self) -> str:
         """"""
         self._bdd().generate()
         return ""
 
-    @action
+    @agent_instructions
     def validate(self) -> str:
         self.contexts
         self._bdd().validate()
         self.scan()
         return "Validation report."
 
-    @action
+    @agent_instructions
     def satisfy(self) -> str:
         self.contexts
         self.templates
         self._bdd().satisfy()
         return "When done, run validate."
 
-    @action
+    @agent_instructions
     def repair(self, asset: str, violation: str) -> str:
         self.scan()
         self.contexts

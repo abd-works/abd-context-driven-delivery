@@ -7,7 +7,7 @@
 Usage::
 
     @sub_agent
-    @tool
+    @agent_tool
     def diagnose(self) -> str:
         \"\"\"Full instructions for the sub-agent go here - inline in the docstring.\"\"\"
 
@@ -63,19 +63,19 @@ class SubAgentTool:
 def sub_agent(func: Callable[..., Any]) -> Callable[..., Any]:
     """Mark a method as a non-blocking sub-agent launch.
 
-    Stack on top of ``@tool``::
+    Stack on top of ``@agent_tool``::
 
         @sub_agent
-        @tool
+        @agent_tool
         def my_task(self) -> str:
             \"\"\"Instructions sent verbatim to the sub-agent.\"\"\"
 
-    ``@tool`` runs first and sets ``_is_tool = True``.  ``@sub_agent`` then
-    sets ``_is_sub_agent = True`` and suppresses ``_is_tool`` so standard tool
+    ``@agent_tool`` runs first and sets ``_is_agent_tool = True``.  ``@sub_agent`` then
+    sets ``_is_sub_agent = True`` and suppresses ``_is_agent_tool`` so standard tool
     discovery skips it and ``discover_sub_agent_tools`` picks it up instead.
     """
     func._is_sub_agent = True  # type: ignore[attr-defined]
-    func._is_tool = False  # type: ignore[attr-defined]
+    func._is_agent_tool = False  # type: ignore[attr-defined]
     return func
 
 

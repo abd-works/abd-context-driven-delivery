@@ -78,27 +78,17 @@ with description("WorkSession on a BaseContextTool host"):
                 self.host, "generate", toolset_path=_CAR_CHRONICLE_TOOLSET
             )
 
-        with it("should name open then eval begin, CDR tools, eval finish"):
+        with it("should name CDR tools then finish_turn"):
             expect(self.response["tools"]).to(
                 equal(
                     [
-                        "open",
-                        "begin_eval_turn",
                         "read_cdr_format",
                         "list_cdrs",
                         "write_cdr",
-                        "finish_eval_turn",
+                        "finish_turn",
                     ]
                 )
             )
-
-        with it("should resolve open instructions from workspace_session.md"):
-            from workspace.workspace import Workspace, WorkSession
-
-            tools = _discover_tools(self.host.workspace)
-            expect(tools["open"].instructions.startswith("# Open")).to(be_true)
-            expect("Session Guidance" in tools["open"].instructions).to(be_true)
-            expect("# Session Guidance" in self.response["instructions"]).to(be_false)
 
         with it("should not expand session active resource on the host generate composer"):
             expect(
@@ -106,15 +96,10 @@ with description("WorkSession on a BaseContextTool host"):
                 in self.response["instructions"]
             ).to(be_false)
 
-        with it("should expand kit open instructions from workspace_session.md"):
-            from workspace.workspace import Workspace, WorkSession
+        with it("should compose a Workspace as host.workspace"):
+            from workspace.workspace import Workspace
 
-            tools = _discover_tools(self.host.workspace)
             expect(isinstance(self.host.workspace, Workspace)).to(be_true)
-            expect(tools["open"].instructions.startswith("# Open")).to(be_true)
-            expect(tools["close_session"].instructions.startswith("# Close Session")).to(
-                be_true
-            )
 
     with context("ChronicleWithOutput generate"):
         with before.all:
@@ -124,17 +109,15 @@ with description("WorkSession on a BaseContextTool host"):
                 self.host, "generate", toolset_path=_CHRONICLE_WITH_OUTPUT_TOOLSET
             )
 
-        with it("should keep open ahead of nested generate_output tools"):
+        with it("should keep nested generate_output tools ahead of finish_turn"):
             expect(self.response["tools"]).to(
                 equal(
                     [
-                        "open",
-                        "begin_eval_turn",
                         "read_cdr_format",
                         "list_cdrs",
                         "write_cdr",
                         "add_epic",
-                        "finish_eval_turn",
+                        "finish_turn",
                     ]
                 )
             )

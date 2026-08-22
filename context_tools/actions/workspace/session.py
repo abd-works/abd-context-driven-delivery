@@ -1,7 +1,7 @@
 """SessionPaths helpers and lazy ``WorkSession`` re-export.
 
-``WorkSession`` is loaded lazily so ``from workspace import log`` does not pull
-``@action`` / ``@tool`` during the primitives bootstrap cycle.
+``WorkSession`` is loaded lazily so SessionLog bootstrap does not pull
+``@agent_instructions`` / ``@agent_tool`` during the primitives cycle.
 """
 
 from __future__ import annotations

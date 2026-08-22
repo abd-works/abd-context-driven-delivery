@@ -1,0 +1,52 @@
+# @toolset-manifest python -m tools manifest improvement.improvement:Improvement
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
+"""Improvement kit — repair / verify_fix for context tools (peer kit, not on host)."""
+from __future__ import annotations
+
+from primitives.actions.action import agent_instructions, agentic_toolset
+from tools.tool import agent_tool
+from workspace import SessionLog
+
+
+@agentic_toolset
+class Improvement:
+    """Slash ``/repair`` runs this kit with ``arguments.tools``; not composed on the host."""
+
+    @agent_instructions
+    def repair(self, tools: list, asset: str, violation: str) -> str:
+        """Open a domain repair on each passed context tool and instruct the fix."""
+        for host in self.context_tools(tools):
+            host.workspace.open(host)
+            host.turn.open(host)
+            current = host.workspace.current_work_session
+            if current is None:
+                raise ValueError("No current work session — open failed")
+            repair = current.repairs.for_violation(asset, violation)
+            repair.open(host, asset, violation)
+            host.contexts
+            host.examples
+            host.templates
+            SessionLog.instance().append(
+                toolset=type(self).manifest_path,
+                name="repair",
+                summary=f"repair {asset}",
+                ok=True,
+                role="run",
+            )
+            host.turn.finish_turn()
+        return (
+            "Repair {{asset}} under {session.path}/ until validate passes. "
+            "Fail-first test before any tool change. Write evals after the fix."
+        )
+
+    @agent_tool
+    def verify_fix(self, tools: list, theme: str) -> str:
+        """verify_fix — regression check on a themed repair bucket."""
+        lines: list[str] = []
+        for host in self.context_tools(tools):
+            current = host.workspace.current_work_session
+            if current is None:
+                raise ValueError("No current work session — open first")
+            lines.append(current.repairs[theme].verify_fix())
+        return "\n".join(lines) if lines else f"verify_fix theme={theme}"

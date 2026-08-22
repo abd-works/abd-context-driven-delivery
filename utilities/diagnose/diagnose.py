@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from sub_agent.sub_agent import sub_agent
-from tools.tool import tool, toolset
+from tools.tool import agent_tool, toolset
 
 
 @toolset
@@ -17,7 +17,7 @@ class Diagnose:
     """
 
     @sub_agent
-    @tool
+    @agent_tool
     def diagnose(self) -> str:
         """A discipline for hard bugs. Skip phases only when explicitly justified.
 

@@ -148,9 +148,9 @@ from tools.tool import _SignatureReader, _ToolsetLoader, resource, Toolset
 
 
 class AgenticToolset(Toolset):
-    """Base for toolsets that declare @action methods. Adds the mode resource.
+    """Base for toolsets that declare @agent_instructions methods. Adds the mode resource.
 
-    Inherit from this instead of Toolset when your class uses @action.
+    Inherit from this instead of Toolset when your class uses @agent_instructions.
     Use @agentic_toolset as the class decorator (parallel to @toolset).
 
     mode lives on the callee, not the caller — it governs every call into this
@@ -163,7 +163,7 @@ class AgenticToolset(Toolset):
     tool    — list the called action in tools (like a tool call); defer its body instead of inlining it.
 
     Same-instance recipes may assign ``self.mode = "tool"`` (or ``"action"``) in an
-    ``@action`` body; the expander applies that flip for later nested calls in the
+    ``@agent_instructions`` body; the expander applies that flip for later nested calls in the
     same walk and restores the prior mode afterward.
     """
 
@@ -172,7 +172,7 @@ class AgenticToolset(Toolset):
     @property
     @resource
     def mode(self) -> str:
-        """Execution mode for @action calls into this instance (self or cross-instance).
+        """Execution mode for @agent_instructions calls into this instance (self or cross-instance).
         action = expand inline; tool = list action in tools, defer its body."""
         return self._mode
 
@@ -237,7 +237,7 @@ class _ActionBody:
 def _action_slot_names(toolset_cls: type) -> frozenset[str]:
     names: set[str] = set()
     for name, member in inspect.getmembers(toolset_cls, predicate=inspect.isfunction):
-        if getattr(member, "_is_action", False):
+        if getattr(member, "_is_agent_instructions", False):
             names.add(name)
     return frozenset(names)
 
@@ -277,7 +277,7 @@ def _cross_instance_call(node: ast.AST) -> tuple[str, str] | None:
 
 
 class _ActionBodyScanner(ast.NodeVisitor):
-    """Visits an @action body, checking only step-level ``self.*`` references.
+    """Visits an @agent_instructions body, checking only step-level ``self.*`` references.
 
     A call *boundary* (``self.<member>()``, or a cross-instance
     ``self.<provider>().<member>()``) is a step and must resolve to an allowed
@@ -292,12 +292,8 @@ class _ActionBodyScanner(ast.NodeVisitor):
         req = self._req
         if member_name in req.allowed_names or member_name in req.all_providers:
             return
-        raise ActionValidationError(
-            f"self.{member_name} is not a @tool, @instruction, @action, or @resource",
-            class_name=req.class_name,
-            action_name=req.action_name,
-            lineno=req.base_line + node.lineno - 1,
-        )
+        # Plain operations are allowed — any self member may be called; expander runs unmarked ones.
+        return
 
     def visit_Call(self, node: ast.Call) -> None:
         if _cross_instance_call(node) is not None:
@@ -317,7 +313,7 @@ class _ActionBodyScanner(ast.NodeVisitor):
 
 
 class _ActionValidator:
-    """Validates @action bodies reference only allowed members."""
+    """Validates @agent_instructions bodies reference only allowed members."""
 
     _instance: _ActionValidator | None = None
 
@@ -367,7 +363,7 @@ class _ActionValidator:
     def validate_class(self, toolset_cls: type) -> None:
         allowed = self._allowed_names(toolset_cls)
         for name, member in inspect.getmembers(toolset_cls, predicate=inspect.isfunction):
-            if not getattr(member, "_is_action", False):
+            if not getattr(member, "_is_agent_instructions", False):
                 continue
             self.validate_action(toolset_cls.__name__, name, member, allowed)
 
@@ -378,7 +374,7 @@ class _ActionValidator:
         validated as steps — call *arguments* are data, evaluated for real once the
         action runs, not a separate step the agent needs to resolve. So a value like
         ``self.domain_slug`` passed as ``slug=self.domain_slug`` is never itself
-        required to be a @tool / @instruction / @action / @resource.
+        required to be a @agent_tool / @instruction / @agent_instructions / @resource.
         """
         _ActionBodyScanner(scan_req).visit(scan_req.body)
 
@@ -411,7 +407,7 @@ class _ActionValidator:
     def _tool_names(self, toolset_cls: type) -> set[str]:
         names: set[str] = set()
         for name, member in inspect.getmembers(toolset_cls, predicate=inspect.isfunction):
-            if getattr(member, "_is_tool", False):
+            if getattr(member, "_is_agent_tool", False):
                 names.add(name)
         return names
 
@@ -434,7 +430,7 @@ class _ActionValidator:
 
 
 class _ActionExpander:
-    """Expands @action bodies into instructions for a calling agent."""
+    """Expands @agent_instructions bodies into instructions for a calling agent."""
 
     _instance: _ActionExpander | None = None
 
@@ -450,7 +446,7 @@ class _ActionExpander:
         after_class: type | None,
         own_func: Callable[..., Any],
     ) -> "tuple[Callable[..., Any], type] | None":
-        """Walk the MRO slice after *after_class* and return the first ``@action`` found."""
+        """Walk the MRO slice after *after_class* and return the first ``@agent_instructions`` found."""
         past_anchor = after_class is None
         for klass in own_class.__mro__:
             if not past_anchor:
@@ -461,7 +457,7 @@ class _ActionExpander:
             func = klass.__dict__[method_name]
             if after_class is None and func is own_func:
                 continue
-            if callable(func) and getattr(func, "_is_action", False):
+            if callable(func) and getattr(func, "_is_agent_instructions", False):
                 return func, klass
         return None
 
@@ -488,7 +484,7 @@ class _ActionExpander:
         visit_key = _ActionExpander._visit_key(instance, current_action, defining_class)
         if visit_key in visited:
             raise ActionValidationError(
-                f"recursive @action call: {current_action}",
+                f"recursive @agent_instructions call: {current_action}",
                 class_name=type(instance).__name__,
                 action_name=current_action,
             )
@@ -541,7 +537,7 @@ class _ActionExpander:
     def _is_empty_action_body(function_def: ast.FunctionDef) -> bool:
         """True when the body has no steps - only docstring, ``...``, ``pass``, and/or ``return``.
 
-        Empty bodies auto-delegate to the same-named parent ``@action`` when one exists
+        Empty bodies auto-delegate to the same-named parent ``@agent_instructions`` when one exists
         (implicit ``super().method()``). Explicit ``super()`` or any ``self.*`` step means
         the body is not empty and is expanded as written.
         """
@@ -572,10 +568,10 @@ class _ActionExpander:
         *,
         after_class: type | None = None,
     ) -> "tuple[Callable[..., Any], type] | None":
-        """Walk the MRO to find the next parent ``@action`` for *method_name*.
+        """Walk the MRO to find the next parent ``@agent_instructions`` for *method_name*.
 
         When *after_class* is None, skip the instance's own definition (identity check).
-        When *after_class* is set, skip until after that class, then take the next ``@action``.
+        When *after_class* is set, skip until after that class, then take the next ``@agent_instructions``.
         Returns ``(func, defining_class)`` or ``None``.
         """
         pair = _ActionExpander._own_class_func(instance, method_name)
@@ -685,7 +681,7 @@ class _ActionExpander:
     def _resolve_parent_result_template(
         self, action_func: Callable[..., Any], instance: Any
     ) -> str:
-        """Return the result template from the parent @action for empty-body delegation."""
+        """Return the result template from the parent @agent_instructions for empty-body delegation."""
         resolved = self._resolve_super_func(instance, action_func.__name__)
         if resolved is None:
             return ""
@@ -888,7 +884,7 @@ class _ActionExpander:
 
     @staticmethod
     def _is_sub_agent_tool(toolset_cls: type, member: str) -> bool:
-        """True when member is a @sub_agent tool (``_is_tool`` is suppressed)."""
+        """True when member is a @sub_agent tool (``_is_agent_tool`` is suppressed)."""
         func = getattr(toolset_cls, member, None)
         return callable(func) and getattr(func, "_is_sub_agent", False)
 
@@ -910,17 +906,20 @@ class _ActionExpander:
     def _walk_cross_instance_statement(
         self, expr_node: ast.AST, ctx: _WalkContext, acc: _ProseAccumulator
     ) -> bool:
-        """Handle cross-instance action/tool calls; return True when handled.
+        """Handle cross-instance action/tool/plain calls; return True when handled.
 
         Actions expand inline (unless target ``mode == "tool"``). Tools and
-        ``@sub_agent`` tools are listed as tool steps — their instructions stay
-        on the tool, not inlined into the caller's markdown.
+        ``@sub_agent`` tools are listed as tool steps. Unannotated callees run now.
         """
         cross = _cross_instance_call(expr_node)
         if not cross:
             return False
         provider_name, member = cross
-        target_instance = self._resolve_provider(ctx.instance, provider_name)
+        try:
+            target_instance = self._resolve_provider(ctx.instance, provider_name)
+        except Exception as exc:  # noqa: BLE001 — expand without live session/provider
+            acc.add_text(f"Could not resolve `{provider_name}`: {exc}")
+            return True
         target_cls = type(target_instance)
         if member in _action_slot_names(target_cls):
             self._expand_action_call(member, target_instance, ctx.visited, acc)
@@ -928,10 +927,113 @@ class _ActionExpander:
             target_cls, member
         ):
             acc.tool_steps.append(member)
+        else:
+            self._run_plain_call(target_instance, member, expr_node, ctx, acc)
         return True
 
-    def _walk_self_member_statement(self, member: str, ctx: _WalkContext, acc: _ProseAccumulator) -> None:
-        """Handle ``self.<member>`` references: actions, instructions, tools, and resources."""
+    def _eval_call_arg(self, node: ast.expr, ctx: _WalkContext) -> Any:
+        """Resolve a simple AST argument for a plain prelude call."""
+        if isinstance(node, ast.Constant):
+            return node.value
+        if isinstance(node, ast.Name) and node.id == "self":
+            return ctx.instance
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+            if node.value.id == "self":
+                return getattr(ctx.instance, node.attr)
+        # type(self).<attr> — for SessionLog.append(toolset=type(self).manifest_path, …)
+        if (
+            isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Name)
+            and node.value.func.id == "type"
+            and len(node.value.args) == 1
+            and isinstance(node.value.args[0], ast.Name)
+            and node.value.args[0].id == "self"
+        ):
+            return getattr(type(ctx.instance), node.attr, "")
+        raise ValueError(f"cannot evaluate plain-call argument {ast.unparse(node)}")
+
+    @staticmethod
+    def _is_session_log_append(node: ast.AST) -> bool:
+        """Match ``SessionLog.instance().append(...)`` (sketch run-audit form)."""
+        if not isinstance(node, ast.Call):
+            return False
+        if not isinstance(node.func, ast.Attribute) or node.func.attr != "append":
+            return False
+        inst = node.func.value
+        if not isinstance(inst, ast.Call):
+            return False
+        if not isinstance(inst.func, ast.Attribute) or inst.func.attr != "instance":
+            return False
+        return isinstance(inst.func.value, ast.Name) and inst.func.value.id == "SessionLog"
+
+    def _walk_session_log_append(
+        self, expr_node: ast.AST, ctx: _WalkContext, acc: _ProseAccumulator
+    ) -> bool:
+        """Plain-run ``SessionLog.instance().append(...)`` during expand."""
+        if not self._is_session_log_append(expr_node):
+            return False
+        assert isinstance(expr_node, ast.Call)
+        try:
+            kwargs = {
+                kw.arg: self._eval_call_arg(kw.value, ctx)
+                for kw in expr_node.keywords
+                if kw.arg is not None
+            }
+            if "toolset" not in kwargs:
+                cls = type(ctx.instance)
+                kwargs["toolset"] = getattr(cls, "manifest_path", None) or (
+                    f"{cls.__module__}:{cls.__name__}"
+                )
+            if "role" not in kwargs:
+                kwargs["role"] = "run"
+            from workspace import SessionLog
+
+            SessionLog.instance().append(**kwargs)
+        except Exception as exc:  # noqa: BLE001 — prelude must not abort expand
+            acc.add_text(f"Ran SessionLog.append (plain): error {exc}")
+            return True
+        name = kwargs.get("name", "append")
+        acc.add_text(f"logged run `{name}`")
+        return True
+
+    def _run_plain_call(
+        self,
+        target: Any,
+        member: str,
+        expr_node: ast.AST,
+        ctx: _WalkContext,
+        acc: _ProseAccumulator,
+    ) -> None:
+        """Execute an unmarked callee during expand; summarize in prelude prose."""
+        if not isinstance(expr_node, ast.Call):
+            return
+        func = getattr(target, member, None)
+        if not callable(func):
+            return
+        try:
+            args = [self._eval_call_arg(a, ctx) for a in expr_node.args]
+            kwargs = {
+                kw.arg: self._eval_call_arg(kw.value, ctx)
+                for kw in expr_node.keywords
+                if kw.arg is not None
+            }
+            result = func(*args, **kwargs)
+        except Exception as exc:  # noqa: BLE001 — prelude must not abort expand
+            acc.add_text(f"Ran `{member}` (plain): error {exc}")
+            return
+        summary = result if isinstance(result, str) and result.strip() else f"ran {member}"
+        if summary:
+            acc.add_text(str(summary))
+
+    def _walk_self_member_statement(
+        self,
+        member: str,
+        expr_node: ast.AST,
+        ctx: _WalkContext,
+        acc: _ProseAccumulator,
+    ) -> None:
+        """Handle ``self.<member>`` references: actions, instructions, tools, resources, plain."""
         if member in ctx.slots.action_slots:
             if member != ctx.current_action:
                 self._expand_action_call(member, ctx.instance, ctx.visited, acc)
@@ -944,6 +1046,22 @@ class _ActionExpander:
             return
         if member in ctx.slots.resource_names:
             self._describe_resource(member, ctx.instance, acc)
+            return
+        # Plain same-instance call — run with args when statement is a Call
+        attr = getattr(ctx.instance, member, None)
+        if callable(attr) and not getattr(attr, "_is_agent_instructions", False):
+            if isinstance(expr_node, ast.Call):
+                self._run_plain_call(ctx.instance, member, expr_node, ctx, acc)
+                return
+            try:
+                result = attr()
+            except TypeError:
+                return
+            except Exception as exc:  # noqa: BLE001
+                acc.add_text(f"Ran `{member}` (plain): error {exc}")
+                return
+            if isinstance(result, str) and result.strip():
+                acc.add_text(result)
 
     def _walk_super_statement(self, ctx: _WalkContext, acc: _ProseAccumulator) -> None:
         """Handle ``super().method()`` calls by inlining the parent action's body."""
@@ -992,11 +1110,13 @@ class _ActionExpander:
             self._walk_for_each_statement(statement, ctx, acc)
             return
         expr_node = statement.value if isinstance(statement, ast.Expr) else statement
+        if self._walk_session_log_append(expr_node, ctx, acc):
+            return
         if self._walk_cross_instance_statement(expr_node, ctx, acc):
             return
         member = _self_member_name(expr_node)
         if member:
-            self._walk_self_member_statement(member, ctx, acc)
+            self._walk_self_member_statement(member, expr_node, ctx, acc)
             return
         if self._super_call_name(expr_node) is not None:
             self._walk_super_statement(ctx, acc)
@@ -1071,15 +1191,6 @@ class _ActionExpander:
         parameter_names = set(self._reader.simple_parameters(request.action_func))
         return self._build_expansion_result(body, request, parameter_names)
 
-    def _should_log_expansion(self, request: _ActionExpandRequest) -> bool:
-        """Return True when the expansion should be recorded in the session log."""
-        from workspace import is_logged, member_is_logged
-
-        action_name = request.action_func.__name__
-        if request.instance is not None:
-            return member_is_logged(type(request.instance), action_name)
-        return is_logged(request.action_func)
-
     def _build_expansion_log_payload(
         self, request: _ActionExpandRequest, tool_steps: tuple[str, ...]
     ) -> dict[str, Any]:
@@ -1094,13 +1205,17 @@ class _ActionExpander:
         }
 
     def _log_expansion(self, request: _ActionExpandRequest, tool_steps: tuple[str, ...]) -> None:
-        if not self._should_log_expansion(request):
-            return
+        """Framework expand append — every @agent_instructions expansion is logged."""
         from workspace import SessionLog, summarize_mapping
+
         action_name = request.action_func.__name__
         SessionLog.instance().append(
-            kind="expansion", toolset=request.toolset_path, name=action_name,
-            summary=summarize_mapping({"tools": ",".join(tool_steps)}), ok=True,
+            toolset=request.toolset_path,
+            name=action_name,
+            summary=summarize_mapping({"tools": ",".join(tool_steps)}),
+            ok=True,
+            role="expansion",
+            kind="expansion",
             payload=self._build_expansion_log_payload(request, tool_steps),
         )
 
@@ -1230,9 +1345,9 @@ class _ActionExpander:
         return "".join(parts)
 
 
-def action(func: Callable[..., Any]) -> Callable[..., Any]:
+def agent_instructions(func: Callable[..., Any]) -> Callable[..., Any]:
     """Mark a method as an agent orchestration recipe; body is expanded, never executed."""
-    func._is_action = True
+    func._is_agent_instructions = True
     return func
 
 
@@ -1337,19 +1452,19 @@ def _raw_mro_class_funcs(owner: type, name: str) -> "list[tuple[type, Any]]":
 
 
 def _mro_action_funcs(owner: type, name: str) -> "list[Callable[..., Any]]":
-    """Return each ``@action`` callable found in *owner*'s MRO for *name*."""
+    """Return each ``@agent_instructions`` callable found in *owner*'s MRO for *name*."""
     funcs: list[Callable[..., Any]] = []
     for _klass, func in _raw_mro_class_funcs(owner, name):
         if not callable(func):
             continue
         target = getattr(func, "__func__", func)
-        if getattr(target, "_is_action", False):
+        if getattr(target, "_is_agent_instructions", False):
             funcs.append(func)
     return funcs
 
 
 def _collect_mro_focus_entries(owner: type, name: str) -> list[tuple[str, str]]:
-    """Collect unique ``_focus_entries`` for @action *name* across *owner*'s MRO."""
+    """Collect unique ``_focus_entries`` for @agent_instructions *name* across *owner*'s MRO."""
     entries: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for func in _mro_action_funcs(owner, name):
@@ -1375,7 +1490,7 @@ def _discover_actions(instance: "Toolset") -> "dict[str, Action]":
     discovered: dict[str, Action] = {}
     owner = type(instance)
     for name, member in inspect.getmembers(owner, predicate=inspect.isfunction):
-        if getattr(member, "_is_action", False):
+        if getattr(member, "_is_agent_instructions", False):
             discovered[name] = Action(
                 name=name,
                 callable=getattr(instance, name),

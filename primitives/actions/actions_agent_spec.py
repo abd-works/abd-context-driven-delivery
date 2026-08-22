@@ -33,7 +33,7 @@ _LEE = {
 }
 
 with description("a class"):
-    with context("with a toolset that declares @action recipes"):
+    with context("with a toolset that declares @agent_instructions recipes"):
         with context("with agent and travelTo action"):
             with it("drives travelTo, follows tools, judges the story"):
                 with agent(_REPO_ROOT, _SESSIONS / "travel-to.json") as block:

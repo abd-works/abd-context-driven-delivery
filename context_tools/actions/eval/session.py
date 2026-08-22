@@ -20,10 +20,10 @@ from types import SimpleNamespace
 from typing import Any, Callable
 
 import yaml
-from primitives.actions.action import action, agentic_toolset
+from primitives.actions.action import agent_instructions, agentic_toolset
 from scanners.scan import Scan, ScanReport
 from sub_agent.sub_agent import sub_agent
-from tools.tool import tool
+from tools.tool import agent_tool
 from workspace.git_repo import (
     GitConnectError as EvalGitConnectError,
     GitRepo,
@@ -856,7 +856,7 @@ class Repair:
         self.mistakes: list[Mistake] = []
 
     @sub_agent
-    @tool
+    @agent_tool
     def log_mistake(
         self,
         artifact: str,
@@ -885,7 +885,7 @@ class Repair:
         ).record(self.session)
         return entry_id
 
-    @tool
+    @agent_tool
     def log_correction(
         self,
         mistakes: list[Mistake] | None = None,
@@ -1005,7 +1005,7 @@ class Repair:
         self.cdd_session = self.session.cdd_repo.open_session(name)
         self._bring_mistakes(list(self.session.mistakes))
 
-    @tool
+    @agent_tool
     def start(self, asset: str, violation: str) -> str:
         """Open the CDD session and copy project mistakes onto it.
 
@@ -1018,7 +1018,7 @@ class Repair:
         return str(getattr(self.cdd_session.workspace, "name", "") or "")
 
     @sub_agent
-    @action
+    @agent_instructions
     def repair_session(self, asset: str, violation: str) -> str:
         """repair"""
         self.start(asset, violation)
@@ -1032,18 +1032,28 @@ class Repair:
             "the eval. If a test cannot fail, defer — do not repair."
         )
 
-    @action
+    @agent_instructions
     def repair(self, tools: list, asset: str, violation: str) -> str:
-        """Run repair on each passed context tool."""
+        """Run repair on each passed context tool via domain Repair + turn envelope."""
         for host in self.context_tools(tools):
-            host.repair(asset, violation)
+            host.workspace.open(host)
+            host.turn.open(host)
+            current = host.workspace.current_work_session
+            if current is None:
+                raise ValueError("No current work session — open failed")
+            current.repairs.for_violation(asset, violation).open(host, asset, violation)
+            self.session = getattr(current, "eval", None)
+            self.host = host
+            self.scanner = getattr(host, "scanner", self.scanner)
+            self.repair_session(asset, violation)
+            host.turn.finish_turn()
         return (
             "Repair {{asset}} under {session.path}/ until validate passes. "
             "Fail-first test before any tool change. Write evals after the fix."
         )
 
     @sub_agent
-    @action
+    @agent_instructions
     def eval(self) -> str:
         """eval"""
         return (
@@ -1057,7 +1067,7 @@ class Repair:
             "ask via AskQuestion."
         )
 
-    @tool
+    @agent_tool
     def contribute(self, before_commit: str = "", after_commit: str = "") -> str:
         self._ensure_cdd_session()
         return (

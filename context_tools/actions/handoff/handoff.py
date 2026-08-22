@@ -13,8 +13,8 @@ from datetime import date
 from pathlib import Path
 
 from workspace import WorkSession, docs_dir
-from primitives.actions.action import action
-from tools.tool import tool, toolset
+from primitives.actions.action import agent_instructions
+from tools.tool import agent_tool, toolset
 
 _STATE_NAMES = (
     "grill-answers.md",
@@ -358,7 +358,7 @@ class Handoff:
     # Public tools / actions
     # ------------------------------------------------------------------
 
-    @tool
+    @agent_tool
     def resolve_working_folder(self, destination: str) -> str:
         """Resolve docs folder via docs_dir(destination).
         For a sprint ({path}/.context/sessions/{name}/) writes flat there; otherwise
@@ -367,7 +367,7 @@ class Handoff:
         folder.mkdir(parents=True, exist_ok=True)
         return str(folder.resolve())
 
-    @tool
+    @agent_tool
     def collect_session_state(self, destination: str) -> str:
         """Collect generator, grilling, and CDD progress state under destination.
         destination defaults to the host generator session.folder (sprint under {session.path}/.context/sessions/{name}/) or session.path.
@@ -377,7 +377,7 @@ class Handoff:
         and grill_answers headings. Call this before drafting the handoff - do not invent state."""
         return json.dumps(self._collect_state(destination), indent=2)
 
-    @tool
+    @agent_tool
     def compact_handoff(self, destination: str, next_focus: str = "") -> str:
         """Write handoff-latest.md from session folder state in one call.
 
@@ -390,7 +390,7 @@ class Handoff:
         content = self._render_handoff_markdown(state, next_focus=next_focus)
         return self.write_handoff(destination, content, focus=next_focus)
 
-    @tool
+    @agent_tool
     def write_handoff(
         self,
         destination: str,
@@ -422,7 +422,7 @@ class Handoff:
         self._maybe_close_sprint(destination, f"handoffs/{primary.name}")
         return str(primary.resolve())
 
-    @action
+    @agent_instructions
     def handoff_session(self, destination: str, next_focus: str = "") -> str:
         """Compact the current session into a handoff document under the session working folder so a fresh agent can continue. Tailor the doc to {{next_focus}} when provided."""
         """Call compact_handoff(destination, next_focus). Tell the user the returned archive path and paste the Resume block from the written file."""

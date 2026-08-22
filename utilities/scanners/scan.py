@@ -6,7 +6,7 @@ import ast
 from pathlib import Path
 from typing import Any
 
-from tools.tool import tool
+from tools.tool import agent_tool
 
 from .scanner import Scanner
 from .scanner_collection import ScannerCollection
@@ -47,7 +47,7 @@ class Scan:
     def _scanner_collection(self) -> ScannerCollection:
         return ScannerCollection()
 
-    @tool
+    @agent_tool
     def scan(self, paths: list[str], root: str | None = None, rule: str | None = None) -> str:
         """scan
 

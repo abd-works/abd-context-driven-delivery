@@ -7,14 +7,14 @@
 """Iterate on formal generate output through a grill loop with validate + one fix pass.
 
 Iterator is a standalone toolset. The complementary @iterate decorator (see
-_decorator.py) marks an @action so framework composition prepends
+_decorator.py) marks an @agent_instructions so framework composition prepends
 iterate_session (which calls grill_with_context in-method).
 """
 from __future__ import annotations
 
 from grill_context.grill_context import GrillContext
-from primitives.actions.action import action, agentic_toolset
-from tools.tool import tool
+from primitives.actions.action import agent_instructions, agentic_toolset
+from tools.tool import agent_tool
 
 
 @agentic_toolset
@@ -25,13 +25,13 @@ class Iterator:
         """GrillContext toolset for in-method composition (not a tool)."""
         return GrillContext()
 
-    @tool
+    @agent_tool
     def mark_iterate_tick(self) -> str:
         """Record that an iterate show/validate/fix tick is due (no I/O).
         Call only after 2-3 grill answers that unlock ONE small slice - never as a prelude to dumping the whole artifact."""
         return "iterate-tick"
 
-    @action
+    @agent_instructions
     def iterate(self, tools: list) -> str:
         """Iterate then generate - grill + formal generate/validate/one-fix ticks."""
         for host in self.context_tools(tools):
@@ -41,7 +41,7 @@ class Iterator:
             host.generate()
         return "Iterate complete; generate instructions applied."
 
-    @action
+    @agent_instructions
     def iterate_session(self, plan: str = "") -> str:
         """Iterate host generate output through an explicit grill_with_context call. Question shape (frame + options) comes from grill_with_context - do not restate bare options here. Each tick writes ONLY the slice unlocked by the last 2-3 answers, then validates and applies one fix pass. Filling the whole map/artifact from index, memory, or templates in one tick is a DEFECT - it defeats this tool."""
         """Step 0 - Grill the iterate plan (concept-grounded questions via grill_with_context). Ask ONE question at a time. Do not pre-author artifacts while grilling. grill_with_context prove-read applies every question: Read every relevant referenced context (segment, module-context, grill-answers, story-context, build-order, cited paths, ...) before options; index stubs are not inventory."""

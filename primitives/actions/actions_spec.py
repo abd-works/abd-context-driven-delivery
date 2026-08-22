@@ -1,4 +1,4 @@
-"""BDD spec for action.py - @action expansion via CLI."""
+"""BDD spec for action.py - @agent_instructions expansion via CLI."""
 
 import subprocess
 import sys
@@ -22,7 +22,7 @@ from primitives.actions.action import (
     ActionValidationError,
     AgenticToolset,
     _ActionExpander,
-    action,
+    agent_instructions,
     agentic_toolset,
 )
 from primitives.actions.examples.car import Car
@@ -33,7 +33,7 @@ from primitives.actions.examples.super_delegation import (
     SuperBase,
 )
 from agent_bdd.yaml_fence import load_fenced
-from tools.tool import tool as _tool
+from tools.tool import agent_tool as _tool
 
 
 @agentic_toolset
@@ -43,7 +43,7 @@ class _ModeFixture:
         """ping tool"""
         return "pong"
 
-    @action
+    @agent_instructions
     def run(self) -> str:
         """Run by calling ping."""
         self.ping()
@@ -58,13 +58,13 @@ class _SelfCallAgent:
         """Polish the work product."""
         return "polished"
 
-    @action
+    @agent_instructions
     def prepare(self) -> str:
         """SELF_PREPARE_MARKER: prepare the work carefully."""
         self.polish()
         return "prepared"
 
-    @action
+    @agent_instructions
     def finish(self) -> str:
         """SELF_FINISH_MARKER: may invoke prepare()."""
         self.prepare()
@@ -80,13 +80,13 @@ class _BodyModeFlipAgent:
         """Polish the work product."""
         return "polished"
 
-    @action
+    @agent_instructions
     def prepare(self) -> str:
         """SELF_PREPARE_MARKER: prepare the work carefully."""
         self.polish()
         return "prepared"
 
-    @action
+    @agent_instructions
     def finish(self) -> str:
         """SELF_FINISH_MARKER: defer prepare via mid-body mode flip."""
         self.mode = "tool"
@@ -103,7 +103,7 @@ class _CalleeAgent:
         """Polish the work product."""
         return "polished"
 
-    @action
+    @agent_instructions
     def prepare(self) -> str:
         """CALLEE_PREPARE_MARKER: prepare the work carefully."""
         self.polish()
@@ -121,7 +121,7 @@ class _CallerAgent:
     def helper(self) -> _CalleeAgent:
         return self._helper
 
-    @action
+    @agent_instructions
     def orchestrate(self) -> str:
         """CALLER_ORCHESTRATE_MARKER: may invoke helper().prepare()."""
         self.helper().prepare()
@@ -144,7 +144,7 @@ class _PropertyCallerAgent:
     def helper(self) -> _CalleeAgent:
         return self._helper
 
-    @action
+    @agent_instructions
     def orchestrate(self) -> str:
         """CALLER_ORCHESTRATE_MARKER: may invoke helper.prepare()."""
         self.helper.prepare()
@@ -155,7 +155,7 @@ _CAR_TOOLSET = "primitives.actions.examples.car:Car"
 
 
 with description("a class"):
-    with context("with a toolset that declares @action recipes"):
+    with context("with a toolset that declares @agent_instructions recipes"):
         with context("the travelTo action"):
             with it("should appear in the manifest with kind action and referenced tools"):
                 entry = Car.manifest.signature["travelTo"]
@@ -506,7 +506,7 @@ class _ForEachCallee:
     def polish(self) -> str:
         return "polished"
 
-    @action
+    @agent_instructions
     def prepare(self) -> str:
         """FOREACH_CALLEE_MARKER: prepare carefully."""
         self.polish()
@@ -518,7 +518,7 @@ class _ForEachCaller:
     def companions(self) -> list:
         return [_ForEachCallee(), _ForEachCallee()]
 
-    @action
+    @agent_instructions
     def orchestrate(self) -> str:
         """FOREACH_CALLER_MARKER: defer each companion."""
         for companion in self.companions():
@@ -526,7 +526,7 @@ class _ForEachCaller:
             companion.prepare()
         return "orchestrated"
 
-    @action
+    @agent_instructions
     def inline_all(self) -> str:
         """FOREACH_INLINE_MARKER: inline each companion."""
         for companion in self.companions():
@@ -626,7 +626,7 @@ with description("Action"):
 
 @agentic_toolset
 class _ContextToolsKit:
-    @action
+    @agent_instructions
     def run(self) -> str:
         return "done"
 

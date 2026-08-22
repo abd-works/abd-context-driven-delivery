@@ -3,7 +3,7 @@
 """Example action whose instructions load from an md file with {{}} templating."""
 from __future__ import annotations
 
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from tools.tool import toolset
 
 
@@ -15,7 +15,7 @@ class TemplatedMdDemo:
         self.label = label
         super().__init__()
 
-    @action
+    @agent_instructions
     def greet(self, name: str) -> str:
         """greet_instructions"""
         return f"Greeted {name}"

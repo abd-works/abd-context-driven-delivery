@@ -11,9 +11,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypedDict
 
 from context_tools.base.base_context_tool import BaseContextTool
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from primitives.instructions import instruction
-from primitives.tools.tool import tool  # noqa: F401
+from primitives.tools.tool import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
     from utilities.diagnose.diagnose import Diagnose
@@ -118,7 +118,7 @@ class Bdd(BaseContextTool):
 
     # -- Lifecycle actions: BDD first, then CE classes -----------------------
 
-    @action
+    @agent_instructions
     def generate(self) -> str:
         """At modules fidelity: delegate entirely to ce().generate() — no BDD spec file is written at this stage. Use this to bootstrap CE class structure before writing tests.
         At behavior fidelity: write all BDD test signatures (SIGNATURE markers).
@@ -130,7 +130,7 @@ class Bdd(BaseContextTool):
         self.ce().generate()
         return "When done, run validate."
 
-    @action
+    @agent_instructions
     def grill(self) -> str:
         """Run the BDD grill loop to surface assumptions and gaps.
         When BDD grill is complete, invoke CleanEngineering via /grill (same session) for the matching classes."""
@@ -139,7 +139,7 @@ class Bdd(BaseContextTool):
         GrillContext().grill(tools=[self])
         return "Grill complete for BDD; invoke ce() via /grill as a separate tools run, then generate."
 
-    @action
+    @agent_instructions
     def sketch(self) -> str:
         """Sketch the BDD hierarchy at the current fidelity.
         When BDD sketch is complete, invoke CleanEngineering via /sketch for the matching classes."""
@@ -148,7 +148,7 @@ class Bdd(BaseContextTool):
         Sketcher().sketch(tools=[self])
         return "Sketch complete for BDD; invoke ce() via /sketch as a separate tools run, then generate."
 
-    @action
+    @agent_instructions
     def iterate(self) -> str:
         """Iterate one BDD cycle: write one test, confirm it is RED, then invoke CleanEngineering via /iterate to build the minimum production code until GREEN. Repeat — one test, one production change, one GREEN — until all tests pass.
         If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure)."""
@@ -158,7 +158,7 @@ class Bdd(BaseContextTool):
         self.diagnostic().diagnose()
         return "Iterate complete for BDD; invoke ce() via /iterate as a separate tools run, then validate."
 
-    @action
+    @agent_instructions
     def satisfy(self) -> str:
         """When running the fixing part of Satisfy, make sure that you create a breaking test that fails first (RED), and then fix the code.
         When BDD violations are resolved, call ce().satisfy() to do the same for the matching classes.
@@ -168,7 +168,7 @@ class Bdd(BaseContextTool):
         self.diagnostic().diagnose()
         return "When done, run validate on artifacts under {session.path}/."
 
-    @action
+    @agent_instructions
     def validate(self) -> str:
         """Validate all BDD artifacts at the current fidelity.
         When BDD validation passes, call ce().validate() to validate the matching class artifacts."""
@@ -176,7 +176,7 @@ class Bdd(BaseContextTool):
         self.ce().validate()
         return "Validation report for artifacts under {session.path}/."
 
-    @action
+    @agent_instructions
     def repair(self) -> str:
         """Repair the BDD artifact that is failing or malformed.
         When the BDD artifact is clean, call ce().repair() to repair the matching class artifact."""
@@ -186,7 +186,7 @@ class Bdd(BaseContextTool):
 
     # -- Tool: sideways format conversion ------------------------------------
 
-    @tool
+    @agent_tool
     def transform(self, source_format: str, target_format: str, content: str) -> TransformResult:
         """Sideways format conversion at the same fidelity.
         Delegates to clean_engineering.transform until BDD has its own channel model."""
@@ -195,7 +195,7 @@ class Bdd(BaseContextTool):
 
         return CleanEngineering().transform(source_format, target_format, content)
 
-    @tool
+    @agent_tool
     def render(self, format: str, content: str = "") -> dict:
         """Render already-generated BDD output into ``format`` via CleanEngineering channels."""
         if not content:

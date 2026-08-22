@@ -18,10 +18,10 @@ from context_tools.clean_engineering.class_model.json_class_model import JsonCle
 from context_tools.clean_engineering.class_model.markdown_class_model import MarkdownCleanEngineeringModel
 from context_tools.clean_engineering.class_model.python_class_model import PythonCleanEngineeringModel
 from context_tools.clean_engineering.class_model.typescript_class_model import TypeScriptCleanEngineeringModel
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from tools.tool import resource, tool  # noqa: F401
+from tools.tool import resource, agent_tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
     "modules": "markdown",
@@ -89,7 +89,7 @@ class CleanEngineering(BaseContextTool):
     @instruction
     def contexts(self) -> Instruction: ...
 
-    @action
+    @agent_instructions
     def generate_output(self) -> str:
         """Write the fidelity artifact under the session.
 
@@ -103,7 +103,7 @@ class CleanEngineering(BaseContextTool):
         self.drawio.render()
         return "Artifact written under {session.path}/."
 
-    @tool
+    @agent_tool
     def transform(
         self,
         source_format: str,
@@ -139,7 +139,7 @@ class CleanEngineering(BaseContextTool):
             rendered = _CHANNELS[target_format].render(canonical)
         return {"format": target_format, "content": rendered}
 
-    @tool
+    @agent_tool
     def render(
         self,
         format: str,

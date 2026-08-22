@@ -107,13 +107,13 @@ with description("RecipeGuide plating instruction slot"):
 with description("RecipeGuide brainstorm action"):
     with context("declared on the class"):
         with it("should be marked as an action"):
-            expect(getattr(RecipeGuide.brainstorm, "_is_action", False)).to(be_true)
+            expect(getattr(RecipeGuide.brainstorm, "_is_agent_instructions", False)).to(be_true)
 
 
 with description("RecipeGuide draft_recipe action"):
     with context("declared on the class"):
         with it("should be marked as an action"):
-            expect(getattr(RecipeGuide.draft_recipe, "_is_action", False)).to(be_true)
+            expect(getattr(RecipeGuide.draft_recipe, "_is_agent_instructions", False)).to(be_true)
 
 
 with description("RecipeGuide instruction_slot_names"):

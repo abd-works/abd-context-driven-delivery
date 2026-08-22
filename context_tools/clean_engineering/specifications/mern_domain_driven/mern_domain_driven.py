@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from context_tools.base.base_context_tool import BaseContextTool
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 
@@ -58,7 +58,7 @@ class MernDomainDriven(BaseContextTool):
     @instruction
     def contexts(self) -> Instruction: ...
 
-    @action
+    @agent_instructions
     def generate(self) -> str:
         """1. Follow session_guidance (handled by the inherited body below). Fill
         templates/ for the feature package this slice touches ({epicSlug}/ with
@@ -75,7 +75,7 @@ class MernDomainDriven(BaseContextTool):
         self._stories().generate()
         return "Ran stories (acceptance tests + ce production) for this slice. Run validate."
 
-    @action
+    @agent_instructions
     def iterate(self) -> str:
         """One cycle: self._stories().iterate() (grill + one spec, RED, then its
         own ce().iterate() wires the minimum code until GREEN), then run this
@@ -87,7 +87,7 @@ class MernDomainDriven(BaseContextTool):
         self._stories().iterate()
         return "Iterate cycle complete for this slice. Run validate."
 
-    @action
+    @agent_instructions
     def satisfy(self) -> str:
         """Find and fix every problem under this slice: call
         self._stories().satisfy() (specs first; its own ce().satisfy() keeps

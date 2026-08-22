@@ -1,7 +1,8 @@
-"""Session-scoped logging for @log-marked tools and actions.
+"""Session-scoped logging — explicit ``SessionLog.append`` (no ``@log`` decorator).
 
-Utility package. Run requests may set ``session`` and ``log`` (full|verbose|off).
-Events append under ``{session.path}/.context/sessions/{session.name}/logs/``.
+Utility package. Run requests may set ``session``. Events append under
+``{session.path}/.context/sessions/{session.name}/logs/``. Expand is logged by
+the framework; run is logged by author calls to ``append``.
 """
 from __future__ import annotations
 
@@ -18,22 +19,12 @@ if TYPE_CHECKING:
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def log(func: F) -> F:
-    """Mark a @tool or @action so SessionLog records its run/expansion."""
-    func._is_logged = True  # type: ignore[attr-defined]
-    return func
-
-
-def is_logged(func: Callable[..., Any] | None) -> bool:
-    if func is None:
-        return False
-    target = getattr(func, "__func__", func)
-    return bool(getattr(target, "_is_logged", False))
-
-
 # Marker attrs copied from a base method onto a subclass override when absent.
 # Action wrappers / chain annotations resolve via MRO in primitives.actions - not here.
-_INHERITED_MARKER_ATTRS = ("_is_logged",)
+_INHERITED_MARKER_ATTRS = (
+    "_is_agent_instructions",
+    "_is_agent_tool",
+)
 
 
 def inherit_annotations(
@@ -78,7 +69,7 @@ class _LastPayload:
 
 
 class ISessionLog(ABC):
-    """Append-only session event log bound to a ``Session``."""
+    """Append-only session event log bound to a ``WorkSession``."""
 
     @classmethod
     @abstractmethod
@@ -88,21 +79,19 @@ class ISessionLog(ABC):
     def bind(self, session: WorkSession) -> None: ...
 
     @abstractmethod
-    def set_session(self, session: str | Session | None) -> None: ...
-
-    @abstractmethod
-    def apply_log_control(self, control: str | None) -> None: ...
+    def set_session(self, session: str | WorkSession | None) -> None: ...
 
     @abstractmethod
     def append(
         self,
         *,
-        kind: str,
         toolset: str,
         name: str,
         summary: str,
         ok: bool,
         error: str | None = None,
+        role: str = "",
+        kind: str | None = None,
         payload: dict[str, Any] | None = None,
     ) -> None: ...
 
@@ -131,7 +120,6 @@ class SessionLog(ISessionLog):
         self._sessions_root = sessions_root
         work_session_cls, workspace_cls = SessionLog._session_cls()
         self._session = work_session_cls(workspace_cls("."), "default")
-        self._verbose = False
         self._last_payload: _LastPayload | None = None
         self._event_count = 0
 
@@ -160,64 +148,47 @@ class SessionLog(ISessionLog):
         return self._session.log
 
     @property
-    def verbose(self) -> bool:
-        return self._verbose
-
-    @property
     def last_payload(self) -> _LastPayload | None:
         return self._last_payload
 
     def bind(self, session: WorkSession) -> None:
-        """Bind a Context Session; events go under ``session.log``."""
+        """Bind a WorkSession; events go under ``session.log``."""
         self._session = session
 
-    def set_session(self, session: str | Session | None) -> None:
-        """Bind a Session, or a name (legacy) as ``Session(path=".", name=...)``."""
-        Session = SessionLog._session_cls()
-        if isinstance(session, WorkSession):
+    def set_session(self, session: str | WorkSession | None) -> None:
+        """Bind a WorkSession, or a name (legacy) as ``WorkSession(Workspace("."), name)``."""
+        work_session_cls, workspace_cls = SessionLog._session_cls()
+        if isinstance(session, work_session_cls):
             self.bind(session)
             return
         name = (session or "").strip() or "default"
-        self._session = Session(path=".", name=name)
-
-    def apply_log_control(self, control: str | None) -> None:
-        if control is None:
-            return
-        value = str(control).strip().lower()
-        if value == "full":
-            self._flush_last_payload()
-            self._verbose = True
-            return
-        if value == "verbose":
-            self._verbose = True
-            return
-        if value == "off":
-            self._verbose = False
-            return
-        raise ValueError(f"unsupported log control {control!r}; use full, verbose, or off")
+        self._session = work_session_cls(workspace_cls("."), name)
 
     def append(
         self,
         *,
-        kind: str,
         toolset: str,
         name: str,
         summary: str,
         ok: bool,
         error: str | None = None,
+        role: str = "",
+        kind: str | None = None,
         payload: dict[str, Any] | None = None,
     ) -> None:
         self._event_count += 1
         index = self._event_count
         self.log_dir.mkdir(parents=True, exist_ok=True)
         payload_ref = self._maybe_write_payloads(index, payload)
+        effective_role = role or (kind if kind in ("expansion", "run") else "")
         line = self._format_event_line(
-            kind=kind,
             toolset=toolset,
             name=name,
             summary=summary,
             ok=ok,
             error=error,
+            role=effective_role,
+            kind=kind,
             payload_ref=payload_ref,
         )
         with (self.log_dir / "events.log").open("a", encoding="utf-8") as fh:
@@ -228,39 +199,49 @@ class SessionLog(ISessionLog):
                 request=payload.get("request"),
                 response=payload.get("response"),
             )
-        # First-order tool/action runs only — expansions stay off the eval Turn.
-        if kind in ("tool", "action"):
-            eval_session = getattr(self._session, "eval", None)
-            if eval_session is not None:
-                from eval.session import ToolCall
+        self._mirror_to_open_turn(
+            toolset=toolset,
+            name=name,
+            summary=summary,
+            ok=ok,
+            error=error,
+            role=effective_role,
+        )
 
-                eval_session.record_tool_call(
-                    ToolCall(_toolset=toolset, _name=name, _summary=summary)
-                )
+    def _mirror_to_open_turn(
+        self,
+        *,
+        toolset: str,
+        name: str,
+        summary: str,
+        ok: bool,
+        error: str | None,
+        role: str,
+    ) -> None:
+        open_turn = getattr(self._session, "open_turn", None)
+        if open_turn is None:
+            return
+        from workspace.workspace import ToolCall
+
+        open_turn.tool_calls.append(
+            ToolCall(
+                toolset=toolset,
+                name=name,
+                summary=summary,
+                ok=ok,
+                error=error or "",
+                role=role,
+            )
+        )
 
     def _maybe_write_payloads(
         self, index: int, payload: dict[str, Any] | None
     ) -> str | None:
-        if not self._verbose or payload is None:
+        # Verbose payload files are author-opt-in via payload only when writing
+        # companion files is requested by passing payload and keeping last_payload.
+        if payload is None:
             return None
-        req_name, res_name = self._write_payload_files(index, payload)
-        return f"{req_name},{res_name}"
-
-    def _flush_last_payload(self) -> None:
-        if self._last_payload is None:
-            return
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        payload = {
-            "request": self._last_payload.request,
-            "response": self._last_payload.response,
-        }
-        req_name, res_name = self._write_payload_files(self._last_payload.event_index, payload)
-        with (self.log_dir / "events.log").open("a", encoding="utf-8") as fh:
-            ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
-            fh.write(
-                f"{ts} kind=control name=log_full "
-                f"payload={req_name},{res_name} summary=retroactive-full\n"
-            )
+        return None
 
     def _write_payload_files(self, index: int, payload: dict[str, Any]) -> tuple[str, str]:
         req_name = f"event-{index:03d}-request.yaml"
@@ -278,23 +259,27 @@ class SessionLog(ISessionLog):
     @staticmethod
     def _format_event_line(
         *,
-        kind: str,
         toolset: str,
         name: str,
         summary: str,
         ok: bool,
         error: str | None,
+        role: str,
+        kind: str | None,
         payload_ref: str | None,
     ) -> str:
         ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
         parts = [
             ts,
-            f"kind={kind}",
             f"toolset={toolset}",
             f"name={name}",
             f"ok={'true' if ok else 'false'}",
             f"summary={summary}",
         ]
+        if kind:
+            parts.insert(1, f"kind={kind}")
+        if role:
+            parts.append(f"role={role}")
         if error:
             parts.append(f"error={error}")
         if payload_ref:
@@ -326,16 +311,3 @@ def _short(value: Any, *, max_len: int = 40) -> str:
     if len(text) <= max_len:
         return text
     return text[: max_len - 1] + "..."
-
-
-def member_is_logged(owner: type | Any, name: str) -> bool:
-    """True when the named member - or a base-class definition - carries @log."""
-    cls = owner if isinstance(owner, type) else type(owner)
-    for base in cls.__mro__:
-        member = base.__dict__.get(name)
-        if member is None or not callable(member):
-            continue
-        if is_logged(member):
-            return True
-    return False
-

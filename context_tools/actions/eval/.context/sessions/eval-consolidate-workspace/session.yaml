@@ -554,3 +554,34 @@ turns:
     sha: b664119e2d900a1a3f562dde0e28d98b7ba20190
   tool_calls: []
   mistakes: []
+- id: d5af320f
+  prompt: Correction — align workspace to OO/BDD model (genbdd001)
+  result: Retired WorkspaceRepo; single WorkSession under Workspace; host.workspace
+    is Workspace; kit absorbed; @log stripped from host; workspace_spec green. Annotation
+    rename to @agent_instructions/@agent_tool not done — primitives still @action/@tool.
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: d5af320f
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: a9fb7d167e273d55976cacc0f6377e28a2bdb09b
+  tool_calls: []
+  mistakes: []
+- id: a1b2c3d4
+  prompt: Correction — annotation rename + turn prelude (annopr001)
+  result: Primitives/context_tools on @agent_instructions/@agent_tool only; SessionLog
+    run append in recipes; Workspace.open + turn.open/finish_turn; host slim (no
+    close_session/log_*/repair/repairer/eval); delete HostLifecycle; Improvement owns
+    /repair; domain Repair on WorkSession. 4e2054e was a discarded sibling of
+    a9fb7d1, not this turn.
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: a1b2c3d4
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - annopr001
+    sha: 67a45423731b0f93d62044764996a464d0734bb0
+  tool_calls: []
+  mistakes: []

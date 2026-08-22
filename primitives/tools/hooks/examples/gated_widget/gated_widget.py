@@ -9,9 +9,9 @@ editing this file triggers the BDD manifest, not GatedWidget's own manifest.
 """
 from __future__ import annotations
 
-from primitives.actions.action import action, agentic_toolset
+from primitives.actions.action import agent_instructions, agentic_toolset
 from sub_agent.sub_agent import sub_agent
-from tools.tool import resource, tool
+from tools.tool import resource, agent_tool
 
 _REVISION = 1
 
@@ -30,13 +30,13 @@ class GatedWidget:
         """Current label."""
         return self._label
 
-    @tool
+    @agent_tool
     def rename(self, label: str) -> str:
         """Rename the widget - plain tool, no gate semantics of its own."""
         self._label = label
         return f"renamed to {label}"
 
-    @action
+    @agent_instructions
     def satisfy(self) -> str:
         """Acknowledge manifest compliance for this fixture - no real generation work.
         Exists so the invoke-edit directive above has a real action to execute."""
@@ -45,7 +45,7 @@ class GatedWidget:
             "cleared for this session."
         )
 
-    @tool
+    @agent_tool
     def hello_world(self, name: str) -> str:
         """Ask for the caller's name and introduce the widget.
 
@@ -59,14 +59,14 @@ class GatedWidget:
             "It's nice to meet you."
         )
 
-    @tool
+    @agent_tool
     def whos_all_here(self) -> str:
         """Return everyone introduced through ``hello_world`` to the chat."""
         if not self._names:
             return "No one has said hello yet."
         return f"Everyone who's here: {', '.join(self._names)}."
 
-    @tool
+    @agent_tool
     def goodbye(self, farewell: str) -> str:
         """Accept a farewell from the caller and say goodbye to everyone.
 
@@ -85,7 +85,7 @@ class GatedWidget:
         )
 
     @sub_agent
-    @tool
+    @agent_tool
     def launch_revision_bump(self) -> str:
         """Launch a non-blocking background sub-agent. That sub-agent must open
         primitives/tools/hooks/examples/gated_widget/gated_widget.py directly (a plain

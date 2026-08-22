@@ -13,13 +13,13 @@ from typing import TYPE_CHECKING, TypedDict
 
 from pathlib import Path
 
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from context_tools.base.base_context_tool import BaseContextTool
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from scanners.scan import Scan
 from scanners.scanner_collection import ScannerCollection
-from tools.tool import tool  # noqa: F401
+from tools.tool import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
     from utilities.diagnose.diagnose import Diagnose
@@ -142,7 +142,7 @@ class Ddd(BaseContextTool):
 
         return Diagnose()
 
-    @tool
+    @agent_tool
     def apply_document_workspace_default(self) -> str:
         """Set the durable working area to `domain/` for /document.
 
@@ -165,7 +165,7 @@ class Ddd(BaseContextTool):
         current.path = current._resolve_working_area(None)
         return current.path
 
-    @action
+    @agent_instructions
     def document(self, paths: list[str]) -> str:
         """Default working folder is `domain/` unless path or folder was overridden."""
         self.apply_document_workspace_default()
@@ -175,13 +175,13 @@ class Ddd(BaseContextTool):
     @instruction
     def contexts(self) -> Instruction: ...
 
-    @action
+    @agent_instructions
     def generate_output(self) -> str:
         """When DDD scaffolding is ready, call ce().generate() for matching OO artifacts."""
         self.ce().generate()
         return ""
 
-    @action
+    @agent_instructions
     def validate(self) -> str:
         """Validate all DDD artifacts at the current fidelity.
         When DDD validation passes, call ce().validate() to validate the matching class artifacts."""
@@ -190,7 +190,7 @@ class Ddd(BaseContextTool):
         self.scan()
         return "Validation report."
 
-    @action
+    @agent_instructions
     def satisfy(self) -> str:
         """Scan the production source for every public method and property; flag any with no corresponding test as a coverage gap. Fix every BDD violation and coverage gap — confirm each failing test is RED for the right reason.
         When BDD violations and coverage gaps are resolved, call ce().satisfy() to build or fix the minimum production code until GREEN. One test, one production change, one GREEN — repeat until validate passes.
@@ -201,7 +201,7 @@ class Ddd(BaseContextTool):
         self.diagnostic().diagnose()
         return "When done, run validate."
 
-    @action
+    @agent_instructions
     def repair(self, asset: str, violation: str) -> str:
         """Repair the DDD artifact that is failing or malformed.
         When the DDD artifact is clean, call ce().repair() to repair the matching class artifact."""
@@ -213,13 +213,13 @@ class Ddd(BaseContextTool):
         self.validate()
         return "Repair {asset} until validate passes."
 
-    @tool
+    @agent_tool
     def transform(self, source_format: str, target_format: str, content: str) -> TransformResult:
         """Sideways format conversion at the same fidelity.
         Delegates to clean_engineering.transform - DDD adds no separate channel model."""
         return self.ce().transform(source_format, target_format, content)
 
-    @tool
+    @agent_tool
     def render(self, format: str, content: str = "") -> dict:
         """Render already-generated DDD output into ``format`` via CleanEngineering channels."""
         if not content:

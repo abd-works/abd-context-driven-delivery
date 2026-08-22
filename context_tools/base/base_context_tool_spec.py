@@ -194,14 +194,12 @@ with description("BaseContextTool composer"):
             with it("should inline the full Contexts section as rubric"):
                 _assert_contexts_inlined(self.response["instructions"], self.contexts)
 
-            with it("should name open then begin_eval_turn, scan, finish_eval_turn"):
+            with it("should name scan then finish_turn"):
                 expect(self.response["tools"]).to(
                     equal(
                         [
-                            "open",
-                            "begin_eval_turn",
                             "scan",
-                            "finish_eval_turn",
+                            "finish_turn",
                         ]
                     )
                 )
@@ -221,9 +219,9 @@ with description("BaseContextTool composer"):
             with it("should set action to satisfy"):
                 expect(self.response["action"]).to(equal("satisfy"))
 
-            with it("should name validate then generate_fixes_from_validate"):
+            with it("should name validate then generate_fixes_from_validate then finish_turn"):
                 expect(self.response["tools"]).to(
-                    equal(["validate", "generate_fixes_from_validate"])
+                    equal(["validate", "generate_fixes_from_validate", "finish_turn"])
                 )
 
             with it("should inline satisfy prose"):
@@ -298,10 +296,10 @@ with description("BaseContextTool public host face"):
     with it("should default context_index_key to empty"):
         expect(type(self.host).context_index_key).to(equal(""))
 
-    with it("should hold a Session as workspace"):
-        from workspace.workspace_session import WorkSession
+    with it("should hold a Workspace as workspace"):
+        from workspace.workspace import Workspace
 
-        expect(isinstance(self.host.workspace, WorkSession)).to(be_true)
+        expect(isinstance(self.host.workspace, Workspace)).to(be_true)
 
     with it("should hold a Scan as scanner"):
         from scanners.scan import Scan
@@ -323,19 +321,24 @@ with description("BaseContextTool public host face"):
 
         expect(isinstance(self.host.decisions, RecordDecisions)).to(be_true)
 
-    with it("should expose active as the workspace Session"):
-        expect(self.host.active).to(equal(self.host.workspace))
+    with it("should expose active as the current work session"):
+        expect(self.host.active).to(equal(self.host.workspace.current_work_session))
 
-    with it("should delegate session_guidance to the workspace kit"):
-        guidance = self.host.session_guidance()
-        expect(isinstance(guidance, Instruction)).to(be_true)
-        expect("Session Guidance" in guidance.expand() or "session" in guidance.expand().lower()).to(
-            be_true
-        )
+    with it("should require an open work session before session_guidance"):
+        expect(lambda: self.host.session_guidance()).to(raise_error(ValueError))
 
-    with it("should expose open and close_session as host tools"):
-        expect("open" in self.host.tools).to(be_true)
-        expect("close_session" in self.host.tools).to(be_true)
+    with it("should not expose close_session on the host"):
+        expect("close_session" in self.host.tools).to(be_false)
+
+    with it("should not expose open or begin_eval_turn on the host"):
+        expect("open" in self.host.tools).to(be_false)
+        expect("begin_eval_turn" in self.host.tools).to(be_false)
+        expect("finish_eval_turn" in self.host.tools).to(be_false)
+
+    with it("should not expose log_mistake, log_correction, or repair on the host"):
+        expect("log_mistake" in self.host.tools).to(be_false)
+        expect("log_correction" in self.host.tools).to(be_false)
+        expect("repair" in getattr(self.host, "actions", {})).to(be_false)
 
     with it("should not expose ensure_session or create_session on the host"):
         expect("ensure_session" in self.host.tools).to(be_false)
@@ -459,66 +462,19 @@ with description("BaseContextTool.render on channel tools"):
 
 
 # ---------------------------------------------------------------------------
-# Repair-to-eval loop: log_mistake/log_correction auto-injection, improve,
-# regression, archive
+# Host slim — mistake/correction/repair are not on BaseContextTool
 # ---------------------------------------------------------------------------
 
-with description("BaseContextTool.log_mistake tool/fidelity auto-injection"):
+with description("BaseContextTool host slim face"):
     with before.each:
-        import shutil
-        import tempfile
+        self.host = Stories(fidelity="story_map")
 
-        self.tmp_dir = Path(tempfile.mkdtemp())
-        import subprocess
-        from eval.session import _git_executable
+    with it("should not compose repairer on the host"):
+        expect(hasattr(self.host, "repairer")).to(be_false)
 
-        subprocess.run(
-            [_git_executable(), "init"],
-            cwd=self.tmp_dir,
-            check=True,
-            capture_output=True,
-        )
-        self.host = Stories(fidelity="story_map", path=str(self.tmp_dir), session="test")
-        self._shutil = shutil
-
-    with it("should tag the entry with the host class name and current fidelity"):
-        self.host.log_mistake(
-            artifact="some/file.md",
-            rule="test-rule",
-            wrong="bad thing happened",
-            original="old",
-        )
-        mist = self.host.eval.open_turn.mistakes[0]
-        expect(mist.tool).to(equal("Stories"))
-        expect(mist.fidelity).to(equal("story_map"))
-        folder = Path(self.host.workspace.folder) / "mistakes" / "test-rule"
-        expect((folder / "faultyAsset").read_text(encoding="utf-8")).to(equal("old"))
-        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
-
-    with it("should re-tag with the fidelity in effect at call time, not construction time"):
-        self.host._set_fidelity("scenarios")
-        self.host.log_mistake(
-            artifact="some/file.md",
-            rule="test-rule",
-            wrong="bad thing happened",
-            original="old",
-        )
-        mist = self.host.eval.open_turn.mistakes[0]
-        expect(mist.fidelity).to(equal("scenarios"))
-        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
-
-    with it("should complete the entry via log_correction on the eval Turn"):
-        entry_id = self.host.log_mistake(
-            artifact="some/file.md",
-            rule="test-rule",
-            wrong="bad thing happened",
-            original="old",
-        )
-        self.host.log_correction(entry_id=entry_id, improved="new")
-        mist = self.host.eval.open_turn.mistakes[0]
-        expect(mist.correction.status).to(equal("fixed"))
-        expect(mist.correction.improved).to(equal("new"))
-        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
+    with it("should not expose eval as a host property for agent tools"):
+        expect(getattr(type(self.host), "eval", None)).to(equal(None))
+        expect(hasattr(BaseContextTool, "eval")).to(be_false)
 
 
 with description("BaseContextTool.createRule action"):
@@ -544,45 +500,6 @@ with description("BaseContextTool.createRule action"):
         expect("Do not call this if **scan** already reports a failure" in instructions).to(
             be_true
         )
-
-
-with description("BaseContextTool repairer forwarding"):
-    with before.each:
-        import shutil
-        import tempfile
-
-        self.tmp_dir = Path(tempfile.mkdtemp())
-        import subprocess
-        from eval.session import _git_executable
-
-        subprocess.run(
-            [_git_executable(), "init"],
-            cwd=self.tmp_dir,
-            check=True,
-            capture_output=True,
-        )
-        self.host = Stories(fidelity="story_map", path=str(self.tmp_dir), session="test")
-        self._shutil = shutil
-
-    with it("should compose Repair on the eval session"):
-        expect(self.host.repairer.session).to(equal(self.host.eval))
-        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
-
-    with it("should discover repair as a non-blocking sub-agent on the host"):
-        from sub_agent.sub_agent import discover_sub_agent_tools
-
-        discovered = discover_sub_agent_tools(self.host)
-        expect("repair" in discovered).to(be_true)
-        expect(discovered["repair"].signature_entry["kind"]).to(equal("sub_agent"))
-        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
-
-    with it("should discover log_mistake as a non-blocking sub-agent on the host"):
-        from sub_agent.sub_agent import discover_sub_agent_tools
-
-        discovered = discover_sub_agent_tools(self.host)
-        expect("log_mistake" in discovered).to(be_true)
-        expect(discovered["log_mistake"].signature_entry["kind"]).to(equal("sub_agent"))
-        self._shutil.rmtree(str(self.tmp_dir), ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------

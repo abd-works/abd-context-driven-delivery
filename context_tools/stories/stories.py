@@ -13,10 +13,10 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from context_tools.base.base_context_tool import BaseContextTool
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from primitives.tools.tool import tool  # noqa: F401
+from primitives.tools.tool import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
     from utilities.diagnose.diagnose import Diagnose
@@ -138,7 +138,7 @@ class Stories(BaseContextTool):
     @instruction
     def contexts(self) -> Instruction: ...
 
-    @action
+    @agent_instructions
     def generate(self) -> str:
         """Generate story artifacts at the current fidelity.
         At scaffold fidelity: write epic, sub-epic, and story names only.
@@ -149,7 +149,7 @@ class Stories(BaseContextTool):
         self.ce().generate()
         return "When done, run validate."
 
-    @action
+    @agent_instructions
     def iterate(self) -> str:
         """Iterate then generate - grill + formal generate/validate/one-fix ticks.
         At acceptance_tests fidelity: after each spec cycle, call ce().iterate() to wire the minimum production code until GREEN.
@@ -163,7 +163,7 @@ class Stories(BaseContextTool):
             "then validate."
         )
 
-    @action
+    @agent_instructions
     def satisfy(self) -> str:
         """Find and fix every problem in the story artifacts under the session root.
         At acceptance_tests fidelity: after fixing specs, call ce().satisfy() to keep matching production implementations GREEN.
@@ -173,7 +173,7 @@ class Stories(BaseContextTool):
         self.diagnostic().diagnose()
         return "When done, run validate on artifacts under {session.path}/."
 
-    @tool
+    @agent_tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:
         """Parse content from source_format into the canonical StoryMap, then render into target_format.
         All formatters are peer channels. Sideways format move at the same fidelity.
@@ -187,7 +187,7 @@ class Stories(BaseContextTool):
         rendered = target.render(canonical)
         return {"format": target_format, "content": rendered}
 
-    @tool
+    @agent_tool
     def render(self, format: str, content: str = "") -> dict:
         """Render already-generated story output into ``format`` via channel parse/render."""
         if not content:

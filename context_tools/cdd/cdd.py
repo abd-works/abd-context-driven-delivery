@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from context_tools.base.base_context_tool import BaseContextTool
 from context_tools.bdd.bdd import Bdd
 from context_tools.clean_engineering.clean_engineering import CleanEngineering
@@ -75,7 +75,7 @@ class Cdd(BaseContextTool):
     # generate / iterate / validate / satisfy / document: set child mode=tool so
     # each is a separate tools run — never inline full child recipes.
 
-    @action
+    @agent_instructions
     def generate_output(self) -> str:
         """Invoke each stage child's generate as its own tools run."""
         for context_tool in self.context_tools():
@@ -83,7 +83,7 @@ class Cdd(BaseContextTool):
             context_tool.generate()
         return "Invoke each Separate tools run above, one child at a time."
 
-    @action
+    @agent_instructions
     def grill(self) -> str:
         """Inline each stage child's grill via the grill kit (high-level Q&A only)."""
         from grill_context.grill_context import GrillContext
@@ -93,7 +93,7 @@ class Cdd(BaseContextTool):
             grill.grill(tools=[context_tool])
         return ""
 
-    @action
+    @agent_instructions
     def sketch(self) -> str:
         """Inline each stage child's sketch via the sketch kit (high-level shape only)."""
         from sketch.sketch import Sketcher
@@ -103,7 +103,7 @@ class Cdd(BaseContextTool):
             sketcher.sketch(tools=[context_tool])
         return ""
 
-    @action
+    @agent_instructions
     def iterate(self) -> str:
         """Invoke each stage child's iterate via the iterate kit."""
         from iterate.iterate import Iterator
@@ -113,7 +113,7 @@ class Cdd(BaseContextTool):
             iterator.iterate(tools=[context_tool])
         return "Invoke each Separate tools run above, one child at a time."
 
-    @action
+    @agent_instructions
     def validate(self) -> str:
         """Invoke each stage child's validate as its own tools run."""
         for context_tool in self.context_tools():
@@ -121,7 +121,7 @@ class Cdd(BaseContextTool):
             context_tool.validate()
         return "Invoke each Separate tools run above, one child at a time."
 
-    @action
+    @agent_instructions
     def satisfy(self) -> str:
         """Invoke each stage child's satisfy as its own tools run."""
         for context_tool in self.context_tools():
@@ -129,7 +129,7 @@ class Cdd(BaseContextTool):
             context_tool.satisfy()
         return "Invoke each Separate tools run above, one child at a time."
 
-    @action
+    @agent_instructions
     def document(self, paths: list[str]) -> str:
         """Invoke each stage child's document as its own tools run."""
         for context_tool in self.context_tools():

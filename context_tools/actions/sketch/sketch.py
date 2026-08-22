@@ -11,8 +11,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from grill_context.grill_context import GrillContext
-from primitives.actions.action import action, agentic_toolset
-from tools.tool import tool
+from primitives.actions.action import agent_instructions, agentic_toolset
+from tools.tool import agent_tool
 from workspace import docs_dir
 
 
@@ -39,7 +39,7 @@ class Sketcher:
         """GrillContext toolset for in-method composition (not a tool)."""
         return GrillContext()
 
-    @tool
+    @agent_tool
     def find_template(self, agent_dir: str = "") -> str:
         """Locate a sketch template using tiered discovery.
         1. Session context - the caller passes an example directly (skip this tool).
@@ -55,7 +55,7 @@ class Sketcher:
                         return path.read_text(encoding="utf-8")
         return _DEFAULT_TEMPLATE.read_text(encoding="utf-8")
 
-    @tool
+    @agent_tool
     def save_sketch(
         self,
         destination: str,
@@ -73,7 +73,7 @@ class Sketcher:
         target.write_text(content, encoding="utf-8")
         return str(target)
 
-    @tool
+    @agent_tool
     def list_sketches(self, destination: str, slug: str = "") -> str:
         """List sketch files under the destination docs dir.
         If slug is provided, filters to sketches matching that slug prefix.
@@ -84,7 +84,7 @@ class Sketcher:
         pattern = f"{slug}-sketch.md" if slug else "*-sketch.md"
         return "\n".join(str(path) for path in sorted(context_dir.glob(pattern)))
 
-    @action
+    @agent_instructions
     def sketch(self, tools: list) -> str:
         """Sketch then generate - grill + sketch cadence, then the host generate body."""
         for host in self.context_tools(tools):
@@ -94,7 +94,7 @@ class Sketcher:
             host.generate()
         return "Sketch complete; generate instructions applied."
 
-    @action
+    @agent_instructions
     def sketch_session(self, slug: str, destination: str, agent_dir: str = "") -> str:
         """Sketch {{slug}} interactively - rough artifact through an explicit grill_with_context call. MUST persist via save_sketch on the first interim draft and overwrite on every refinement. Never leave the sketch only in chat. destination defaults to session.folder (sprint) for engagement sketches, or {session.path}/{module} for module sketches. Question shape (frame + options) comes from grill_with_context - do not restate bare options here."""
         """Step 0 - Grill the sketch plan (concept-grounded questions via grill_with_context)."""

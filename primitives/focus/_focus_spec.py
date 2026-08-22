@@ -18,7 +18,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from primitives.focus._decorator import focus
 from primitives.instructions.instructions import instruction
 
@@ -27,7 +27,7 @@ from primitives.instructions.instructions import instruction
 # Minimal stubs used by the tests
 # ---------------------------------------------------------------------------
 
-@action
+@agent_instructions
 def _stub_action(self) -> None:
     """stub action"""
 
@@ -48,9 +48,9 @@ def _plain_function() -> None:
 
 with description("a method annotated to bind a focus group"):
 
-    with context("that is applied to an @action method"):
+    with context("that is applied to an @agent_instructions method"):
         with before.each:
-            @action
+            @agent_instructions
             def act(self) -> None:
                 """act"""
 
@@ -67,9 +67,9 @@ with description("a method annotated to bind a focus group"):
             group, key = entries[0]
             expect(key).to(equal("fidelity"))
 
-    with context("that is applied to an @action method with a trailing-s group name"):
+    with context("that is applied to an @agent_instructions method with a trailing-s group name"):
         with before.each:
-            @action
+            @agent_instructions
             def act(self) -> None:
                 """act"""
 
@@ -80,9 +80,9 @@ with description("a method annotated to bind a focus group"):
             group, key = entries[0]
             expect(key).to(equal("format"))
 
-    with context("that is applied to an @action method with an explicit filter_key"):
+    with context("that is applied to an @agent_instructions method with an explicit filter_key"):
         with before.each:
-            @action
+            @agent_instructions
             def act(self) -> None:
                 """act"""
 
@@ -93,9 +93,9 @@ with description("a method annotated to bind a focus group"):
             group, key = entries[0]
             expect(key).to(equal("mode_override"))
 
-    with context("that is applied twice to the same @action method"):
+    with context("that is applied twice to the same @agent_instructions method"):
         with before.each:
-            @action
+            @agent_instructions
             def act(self) -> None:
                 """act"""
 
@@ -142,7 +142,7 @@ with description("a method annotated to bind a focus group"):
 
     with context("that is used as a decorator factory (no positional func)"):
         with before.each:
-            @action
+            @agent_instructions
             def act(self) -> None:
                 """act"""
 

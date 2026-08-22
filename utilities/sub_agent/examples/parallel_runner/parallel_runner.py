@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from sub_agent.sub_agent import sub_agent
-from tools.tool import tool, toolset
+from tools.tool import agent_tool, toolset
 
 
 @toolset
@@ -11,14 +11,14 @@ class ParallelRunner:
     """Toolset that routes heavy analysis work as a non-blocking sub-agent launch.
 
     The ``run_analysis`` method is decorated with ``@sub_agent`` on top of
-    ``@tool``.  Standard tool discovery skips it; ``discover_sub_agent_tools``
+    ``@agent_tool``.  Standard tool discovery skips it; ``discover_sub_agent_tools``
     surfaces it with ``kind: sub_agent / launch: non_blocking`` in the manifest
     so the calling agent knows to spawn a background sub-agent rather than
     running the work inline.
     """
 
     @sub_agent
-    @tool
+    @agent_tool
     def run_analysis(self, target: str) -> str:
         """Analyse *target* as a background sub-agent.
 

@@ -9,9 +9,9 @@
 
 from __future__ import annotations
 
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from context_tools.base.base_context_tool import BaseContextTool
-from tools.tool import tool
+from tools.tool import agent_tool
 
 
 class ChronicleWithOutput(BaseContextTool):
@@ -24,13 +24,13 @@ class ChronicleWithOutput(BaseContextTool):
     def toolset_name(self) -> str:
         return "car_chronicle"
 
-    @action
+    @agent_instructions
     def generate_output(self) -> str:
         """Append each trip entry to the driving log before validating."""
         self.add_epic()
         return "Chronicle entries saved."
 
-    @tool
+    @agent_tool
     def add_epic(self) -> str:
         """Add one epic block to the chronicle outline."""
         return "epic added"

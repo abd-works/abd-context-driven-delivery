@@ -11,9 +11,9 @@ from pathlib import Path
 
 from partition.partition_index import PartitionIndex
 from partition.segment import Segment, SegmentCompletenessConfig
-from primitives.actions.action import action, agentic_toolset
+from primitives.actions.action import agent_instructions, agentic_toolset
 from primitives.instructions import instruction
-from tools.tool import tool
+from tools.tool import agent_tool
 
 
 @agentic_toolset
@@ -21,7 +21,7 @@ class Partition:
     """Corpus partition: index, segment, completeness.
 
     Real toolset (not a mixin). Slash ``/partition`` runs this kit with
-    ``arguments.tools``; each host is opened via ``host.open()`` inside
+    ``arguments.tools``; each host opens via ``host.workspace.open(host)`` inside
     ``partition(tools)``, not via a composed attribute on BaseContextTool.
     """
 
@@ -30,7 +30,7 @@ class Partition:
     def module_dir(self) -> Path:
         return Path(inspect.getfile(type(self))).resolve().parent
 
-    @tool
+    @agent_tool
     def verify_segment_completeness(
         self,
         segment_path: str,
@@ -83,7 +83,7 @@ class Partition:
             resolved.read_text(encoding="utf-8", errors="replace"),
         )
 
-    @tool
+    @agent_tool
     def index(self, context: str, out_root: str | None = None) -> str:
         """index"""
         return (
@@ -91,7 +91,7 @@ class Partition:
             "(out_root overrides session.path when set)."
         )
 
-    @tool
+    @agent_tool
     def segment(self, out_root: str | None = None) -> str:
         """segment"""
         return (
@@ -100,7 +100,7 @@ class Partition:
             "Named-entry completeness verified (length-only is a false PASS)."
         )
       
-    @action
+    @agent_instructions
     def partition_corpus(
         self,
         context: str,
@@ -123,7 +123,7 @@ class Partition:
             "Hard fail if any new chunk fails named-entry completeness."
         )
 
-    @action
+    @agent_instructions
     def partition(
         self,
         tools: list,
@@ -133,9 +133,9 @@ class Partition:
     ) -> str:
         """partition"""
         for host in self.context_tools(tools):
-            host.open()
+            host.workspace.open(host)
             host.contexts
-            host.begin_eval_turn()
+            host.turn.open(host)
             self.partition_corpus(
                 context,
                 mode,
@@ -143,7 +143,7 @@ class Partition:
                 slug=host.domain_slug,
                 scaffold=host.scaffold,
             )
-            host.finish_eval_turn()
+            host.turn.finish_turn()
         return (
             "Partition of {{context}} finished (mode {{mode}}); "
             "docs under {session.path}/.context/. "

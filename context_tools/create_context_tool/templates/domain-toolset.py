@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from primitives.actions.action import action  # noqa: F401
+from primitives.actions.action import agent_instructions  # noqa: F401
 from context_tools.base.base_context_tool import BaseContextTool
 
 

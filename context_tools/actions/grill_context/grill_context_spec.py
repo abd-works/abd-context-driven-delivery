@@ -130,7 +130,7 @@ with description("GrillContext toolset"):
                 self.gc.write_grill_answer(
                     root=self.root,
                     heading="How actions are discovered",
-                    body="Actions are discovered by scanning @action decorators.",
+                    body="Actions are discovered by scanning @agent_instructions decorators.",
                 )
                 answers_path = Path(self.root) / ".context" / "grill-answers.md"
                 expect(answers_path.exists()).to(be_true)
