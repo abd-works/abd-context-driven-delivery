@@ -6,28 +6,28 @@ Fidelity: behavior
 
 a context tool
   that is invoked to run an action
-    -> workspace.openWorkSession(name, goal, fidelities, contexts, path, default_path, tool, fidelity)
-    -> turn.open(host)
-    it should open a turn for the action run
-    it should load path overrides from context-index before opening
-    with an explicit path argument on open
+    with an explicit path argument
       it should resolve its path to that argument
-    with no explicit path argument on open
-      with a stored override for its tool and fidelity
+    with no explicit path argument
+      with a path override for its tool and fidelity
         it should resolve its path to the override path
-      with no stored override
-        it should resolve its path to its default workspace folder under the workspace
+      with no path override
+        it should resolve its path under its default workspace folder
+    -> workspace.openWorkSession(name, goal, fidelities, contexts, path)
+    it should load path overrides from context-index
     with a new work session name
       it should add the opened work session to its work sessions
       it should set the current work session to the opened work session
     with an existing work session name
       it should load the existing work session from its sessions folder
       it should set the current work session to that work session
-    with an explicit path that differs from the default path for the opening tool
+    with a resolved path that differs from the default path
+      -> workspace.upsertPath(tool, fidelity, path, default_path)
       it should record a path override for that tool and fidelity
-    with an explicit path that equals the default path for the opening tool
+    with a resolved path that equals the default path
+      -> workspace.upsertPath(tool, fidelity, path, default_path)
       it should drop any path override for that tool and fidelity
-    with its work session opening on the workspace
+    with its work session opening
       with HEAD already on its session branch
         it should continue without switching branch
       with a clean working tree not on its session branch
@@ -37,6 +37,8 @@ a context tool
           it should create its session branch
       with a dirty working tree not on its session branch
         it should refuse to switch branch
+    -> turn.open(host)
+    it should open a turn for the action run
 
 a workspace
   -> workspace = Workspace(path=...)

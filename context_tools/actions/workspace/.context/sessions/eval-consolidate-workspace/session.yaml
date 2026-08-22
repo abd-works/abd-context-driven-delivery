@@ -321,7 +321,8 @@ turns:
   mistakes: []
 - id: f100ccc9
   prompt: log correction — sketch action-first usage story entry
-  result: mistake 23dd937b fixed; sketch starts at action invoke; turn.open opens a turn for the run
+  result: mistake 23dd937b fixed; sketch starts at action invoke; turn.open opens
+    a turn for the run
   context: eval-consolidate-workspace
   change_commit:
     turn_id: f100ccc9
@@ -339,4 +340,40 @@ turns:
   - toolset: context_tools.bdd.bdd:Bdd
     name: log_correction
     summary: entry_id=23dd937b, status=fixed
+  mistakes: []
+- id: c02437db
+  prompt: log correction — full workspace-bdd-sketch domain audit
+  result: three mistakes fixed; path resolve then openWorkSession then WorkSession.open
+    then turn.open; openWorkSession signature aligned to OO model
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: c02437db
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - acddcec1
+    - e4736325
+    - 0bf09f1e
+    sha: 9df2be7b6935fc7ac05b98ddc10479d840a2b30e
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=acddcec1, rule=domain-practice-alignment
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=e4736325, rule=usage-order-behaviors
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=0bf09f1e, rule=describe-is-plain-english
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=acddcec1, status=fixed
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=e4736325, status=fixed
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=0bf09f1e, status=fixed
   mistakes: []
