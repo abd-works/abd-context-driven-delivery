@@ -450,3 +450,25 @@ turns:
     name: log_correction
     summary: entry_id=1bcaf881, status=fixed
   mistakes: []
+- id: 94c219e3
+  prompt: log correction — observable behavior not lookupPath mechanism in sketch
+  result: path override state as with conditions; it should have/return override path;
+    action open branches on stored override not API return value
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 94c219e3
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - ee24d3a0
+    sha: ae199e47cb419d3ac5b166fca83d4f885a040d18
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=ee24d3a0, rule=observable-behavior
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=ee24d3a0, status=fixed
+  mistakes: []
