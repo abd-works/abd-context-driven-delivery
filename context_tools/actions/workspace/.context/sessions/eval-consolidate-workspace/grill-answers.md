@@ -223,27 +223,112 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 ---
 
-### Turn — grill tick 9 — slice F design tree root (mistake / correction)
+### Turn — grill tick 9 — slice F placement (Mistake-first)
 
-**Question:** Slice **F** adds the OO mistake/correction chain (`workspace-eval-oo-sketch.md` §4: `Turn.mistakes`, mistake/correction record paths, `TurnCommit.mistakeIds`; §9 item 6). The consolidated sketch already reaches `that has a turn open` (expand, artifact I/O) and turn finish.
+**Method:** Mistake public API → external trigger events → sub-contexts → placement (sub-context vs own context).
 
-At the **highest level** still under `that has a turn open`, what **event or state change** should we model first?
+**Mistake operations (target OO §4):** construct via `Turn.record_mistake`; `persist(workSession)`; `write_files()`; linked on Turn (`record_mistake`); linked on Repair (`nest`). Correction is a **later** event.
 
-**Options (design tree — next branch):**
+**External trigger (slice F entry):** agent invokes `Turn.record_mistake` while work session is open.
 
-- **A — Enabling event: violation found** — `that finds a violation in an artifact` unlocks mistake substates (what is recorded, where it lands). Correction and Repair bucket deferred to later ticks.
-- **B — Enabling event: mistake recorded** — `that is recording a mistake` (agent invoked mistake path while turn is open). Unlocks substates to drill next: on open turn, work-session files, themed repair backlog.
-- **C — Standing state: mistakes on open turn** — `with mistakes on its open turn` before finish — unlocks turn-finish substates (`TurnCommit.mistakeIds`). Requires a prior tick to name how mistakes arrive on the turn.
-- **D — Standing state: repair backlog** — `with a themed repair in its backlog` — model Repair bucket first. Likely violates nest-by-enabling-events unless a prior event is named.
+**Question:** Is mistake filing a **sub-context** of the existing sketch or its **own** top-level subject?
 
-**Runner paths read:**
+| Choice | Placement |
+|---|---|
+| **1** | Sub-context: under `that has a turn open` → **`that has a mistake filed on it`** |
+| **2** | Own context: top-level **`a mistake`** |
+| **3** | Split: filing under open turn; **`a mistake`** only after persist |
 
-- `workspace-eval-oo-sketch.md` §4 lines 393–394, 408, 427–446, 660–683; §191 domain chain
-- `workspace-bdd-sketch.md` — `that has a turn open` through turn finish
-- `context_tools/bdd/bdd.md` — hierarchy shape, nest-by-enabling-events, state-not-when
-- `grill-answers.md` tick 8 taxonomy
+**Answer (user):** **1 — sub-context** under `that has a turn open` → `that has a mistake filed on it`.
 
-**Answer:** _(pending — user)_
+**Slice unlocked:** **partial** — tick 10 locks `with` subsets + `it should` set under that nest.
 
-**Slice unlocked:** **no** — tick 10 drills **substates** under the chosen branch: nested `with` / `it should` that are legitimate tests; reject API steps and logged-state `that`.
+---
+
+### Turn — grill tick 10 — slice F substates under `that has a mistake filed on it`
+
+**Context (locked from tick 9):**
+
+```
+that has a turn open
+  that has a mistake filed on it
+    with ???
+      it should …
+```
+
+**Question A — standing `with` subsets:** OO `find_or_create(theme, backlog).nest([mistake])` (§4 line 433). Which **`with`** branches are legitimate under the filing event?
+
+| Choice | `with` line | Unlocks |
+|---|---|---|
+| **A** | `with no themed repair in its backlog for that rule yet` | create themed repair bucket + nest mistake |
+| **B** | `with a themed repair already in its backlog for that rule` | nest into existing bucket only |
+| **C** | **Both A and B** — two branches, same outcomes underneath |
+| **D** | **Neither** — no `with`; filing outcomes are unconditional |
+
+**Question B — legitimate `it should` expectations:** Which belong under `that has a mistake filed on it` (tick 8 rejects API / logged-state)?
+
+| # | Expectation | Include? |
+|---|---|---|
+| 1 | it should appear on its open turn | |
+| 2 | it should keep its mistake files under its work session folder | |
+| 3 | it should sit in a themed repair in its backlog | |
+| 4 | it should give the agent an entry id for that mistake | |
+| 5 | it should attach a correction to that mistake | **reject** — correction is separate event (tick 11) |
+| 6 | it should include that mistake on its turn commit | **reject** — turn finish event (existing slice) |
+
+**Runner paths read:** OO §4 lines 427–433, 465–470, 660–670; `bdd.md` nest-by-enabling-events, state-not-when; tick 8 taxonomy.
+
+**Answer (user — tick 10, corrected):**
+
+- **Question A — two branches (NOT repair-bucket `with` substates):**
+  - **A — create a mistake:** filing records the mistake (`openTurn.record_mistake`, `persist`) — one behavior.
+  - **B — create a mistake and group it by a repair:** same filing, plus repair grouping (`find_or_create(theme, backlog).nest`) — **additional** behavior on top of A. B depends on A (you cannot group without creating the mistake first). **Not** “no themed repair yet” vs “themed repair already exists.”
+  - **Assistant misread (rejected):** sequential repair-bucket substates under one filing event.
+- **Question B — expectations 1–4:** **Rejected.**
+- **User domain line:** record a mistake on the **TurnCommit** from the **Turn** that made the change (session branch commit).
+
+**OO chain (§4 427–433):** `record_mistake` @agent_tool → `openTurn.record_mistake` → `mistake.persist` → `repairs.find_or_create(...).nest([mistake])`. Branch A = first two domain steps; branch B adds the repair nest.
+
+**Slice unlocked:** **partial** — tick 11 locks Bdd tree shape for A/B + domain `it should` lines.
+
+---
+
+### Turn — grill tick 11 — slice F two branches (create mistake vs group by repair)
+
+**Misread corrected:** branches are **behaviors**, not backlog pre-existence `with` lines.
+
+**OO split:**
+
+| Branch | Domain steps | Bdd subject (draft — confirm) |
+|---|---|---|
+| **A** | `openTurn.record_mistake` → `mistakes.add`; `mistake.persist` | `that has a mistake filed on it` |
+| **B** | + `repairs.find_or_create(theme, backlog).nest([mistake])` | `that has a mistake grouped by a repair in its backlog` *(or nested under A — pick shape)* |
+
+**Question 1 — tree shape:** How should B sit relative to A?
+
+| Choice | Sketch shape |
+|---|---|
+| **1** | **Sibling** `that` lines under `that has a turn open` — A then B as separate enabling events |
+| **2** | **Nested** — B is a sub-context under A (`that has a mistake filed on it` → `that groups it by a repair in its backlog`) because B depends on A |
+| **3** | **Single** `that has a mistake filed on it` — unconditional A outcomes; B outcomes only under a nested `that groups it by a repair` |
+
+**Question 2 — domain `it should` lines (reject paraphrase; confirm or edit):**
+
+**Branch A** (`that has a mistake filed on it`):
+
+- `it should record the mistake on its open turn` *(domain: `Turn.mistakes`)*
+- `it should persist the mistake under its work session` *(domain: `mistake.persist`)*
+
+**Branch B** (grouping — whichever `that` from Q1):
+
+- `it should find or create a themed repair in its backlog for that rule`
+- `it should nest the mistake in that repair`
+
+**Turn finish** (existing `that has finished its turn` — separate event, not filing):
+
+- `it should attach the mistake ids to its TurnCommit on the session branch commit` *(domain: `TurnCommit.mistakeIds`, `sha` — user’s “branch commit from the Turn that made the change”)*
+
+**Answer:** _(user — write sketch, fix in review; stop fine-grained line-by-line grill)_
+
+**Slice unlocked:** **yes** — sketch written in `workspace-bdd-sketch.md` (both copies); user edits expected.
 
