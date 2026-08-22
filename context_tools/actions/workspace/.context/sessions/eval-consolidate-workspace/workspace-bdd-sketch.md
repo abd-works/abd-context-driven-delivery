@@ -10,15 +10,17 @@ a context tool
     that has been loaded
       with no path overrides persisted
         it should expose an empty path override list
-        that is asked for a tool path
+        with a context tool resolving its edit path for a tool and fidelity
+          -> workspace.lookupPath(tool, fidelity)
           it should return no override path
-      with path overrides persisted for tool, fidelity, and path
+      with path overrides persisted for a tool and fidelity
         it should expose those path overrides
-        that is asked for a tool path
-          with no path override for that tool and fidelity
-            it should return no override path
-          with a path override for that tool and fidelity
-            it should return the stored workspace-relative path
+        with a context tool resolving its edit path for that tool and fidelity
+          -> workspace.lookupPath(tool, fidelity)
+          it should return the stored workspace-relative path
+        with a context tool resolving its edit path for a different tool and fidelity
+          -> workspace.lookupPath(tool, fidelity)
+          it should return no override path
       that records a tool path with a known default path
         with a path that differs from the default path
           -> workspace.upsertPath(tool, fidelity, path, default_path)
@@ -33,10 +35,11 @@ a context tool
     with an explicit path argument
       it should resolve its path to that argument
     with no explicit path argument
-      with a path override for its tool and fidelity
-        it should resolve its path to the override path
-      with no path override
+      -> workspace.lookupPath(context_index_key, fidelity)
+      with no override path returned
         it should resolve its path under its default workspace folder
+      with an override path returned
+        it should resolve its path to the override path
     -> workspace.openWorkSession(name, goal, fidelities, contexts, path)
     -> workspace.load()
     it should load its path overrides
