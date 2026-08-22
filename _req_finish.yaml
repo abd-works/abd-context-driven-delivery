@@ -5,6 +5,6 @@ context:
   session: eval-consolidate-workspace
 tool: finish_eval_turn
 arguments:
-  prompt: session index sync — turn 8a3d60bb
-  result: session.yaml turn record; drop _req_finish.yaml from tree
+  prompt: session index sync — turn d1dd751c
+  result: session.yaml + remove _req_finish.yaml
   context: eval-consolidate-workspace
