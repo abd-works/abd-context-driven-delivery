@@ -1,6 +1,6 @@
 """Example: open or resume a named sprint using Session.open."""
 
-from workspace.workspace_session import Session
+from workspace.workspace_session import WorkSession
 
 
 class SprintLifecycle:
@@ -12,7 +12,7 @@ class SprintLifecycle:
         Call ``open`` with a descriptive goal on first create so the sprint
         folder and session.md Start block capture intent.
         """
-        session = Session(path=workspace, session=name, workspace=workspace)
+        session = WorkSession(path=workspace, session=name, workspace=workspace)
         return session.open(
             name=name,
             goal="Example sprint — replace with real goal text",

@@ -12,7 +12,7 @@ import json
 from datetime import date
 from pathlib import Path
 
-from workspace import Session, docs_dir
+from workspace import WorkSession, docs_dir
 from primitives.actions.action import action
 from tools.tool import tool, toolset
 
@@ -179,7 +179,7 @@ class Handoff:
         if dest.parent.name != "sessions":
             return None
         working = str(dest.parent.parent.parent)
-        loaded = Session.load(working, dest.name)
+        loaded = WorkSession.load(working, dest.name)
         if not loaded.session_md.is_file():
             return None
         return {
@@ -284,12 +284,12 @@ class Handoff:
         )
 
     def _render_handoff_markdown(self, state: dict, *, next_focus: str = "") -> str:
-        """Render handoff-latest content from collected state — no agent drafting step."""
+        """Render handoff-latest content from collected state â€” no agent drafting step."""
         session = state.get("session") or {}
         cdd = state.get("cdd") or {}
         title_name = session.get("name") or Path(state["destination"]).name
         lines = [
-            f"# Handoff — {title_name} ({date.today().isoformat()})",
+            f"# Handoff â€” {title_name} ({date.today().isoformat()})",
             "",
             "## Resume",
             "",
@@ -352,7 +352,7 @@ class Handoff:
         if dest.parent.name != "sessions":
             return
         working = str(dest.parent.parent.parent)
-        Session.load(working, dest.name).close(outcome="handoff written", handoff=handoff_name)
+        WorkSession.load(working, dest.name).close(outcome="handoff written", handoff=handoff_name)
 
     # ------------------------------------------------------------------
     # Public tools / actions
@@ -405,7 +405,7 @@ class Handoff:
         when focus (or a non-archive slug) is provided. Do not use plain 'handoff'
         or 'handoff-latest' as the archive name - those are reserved.
 
-        When destination is a sprint under sessions/, closes the Session (End section).
+        When destination is a sprint under sessions/, closes the WorkSession (End section).
         Returns the archive handoff path."""
         archive_slug = self._resolve_archive_slug(slug=slug, focus=focus)
         if archive_slug in _RESERVED_SLUGS or archive_slug == "handoff-latest":

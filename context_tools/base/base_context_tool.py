@@ -31,7 +31,7 @@ from eval.session import Repair
 from scanners.scan import Scan
 from sub_agent.sub_agent import sub_agent
 from workspace.session_log import log
-from workspace.workspace_session import Session
+from workspace.workspace_session import WorkSession
 from tools.tool import resource
 from tools.tool import tool
 
@@ -82,7 +82,7 @@ class BaseContextTool(AgenticToolset):
         super().__init__()
         self.format = format
         self._raw_path = path
-        self.workspace = Session(
+        self.workspace = WorkSession(
             format=self.format,
             path=path,
             session=session,
@@ -165,7 +165,7 @@ class BaseContextTool(AgenticToolset):
 
     @instruction(override=True)
     def session_guidance(self) -> Instruction:
-        """Delegate to Session — prose lives in workspace_session.md."""
+        """Delegate to WorkSession — prose lives in workspace_session.md."""
         return Instruction.ref(self.workspace, "session_guidance")
 
     @tool

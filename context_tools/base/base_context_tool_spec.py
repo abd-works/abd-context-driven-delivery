@@ -299,9 +299,9 @@ with description("BaseContextTool public host face"):
         expect(type(self.host).context_index_key).to(equal(""))
 
     with it("should hold a Session as workspace"):
-        from workspace.workspace_session import Session
+        from workspace.workspace_session import WorkSession
 
-        expect(isinstance(self.host.workspace, Session)).to(be_true)
+        expect(isinstance(self.host.workspace, WorkSession)).to(be_true)
 
     with it("should hold a Scan as scanner"):
         from scanners.scan import Scan

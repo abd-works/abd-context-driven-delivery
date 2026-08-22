@@ -1,6 +1,6 @@
-"""docs_dir and lazy ``Session`` re-export (kit lives in ``workspace_session``).
+"""SessionPaths helpers and lazy ``WorkSession`` re-export.
 
-``Session`` is loaded lazily so ``from workspace import log`` does not pull
+``WorkSession`` is loaded lazily so ``from workspace import log`` does not pull
 ``@action`` / ``@tool`` during the primitives bootstrap cycle.
 """
 
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-__all__ = ["Session", "WorkspaceSession", "SessionPaths", "docs_dir"]
+__all__ = ["WorkSession", "SessionPaths", "docs_dir"]
 
 
 class SessionPaths:
@@ -27,10 +27,12 @@ class SessionPaths:
         return dest / ".context"
 
 
+docs_dir = SessionPaths.docs_dir
+
 
 def __getattr__(name: str):
-    if name in ("Session", "WorkspaceSession"):
-        from workspace.workspace_session import Session, WorkspaceSession
+    if name == "WorkSession":
+        from workspace.workspace_session import WorkSession
 
-        return Session if name == "Session" else WorkspaceSession
+        return WorkSession
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

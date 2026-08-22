@@ -2,7 +2,7 @@
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
-"""BDD for eval.Session — ring 1 capture.
+"""BDD for eval.EvalSession — ring 1 capture.
 
 Sources / context:
 context_tools/actions/eval/.context/sessions/eval/eval-bdd-sketch.md
@@ -23,11 +23,11 @@ from eval.session import (
     EvalGitConnectError,
     Mistake,
     NullCDDRepo,
-    NullWorkspaceRepo,
+    NullGitRepo,
     Repair,
-    Session,
+    EvalSession,
     ToolCall,
-    WorkspaceRepo,
+    GitRepo,
     find_git_root,
     repos_for_workspace,
 )
@@ -61,9 +61,9 @@ def _workspace(tmp: Path, name: str = "sprint") -> SimpleNamespace:
 
 
 def _isolated_session(ws, **kwargs):
-    return Session(
+    return EvalSession(
         workspace=ws,
-        workspace_repo=NullWorkspaceRepo(),
+        git=NullGitRepo(),
         cdd_repo=NullCDDRepo(),
         **kwargs,
     )
@@ -97,8 +97,8 @@ with description("a session"):
         with before.each:
             self.tmp = Path(tempfile.mkdtemp())
             self.ws = _workspace(self.tmp, name="sprint")
-            self.repo = NullWorkspaceRepo()
-            self.session = Session(workspace=self.ws, workspace_repo=self.repo)
+            self.repo = NullGitRepo()
+            self.session = EvalSession(workspace=self.ws, git=self.repo)
 
         with context("with a working-area path"):
             with it("should expose that path for durable work"):
@@ -200,7 +200,7 @@ with description("a session"):
             with it("should set that Mistake.repair to the Repair"):
                 expect(self.mistake.repair).to(equal(self.repairer))
 
-            with it("should open a WorkspaceSession on the CDD clone"):
+            with it("should open a WorkSession on the CDD clone"):
                 expect(self.repairer.cdd_session is not None).to(equal(True))
                 expect(self.repairer.cdd_session.workspace.name).to(equal("sprint"))
 
@@ -368,10 +368,10 @@ with description("a session"):
         with context("with changes to the working area"):
             with before.each:
                 self.tmp = Path(tempfile.mkdtemp())
-                self.repo = NullWorkspaceRepo()
-                self.session = Session(
+                self.repo = NullGitRepo()
+                self.session = EvalSession(
                     workspace=_workspace(self.tmp),
-                    workspace_repo=self.repo,
+                    git=self.repo,
                     is_dirty=lambda: True,
                 )
                 self.session.record_tool_call(
@@ -381,7 +381,7 @@ with description("a session"):
                     prompt="p", result="r", context="c"
                 )
 
-            with it("should close the open Turn onto the Session"):
+            with it("should close the open Turn onto the EvalSession"):
                 # Assert
                 expect(self.session.open_turn).to(be_none)
                 expect(len(self.session.turns)).to(equal(1))
@@ -393,7 +393,7 @@ with description("a session"):
                 expect(turn.result).to(equal("r"))
                 expect(turn.context).to(equal("c"))
 
-            with it("should commit the working-area delta on the WorkspaceRepo session branch"):
+            with it("should commit the working-area delta on the GitRepo session branch"):
                 # Assert
                 expect(len(self.repo.commits)).to(equal(1))
                 expect(self.session.branch).to(equal("session/sprint"))
@@ -415,10 +415,10 @@ with description("a session"):
         with context("with no changes to the working area"):
             with before.each:
                 self.tmp = Path(tempfile.mkdtemp())
-                self.repo = NullWorkspaceRepo()
-                self.session = Session(
+                self.repo = NullGitRepo()
+                self.session = EvalSession(
                     workspace=_workspace(self.tmp),
-                    workspace_repo=self.repo,
+                    git=self.repo,
                     is_dirty=lambda: False,
                 )
                 self.session.record_tool_call(
@@ -434,7 +434,7 @@ with description("a session"):
                 expect(self.session.open_turn).to(be_none)
                 expect(len(self.session.turns)).to(equal(0))
 
-            with it("should not create a WorkspaceRepo commit"):
+            with it("should not create a GitRepo commit"):
                 # Assert
                 expect(len(self.repo.commits)).to(equal(0))
 
@@ -502,7 +502,7 @@ with description("repos for a workspace"):
         with after.each:
             shutil.rmtree(self.project, ignore_errors=True)
 
-        with it("should root WorkspaceRepo at the project clone"):
+        with it("should root GitRepo at the project clone"):
             expect(self.ws_repo.root).to(equal(self.project.resolve()))
 
         with it("should root CDDRepo at the tools clone"):
@@ -543,8 +543,8 @@ if _GIT_ON_PATH:
         expect(_REPO_ROOT is not None).to(equal(True))
         assert _REPO_ROOT is not None
         self.repo_root = _REPO_ROOT
-        self.main_branch = WorkspaceRepo(self.repo_root).current_branch()
-        self.start_sha = WorkspaceRepo(self.repo_root).current_commit()
+        self.main_branch = GitRepo(self.repo_root).current_branch
+        self.start_sha = GitRepo(self.repo_root).current_commit
         # Linked worktree of THIS clone — keeps the main worktree on its branch.
         self.wt = Path(tempfile.mkdtemp(prefix="eval-git-probe-wt-"))
         shutil.rmtree(self.wt)
@@ -562,11 +562,11 @@ if _GIT_ON_PATH:
         self.probe.mkdir(parents=True)
         ws = _workspace(self.probe, name=_PROBE_NAME)
         # Working area is a linked worktree of THIS (tools) clone — share the root.
-        self.ws_repo = WorkspaceRepo(self.wt)
+        self.ws_repo = GitRepo(self.wt)
         self.cdd_repo = CDDRepo(self.wt)
-        self.session = Session(
+        self.session = EvalSession(
             workspace=ws,
-            workspace_repo=self.ws_repo,
+            git=self.ws_repo,
             cdd_repo=self.cdd_repo,
         )
 
@@ -578,13 +578,13 @@ if _GIT_ON_PATH:
         _remove_worktree(repo_root, wt)
         if getattr(self, "main_branch", None) is None:
             return
-        expect(WorkspaceRepo(repo_root).current_branch()).to(
+        expect(GitRepo(repo_root).current_branch).to(
             equal(self.main_branch)
         )
 
     with it("should create a session/* branch on this clone"):
         expect(self.session.branch).to(equal(f"session/{_PROBE_NAME}"))
-        expect(self.ws_repo.current_branch()).to(equal(f"session/{_PROBE_NAME}"))
+        expect(self.ws_repo.current_branch).to(equal(f"session/{_PROBE_NAME}"))
 
     with it("should share this clone's git root when the working area is a linked worktree"):
         expect(self.ws_repo.root).to(equal(self.cdd_repo.root))

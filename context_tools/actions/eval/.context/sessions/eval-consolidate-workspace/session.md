@@ -4,8 +4,8 @@
 
 - **date:** 2026-08-21
 - **path:** context_tools/actions/eval
-- **goal:** land OO sketch git-primary updates left out of BDD spinal turn
-- **fidelities:** behavior
+- **goal:** BDD development — tests + code for git-primary mistake/correction
+- **fidelities:** development
 - **contexts:** clean-engineering, bdd
 
 ## Artifacts

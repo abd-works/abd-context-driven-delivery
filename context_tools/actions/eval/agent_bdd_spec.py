@@ -24,7 +24,7 @@ from agent_bdd import (
     run_toolset,
     sessions_dir,
 )
-from eval.session import WorkspaceRepo, _git, find_git_root
+from eval.session import GitRepo, _git, find_git_root
 
 _REPO_ROOT = repo_root_from(__file__, parents=2)
 _SESSIONS = sessions_dir(__file__)
@@ -55,7 +55,7 @@ with description("an eval Session"):
         with it("records the tool run and commits the sandbox turn"):
             expect(_REPO_ROOT is not None).to(be_true)
             assert _REPO_ROOT is not None
-            main_branch = WorkspaceRepo(_REPO_ROOT).current_branch()
+            main_branch = GitRepo(_REPO_ROOT).current_branch
             wt = Path(tempfile.mkdtemp(prefix="eval-agent-git-wt-"))
             shutil.rmtree(wt)
             _remove_worktree(_REPO_ROOT, wt)
@@ -90,7 +90,7 @@ with description("an eval Session"):
                         f"Session name: {_PROBE_NAME}\n"
                         "1. Using shell/python with PYTHONPATH covering utilities + "
                         "context_tools/actions + primitives, construct eval.Session "
-                        "with WorkspaceRepo and CDDRepo BOTH rooted at the worktree "
+                        "with GitRepo and CDDRepo BOTH rooted at the worktree "
                         "(same git root for workspace + tool).\n"
                         "2. record_tool_call a ToolCall(toolset='echo.echo:Echoer', "
                         "name='fence', summary='eval session git probe').\n"
@@ -113,7 +113,7 @@ with description("an eval Session"):
                     expect("CHANGE_COMMIT:" in report).to(be_true)
                     expect("TOOL_SHA:" in report).to(be_true)
                     expect("SESSION_YAML:" in report).to(be_true)
-                    expect(WorkspaceRepo(_REPO_ROOT).current_branch()).to(
+                    expect(GitRepo(_REPO_ROOT).current_branch).to(
                         equal(main_branch)
                     )
                     expect(find_git_root(wt) is not None).to(be_true)
@@ -126,4 +126,4 @@ with description("an eval Session"):
                     )
             finally:
                 _remove_worktree(_REPO_ROOT, wt)
-                expect(WorkspaceRepo(_REPO_ROOT).current_branch()).to(equal(main_branch))
+                expect(GitRepo(_REPO_ROOT).current_branch).to(equal(main_branch))

@@ -1,4 +1,4 @@
-"""Session — named sprint + workspace kit (working area, session area, context index)."""
+"""WorkSession — named sprint + workspace kit (working area, session area, context index)."""
 
 from __future__ import annotations
 
@@ -12,15 +12,15 @@ from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from workspace.context_index import ContextIndex
 from workspace.session import SessionPaths
-from workspace.workspace_repo import WorkspaceRepo, find_git_root
+from workspace.git_repo import GitRepo, find_git_root
 from tools.tool import resource, tool
 
 # Re-export for ``from workspace.workspace_session import SessionPaths.docs_dir``
-__all__ = ["Session", "WorkspaceSession", "SessionPaths.docs_dir"]
+__all__ = ["WorkSession", "SessionPaths.docs_dir"]
 
 
-class Session:
-    """Sprint + workspace kit: working area, session area, and context index.
+class WorkSession:
+    """WorkSession kit: working area, session area, and context index.
 
     - **path** — durable tool root (e.g. ``…/sandbox``)
     - **folder** — ``{path}/.context/sessions/{name}/``
@@ -101,7 +101,7 @@ class Session:
         self.body = body
         self._bind_session_log()
 
-    def _take_from(self, other: Session) -> None:
+    def _take_from(self, other: WorkSession) -> None:
         self.path = other.path
         self.name = other.name
         self.goal = other.goal
@@ -129,7 +129,7 @@ class Session:
         if self._host is None:
             self.eval = None
             return
-        from eval.session import Session as EvalSession
+        from eval.session import EvalSession
 
         name = getattr(self, "name", None)
         if not name:
@@ -227,7 +227,7 @@ class Session:
 
     @property
     @resource
-    def active(self) -> Session:
+    def active(self) -> WorkSession:
         """active"""
         return self
 
@@ -252,12 +252,12 @@ class Session:
         }
 
     def __repr__(self) -> str:
-        return f"Session(path={self.path!r}, name={self.name!r})"
+        return f"WorkSession(path={self.path!r}, name={self.name!r})"
 
     # -- session.md IO -------------------------------------------------------
 
     @classmethod
-    def load(cls, path: str, name: str) -> Session:
+    def load(cls, path: str, name: str) -> WorkSession:
         """Load from ``{path}/.context/sessions/{name}/session.md`` when present."""
         session = cls(path=path, name=name)
         md = session.session_md
@@ -296,7 +296,7 @@ class Session:
         root = find_git_root(self.path)
         if root is None:
             return
-        WorkspaceRepo(root).ensure_session_branch(self.name)
+        GitRepo(root).checkout_or_create(f"session/{self.name}")
 
     def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
         """Write End section (and handoff link) into session.md."""
@@ -364,7 +364,7 @@ class Session:
         return "\n".join(lines[body_start:scope_end]).strip("\n")
 
     @classmethod
-    def _parse(cls, text: str, *, path: str, name: str) -> Session:
+    def _parse(cls, text: str, *, path: str, name: str) -> WorkSession:
         lines = text.splitlines()
         end_idx = next(
             (i for i, line in enumerate(lines) if line.strip() == cls._END_HEADING),
@@ -488,7 +488,3 @@ class Session:
         if path.is_file():
             self._context_index = path.read_text(encoding="utf-8")
         return str(path.resolve())
-
-
-# Back-compat alias for imports / decorator chain targets
-WorkspaceSession = Session
