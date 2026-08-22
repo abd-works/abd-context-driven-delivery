@@ -139,5 +139,25 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 **Slice unlocked:** **yes** â€” Bdd workspace module checklist items 1â€“5 covered at behavior signature level.
 
+---
 
+### Turn 7643854d â€” grill tick 7 (deferred slice E)
+
+**Question:** `workspace-bdd-sketch.md` deferred line â€” Turn/git/repairs via `currentWorkSession`; SessionLog; GitRepo commit/push on `Turn.finish`. Where should slice **E** boundary fall for workspace Bdd?
+
+**Options:**
+
+- **A â€” Turn.finish git only:** when a turn finishes, commit scoped changes when the working tree is dirty on the session branch, always push the session branch; **exclude** SessionLog and domain Repair.
+- **B â€” Turn.finish + SessionLog:** add observables for action-run and instruction-expand audit on the session trail and on the open turn; commit/push on turn finish as in A; **exclude** domain Repair/mistake/correction (eval package).
+- **C â€” Include domain Repair chain:** mistake â†’ correction â†’ themed Repair on `WorkSession.repairs` in the same workspace sketch.
+- **D â€” Defer all to eval module:** workspace sketch stays closed at slice D; deferred items move to a separate eval Bdd sketch only.
+
+**Runner paths read:**
+
+- `workspace-eval-oo-sketch.md` Â§4 (SessionLog, Turn envelope, Turn.finish push)
+- `workspace-eval-oo-sketch.md` Â§9 workspace checklist items 8â€“9; eval checklist items 2â€“6
+- `workspace-bdd-sketch.md` deferred line
+- `mistakes/observable-behavior-2/mistake.md` â€” behavior under turn artifact I/O, not API operations
+
+**Slice unlocked:** **no** â€” await judge answer.
 
