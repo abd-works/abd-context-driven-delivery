@@ -1,6 +1,6 @@
 ﻿# BDD sketch — workspace module (usage story)
 
-Design: `workspace-eval-oo-sketch.md` §2. Grill: `grill-answers.md` (slices A–D).
+Design: `workspace-eval-oo-sketch.md` §2. Grill: `grill-answers.md` (slices A–E).
 
 Fidelity: behavior
 
@@ -36,5 +36,15 @@ a context tool
           it should keep a path override for that tool and fidelity
         with a path for the turn that equals the default path
           it should drop the path override for that tool and fidelity
+        that has logged its action run
+          it should record the run on the session trail
+          it should attach the run record to its open turn
+        that has expanded its action instructions
+          it should record the expansion on the session trail
+          it should attach the expansion record to its open turn
+      that has finished its turn
+        with a dirty working tree on its session branch
+          it should commit its scoped changes on the session branch
+        it should push its session branch to origin
 
-**Deferred:** Turn/git/repairs via currentWorkSession; SessionLog; GitRepo commit/push on Turn.finish.
+**Deferred:** domain Repair / mistake / correction chain (eval module Bdd sketch).

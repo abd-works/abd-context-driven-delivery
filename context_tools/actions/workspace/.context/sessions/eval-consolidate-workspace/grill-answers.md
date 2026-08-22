@@ -161,3 +161,9 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 **Slice unlocked:** **no** â€” await judge answer.
 
+**Judge answer:** **Recommend B â€” Turn.finish + SessionLog.** OO Â§4 locks SessionLog.append for expand (framework) and run (recipe body) â€” same record on session trail (`events.log`) and on `openTurn.toolCalls` when a turn is open. Turn.finish (checklist item 8) commits when dirty then **always** pushes session branch. Domain Repair/mistake/correction stays on eval package (`WorkSession.repairs`) â€” eval checklist items 2â€“6; reject C (mixes eval domain into workspace module sketch). Reject D (SessionLog and Turn.finish git are workspace checklist items 8â€“9, not eval-only). Reject A (drops locked SessionLog observables).
+
+**Citations:** OO Â§4 lines 217â€“240, 256â€“266; Â§9 lines 832â€“834; observable-behavior-2 correction â€” nest under turn events, not API calls.
+
+**Slice unlocked:** **yes** â€” slice E: SessionLog audit during open turn; turn finish commit-when-dirty + always push; exclude domain Repair (defer to eval Bdd sketch).
+

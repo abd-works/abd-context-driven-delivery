@@ -1,0 +1,10 @@
+toolset: context_tools.bdd.bdd:Bdd
+context:
+  fidelity: behavior
+  path: context_tools/actions/workspace
+  session: eval-consolidate-workspace
+tool: finish_eval_turn
+arguments:
+  prompt: bdd judge answer — grill tick 7 deferred slice E
+  result: recommend B — Turn.finish git + SessionLog audit; exclude domain Repair to eval sketch
+  context: eval-consolidate-workspace
