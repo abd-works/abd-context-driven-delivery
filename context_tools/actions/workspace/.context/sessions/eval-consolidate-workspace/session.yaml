@@ -619,3 +619,16 @@ turns:
     sha: c1785adb1d742a46cc6df746a47c00b3726f8cae
   tool_calls: []
   mistakes: []
+- id: 99079d1e
+  prompt: bdd grill tick 8 — usage-story describe taxonomy
+  result: grill-answers.md tick 8 Q+A; mistake 745db890 logged; skipped-grill on /bdd
+    /sketch corrected
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 99079d1e
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: c84bc25419a2c4625a56319bedb733b55a891faf
+  tool_calls: []
+  mistakes: []
