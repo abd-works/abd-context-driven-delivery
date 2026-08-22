@@ -1,0 +1,9 @@
+it should load an empty path override list
+it should resolve its path under its default workspace folder
+-> workspace.lookupPath(tool, fidelity)
+that is opening for the run
+-> workspace.openWorkSession(...)
+with a context-index file present
+with a path used for the bout
+a workspace
+  that has been loaded
