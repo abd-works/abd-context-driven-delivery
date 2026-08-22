@@ -4,33 +4,30 @@ Design: `workspace-eval-oo-sketch.md` Â§2. Grill: `grill-answers.md` (slices Aâ€
 
 Fidelity: behavior
 
-a context tool host
-  with no workspace at the chosen folder
-    -> workspace = Workspace(path=...)
-    it should bind that workspace as its workspace
-  that opens on a workspace
-    with an explicit path argument
+a context tool
+  that is invoked to run an action
+    -> workspace.openWorkSession(name, goal, fidelities, contexts, path, default_path, tool, fidelity)
+    -> turn.open(host)
+    it should open its work session before domain steps
+    it should load path overrides from context-index before opening
+    with an explicit path argument on open
       it should resolve its path to that argument
-    with no explicit path argument
+    with no explicit path argument on open
       with a stored override for its tool and fidelity
         it should resolve its path to the override path
       with no stored override
         it should resolve its path to its default workspace folder under the workspace
-    with no current work session
-      -> workspace.openWorkSession(name, goal, fidelities, contexts, path, default_path, tool, fidelity)
-      it should load path overrides from context-index before opening
-      with a new session name
-        it should add the opened work session to its work sessions
-        it should set the current work session to the opened work session
-      with an existing session name
-        it should load the existing work session from its sessions folder
-        it should set the current work session to that work session
-      with an explicit path that differs from the default path for the opening tool
-        it should record a path override for that tool and fidelity
-      with an explicit path that equals the default path for the opening tool
-        it should drop any path override for that tool and fidelity
-    with a current work session being opened
-      -> workSession.open(name, goal, fidelities, contexts, path)
+    with a new work session name
+      it should add the opened work session to its work sessions
+      it should set the current work session to the opened work session
+    with an existing work session name
+      it should load the existing work session from its sessions folder
+      it should set the current work session to that work session
+    with an explicit path that differs from the default path for the opening tool
+      it should record a path override for that tool and fidelity
+    with an explicit path that equals the default path for the opening tool
+      it should drop any path override for that tool and fidelity
+    with its work session opening on the workspace
       with HEAD already on its session branch
         it should continue without switching branch
       with a clean working tree not on its session branch

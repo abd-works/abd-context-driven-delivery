@@ -1,0 +1,10 @@
+toolset: context_tools.bdd.bdd:Bdd
+context:
+  fidelity: behavior
+  path: context_tools/actions/workspace
+  session: eval-consolidate-workspace
+tool: finish_eval_turn
+arguments:
+  prompt: log correction — sketch action-first usage story entry
+  result: mistake fixed; sketch starts at action invoke + session prelude
+  context: eval-consolidate-workspace

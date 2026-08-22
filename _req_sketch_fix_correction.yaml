@@ -1,0 +1,11 @@
+toolset: context_tools.bdd.bdd:Bdd
+context:
+  fidelity: behavior
+  path: context_tools/actions/workspace
+  session: eval-consolidate-workspace
+tool: log_correction
+arguments:
+  entry_id: 23dd937b
+  improved: ""
+  how: Re-root sketch at "a context tool that is invoked to run an action" with openWorkSession + turn.open as session prelude per OO sketch turn envelope.
+  status: fixed

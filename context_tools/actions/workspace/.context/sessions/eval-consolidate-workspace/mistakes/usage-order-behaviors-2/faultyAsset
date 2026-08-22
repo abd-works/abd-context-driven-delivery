@@ -1,0 +1,5 @@
+a context tool host
+  with no workspace at the chosen folder
+    -> workspace = Workspace(path=...)
+    it should bind that workspace as its workspace
+  that opens on a workspace
