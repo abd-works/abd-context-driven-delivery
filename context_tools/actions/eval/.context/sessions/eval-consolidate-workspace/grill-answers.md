@@ -177,7 +177,7 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 - **A — Subject / entry:** top `describe` names the stakeholder-facing actor (`a context tool`); nest only usage entry (`with a workspace`) then one domain entry event.
 - **B — Standing `with`:** narrows git/session/path/input state **already true** before the next observation (`with a new work session name`, `with HEAD already on its session branch`, `with no path override…`); nest `it should` outcomes only — not further API calls.
-- **C — Enabling `that` (event):** names something that **happens** and unlocks the next observations (`that has an action run against it`, `that has a turn open`, `that is reading or writing module artifacts`, `that is asked for its instructions`, `that has finished its turn`); nest narrower `with` or `it should` — never past-tense operation results (`that has logged…`).
+- **C — Enabling `that` (event):** names something that **happens** and unlocks the next observations (`that has an action run against it`, `that has a turn open`, `that is reading or writing module artifacts`, `that is asked for its instructions`, `that the agent is finished working with it`, `that has finished its turn`); nest narrower `with` or `it should` — never past-tense operation results (`that has logged…`).
 - **D — Invalid:** operation/API narration (`openWorkSession`, `lookupPath`, `SessionLog.append`), outcomes dressed as state (`that has logged`, `that has expanded`), or manager classes as subjects.
 
 **Runner paths read:**
@@ -202,12 +202,15 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 | `that is reading or writing module artifacts` | **enabling event** | explicit-path / override `with` branches → edit-path outcomes | `lookupPath`, resolve-on-open |
 | `with a path for the turn that differs/equals…` | **standing `with`** (after path known) | keep/drop override outcomes | upsertPath call lines |
 | `that is asked for its instructions` | **enabling event** (expand) | expansion trail + openTurn attachment outcomes | `that has expanded…` |
-| `that has finished its turn` | **enabling event** (`finish_turn`) | action-run trail + turn attachment; commit scoped changes; push session branch | `that has logged…`, recipe-run event; optional dirty `with` on commit |
+| `that the agent is finished working with it` | **enabling event** (agent done with tool) | `it should finish its turn for the action` | logged state; skipping `finish_turn`; API narration |
+| `it should finish its turn for the action` | **outcome** (turn envelope) | leaf — agent invokes `finish_turn` after work | nested under `that has finished its turn` |
+| `that has finished its turn` | **enabling event** (`finish_turn` completed) | action-run trail + turn attachment; commit scoped changes; push session branch | `that has logged…`, recipe-run event; optional dirty `with` on commit |
 
 **Locked behaviors from OO §4 (stakeholder-visible, not implementation):**
 
 - **Expand audit** — when instructions are **asked for** (framework expand), record on session trail and on **open** turn.
-- **Run audit** — when the turn is **finished** for the action (agent invokes `finish_turn` after work), record action run on session trail and on that turn — **not** under a “logged” state.
+- **Finish turn obligation** — when the agent is **finished working with** the context tool, it must **finish its turn for the action** (`finish_turn` @agent_tool) — testable gate before turn-finish outcomes.
+- **Run audit** — when the turn is **finished** for the action, record action run on session trail and on that turn — **not** under a “logged” state.
 - **Git on finish** — commit scoped changes on the session branch; push session branch (turn finish implies work landed — not an optional dirty `with` branch).
 
 **Process correction:** `/bdd /sketch` must run **grill → sketch → generate** cadence (`Sketcher.sketch_session` / `bdd-grill-sketch-workflow.md`). Consolidated sketch was generated without tick 8 taxonomy — caused repeated nest-by-enabling-events failures.

@@ -1024,8 +1024,54 @@ turns:
       \ push its session branch to origin\n"
     tool: Bdd
     fidelity: behavior
-    folder: mistakes/nest-by-enabling-events-2
+    folder: repairs/nest-by-enabling-events/nest-by-enabling-events
     correction:
-      improved: ''
-      how: ''
-      status: open
+      improved: "\uFEFF# BDD sketch — workspace module (usage story)\n\nDesign: `workspace-eval-oo-sketch.md`\
+        \ §2. Grill: `grill-answers.md` (slices A–E; tick 8 usage-story taxonomy).\n\
+        \nFidelity: behavior\n\na context tool\n  with a workspace\n    that has an\
+        \ action run against it\n      with a new work session name\n        it should\
+        \ add the opened work session to its work sessions\n        it should set\
+        \ the current work session to the opened work session\n      with an existing\
+        \ work session name\n        it should load the existing work session from\
+        \ its sessions folder\n        it should set the current work session to that\
+        \ work session\n      with HEAD already on its session branch\n        it\
+        \ should continue without switching branch\n      with a clean working tree\
+        \ not on its session branch\n        with an existing session branch\n   \
+        \       it should check out that session branch\n        with no session branch\
+        \ yet\n          it should create its session branch\n      with a dirty working\
+        \ tree not on its session branch\n        it should refuse to switch branch\n\
+        \      it should open a turn for the action run\n      that has a turn open\n\
+        \        that is reading or writing module artifacts\n          with an explicit\
+        \ path given on the run\n            it should use that path for its module\
+        \ artifacts\n          with no explicit path given on the run\n          \
+        \  with no path override for its tool and fidelity\n              it should\
+        \ use its default workspace folder for its module artifacts\n            with\
+        \ a path override for its tool and fidelity\n              it should use the\
+        \ override path for its module artifacts\n        with a path for the turn\
+        \ that differs from the default path\n          it should keep a path override\
+        \ for that tool and fidelity\n        with a path for the turn that equals\
+        \ the default path\n          it should drop the path override for that tool\
+        \ and fidelity\n        that is asked for its instructions\n          it should\
+        \ record the expansion on the session trail\n          it should attach the\
+        \ expansion record to its open turn\n      that the agent is finished working\
+        \ with it\n        it should finish its turn for the action\n      that has\
+        \ finished its turn\n        it should record the action run on the session\
+        \ trail\n        it should attach the action run record to its turn\n    \
+        \    it should commit its scoped changes on the session branch\n        it\
+        \ should push its session branch to origin\n\n**Deferred:** domain Repair\
+        \ / mistake / correction chain (eval module Bdd sketch).\n"
+      how: Remove dirty `with`; commit is direct outcome under that has finished its
+        turn.
+      status: fixed
+- id: 26dce6b8
+  prompt: log correction — turn finish always commits
+  result: entry_id=4b1a8711 fixed; sketch + workspace_spec.py
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 26dce6b8
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 59867ae4af202f53476c609f2e6b9f0e2a61130c
+  tool_calls: []
+  mistakes: []
