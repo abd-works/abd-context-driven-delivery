@@ -1,0 +1,4 @@
+## Slice A — path overrides (ticks 1–3)
+## Slice B — openWorkSession (grill tick 4)
+## Slice C — WorkSession.open (grill tick 5)
+## Slice D — host edit-path resolution (grill tick 6)

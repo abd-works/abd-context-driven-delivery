@@ -290,3 +290,32 @@ turns:
     sha: cf3e282fb1255c13ee9bb67a18584250ab0ed87f
   tool_calls: []
   mistakes: []
+- id: ca24345f
+  prompt: log correction — workspace-bdd-sketch usage story and domain vocabulary
+  result: mistakes d6ddab78 1ad49040 fixed; sketch usage-order + path resolution wording;
+    workspace_spec.py aligned
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: ca24345f
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - d6ddab78
+    - 1ad49040
+    sha: dd11e8341f12b75ec689d6f1509c6d3afe5beb0b
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=d6ddab78, rule=domain-practice-alignment
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=1ad49040, rule=usage-order-behaviors
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=d6ddab78, status=fixed
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=1ad49040, status=fixed
+  mistakes: []
