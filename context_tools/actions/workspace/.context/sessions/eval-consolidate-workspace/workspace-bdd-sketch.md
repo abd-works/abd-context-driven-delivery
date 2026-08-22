@@ -1,6 +1,6 @@
 ﻿# BDD sketch — workspace module (usage story)
 
-Design: `workspace-eval-oo-sketch.md` §2. Grill: `grill-answers.md` (slices A–E).
+Design: `workspace-eval-oo-sketch.md` §2. Grill: `grill-answers.md` (slices A–E; tick 8 usage-story taxonomy).
 
 Fidelity: behavior
 

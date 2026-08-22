@@ -167,3 +167,52 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 **Slice unlocked:** **yes** â€” slice E: SessionLog audit during open turn; turn finish commit-when-dirty + always push; exclude domain Repair (defer to eval Bdd sketch).
 
+---
+
+### Turn — grill tick 8 — usage-story describe taxonomy (consolidated sketch)
+
+**Question:** Consolidated `workspace-bdd-sketch.md` — for **each** `describe` / `that` / `with` line, what category is it (**subject**, **standing condition**, **enabling event**, **outcome-only leaf**), and what legitimate behaviors, events, or state changes may nest there? What must **never** appear as a nested `that` (operation outcomes, API steps, logging as state)?
+
+**Options (per line class):**
+
+- **A — Subject / entry:** top `describe` names the stakeholder-facing actor (`a context tool`); nest only usage entry (`with a workspace`) then one domain entry event.
+- **B — Standing `with`:** narrows git/session/path/input state **already true** before the next observation (`with a new work session name`, `with HEAD already on its session branch`, `with no path override…`); nest `it should` outcomes only — not further API calls.
+- **C — Enabling `that` (event):** names something that **happens** and unlocks the next observations (`that has an action run against it`, `that has a turn open`, `that is reading or writing module artifacts`, `that is asked for its instructions`, `that has finished its turn`); nest narrower `with` or `it should` — never past-tense operation results (`that has logged…`).
+- **D — Invalid:** operation/API narration (`openWorkSession`, `lookupPath`, `SessionLog.append`), outcomes dressed as state (`that has logged`, `that has expanded`), or manager classes as subjects.
+
+**Runner paths read:**
+
+- `workspace-bdd-sketch.md` (consolidated usage story)
+- `workspace-eval-oo-sketch.md` §2 lines 42–93, 125–131; §4 lines 217–266 (turn envelope, SessionLog moments, finish_turn)
+- `context_tools/bdd/bdd.md` — hierarchy shape, `nest-by-enabling-events`, `state-not-when`, `observable-behavior`
+- `context_tools/bdd/.context/bdd-grill-sketch-workflow.md` — grill before sketch; never skip grill on `/bdd /sketch`
+- `mistakes/nest-by-enabling-events-2/mistake.md` (db6b3528) — logged state anti-pattern
+
+**Answer (taxonomy — apply before any sketch edit):**
+
+| Line | Category | What may nest | Reject |
+|---|---|---|---|
+| `a context tool` | **subject** | `with a workspace` only at this depth | `BaseContextTool`, `SessionLog`, `@agent_tool` |
+| `with a workspace` | **standing `with`** | domain entry event | path override load/save as subjects |
+| `that has an action run against it` | **enabling event** (single entry) | session-name `with` branches; git `with` branches; prelude outcome; turn-open state; turn-finished event | `openWorkSession`, separate host-resolution slice lines |
+| `with a new/existing work session name` | **standing `with`** | `currentWorkSession` / `workSessions` outcomes | WorkSession.open API steps |
+| `with HEAD…` / `with a clean…` / `with a dirty…` | **standing `with`** (git) | branch policy `it should` | checkout/create as operation lines |
+| `it should open a turn for the action run` | **outcome** (prelude) | leaf | nested under wrong parent |
+| `that has a turn open` | **state after event** (`Turn.open`) | artifact-I/O event; path-for-turn `with`; expand event | SessionLog as subject |
+| `that is reading or writing module artifacts` | **enabling event** | explicit-path / override `with` branches → edit-path outcomes | `lookupPath`, resolve-on-open |
+| `with a path for the turn that differs/equals…` | **standing `with`** (after path known) | keep/drop override outcomes | upsertPath call lines |
+| `that is asked for its instructions` | **enabling event** (expand) | expansion trail + openTurn attachment outcomes | `that has expanded…` |
+| `that has finished its turn` | **enabling event** (`finish_turn`) | action-run trail + turn attachment; then dirty `with` → commit; always push | `that has logged…`, recipe-run event |
+
+**Locked behaviors from OO §4 (stakeholder-visible, not implementation):**
+
+- **Expand audit** — when instructions are **asked for** (framework expand), record on session trail and on **open** turn.
+- **Run audit** — when the turn is **finished** for the action (agent invokes `finish_turn` after work), record action run on session trail and on that turn — **not** under a “logged” state.
+- **Git on finish** — commit when dirty on session branch; **always** push session branch (OO lines 256–258).
+
+**Process correction:** `/bdd /sketch` must run **grill → sketch → generate** cadence (`Sketcher.sketch_session` / `bdd-grill-sketch-workflow.md`). Consolidated sketch was generated without tick 8 taxonomy — caused repeated nest-by-enabling-events failures.
+
+**Citations:** OO §2 lines 51–53, 84–92, 125–131; §4 lines 223–224, 255–266, 611–618; `bdd.md` pass/fail examples; mistake db6b3528.
+
+**Slice unlocked:** **yes** — consolidated usage-story sketch may proceed only where each line matches taxonomy above; re-grill if a new `that`/`with` line is added.
+
