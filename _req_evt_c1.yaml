@@ -1,0 +1,11 @@
+toolset: context_tools.bdd.bdd:Bdd
+context:
+  fidelity: behavior
+  path: context_tools/actions/workspace
+  session: eval-consolidate-workspace
+tool: log_correction
+arguments:
+  entry_id: 17b92604
+  improved: ""
+  how: Single event that has an action run against it; with for pre-run state and run inputs; no openWorkSession/turn.open operation lines.
+  status: fixed

@@ -5,45 +5,41 @@ Design: `workspace-eval-oo-sketch.md` Â§2. Grill: `grill-answers.md` (slices Aâ€
 Fidelity: behavior
 
 a context tool
-  with an action run against it
-    with a workspace
-      that is opening for the run
-        -> workspace.openWorkSession(name, goal, fidelities, contexts, path)
-        with no path overrides persisted
-          it should load an empty path override list
-          with no explicit path argument on the run
-            it should resolve its path under its default workspace folder
-        with a path override persisted for its tool and fidelity
-          it should load that path override
-          with no explicit path argument on the run
-            it should resolve its path to the override path
-        with path overrides persisted for other tools only
-          it should load those path overrides
-          with no explicit path argument on the run
-            it should resolve its path under its default workspace folder
-        with an explicit path argument on the run
-          it should resolve its path to that argument
-        with a new work session name
-          it should add the opened work session to its work sessions
-          it should set the current work session to the opened work session
-        with an existing work session name
-          it should load the existing work session from its sessions folder
-          it should set the current work session to that work session
-        with a resolved path that differs from the default path
-          it should keep a path override for that tool and fidelity
-        with a resolved path that equals the default path
-          it should drop the path override for that tool and fidelity
-        with its work session opening
-          with HEAD already on its session branch
-            it should continue without switching branch
-          with a clean working tree not on its session branch
-            with an existing session branch
-              it should check out that session branch
-            with no session branch yet
-              it should create its session branch
-          with a dirty working tree not on its session branch
-            it should refuse to switch branch
-      -> turn.open(host)
+  with a workspace
+    that has an action run against it
+      with no path overrides persisted
+        it should load an empty path override list
+        with no explicit path argument
+          it should resolve its path under its default workspace folder
+      with a path override persisted for its tool and fidelity
+        it should load that path override
+        with no explicit path argument
+          it should resolve its path to the override path
+      with path overrides persisted for other tools only
+        it should load those path overrides
+        with no explicit path argument
+          it should resolve its path under its default workspace folder
+      with an explicit path argument
+        it should resolve its path to that argument
+      with a new work session name
+        it should add the opened work session to its work sessions
+        it should set the current work session to the opened work session
+      with an existing work session name
+        it should load the existing work session from its sessions folder
+        it should set the current work session to that work session
+      with a resolved path that differs from the default path
+        it should keep a path override for that tool and fidelity
+      with a resolved path that equals the default path
+        it should drop the path override for that tool and fidelity
+      with HEAD already on its session branch
+        it should continue without switching branch
+      with a clean working tree not on its session branch
+        with an existing session branch
+          it should check out that session branch
+        with no session branch yet
+          it should create its session branch
+      with a dirty working tree not on its session branch
+        it should refuse to switch branch
       it should open a turn for the action run
 
 **Deferred:** Turn/git/repairs via currentWorkSession; SessionLog; GitRepo commit/push on Turn.finish.

@@ -1,0 +1,10 @@
+toolset: context_tools.bdd.bdd:Bdd
+context:
+  fidelity: behavior
+  path: context_tools/actions/workspace
+  session: eval-consolidate-workspace
+tool: finish_eval_turn
+arguments:
+  prompt: log correction — action run event not workspace opening operation
+  result: that has an action run against it; with branches for persisted override state and run inputs; it should outcomes only
+  context: eval-consolidate-workspace

@@ -472,3 +472,25 @@ turns:
     name: log_correction
     summary: entry_id=ee24d3a0, status=fixed
   mistakes: []
+- id: 6c4097f7
+  prompt: log correction — usage story from action run against context tool
+  result: with an action run against it → with a workspace → that is opening for the
+    run; override branches under load during open
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 6c4097f7
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - ad49022f
+    sha: 03e273471a314d523e22f7373664b84a6665f163
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=ad49022f, rule=usage-order-behaviors
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=ad49022f, status=fixed
+  mistakes: []
