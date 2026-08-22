@@ -428,3 +428,25 @@ turns:
     name: log_correction
     summary: entry_id=95ae9520, status=fixed
   mistakes: []
+- id: 3ac4898f
+  prompt: log correction — lookupPath scenarios from context tool caller perspective
+  result: frame lookup under resolving edit path for tool+fidelity; explicit lookupPath
+    call; action prelude uses lookupPath return value branches
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 3ac4898f
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - 1bcaf881
+    sha: eaa725b29c426ab524179c459132dad8fdadeeb3
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=1bcaf881, rule=usage-order-behaviors
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=1bcaf881, status=fixed
+  mistakes: []

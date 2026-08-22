@@ -10,17 +10,12 @@ a context tool
     that has been loaded
       with no path overrides persisted
         it should expose an empty path override list
-        with a context tool resolving its edit path for a tool and fidelity
-          -> workspace.lookupPath(tool, fidelity)
-          it should return no override path
-      with path overrides persisted for a tool and fidelity
-        it should expose those path overrides
-        with a context tool resolving its edit path for that tool and fidelity
-          -> workspace.lookupPath(tool, fidelity)
-          it should return the stored workspace-relative path
-        with a context tool resolving its edit path for a different tool and fidelity
-          -> workspace.lookupPath(tool, fidelity)
-          it should return no override path
+        it should have no override path for its tool and fidelity
+      with a path override stored for its tool and fidelity
+        it should expose that path override
+        it should return the stored workspace-relative path for its tool and fidelity
+      with path overrides stored for other tools only
+        it should have no override path for its tool and fidelity
       that records a tool path with a known default path
         with a path that differs from the default path
           -> workspace.upsertPath(tool, fidelity, path, default_path)
@@ -35,13 +30,11 @@ a context tool
     with an explicit path argument
       it should resolve its path to that argument
     with no explicit path argument
-      -> workspace.lookupPath(context_index_key, fidelity)
-      with no override path returned
+      with no override path stored for its tool and fidelity
         it should resolve its path under its default workspace folder
-      with an override path returned
+      with an override path stored for its tool and fidelity
         it should resolve its path to the override path
     -> workspace.openWorkSession(name, goal, fidelities, contexts, path)
-    -> workspace.load()
     it should load its path overrides
     with a new work session name
       it should add the opened work session to its work sessions
