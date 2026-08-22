@@ -1,10 +1,11 @@
-"""Session model (named sprints + workspace kit), logging, and binding.
+"""WorkSession model, logging, and binding.
 
-``Session`` / ``WorkspaceSession`` load lazily so ``from workspace import log``
+``WorkSession`` loads lazily so ``from workspace import log``
 does not re-enter ``primitives.actions.action`` while that module is still importing.
 """
 
 from workspace.session import SessionPaths
+
 docs_dir = SessionPaths.docs_dir
 from workspace.session_log import (
     ISessionLog,
@@ -19,9 +20,8 @@ from workspace.session_log import (
 
 __all__ = [
     "ISessionLog",
-    "Session",
+    "WorkSession",
     "SessionLog",
-    "WorkspaceSession",
     "docs_dir",
     "inherit_annotations",
     "inherit_annotations_from_bases",
@@ -33,20 +33,16 @@ __all__ = [
 
 
 def __getattr__(name: str):
-    if name in ("Session", "WorkspaceSession"):
-        from workspace.workspace_session import Session, WorkspaceSession
+    if name == "WorkSession":
+        from workspace.workspace_session import WorkSession
 
-        return Session if name == "Session" else WorkspaceSession
-    if name in ("WorkspaceRepo", "NullWorkspaceRepo", "find_git_root"):
-        from workspace.workspace_repo import (
-            NullWorkspaceRepo,
-            WorkspaceRepo,
-            find_git_root,
-        )
+        return WorkSession
+    if name in ("GitRepo", "NullGitRepo", "find_git_root"):
+        from workspace.git_repo import GitRepo, NullGitRepo, find_git_root
 
         return {
-            "WorkspaceRepo": WorkspaceRepo,
-            "NullWorkspaceRepo": NullWorkspaceRepo,
+            "GitRepo": GitRepo,
+            "NullGitRepo": NullGitRepo,
             "find_git_root": find_git_root,
         }[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

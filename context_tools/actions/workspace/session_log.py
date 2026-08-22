@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 if TYPE_CHECKING:
-    from workspace.workspace_session import Session
+    from workspace.workspace_session import WorkSession
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -85,7 +85,7 @@ class ISessionLog(ABC):
     def instance(cls) -> ISessionLog: ...
 
     @abstractmethod
-    def bind(self, session: Session) -> None: ...
+    def bind(self, session: WorkSession) -> None: ...
 
     @abstractmethod
     def set_session(self, session: str | Session | None) -> None: ...
@@ -112,7 +112,7 @@ class ISessionLog(ABC):
 
     @property
     @abstractmethod
-    def session(self) -> Session: ...
+    def session(self) -> WorkSession: ...
 
 
 class SessionLog(ISessionLog):
@@ -122,9 +122,9 @@ class SessionLog(ISessionLog):
 
     @staticmethod
     def _session_cls():
-        from workspace.workspace_session import Session
+        from workspace.workspace_session import WorkSession
 
-        return Session
+        return WorkSession
 
     def __init__(self, sessions_root: Path | None = None) -> None:
         # Test override only: when set, log_dir = sessions_root / session.name
@@ -145,7 +145,7 @@ class SessionLog(ISessionLog):
         cls._instance = log
 
     @property
-    def session(self) -> Session:
+    def session(self) -> WorkSession:
         return self._session
 
     @property
@@ -166,14 +166,14 @@ class SessionLog(ISessionLog):
     def last_payload(self) -> _LastPayload | None:
         return self._last_payload
 
-    def bind(self, session: Session) -> None:
+    def bind(self, session: WorkSession) -> None:
         """Bind a Context Session; events go under ``session.log``."""
         self._session = session
 
     def set_session(self, session: str | Session | None) -> None:
         """Bind a Session, or a name (legacy) as ``Session(path=".", name=...)``."""
         Session = SessionLog._session_cls()
-        if isinstance(session, Session):
+        if isinstance(session, WorkSession):
             self.bind(session)
             return
         name = (session or "").strip() or "default"

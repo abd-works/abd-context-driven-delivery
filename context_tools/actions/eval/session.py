@@ -24,15 +24,15 @@ from primitives.actions.action import action, agentic_toolset
 from scanners.scan import Scan, ScanReport
 from sub_agent.sub_agent import sub_agent
 from tools.tool import tool
-from workspace.workspace_repo import (
+from workspace.git_repo import (
     GitConnectError as EvalGitConnectError,
-    NullWorkspaceRepo,
-    WorkspaceRepo,
+    GitRepo,
+    NullGitRepo,
     _git,
     _git_executable,
     find_git_root,
 )
-from workspace.workspace_session import WorkspaceSession
+from workspace.workspace_session import WorkSession
 
 
 def _mistake_slug(rule: str, wrong: str, taken: set[str]) -> str:
@@ -94,12 +94,14 @@ class TurnCommit:
 
 @dataclass
 class Correction:
-    """*Correction* is the fix record nested on a Mistake."""
+    """*Correction* is the fix record linked to mistakes via their introducing commits."""
 
     _improved: str = ""
     _how: str = ""
     _status: str = "open"
     _fixed_in: Turn | None = None
+    _mistakes: list[Mistake] = field(default_factory=list)
+    _fix_commit: str = ""
 
     @property
     def improved(self) -> str:
@@ -117,13 +119,63 @@ class Correction:
     def fixed_in(self) -> Turn | None:
         return self._fixed_in
 
+    @property
+    def mistakes(self) -> list[Mistake]:
+        return self._mistakes
+
+    @property
+    def fix_commit(self) -> str:
+        return self._fix_commit
+
+    def add(self, mistake: Mistake) -> None:
+        if mistake not in self._mistakes:
+            self._mistakes.append(mistake)
+        mistake.correct(self)
+
     def apply(self, mistakes: list[Mistake], turn: Turn) -> None:
         self._status = "fixed"
         self._fixed_in = turn
         for mistake in mistakes:
-            mistake.correct(self)
+            self.add(mistake)
             mistake.write_files()
         self._write_improvement(mistakes)
+
+    def link(self, git: GitRepo, fix_commit: str) -> None:
+        """Record correction payload on *fix_commit* and keep Fixes-Mistake association."""
+        self._fix_commit = fix_commit
+        self._status = "fixed"
+        entry_ids = [m.entry_id for m in self._mistakes]
+        payload = {
+            "improved": self._improved,
+            "how": self._how,
+            "status": self._status,
+            "entry_ids": ",".join(entry_ids),
+            "fix_commit": fix_commit,
+        }
+        git.note(fix_commit, payload)
+        for mistake in self._mistakes:
+            if not mistake.introducing_commit:
+                continue
+            prior = git.read_notes(mistake.introducing_commit)
+            prior["fixed_by"] = fix_commit
+            git.note(mistake.introducing_commit, prior)
+
+    def correction_commit_message(self) -> str:
+        entry_ids = [m.entry_id for m in self._mistakes]
+        lines = [
+            "correction",
+            "",
+            f"improved: {self._improved}",
+            f"how: {self._how}",
+            f"status: {self._status}",
+            "",
+        ]
+        for entry_id in entry_ids:
+            lines.append(f"Fixes-Mistake: {entry_id}")
+            for mistake in self._mistakes:
+                if mistake.entry_id == entry_id and mistake.introducing_commit:
+                    lines.append(f"Introducing-Commit: {mistake.introducing_commit}")
+        return "\n".join(lines)
 
     def _write_improvement(self, mistakes: list[Mistake]) -> None:
         ready = [
@@ -163,7 +215,7 @@ class Correction:
 
 @dataclass
 class Mistake:
-    """*Mistake* is a pointed-out error nested on the Turn where it was spotted."""
+    """*Mistake* is a pointed-out error annotated on the introducing commit."""
 
     _entry_id: str
     _artifact: str
@@ -172,6 +224,7 @@ class Mistake:
     _original: str
     _tool: str = ""
     _fidelity: str = ""
+    _introducing_commit: str = ""
     _correction: Correction = field(default_factory=Correction)
     _repair: Repair | None = None
     _folder: str = ""
@@ -206,6 +259,10 @@ class Mistake:
         return self._fidelity
 
     @property
+    def introducing_commit(self) -> str:
+        return self._introducing_commit
+
+    @property
     def correction(self) -> Correction:
         return self._correction
 
@@ -224,6 +281,22 @@ class Mistake:
     @property
     def folder(self) -> str:
         return self._folder
+
+    def annotate(self, git: GitRepo) -> None:
+        """Note this mistake on the introducing commit — not on the discovery turn commit."""
+        if not self._introducing_commit:
+            raise ValueError("Mistake.annotate requires introducing_commit")
+        payload = {
+            "entry_id": self._entry_id,
+            "artifact": self._artifact,
+            "rule": self._rule,
+            "wrong": self._wrong,
+            "original": self._original,
+            "tool": self._tool,
+            "fidelity": self._fidelity,
+            "introducing_commit": self._introducing_commit,
+        }
+        git.note(self._introducing_commit, payload)
 
     def record(self, session: EvalSession) -> None:
         turn = session.begin_turn()
@@ -361,23 +434,23 @@ class Turn:
             self._mistakes.append(item)
 
 
-class CDDRepo(WorkspaceRepo):
-    """WorkspaceRepo for the tool clone. Asset sessions link ``cddAt`` once."""
+class CDDRepo(GitRepo):
+    """GitRepo for the tool clone. Asset sessions link ``cddAt`` once."""
 
     @property
     def head_sha(self) -> str:
-        return self.current_commit()
+        return self.current_commit
 
     def current_branch_and_sha(self) -> tuple[str, str]:
-        return self.current_branch(), self.head_sha
+        return self.current_branch, self.head_sha
 
     def link(self, session: EvalSession) -> None:
         session.cdd_at = self.head_sha
 
     def open_session(self, name: str) -> EvalSession:
-        workspace = WorkspaceSession(path=str(self.root), name=name)
+        workspace = WorkSession(path=str(self.root), name=name)
         workspace.ensure_started()
-        return EvalSession(workspace=workspace, workspace_repo=self, cdd_repo=self)
+        return EvalSession(workspace=workspace, git=self, cdd_repo=self)
 
 
 class NullCDDRepo(CDDRepo):
@@ -391,18 +464,20 @@ class NullCDDRepo(CDDRepo):
         self._sha = sha
         self._opened: list[EvalSession] = []
 
-    def ensure_session_branch(self, session_name: str) -> str:
-        self._branch = f"session/{session_name}"
+    def checkout_or_create(self, name: str) -> str:
+        self._branch = name
         return self._branch
 
-    def commit_on_session_branch(self, paths: list[str], message: str) -> str:
+    def commit(self, paths: list[str], message: str) -> str:
         self.commits.append((list(paths), message))
         self._commit = f"commit-{len(self.commits)}"
         return self._commit
 
+    @property
     def current_commit(self) -> str:
         return self._sha if not self._commit else self._commit
 
+    @property
     def current_branch(self) -> str:
         return self._branch
 
@@ -419,7 +494,7 @@ class NullCDDRepo(CDDRepo):
         workspace = SimpleNamespace(path=str(folder.parents[2]), folder=folder, name=name)
         opened = EvalSession(
             workspace=workspace,
-            workspace_repo=NullWorkspaceRepo(),
+            git=NullGitRepo(),
             cdd_repo=NullCDDRepo(branch=self._branch, sha=self._sha),
         )
         self._opened.append(opened)
@@ -431,8 +506,8 @@ def find_cdd_root() -> Path | None:
     return find_git_root(Path(__file__))
 
 
-def repos_for_workspace(workspace: WorkspaceSession) -> tuple[WorkspaceRepo, CDDRepo]:
-    """WorkspaceRepo at the working-area clone; CDDRepo at the tools clone.
+def repos_for_workspace(workspace: WorkSession) -> tuple[GitRepo, CDDRepo]:
+    """GitRepo at the working-area clone; CDDRepo at the tools clone.
 
     Share one root only when the working area sits inside the tools clone
     (e.g. ``sandbox/…``). Cannot connect → ``EvalGitConnectError`` (no Null*).
@@ -450,10 +525,10 @@ def repos_for_workspace(workspace: WorkspaceSession) -> tuple[WorkspaceRepo, CDD
             "Cannot connect eval git: the CDD tools clone has no git root. "
             f"{_DO_NOT_PROCEED}"
         )
-    workspace_repo = WorkspaceRepo(workspace_root)
+    git = GitRepo(workspace_root)
     if workspace_root == cdd_root:
-        return workspace_repo, CDDRepo(workspace_root)
-    return workspace_repo, CDDRepo(cdd_root)
+        return git, CDDRepo(workspace_root)
+    return git, CDDRepo(cdd_root)
 
 
 class EvalSession:
@@ -461,8 +536,8 @@ class EvalSession:
 
     def __init__(
         self,
-        workspace: WorkspaceSession,
-        workspace_repo: WorkspaceRepo | None = None,
+        workspace: WorkSession,
+        git: GitRepo | None = None,
         cdd_repo: CDDRepo | None = None,
         is_dirty: Callable[[], bool] | None = None,
     ) -> None:
@@ -472,15 +547,15 @@ class EvalSession:
         self._mistakes: list[Mistake] = []
         self._repairs: list[Repair] = []
         self._cdd_at = ""
-        if workspace_repo is None and cdd_repo is None:
-            workspace_repo, cdd_repo = repos_for_workspace(workspace)
-        self._workspace_repo = workspace_repo or NullWorkspaceRepo()
+        if git is None and cdd_repo is None:
+            git, cdd_repo = repos_for_workspace(workspace)
+        self._git = git or NullGitRepo()
         self._cdd_repo = cdd_repo or NullCDDRepo()
         if is_dirty is not None:
             self._is_dirty = is_dirty
         else:
             # Whole-repo scope: session path alone misses cross-cutting kit edits.
-            self._is_dirty = lambda: self._workspace_repo.is_dirty(None)
+            self._is_dirty = lambda: self._git.is_dirty(None)
         session_name = str(getattr(workspace, "name", "") or "default")
         self._branch = f"session/{session_name}"
         self.load()
@@ -488,7 +563,7 @@ class EvalSession:
             self._cdd_repo.link(self)
 
     @property
-    def workspace(self) -> WorkspaceSession:
+    def workspace(self) -> WorkSession:
         return self._workspace
 
     @property
@@ -516,8 +591,8 @@ class EvalSession:
         return list(self._repairs)
 
     @property
-    def workspace_repo(self) -> WorkspaceRepo:
-        return self._workspace_repo
+    def git(self) -> GitRepo:
+        return self._git
 
     @property
     def cdd_repo(self) -> CDDRepo:
@@ -551,8 +626,8 @@ class EvalSession:
         open_turn._prompt = prompt
         open_turn._result = result
         open_turn._context = context
-        sha = self._workspace_repo.commit_on_session_branch(
-            [str(self._workspace_repo.root)], f"turn {open_turn.id}"
+        sha = self._git.commit(
+            [str(self._git.root)], f"turn {open_turn.id}"
         )
         session_name = str(getattr(self._workspace, "name", "") or "")
         open_turn._change_commit = TurnCommit(
@@ -703,8 +778,6 @@ class EvalSession:
             ],
         }
 
-
-Session = EvalSession
 
 
 def _looks_like_asset(text: str) -> bool:
