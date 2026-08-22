@@ -1,0 +1,10 @@
+toolset: context_tools.bdd.bdd:Bdd
+context:
+  fidelity: behavior
+  path: context_tools/actions/workspace
+  session: eval-consolidate-workspace
+tool: finish_eval_turn
+arguments:
+  prompt: bdd sketch — generate behavior signatures (slices A–E)
+  result: workspace_spec.py rewritten to match workspace-bdd-sketch usage story; 20 SIGNATURE markers; scan clean
+  context: eval-consolidate-workspace
