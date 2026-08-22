@@ -80,16 +80,7 @@ with description("a context tool"):
                         # BDD: SIGNATURE
                         pass
 
-                with context("that has logged its action run"):
-                    with it("should record the run on the session trail"):
-                        # BDD: SIGNATURE
-                        pass
-
-                    with it("should attach the run record to its open turn"):
-                        # BDD: SIGNATURE
-                        pass
-
-                with context("that has expanded its action instructions"):
+                with context("that is asked for its instructions"):
                     with it("should record the expansion on the session trail"):
                         # BDD: SIGNATURE
                         pass
@@ -99,6 +90,14 @@ with description("a context tool"):
                         pass
 
             with context("that has finished its turn"):
+                with it("should record the action run on the session trail"):
+                    # BDD: SIGNATURE
+                    pass
+
+                with it("should attach the action run record to its turn"):
+                    # BDD: SIGNATURE
+                    pass
+
                 with context("with a dirty working tree on its session branch"):
                     with it("should commit its scoped changes on the session branch"):
                         # BDD: SIGNATURE

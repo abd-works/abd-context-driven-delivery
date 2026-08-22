@@ -1,0 +1,10 @@
+toolset: context_tools.bdd.bdd:Bdd
+context:
+  fidelity: behavior
+  path: context_tools/actions/workspace
+  session: eval-consolidate-workspace
+tool: finish_eval_turn
+arguments:
+  prompt: log correction — action-run audit under turn finish not logged state
+  result: mistake db6b3528 fixed; run trail + turn attachment under that has finished its turn; expand stays under that is asked for its instructions
+  context: eval-consolidate-workspace

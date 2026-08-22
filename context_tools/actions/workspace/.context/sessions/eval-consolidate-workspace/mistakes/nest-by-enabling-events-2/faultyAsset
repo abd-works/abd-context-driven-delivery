@@ -1,0 +1,4 @@
+that has logged its action run
+  it should record the run on the session trail
+that has expanded its action instructions
+  it should record the expansion on the session trail

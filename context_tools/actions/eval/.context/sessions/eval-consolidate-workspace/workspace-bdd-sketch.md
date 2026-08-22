@@ -36,13 +36,12 @@ a context tool
           it should keep a path override for that tool and fidelity
         with a path for the turn that equals the default path
           it should drop the path override for that tool and fidelity
-        that has logged its action run
-          it should record the run on the session trail
-          it should attach the run record to its open turn
-        that has expanded its action instructions
+        that is asked for its instructions
           it should record the expansion on the session trail
           it should attach the expansion record to its open turn
       that has finished its turn
+        it should record the action run on the session trail
+        it should attach the action run record to its turn
         with a dirty working tree on its session branch
           it should commit its scoped changes on the session branch
         it should push its session branch to origin
