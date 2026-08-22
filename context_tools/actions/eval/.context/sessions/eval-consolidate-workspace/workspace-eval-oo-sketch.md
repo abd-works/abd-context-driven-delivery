@@ -167,7 +167,7 @@ EvalSession (delete — turn owner today)
 - `EvalSession` ◆— `Repair` toolset instances in `_repairs`
 - `Repair` → `cddSession`, `Scan`, `BaseContextTool`
 - `Turn` ◆— `ToolCall`; `Turn` → `TurnCommit`
-- `Mistake` ◆— `Correction` → fixedIn `Turn`
+- `Mistake` → `Correction` (Correction.add); Mistake → introducing commit SHA; Correction → fix commit SHA
 
 ### Eval leaks
 
@@ -390,8 +390,22 @@ WorkSession
   ToolCall
     toolset name summary ok error role  // role=expansion|run optional metadata
   TurnCommit
-    turnId sessionName toolNames mistakeIds sha
-    // mistakeIds = mistakes on turn at finish; corrections traced via mistake.correction.fixedIn
+    turnId sessionName toolNames sha
+    // identity = git SHA; turn metadata in commit message body + trailers
+    // mistake/correction association is NOT mirrored here as a yaml list
+  ----
+  // Git-primary change fidelity (LOCKED)
+  // Association rule: Mistake = note on introducing SHA; Correction = new session-branch
+  //   commit with Fixes-Mistake trailers + payload linking entry_ids → introducing SHAs.
+  //   session.yaml / events.log are NOT the association store. Merge topology deferred.
+  // Mistake note payload: entry_id, artifact, rule, wrong, original, tool, fidelity (+ introducing SHA)
+  // Correction commit payload: improved, how, status, entry_ids[] (+ fix SHA; each id → introducing SHA)
+  //   Mistake  → git notes (optional annotated tag mistake/<id>) on introducing commit SHA
+  //   Correction → new commit on session branch + trailers Fixes-Mistake: <id>… (optional notes both ways)
+  //   Exact change body → git show <sha> — do not duplicate as primary store
+  //   session.yaml → bootstrap only (name, branch, workspace path, HEAD); not mistake index
+  //   SessionLog / events.log → in-turn expand|run audit only — not mistake/correction association
+  //   mistakes/{slug}/ and repairs/ folder trees → not primary association store (Repair nest deferred)
 
   ---- workspace package (peer — not on WorkSession)
 SessionLog                              // session_log.py — own class; binds WorkSession
@@ -399,13 +413,13 @@ SessionLog                              // session_log.py — own class; binds W
   append(toolset, name, summary, ok, error, role, payload)  // expand (framework) or run (author)
     -> events.log line: ts toolset=… name=… ok=… summary=… [error=…] [role=expansion|run] [payload=…]
     -> openTurn.toolCalls.add(ToolCall(...))  // same fields — expansion and run both land on turn
+    // never the store for Mistake↔Correction↔commit links
 
   ---- Turn kit (host.turn) vs turn state (workspace.openTurn) — same class, one owner
 Turn : AgenticToolset                   // manifest: turn.turn:Turn
   workSession WorkSession               // back-ref when attached as openTurn
   prompt result context toolCalls changeCommit
   commitMessage
-  mistakes Mistake
   open(host)                                // plain — open turn; reuse openTurn only on failure/recovery
     if host.workspace.openTurn is None:
       host.workspace.openTurn = Turn(workSession=host.workspace)
@@ -418,32 +432,26 @@ Turn : AgenticToolset                   // manifest: turn.turn:Turn
     changeCommit = None
     if workSession.dirty:
       sha = workSession.git.commit(workSession.scope_paths, commitMessage)
+      // commitMessage may carry trailers (e.g. Fixes-Mistake) when this turn is a correction
       changeCommit = TurnCommit.from(self, sha)
       workSession.turns.add(self)
     workSession.git.push()                // always — session branch to origin
     workSession.openTurn = None
-    workSession.save()
+    workSession.save()                    // bootstrap yaml only — not mistake index rewrite
     return changeCommit
-  record_mistake(tools, artifact, rule, wrong, original, tool, fidelity) @agent_tool
+  record_mistake(tools, artifact, rule, wrong, original, tool, fidelity, introducing_commit) @agent_tool
     for host in context_tools(tools):
       if host.workspace.openTurn is None: host.workspace.openTurn = Turn(workSession=host.workspace)
-      mistake = Mistake(...)
-      host.workspace.openTurn.record_mistake(mistake)
-      mistake.persist(host.workspace)
-      host.workspace.repairs.find_or_create(mistake.theme, status=backlog).nest([mistake])
-  record_mistake(mistake)               // domain
-    -> mistakes.add(mistake)
-  record_correction(tools, entry_id, improved, how, status) @agent_tool
+      mistake = Mistake(..., introducingCommit=introducing_commit)
+      mistake.annotate(host.workspace.git)   // notes on introducing commit — NOT on open turn commit
+  record_correction(tools, entry_ids, improved, how, status) @agent_tool
     for host in context_tools(tools):
       if host.workspace.openTurn is None: host.workspace.openTurn = Turn(workSession=host.workspace)
-      mistakes = host.workspace.find_mistake(entry_id)
+      mistakes = host.workspace.git.find_mistakes(entry_ids)  // resolve via notes/tags on session branch
       correction = Correction(...)
-      host.workspace.openTurn.record_correction(mistakes, correction)
-      correction.persist(host.workspace)
-      Repair.nest(mistakes)
-  record_correction(mistakes, correction)   // domain
-    -> correction.fixedIn = self
-    -> each mistake: correction.add(mistake)
+      each mistake: correction.add(mistake)
+      host.workspace.openTurn.pendingCorrection = correction
+      // link lands when finish commits: trailers on this turn's SHA + optional notes on mistake SHAs
 
   ---- workspace.git
 GitRepo
@@ -455,27 +463,36 @@ GitRepo
   create_branch(branch)               // internal — git branch; ref only, no switch
   checkout_or_create(branch)            // if missing create_branch; then branch = branch
   is_dirty(scope_paths)                 // low-level; prefer WorkSession.dirty
-  commit(paths, message) sha
+  commit(paths, message) sha            // message may include trailers
   push()                                // git push -u origin <current branch>; called from Turn.finish every turn
+  note(sha, namespace, payload)             // git notes — annotate commit without rewriting history
+  read_notes(sha, namespace)
+  find_mistakes(entry_ids) Mistake      // resolve mistake notes/tags on session branch commits
   // branch setter     ≈ git switch/checkout (existing branch)
   // create_branch     ≈ git branch (create ref, stay on current HEAD)
   // checkout_or_create ≈ git switch -c when new, else git switch
 
   ---- workspace.repairs / turn.mistakes (eval domain — not agentic)
-Mistake                                 // resource — not agentic
-  entry_id artifact rule wrong original tool fidelity theme folder
-  repair Repair                           // 0..1 themed repair bucket
-  correction Correction                   // 0..1 — set by Correction.add(mistake)
-  persist(workSession)                    // write mistakes/{slug}/
-  write_files()
+Mistake                                 // resource — not agentic; identity hangs off introducing commit
+  entry_id artifact rule wrong original tool fidelity
+  introducingCommit sha                 // commit that made the faulty change (session branch)
+  correction Correction                 // 0..1 — set by Correction.add(mistake)
+  annotate(git)                         // git.note(introducingCommit, payload) — payload MUST include:
+    //   entry_id, artifact, rule, wrong, original, tool, fidelity, introducingCommit
+    // optional tag mistake/<entry_id> → introducingCommit
+  // exact tree/diff fidelity = git show introducingCommit — original is curated excerpt for agents, not a second full-file store
 
-Correction                              // resource — not agentic
-  improved how status fixedIn Turn
-  mistakes Mistake                        // collection
-  add(mistake)                              // mistakes.add; mistake.correction = self
-  persist(workSession)                    // write repairedAsset + improvement.md — after add
+Correction                              // resource — not agentic; identity hangs off fix commit
+  improved how status
+  mistakes Mistake                      // collection — mistakes this correction fixes
+  fixCommit sha | None                  // set when correction turn finishes (this turn's commit)
+  add(mistake)                          // mistakes.add; mistake.correction = self
+  link(git)                             // on fixCommit — trailers + note payload MUST include:
+    //   improved, how, status, mistake entry_ids[], fixCommit
+    //   Fixes-Mistake: <entry_id>… trailers; each entry_id resolves to that mistake's introducingCommit
+  // association lives on the branch graph — one place — not session.yaml + trail + folder tree
 
-Repair                                  // resource — themed improvement bucket on WorkSession
+Repair                                  // resource — themed improvement bucket on WorkSession (deferred nest)
   theme status backlog | finished
   mistakes Mistake
   correction Correction
@@ -484,7 +501,7 @@ Repair                                  // resource — themed improvement bucke
   tools_git GitRepo                       // optional CDD clone root — composed at caller, not subclass
   open(host, asset, violation)            // ensure mistakes on turn; copy to tools_git session if needed
   verify_fix()                            // regression artifacts -> bddEvals
-  nest(mistakes)                          // same-theme mistakes under repairs/{theme}/
+  nest(mistakes)                          // same-theme mistakes under repairs/{theme}/ — deferred from usage story
   finish(turn)                            // status = finished
 
   ---- who calls GitRepo (CE must show composition from owner; callers use owner's git)
@@ -616,7 +633,7 @@ Turn
 | Turn close | yes — **`self.turn.finish_turn(tools, prompt, result, context)`** `@agent_tool` | `openTurn.finish(...)` |
 | Instruction **expand** | no — framework on `@agent_instructions` expand | `SessionLog.append` → **events.log** + **openTurn.toolCalls** (`role=expansion`) |
 | Action **run** audit | no — explicit `SessionLog.append` at end of recipe | same record → **events.log** + **openTurn.toolCalls** (`role=run`) |
-| Mistake / correction | yes — `record_mistake` / `record_correction` **@agent_tool** | `openTurn.record_*` → `Correction.add(mistake)` |
+| Mistake / correction | yes — `record_mistake` / `record_correction` **@agent_tool** | **git notes** on introducing SHA (entry_id, artifact, rule, wrong, original, tool, fidelity); **fix commit** trailers + payload (improved, how, status, mistake entry_ids) |
 
 Auditable `@agent_instructions`: framework logs **expand**; author logs **run** at end of body — both via `SessionLog.append`, not `@agent_tool`.
 
@@ -661,12 +678,11 @@ Prerequisite: host run — self.workspace.open() + self.turn.open(self) (plain)
 
 ```
 Agent
-  -> Turn.record_mistake(tools, artifact, rule, wrong, original, tool, fidelity)  @agent_tool
+  -> Turn.record_mistake(tools, artifact, rule, wrong, original, tool, fidelity, introducing_commit)  @agent_tool
     for host in tools:
-      -> openTurn = host.workspace.openTurn or Turn(workSession=host.workspace)
-      -> openTurn.record_mistake(mistake)
-      -> mistake.persist(host.workspace)
-      -> host.workspace.repairs.find_or_create(mistake.theme, backlog).nest([mistake])
+      -> mistake = Mistake(..., introducingCommit=introducing_commit)
+      -> mistake.annotate(host.workspace.git)
+           // git.note on introducing commit — not on open turn's commit
     <- entry_id
 ```
 
@@ -674,19 +690,18 @@ Agent
 
 ```
 Agent
-  -> Turn.record_correction(tools, entry_id, improved, how, status)  @agent_tool
+  -> Turn.record_correction(tools, entry_ids, improved, how, status)  @agent_tool
     for host in tools:
-      -> openTurn = host.workspace.openTurn or Turn(workSession=host.workspace)
-      -> openTurn.record_correction(mistakes, correction)
-           // fixedIn = openTurn; each mistake: correction.add(mistake)
-      -> correction.persist(host.workspace)
-      -> Repair.nest(mistakes)
-    <- entry_id
+      -> mistakes = host.workspace.git.find_mistakes(entry_ids)
+      -> correction = Correction(...)
+      -> each mistake: correction.add(mistake)
+      -> openTurn.pendingCorrection = correction
+  // later — turn finish commits the fix; trailers Fixes-Mistake on that SHA; correction.link(git)
 ```
 
 ### Logging
 
-**`SessionLog.append(...)`** — own workspace package class. **Expand:** framework on `@agent_instructions` expand. **Run:** explicit call at end of auditable recipe bodies. Not `@agent_tool`. Delete `@log` decorator and runner run hooks (see §4).
+**`SessionLog.append(...)`** — own workspace package class. **Expand:** framework on `@agent_instructions` expand. **Run:** explicit call at end of auditable recipe bodies. Not `@agent_tool`. Delete `@log` decorator and runner run hooks (see §4). **Not** the store for mistake↔correction↔commit association — that is git notes + commit trailers.
 
 Turn **@agent_tool**s and `openTurn` domain methods share names on the **same class**. **Mistake** / **Correction** are not agentic.
 
@@ -705,7 +720,7 @@ All Turn / Improvement ops require **WorkSession open** (`host.workspace.name` s
 | Turn envelope | yes — `finish_turn` **@agent_tool** in orchestrator instructions | `openTurn.finish(...)` |
 | Instruction **expand** | no — framework on `@agent_instructions` expand | `SessionLog.append` → **events.log** + **openTurn.toolCalls** (`role=expansion`) |
 | Action **run** audit | no — explicit `SessionLog.append` at end of recipe | same record → **events.log** + **openTurn.toolCalls** (`role=run`) |
-| Mistake / correction | yes — `Turn.record_mistake` / `Turn.record_correction` **@agent_tool** | `openTurn.record_mistake`; `openTurn.record_correction` → `Correction.add(mistake)` each |
+| Mistake / correction | yes — `Turn.record_mistake` / `Turn.record_correction` **@agent_tool** | **git notes** on introducing SHA; **trailers** on fix commit — not openTurn.mistakes list / yaml index |
 
 **One Turn class** — **@agent_tool** fans out; domain methods on `openTurn`.
 
@@ -753,12 +768,12 @@ Bdd.validate() @agent_instructions
 Turn.finish_turn(tools, prompt, result, context) @agent_tool
   -> openTurn.finish(...)
 
-Turn.record_mistake(tools, ...) @agent_tool
-  -> openTurn.record_mistake(mistake)
+Turn.record_mistake(tools, ..., introducing_commit) @agent_tool
+  -> Mistake(...).annotate(git)   // notes payload on introducing commit
 
-Turn.record_correction(tools, ...) @agent_tool
-  -> openTurn.record_correction(mistakes, correction)
-     // correction.add(mistake)
+Turn.record_correction(tools, entry_ids, ...) @agent_tool
+  -> Correction(...); each mistake: correction.add(mistake)
+  // finish: fix commit + correction.link(git) — improved, how, status, entry_ids
 
 Improvement.repair(tools, asset, violation) @agent_instructions
   for host in tools:
@@ -771,11 +786,11 @@ Improvement.verify_fix(tools, theme) @agent_tool
 
 **Seam rules**
 
-- **GitRepo** — git-shaped surface: `branch` setter switches to an **existing** ref; `create_branch` creates ref only (internal); `checkout_or_create` creates if missing then sets `branch`. **Composed on `WorkSession.git`** (session repo) and optionally on **`Repair.tools_git`** (tools clone). **`Turn.finish`** commits and pushes via **`workSession.git`** — draw **`Turn` → `GitRepo`** association (not composition).
-- **WorkSession** — `session_branch`, `scope_paths`, `dirty` as properties; holds `git` (**GitRepo** — sole session-repo owner), `openTurn` (**Turn** instance — sole turn-state owner), turn index, repairs backlog. **`open`** checks out session branch; **`dirty`** delegates to `git.is_dirty`.
+- **GitRepo** — git-shaped surface: `branch` setter switches to an **existing** ref; `create_branch` creates ref only (internal); `checkout_or_create` creates if missing then sets `branch`; **`note` / `read_notes` / `find_mistakes`** for mistake annotation without rewriting history. **Composed on `WorkSession.git`** (session repo) and optionally on **`Repair.tools_git`** (tools clone). **`Turn.finish`** commits and pushes via **`workSession.git`** — draw **`Turn` → `GitRepo`** association (not composition).
+- **WorkSession** — `session_branch`, `scope_paths`, `dirty` as properties; holds `git` (**GitRepo** — sole session-repo owner), `openTurn` (**Turn** instance — sole turn-state owner), turn index, repairs backlog. **`open`** checks out session branch; **`dirty`** delegates to `git.is_dirty`. **`save`/`session.yaml`** bootstrap only — not mistake index.
 - **Turn** — one class: agentic kit *and* `WorkSession.openTurn`. **`host.turn`** is the composed kit for prelude + manifest; **`openTurn`** is runtime state. **`open(host)` plain** — open turn for this run; **`finish_turn` / `record_mistake` / `record_correction` `@agent_tool`**. Logging is **`SessionLog`** (workspace package), plain run — not on Turn kit. CE: **`WorkSession` → `Turn` only** — no host → Turn edge.
-- **Mistake** / **Correction** — `Correction.add(mistake)` adds to `correction.mistakes` and sets `mistake.correction`; `persist` after adds.
-- **Repair** (domain) — themed bucket with `open`, `verify_fix`, `nest`, `finish`; holds optional `tools_git GitRepo`.
+- **Mistake** / **Correction** — Git-primary: mistake **annotates introducing commit**; correction **links fix commit → mistake commits** (trailers + optional notes). `Correction.add(mistake)` wires in-memory; **no** primary persist to `mistakes/` / yaml turn rows.
+- **Repair** (domain) — themed bucket with `open`, `verify_fix`, `nest`, `finish`; holds optional `tools_git GitRepo`. Nest deferred from usage story.
 - **Improvement** — thin `/repair` orchestrator over domain Repair resources; no runner/loop type.
 - No EvalSession / `host.eval`.
 
@@ -837,7 +852,7 @@ turn
 ### Eval module checklist
 
 1. Delete `EvalSession` turn ownership — move Turn/TurnCommit to WorkSession.
-2. **Mistake**, **Correction**, **Repair** (domain resources) stay in eval package; persist via WorkSession.save/load.
+2. **Mistake**, **Correction**, **Repair** (domain resources) stay in eval package; **Git-primary** association (notes + trailers on session branch). `session.yaml` bootstrap only — not mistake index. Repair nest deferred.
 3. Delete `CDDRepo` subclass — domain **Repair.tools_git** composes `GitRepo(tools_root)`.
 4. Split eval `Repair` toolset → **Turn** (turn **@agent_tool**s) + **Improvement**.
 5. `verify_fix` attaches BDD eval artifacts to domain Repair.
