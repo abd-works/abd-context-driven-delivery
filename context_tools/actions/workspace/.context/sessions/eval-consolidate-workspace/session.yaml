@@ -377,3 +377,32 @@ turns:
     name: log_correction
     summary: entry_id=0bf09f1e, status=fixed
   mistakes: []
+- id: db766338
+  prompt: log correction — workspace sketch hierarchy and branch nesting
+  result: nest workspace under context tool; branch no-index vs with-index to depth;
+    dedupe upsert/save once under that has been loaded
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: db766338
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - a4b78031
+    - 18df551a
+    sha: 94437fca3dda7dde9a4866de221d4171569192d9
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=a4b78031, rule=usage-order-behaviors
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=18df551a, rule=state-oriented-hierarchy
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=a4b78031, status=fixed
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=18df551a, status=fixed
+  mistakes: []

@@ -5,6 +5,29 @@ Design: `workspace-eval-oo-sketch.md` Â§2. Grill: `grill-answers.md` (slices Aâ€
 Fidelity: behavior
 
 a context tool
+  with its workspace
+    -> workspace = Workspace(path=...)
+    that has been loaded
+      with no context-index file present
+        it should expose an empty path override list
+        that is asked for a tool path
+          it should return no override path
+      with a context-index file listing tool, fidelity, and path rows
+        it should expose those rows as path overrides
+        that is asked for a tool path
+          with no override stored for that tool and fidelity
+            it should return no override path
+          with an override stored for that tool and fidelity
+            it should return the stored workspace-relative path
+      that records a tool path with a known default path
+        with a path that differs from the default path
+          -> workspace.upsertPath(tool, fidelity, path, default_path)
+          it should keep a path override row for that tool and fidelity
+        with a path that equals the default path
+          -> workspace.upsertPath(tool, fidelity, path, default_path)
+          it should drop the path override row for that tool and fidelity
+      that is saved after path overrides change
+        it should write current override rows to context-index under its path without a change log section
   that is invoked to run an action
     with an explicit path argument
       it should resolve its path to that argument
@@ -22,10 +45,8 @@ a context tool
       it should load the existing work session from its sessions folder
       it should set the current work session to that work session
     with a resolved path that differs from the default path
-      -> workspace.upsertPath(tool, fidelity, path, default_path)
       it should record a path override for that tool and fidelity
     with a resolved path that equals the default path
-      -> workspace.upsertPath(tool, fidelity, path, default_path)
       it should drop any path override for that tool and fidelity
     with its work session opening
       with HEAD already on its session branch
@@ -39,27 +60,5 @@ a context tool
         it should refuse to switch branch
     -> turn.open(host)
     it should open a turn for the action run
-
-a workspace
-  -> workspace = Workspace(path=...)
-  that has been loaded
-    with no context-index file present
-      it should expose an empty path override list
-    with a context-index file listing tool, fidelity, and path rows
-      it should expose those rows as path overrides
-  that is asked for a tool path
-    with no override stored for that tool and fidelity
-      it should return no override path
-    with an override stored for that tool and fidelity
-      it should return the stored workspace-relative path
-  that records a tool path with a known default path
-    with a path that differs from the default path
-      -> workspace.upsertPath(tool, fidelity, path, default_path)
-      it should keep a path override row for that tool and fidelity
-    with a path that equals the default path
-      -> workspace.upsertPath(tool, fidelity, path, default_path)
-      it should drop the path override row for that tool and fidelity
-  that is saved after path overrides change
-    it should write current override rows to context-index under its path without a change log section
 
 **Deferred:** Turn/git/repairs via currentWorkSession; SessionLog; GitRepo commit/push on Turn.finish.
