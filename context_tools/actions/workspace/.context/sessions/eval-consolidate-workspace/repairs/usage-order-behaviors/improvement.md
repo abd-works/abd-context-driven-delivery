@@ -1,6 +1,6 @@
 # usage-order-behaviors
 
 - **tool:** Bdd
-- **error:** Nested enabling event `that has an action run against it` before standing `with a workspace`. Grill tick 8: subject `a context tool` → standing `with a workspace` → domain entry event — not event-before-standing.
+- **error:** Grill tick 9 asked slice-boundary / process options (where should the first extension boundary fall) instead of BDD design-tree questions: highest-level behavior, event, or state change to model; substates under that branch; legitimate it should tests. bdd.md: nest by enabling events and usage story — grill must walk the tree down, not pick sketch scope by checklist letter.
 - **rule:** usage-order-behaviors
-- **how:** OO §2 three levels: BaseContextTool composes Workspace (with a workspace) before action-run envelope; §4 openWorkSession + Turn.open then agent work. Design cites workspace-eval-oo-sketch.md only.
+- **how:** Replace slice-boundary grill with BDD design-tree root: highest-level event/state under that has a turn open; tick 10 will drill substates and legitimate tests.
