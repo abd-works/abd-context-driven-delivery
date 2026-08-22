@@ -374,7 +374,7 @@ _ACTION_DECORATOR_NAME = "action"
 
 @dataclass(frozen=True)
 class ActionResolution:
-    """One public lifecycle ``@action``'s resolved delegate dir and same-instance calls."""
+    """One public lifecycle ``@agent_instructions``'s resolved delegate dir and same-instance calls."""
 
     name: str
     source_dir: Path
@@ -544,7 +544,7 @@ def _resolve_actions_from_source(
     *,
     action_names: frozenset[str] | None = None,
 ) -> list[tuple[str, ast.FunctionDef]]:
-    """Return ``(name, method)`` for public ``@action`` methods in ``path``."""
+    """Return ``(name, method)`` for public ``@agent_instructions`` methods in ``path``."""
     tree = ast.parse(path.read_text(encoding="utf-8"))
     methods = _public_action_methods(tree)
     if action_names is not None:
@@ -575,7 +575,7 @@ def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
 def resolve_lifecycle_actions(
     base_context_tool_path: Path | None = None,
 ) -> list[ActionResolution]:
-    """AST-walk ``BaseContextTool``'s public ``@action`` methods, in source
+    """AST-walk ``BaseContextTool``'s public ``@agent_instructions`` methods, in source
     order, and resolve each one's delegate kit dir and same-instance calls.
 
     Kit-owned lifecycle actions (``partition``, ``grill``, ``sketch``,
@@ -976,14 +976,14 @@ def resolve_illustrated_example(tool_dir: Path, row: IllustratedExampleRow) -> s
 # Two small, necessary elaborations on the sketch's one-page model (documented
 # here rather than left implicit): CatalogAction additionally takes an
 # ``action_page_hrefs`` map so it can tell a hyperlinkable lifecycle-action
-# name apart from a plain @tool name when rendering "Tools/actions called"
+# name apart from a plain @agent_tool name when rendering "Tools/actions called"
 # bullets; CatalogFidelity additionally takes the ordered list of
 # ``ActionResolution`` (from ``resolve_lifecycle_actions``) so it knows the
 # 9 actions and their href map without re-deriving them per fidelity page.
 
 
 class CatalogTool:
-    """The one-line, hyperlinked rendering of a single real ``@tool`` call
+    """The one-line, hyperlinked rendering of a single real ``@agent_tool`` call
     site - a git-blob source citation, since no catalog page exists for a
     plain tool."""
 
@@ -992,7 +992,7 @@ class CatalogTool:
         self.ref = ref
 
     def generate_catalog(self, tool: object, owner: object) -> str:
-        """Render one "Tools/actions called" bullet for a plain @tool name.
+        """Render one "Tools/actions called" bullet for a plain @agent_tool name.
         ``tool`` is the tool's name (str) or a ``_Tool``; ``owner`` is the
         toolset instance/class it was called on - never mutated."""
         name = tool if isinstance(tool, str) else getattr(tool, "name", str(tool))

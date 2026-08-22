@@ -206,31 +206,33 @@ with description("write_action_command tool"):
             expect(content).to(contain("partition.partition:Partition"))
             expect(content).to(contain("Do not invoke each context tool with `action: partition`"))
 
-    with context("generate owns the run"):
-        with it("should tell the agent to invoke HostLifecycle with the context tools as arguments"):
+    with context("generate is host-owned"):
+        with it("should tell the agent to invoke each context tool with action: generate"):
             self.skills.write_action_command(action="generate", ide="cursor")
             content = (self.root / ".cursor" / "commands" / "generate.md").read_text(
                 encoding="utf-8"
             )
-            expect(content).to(contain("host_lifecycle.host_lifecycle:HostLifecycle"))
-            expect(content).to(contain("Do not invoke each context tool with `action: generate`"))
+            expect(content).to(contain("action: generate"))
+            expect(content).to(contain("Do not run this as its own toolset"))
+            expect(content).not_to(contain("host_lifecycle.host_lifecycle:HostLifecycle"))
 
-    with context("validate owns the run"):
-        with it("should tell the agent to invoke HostLifecycle with the context tools as arguments"):
+    with context("validate is host-owned"):
+        with it("should tell the agent to invoke each context tool with action: validate"):
             self.skills.write_action_command(action="validate", ide="cursor")
             content = (self.root / ".cursor" / "commands" / "validate.md").read_text(
                 encoding="utf-8"
             )
-            expect(content).to(contain("host_lifecycle.host_lifecycle:HostLifecycle"))
-            expect(content).to(contain("Do not invoke each context tool with `action: validate`"))
+            expect(content).to(contain("action: validate"))
+            expect(content).to(contain("Do not run this as its own toolset"))
+            expect(content).not_to(contain("host_lifecycle.host_lifecycle:HostLifecycle"))
 
     with context("repair owns the run"):
-        with it("should tell the agent to invoke Repair with the context tools as arguments"):
+        with it("should tell the agent to invoke Improvement with the context tools as arguments"):
             self.skills.write_action_command(action="repair", ide="cursor")
             content = (self.root / ".cursor" / "commands" / "repair.md").read_text(
                 encoding="utf-8"
             )
-            expect(content).to(contain("eval.session:Repair"))
+            expect(content).to(contain("improvement.improvement:Improvement"))
             expect(content).to(contain("Do not invoke each context tool with `action: repair`"))
 
 
@@ -912,4 +914,4 @@ with description("_ide_config_roots multi-folder workspace"):
 
 with description("deploy_tools_as_skills action"):
     with it("is marked as an agent action"):
-        expect(AgentSkills.deploy_tools_as_skills._is_action).to(be_true)
+        expect(AgentSkills.deploy_tools_as_skills._is_agent_instructions).to(be_true)

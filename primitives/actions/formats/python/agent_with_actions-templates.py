@@ -1,5 +1,5 @@
 # =============================================================================
-# Agent-With-Actions Template - @toolset class with @action orchestration recipes
+# Agent-With-Actions Template - @toolset class with @agent_instructions orchestration recipes
 # =============================================================================
 # Fill placeholders (delete this block before committing):
 #
@@ -22,8 +22,8 @@
 
 from __future__ import annotations
 
-from primitives.actions.action import action
-from tools.tool import resource, tool, toolset
+from primitives.actions.action import agent_instructions
+from tools.tool import resource, agent_tool, toolset
 
 
 @toolset
@@ -41,12 +41,12 @@ class {ClassName}:
         """Current {resource_name}."""
         return self._{resource_name}
 
-    @tool
+    @agent_tool
     def {tool_name}(self) -> str:
         """{tool_description}"""
         ...
 
-    @action
+    @agent_instructions
     def {action_name}(self, {action_param}: str) -> str:
         """{action_instruction}"""
         """{mid_action_prose}"""

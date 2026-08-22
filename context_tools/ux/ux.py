@@ -14,7 +14,7 @@ from typing import Any
 from context_tools.base.base_context_tool import BaseContextTool
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from tools.tool import tool  # noqa: F401
+from tools.tool import agent_tool  # noqa: F401
 
 _FIDELITY_FORMAT_DEFAULTS = {
     "ia": "drawio",
@@ -83,7 +83,7 @@ class Ux(BaseContextTool):
     @instruction
     def contexts(self) -> Instruction: ...
 
-    @tool
+    @agent_tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:
         """Parse content from source_format into the canonical UxMap, then render into target_format.
         Peer channels: drawio, html, markdown, json. Sideways move at the same fidelity."""
@@ -93,7 +93,7 @@ class Ux(BaseContextTool):
         rendered = target_cls.render(canonical)
         return {"format": target_format, "content": rendered}
 
-    @tool
+    @agent_tool
     def render(self, format: str, content: str = "") -> dict:
         """Render already-generated UX output into ``format`` via channel parse/render."""
         if not content:
@@ -103,7 +103,7 @@ class Ux(BaseContextTool):
             raise ValueError("source format is not set")
         return self.transform(source, format, content)
 
-    @tool
+    @agent_tool
     def ensure_javascript(self, generator: str, source_format: str, content: Any) -> dict:
         """Ensure Stories or Clean Engineering JS exists - transform via that generator if needed.
         generator: 'stories' | 'clean_engineering'. Returns {format: javascript, content: ...}."""

@@ -8,7 +8,7 @@ import inspect
 from pathlib import Path
 
 from primitives.assets.assets import Asset, AssetCollection, AssetLocator
-from tools.tool import resource, tool, toolset
+from tools.tool import resource, agent_tool, toolset
 
 
 @toolset
@@ -39,19 +39,19 @@ class CardFile:
         """The label of the card currently set as the default topic."""
         return self._topic
 
-    @tool
+    @agent_tool
     def read_card(self, label: str) -> str:
         """Read a reference card by label. Returns its full markdown content."""
         locator = AssetLocator(self, label=label)
         return Asset(locator.locate()).collect()
 
-    @tool
+    @agent_tool
     def read_all(self) -> str:
         """Read every card in the cards/ subfolder and return them merged."""
         locator = AssetLocator(self, label="cards")
         return AssetCollection(locator.locate()).merged()
 
-    @tool
+    @agent_tool
     def set_topic(self, label: str) -> str:
         """Switch the default topic to a different card label."""
         self._topic = label

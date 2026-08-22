@@ -78,14 +78,34 @@ with description("Partition kit on hosts"):
         expect("partition" in host.actions).to(equal(False))
 
 
+class _FakeWorkspace:
+    def __init__(self, steps: list[str]) -> None:
+        self.steps = steps
+
+    def open(self, host: Any, **_kwargs: Any) -> str:
+        self.steps.append("workspace.open")
+        return "ok"
+
+
+class _FakeTurn:
+    def __init__(self, steps: list[str]) -> None:
+        self.steps = steps
+
+    def open(self, host: Any) -> str:
+        self.steps.append("turn.open")
+        return "ok"
+
+    def finish_turn(self, *args: Any, **kwargs: Any) -> str:
+        self.steps.append("finish_turn")
+        return "ok"
+
+
 class _PartitionHost:
     def __init__(self, steps: list[str]) -> None:
         self.steps = steps
         self.domain_slug = "test_domain"
-
-    def open(self) -> str:
-        self.steps.append("open")
-        return "ok"
+        self.workspace = _FakeWorkspace(steps)
+        self.turn = _FakeTurn(steps)
 
     @property
     def contexts(self) -> Instruction:
@@ -95,14 +115,6 @@ class _PartitionHost:
     @property
     def scaffold(self) -> Instruction:
         return Instruction("", _KIT_DIR)
-
-    def begin_eval_turn(self) -> str:
-        self.steps.append("begin_eval_turn")
-        return "ok"
-
-    def finish_eval_turn(self, prompt: str = "", result: str = "", context: str = "") -> str:
-        self.steps.append("finish_eval_turn")
-        return "ok"
 
 
 class _PartitionKit(Partition):
@@ -124,7 +136,7 @@ class _PartitionKit(Partition):
 
 with description("a partition action"):
     with context("that is given one context tool"):
-        with it("should open eval, run partition_corpus, and finish eval"):
+        with it("should open workspace and turn, run partition_corpus, and finish_turn"):
             steps: list[str] = []
             _PartitionKit(steps).partition(
                 tools=[_PartitionHost(steps)],
@@ -134,11 +146,11 @@ with description("a partition action"):
             expect(steps).to(
                 equal(
                     [
-                        "open",
+                        "workspace.open",
                         "contexts",
-                        "begin_eval_turn",
+                        "turn.open",
                         "partition_corpus",
-                        "finish_eval_turn",
+                        "finish_turn",
                     ]
                 )
             )

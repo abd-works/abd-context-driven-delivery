@@ -42,7 +42,7 @@ def _render_epic_helper(epic: Epic) -> str:
     lines: list[str] = [
         '"""Epic helper - ExampleFactory accessors; AI fills given_* bodies."""',
         "",
-        "from __future__ import annotations",
+        "from __future__ import annotations", 
         "",
     ]
     lines.extend(render_python_factory_imports(factories))

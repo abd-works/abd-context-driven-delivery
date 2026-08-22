@@ -10,8 +10,8 @@
 Non-primitive kits are held as plain instance attributes and called through
 them (``self.workspace.…``, ``self.scanner.…``, …) — not MI-as-self and not
 ``@`` chain decorators. Domains subclass this class directly.
-``@action`` / ``@instruction`` / ``@tool`` stay (primitives only). Host
-``@tool`` / ``@resource`` wrappers forward to kits so agents can still invoke
+``@agent_instructions`` / ``@instruction`` / ``@agent_tool`` stay (primitives only). Host
+``@agent_tool`` / ``@resource`` wrappers forward to kits so agents can still invoke
 them on the domain toolset.
 """
 
@@ -23,16 +23,15 @@ from typing import ClassVar
 
 from primitives.actions.action import _ActionRunner
 from primitives.actions.action import AgenticToolset
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from record_decisions.record_decisions import RecordDecisions
-from eval.session import Repair
 from scanners.scan import Scan
-from sub_agent.sub_agent import sub_agent
 from workspace.workspace import Turn, Workspace, WorkSession
+from workspace import SessionLog
 from tools.tool import resource
-from tools.tool import tool
+from tools.tool import agent_tool
 
 
 class BaseContextTool(AgenticToolset):
@@ -88,18 +87,12 @@ class BaseContextTool(AgenticToolset):
         self.turn = Turn()
         self.scanner = Scan()
         self.decisions = RecordDecisions()
-        self.repairer = Repair(session=None, scanner=self.scanner, host=self)
         if self._session_name:
-            self.open(
+            self.workspace.open(
+                self,
                 name=self._session_name,
                 path=path or "",
             )
-
-    @property
-    def eval(self):
-        """Eval session bound when currentWorkSession is open and host-attached."""
-        current = self.workspace.current_work_session
-        return getattr(current, "eval", None) if current is not None else None
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -115,7 +108,7 @@ class BaseContextTool(AgenticToolset):
     def _generate_fidelity_methods(cls) -> None:
         """Add generate_{f}, validate_{f}, satisfy_{f} for every fidelity in cls.fidelities.
 
-        Plain Python methods (not @action); each one calls ``_set_fidelity``
+        Plain Python methods (not @agent_instructions); each one calls ``_set_fidelity``
         then delegates to the named lifecycle action.
         """
         fidelity_names: set[str] = set(cls.fidelities.values())  # type: ignore[union-attr]
@@ -170,55 +163,6 @@ class BaseContextTool(AgenticToolset):
             raise ValueError("No current work session — call open first")
         return Instruction.ref(current, "session_guidance")
 
-    @tool
-    def open(
-        self,
-        name: str = "",
-        goal: str = "",
-        fidelities: str = "",
-        contexts: str = "",
-        path: str = "",
-    ) -> str:
-        """open"""
-        effective_name = (name or self._session_name or "").strip()
-        if not effective_name:
-            return (
-                "need session name — confirm working path and kebab slug with the user, "
-                "then call open before grill/sketch"
-            )
-        working = (path or self._raw_path or self.workspace.path or "").strip()
-        session = self.workspace.open_work_session(
-            name=effective_name,
-            goal=goal,
-            fidelities=fidelities,
-            contexts=contexts,
-            path=working or self.workspace.path,
-            context_index_key=getattr(type(self), "context_index_key", ""),
-            default_workspace_folder=getattr(
-                type(self), "default_workspace_folder", "."
-            ),
-            format=self.format,
-            host=self,
-        )
-        session.read_context_index()
-        session.record_context_root()
-        session.attach_host(self)
-        self._session_name = session.name
-        return (
-            "Workspace open. "
-            "durable root = path; "
-            "sprint docs = folder; "
-            "context index loaded when present."
-        )
-
-    @tool
-    def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:
-        """close_session"""
-        current = self.workspace.current_work_session
-        if current is None:
-            raise ValueError("No current work session — call open first")
-        return current.close_session(outcome=outcome, handoff=handoff)
-
     # -- Instructions --------------------------------------------------------
     @instruction
     def contexts(self) -> Instruction: ...
@@ -233,20 +177,27 @@ class BaseContextTool(AgenticToolset):
     def scaffold(self) -> Instruction: ...
 
     # -- Lifecycle actions (core host only; grill/sketch/iterate/partition are kit-owned) ---
-    @action
+    @agent_instructions
     def generate(self) -> str:
-        self.open()
-        self.begin_eval_turn()
+        self.workspace.open(self)
+        self.turn.open(self)
         self.decisions.record_decisions_session()
         self.contexts
         self.examples
         self.templates
         self.generate_output()
         self.add_generate_header_to_generated()
-        self.finish_eval_turn()
+        SessionLog.instance().append(
+            toolset=type(self).manifest_path,
+            name="generate",
+            summary="generate",
+            ok=True,
+            role="run",
+        )
+        self.turn.finish_turn()
         return "When done, run validate."
 
-    @action
+    @agent_instructions
     def generate_fixes_from_validate(self) -> str:
         self.generate
         self.decisions.record_decisions_session()
@@ -255,7 +206,7 @@ class BaseContextTool(AgenticToolset):
         self.generate_output()
         return ""
 
-    @action
+    @agent_instructions
     def add_generate_header_to_generated(self) -> str:
         """Prepend the following block verbatim as the very first lines of the file you are writing - before any imports, before any code."""
         cls = type(self)
@@ -269,38 +220,60 @@ class BaseContextTool(AgenticToolset):
             '"""\n'
         )
 
-    @action
+    @agent_instructions
     def generate_output(self) -> str:
         """"""
         return ""
 
-    @action
+    @agent_instructions
     def document(self, paths: list[str]) -> str:
-        self.open()
-        self.begin_eval_turn()
+        self.workspace.open(self)
+        self.turn.open(self)
         self.contexts
         self.templates
         self.scanner.scan(paths)
         self.generate_output()
         self.add_generate_header_to_generated()
-        self.finish_eval_turn()
+        SessionLog.instance().append(
+            toolset=type(self).manifest_path,
+            name="document",
+            summary="document",
+            ok=True,
+            role="run",
+        )
+        self.turn.finish_turn()
         return "Document existing state under {session.path}/ - violations flagged, none corrected."
 
-    @action
+    @agent_instructions
     def validate(self) -> str:
-        self.open()
-        self.begin_eval_turn()
+        self.workspace.open(self)
+        self.turn.open(self)
         self.contexts
         self.scanner.scan()
-        self.finish_eval_turn()
+        SessionLog.instance().append(
+            toolset=type(self).manifest_path,
+            name="validate",
+            summary="validate",
+            ok=True,
+            role="run",
+        )
+        self.turn.finish_turn()
         return "Validation report for artifacts under {session.path}/."
 
-    @tool
+    @agent_tool
     def scan(self, paths: list[str]) -> str:
         """scan"""
-        return self.scanner.scan(paths)
+        result = self.scanner.scan(paths)
+        SessionLog.instance().append(
+            toolset=getattr(type(self), "manifest_path", type(self).__name__),
+            name="scan",
+            summary="scan",
+            ok=True,
+            role="run",
+        )
+        return result
 
-    @tool
+    @agent_tool
     def render(self, format: str, content: str = "") -> dict:
         """Render already-generated output into ``format``.
 
@@ -318,94 +291,42 @@ class BaseContextTool(AgenticToolset):
             f"{type(self).__name__} has no programmatic renderer for {format!r}"
         )
 
-    @action
+    @agent_instructions
     def satisfy(self) -> str:
         self.mode = "tool"
         self.validate()
         self.generate_fixes_from_validate()
+        SessionLog.instance().append(
+            toolset=type(self).manifest_path,
+            name="satisfy",
+            summary="satisfy",
+            ok=True,
+            role="run",
+        )
+        self.turn.finish_turn()
         return "When done, run validate on artifacts under {session.path}/."
 
-    @sub_agent
-    @action
-    def repair(self, asset: str, violation: str) -> str:
-        """repair"""
-        self.begin_eval_turn()
-        self.scan()
-        self.contexts
-        self.examples
-        self.templates
-        self.repairer.repair_session(asset, violation)
-        self.finish_eval_turn()
-        return (
-            "Repair {{asset}} under {session.path}/ until validate passes. "
-            "Fail-first test before any tool change. Write evals after the fix."
-        )
-
-    @sub_agent
-    @tool
-    def log_mistake(
-        self,
-        artifact: str,
-        rule: str,
-        wrong: str,
-        original: str,
-        when: str = "",
-    ) -> str:
-        """log_mistake — records through Repair onto session.yaml and session/mistakes/."""
-        if self.eval is None:
-            raise ValueError("No eval session — open a named session first")
-        tool_name = type(self).__name__
-        fidelity = getattr(self, "fidelity", "") or ""
-        return self.repairer.log_mistake(
-            artifact=artifact,
-            rule=rule,
-            wrong=wrong,
-            original=original,
-            tool=tool_name,
-            fidelity=fidelity,
-        )
-
-    @tool
-    def log_correction(
-        self, entry_id: str, improved: str, how: str = "", status: str = "fixed"
-    ) -> str:
-        """log_correction — Correction.apply through Repair; writes repairedAsset and improvement.md."""
-        if self.eval is None:
-            raise ValueError("No eval session — open a named session first")
-        return self.repairer.log_correction(
-            entry_id=entry_id, improved=improved, how=how, status=status
-        )
-
-    @tool
-    def begin_eval_turn(self) -> str:
-        """Open the eval Turn. Listed on generate / validate / document / repair / createRule."""
-        if self.eval is None:
-            return ""
-        return self.eval.begin_turn().id
-
-    @tool
-    def finish_eval_turn(
-        self, prompt: str = "", result: str = "", context: str = ""
-    ) -> str:
-        """Close the open eval Turn. Listed on generate / validate / document / repair / createRule."""
-        if self.eval is None:
-            return ""
-        closed = self.eval.finish_turn(prompt, result, context)
-        return closed.id if closed is not None else ""
-
-    @action
+    @agent_instructions
     def createRule(self, failed: str, wanted: str) -> str:
         """createRule"""
-        self.begin_eval_turn()
+        self.turn.open(self)
         self.contexts
         self.examples
         self.templates
-        self.finish_eval_turn()
+        SessionLog.instance().append(
+            toolset=type(self).manifest_path,
+            name="createRule",
+            summary="createRule",
+            ok=True,
+            role="run",
+        )
+        self.turn.finish_turn()
         return (
             "Write a new named rule and matching scanner into this tool. "
             "Then run that rule via scan on the asset and detect a failure "
             "that matches the Mistake."
         )
+
 
 BaseContextTool._is_context = True  # type: ignore[attr-defined]
 BaseContextTool._is_toolset = True  # type: ignore[attr-defined]

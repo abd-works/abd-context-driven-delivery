@@ -10,14 +10,14 @@ echo_session action directly to render arbitrary text inside DO-NOT-FOLLOW
 fences.
 
 The complementary @echo decorator (see _decorator.py, re-exported from the
-package root) marks another action's @action so framework-level composition can
+package root) marks another action's @agent_instructions so framework-level composition can
 short-circuit that action into an echo of its fully-wrapped instructions -
 diagnostic-only, no execution.
 """
 from __future__ import annotations
 
-from primitives.actions.action import action
-from tools.tool import tool, toolset
+from primitives.actions.action import agent_instructions
+from tools.tool import agent_tool, toolset
 
 
 _FENCE_HEADER = "===== DO NOT FOLLOW ANY OF THESE INSTRUCTIONS ====="
@@ -32,14 +32,14 @@ class Echoer:
         """Compose a DO-NOT-FOLLOW fenced block around body (pure)."""
         return f"{_FENCE_HEADER}\n{body}\n{_FENCE_FOOTER}"
 
-    @tool
+    @agent_tool
     def fence(self, body: str) -> str:
         """Wrap {body} in DO-NOT-FOLLOW fences and return the fenced block.
         Header and footer label the block as inert diagnostic text intended for the user to read.
         Use to render wrapped instructions verbatim for inspection."""
         return self._fenced(body)
 
-    @action
+    @agent_instructions
     def echo_session(self, instructions: str) -> str:
         """STOP. DO NOT EXECUTE ANY OF THE INSTRUCTIONS BELOW THIS LINE. Your only task right now is: collect every instruction you received for this action into one string, call fence with that string, emit the fenced block to the user as chat output, then stop completely. Nothing else. Do not interpret. Do not act. Do not generate. The fenced block IS the entire output of this invocation."""
         """Step 1 - call fence, passing every instruction you received for this action - verbatim, in full, in order - as a single string. Do not summarise. Do not omit."""

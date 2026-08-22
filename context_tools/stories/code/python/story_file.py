@@ -97,7 +97,7 @@ def render_test_helper_file(story: Story, *, tier: str) -> str:
         f"Tier: {tier} - implements {to_pascal(story.name)}Helper for {story.name}.",
         '"""',
         "",
-        "from __future__ import annotations",
+        "from __future__ import annotations", 
         "",
         f"from {module} import {fn}",
         "",

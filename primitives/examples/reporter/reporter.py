@@ -1,15 +1,15 @@
 # @toolset-manifest python -m tools manifest primitives.examples.reporter:Reporter
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Integrated example - @toolset, @tool, @resource, @instruction (all three forms), @action."""
+"""Integrated example - @toolset, @agent_tool, @resource, @instruction (all three forms), @agent_instructions."""
 from __future__ import annotations
 
 import inspect
 from pathlib import Path
 
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from primitives.instructions import Instruction, instruction
-from tools.tool import resource, tool, toolset
+from tools.tool import resource, agent_tool, toolset
 
 
 @toolset
@@ -47,23 +47,23 @@ class Reporter:
         """Number of field notes collected so far."""
         return len(self._notes)
 
-    # -- @tool - directly callable by the AI ----------------------------------
+    # -- @agent_tool - directly callable by the AI ----------------------------------
     # Python executes these; results are returned to the AI as tool outputs.
 
-    @tool
+    @agent_tool
     def add_note(self, note: str) -> str:
         """Record a field note."""
         self._notes.append(note)
         return f"Note added: {note}"
 
-    @tool
+    @agent_tool
     def read_notes(self) -> str:
         """Return all collected notes as a numbered list."""
         if not self._notes:
             return "No notes yet."
         return "\n".join(f"{i + 1}. {n}" for i, n in enumerate(self._notes))
 
-    @tool
+    @agent_tool
     def clear_notes(self) -> None:
         """Discard all notes and start fresh."""
         self._notes.clear()
@@ -79,12 +79,12 @@ class Reporter:
     @instruction(label="house-guidelines")
     def guidelines(self) -> Instruction: ...
 
-    # -- @action - AI-orchestrated recipes ------------------------------------
+    # -- @agent_instructions - AI-orchestrated recipes ------------------------------------
     # Body is AST-parsed into AI instructions; Python never runs it.
     # String literals -> prose. self.tool() -> tool call. self.slot() -> expanded content.
 
     # Form A - inline prose: each string literal in the body IS the instruction text
-    @action
+    @agent_instructions
     def gather(self, topic: str) -> str:
         """Gather notes on {{topic}} for the {{self.beat}} beat."""
         """Find 3-5 distinct facts or quotes. Record each with add_note."""
@@ -92,7 +92,7 @@ class Reporter:
         return f"gathered notes on {topic}"
 
     # Named slots in an action: expanded and injected before the AI sees the recipe
-    @action
+    @agent_instructions
     def file_report(self, headline: str) -> str:
         """Write a field report with the headline: {{headline}}."""
         self.style()        # -> expands # Style section from reporter.md

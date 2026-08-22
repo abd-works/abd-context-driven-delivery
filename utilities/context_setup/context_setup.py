@@ -11,8 +11,8 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from primitives.actions.action import action
-from tools.tool import tool, toolset
+from primitives.actions.action import agent_instructions
+from tools.tool import agent_tool, toolset
 
 from context_tools.clean_engineering.clean_engineering import CleanEngineering
 from context_tools.ddd.ddd import Ddd
@@ -124,7 +124,7 @@ class ContextSetup:
 
     def __init__(self) -> None:
         # Composed context tools — mode="tool" on each instance so the expander
-        # treats their @action calls as deferred tool steps (not inlined recipes).
+        # treats their @agent_instructions calls as deferred tool steps (not inlined recipes).
         self.stories: Stories = Stories()
         self.stories.mode = "tool"
         self.clean_engineering: CleanEngineering = CleanEngineering()
@@ -135,12 +135,12 @@ class ContextSetup:
         self.ux.mode = "tool"
         self.default_indexer: SemanticIndexer = SemanticIndexer()
         self.default_indexer.mode = "tool"
-        # ContextIndex.embed is a @tool — deferred automatically (no mode needed).
+        # ContextIndex.embed is a @agent_tool — deferred automatically (no mode needed).
         self.context_index: ContextIndex = ContextIndex()
 
     # ── @tools — deterministic Python ────────────────────────────────────────
 
-    @tool
+    @agent_tool
     def convert(self, folder_path: str) -> ConversionResult:
         """Convert every supported document in folder_path to a Markdown file.
         Supported formats: .docx, .doc, .pdf, .pptx, .ppt, .txt, .md, .html, .htm.
@@ -178,7 +178,7 @@ class ContextSetup:
             structure_notes=structure_notes,
         )
 
-    @tool
+    @agent_tool
     def smoke_test(
         self,
         repo_path: str,
@@ -216,7 +216,7 @@ class ContextSetup:
             inventory_path=inventory_path,
         )
 
-    @tool
+    @agent_tool
     def scout_app(
         self,
         repo_path: str,
@@ -258,7 +258,7 @@ class ContextSetup:
             page_captures=captures,
         )
 
-    @tool
+    @agent_tool
     def complete_capture(
         self,
         repo_path: str,
@@ -297,9 +297,9 @@ class ContextSetup:
             total_page_count=total,
         )
 
-    # ── @action — AI reads recipe; owns judgment; calls @tools + collaborators ─
+    # ── @agent_instructions — AI reads recipe; owns judgment; calls @tools + collaborators ─
 
-    @action
+    @agent_instructions
     def capture_from_live_app(
         self,
         repo_path: str,
@@ -373,7 +373,7 @@ class ContextSetup:
         self.context_index.embed()
         return "Live app captured and indexed."
 
-    @action
+    @agent_instructions
     def capture_from_documents(
         self,
         folder_path: str,

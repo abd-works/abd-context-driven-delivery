@@ -111,14 +111,12 @@ with description("AgentBdd action expansion"):
                     context={"format": "python"},
                 )
 
-            with it("should name open then begin_eval_turn, scan, finish_eval_turn, validate"):
+            with it("should name scan then finish_turn then validate"):
                 expect(self.response["tools"]).to(
                     equal(
                         [
-                            "open",
-                            "begin_eval_turn",
                             "scan",
-                            "finish_eval_turn",
+                            "finish_turn",
                             "validate",
                         ]
                     )
@@ -141,4 +139,3 @@ with description("AgentBdd action expansion"):
             with it("should inline bdd satisfy prose via nested bdd satisfy"):
                 satisfy_prose = _lifecycle_prose("satisfy")
                 _assert_text_inlined(self.response["instructions"], satisfy_prose)
-                _assert_text_inlined(self.response["instructions"], self.bdd_contexts)

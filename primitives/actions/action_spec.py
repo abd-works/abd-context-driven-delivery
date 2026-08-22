@@ -1,4 +1,4 @@
-"""BDD: @action with no docstring uses the method name as the instruction label."""
+"""BDD: @agent_instructions with no docstring uses the method name as the instruction label."""
 import sys
 from pathlib import Path
 
@@ -13,7 +13,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from primitives.actions.action import _ActionExpander, action
+from primitives.actions.action import _ActionExpander, agent_instructions
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
 from tools.tool import Toolset
 from tools.tool import _ToolsetLoader
@@ -29,12 +29,12 @@ class _PlainHost(Toolset):
 _PlainHost._is_toolset = True  # type: ignore[attr-defined]
 
 
-@action
+@agent_instructions
 def custom_step(self) -> str:
     return "done."
 
 
-@action
+@agent_instructions
 def labeled_like_custom_step(self) -> str:
     """custom_step"""
     return "done."
@@ -44,8 +44,8 @@ _PlainHost.custom_step = custom_step
 _PlainHost.labeled_like_custom_step = labeled_like_custom_step
 
 
-with description("@action docstring defaults"):
-    with context("any @action with no docstring"):
+with description("@agent_instructions docstring defaults"):
+    with context("any @agent_instructions with no docstring"):
         with before.each:
             self.host = _PlainHost()
             self.expander = _ActionExpander.instance()

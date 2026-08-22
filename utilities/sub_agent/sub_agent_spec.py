@@ -18,7 +18,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
 from expects import be_a, be_true, equal, expect
 from mamba import before, context, description, it
 
-from tools.tool import tool as _tool
+from tools.tool import agent_tool as _tool
 from utilities.sub_agent.sub_agent import (
     SubAgentTool,
     discover_sub_agent_tools,
@@ -81,7 +81,7 @@ with description("a sub_agent-decorated method"):
         with it("should suppress the tool marker so standard tool discovery skips it"):
             # Arrange / Act
             # Assert
-            expect(getattr(_WithSubAgent.diagnose, "_is_tool", True)).to(equal(False))
+            expect(getattr(_WithSubAgent.diagnose, "_is_agent_tool", True)).to(equal(False))
 
 
 with description("a SubAgentTool"):

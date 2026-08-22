@@ -1,15 +1,15 @@
 # @toolset-manifest python -m tools manifest primitives.focus.examples.review_assistant:ReviewAssistant
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Example showing @focus on an @action — injects fidelity-specific guidance at runtime."""
+"""Example showing @focus on an @agent_instructions — injects fidelity-specific guidance at runtime."""
 from __future__ import annotations
 
 import inspect
 from pathlib import Path
 
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from primitives.focus import focus
-from tools.tool import resource, tool, toolset
+from tools.tool import resource, agent_tool, toolset
 
 
 @toolset
@@ -43,13 +43,13 @@ class ReviewAssistant:
         """Number of review findings recorded so far."""
         return len(self._findings)
 
-    @tool
+    @agent_tool
     def record_finding(self, finding: str) -> str:
         """Record a review finding."""
         self._findings.append(finding)
         return f"Finding recorded: {finding}"
 
-    @tool
+    @agent_tool
     def read_findings(self) -> str:
         """Return all recorded findings as a numbered list."""
         if not self._findings:
@@ -59,7 +59,7 @@ class ReviewAssistant:
     # @focus appends fidelities/{fidelity}.md to this action's prose.
     # The filter_key defaults to "fidelity" (strip trailing 's' from "fidelities").
     @focus(focus="fidelities")
-    @action
+    @agent_instructions
     def review(self, subject: str) -> str:
         """Review {{subject}} and record every issue found."""
         """Use record_finding for each issue. Read findings when done."""

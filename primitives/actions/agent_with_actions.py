@@ -5,7 +5,7 @@
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
-"""AgentWithActions generator - scaffold @toolset classes with @action recipes, bdd spec, and agent bdd spec."""
+"""AgentWithActions generator - scaffold @toolset classes with @agent_instructions recipes, bdd spec, and agent bdd spec."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from agent_bdd.agent_bdd import AgentBdd
 from context_tools.base.base_context_tool import BaseContextTool
 from context_tools.bdd.bdd import Bdd
 
-from .action import action  # noqa: F401
+from .action import agent_instructions  # noqa: F401
 
 
 class AgentWithActions(BaseContextTool):
@@ -29,14 +29,14 @@ class AgentWithActions(BaseContextTool):
     def _agent_bdd(self) -> AgentBdd:
         return AgentBdd(format=self.format)
 
-    @action
+    @agent_instructions
     def generate_output(self) -> str:
         """"""
         self._bdd().generate()
         self._agent_bdd().generate()
         return ""
 
-    @action
+    @agent_instructions
     def validate(self) -> str:
         self.contexts
         self._bdd().validate()
@@ -44,7 +44,7 @@ class AgentWithActions(BaseContextTool):
         self.scan()
         return "Validation report."
 
-    @action
+    @agent_instructions
     def satisfy(self) -> str:
         self.contexts
         self.templates
@@ -52,7 +52,7 @@ class AgentWithActions(BaseContextTool):
         self._agent_bdd().satisfy()
         return "When done, run validate."
 
-    @action
+    @agent_instructions
     def repair(self, asset: str, violation: str) -> str:
         self.scan()
         self.contexts

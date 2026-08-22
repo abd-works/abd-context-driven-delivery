@@ -8,9 +8,6 @@ from workspace.session_log import (
     SessionLog,
     inherit_annotations,
     inherit_annotations_from_bases,
-    is_logged,
-    log,
-    member_is_logged,
     summarize_mapping,
 )
 
@@ -25,9 +22,6 @@ __all__ = [
     "docs_dir",
     "inherit_annotations",
     "inherit_annotations_from_bases",
-    "is_logged",
-    "log",
-    "member_is_logged",
     "summarize_mapping",
 ]
 

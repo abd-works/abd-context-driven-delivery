@@ -11,8 +11,8 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Protocol, Sequence
 
-from primitives.actions.action import action
-from tools.tool import tool, toolset
+from primitives.actions.action import agent_instructions
+from tools.tool import agent_tool, toolset
 
 if TYPE_CHECKING:
     pass
@@ -93,7 +93,7 @@ class ContextIndex:
 
     # ── @tools — deterministic Python ────────────────────────────────────────
 
-    @tool
+    @agent_tool
     def embed(self, segments_paths: list[str], out_path: str) -> EmbedResult:
         """Read every segment markdown file listed in segments_paths, embed using the embedding provider,
         and write a FAISS index to out_path/index.faiss with a metadata sidecar at out_path/meta.json.
@@ -135,7 +135,7 @@ class ContextIndex:
             views_covered=sorted(views_covered),
         )
 
-    @tool
+    @agent_tool
     def search(self, query: str, index_path: str, top_k: int = 5) -> SearchResult:
         """Embed query and search the FAISS index at index_path.
         query — natural-language question or search phrase.
@@ -169,9 +169,9 @@ class ContextIndex:
             )
         return SearchResult(chunks=chunks)
 
-    # ── @action — AI reads recipe; owns judgment ──────────────────────────────
+    # ── @agent_instructions — AI reads recipe; owns judgment ──────────────────────────────
 
-    @action
+    @agent_instructions
     def ask(self, question: str, index_path: str) -> str:
         """Answer question using the FAISS index at index_path, citing sources.
         question={question}, index_path={index_path}."""

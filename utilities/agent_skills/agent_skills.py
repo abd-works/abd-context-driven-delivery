@@ -8,9 +8,9 @@ import ast
 import json
 from pathlib import Path
 
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from focus._decorator import _default_filter_key
-from tools.tool import tool, toolset
+from tools.tool import agent_tool, toolset
 from tools.toolset_header import read_toolset_header
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -201,11 +201,7 @@ _KIT_OWNED_INVOKE_BODIES: dict[str, str] = {
         ("sketch", "Sketcher", "sketch.sketch:Sketcher"),
         ("grill", "GrillContext", "grill_context.grill_context:GrillContext"),
         ("partition", "Partition", "partition.partition:Partition"),
-        ("generate", "HostLifecycle", "host_lifecycle.host_lifecycle:HostLifecycle"),
-        ("validate", "HostLifecycle", "host_lifecycle.host_lifecycle:HostLifecycle"),
-        ("document", "HostLifecycle", "host_lifecycle.host_lifecycle:HostLifecycle"),
-        ("satisfy", "HostLifecycle", "host_lifecycle.host_lifecycle:HostLifecycle"),
-        ("repair", "Repair", "eval.session:Repair"),
+        ("repair", "Improvement", "improvement.improvement:Improvement"),
     )
 }
 
@@ -836,7 +832,7 @@ class AgentSkills:
     # Tools                                                                #
     # ------------------------------------------------------------------ #
 
-    @tool
+    @agent_tool
     def resolve_deploy_targets(self, ide: str = "cursor") -> str:
         """Resolve where skill shims will be written for the given IDE.
         Returns JSON with ide_config_roots, multi_folder_workspaces, and primary workspace."""
@@ -854,7 +850,7 @@ class AgentSkills:
             indent=2,
         )
 
-    @tool
+    @agent_tool
     def scan_toolsets(self) -> str:
         """Scan the workspace for Python toolset files. Returns a JSON array of
         {module_dir, skill_slug, manifest_command, class_name, description, file_path,
@@ -893,7 +889,7 @@ class AgentSkills:
             results.append(self._enrich_toolset_entry(entry))
         return json.dumps(results, indent=2)
 
-    @tool
+    @agent_tool
     def write_skill_shim(
         self,
         skill_slug: str,
@@ -931,7 +927,7 @@ class AgentSkills:
             return owned
         return _ACTION_INVOKE_BODY.format(action=action)
 
-    @tool
+    @agent_tool
     def write_action_command(self, action: str, ide: str) -> str:
         """Write a host-action command/prompt composable with a context-tool skill.
         ide=cursor -> .cursor/commands/{action}.md
@@ -955,7 +951,7 @@ class AgentSkills:
             written.append(str(target))
         return written[0]
 
-    @tool
+    @agent_tool
     def write_action_skill_shim(self, action: str, ide: str) -> str:
         """Write a skill shim that routes to the in-scope context tool's matching action.
         Do not run the action kit as its own toolset.
@@ -974,7 +970,7 @@ class AgentSkills:
             written.append(str(skill_md))
         return written[0]
 
-    @tool
+    @agent_tool
     def write_companion_skill_shim(
         self,
         command_name: str,
@@ -1000,7 +996,7 @@ class AgentSkills:
             written.append(str(skill_md))
         return written[0]
 
-    @tool
+    @agent_tool
     def write_companion_command(
         self,
         command_name: str,
@@ -1035,7 +1031,7 @@ class AgentSkills:
             written.append(str(target))
         return written[0]
 
-    @tool
+    @agent_tool
     def write_stage_fidelity_command(self, stage: str, fidelity: str, ide: str) -> str:
         """Write a fidelity command/prompt (CDD stages and concrete fidelities).
         Sets context.fidelity on the in-scope context tool; that tool maps stage
@@ -1060,7 +1056,7 @@ class AgentSkills:
             written.append(str(target))
         return written[0]
 
-    @tool
+    @agent_tool
     def write_focus_shortcut(
         self,
         command_name: str,
@@ -1109,7 +1105,7 @@ class AgentSkills:
             written.append(str(target))
         return written[0]
 
-    @tool
+    @agent_tool
     def remove_focus_shortcut(self, command_name: str, ide: str) -> str:
         """Remove a deployed focus shortcut.
         ide=cursor -> .cursor/commands/{command_name}.md
@@ -1128,7 +1124,7 @@ class AgentSkills:
             results.append(f"removed: {target}")
         return "\n".join(results)
 
-    @tool
+    @agent_tool
     def save_state(
         self,
         ide: str,
@@ -1157,7 +1153,7 @@ class AgentSkills:
         _STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
         return str(_STATE_FILE)
 
-    @tool
+    @agent_tool
     def load_state(self) -> str:
         """Load last deploy parameters from .deploy-state.json.
         Returns JSON with {ide, name_filter, deployed, deployed_commands} or '{}' if not found."""
@@ -1165,7 +1161,7 @@ class AgentSkills:
             return "{}"
         return _STATE_FILE.read_text(encoding="utf-8")
 
-    @tool
+    @agent_tool
     def deploy_hooks(self, ide: str) -> str:
         """Deploy primitives/tools/hooks/manifest-gate.json to the IDE hooks location.
         ide=cursor -> merges into .cursor/hooks.json (creates if absent).
@@ -1192,7 +1188,7 @@ class AgentSkills:
                 written.append(str(target))
         return "\n".join(written)
 
-    @tool
+    @agent_tool
     def remove_skill_shim(self, skill_slug: str, ide: str) -> str:
         """Remove .cursor/skills/{skill_slug}/ (ide=cursor) or .github/skills/{skill_slug}/ (ide=vscode).
         Removes from every configured deploy root. Returns a summary."""
@@ -1265,7 +1261,7 @@ class AgentSkills:
             deployed_commands.append(command_name)
         return deployed_skills, deployed_commands
 
-    @tool
+    @agent_tool
     def deploy_filtered_toolsets(self, entries_json: str, ide: str) -> str:
         """Write skill shims, action skills, and action commands for confirmed scan entries.
         entries_json is a JSON array of scan_toolsets objects (already filtered).
@@ -1277,7 +1273,7 @@ class AgentSkills:
             f"Deployed {len(deployed_commands)} command(s): {', '.join(deployed_commands)}."
         )
 
-    @action
+    @agent_instructions
     def deploy_tools_as_skills(self, name_filter: str, ide: str) -> str:
         """Deploy workspace toolsets as IDE shims. ide={ide}, filter={name_filter}."""
         """Step 1 - If ide is empty, ask: Which IDE? cursor (Recommended) / vscode."""
@@ -1296,7 +1292,7 @@ class AgentSkills:
             "Hooks deployed. State saved. Reload the IDE to pick them up."
         )
 
-    @tool
+    @agent_tool
     def deploy_again(self) -> str:
         """Re-deploy using the exact parameters saved by the last deploy_tools_as_skills run.
         No questions asked. Scans for new toolsets, writes all shims, saves updated state.
@@ -1338,7 +1334,7 @@ class AgentSkills:
             f"{multi_note} Roots: {roots}."
         )
 
-    @tool
+    @agent_tool
     def clean_skills(self) -> str:
         """Remove all deployed skill shims and focus shortcuts from both IDE locations.
         No questions asked. Uses saved state; falls back to scan_toolsets.

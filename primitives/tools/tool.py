@@ -350,59 +350,15 @@ class _ToolsetRunner:
         cls._instance = runner
 
     def run_request(self, request: RunRequestDocument) -> RunResponseDocument:
-        from workspace import SessionLog, member_is_logged, summarize_mapping
+        from workspace import SessionLog
 
         parsed = self._parse_run_request(request)
-        slog = SessionLog.instance()
-        slog.set_session(parsed.session)
-        if parsed.log_control is not None:
-            slog.apply_log_control(parsed.log_control)
+        SessionLog.instance().set_session(parsed.session)
         toolset_cls = self._loader.load(str(parsed.toolset_path))
         instance = self._build_instance(toolset_cls, parsed.context)
-        member_name = str(parsed.action_name or parsed.tool_name)
-        should_log = member_is_logged(toolset_cls, member_name)
-        try:
-            if parsed.action_name:
-                response = self._run_action(request, parsed, instance)
-            else:
-                response = self._run_tool(request, parsed, instance)
-        except RunError as exc:
-            if should_log:
-                slog.append(
-                    kind="action" if parsed.action_name else "tool",
-                    toolset=str(parsed.toolset_path),
-                    name=member_name,
-                    summary=summarize_mapping(parsed.arguments),
-                    ok=False,
-                    error=str(exc),
-                    payload={
-                        "request": {
-                            "toolset": str(parsed.toolset_path),
-                            "arguments": parsed.arguments,
-                            "context": parsed.context,
-                        },
-                        "response": exc.response,
-                    },
-                )
-            raise
-        if should_log:
-            slog.append(
-                kind="action" if parsed.action_name else "tool",
-                toolset=str(parsed.toolset_path),
-                name=member_name,
-                summary=summarize_mapping(parsed.arguments),
-                ok=bool(response.get("ok", True)),
-                error=None if response.get("ok", True) else str(response.get("error")),
-                payload={
-                    "request": {
-                        "toolset": str(parsed.toolset_path),
-                        "arguments": parsed.arguments,
-                        "context": parsed.context,
-                    },
-                    "response": response,
-                },
-            )
-        return response
+        if parsed.action_name:
+            return self._run_action(request, parsed, instance)
+        return self._run_tool(request, parsed, instance)
 
     def _run_tool(
         self,
@@ -494,7 +450,7 @@ class _ToolsetRunner:
         return getattr(instance, tool_name)(**arguments)
 
     def _resolve_runnable(self, instance: Toolset, tool_name: str) -> Any:
-        """A @tool, or a registered extension member that is not an @action."""
+        """A @agent_tool, or a registered extension member that is not an @agent_instructions."""
         if tool_name in instance.tools:
             return instance.tools[tool_name]
         from tools.extensions import ToolsetExtensions
@@ -717,9 +673,9 @@ class _Resource:
         signature[self.name] = self.signature_entry
 
 
-def tool(func: Callable[..., Any]) -> Callable[..., Any]:
+def agent_tool(func: Callable[..., Any]) -> Callable[..., Any]:
     """Mark a method as a tool; instructions come from the method docstring."""
-    func._is_tool = True
+    func._is_agent_tool = True
     return func
 
 
@@ -729,14 +685,10 @@ def resource(func: Callable[..., Any]) -> Callable[..., Any]:
     return func
 
 
-# Re-export - authors mark tools/actions with @log from tools.tool or sessions
-from workspace import log as log  # noqa: E402
-
-
 def _discover_tools(instance: Toolset) -> dict[str, _Tool]:
     discovered: dict[str, _Tool] = {}
     for name, member in inspect.getmembers(instance.__class__, predicate=inspect.isfunction):
-        if getattr(member, "_is_tool", False):
+        if getattr(member, "_is_agent_tool", False):
             discovered[name] = _Tool(name=name, callable=getattr(instance, name))
     return discovered
 

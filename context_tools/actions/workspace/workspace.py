@@ -14,7 +14,7 @@ from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from workspace.context_index import ContextIndex
 from workspace.git_repo import GitRepo, NullGitRepo, find_git_root
-from tools.tool import resource, tool
+from tools.tool import resource, agent_tool
 
 
 @dataclass
@@ -71,6 +71,24 @@ class Turn:
             session.open_turn = Turn(work_session=session)
         return session.open_turn
 
+    @agent_tool
+    def finish_turn(
+        self,
+        tools: list[Any] | None = None,
+        prompt: str = "",
+        result: str = "",
+        context: str = "",
+    ) -> TurnCommit | None:
+        """finish_turn — agent closes the open turn after work."""
+        if tools:
+            for host in tools:
+                workspace = getattr(host, "workspace", None)
+                current = getattr(workspace, "current_work_session", None)
+                open_turn = getattr(current, "open_turn", None)
+                if open_turn is not None:
+                    return open_turn.finish(prompt=prompt, result=result, context=context)
+        return self.finish(prompt=prompt, result=result, context=context)
+
     def finish(
         self, prompt: str = "", result: str = "", context: str = ""
     ) -> TurnCommit | None:
@@ -108,6 +126,7 @@ class Turn:
         session.save()
         return change
 
+    @agent_tool
     def record_mistake(
         self,
         *,
@@ -136,6 +155,7 @@ class Turn:
         mistake.annotate(session.git)
         return mistake
 
+    @agent_tool
     def record_correction(
         self,
         entry_ids: list[str],
@@ -250,6 +270,60 @@ class Correction:
         return "\n".join(lines)
 
 
+@dataclass
+class Repair:
+    """Domain repair bucket on a WorkSession — themed improvement nest (not agentic)."""
+
+    theme: str
+    status: str = "backlog"
+    work_session: WorkSession | None = None
+    asset: str = ""
+    violation: str = ""
+    mistakes: list[Mistake] = field(default_factory=list)
+
+    def open(self, host: Any, asset: str, violation: str) -> Repair:
+        self.asset = asset
+        self.violation = violation
+        self.status = "backlog"
+        session = getattr(getattr(host, "workspace", None), "current_work_session", None)
+        if session is not None and session.open_turn is None:
+            turn = getattr(host, "turn", None)
+            if turn is not None:
+                turn.open(host)
+        return self
+
+    def verify_fix(self) -> str:
+        return f"verify_fix theme={self.theme} status={self.status}"
+
+    def finish(self, turn: Turn | None = None) -> None:
+        self.status = "finished"
+
+
+class Repairs:
+    """WorkSession.repairs — lookup by theme / violation."""
+
+    def __init__(self, session: WorkSession) -> None:
+        self._session = session
+        self._by_theme: dict[str, Repair] = {}
+
+    def for_violation(self, asset: str, violation: str) -> Repair:
+        theme = (violation or asset or "repair").strip() or "repair"
+        if theme not in self._by_theme:
+            self._by_theme[theme] = Repair(theme=theme, work_session=self._session)
+        return self._by_theme[theme]
+
+    def __getitem__(self, theme: str) -> Repair:
+        if theme not in self._by_theme:
+            self._by_theme[theme] = Repair(theme=theme, work_session=self._session)
+        return self._by_theme[theme]
+
+    def __iter__(self):
+        return iter(self._by_theme.values())
+
+    def __len__(self) -> int:
+        return len(self._by_theme)
+
+
 class WorkSession:
     """One named work session — owns openTurn, turns, repairs, git; session.md kit."""
 
@@ -290,7 +364,7 @@ class WorkSession:
         self.git = git if git is not None else self._default_git()
         self.open_turn: Turn | None = None
         self.turns: list[Turn] = []
-        self.repairs: list = []
+        self.repairs = Repairs(self)
         self.scope_paths: list[str] = [str(self.git.root)]
         self.trail: list[ToolCall] = []
         self.format = format
@@ -396,13 +470,8 @@ class WorkSession:
         self._sync_host_repairer()
 
     def _sync_host_repairer(self) -> None:
-        host = self._host
-        if host is None:
-            return
-        repairer = getattr(host, "repairer", None)
-        if repairer is not None:
-            repairer.session = self.eval
-            repairer.host = host
+        """No host.repairer — mistakes/corrections go through Turn; repair via Improvement."""
+        return
 
     def _write_eval_state(self) -> None:
         host = self._host
@@ -518,6 +587,8 @@ class WorkSession:
             )
         self.ensure_started(goal=goal, fidelities=fidelities, contexts=contexts)
         self._bind_session_log()
+        self.read_context_index()
+        self.record_context_root()
         return (
             "Workspace open. "
             "durable root = path; "
@@ -770,6 +841,50 @@ class Workspace:
                 PathOverride(tool=tool, fidelity=fidelity, path=normalized)
             )
         self.save()
+
+    def open(
+        self,
+        host: Any,
+        name: str = "",
+        goal: str = "",
+        fidelities: str = "",
+        contexts: str = "",
+        path: str = "",
+    ) -> WorkSession:
+        """Plain prelude — open/resume a work session for *host* (not an agent tool)."""
+        effective_name = (
+            name or getattr(host, "_session_name", None) or ""
+        ).strip()
+        if not effective_name:
+            raise ValueError(
+                "need session name — confirm working path and kebab slug with the user, "
+                "then open before grill/sketch"
+            )
+        working = (
+            path
+            or getattr(host, "_raw_path", None)
+            or self.path
+            or ""
+        ).strip()
+        session = self.open_work_session(
+            name=effective_name,
+            goal=goal,
+            fidelities=fidelities or getattr(host, "fidelity", "") or "",
+            contexts=contexts,
+            path=working or self.path,
+            context_index_key=getattr(type(host), "context_index_key", ""),
+            default_workspace_folder=getattr(
+                type(host), "default_workspace_folder", "."
+            ),
+            format=getattr(host, "format", None),
+            host=host,
+        )
+        session.read_context_index()
+        session.record_context_root()
+        session.attach_host(host)
+        if hasattr(host, "_session_name"):
+            host._session_name = session.name
+        return session
 
     def open_work_session(
         self,

@@ -7,9 +7,9 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from primitives.actions.action import action
+from primitives.actions.action import agent_instructions
 from primitives.instructions import Instruction, instruction
-from tools.tool import resource, tool, toolset
+from tools.tool import resource, agent_tool, toolset
 
 
 @toolset
@@ -42,13 +42,13 @@ class RecipeGuide:
 
     # -- tools: callable by the AI ---------------------------------------------
 
-    @tool
+    @agent_tool
     def add_draft(self, recipe: str) -> str:
         """Save a recipe draft."""
         self._drafts.append(recipe)
         return f"Draft saved: {recipe}"
 
-    @tool
+    @agent_tool
     def read_drafts(self) -> str:
         """Return all saved drafts as a numbered list."""
         if not self._drafts:
@@ -72,7 +72,7 @@ class RecipeGuide:
 
     # Form A - inline prose: each string literal in the body IS instruction text.
     #   {{expr}} substitutions are rendered against the live instance before the AI sees them.
-    @action
+    @agent_instructions
     def brainstorm(self, theme: str) -> str:
         """List 5 recipe ideas for {{theme}} using {{self.cuisine}} techniques."""
         """For each idea write a one-sentence description and name the key ingredient."""
@@ -80,7 +80,7 @@ class RecipeGuide:
         return f"Brainstormed ideas for {theme}"
 
     # Using named slots: technique (section) and plating (file) are expanded inline.
-    @action
+    @agent_instructions
     def draft_recipe(self, name: str) -> str:
         """Draft a complete recipe called {{name}}."""
         self.technique()   # -> expands # Technique section from recipe_guide.md

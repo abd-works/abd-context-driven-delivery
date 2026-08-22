@@ -158,9 +158,9 @@ with description("instruction_slot_names"):
 with description("_expand_docstring"):
     with context("a multi-word docstring"):
         with it("should return it unchanged"):
-            from primitives.actions.action import action
+            from primitives.actions.action import agent_instructions
 
-            @action
+            @agent_instructions
             def my_action(self) -> str:
                 """This is literal prose."""
                 return ""
@@ -171,9 +171,9 @@ with description("_expand_docstring"):
 
     with context("an empty docstring"):
         with it("should return an empty string"):
-            from primitives.actions.action import action
+            from primitives.actions.action import agent_instructions
 
-            @action
+            @agent_instructions
             def empty_action(self) -> str:
                 """"""
                 return ""
