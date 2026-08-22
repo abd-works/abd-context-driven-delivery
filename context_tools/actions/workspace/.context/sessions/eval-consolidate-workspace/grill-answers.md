@@ -212,7 +212,7 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 
 **Process correction:** `/bdd /sketch` must run **grill → sketch → generate** cadence (`Sketcher.sketch_session` / `bdd-grill-sketch-workflow.md`). Consolidated sketch was generated without tick 8 taxonomy — caused repeated nest-by-enabling-events failures.
 
-**Eval turn attachment:** `begin_eval_turn` → `log_mistake` → `log_correction` → `finish_eval_turn` must run in **one Python process** (see `bdd-grill-sketch-workflow.md` § Eval turn — single process). Separate `tools.ps1 run` calls orphan mistakes: files under `mistakes/` but `session.yaml` shows `mistake_ids: []` (turns `99079d1e`, `2245e8ec`). Replay turn `26ddc97e` hydrated `745db890` and `db6b3528` and wrote `repairs/` correctly.
+**Eval turn attachment:** Mistake and correction are **separate turns** (each: one process for `begin` → tool → `finish`, then commit). See `bdd-grill-sketch-workflow.md` § Eval turn — one process per turn. Orphans `99079d1e` / `2245e8ec`: separate `tools.ps1 run` per tool broke the open turn. Do not combine `log_mistake` and `log_correction` in one turn.
 
 **Citations:** OO §2 lines 51–53, 84–92, 125–131; §4 lines 223–224, 255–266, 611–618; `bdd.md` pass/fail examples; mistake db6b3528.
 

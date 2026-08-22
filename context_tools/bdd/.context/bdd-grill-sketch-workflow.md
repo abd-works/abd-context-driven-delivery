@@ -34,25 +34,40 @@ context:
 
 Use `.\tools.ps1` from repo root. Write `_req.yaml`, run, delete.
 
-## Eval turn — single process (required)
+## Eval turn — one process per turn (required)
 
-**Never** run `begin_eval_turn`, `log_mistake`, `log_correction`, or `finish_eval_turn` as **separate** `tools.ps1 run` calls. Each invocation starts a **new Python process**. `EvalSession.load()` reads `session.yaml` only — it does **not** scan `mistakes/` on disk. A mistake written in one run is invisible to `log_correction` in the next; `_find_mistake` returns nothing, `repairs/` is never created, and `finish_eval_turn` commits with empty `mistake_ids` even when `mistake.md` exists under `mistakes/`.
+**Mistake and correction are different turns** — each gets its own `begin_eval_turn` → … → `finish_eval_turn` → commit. Never `log_mistake` and `log_correction` on the same turn.
 
-**Required shape — one process, one open turn:**
+**Within one turn**, never run `begin_eval_turn`, `log_mistake` or `log_correction`, and `finish_eval_turn` as **separate** `tools.ps1 run` calls. Each invocation is a new Python process; the open turn from `begin_eval_turn` is lost, so `finish_eval_turn` commits with empty `mistake_ids` even when files exist under `mistakes/`.
+
+**Mistake turn** — one process, then commit:
 
 ```python
-bdd = Bdd(fidelity="behavior", path=..., session=...)
 bdd.open()
 bdd.begin_eval_turn()
 entry_id = bdd.log_mistake(artifact=..., rule=..., wrong=..., original=...)
-# fix artifact on disk
-bdd.log_correction(entry_id=entry_id, improved=<full repaired file contents>, how=..., status="fixed")
-bdd.finish_eval_turn(prompt=..., result=..., context=...)
+bdd.finish_eval_turn(prompt="log mistake — …", result=f"entry_id={entry_id}", context=...)
 ```
 
-All four calls must share the same in-memory `open_turn` so mistakes attach to the turn and `session.yaml` records `mistake_ids` and `mistakes:` on finish.
+**Fix the artifact** on disk (separate work between turns).
 
-**Replay (orphaned turns):** When earlier turns logged `mistakes/` files but `session.yaml` has `mistake_ids: []` (turns `99079d1e`, `2245e8ec` in eval-consolidate-workspace), hydrate each `Mistake` from `mistakes/{folder}/mistake.md` + `faultyAsset` into `session._mistakes` and `open_turn`, then `log_correction` in the **same** process before `finish_eval_turn`. Turn `26ddc97e` replayed `745db890` and `db6b3528` this way.
+**Correction turn** — new process, new turn, then commit:
+
+```python
+bdd.open()
+bdd.begin_eval_turn()
+bdd.log_correction(
+    entry_id=entry_id,
+    improved=<full repaired file contents>,
+    how=...,
+    status="fixed",
+)
+bdd.finish_eval_turn(prompt="log correction — …", result=f"entry_id={entry_id} fixed", context=...)
+```
+
+`log_correction` loads the mistake from `session.yaml` (prior mistake turn's `mistakes:` / `mistake_ids`). It does not scan `mistakes/` on disk. If the mistake turn did not finish with the mistake on the turn record, correction cannot attach.
+
+**Orphaned turns** (`99079d1e`, `2245e8ec`): separate `tools.ps1 run` per tool inside what should have been one mistake turn or one correction turn — `mistake_ids: []` despite files under `mistakes/`. Re-run as proper two-turn sequence; do not combine mistake + correction in one turn (turn `26ddc97e` replay was a workaround only).
 
 ## Session artifacts
 
@@ -78,10 +93,9 @@ Under `{active.path}` when behavior signatures exist:
 
 When judge FAILs:
 
-1. `log_mistake` ΓÇö artifact path, rule name, wrong, original excerpt
+1. **Mistake turn:** `begin_eval_turn` → `log_mistake` → `finish_eval_turn` → commit (one process for all three)
 2. Fix artifact (sketch or grill-answers)
-3. `log_correction` ΓÇö entry_id, improved, how, status=fixed
-4. Same turn's `finish_eval_turn` includes mistake ids in session.yaml
+3. **Correction turn:** `begin_eval_turn` → `log_correction` → `finish_eval_turn` → commit (one process; separate turn from step 1)
 
 Runner **does not** argue with judge; runner applies correction or re-grills.
 
