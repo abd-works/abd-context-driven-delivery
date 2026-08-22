@@ -1,0 +1,5 @@
+improved: Workspace aggregate + one WorkSession + GitRepo; host.workspace is Workspace; WorkspaceRepo deleted; dual kit stack collapsed; @log removed from host
+how: Absorbed kit into workspace.WorkSession; open_work_session cutover; ContextToolHost for specs; caller/path updates
+status: fixed
+entry_ids: genbdd001
+fix_commit: a9fb7d167e273d55976cacc0f6377e28a2bdb09b
