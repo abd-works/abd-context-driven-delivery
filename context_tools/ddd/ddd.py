@@ -126,8 +126,12 @@ class Ddd(BaseContextTool):
             fidelity=_CE_FIDELITY.get(self.fidelity, "modules"),
             format=self.format,
             path=self.workspace.path,
-            session=self.workspace.name,
-            workspace=self.workspace.workspace_root,
+            session=(
+                self.workspace.current_work_session.name
+                if self.workspace.current_work_session
+                else ""
+            ),
+            workspace=self.workspace.path,
         )
         instance.mode = "tool"
         return instance
@@ -148,12 +152,18 @@ class Ddd(BaseContextTool):
         """
         generate_folder = type(self).default_workspace_folder
         if self._raw_path is not None:
+            current = self.workspace.current_work_session
+            return current.path if current is not None else self.workspace.path
+        if self.default_workspace_folder != generate_folder:
+            current = self.workspace.current_work_session
+            return current.path if current is not None else self.workspace.path
+        self.default_workspace_folder = type(self)._DOCUMENT_WORKSPACE_FOLDER
+        current = self.workspace.current_work_session
+        if current is None:
             return self.workspace.path
-        if self.workspace.default_workspace_folder != generate_folder:
-            return self.workspace.path
-        self.workspace.default_workspace_folder = type(self)._DOCUMENT_WORKSPACE_FOLDER
-        self.workspace.path = self.workspace._resolve_working_area(None)
-        return self.workspace.path
+        current.default_workspace_folder = type(self)._DOCUMENT_WORKSPACE_FOLDER
+        current.path = current._resolve_working_area(None)
+        return current.path
 
     @action
     def document(self, paths: list[str]) -> str:

@@ -2,32 +2,41 @@
 
 ## Purpose
 
-Named sprint + workspace kit (`Session` in `workspace_session.py`), append-only `@log` events (`SessionLog`), and `context-index.md` helpers. (`WorkspaceSession` is a back-compat alias for `Session`.)
+**Workspace** aggregate (`workspace.py`): parent of `.context/`, owns many **WorkSession**s,
+**currentWorkSession**, and **pathOverrides**. **GitRepo** is the git collaborator on
+`WorkSession.git`. **SessionLog** records expand|run trails explicitly (not via `@log`).
 
 ## Primary use case
 
-BaseContextTool holds a composed `Session` as the plain attribute `workspace` and calls **`self.open()`** once at the start of lifecycle actions. That opens path + folder + context index + eval bind together.
+`BaseContextTool.workspace` is a **Workspace**. Opening a sprint calls
+`Workspace.open_work_session(...)` → sets `currentWorkSession`. Turn/git go through
+`currentWorkSession` (`openTurn`, `git`).
 
 ## Layout
 
 ```
-{path}/                                 # durable tool root (session.path)
+{workspace.path}/                       # Workspace.path — parent of .context/
   .context/
-    sessions/{name}/                    # folder (session.folder)
+    context-index.md                    # PathOverride persistence
+    sessions/{name}/                    # WorkSession.folder
       session.md
-      logs/
-      …
-
-{workspace_root}/.context/context-index.md
+      session.yaml                      # bootstrap only (not mistake index)
+      logs/events.log
 ```
 
 ## Public API
 
-- `WorkSession` — sprint record + kit: `path`, `folder`, `context_index`; `load` / `ensure_started` / `close`; tool **`open`** (sprint + index + root + eval bind); tool **`close_session`**; internal `_ensure_sprint`, `read_context_index`, `record_context_root` (called from `open`, not agent tools). Target model also has aggregate **`Workspace`** in `workspace.py` (`workSessions`, `currentWorkSession`, `pathOverrides`) — host still composes `WorkSession` today; cutover to `Workspace` is remaining.
-- `GitRepo` — git working-tree collaborator at `find_git_root(...)` (`checkout_or_create`, `commit`, `push`, notes). Composed on `WorkSession.git`. Session branch naming (`session/{name}`) is **WorkSession** policy via `checkout_or_create`, not GitRepo. Starting a session refuses dirty checkout onto another branch (`DirtyBranchSwitchError`). Eval/turn finish commits via `git.commit`; it does not switch branches.
-- Prose: **`workspace_session.md`** (`# Session Guidance` and tool sections) — resolved via normal `@instruction` / tool docstring lookup (`domain_slug = workspace_session`)
-- `docs_dir` / `SessionPaths.docs_dir` (in `session.py`), `SessionLog`, `@log`, `ContextIndex` helpers
+- `Workspace` — `path`, `work_sessions`, `current_work_session`, `path_overrides`;
+  `load` / `save` / `lookup_path` / `upsert_path` / `open_work_session`
+- `WorkSession` — back-ref `workspace`; owns `git`, `open_turn`, `turns`, `repairs`, trail;
+  session.md kit (`ensure_started`, `close`, `close_session`, context index helpers)
+- `GitRepo` / `NullGitRepo` — `checkout_or_create`, `commit`, `push`, notes (`note` /
+  `read_notes` / `find_mistakes`). Session branch naming is WorkSession policy.
+- `Turn` / `Mistake` / `Correction` / `PathOverride` / `ToolCall` / `TurnCommit`
+- `SessionLog` — `append` → events.log + openTurn.toolCalls; **delete `@log` as host primary**
+- `ContextToolHost` — OO host used by `workspace_spec` (production host is `BaseContextTool`)
 
 ## Dependencies
 
-stdlib (+ optional yaml); `tools.tool`; `eval` (EvalSession bind on open); consumed by `context_tools.base.base_context_tool`
+stdlib (+ optional yaml); `tools.tool`; `eval` (EvalSession bind on WorkSession.attach_host);
+consumed by `context_tools.base.base_context_tool`

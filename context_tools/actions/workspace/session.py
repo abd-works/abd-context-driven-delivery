@@ -32,7 +32,7 @@ docs_dir = SessionPaths.docs_dir
 
 def __getattr__(name: str):
     if name == "WorkSession":
-        from workspace.workspace_session import WorkSession
+        from workspace.workspace import WorkSession
 
         return WorkSession
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

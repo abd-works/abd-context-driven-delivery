@@ -30,8 +30,7 @@ from record_decisions.record_decisions import RecordDecisions
 from eval.session import Repair
 from scanners.scan import Scan
 from sub_agent.sub_agent import sub_agent
-from workspace.session_log import log
-from workspace.workspace_session import WorkSession
+from workspace.workspace import Turn, Workspace, WorkSession
 from tools.tool import resource
 from tools.tool import tool
 
@@ -82,25 +81,25 @@ class BaseContextTool(AgenticToolset):
         super().__init__()
         self.format = format
         self._raw_path = path
-        self.workspace = WorkSession(
-            format=self.format,
-            path=path,
-            session=session,
-            workspace=workspace,
-            context_index_key=getattr(type(self), "context_index_key", ""),
-            default_workspace_folder=getattr(
-                type(self), "default_workspace_folder", "."
-            ),
-        )
-        self.workspace.attach_host(self)
+        self._session_name = session or ""
+        root = workspace or path or "."
+        self.workspace = Workspace(str(root))
+        self.workspace.load()
+        self.turn = Turn()
         self.scanner = Scan()
         self.decisions = RecordDecisions()
-        self.repairer = Repair(session=self.eval, scanner=self.scanner, host=self)
+        self.repairer = Repair(session=None, scanner=self.scanner, host=self)
+        if self._session_name:
+            self.open(
+                name=self._session_name,
+                path=path or "",
+            )
 
     @property
     def eval(self):
-        """Eval session bound by workspace open (None until sprint is named and open)."""
-        return getattr(self.workspace, "eval", None)
+        """Eval session bound when currentWorkSession is open and host-attached."""
+        current = self.workspace.current_work_session
+        return getattr(current, "eval", None) if current is not None else None
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -159,14 +158,17 @@ class BaseContextTool(AgenticToolset):
    
     @property
     @resource
-    def active(self) -> Session:
-        """The current workspace session — exposes the session as a host resource."""
-        return self.workspace
+    def active(self) -> WorkSession | None:
+        """The current work session — exposes currentWorkSession as a host resource."""
+        return self.workspace.current_work_session
 
     @instruction(override=True)
     def session_guidance(self) -> Instruction:
         """Delegate to WorkSession — prose lives in workspace_session.md."""
-        return Instruction.ref(self.workspace, "session_guidance")
+        current = self.workspace.current_work_session
+        if current is None:
+            raise ValueError("No current work session — call open first")
+        return Instruction.ref(current, "session_guidance")
 
     @tool
     def open(
@@ -178,18 +180,44 @@ class BaseContextTool(AgenticToolset):
         path: str = "",
     ) -> str:
         """open"""
-        return self.workspace.open(
-            name=name,
+        effective_name = (name or self._session_name or "").strip()
+        if not effective_name:
+            return (
+                "need session name — confirm working path and kebab slug with the user, "
+                "then call open before grill/sketch"
+            )
+        working = (path or self._raw_path or self.workspace.path or "").strip()
+        session = self.workspace.open_work_session(
+            name=effective_name,
             goal=goal,
             fidelities=fidelities,
             contexts=contexts,
-            path=path,
+            path=working or self.workspace.path,
+            context_index_key=getattr(type(self), "context_index_key", ""),
+            default_workspace_folder=getattr(
+                type(self), "default_workspace_folder", "."
+            ),
+            format=self.format,
+            host=self,
+        )
+        session.read_context_index()
+        session.record_context_root()
+        session.attach_host(self)
+        self._session_name = session.name
+        return (
+            "Workspace open. "
+            "durable root = path; "
+            "sprint docs = folder; "
+            "context index loaded when present."
         )
 
     @tool
     def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:
         """close_session"""
-        return self.workspace.close_session(outcome=outcome, handoff=handoff)
+        current = self.workspace.current_work_session
+        if current is None:
+            raise ValueError("No current work session — call open first")
+        return current.close_session(outcome=outcome, handoff=handoff)
 
     # -- Instructions --------------------------------------------------------
     @instruction
@@ -205,7 +233,6 @@ class BaseContextTool(AgenticToolset):
     def scaffold(self) -> Instruction: ...
 
     # -- Lifecycle actions (core host only; grill/sketch/iterate/partition are kit-owned) ---
-    @log
     @action
     def generate(self) -> str:
         self.open()
@@ -247,7 +274,6 @@ class BaseContextTool(AgenticToolset):
         """"""
         return ""
 
-    @log
     @action
     def document(self, paths: list[str]) -> str:
         self.open()
@@ -260,7 +286,6 @@ class BaseContextTool(AgenticToolset):
         self.finish_eval_turn()
         return "Document existing state under {session.path}/ - violations flagged, none corrected."
 
-    @log
     @action
     def validate(self) -> str:
         self.open()
@@ -270,7 +295,6 @@ class BaseContextTool(AgenticToolset):
         self.finish_eval_turn()
         return "Validation report for artifacts under {session.path}/."
 
-    @log
     @tool
     def scan(self, paths: list[str]) -> str:
         """scan"""
@@ -294,7 +318,6 @@ class BaseContextTool(AgenticToolset):
             f"{type(self).__name__} has no programmatic renderer for {format!r}"
         )
 
-    @log
     @action
     def satisfy(self) -> str:
         self.mode = "tool"
@@ -302,7 +325,6 @@ class BaseContextTool(AgenticToolset):
         self.generate_fixes_from_validate()
         return "When done, run validate on artifacts under {session.path}/."
 
-    @log
     @sub_agent
     @action
     def repair(self, asset: str, violation: str) -> str:
@@ -319,7 +341,6 @@ class BaseContextTool(AgenticToolset):
             "Fail-first test before any tool change. Write evals after the fix."
         )
 
-    @log
     @sub_agent
     @tool
     def log_mistake(
@@ -344,7 +365,6 @@ class BaseContextTool(AgenticToolset):
             fidelity=fidelity,
         )
 
-    @log
     @tool
     def log_correction(
         self, entry_id: str, improved: str, how: str = "", status: str = "fixed"
@@ -373,7 +393,6 @@ class BaseContextTool(AgenticToolset):
         closed = self.eval.finish_turn(prompt, result, context)
         return closed.id if closed is not None else ""
 
-    @log
     @action
     def createRule(self, failed: str, wanted: str) -> str:
         """createRule"""

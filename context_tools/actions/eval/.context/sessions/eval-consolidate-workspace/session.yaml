@@ -540,3 +540,17 @@ turns:
     sha: 46d0e7b809cd85112e9b45b91979a680009e410d
   tool_calls: []
   mistakes: []
+- id: 0db70433
+  prompt: BDD development generation — workspace domain code + specs
+  result: Generated workspace domain slice + BDD bodies from sketches; also left WorkspaceRepo
+    / dual Session naming / host not on Workspace aggregate (diverged from OO model
+    — mistake to annotate on this introducing SHA).
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 0db70433
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: b664119e2d900a1a3f562dde0e28d98b7ba20190
+  tool_calls: []
+  mistakes: []
