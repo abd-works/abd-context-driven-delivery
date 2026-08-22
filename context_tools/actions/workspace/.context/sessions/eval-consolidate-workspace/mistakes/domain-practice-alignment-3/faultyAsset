@@ -1,0 +1,4 @@
+with no context-index file present
+with a context-index file listing tool, fidelity, and path rows
+it should write current override rows to context-index under its path
+it should load path overrides from context-index

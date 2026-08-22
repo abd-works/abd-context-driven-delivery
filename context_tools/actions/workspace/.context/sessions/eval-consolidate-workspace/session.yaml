@@ -406,3 +406,25 @@ turns:
     name: log_correction
     summary: entry_id=18df551a, status=fixed
   mistakes: []
+- id: b555cf01
+  prompt: log correction — pathOverrides domain vocabulary in workspace sketch
+  result: replace context-index phrasing with path override / pathOverrides load save
+    upsertPath lookupPath language
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: b555cf01
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - 95ae9520
+    sha: 3c4b64044f1ed8e8b2f040e37f35b17d71300d4e
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=95ae9520, rule=domain-practice-alignment
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=95ae9520, status=fixed
+  mistakes: []

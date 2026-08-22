@@ -8,16 +8,16 @@ a context tool
   with its workspace
     -> workspace = Workspace(path=...)
     that has been loaded
-      with no context-index file present
+      with no path overrides persisted
         it should expose an empty path override list
         that is asked for a tool path
           it should return no override path
-      with a context-index file listing tool, fidelity, and path rows
-        it should expose those rows as path overrides
+      with path overrides persisted for tool, fidelity, and path
+        it should expose those path overrides
         that is asked for a tool path
-          with no override stored for that tool and fidelity
+          with no path override for that tool and fidelity
             it should return no override path
-          with an override stored for that tool and fidelity
+          with a path override for that tool and fidelity
             it should return the stored workspace-relative path
       that records a tool path with a known default path
         with a path that differs from the default path
@@ -27,7 +27,8 @@ a context tool
           -> workspace.upsertPath(tool, fidelity, path, default_path)
           it should drop the path override row for that tool and fidelity
       that is saved after path overrides change
-        it should write current override rows to context-index under its path without a change log section
+        -> workspace.save()
+        it should persist its path override rows under its path
   that is invoked to run an action
     with an explicit path argument
       it should resolve its path to that argument
@@ -37,7 +38,8 @@ a context tool
       with no path override
         it should resolve its path under its default workspace folder
     -> workspace.openWorkSession(name, goal, fidelities, contexts, path)
-    it should load path overrides from context-index
+    -> workspace.load()
+    it should load its path overrides
     with a new work session name
       it should add the opened work session to its work sessions
       it should set the current work session to the opened work session
