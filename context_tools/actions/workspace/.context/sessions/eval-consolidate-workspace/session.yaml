@@ -606,3 +606,16 @@ turns:
     sha: 8a9e6c8fda86ea0df306918ce8e48e57a5a1d95b
   tool_calls: []
   mistakes: []
+- id: 2245e8ec
+  prompt: log correction — action-run audit under turn finish not logged state
+  result: mistake db6b3528 fixed; run trail + turn attachment under that has finished
+    its turn; expand stays under that is asked for its instructions
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 2245e8ec
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: c1785adb1d742a46cc6df746a47c00b3726f8cae
+  tool_calls: []
+  mistakes: []
