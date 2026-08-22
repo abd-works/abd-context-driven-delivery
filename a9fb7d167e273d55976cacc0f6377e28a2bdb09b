@@ -1,9 +1,10 @@
 entry_id: annopr001
 artifact: context_tools/actions/eval/.context/sessions/eval-consolidate-workspace/workspace-eval-oo-sketch.md
 rule: implement-dependent-utility-changes-from-sketch
-wrong: Correction cutover followed Workspace/WorkSession shape but ignored sketch §4/§9.1: @agent_instructions / @agent_tool replace @action / @tool / @log. Did not update dependent primitives (action.py / tool.py expander, validator, manifest) so the new annotation set cannot work; left host on @action/@tool.
-original: **Only two author annotations:** `@agent_instructions`, `@agent_tool`.
-**No legacy decorators.** Delete `@action`, `@tool`, `@log`… Framework and runner recognize `@agent_instructions` and `@agent_tool` only.
+wrong: Correction cutover followed Workspace/WorkSession shape but ignored sketch ?4/?9.1: @agent_instructions / @agent_tool replace @action / @tool / @log. Did not update dependent primitives (action.py / tool.py expander, validator, manifest) so the new annotation set cannot work; left host on @action/@tool.
+original: **Only two author annotations:** @agent_instructions, @agent_tool.
+**No legacy decorators.** Delete @action, @tool, @log? Framework and runner recognize @agent_instructions and @agent_tool only.
 tool: context_tools.bdd.bdd:Bdd
 fidelity: development
 introducing_commit: a9fb7d167e273d55976cacc0f6377e28a2bdb09b
+fixed_by: 4e2054e01cd569cc4e46f4078fe65dced3bea047
