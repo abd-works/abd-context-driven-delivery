@@ -4,8 +4,8 @@
 
 - **date:** 2026-08-21
 - **path:** context_tools/actions/eval
-- **goal:** Consolidate eval with workspace kit; fix eval git specs; add session turn/close tagging for promote and contribute.
-- **fidelities:** model
+- **goal:** close turn — BDD sketch spinal git-primary
+- **fidelities:** behavior
 - **contexts:** clean-engineering, bdd
 
 ## Artifacts

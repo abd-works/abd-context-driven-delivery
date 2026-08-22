@@ -4,7 +4,7 @@ Workspace-relative roots for each context tool. Prefer these over defaults when 
 
 ## Current
 
-- bdd = ./context_tools/actions/workspace/*
+- bdd = ./context_tools/actions/eval/*
 - clean_engineering = ./context_tools/actions/eval/*
 - stories = ./../story-ui/*
 
@@ -17,3 +17,4 @@ Workspace-relative roots for each context tool. Prefer these over defaults when 
 - 2026-08-20: bdd = ./context_tools/* - action-owns-context-tools iterate
 - 2026-08-21: clean_engineering = ./context_tools/actions/eval/* (was ./../story-ui/*)
 - 2026-08-22: bdd = ./context_tools/actions/workspace/* (was ./context_tools/*)
+- 2026-08-22: bdd = ./context_tools/actions/eval/* (was ./context_tools/actions/workspace/*)
