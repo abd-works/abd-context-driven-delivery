@@ -632,3 +632,152 @@ turns:
     sha: c84bc25419a2c4625a56319bedb733b55a891faf
   tool_calls: []
   mistakes: []
+- id: 26ddc97e
+  prompt: log correction replay — single-process 745db890 db6b3528
+  result: repairs/ with repairedAsset + improvement.md; session.yaml mistake_ids on
+    turn
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 26ddc97e
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - 745db890
+    - db6b3528
+    sha: 011a3dcaf839e66bb7e06bb7279bf773ba6fb97e
+  tool_calls: []
+  mistakes:
+  - entry_id: 745db890
+    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+    rule: usage-order-behaviors
+    wrong: Ran /bdd /sketch without grilling the consolidated usage story. Sketcher
+      generate wrote workspace_spec.py and edited the hierarchy without grill tick
+      classifying legitimate subjects, standing with conditions, enabling that events,
+      and invalid patterns per describe line — repeated bad Bdd (logged state, API
+      narration).
+    original: "\uFEFF# BDD sketch — workspace module (usage story)\n\nDesign: `workspace-eval-oo-sketch.md`\
+      \ §2. Grill: `grill-answers.md` (slices A–E; tick 8 usage-story taxonomy).\n\
+      \nFidelity: behavior\n\na context tool\n  with a workspace\n    that has an\
+      \ action run against it\n      with a new work session name\n        it should\
+      \ add the opened work session to its work sessions\n        it should set the\
+      \ current work session to the opened work session\n      with an existing work\
+      \ session name\n        it should load the existing work session from its sessions\
+      \ folder\n        it should set the current work session to that work session\n\
+      \      with HEAD already on its session branch\n        it should continue without\
+      \ switching branch\n      with a clean working tree not on its session branch\n\
+      \        with an existing session branch\n          it should check out that\
+      \ session branch\n        with no session branch yet\n          it should create\
+      \ its session branch\n      with a dirty working tree not on its session branch\n\
+      \        it should refuse to switch branch\n      it should open a turn for\
+      \ the action run\n      that has a turn open\n        that is reading or writing\
+      \ module artifacts\n          with an explicit path given on the run\n     \
+      \       it should use that path for its module artifacts\n          with no\
+      \ explicit path given on the run\n            with no path override for its\
+      \ tool and fidelity\n              it should use its default workspace folder\
+      \ for its module artifacts\n            with a path override for its tool and\
+      \ fidelity\n              it should use the override path for its module artifacts\n\
+      \        with a path for the turn that differs from the default path\n     \
+      \     it should keep a path override for that tool and fidelity\n        with\
+      \ a path for the turn that equals the default path\n          it should drop\
+      \ the path override for that tool and fidelity\n        that is asked for its\
+      \ instructions\n          it should record the expansion on the session trail\n\
+      \          it should attach the expansion record to its open turn\n      that\
+      \ has finished its turn\n        it should record the action run on the session\
+      \ trail\n        it should attach the action run record to its turn\n      \
+      \  with a dirty working tree on its session branch\n          it should commit\
+      \ its scoped changes on the session branch\n        it should push its session\
+      \ branch to origin\n\n**Deferred:** domain Repair / mistake / correction chain\
+      \ (eval module Bdd sketch).\n"
+    tool: Bdd
+    fidelity: behavior
+    folder: repairs/usage-order-behaviors/usage-order-behaviors-7
+    correction:
+      improved: "\uFEFF# BDD sketch — workspace module (usage story)\n\nDesign: `workspace-eval-oo-sketch.md`\
+        \ §2. Grill: `grill-answers.md` (slices A–E; tick 8 usage-story taxonomy).\n\
+        \nFidelity: behavior\n\na context tool\n  with a workspace\n    that has an\
+        \ action run against it\n      with a new work session name\n        it should\
+        \ add the opened work session to its work sessions\n        it should set\
+        \ the current work session to the opened work session\n      with an existing\
+        \ work session name\n        it should load the existing work session from\
+        \ its sessions folder\n        it should set the current work session to that\
+        \ work session\n      with HEAD already on its session branch\n        it\
+        \ should continue without switching branch\n      with a clean working tree\
+        \ not on its session branch\n        with an existing session branch\n   \
+        \       it should check out that session branch\n        with no session branch\
+        \ yet\n          it should create its session branch\n      with a dirty working\
+        \ tree not on its session branch\n        it should refuse to switch branch\n\
+        \      it should open a turn for the action run\n      that has a turn open\n\
+        \        that is reading or writing module artifacts\n          with an explicit\
+        \ path given on the run\n            it should use that path for its module\
+        \ artifacts\n          with no explicit path given on the run\n          \
+        \  with no path override for its tool and fidelity\n              it should\
+        \ use its default workspace folder for its module artifacts\n            with\
+        \ a path override for its tool and fidelity\n              it should use the\
+        \ override path for its module artifacts\n        with a path for the turn\
+        \ that differs from the default path\n          it should keep a path override\
+        \ for that tool and fidelity\n        with a path for the turn that equals\
+        \ the default path\n          it should drop the path override for that tool\
+        \ and fidelity\n        that is asked for its instructions\n          it should\
+        \ record the expansion on the session trail\n          it should attach the\
+        \ expansion record to its open turn\n      that has finished its turn\n  \
+        \      it should record the action run on the session trail\n        it should\
+        \ attach the action run record to its turn\n        with a dirty working tree\
+        \ on its session branch\n          it should commit its scoped changes on\
+        \ the session branch\n        it should push its session branch to origin\n\
+        \n**Deferred:** domain Repair / mistake / correction chain (eval module Bdd\
+        \ sketch).\n"
+      how: Single-process log_correction replay; grill tick 8 before sketch; run audit
+        under that has finished its turn.
+      status: fixed
+  - entry_id: db6b3528
+    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+    rule: nest-by-enabling-events
+    wrong: 'Used operation outcomes as nested states: `that has logged its action
+      run` and `that has expanded its action instructions`. Logging is not a standing
+      state — the `that` must name what triggers the record (agent asks for instructions
+      → expansion trail; recipe body runs → run trail). Same class of error as treating
+      API steps as subjects.'
+    original: "that has logged its action run\n  it should record the run on the session\
+      \ trail\nthat has expanded its action instructions\n  it should record the expansion\
+      \ on the session trail\n"
+    tool: Bdd
+    fidelity: behavior
+    folder: repairs/nest-by-enabling-events/nest-by-enabling-events-2
+    correction:
+      improved: "\uFEFF# BDD sketch — workspace module (usage story)\n\nDesign: `workspace-eval-oo-sketch.md`\
+        \ §2. Grill: `grill-answers.md` (slices A–E; tick 8 usage-story taxonomy).\n\
+        \nFidelity: behavior\n\na context tool\n  with a workspace\n    that has an\
+        \ action run against it\n      with a new work session name\n        it should\
+        \ add the opened work session to its work sessions\n        it should set\
+        \ the current work session to the opened work session\n      with an existing\
+        \ work session name\n        it should load the existing work session from\
+        \ its sessions folder\n        it should set the current work session to that\
+        \ work session\n      with HEAD already on its session branch\n        it\
+        \ should continue without switching branch\n      with a clean working tree\
+        \ not on its session branch\n        with an existing session branch\n   \
+        \       it should check out that session branch\n        with no session branch\
+        \ yet\n          it should create its session branch\n      with a dirty working\
+        \ tree not on its session branch\n        it should refuse to switch branch\n\
+        \      it should open a turn for the action run\n      that has a turn open\n\
+        \        that is reading or writing module artifacts\n          with an explicit\
+        \ path given on the run\n            it should use that path for its module\
+        \ artifacts\n          with no explicit path given on the run\n          \
+        \  with no path override for its tool and fidelity\n              it should\
+        \ use its default workspace folder for its module artifacts\n            with\
+        \ a path override for its tool and fidelity\n              it should use the\
+        \ override path for its module artifacts\n        with a path for the turn\
+        \ that differs from the default path\n          it should keep a path override\
+        \ for that tool and fidelity\n        with a path for the turn that equals\
+        \ the default path\n          it should drop the path override for that tool\
+        \ and fidelity\n        that is asked for its instructions\n          it should\
+        \ record the expansion on the session trail\n          it should attach the\
+        \ expansion record to its open turn\n      that has finished its turn\n  \
+        \      it should record the action run on the session trail\n        it should\
+        \ attach the action run record to its turn\n        with a dirty working tree\
+        \ on its session branch\n          it should commit its scoped changes on\
+        \ the session branch\n        it should push its session branch to origin\n\
+        \n**Deferred:** domain Repair / mistake / correction chain (eval module Bdd\
+        \ sketch).\n"
+      how: Nest under turn finish for action-run audit; expand under that is asked
+        for its instructions.
+      status: fixed
