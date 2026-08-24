@@ -4,7 +4,11 @@
 """Improvement kit — repair / verify_fix for context tools (peer kit, not on host)."""
 from __future__ import annotations
 
+import inspect
+from pathlib import Path
+
 from primitives.actions.action import agent_instructions, agentic_toolset
+from primitives.instructions import Instruction, instruction
 from tools.tool import agent_tool
 from workspace import SessionLog
 
@@ -13,9 +17,20 @@ from workspace import SessionLog
 class Improvement:
     """Slash ``/repair`` runs this kit with ``arguments.tools``; not composed on the host."""
 
+    @property
+    def module_dir(self) -> Path:
+        """Directory of this module — used by @instruction slots to locate markdown files."""
+        return Path(inspect.getfile(type(self))).resolve().parent
+
+    @instruction(label="repair")
+    def repair_loop(self) -> Instruction:
+        """Deep root-cause recipe — why the toolset's expected behavior failed."""
+        ...
+
     @agent_instructions
     def repair(self, tools: list, asset: str, violation: str) -> str:
         """Open a domain repair on each passed context tool and instruct the fix."""
+        self.repair_loop
         for host in self.context_tools(tools):
             host.workspace.open(host)
             host.turn.open(host)
@@ -36,8 +51,10 @@ class Improvement:
             )
             host.turn.finish_turn()
         return (
-            "Repair {{asset}} under {session.path}/ until validate passes. "
-            "Fail-first test before any tool change. Write evals after the fix."
+            "Diagnose why the toolset's expected behavior failed for {{asset}} "
+            "(run diagnose.diagnose:Diagnose). State the proposed kit change "
+            "before any test. Do not list tactical file fixes. Then fail-first "
+            "at the seam. See repair.md."
         )
 
     @agent_tool
