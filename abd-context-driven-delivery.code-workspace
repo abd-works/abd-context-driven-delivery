@@ -5,6 +5,10 @@
 			"path": "."
 		},
 		{
+			"name": "pml-domainmodel",
+			"path": "../pml-domainmodel"
+		},
+		{
 			"name": "abd-skills",
 			"path": "../abd-skills"
 		},
