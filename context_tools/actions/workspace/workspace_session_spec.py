@@ -175,6 +175,10 @@ with description("a WorkSession with a name and path"):
         expect(d["fidelities"]).to(equal("behavior"))
         expect(d["contexts"]).to(equal("bdd"))
 
+    with it("should not bind EvalSession when a host attaches"):
+        self.session.attach_host(object())
+        expect(getattr(self.session, "eval", None)).to(be_none)
+
 
 with description("a WorkSession without a name"):
     with it("should raise ValueError when folder is accessed"):
