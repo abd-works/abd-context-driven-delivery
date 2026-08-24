@@ -25,8 +25,9 @@ tool: open
 4. Apply all guidance and named rules in each **context** — each bullet is a requirement.
 5. Match **examples** for shape, depth, and tone.
 6. Fill the **template** scaffold and save the artifact under the session layout from `session_guidance`.
+6b. **Large job — several turns.** Decide the source from the **ask** and what this session already produced (a sketch, a model, a format to transform — not a locked default). If that source is a whole model, sketch, or similarly large artifact, implement **one slice** in this invoke, then stop. `finish_turn` closes this turn. Continue in later generate or iterate turns — even if the user asked for everything once. Filling the whole artifact in one generate is a defect (same class as dumping a map in one iterate tick). A small implied source may finish in one turn. Do not treat a red full-tree **validate** as permission to finish the rest in this invoke; validate the slice you wrote.
 7. Follow any extra build steps included in your instructions when present.
-8. Run **validate**. If it fails, fix the artifact and **validate** again until it passes.
+8. Run **validate** on what this turn wrote. If the job is one slice, a remaining gap in the rest of the source is the next turn, not this one. If the implied source was small enough for one turn and validate fails, fix the artifact and **validate** again until it passes.
 
 ---
 # Validate
