@@ -38,5 +38,5 @@
 
 ## Dependencies
 
-stdlib (+ optional yaml); `tools.tool`; `eval` (EvalSession bind on WorkSession.attach_host);
+stdlib (+ optional yaml); `tools.tool`;
 consumed by `context_tools.base.base_context_tool`

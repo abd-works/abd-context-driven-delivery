@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import inspect
-import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
@@ -369,7 +368,6 @@ class WorkSession:
         self.trail: list[ToolCall] = []
         self.format = format
         self._host = host
-        self.eval: Any | None = None
         self._context_index: str | None = None
         if context_index_key is not None:
             self.context_index_key = context_index_key
@@ -452,46 +450,6 @@ class WorkSession:
 
     def attach_host(self, host: Any) -> None:
         self._host = host
-        self._bind_eval()
-
-    def _bind_eval(self) -> None:
-        if self._host is None:
-            self.eval = None
-            return
-        from eval.session import EvalSession
-
-        if not self.name:
-            self.eval = None
-            self._sync_host_repairer()
-            return
-        self.eval = EvalSession(workspace=self)
-        self._bind_session_log()
-        self._write_eval_state()
-        self._sync_host_repairer()
-
-    def _sync_host_repairer(self) -> None:
-        """No host.repairer — mistakes/corrections go through Turn; repair via Improvement."""
-        return
-
-    def _write_eval_state(self) -> None:
-        host = self._host
-        if host is None:
-            return
-        state_dir = Path.home() / ".cursor"
-        state_dir.mkdir(parents=True, exist_ok=True)
-        cdd_repo = Path(inspect.getfile(type(host))).resolve().parent.parent.parent
-        state = {
-            "cdd_repo": str(cdd_repo),
-            "toolset_path": f"{type(host).__module__}:{type(host).__name__}",
-            "path": getattr(host, "_raw_path", None),
-            "session": getattr(self, "name", None),
-        }
-        try:
-            (state_dir / "cdd_eval_state.json").write_text(
-                json.dumps(state, indent=2), encoding="utf-8"
-            )
-        except Exception:
-            pass
 
     def _resolve_working_area(self, working_area: str | None) -> str:
         if working_area is not None:
