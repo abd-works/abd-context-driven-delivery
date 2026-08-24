@@ -243,6 +243,10 @@ with description("BaseContextTool composer"):
         with it("should inline generate prose on the composer"):
             expect(_section("generate") in self.response["instructions"]).to(be_true)
 
+        with it("should require several turns for a large implied source even if asked once"):
+            expect("several turns" in self.response["instructions"]).to(be_true)
+            expect("one slice" in self.response["instructions"]).to(be_true)
+
     with context("a subclass that overrides generate_output"):
         with before.all:
             self.chronicle = _load_chronicle_with_output()
