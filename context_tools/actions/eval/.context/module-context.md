@@ -31,7 +31,7 @@ Locations stay in workspace; eval owns the domain story used for RCA and evals.
 `EvalSession`, `Turn`, `ToolCall`, `Mistake`, `Correction`,
 `CDDRepo` (extends workspace `GitRepo`), `TurnCommit`, `Repair`, `Archive`. An asset
 EvalSession holds `git`, `cddRepo`, and `cddAt` (tool checkout linked
-once). Repair opens a WorkspaceSession on the CDD clone. Mistake regression uses Bdd
+once). Repair may open a WorkSession on the CDD clone. Mistake regression uses Bdd
 `expect_scan_fails` / `expect_scan_passes` and AgentBdd `generate_and_judge` —
 not a parallel spec harness in this package.
 
@@ -53,18 +53,14 @@ sprint is started. Eval records that name and **commits** turn deltas on it.
 - `BaseContextTool.createRule(failed, wanted)` — only when scan does not
   already match the Mistake; then run the new rule and detect a failure that
   matches the Mistake.
-- BaseContextTool holds `self.eval` (property → `workspace.eval`) beside `self.workspace`
-- Host wiring: `@log` → `SessionLog.append` → `record_tool_call`; Base
-  `log_mistake` / `log_correction` forward to `self.repairer` (session.yaml
-  plus `{session.folder}/mistakes/{name}/` until a correction nests them
-  under `{session.folder}/repairs/{theme}/`; not mistakes.log).
-  Base registers `begin_eval_turn` / `finish_eval_turn` on generate, validate,
-  document, partition, repair, eval, and createRule so the agent runs them. grill /
-  sketch / iterate / satisfy do not register their own — they delegate.
+- BaseContextTool does **not** hold `self.eval` or `self.repairer`. Turn owns
+  `record_mistake` / `record_correction`; `/repair` is Improvement.
+- Host wiring: `@log` is gone. SessionLog.append records expand|run. Mistakes
+  persist via Turn onto git notes + trailers, not host log_mistake forwards.
 
 ## Dependencies
 `workspace` (path/folder/name; package under `context_tools/actions/workspace`).
-`scanners.Scan` for regression only. Workspace `open` binds eval; Base pass-through only.
+`scanners.Scan` for regression only. Workspace `open` does not bind eval onto the host.
 
 ## Package
 Host-action kit under `context_tools/actions/eval` (import `eval` via PYTHONPATH). Peer to `workspace`, `sketch`, `grill_context`, …
@@ -79,7 +75,7 @@ Includes eval YAML. `CDDRepo` **extends** GitRepo. `repos_for_workspace` roots
 `GitRepo` at `find_git_root(workspace.path)` and `CDDRepo` at the running
 tools clone (`find_cdd_root` — this package's git root). An asset session
 **links once** (`cddAt` = `headSha`) — which tools this session used. It does
-not stamp CDD on every Turn. Repair **opens a WorkspaceSession** whose path is
+not stamp CDD on every Turn. Repair **opens a WorkSession** whose path is
 the CDD clone and **copies** project Mistakes onto that session (new objects,
 same entry ids) so the tools clone holds a consumable `mistakes/` record.
 Logging on the project does not mirror in real time — the bring-over happens
