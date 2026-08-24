@@ -4,6 +4,7 @@
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """BDD spec for Improvement — /repair inlines the manual diagnose recipe."""
 
+import inspect
 import sys
 from pathlib import Path
 from typing import Any
@@ -84,3 +85,11 @@ with description("Improvement repair recipe"):
 
         with it("should tell the agent not to list tactical diffs"):
             expect("tactical diffs" in self.response["instructions"]).to(be_true)
+
+        with it("should keep the turn open until after fail-first"):
+            expect(
+                "leave the turn open" in self.response["instructions"].lower()
+            ).to(be_true)
+            expect("finish_turn" in inspect.getsource(type(self.kit).repair)).to(
+                equal(False)
+            )
