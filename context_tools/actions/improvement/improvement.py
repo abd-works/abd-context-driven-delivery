@@ -49,7 +49,6 @@ class Improvement:
                 ok=True,
                 role="run",
             )
-            host.turn.finish_turn()
         return (
             "Diagnose why the toolset's expected behavior failed for {{asset}} "
             "(run diagnose.diagnose:Diagnose). State the proposed kit change "

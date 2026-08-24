@@ -1,6 +1,6 @@
 # Repair
 
-`Improvement.repair` opens a work session, a turn, and a domain `Repair` bucket, then `finish_turn`. It does **not** run fail-first scan, nest files, or verify. Do the work by hand. This file is the recipe `/repair` must follow.
+`Improvement.repair` opens a work session, a turn, and a domain `Repair` bucket. It does **not** close the turn. It does **not** run fail-first scan, nest files, or verify. **Leave the turn open.** Diagnose, propose the kit change, fail-first, then `finish_turn`. This file is the recipe `/repair` must follow.
 
 ## What you are diagnosing
 
@@ -41,7 +41,7 @@ These are the usual places the **kit** fails its own story. They are starting hy
 - **Generate from the source the ask implies.** Source of truth is **context of the ask**, not a vocabulary lock (“the locked sketch,” “the files on disk,” “the CE diagram”). If this session grilled/sketched and the ask is generate, the source is that sketch. If the ask is transform, the source is the format you already have. If there is no sketch, do not invent one as a rule. Generate must finish the **whole** implied artifact — leftover annotations and half-migrated types mean generate used the wrong source (usually “code already there”) or stopped early. Research: did it invent from scratch instead of **transform** when a model already existed in another format? Did one `finish_turn` swallow a job that needed **several turns**? Did “if the module exists, fill gaps” invite a halfway stop? Do not let words like *locked* or *envelope* force a stupid default.
 - **Grill in sketch.** `Sketcher.sketch_session` already calls `grill_with_context` at step 0. At diagnose time, **research** whether that path ran — do not re-implement grill-in-sketch unless research shows sketch still completing without it.
 - **Turn envelope.** Check the **current** `Turn` / `WorkSession` code before treating process-local `open_turn` as a live bug. Notes + same-process `open`/`finish_turn` may already be enough. Do not persist `open_turn` blindly.
-- **`/repair` must not close the turn on open (later).** `Improvement.repair` today `finish_turn`s when it opens the bucket. That is wrong for the new repair approach (diagnose → proposed solution → fail-first → then close). **Do not change that Python while existing repair calls are still the legacy envelope.** Record it here; fix when `/repair` is rebuilt. Until then, do the diagnosis by hand after that premature close.
+- **`/repair` leaves the turn open.** `Improvement.repair` opens the bucket and stops. Diagnose → proposed solution → fail-first happen on that open turn. Close with `finish_turn` only after the fail-first change lands.
 
 ## Associate, then theme, then diagnose
 
