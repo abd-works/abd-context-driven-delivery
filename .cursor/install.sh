@@ -8,12 +8,19 @@ cd "$ROOT"
 
 export PYTHONIOENCODING=utf-8
 
-if [[ ! -x "$ROOT/.venv/bin/python" ]]; then
-  python3 -m venv "$ROOT/.venv"
+# This repo commits a Windows .venv. Keep a separate Linux venv for Cloud Agents.
+CLOUD_VENV="${CLOUD_VENV_PATH:-/home/ubuntu/.venvs/abd-cdd}"
+if ! "$CLOUD_VENV/bin/python" -c "import sys" >/dev/null 2>&1; then
+  if ! python3 -m venv --help >/dev/null 2>&1 || ! python3 -c "import ensurepip" >/dev/null 2>&1; then
+    sudo apt-get update
+    sudo apt-get install -y python3.12-venv
+  fi
+  rm -rf "$CLOUD_VENV"
+  python3 -m venv "$CLOUD_VENV"
 fi
-"$ROOT/.venv/bin/python" -m pip install --upgrade pip
-"$ROOT/.venv/bin/python" -m pip install -r "$ROOT/requirements.txt"
-"$ROOT/.venv/bin/python" -m pip install -e "$ROOT"
+"$CLOUD_VENV/bin/python" -m pip install --upgrade pip
+"$CLOUD_VENV/bin/python" -m pip install -r "$ROOT/requirements.txt"
+"$CLOUD_VENV/bin/python" -m pip install -e "$ROOT"
 
 PML_DEST="${PML_DOMAINMODEL_PATH:-/home/ubuntu/pml-domainmodel}"
 PML_REPO="https://github.com/Paradise-Mobile/pml-domainmodel.git"
