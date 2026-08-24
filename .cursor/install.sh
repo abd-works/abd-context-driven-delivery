@@ -20,7 +20,16 @@ if ! "$CLOUD_VENV/bin/python" -c "import sys" >/dev/null 2>&1; then
 fi
 "$CLOUD_VENV/bin/python" -m pip install --upgrade pip
 "$CLOUD_VENV/bin/python" -m pip install -r "$ROOT/requirements.txt"
-"$CLOUD_VENV/bin/python" -m pip install -e "$ROOT"
+# Mirror tools.ps1 PYTHONPATH without an editable install (setuptools package
+# discovery currently expects context_tools/actions/examples, which is not in tree).
+py_site="$("$CLOUD_VENV/bin/python" -c "import site; print(site.getsitepackages()[0])")"
+cat > "$py_site/abd_cdd_paths.pth" <<EOF
+$ROOT
+$ROOT/primitives
+$ROOT/utilities
+$ROOT/context_tools
+$ROOT/context_tools/actions
+EOF
 
 PML_DEST="${PML_DOMAINMODEL_PATH:-/home/ubuntu/pml-domainmodel}"
 PML_REPO="https://github.com/Paradise-Mobile/pml-domainmodel.git"
