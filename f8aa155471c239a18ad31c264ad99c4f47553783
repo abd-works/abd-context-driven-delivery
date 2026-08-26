@@ -1,0 +1,22 @@
+entry_id: 745db890
+artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+rule: usage-order-behaviors
+wrong: Ran /bdd /sketch without grilling the consolidated usage story. Sketcher generate wrote workspace_spec.py and edited the hierarchy without grill tick classifying legitimate subjects, standing with conditions, enabling that events, and invalid patterns per describe line — repeated bad Bdd (logged state, API narration).
+original: ﻿# BDD sketch — workspace module (usage story)
+
+Design: `workspace-eval-oo-sketch.md` §2. Grill: `grill-answers.md` (slices A–E; tick 8 usage-story taxonomy).
+
+Fidelity: behavior
+
+a context tool
+  with a workspace
+    that has an action run against it
+      with a new work session name
+        it should add the opened work session to its work sessions
+        it should set the current work session to the opened work session
+      with an existing work session name
+        it should load the e...
+tool: context_tools.bdd.bdd:Bdd
+fidelity: behavior
+introducing_commit: f8aa155471c239a18ad31c264ad99c4f47553783
+fixed_by: 011a3dcaf839e66bb7e06bb7279bf773ba6fb97e
