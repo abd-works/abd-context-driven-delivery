@@ -1,0 +1,8 @@
+entry_id: 18df551a
+artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+rule: state-oriented-hierarchy
+wrong: After "that has been loaded", lookup/upsert/save were parallel "that" siblings instead of exploring the no-index and with-index branches to depth — duplicated the same observables twice instead of branching where load state differs.
+tool: context_tools.bdd.bdd:Bdd
+fidelity: behavior
+introducing_commit: 9765d7b0e52305da82c8dd07c88d0c27740c5642
+fixed_by: 767739a36982ba7480e42d8809586eb8ae3fb670
