@@ -1,0 +1,18 @@
+improved: ﻿# BDD sketch — workspace module (usage story)
+
+Design: `workspace-eval-oo-sketch.md` §2. Grill: `grill-answers.md` (slices A–E; tick 8 usage-story taxonomy).
+
+Fidelity: behavior
+
+a context tool
+  with a workspace
+    that has an action run against it
+      with a new work session name
+        it should add the opened work session to its work sessions
+        it should set the current work session to the opened work session
+      with an existing work session name
+        it should load the exis...
+how: Single-process log_correction replay; grill tick 8 before sketch; run audit under that has finished its turn.
+status: fixed
+entry_ids: 745db890
+fix_commit: 011a3dcaf839e66bb7e06bb7279bf773ba6fb97e
