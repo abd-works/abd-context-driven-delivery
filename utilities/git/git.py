@@ -142,6 +142,52 @@ class Ticket:
         repo._gh("-C", str(repo.root), "issue", "close", str(self.number))
         self.data["closed"] = "true"
 
+    def set_status(self, state_name: str) -> Ticket:
+        repo = self._repo
+        if repo is None:
+            raise RuntimeError("Ticket.set_status requires a repo")
+        project = repo.project
+        if project is None:
+            raise RuntimeError("attach_project before setting ticket status")
+        state = project.state_named(state_name)
+        if repo._memory:
+            repo._ticket_project_state[self.number] = state_name
+            self.state = state
+            return self
+        item_raw = repo._gh(
+            "project",
+            "item-add",
+            str(project.number),
+            "--owner",
+            project.owner,
+            "--url",
+            self.url,
+            "--format",
+            "json",
+        )
+        item = json.loads(item_raw or "{}")
+        item_id = item.get("id")
+        if not item_id:
+            raise GhConnectError(
+                f"Could not add issue to project. {_GH_DO_NOT_PROCEED}"
+            )
+        repo._gh(
+            "project",
+            "item-edit",
+            "--id",
+            str(item_id),
+            "--project-id",
+            str(project.number),
+            "--owner",
+            project.owner,
+            "--field",
+            "Status",
+            "--value",
+            state_name,
+        )
+        self.state = state
+        return self
+
     @classmethod
     def parse_number(cls, ref: str) -> int:
         cleaned = ref.strip()
@@ -211,51 +257,6 @@ class Project:
             if state.name == name:
                 return state
         raise ValueError(f"unknown project state: {name!r}")
-
-    def add_ticket(self, ticket: Ticket, state_name: str) -> Ticket:
-        if state_name not in DEFAULT_PROJECT_STATES:
-            raise ValueError(f"status must be one of {DEFAULT_PROJECT_STATES}")
-        repo = self._repo
-        if repo._memory:
-            repo._ticket_project_state[ticket.number] = state_name
-            ticket.state = self.state_named(state_name)
-            return ticket
-        item_raw = repo._gh(
-            "project",
-            "item-add",
-            str(self.number),
-            "--owner",
-            self.owner,
-            "--url",
-            ticket.url,
-            "--format",
-            "json",
-        )
-        item = json.loads(item_raw or "{}")
-        item_id = item.get("id")
-        if not item_id:
-            raise GhConnectError(
-                f"Could not add issue to project. {_GH_DO_NOT_PROCEED}"
-            )
-        repo._gh(
-            "project",
-            "item-edit",
-            "--id",
-            str(item_id),
-            "--project-id",
-            str(self.number),
-            "--owner",
-            self.owner,
-            "--field",
-            "Status",
-            "--value",
-            state_name,
-        )
-        ticket.state = self.state_named(state_name)
-        return ticket
-
-    def set_ticket_state(self, ticket: Ticket, state_name: str) -> Ticket:
-        return self.add_ticket(ticket, state_name)
 
 
 class Repo:

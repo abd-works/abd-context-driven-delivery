@@ -78,9 +78,9 @@ with description("a Repo"):
         with it("should create tickets and track project state"):
             project = self.repo.attach_project("demo-org", 3)
             ticket = self.repo.create_ticket("Workflow package", "forward requirements")
-            project.add_ticket(ticket, "Backlog")
+            ticket.set_status("Backlog")
             expect(ticket.state.name).to(equal("Backlog"))
-            project.set_ticket_state(ticket, "In Progress")
+            ticket.set_status("In Progress")
             expect(self.repo._ticket_project_state[ticket.number]).to(equal("In Progress"))
 
         with it("should merge branches through Branch objects"):
@@ -97,7 +97,7 @@ with description("a Repo ticket lifecycle"):
         self.repo = Repo.memory("/tmp/demo-clone")
         self.project = self.repo.attach_project("demo-org", 3)
         self.ticket = self.repo.create_ticket("Demo", "body")
-        self.project.add_ticket(self.ticket, "Backlog")
+        self.ticket.set_status("Backlog")
 
     with it("should close tickets"):
         self.ticket.close()

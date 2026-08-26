@@ -37,8 +37,8 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 - `Branch.checkout()`, `Branch.commit(paths, message)` → `Commit`, `Branch.merge(other)` → `Commit`
 - `Commit.format(subject, trailers)` / `Commit.from_message(sha, message)` — message + trailer `data`
 - `Repo.attach_project(owner, number)` → `Project`
-- `Project.add_ticket(ticket, state)`, `Project.set_ticket_state(ticket, state)`
-- `Ticket.parse_number(ref)` / `Ticket.github_ref(...)` / `Ticket.close()`
+- `Project.state_named(name)` — column on the board
+- `Ticket.set_status(state)` / `Ticket.parse_number(ref)` / `Ticket.github_ref(...)` / `Ticket.close()`
 - `Ticket` — `number`, `title`, `body`, `url`, `state`, open `data` map
 - `TicketState` — column name (`Backlog`, `In Progress`, `Done`)
 - `Repo.ticket(ref)` / `Repo.create_ticket(title, body)`

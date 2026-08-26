@@ -111,8 +111,6 @@ owner: str
 number: int
 states: list[TicketState]
 ----
-add_ticket(ticket, state_name): Ticket
-set_ticket_state(ticket, state_name): Ticket
 state_named(name): TicketState
 
 ## Ticket
@@ -129,6 +127,7 @@ data: dict
 closed: bool
 parse_number(ref): int
 github_ref(owner, repo, number): str
+set_status(state_name): Ticket
 close(): None
 
 ## TicketState

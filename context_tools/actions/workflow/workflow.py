@@ -183,7 +183,7 @@ class Workflow:
         repo = self._repo(workspace)
         project = self._ensure_project(repo, repo_root)
         ticket = repo.create_ticket(title, body)
-        project.add_ticket(ticket, project_status)
+        ticket.set_status(project_status)
         return {
             "number": ticket.number,
             "title": ticket.title,
@@ -208,7 +208,7 @@ class Workflow:
         if issue is None:
             raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
         project = self._ensure_project(repo, repo_root)
-        project.set_ticket_state(issue, status)
+        issue.set_status(status)
         return status
 
     @agent_tool
