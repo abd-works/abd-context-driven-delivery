@@ -11,5 +11,5 @@ original: ### Turn — grill tick 9 — slice F boundary (mistake / correction)
 - **A — Mistake-only under open turn:** enabling event when recording a mistake → on open turn, persist under work session, nest in themed repair backlog. Exclude correction and Tu...
 tool: context_tools.bdd.bdd:Bdd
 fidelity: behavior
-introducing_commit: cabaeca0e0eb251e9e919373b505fe3b3eea6027
-fixed_by: 6a2d321b9d885b751df63483ba39b8bbd941a4c9
+introducing_commit: 9a8180759fddaef6e0ab2c97c6ff7989baa90aa1
+fixed_by: 354c51b7dc08c7edf05825e66bf9ad627eb66aef
