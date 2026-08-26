@@ -21,9 +21,16 @@ from expects import contain, equal, expect, raise_error
 from mamba import context, description, it
 
 from harness import harness as harness_mod
+from harness.agent import Agent
+from harness.agent_guidance import AgentGuidance
 from harness.bodies import ActionBody, ContextToolBody, FormatBody
+from harness.command import Command
 from harness.harness import Harness
-from harness.harness_tool import Command, Instruction, Prompt, Rule, Skill
+from harness.hook import Hook
+from harness.instruction import Instruction
+from harness.prompt import Prompt
+from harness.rule import Rule
+from harness.skill import Skill
 from primitives.actions.action import _ActionExpander
 
 
@@ -307,7 +314,9 @@ with description("a harness"):
                 harness.write_deploy(source="sketch")
                 expect((root / ".cursor" / "commands" / "sketch.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "skills" / "sketch").exists()).to(equal(False))
+                prompt = next(p for p in harness.prompts if p.name == "sketch")
                 command = next(c for c in harness.commands if c.name == "sketch")
+                expect(prompt.body.text).to(contain("Run this action for any provided context tools"))
                 expect(command.body.text).to(contain("Run this action for any provided context tools"))
 
         with context("with a workflow backlog operation"):
@@ -443,7 +452,7 @@ with description("a prompt"):
             root = _sandbox()
             written = Prompt("Cursor", "echo")
             written.body = "echo-body"
-            result = written.generate_for_ide("Cursor", [root / ".cursor"])
+            result = written.generate({"name": "echo", "body": "echo-body"}, [root / ".cursor"])
             expect(isinstance(result, Command)).to(equal(True))
             expect((root / ".cursor" / "commands" / "echo.md").read_text(encoding="utf-8")).to(equal("echo-body"))
 
@@ -457,7 +466,7 @@ with description("an instruction"):
             root = _sandbox()
             written = Instruction("Cursor", "guide")
             written.body = "guide-body"
-            result = written.generate_for_ide("Cursor", [root / ".cursor"])
+            result = written.generate({"name": "guide", "body": "guide-body"}, [root / ".cursor"])
             expect(isinstance(result, Rule)).to(equal(True))
             expect((root / ".cursor" / "rules" / "guide.mdc").read_text(encoding="utf-8")).to(equal("guide-body"))
 
@@ -466,3 +475,21 @@ with description("a rule"):
     with context("that generates"):
         with it("should write .cursor/rules/{name}.mdc"):
             expect(Rule("Cursor", "guide").relative_path().as_posix()).to(equal("rules/guide.mdc"))
+
+
+with description("an agent"):
+    with context("that generates"):
+        with it("should not implement yet"):
+            expect(lambda: Agent("Cursor").generate("later")).to(raise_error(NotImplementedError))
+
+
+with description("a hook"):
+    with context("that generates"):
+        with it("should not implement yet"):
+            expect(lambda: Hook("Cursor").generate("later")).to(raise_error(NotImplementedError))
+
+
+with description("agent guidance"):
+    with context("that generates"):
+        with it("should not implement yet"):
+            expect(lambda: AgentGuidance("Cursor").generate("later")).to(raise_error(NotImplementedError))

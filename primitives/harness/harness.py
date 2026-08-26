@@ -16,17 +16,16 @@ from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
 from tools.toolset_header import read_toolset_header
 
-from harness.bodies import ActionBody, ContextToolBody, FormatBody
-from harness.harness_tool import (
-    Command,
-    Instruction,
-    Prompt,
-    Rule,
-    Skill,
-    operation_writes,
-    prompt,
-    skill,
-)
+from harness.agent import Agent
+from harness.agent_guidance import AgentGuidance
+from harness.bodies import ActionBody
+from harness.command import Command
+from harness.harness_tool import operation_writes
+from harness.hook import Hook
+from harness.instruction import Instruction
+from harness.prompt import Prompt, prompt
+from harness.rule import Rule
+from harness.skill import Skill, skill
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _IMPLEMENTED = frozenset({"Cursor", "VS Code"})
@@ -64,6 +63,9 @@ class Harness:
         self.commands: list[Command] = []
         self.instruction_files: list[Instruction] = []
         self.rules: list[Rule] = []
+        self.agents: list[Agent] = []
+        self.hooks: list[Hook] = []
+        self.agent_guidance: list[AgentGuidance] = []
 
     def _require_implemented(self) -> None:
         if self.type not in _IMPLEMENTED:
@@ -294,207 +296,109 @@ class Harness:
                 found.append((item.name, ast.get_docstring(item) or ""))
         return found
 
-    def _prompt_job(
-        self,
-        name: str,
-        *,
-        toolset: str,
-        meta: dict,
-        guidance: str,
-        fidelity: bool,
-    ) -> dict:
-        if fidelity and name != "scaffold":
-            text = f"Run at fidelity {name}. Do not treat this as a format."
-        else:
-            text = guidance
-        return {
-            "name": name,
-            "vehicle": "prompt",
-            "body_kind": "action",
-            "toolset": toolset,
-            "overview": meta.get("overview", name),
-            "class_string": meta.get("class_string", name),
-            "guidance": text,
-        }
-
-    def _format_job(self, name: str) -> dict:
-        return {
-            "name": name,
-            "vehicle": "prompt",
-            "body_kind": "format",
-            "toolset": "the in-scope context tool",
-            "overview": name,
-            "class_string": name,
-            "guidance": f"generate and render as {name}",
-        }
-
-    def _body_for(self, job: dict):
-        kind = job["body_kind"]
-        name = job["name"]
-        if kind == "format":
-            return FormatBody.from_source(format=name)
-        if kind == "action":
-            return ActionBody.from_source(
-                name=name,
-                class_string=job.get("class_string", name),
-                operation_instructions=job.get("guidance", ""),
-                toolset=job.get("toolset", ""),
-            )
-        return ContextToolBody.from_source(
-            name=name,
-            overview=job.get("overview", name),
-            class_string=job.get("class_string", name),
-            guidance=job.get("guidance", "guidance"),
-            toolset=job.get("toolset", ""),
-        )
-
     def _drop_action_skill(self, slug: str, roots: list[Path]) -> None:
         for root in roots:
             skill_dir = root / "skills" / slug
             if skill_dir.is_dir():
                 shutil.rmtree(skill_dir)
 
-    def _record(self, tool) -> None:
-        if isinstance(tool, Skill):
-            self.skills.append(tool)
-        elif isinstance(tool, Command):
-            self.commands.append(tool)
-        elif isinstance(tool, Prompt):
-            self.prompts.append(tool)
-        elif isinstance(tool, Rule):
-            self.rules.append(tool)
-        elif isinstance(tool, Instruction):
-            self.instruction_files.append(tool)
+    def _wanted(self, wanted: str, name: str, source_slug: str, derived: str) -> bool:
+        if not wanted:
+            return True
+        if name == wanted:
+            return True
+        return source_slug == wanted and derived != "fidelity"
 
-    def _write_vehicle(self, job: dict, roots: list[Path]) -> None:
-        name = job["name"]
-        vehicle = job["vehicle"]
-        body = self._body_for(job)
-        description = job.get("overview", name)
-        if vehicle == "skill":
-            tool = Skill(self.type, name)
-            tool.description = description
-            tool.body = body
-            tool.write(roots)
-            self._record(tool)
-            return
-        if vehicle == "instruction":
-            tool = Instruction(self.type, name)
-            tool.description = description
-            tool.body = body
-            written = tool.generate_for_ide(self.type, roots)
-            self._record(written)
-            return
-        tool = Prompt(self.type, name)
-        tool.description = description
-        tool.body = body
-        written = tool.generate_for_ide(self.type, roots)
-        self._record(written)
+    def _emit(self, kind: str, source: dict, roots: list[Path], seen: set[tuple[str, str]]) -> str | None:
+        name = source["name"]
+        key = (name, kind)
+        if key in seen:
+            return None
+        seen.add(key)
+        if kind == "skill":
+            skill_file = Skill(self.type, name)
+            skill_file.generate(source, roots)
+            self.skills.append(skill_file)
+            return name
+        if kind == "instruction":
+            instruction_file = Instruction(self.type, name)
+            written = instruction_file.generate(source, roots)
+            self.instruction_files.append(instruction_file)
+            if isinstance(written, Rule):
+                self.rules.append(written)
+            return name
+        prompt_file = Prompt(self.type, name)
+        written = prompt_file.generate(source, roots)
+        self.prompts.append(prompt_file)
+        if isinstance(written, Command):
+            self.commands.append(written)
+        return name
 
-    def _job_from_entry(self, entry: dict) -> list[dict]:
+    def _generate_entry(
+        self,
+        entry: dict,
+        roots: list[Path],
+        wanted: str,
+        seen: set[tuple[str, str]],
+    ) -> list[str]:
         path = Path(entry["file_path"])
         slug = entry["skill_slug"]
         kind = self._classify_path(str(path))
         meta = self._read_meta(path, slug)
         toolset = entry.get("manifest_command", "").rsplit(" ", 1)[-1]
-        default_vehicle = "prompt" if kind == "action" else "skill"
-        default_body = "action" if kind == "action" else "context"
+        names: list[str] = []
+
+        def source_for(name: str, guidance: str) -> dict:
+            payload = {**meta, "name": name, "toolset": toolset, "guidance": guidance}
+            if kind == "action":
+                payload["action"] = True
+            return payload
+
         writes = operation_writes(path)
-        jobs: list[dict] = []
         if writes:
-            for vehicle, deploy_name, operation, doc in writes:
-                jobs.append(
-                    {
-                        "name": deploy_name or slug,
-                        "vehicle": vehicle,
-                        "body_kind": default_body,
-                        "toolset": toolset,
-                        "overview": meta["overview"],
-                        "class_string": meta["class_string"],
-                        "guidance": doc or meta["guidance"],
-                        "operation": operation,
-                        "source_slug": slug,
-                        "derived": "source",
-                    }
-                )
+            for vehicle, deploy_name, _operation, doc in writes:
+                name = deploy_name or slug
+                if not self._wanted(wanted, name, slug, "source"):
+                    continue
+                written = self._emit(vehicle, source_for(name, doc or meta["guidance"]), roots, seen)
+                if written:
+                    names.append(written)
+        elif kind == "action":
+            if self._wanted(wanted, slug, slug, "source"):
+                written = self._emit("prompt", source_for(slug, meta["guidance"]), roots, seen)
+                if written:
+                    names.append(written)
         else:
-            jobs.append(
-                {
-                    "name": slug,
-                    "vehicle": default_vehicle,
-                    "body_kind": default_body,
-                    "toolset": toolset,
-                    "source_slug": slug,
-                    "derived": "source",
-                    **meta,
-                }
-            )
+            if self._wanted(wanted, slug, slug, "source"):
+                written = self._emit("skill", source_for(slug, meta["guidance"]), roots, seen)
+                if written:
+                    names.append(written)
         if kind != "action":
             for fidelity_name in self._fidelity_names(path):
-                job = self._prompt_job(
-                    fidelity_name,
-                    toolset=toolset,
-                    meta=meta,
-                    guidance=f"Run {fidelity_name}.",
-                    fidelity=True,
-                )
-                job["source_slug"] = slug
-                job["derived"] = "fidelity"
-                jobs.append(job)
+                if not self._wanted(wanted, fidelity_name, slug, "fidelity"):
+                    continue
+                if fidelity_name == "scaffold":
+                    guidance = f"Run {fidelity_name}."
+                else:
+                    guidance = f"Run at fidelity {fidelity_name}. Do not treat this as a format."
+                written = self._emit("prompt", source_for(fidelity_name, guidance), roots, seen)
+                if written:
+                    names.append(written)
         else:
             for operation, doc in self._instruction_operations(path):
                 if operation == slug:
                     continue
-                job = self._prompt_job(
-                    operation,
-                    toolset=toolset,
-                    meta=meta,
-                    guidance=doc or f"Run {operation}.",
-                    fidelity=False,
+                if not self._wanted(wanted, operation, slug, "operation"):
+                    continue
+                written = self._emit(
+                    "prompt",
+                    source_for(operation, doc or f"Run {operation}."),
+                    roots,
+                    seen,
                 )
-                job["source_slug"] = slug
-                job["derived"] = "operation"
-                jobs.append(job)
-        return jobs
-
-    def _jobs(self, source: str, name_filter: str) -> list[dict]:
-        wanted = source.strip()
-        jobs: list[dict] = []
-        seen: set[tuple[str, str]] = set()
-
-        def add(job: dict) -> None:
-            key = (job["name"], job["vehicle"])
-            if key in seen:
-                return
-            seen.add(key)
-            jobs.append(job)
-
-        for entry in json.loads(self.walk(name_filter)):
-            for job in self._job_from_entry(entry):
-                add(job)
-        for name in _FORMATS:
-            job = self._format_job(name)
-            job["source_slug"] = name
-            job["derived"] = "format"
-            add(job)
-        if wanted:
-            selected: list[dict] = []
-            selected_keys: set[tuple[str, str]] = set()
-
-            def take(job: dict) -> None:
-                key = (job["name"], job["vehicle"])
-                if key in selected_keys:
-                    return
-                selected_keys.add(key)
-                selected.append(job)
-
-            for job in jobs:
-                if job["name"] == wanted:
-                    take(job)
-                elif job.get("source_slug") == wanted and job.get("derived") != "fidelity":
-                    take(job)
-            return selected
-        return jobs
+                if written:
+                    names.append(written)
+        return names
 
     def _write_harness_files(self, roots: list[Path]) -> None:
         body = ActionBody.from_source(
@@ -506,16 +410,19 @@ class Harness:
             ),
             toolset="harness.harness:Harness",
         )
+        source = {
+            "name": "harness",
+            "overview": "Deploy workspace toolsets as IDE skills, prompts, and instructions.",
+            "body": body,
+        }
         skill_file = Skill(self.type, "harness")
-        skill_file.description = "Deploy workspace toolsets as IDE skills, prompts, and instructions."
-        skill_file.body = body
-        skill_file.write(roots)
-        self._record(skill_file)
+        skill_file.generate(source, roots)
+        self.skills.append(skill_file)
         prompt_file = Prompt(self.type, "harness")
-        prompt_file.description = skill_file.description
-        prompt_file.body = body
-        written = prompt_file.generate_for_ide(self.type, roots)
-        self._record(written)
+        written = prompt_file.generate(source, roots)
+        self.prompts.append(prompt_file)
+        if isinstance(written, Command):
+            self.commands.append(written)
 
     def _remove_stale(self, roots: list[Path]) -> None:
         for root in roots:
@@ -582,21 +489,32 @@ class Harness:
         self.commands = []
         self.instruction_files = []
         self.rules = []
+        self.agents = []
+        self.hooks = []
+        self.agent_guidance = []
         roots = self._write_root_paths()
-        jobs = self._jobs(source, name_filter)
-        for job in jobs:
-            self._write_vehicle(job, roots)
+        wanted = source.strip()
+        seen: set[tuple[str, str]] = set()
+        names: list[str] = []
+        for entry in json.loads(self.walk(name_filter)):
+            names.extend(self._generate_entry(entry, roots, wanted, seen))
+        for fmt in _FORMATS:
+            if wanted and fmt != wanted:
+                continue
+            written = self._emit("prompt", {"name": fmt, "format": fmt}, roots, seen)
+            if written:
+                names.append(written)
         skill_names = {item.name for item in self.skills}
-        for job in jobs:
-            if job["vehicle"] == "prompt" and job["name"] not in skill_names:
-                self._drop_action_skill(job["name"], roots)
+        for prompt_file in self.prompts:
+            if prompt_file.name not in skill_names:
+                self._drop_action_skill(prompt_file.name, roots)
         self._write_harness_files(roots)
         self._remove_stale(roots)
         self._save_ide()
         return json.dumps(
             {
                 "roots": [str(r) for r in roots],
-                "sources": [job["name"] for job in jobs],
+                "sources": names,
             }
         )
 
