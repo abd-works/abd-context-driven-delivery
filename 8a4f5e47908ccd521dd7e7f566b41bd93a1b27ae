@@ -1,0 +1,15 @@
+entry_id: 4b1a8711
+artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+rule: nest-by-enabling-events
+wrong: Nested commit under `with a dirty working tree on its session branch` at turn finish. Finishing a turn after work always commits scoped changes — dirty is not an optional `with` branch.
+original:       that has finished its turn
+        it should record the action run on the session trail
+        it should attach the action run record to its turn
+        with a dirty working tree on its session branch
+          it should commit its scoped changes on the session branch
+        it should push its session branch to origin
+
+tool: context_tools.bdd.bdd:Bdd
+fidelity: behavior
+introducing_commit: 8a4f5e47908ccd521dd7e7f566b41bd93a1b27ae
+fixed_by: b7679898d266ecc561610672e57892a6a53d1bd7
