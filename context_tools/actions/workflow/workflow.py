@@ -16,7 +16,6 @@ from primitives.actions.action import agent_instructions
 from tools.tool import agent_tool, toolset
 from workspace import Workspace
 from workspace.git_repo import NullGitRepo
-from workspace.workspace import ContextToolHost, Turn
 
 
 _PROJECT_STATUSES = ("Backlog", "In Progress", "Done")
@@ -333,9 +332,8 @@ class Workflow:
             path=str(repo_root),
             git=git,
         )
-        host = ContextToolHost(ws, git=session.git)
-        turn = Turn()
-        open_turn = turn.open(host, action="start")
+        open_turn = session.turn
+        open_turn.action = "start"
         if instructions.strip():
             open_turn.prompt = instructions.strip()
         return {

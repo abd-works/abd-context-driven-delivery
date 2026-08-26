@@ -7,13 +7,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from lifecycle import LifecycleAction
 from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
 from workspace import docs_dir
 
 
 @agentic_toolset
-class GrillContext:
+class GrillContext(LifecycleAction):
     """Interview a plan relentlessly against the codebase context until reaching shared understanding."""
 
     def _grill_answers_path(self, root: str) -> Path:
@@ -80,11 +81,11 @@ class GrillContext:
     @agent_instructions
     def grill(self, tools: list) -> str:
         """Grill then generate - pure grill loop, then the host generate body."""
+        self.begin(tools, action="grill")
         for host in self.context_tools(tools):
-            host.open()
-            host.decisions.record_decisions_session()
             self.grill_with_context()
             host.generate()
+        self.end()
         return "Grill complete; generate instructions applied."
 
     @agent_instructions

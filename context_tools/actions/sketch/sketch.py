@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from grill_context.grill_context import GrillContext
+from lifecycle import LifecycleAction
 from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
 from workspace import docs_dir
@@ -20,10 +21,11 @@ _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 
 
 @agentic_toolset
-class Sketcher:
+class Sketcher(LifecycleAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
-    def __init__(self, agent_dir: str = "") -> None:
+    def __init__(self, agent_dir: str = "", path: str = ".", session: str = "") -> None:
+        super().__init__(path=path, session=session)
         self._agent_dir = agent_dir
 
     def _sketch_path(self, destination: str, slug: str) -> Path:
@@ -87,24 +89,18 @@ class Sketcher:
     @agent_instructions
     def sketch(self, tools: list) -> str:
         """Sketch then generate - grill + sketch cadence, then the host generate body."""
-        for host in self.context_tools(tools):
-            host.open()
-            host.decisions.record_decisions_session()
-            self.sketch_session()
-            host.generate()
-        return "Sketch complete; generate instructions applied."
-
-    @agent_instructions
-    def sketch_session(self, slug: str, destination: str, agent_dir: str = "") -> str:
-        """Sketch {{slug}} interactively - rough artifact through an explicit grill_with_context call. MUST persist via save_sketch on the first interim draft and overwrite on every refinement. Never leave the sketch only in chat. destination defaults to session.folder (sprint) for engagement sketches, or {session.path}/{module} for module sketches. Question shape (frame + options) comes from grill_with_context - do not restate bare options here."""
+        """Sketch interactively - rough artifact through an explicit grill_with_context call. MUST persist via save_sketch on the first interim draft and overwrite on every refinement. Never leave the sketch only in chat. destination defaults to session.folder (sprint) for engagement sketches, or {session.path}/{module} for module sketches. Question shape (frame + options) comes from grill_with_context - do not restate bare options here."""
         """Step 0 - Grill the sketch plan (concept-grounded questions via grill_with_context)."""
-        self._grill_context().grill_with_context(slug)
         """Step 1 - Resolve destination: engagement -> session.folder; module -> {session.path}/{module}. If no session sprint exists yet, confirm path with the user, suggest a kebab slug, open, then use session.folder. Do not invent a divergent folder."""
         """Step 2 - locate the sketch template via find_template(agent_dir=agent_dir). agent_dir is the concrete host toolset module directory (manifest chain agent_dir / module_dir of the invoked Context). If the caller supplied a template directly in context, use that instead."""
-        self.find_template(agent_dir)
         """Step 3 - draft a rough sketch inspired by the template. Show it in chat, then IMMEDIATELY call save_sketch(destination, slug, content) before continuing the grill. A sketch that exists only in chat is a defect - the file under the destination docs dir is the working record."""
-        self.save_sketch()
         """Step 4 - After every 2-3 grill answers, regenerate the sketch showing exactly what changed, show it in chat, and IMMEDIATELY call save_sketch again (same path). Use placeholders for unresolved branches. Do not write formal generate artifacts during the sketch loop - that is iterate/generate territory."""
-        self.save_sketch()
         """Step 5 - Repeat until the sketch is stable, the user is satisfied, or the user switches to iterate/generate. Every new grill question still follows grill's Step 3a-3b; this stage only owns sketch persist/show cadence."""
-        return "Sketch saved for {{slug}} under {{destination}}."
+        self.begin(tools, action="sketch")
+        for host in self.context_tools(tools):
+            self._grill_context().grill_with_context()
+            self.find_template()
+            self.save_sketch()
+            host.generate()
+        self.end()
+        return "Sketch complete; generate instructions applied."

@@ -9,6 +9,7 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
+from lifecycle import LifecycleAction
 from partition.partition_index import PartitionIndex
 from partition.segment import Segment, SegmentCompletenessConfig
 from primitives.actions.action import agent_instructions, agentic_toolset
@@ -17,12 +18,12 @@ from tools.tool import agent_tool
 
 
 @agentic_toolset
-class Partition:
+class Partition(LifecycleAction):
     """Corpus partition: index, segment, completeness.
 
     Real toolset (not a mixin). Slash ``/partition`` runs this kit with
-    ``arguments.tools``; each host opens via ``host.workspace.open(host)`` inside
-    ``partition(tools)``, not via a composed attribute on BaseContextTool.
+    ``arguments.tools``. Workspace open and the hanging session turn come from
+    ``LifecycleAction.begin`` / ``end``.
     """
 
 
@@ -132,10 +133,9 @@ class Partition:
         out_root: str | None = None,
     ) -> str:
         """partition"""
+        self.begin(tools, action="partition")
         for host in self.context_tools(tools):
-            host.workspace.open(host)
             host.contexts
-            host.turn.open(host)
             self.partition_corpus(
                 context,
                 mode,
@@ -143,7 +143,7 @@ class Partition:
                 slug=host.domain_slug,
                 scaffold=host.scaffold,
             )
-            host.turn.finish_turn()
+        self.end()
         return (
             "Partition of {{context}} finished (mode {{mode}}); "
             "docs under {session.path}/.context/. "

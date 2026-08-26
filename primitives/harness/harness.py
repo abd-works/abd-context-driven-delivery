@@ -530,3 +530,33 @@ class Harness:
         """With type Claude, Codex, or ChatGPT: must not implement yet."""
         self.write_deploy()
         return ""
+
+    @agent_tool
+    def generateAgain(self) -> str:
+        """Write using the saved IDE. No questions."""
+        path = self._state_path()
+        if not path.is_file():
+            raise RuntimeError("no saved IDE")
+        try:
+            saved = json.loads(path.read_text(encoding="utf-8")).get("type")
+        except (OSError, json.JSONDecodeError):
+            saved = None
+        if not saved:
+            raise RuntimeError("no saved IDE")
+        self.type = saved
+        return self.write_deploy()
+
+    @prompt
+    @agent_tool
+    def clean(self) -> str:
+        """Remove this Harness type's deploy files only — not the other IDE."""
+        self._require_implemented()
+        roots = self._write_root_paths()
+        removed: list[str] = []
+        for root in roots:
+            for folder in ("skills", "commands", "prompts", "instructions", "rules"):
+                target = root / folder
+                if target.is_dir():
+                    shutil.rmtree(target)
+                    removed.append(str(target))
+        return json.dumps({"roots": [str(r) for r in roots], "removed": removed})

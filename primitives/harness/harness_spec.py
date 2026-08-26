@@ -493,3 +493,44 @@ with description("agent guidance"):
     with context("that generates"):
         with it("should not implement yet"):
             expect(lambda: AgentGuidance("Cursor").generate("later")).to(raise_error(NotImplementedError))
+
+
+with description("generateAgain"):
+    with context("that runs"):
+        with context("with saved state"):
+            with it("should write using the saved IDE without AskQuestion"):
+                root = _sandbox()
+                harness = Harness("VS Code", repo_root=root)
+                harness.write_deploy(source="stories")
+                again = Harness("Cursor", repo_root=root)
+                again.generateAgain()
+                expect((root / ".github" / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
+                expect(type(again).generateAgain.__doc__).not_to(contain("AskQuestion"))
+        with context("with no saved state"):
+            with it("should refuse"):
+                root = _sandbox()
+                expect(lambda: Harness("Cursor", repo_root=root).generateAgain()).to(
+                    raise_error(RuntimeError)
+                )
+
+
+with description("clean"):
+    with context("that runs"):
+        with it("should write a prompt"):
+            root = _sandbox()
+            harness = Harness("VS Code", repo_root=root)
+            harness.write_deploy()
+            expect(any(p.name == "clean" for p in harness.prompts)).to(equal(True))
+            expect((root / ".github" / "prompts" / "clean.prompt.md").is_file()).to(equal(True))
+        with context("with type Cursor"):
+            with it("should clean that Cursor deploy area and not VS Code"):
+                root = _sandbox()
+                github = root / ".github" / "skills" / "keep" / "SKILL.md"
+                github.parent.mkdir(parents=True, exist_ok=True)
+                github.write_text("keep", encoding="utf-8")
+                harness = Harness("Cursor", repo_root=root)
+                harness.write_deploy(source="stories")
+                expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
+                harness.clean()
+                expect((root / ".cursor" / "skills").exists()).to(equal(False))
+                expect(github.read_text(encoding="utf-8")).to(equal("keep"))

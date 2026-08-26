@@ -11,6 +11,7 @@ from typing import Any
 
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
+from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
 from workspace.git_repo import GitRepo, NullGitRepo, Repo
 from tools.tool import resource, agent_tool
@@ -350,10 +351,8 @@ class Repair:
         self.violation = violation
         self.status = "backlog"
         session = getattr(getattr(host, "workspace", None), "current_work_session", None)
-        if session is not None and session.open_turn is None:
-            turn = getattr(host, "turn", None)
-            if turn is not None:
-                turn.open(host)
+        if session is not None:
+            session.turn
         return self
 
     def verify_fix(self) -> str:
@@ -429,6 +428,7 @@ class WorkSession:
         self.open_turn: Turn | None = None
         self.turns: list[Turn] = []
         self.repairs = Repairs(self)
+        self.decisions = RecordDecisions()
         self.scope_paths: list[str] = [str(self.git.root)]
         self.trail: list[ToolCall] = []
         self.format = format
@@ -457,6 +457,19 @@ class WorkSession:
     @property
     def dirty(self) -> bool:
         return self.git.is_dirty()
+
+    @property
+    def turn(self) -> Turn:
+        """Turn hangs off the session — present once the session is awake."""
+        if self.open_turn is None:
+            hanging = Turn(work_session=self)
+            if self.context_index_key:
+                hanging.tool_keys = [self.context_index_key]
+            hanging.fidelity = self.fidelities
+            if self.format:
+                hanging.format = str(self.format)
+            self.open_turn = hanging
+        return self.open_turn
 
     @property
     def folder(self) -> Path:
@@ -865,18 +878,19 @@ class Workspace:
             )
         self.save()
 
+    @agent_tool
     def open(
         self,
-        host: Any,
+        host: Any | None = None,
         name: str = "",
         goal: str = "",
         fidelities: str = "",
         contexts: str = "",
         path: str = "",
     ) -> WorkSession:
-        """Plain prelude — open/resume a work session for *host* (not an agent tool)."""
+        """Open the workspace if it is not already open. The work session's turn and decision records hang off it."""
         effective_name = (
-            name or getattr(host, "_session_name", None) or ""
+            name or (getattr(host, "_session_name", None) if host is not None else None) or ""
         ).strip()
         if not effective_name:
             raise ValueError(
@@ -885,21 +899,27 @@ class Workspace:
             )
         working = (
             path
-            or getattr(host, "_raw_path", None)
+            or (getattr(host, "_raw_path", None) if host is not None else None)
             or self.path
             or ""
         ).strip()
         session = self.open_work_session(
             name=effective_name,
             goal=goal,
-            fidelities=fidelities or getattr(host, "fidelity", "") or "",
+            fidelities=fidelities
+            or ((getattr(host, "fidelity", "") or "") if host is not None else "")
+            or "",
             contexts=contexts,
             path=working or self.path,
-            context_index_key=getattr(type(host), "context_index_key", ""),
-            default_workspace_folder=getattr(
-                type(host), "default_workspace_folder", "."
+            context_index_key=(
+                getattr(type(host), "context_index_key", "") if host is not None else ""
             ),
-            format=getattr(host, "format", None),
+            default_workspace_folder=(
+                getattr(type(host), "default_workspace_folder", ".")
+                if host is not None
+                else "."
+            ),
+            format=getattr(host, "format", None) if host is not None else None,
             host=host,
         )
         session.read_context_index()
@@ -1021,7 +1041,6 @@ class ContextToolHost:
         self.default_workspace_folder = default_workspace_folder
         self.fidelity = fidelity
         self._git = git
-        self.turn = Turn()
         self.artifact_path = ""
 
     @property
@@ -1060,7 +1079,8 @@ class ContextToolHost:
         )
         resolved = self.resolve_edit_path(explicit=path)
         self.artifact_path = resolved
-        open_turn = self.turn.open(self, action=action)
+        open_turn = session.turn
+        open_turn.action = action
         open_turn.artifact_path = resolved
         self.workspace.upsert_path(
             self.context_index_key,
@@ -1074,7 +1094,7 @@ class ContextToolHost:
         session = self.workspace.current_work_session
         if session is None:
             raise RuntimeError("no current work session")
-        self.turn.open(self)
+        session.turn
         call = ToolCall(
             toolset=self.context_index_key,
             name="expand",

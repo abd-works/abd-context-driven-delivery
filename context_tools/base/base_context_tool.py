@@ -26,9 +26,8 @@ from primitives.actions.action import AgenticToolset
 from primitives.actions.action import agent_instructions
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from record_decisions.record_decisions import RecordDecisions
 from scanners.scan import Scan
-from workspace.workspace import Turn, Workspace, WorkSession
+from workspace.workspace import Workspace, WorkSession
 from workspace import SessionLog
 from tools.tool import resource
 from tools.tool import agent_tool
@@ -84,9 +83,7 @@ class BaseContextTool(AgenticToolset):
         root = workspace or path or "."
         self.workspace = Workspace(str(root))
         self.workspace.load()
-        self.turn = Turn()
         self.scanner = Scan()
-        self.decisions = RecordDecisions()
         if self._session_name:
             self.workspace.open(
                 self,
@@ -176,31 +173,18 @@ class BaseContextTool(AgenticToolset):
     @instruction
     def scaffold(self) -> Instruction: ...
 
-    # -- Lifecycle actions (core host only; grill/sketch/iterate/partition are kit-owned) ---
+    # -- Guidance (contexts, examples, templates). Lifecycle lives on Generate / Validate / Document / Satisfy / Render. ---
     @agent_instructions
-    def generate(self) -> str:
-        self.workspace.open(self)
-        self.turn.open(self, action="generate")
-        self.decisions.record_decisions_session()
+    def guidance(self) -> str:
+        """contexts, examples, templates"""
         self.contexts
         self.examples
         self.templates
-        self.generate_output()
-        self.add_generate_header_to_generated()
-        SessionLog.instance().append(
-            toolset=type(self).manifest_path,
-            name="generate",
-            summary="generate",
-            ok=True,
-            role="run",
-        )
-        self.turn.finish_turn()
-        return "When done, run validate."
+        return ""
 
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:
-        self.generate
-        self.decisions.record_decisions_session()
+        self.guidance
         self.examples
         self.templates
         self.generate_output()
@@ -224,41 +208,6 @@ class BaseContextTool(AgenticToolset):
     def generate_output(self) -> str:
         """"""
         return ""
-
-    @agent_instructions
-    def document(self, paths: list[str]) -> str:
-        self.workspace.open(self)
-        self.turn.open(self, action="document")
-        self.contexts
-        self.templates
-        self.scanner.scan(paths)
-        self.generate_output()
-        self.add_generate_header_to_generated()
-        SessionLog.instance().append(
-            toolset=type(self).manifest_path,
-            name="document",
-            summary="document",
-            ok=True,
-            role="run",
-        )
-        self.turn.finish_turn()
-        return "Document existing state under {session.path}/ - violations flagged, none corrected."
-
-    @agent_instructions
-    def validate(self) -> str:
-        self.workspace.open(self)
-        self.turn.open(self, action="validate")
-        self.contexts
-        self.scanner.scan()
-        SessionLog.instance().append(
-            toolset=type(self).manifest_path,
-            name="validate",
-            summary="validate",
-            ok=True,
-            role="run",
-        )
-        self.turn.finish_turn()
-        return "Validation report for artifacts under {session.path}/."
 
     @agent_tool
     def scan(self, paths: list[str]) -> str:
@@ -291,48 +240,14 @@ class BaseContextTool(AgenticToolset):
             f"{type(self).__name__} has no programmatic renderer for {format!r}"
         )
 
-    @agent_instructions
-    def satisfy(self) -> str:
-        self.mode = "tool"
-        self.validate()
-        self.generate_fixes_from_validate()
-        SessionLog.instance().append(
-            toolset=type(self).manifest_path,
-            name="satisfy",
-            summary="satisfy",
-            ok=True,
-            role="run",
-        )
-        self.turn.finish_turn()
-        return "When done, run validate on artifacts under {session.path}/."
-
-    @agent_instructions
-    def createRule(self, failed: str, wanted: str) -> str:
-        """createRule"""
-        self.turn.open(self, action="createRule")
-        self.contexts
-        self.examples
-        self.templates
-        SessionLog.instance().append(
-            toolset=type(self).manifest_path,
-            name="createRule",
-            summary="createRule",
-            ok=True,
-            role="run",
-        )
-        self.turn.finish_turn()
-        return (
-            "Write a new named rule and matching scanner into this tool. "
-            "Then run that rule via scan on the asset and detect a failure "
-            "that matches the Mistake."
-        )
-
     @agent_tool
     def begin_turn(self, action: str = "") -> str:
-        """Open a workspace turn on the current work session."""
+        """Open a workspace if needed. The turn hangs off the work session."""
         if self.workspace.current_work_session is None:
             self.workspace.open(self)
-        turn = self.turn.open(self, action=action)
+        turn = self.workspace.current_work_session.turn
+        if action:
+            turn.action = action
         return turn.id
 
     @agent_tool

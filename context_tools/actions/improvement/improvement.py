@@ -7,6 +7,7 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
+from lifecycle import LifecycleAction
 from primitives.actions.action import agent_instructions, agentic_toolset
 from primitives.instructions import Instruction, instruction
 from tools.tool import agent_tool
@@ -14,7 +15,7 @@ from workspace import SessionLog
 
 
 @agentic_toolset
-class Improvement:
+class Improvement(LifecycleAction):
     """Slash ``/repair`` runs this kit with ``arguments.tools``; not composed on the host."""
 
     @property
@@ -31,10 +32,9 @@ class Improvement:
     def repair(self, tools: list, asset: str, violation: str) -> str:
         """Open a domain repair on each passed context tool and instruct the fix."""
         self.repair_loop
+        self.begin(tools, action="repair")
         for host in self.context_tools(tools):
-            host.workspace.open(host)
-            host.turn.open(host)
-            current = host.workspace.current_work_session
+            current = self._session()
             if current is None:
                 raise ValueError("No current work session — open failed")
             repair = current.repairs.for_violation(asset, violation)
@@ -49,6 +49,7 @@ class Improvement:
                 ok=True,
                 role="run",
             )
+        self.end()
         return (
             "Diagnose why the toolset's expected behavior failed for {{asset}} "
             "(run diagnose.diagnose:Diagnose). State the proposed kit change "
@@ -61,7 +62,7 @@ class Improvement:
         """verify_fix — regression check on a themed repair bucket."""
         lines: list[str] = []
         for host in self.context_tools(tools):
-            current = host.workspace.current_work_session
+            current = self.workspace.current_work_session
             if current is None:
                 raise ValueError("No current work session — open first")
             lines.append(current.repairs[theme].verify_fix())

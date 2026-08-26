@@ -12,6 +12,7 @@ import json
 from datetime import date
 from pathlib import Path
 
+from lifecycle import LifecycleAction
 from workspace import WorkSession, docs_dir
 from primitives.actions.action import agent_instructions
 from tools.tool import agent_tool, toolset
@@ -26,7 +27,7 @@ _RESERVED_SLUGS = frozenset({"handoff", "handoff-latest", "latest"})
 
 
 @toolset
-class Handoff:
+class Handoff(LifecycleAction):
     """Compact the current conversation into a handoff for the next agent session."""
 
     # ------------------------------------------------------------------
@@ -426,5 +427,7 @@ class Handoff:
     def handoff_session(self, destination: str, next_focus: str = "") -> str:
         """Compact the current session into a handoff document under the session working folder so a fresh agent can continue. Tailor the doc to {{next_focus}} when provided."""
         """Call compact_handoff(destination, next_focus). Tell the user the returned archive path and paste the Resume block from the written file."""
+        self.begin(action="handoff")
         self.compact_handoff()
+        self.end()
         return "Handoff written for {{destination}}."
