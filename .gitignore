@@ -14,3 +14,7 @@ sandbox/node_modules/
 # Generated Cursor skills and commands (agent_skills)
 .cursor/commands/
 .cursor/skills/
+utilities/agent_skills/.deploy-state.json
+
+# SessionLog append-only audit trails (runtime; not sprint artifacts)
+**/logs/events.log

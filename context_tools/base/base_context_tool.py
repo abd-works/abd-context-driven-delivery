@@ -180,7 +180,7 @@ class BaseContextTool(AgenticToolset):
     @agent_instructions
     def generate(self) -> str:
         self.workspace.open(self)
-        self.turn.open(self)
+        self.turn.open(self, action="generate")
         self.decisions.record_decisions_session()
         self.contexts
         self.examples
@@ -228,7 +228,7 @@ class BaseContextTool(AgenticToolset):
     @agent_instructions
     def document(self, paths: list[str]) -> str:
         self.workspace.open(self)
-        self.turn.open(self)
+        self.turn.open(self, action="document")
         self.contexts
         self.templates
         self.scanner.scan(paths)
@@ -247,7 +247,7 @@ class BaseContextTool(AgenticToolset):
     @agent_instructions
     def validate(self) -> str:
         self.workspace.open(self)
-        self.turn.open(self)
+        self.turn.open(self, action="validate")
         self.contexts
         self.scanner.scan()
         SessionLog.instance().append(
@@ -309,7 +309,7 @@ class BaseContextTool(AgenticToolset):
     @agent_instructions
     def createRule(self, failed: str, wanted: str) -> str:
         """createRule"""
-        self.turn.open(self)
+        self.turn.open(self, action="createRule")
         self.contexts
         self.examples
         self.templates

@@ -1560,6 +1560,16 @@ class _ActionRunner:
                 f"unknown action {action_name!r}",
                 response={"ok": False, "action": action_name, "error": "unknown action"},
             )
+        turn = getattr(request.instance, "turn", None)
+        if turn is not None and hasattr(turn, "bind_from_host"):
+            workspace = getattr(request.instance, "workspace", None)
+            if workspace is not None and getattr(workspace, "current_work_session", None) is None:
+                if hasattr(workspace, "open"):
+                    try:
+                        workspace.open(request.instance)
+                    except (ValueError, TypeError):
+                        pass
+            turn.open(request.instance, action=action_name)
         expanded = self._try_expand_action(request.instance.actions[action_name], request)
         return self._build_response(request.request, _RunOutput(
             toolset_path=request.toolset_path, action_name=request.action_name,

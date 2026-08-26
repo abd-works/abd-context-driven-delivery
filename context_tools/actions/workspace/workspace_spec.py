@@ -451,7 +451,12 @@ with description("a context tool"):
                     self.tmp = Path(tempfile.mkdtemp(prefix="ws-done-"))
                     self.git = NullGitRepo()
                     self.workspace = Workspace(str(self.tmp))
-                    self.host = ContextToolHost(self.workspace, git=self.git)
+                    self.host = ContextToolHost(
+                        self.workspace,
+                        git=self.git,
+                        fidelity="modules",
+                    )
+                    self.host.format = "python"
                     self.session = self.host.run_action("sprint-a")
                     self.turn = self.session.open_turn
                     self.git.set_dirty(True)
@@ -469,6 +474,12 @@ with description("a context tool"):
                 with it("should commit its scoped changes on the session branch"):
                     expect(len(self.git.commits)).to(equal(1))
                     expect(self.commit.sha).to(equal("commit-1"))
+                    expect(self.git.commits[0][1]).to(equal(self.turn.name))
+
+                with it("should name its turn from its context tool action fidelity and format"):
+                    expect(self.turn.name).to(
+                        equal("bdd-run-modules-python")
+                    )
 
                 with it("should push its session branch to origin"):
                     expect(self.git.pushes).to(equal(["session/sprint-a"]))
