@@ -1,0 +1,10 @@
+entry_id: 9d033ff4
+artifact: context_tools/bdd/.context/bdd-grill-sketch-workflow.md
+rule: eval-turn-single-process
+wrong: Ran begin_eval_turn, log_mistake, log_correction, and finish_eval_turn as separate tools.ps1 run calls. Each process reloads session.yaml only; mistakes on disk under mistakes/ are not in session._mistakes; log_correction _find_mistake fails silently; repairs/ not created; session.yaml turns 99079d1e and 2245e8ec have mistake_ids: [].
+original: Use .\tools.ps1 from repo root. Write _req.yaml, run, delete.
+(No warning that separate runs orphan log_mistake / log_correction.)
+tool: context_tools.bdd.bdd:Bdd
+fidelity: behavior
+introducing_commit: f53ef7da50dcc48f4df4c3d3898a6afbc73683f1
+fixed_by: 319df4a2748233185bf55864c4393b3af8d5023b
