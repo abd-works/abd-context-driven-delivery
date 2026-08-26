@@ -78,3 +78,5 @@
 2026-08-26T20:25:56 kind=expansion toolset=workflow.workflow:Workflow name=backlog ok=true summary=tools=compact_handoff,capture_backlog role=expansion
 2026-08-26T20:44:43 kind=expansion toolset=workflow.workflow:Workflow name=backlog ok=true summary=tools=compact_handoff,capture_backlog role=expansion
 2026-08-26T20:48:09 kind=expansion toolset=workflow.workflow:Workflow name=backlog ok=true summary=tools=compact_handoff,capture_backlog role=expansion
+2026-08-26T21:04:02 kind=expansion toolset=workflow.workflow:Workflow name=backlog ok=true summary=tools=compact_handoff,capture_backlog role=expansion
+2026-08-26T21:04:34 kind=expansion toolset=workflow.workflow:Workflow name=handoff_tool ok=true summary=tools=compact_handoff role=expansion
