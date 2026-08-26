@@ -1,0 +1,15 @@
+improved: # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""BDD behavior signatures — Workspace target model (slices A–E)."""
+
+from mamba import context, description, it
+
+with description("a context tool"):
+    with context("with a workspace"):
+        with context("that has an action run against it"):
+            with context("with a new work ses...
+how: Revert premature spec edit; agent-finish slice stays in sketch until validate + generate.
+status: fixed
+entry_ids: 32453ccf
+fix_commit: 8d96d5670fef943985dcdbc17bf736bb73aa9517
