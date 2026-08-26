@@ -1,0 +1,10 @@
+entry_id: genbdd001
+artifact: context_tools/actions/workspace/workspace.py
+rule: implement-from-oo-bdd-model
+wrong: BDD development generation ignored the OO clean-engineering model and BDD sketch: invented WorkspaceRepo / parallel session stacks instead of GitRepo + single WorkSession under Workspace; left legacy Session/WorkspaceSession/@log paths in place instead of retiring them; BDDs and code did not match the sketched behaviors.
+original: class WorkspaceRepo:  # not in OO model — behaviors belong on domain objects
+# dual WorkSession: workspace_session.WorkSession AND workspace.WorkSession
+tool: context_tools.bdd.bdd:Bdd
+fidelity: development
+introducing_commit: 41966b31538657e7a1efe572e6deda26f1cef4ac
+fixed_by: d3ccb6a44c7ccc838c3f4326e41b4cf1ea1907ab
