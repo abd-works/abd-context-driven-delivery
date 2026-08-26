@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import shutil
 from pathlib import Path
@@ -15,11 +16,66 @@ from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
 from tools.toolset_header import read_toolset_header
 
+from harness.bodies import ActionBody, ContextToolBody, FormatBody
+from harness.harness_tool import (
+    Command,
+    Instruction,
+    Prompt,
+    Rule,
+    Skill,
+    operation_writes,
+    prompt,
+    skill,
+)
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _IMPLEMENTED = frozenset({"Cursor", "VS Code"})
 _SKIP_DIRS = frozenset({"__pycache__", "examples", "primitives"})
 _STALE_ACTION_SKILL_SLUGS = ("grill-context", "workspace", "workflow")
 _WALK_TREES = ("context_tools", "utilities")
+_FORMATS = (
+    "markdown",
+    "json",
+    "drawio",
+    "miro",
+    "python",
+    "typescript",
+    "java",
+    "javascript",
+)
+_STAGES = ("discovery", "specification", "engineering")
+_FIDELITIES = (
+    "story_map",
+    "scenarios",
+    "acceptance_tests",
+    "bounded_context",
+    "building_blocks",
+    "tactics",
+    "modules",
+    "model",
+    "code",
+    "ia",
+    "mockup",
+    "front_end_code",
+    "behavior",
+    "development",
+    "spec",
+    "engineer",
+)
+_COMPANIONS = ("echo", "handoff", "backlog", "start", "finish")
+_HOST_ACTIONS = (
+    "partition",
+    "grill",
+    "sketch",
+    "generate",
+    "document",
+    "iterate",
+    "validate",
+    "satisfy",
+    "repair",
+    "improve",
+    "scaffold",
+)
 
 
 def _home() -> Path:
@@ -36,6 +92,11 @@ class Harness:
             raise TypeError("type is required")
         self.type = type
         self.repo_root = Path(repo_root) if repo_root is not None else _REPO_ROOT
+        self.skills: list[Skill] = []
+        self.prompts: list[Prompt] = []
+        self.commands: list[Command] = []
+        self.instruction_files: list[Instruction] = []
+        self.rules: list[Rule] = []
 
     def _require_implemented(self) -> None:
         if self.type not in _IMPLEMENTED:
@@ -137,36 +198,246 @@ class Harness:
             deduped.append(root)
         return deduped
 
-    def _source_skill_path(self, ide_root: Path, slug: str) -> Path:
-        return ide_root / "skills" / slug / "SKILL.md"
+    def _classify_path(self, file_path: str) -> str:
+        try:
+            parts = Path(file_path).resolve().relative_to(self.repo_root.resolve()).parts
+        except ValueError:
+            parts = Path(file_path).parts
+        if "utilities" in parts:
+            return "utility"
+        if "actions" in parts:
+            return "action"
+        return "context_tool"
 
-    def _harness_skill_path(self, ide_root: Path) -> Path:
-        return ide_root / "skills" / "harness" / "SKILL.md"
+    def _read_meta(self, path: Path, fallback_name: str) -> dict:
+        overview = fallback_name
+        class_string = fallback_name
+        guidance = "guidance"
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError):
+            return {
+                "overview": overview,
+                "class_string": class_string,
+                "guidance": guidance,
+            }
+        module_doc = ast.get_docstring(tree) or ""
+        if module_doc.strip():
+            overview = module_doc.strip().splitlines()[0]
+        for node in tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            class_string = (ast.get_docstring(node) or node.name).strip()
+            for item in node.body:
+                if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                doc = ast.get_docstring(item)
+                if doc:
+                    guidance = doc.strip()
+                    break
+            break
+        return {
+            "overview": overview,
+            "class_string": class_string,
+            "guidance": guidance,
+        }
 
-    def _harness_prompt_path(self, ide_root: Path) -> Path:
-        if self.type == "Cursor":
-            return ide_root / "commands" / "harness.md"
-        return ide_root / "prompts" / "harness.prompt.md"
+    def _body_for(self, job: dict):
+        kind = job["body_kind"]
+        name = job["name"]
+        if kind == "format":
+            return FormatBody.from_source(format=name)
+        if kind == "action":
+            return ActionBody.from_source(
+                name=name,
+                class_string=job.get("class_string", name),
+                operation_instructions=job.get("guidance", ""),
+                toolset=job.get("toolset", ""),
+            )
+        return ContextToolBody.from_source(
+            name=name,
+            overview=job.get("overview", name),
+            class_string=job.get("class_string", name),
+            guidance=job.get("guidance", "guidance"),
+            toolset=job.get("toolset", ""),
+        )
 
-    def _write_text(self, path: Path, content: str) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
-
-    def _write_source_placeholder(self, slug: str, roots: list[Path]) -> None:
-        content = f"# {slug}\ngenerated by Harness\n"
+    def _drop_action_skill(self, slug: str, roots: list[Path]) -> None:
         for root in roots:
-            self._write_text(self._source_skill_path(root, slug), content)
+            skill_dir = root / "skills" / slug
+            if skill_dir.is_dir():
+                shutil.rmtree(skill_dir)
+
+    def _record(self, tool) -> None:
+        if isinstance(tool, Skill):
+            self.skills.append(tool)
+        elif isinstance(tool, Command):
+            self.commands.append(tool)
+        elif isinstance(tool, Prompt):
+            self.prompts.append(tool)
+        elif isinstance(tool, Rule):
+            self.rules.append(tool)
+        elif isinstance(tool, Instruction):
+            self.instruction_files.append(tool)
+
+    def _write_vehicle(self, job: dict, roots: list[Path]) -> None:
+        name = job["name"]
+        vehicle = job["vehicle"]
+        body = self._body_for(job)
+        description = job.get("overview", name)
+        if vehicle == "skill":
+            tool = Skill(self.type, name)
+            tool.description = description
+            tool.body = body
+            tool.write(roots)
+            self._record(tool)
+            return
+        if vehicle == "instruction":
+            tool = Instruction(self.type, name)
+            tool.description = description
+            tool.body = body
+            written = tool.generate_for_ide(self.type, roots)
+            self._record(written)
+            return
+        tool = Prompt(self.type, name)
+        tool.description = description
+        tool.body = body
+        written = tool.generate_for_ide(self.type, roots)
+        self._record(written)
+
+    def _job_from_entry(self, entry: dict) -> list[dict]:
+        path = Path(entry["file_path"])
+        slug = entry["skill_slug"]
+        kind = self._classify_path(str(path))
+        meta = self._read_meta(path, slug)
+        toolset = entry.get("manifest_command", "").rsplit(" ", 1)[-1]
+        default_vehicle = "prompt" if kind == "action" else "skill"
+        default_body = "action" if kind == "action" else "context"
+        writes = operation_writes(path)
+        jobs: list[dict] = []
+        if writes:
+            for vehicle, deploy_name, operation, doc in writes:
+                jobs.append(
+                    {
+                        "name": deploy_name or slug,
+                        "vehicle": vehicle,
+                        "body_kind": default_body,
+                        "toolset": toolset,
+                        "overview": meta["overview"],
+                        "class_string": meta["class_string"],
+                        "guidance": doc or meta["guidance"],
+                        "operation": operation,
+                    }
+                )
+            return jobs
+        jobs.append(
+            {
+                "name": slug,
+                "vehicle": default_vehicle,
+                "body_kind": default_body,
+                "toolset": toolset,
+                **meta,
+            }
+        )
+        return jobs
+
+    def _catalog_job(self, name: str) -> dict | None:
+        if name in _FORMATS:
+            return {
+                "name": name,
+                "vehicle": "prompt",
+                "body_kind": "format",
+                "toolset": "the in-scope context tool",
+                "overview": name,
+                "class_string": name,
+                "guidance": f"generate and render as {name}",
+            }
+        if name in _STAGES or name in _FIDELITIES:
+            return {
+                "name": name,
+                "vehicle": "prompt",
+                "body_kind": "action",
+                "toolset": "the in-scope context tool",
+                "overview": name,
+                "class_string": name,
+                "guidance": f"Run at fidelity {name}. Do not treat this as a format.",
+            }
+        if name in _COMPANIONS or name in _HOST_ACTIONS:
+            return {
+                "name": name,
+                "vehicle": "prompt",
+                "body_kind": "action",
+                "toolset": name,
+                "overview": name,
+                "class_string": name,
+                "guidance": f"Run {name}.",
+            }
+        return None
+
+    def _jobs(self, source: str, name_filter: str) -> list[dict]:
+        wanted = source.strip()
+        jobs: list[dict] = []
+        seen: set[tuple[str, str]] = set()
+
+        def add(job: dict) -> None:
+            key = (job["name"], job["vehicle"])
+            if key in seen:
+                return
+            seen.add(key)
+            jobs.append(job)
+
+        if wanted:
+            catalog = self._catalog_job(wanted)
+            if catalog is not None:
+                add(catalog)
+                return jobs
+            for entry in json.loads(self.walk(name_filter)):
+                if entry["skill_slug"] == wanted:
+                    for job in self._job_from_entry(entry):
+                        add(job)
+                    return jobs
+            add(
+                {
+                    "name": wanted,
+                    "vehicle": "skill",
+                    "body_kind": "context",
+                    "toolset": wanted,
+                    "overview": wanted,
+                    "class_string": wanted,
+                    "guidance": wanted,
+                }
+            )
+            return jobs
+
+        for entry in json.loads(self.walk(name_filter)):
+            for job in self._job_from_entry(entry):
+                add(job)
+        for extra in (*_FORMATS, *_STAGES, *_FIDELITIES, *_COMPANIONS, *_HOST_ACTIONS):
+            catalog = self._catalog_job(extra)
+            if catalog is not None:
+                add(catalog)
+        return jobs
 
     def _write_harness_files(self, roots: list[Path]) -> None:
-        skill = (
-            "# Harness\n"
-            "python -m tools manifest harness.harness:Harness\n"
-            "python -m tools run _req.yaml\n"
+        body = ActionBody.from_source(
+            name="harness",
+            class_string="Deploy workspace toolsets as IDE skills, prompts, and instructions.",
+            operation_instructions=(
+                "With no IDE given, AskQuestion: Which IDE? Cursor | VS Code. "
+                "With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring."
+            ),
+            toolset="harness.harness:Harness",
         )
-        prompt = skill
-        for root in roots:
-            self._write_text(self._harness_skill_path(root), skill)
-            self._write_text(self._harness_prompt_path(root), prompt)
+        skill_file = Skill(self.type, "harness")
+        skill_file.description = "Deploy workspace toolsets as IDE skills, prompts, and instructions."
+        skill_file.body = body
+        skill_file.write(roots)
+        self._record(skill_file)
+        prompt_file = Prompt(self.type, "harness")
+        prompt_file.description = skill_file.description
+        prompt_file.body = body
+        written = prompt_file.generate_for_ide(self.type, roots)
+        self._record(written)
 
     def _remove_stale(self, roots: list[Path]) -> None:
         for root in roots:
@@ -229,18 +500,31 @@ class Harness:
     def write_deploy(self, source: str = "", name_filter: str = "") -> str:
         """Write scanned sources (or one source) plus Harness skill and prompt into the deploy area."""
         self._require_implemented()
+        self.skills = []
+        self.prompts = []
+        self.commands = []
+        self.instruction_files = []
+        self.rules = []
         roots = self._write_root_paths()
-        if source.strip():
-            slugs = [source.strip()]
-        else:
-            slugs = [entry["skill_slug"] for entry in json.loads(self.walk(name_filter))]
-        for slug in slugs:
-            self._write_source_placeholder(slug, roots)
+        jobs = self._jobs(source, name_filter)
+        for job in jobs:
+            self._write_vehicle(job, roots)
+        skill_names = {item.name for item in self.skills}
+        for job in jobs:
+            if job["vehicle"] == "prompt" and job["name"] not in skill_names:
+                self._drop_action_skill(job["name"], roots)
         self._write_harness_files(roots)
         self._remove_stale(roots)
         self._save_ide()
-        return json.dumps({"roots": [str(r) for r in roots], "sources": slugs})
+        return json.dumps(
+            {
+                "roots": [str(r) for r in roots],
+                "sources": [job["name"] for job in jobs],
+            }
+        )
 
+    @skill
+    @prompt
     @agent_instructions
     def generate(self, source: str | None = None, name_filter: str | None = None) -> str:
         """With no IDE given, AskQuestion: Which IDE? Cursor | VS Code."""
