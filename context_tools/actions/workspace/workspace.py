@@ -58,16 +58,57 @@ class Turn:
         self.context = ""
         self.tool_calls: list[ToolCall] = []
         self.change_commit: TurnCommit | None = None
-        self.commit_message = ""
+        self.tool_keys: list[str] = []
+        self.action = ""
+        self.fidelity = ""
+        self.format = ""
         self.pending_correction: Correction | None = None
         self.artifact_path = ""
 
-    def open(self, host: ContextToolHost) -> Turn:
+    @property
+    def name(self) -> str:
+        parts: list[str] = []
+        if self.tool_keys:
+            parts.append("-".join(self.tool_keys))
+        if self.action:
+            parts.append(self.action)
+        if self.fidelity:
+            parts.append(self.fidelity)
+        if self.format:
+            parts.append(self.format)
+        return "-".join(parts) if parts else f"turn-{self.id}"
+
+    @property
+    def commit_message(self) -> str:
+        return self.name
+
+    def bind_from_host(self, host: Any, *, action: str = "") -> None:
+        key = getattr(host, "context_index_key", "") or getattr(
+            type(host), "context_index_key", ""
+        )
+        if key:
+            self.tool_keys = [key]
+        if action:
+            self.action = action
+        host_fidelity = getattr(host, "fidelity", "") or ""
+        if host_fidelity:
+            self.fidelity = host_fidelity
+        host_format = getattr(host, "format", None)
+        if host_format:
+            self.format = str(host_format)
+        else:
+            session = getattr(getattr(host, "workspace", None), "current_work_session", None)
+            session_format = getattr(session, "format", None) if session is not None else None
+            if session_format:
+                self.format = str(session_format)
+
+    def open(self, host: ContextToolHost, *, action: str = "") -> Turn:
         session = host.workspace.current_work_session
         if session is None:
             raise RuntimeError("open turn requires currentWorkSession")
         if session.open_turn is None:
             session.open_turn = Turn(work_session=session)
+        session.open_turn.bind_from_host(host, action=action)
         return session.open_turn
 
     @agent_tool
@@ -106,9 +147,11 @@ class Turn:
         session.append_trail(run)
         change: TurnCommit | None = None
         if session.dirty:
-            message = self.commit_message or f"turn {self.id}"
+            message = self.name
             if self.pending_correction is not None:
-                message = self.pending_correction.correction_commit_message()
+                message = self.pending_correction.correction_commit_message(
+                    subject=self.name
+                )
             sha = session.git.commit(session.scope_paths, message)
             if self.pending_correction is not None:
                 self.pending_correction.link(session.git, sha)
@@ -253,9 +296,9 @@ class Correction:
             prior["fixed_by"] = fix_commit
             git.note(mistake.introducing_commit, prior)
 
-    def correction_commit_message(self) -> str:
+    def correction_commit_message(self, *, subject: str = "correction") -> str:
         lines = [
-            "correction",
+            subject,
             "",
             f"improved: {self.improved}",
             f"how: {self.how}",
@@ -975,7 +1018,14 @@ class ContextToolHost:
             return override.replace("\\", "/")
         return self.default_path
 
-    def run_action(self, name: str, *, path: str = "", goal: str = "") -> WorkSession:
+    def run_action(
+        self,
+        name: str,
+        *,
+        path: str = "",
+        goal: str = "",
+        action: str = "run",
+    ) -> WorkSession:
         session = self.workspace.open_work_session(
             name=name,
             goal=goal,
@@ -984,10 +1034,11 @@ class ContextToolHost:
             git=self._git,
             context_index_key=self.context_index_key,
             default_workspace_folder=self.default_workspace_folder,
+            format=getattr(self, "format", None),
         )
         resolved = self.resolve_edit_path(explicit=path)
         self.artifact_path = resolved
-        open_turn = self.turn.open(self)
+        open_turn = self.turn.open(self, action=action)
         open_turn.artifact_path = resolved
         self.workspace.upsert_path(
             self.context_index_key,
