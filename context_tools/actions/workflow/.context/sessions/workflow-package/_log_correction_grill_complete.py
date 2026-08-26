@@ -3,8 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from eval.session import EvalSession, Repair, repos_for_workspace
-from workspace.workspace import Workspace
+from _workspace_turn import log_correction_turn
 
 SESSION = "workflow-package"
 PATH = "context_tools/actions/workflow"
@@ -13,14 +12,10 @@ ENTRY_ID = "62fc32d6"
 
 
 def main() -> None:
-    ws = Workspace(PATH)
-    work_session = ws.open_work_session(name=SESSION, path=PATH)
-    git, cdd_repo = repos_for_workspace(work_session)
-    eval_session = EvalSession(workspace=work_session, git=git, cdd_repo=cdd_repo)
-    repairer = Repair(session=eval_session)
-
     improved = SKETCH.read_text(encoding="utf-8")
-    repairer.log_correction(
+    sha = log_correction_turn(
+        path=PATH,
+        session_name=SESSION,
         entry_id=ENTRY_ID,
         improved=improved,
         how=(
@@ -30,17 +25,10 @@ def main() -> None:
             "Backlog/In Progress/Done; aligned module-context and workflow.py "
             "(removed CDD-N/tickets.jsonl/backlog folder tools)."
         ),
-        status="fixed",
-    )
-
-    turn = eval_session.finish_turn(
         prompt="log correction — workflow sketch grill-complete usage story",
-        result=f"entry_id={ENTRY_ID} fixed",
-        context=SESSION,
     )
-    sha = turn.change_commit.sha if turn and turn.change_commit else "(no commit — clean tree)"
     print(f"entry_id={ENTRY_ID}")
-    print(f"turn_commit={sha}")
+    print(f"turn_commit={sha or '(no commit — clean tree)'}")
 
 
 if __name__ == "__main__":

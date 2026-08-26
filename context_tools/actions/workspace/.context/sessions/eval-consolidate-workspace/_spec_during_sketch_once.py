@@ -19,10 +19,9 @@ ORIGINAL = """            with context("that the agent is finished working with 
 
 def main() -> None:
     bdd = Bdd(fidelity="behavior", path=PATH, session=SESSION)
-    bdd.open()
-
-    bdd.begin_eval_turn()
-    eid = bdd.log_mistake(
+    bdd.workspace.open(bdd)
+    bdd.begin_turn(action="mistake")
+    eid = bdd.record_mistake(
         artifact=str(SPEC).replace("\\", "/"),
         rule="usage-order-behaviors",
         wrong=(
@@ -32,21 +31,22 @@ def main() -> None:
             "in workspace-bdd-sketch.md only until generate."
         ),
         original=ORIGINAL,
+        introducing_commit=bdd.workspace.current_work_session.git.current_commit,
     )
-    bdd.finish_eval_turn(
+    bdd.finish_turn(
         prompt="log mistake — spec edited during sketch phase",
         result=f"entry_id={eid}",
         context=SESSION,
     )
 
-    bdd.begin_eval_turn()
-    bdd.log_correction(
+    bdd.begin_turn(action="correction")
+    bdd.record_correction(
         entry_id=eid,
         improved=SPEC.read_text(encoding="utf-8"),
         how="Revert premature spec edit; agent-finish slice stays in sketch until validate + generate.",
         status="fixed",
     )
-    bdd.finish_eval_turn(
+    bdd.finish_turn(
         prompt="log correction — spec reverted; sketch-only until generate",
         result=f"entry_id={eid} fixed",
         context=SESSION,

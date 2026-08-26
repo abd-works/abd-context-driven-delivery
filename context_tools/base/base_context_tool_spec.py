@@ -334,12 +334,17 @@ with description("BaseContextTool public host face"):
     with it("should not expose close_session on the host"):
         expect("close_session" in self.host.tools).to(be_false)
 
-    with it("should not expose open or begin_eval_turn on the host"):
-        expect("open" in self.host.tools).to(be_false)
+    with it("should not expose begin_eval_turn or finish_eval_turn on the host"):
         expect("begin_eval_turn" in self.host.tools).to(be_false)
         expect("finish_eval_turn" in self.host.tools).to(be_false)
 
-    with it("should not expose log_mistake, log_correction, or repair on the host"):
+    with it("should expose workspace turn tools on the host"):
+        expect("begin_turn" in self.host.tools).to(be_true)
+        expect("finish_turn" in self.host.tools).to(be_true)
+        expect("record_mistake" in self.host.tools).to(be_true)
+        expect("record_correction" in self.host.tools).to(be_true)
+
+    with it("should not expose legacy log_mistake or log_correction on the host"):
         expect("log_mistake" in self.host.tools).to(be_false)
         expect("log_correction" in self.host.tools).to(be_false)
         expect("repair" in getattr(self.host, "actions", {})).to(be_false)

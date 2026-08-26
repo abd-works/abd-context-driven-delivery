@@ -10,8 +10,7 @@ named context tool runs `action: generate` (etc.) in order.
 
 ## Membership
 Host-action kits: `sketch`, `iterate`, `grill_context`, `partition`,
-`improvement`, `eval` (`eval.session:EvalSession`; agentic Repair deferred),
-`workspace`
+`improvement`, `workspace`
 Companions: `echo`, `handoff`, `workflow`
 
 Host-action skill/command names match the BaseContextTool operation (`grill`, not

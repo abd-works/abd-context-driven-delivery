@@ -1,12 +1,12 @@
 """Mistake turn — workflow sketch duplicated workspace git/session branch scope."""
 from __future__ import annotations
 
-from eval.session import EvalSession, Repair, repos_for_workspace
-from workspace.workspace import Workspace
+from _workspace_turn import log_mistake_turn
 
 SESSION = "workflow-package"
 PATH = "context_tools/actions/workflow"
 ARTIFACT = "context_tools/actions/workflow/.context/workflow-bdd-sketch.md"
+INTRODUCING_SHA = "be3d9aed66c0a06668344f889beeddae59cb7027"
 
 ORIGINAL_EXCERPT = """\
           it should set the current work session to that work session
@@ -29,13 +29,9 @@ ORIGINAL_EXCERPT = """\
 
 
 def main() -> None:
-    ws = Workspace(PATH)
-    work_session = ws.open_work_session(name=SESSION, path=PATH)
-    git, cdd_repo = repos_for_workspace(work_session)
-    eval_session = EvalSession(workspace=work_session, git=git, cdd_repo=cdd_repo)
-    repairer = Repair(session=eval_session)
-
-    entry_id = repairer.log_mistake(
+    entry_id, sha = log_mistake_turn(
+        path=PATH,
+        session_name=SESSION,
         artifact=ARTIFACT,
         rule="layer-isolation",
         wrong=(
@@ -46,18 +42,11 @@ def main() -> None:
             "workflow outcomes (Project status, issue body, trailers, finish orchestration)."
         ),
         original=ORIGINAL_EXCERPT,
-        tool="bdd",
-        fidelity="behavior",
-    )
-
-    turn = eval_session.finish_turn(
+        introducing_commit=INTRODUCING_SHA,
         prompt="log mistake — workflow sketch duplicated workspace scope",
-        result=f"entry_id={entry_id}",
-        context=SESSION,
     )
-    sha = turn.change_commit.sha if turn and turn.change_commit else "(no commit)"
     print(f"entry_id={entry_id}")
-    print(f"turn_commit={sha}")
+    print(f"turn_commit={sha or '(no commit)'}")
 
 
 if __name__ == "__main__":

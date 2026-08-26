@@ -327,6 +327,84 @@ class BaseContextTool(AgenticToolset):
             "that matches the Mistake."
         )
 
+    @agent_tool
+    def begin_turn(self, action: str = "") -> str:
+        """Open a workspace turn on the current work session."""
+        if self.workspace.current_work_session is None:
+            self.workspace.open(self)
+        turn = self.turn.open(self, action=action)
+        return turn.id
+
+    @agent_tool
+    def finish_turn(
+        self, prompt: str = "", result: str = "", context: str = ""
+    ) -> str:
+        """Finish the open workspace turn; commits on the session branch when dirty."""
+        current = self.workspace.current_work_session
+        if current is None or current.open_turn is None:
+            raise RuntimeError("no open turn — call begin_turn first")
+        commit = current.open_turn.finish(
+            prompt=prompt, result=result, context=context
+        )
+        return commit.sha if commit else ""
+
+    @agent_tool
+    def record_mistake(
+        self,
+        artifact: str,
+        rule: str,
+        wrong: str,
+        original: str,
+        introducing_commit: str,
+        entry_id: str = "",
+        tool: str = "",
+        fidelity: str = "",
+    ) -> str:
+        """Annotate a mistake on the introducing commit (git-primary)."""
+        import uuid
+
+        current = self.workspace.current_work_session
+        if current is None or current.open_turn is None:
+            raise RuntimeError("no open turn — call begin_turn first")
+        eid = entry_id or uuid.uuid4().hex[:8]
+        current.open_turn.record_mistake(
+            entry_id=eid,
+            artifact=artifact.replace("\\", "/"),
+            rule=rule,
+            wrong=wrong,
+            original=original,
+            tool=tool or getattr(type(self), "context_index_key", "") or "bdd",
+            fidelity=fidelity or getattr(self, "fidelity", "") or "",
+            introducing_commit=introducing_commit,
+        )
+        return eid
+
+    @agent_tool
+    def record_correction(
+        self,
+        entry_id: str = "",
+        improved: str = "",
+        how: str = "",
+        status: str = "fixed",
+        entry_ids: list[str] | None = None,
+    ) -> str:
+        """Link a correction to mistake entry ids on the open turn."""
+        current = self.workspace.current_work_session
+        if current is None or current.open_turn is None:
+            raise RuntimeError("no open turn — call begin_turn first")
+        ids = list(entry_ids or [])
+        if entry_id and entry_id not in ids:
+            ids.append(entry_id)
+        if not ids:
+            raise ValueError("record_correction requires entry_id or entry_ids")
+        current.open_turn.record_correction(
+            entry_ids=ids,
+            improved=improved,
+            how=how,
+            status=status,
+        )
+        return ids[0]
+
 
 BaseContextTool._is_context = True  # type: ignore[attr-defined]
 BaseContextTool._is_toolset = True  # type: ignore[attr-defined]

@@ -6,7 +6,7 @@
 """Draw.io miniature kit — render class diagrams, scan layout rules, repair on failure.
 
 Not a full context tool: no partition / grill / sketch / fidelities. Composed by
-CleanEngineering when ``format`` is ``drawio``. Reuses Scan + Repair kits.
+CleanEngineering when ``format`` is ``drawio``. Reuses Scan kit.
 """
 
 from __future__ import annotations
@@ -15,7 +15,6 @@ from pathlib import Path
 
 from primitives.actions.action import agent_instructions, agentic_toolset
 from primitives.instructions import Instruction, instruction
-from eval.session import Repair
 from scanners.scan import Scan
 from scanners.scanner_collection import ScannerCollection
 from sub_agent.sub_agent import sub_agent
@@ -50,12 +49,6 @@ class Drawio:
     def __init__(self, workspace=None) -> None:
         self.workspace = workspace
         self.scanner = _DrawioScan(self.module_dir)
-        self.repairer = Repair(
-            session=getattr(workspace, "eval", None),
-            scanner=self.scanner,
-            host=self,
-            workspace=workspace,
-        )
 
     @property
     def module_dir(self) -> Path:
@@ -142,7 +135,6 @@ class Drawio:
         self.scan()
         self.contexts
         self.examples
-        self.repairer.repair_session(asset, violation)
         return "Repair {{asset}} until drawio validate/scan passes. Fix the layout generator — not a one-off diagram edit."
 
     @agent_instructions
@@ -170,5 +162,9 @@ class Drawio:
     @sub_agent
     @agent_tool
     def verify_regression(self, examples_root: str = "") -> str:
-        """Eval the repair (scan before/after + judge); examples_root is unused."""
-        return self.repairer.eval()
+        """Regression check after repair (scan before/after + judge)."""
+        _ = examples_root
+        return (
+            "Eval the repair with expect_scan_fails on the before file and "
+            "expect_scan_passes on the after file (context_tools.bdd.spec_helpers)."
+        )

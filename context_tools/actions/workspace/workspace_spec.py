@@ -327,6 +327,14 @@ with description("a context tool"):
                         note = self.git.read_notes(self.introducing)
                         expect(note.get("entry_id")).to(equal("m001"))
 
+                    with it("should own the mistake on its open turn"):
+                        expect(self.mistake in self.session.open_turn.mistakes).to(
+                            be_true
+                        )
+                        expect(self.session.open_turn.mistakes[0].entry_id).to(
+                            equal("m001")
+                        )
+
                     with it("should note the artifact path on that commit"):
                         expect(
                             self.git.read_notes(self.introducing).get("artifact")
@@ -388,6 +396,7 @@ with description("a context tool"):
                             how="annotate + link",
                             status="fixed",
                         )
+                        self.correction = self.session.open_turn.correction
                         self.git.set_dirty(True)
                         self.session.open_turn.finish(result="fixed")
                         self.fix = self.git.current_commit
@@ -396,6 +405,12 @@ with description("a context tool"):
                         "should record the improved content on its correction commit on the session branch"
                     ):
                         expect(self.git.read_notes(self.fix).get("improved")).to(
+                            equal("notes on introducing SHA")
+                        )
+
+                    with it("should own the correction on its open turn"):
+                        expect(self.correction is not None).to(be_true)
+                        expect(self.correction.improved).to(
                             equal("notes on introducing SHA")
                         )
 

@@ -10,9 +10,6 @@ PATH = "context_tools/actions/workspace"
 SKETCH = Path(
     "context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md"
 )
-EVAL_SKETCH = Path(
-    "context_tools/actions/eval/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md"
-)
 ORIGINAL = """a context tool
   that has an action run against it
     with a workspace
@@ -22,10 +19,9 @@ ORIGINAL = """a context tool
 
 def main() -> None:
     bdd = Bdd(fidelity="behavior", path=PATH, session=SESSION)
-    bdd.open()
-
-    bdd.begin_eval_turn()
-    eid = bdd.log_mistake(
+    bdd.workspace.open(bdd)
+    bdd.begin_turn(action="mistake")
+    eid = bdd.record_mistake(
         artifact=str(SKETCH).replace("\\", "/"),
         rule="usage-order-behaviors",
         wrong=(
@@ -34,25 +30,24 @@ def main() -> None:
             "`with a workspace` → domain entry event — not event-before-standing."
         ),
         original=ORIGINAL,
+        introducing_commit=bdd.workspace.current_work_session.git.current_commit,
     )
-    bdd.finish_eval_turn(
+    bdd.finish_turn(
         prompt="log mistake — sketch entry hierarchy inverted",
         result=f"entry_id={eid}",
         context=SESSION,
     )
 
     fixed = SKETCH.read_text(encoding="utf-8")
-    SKETCH.write_text(fixed, encoding="utf-8")
-    EVAL_SKETCH.write_text(fixed, encoding="utf-8")
 
-    bdd.begin_eval_turn()
-    bdd.log_correction(
+    bdd.begin_turn(action="correction")
+    bdd.record_correction(
         entry_id=eid,
         improved=fixed,
-        how="Restore tick 8 order: with a workspace before that has an action run against it; sync eval copy.",
+        how="Restore tick 8 order: with a workspace before that has an action run against it.",
         status="fixed",
     )
-    bdd.finish_eval_turn(
+    bdd.finish_turn(
         prompt="log correction — sketch entry hierarchy",
         result=f"entry_id={eid} fixed",
         context=SESSION,

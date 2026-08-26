@@ -32,6 +32,8 @@
   session.md kit (`ensure_started`, `close`, `close_session`, context index helpers)
 - `GitRepo` / `NullGitRepo` — `checkout_or_create`, `commit`, `push`, notes (`note` /
   `read_notes` / `find_mistakes`). Session branch naming is WorkSession policy.
+- `Turn` — owns `mistakes` and optional `correction` directly; `record_mistake` /
+  `record_correction` attach to the open turn before `finish`
 - `Turn` / `Mistake` / `Correction` / `PathOverride` / `ToolCall` / `TurnCommit`
 - `SessionLog` — `append` → events.log + openTurn.toolCalls; **delete `@log` as host primary**
 - `ContextToolHost` — OO host used by `workspace_spec` (production host is `BaseContextTool`)

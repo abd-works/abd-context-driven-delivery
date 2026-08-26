@@ -16,7 +16,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"
 _GENERATOR_DIR = _REPO_ROOT / "context_tools" / "base"
 _LIFECYCLE_PROSE_DIR = _GENERATOR_DIR  # sections in base_context_tool.md
-_REPAIR_DIR = _REPO_ROOT / "context_tools" / "actions" / "eval"
+_REPAIR_DIR = _REPO_ROOT / "context_tools" / "actions" / "improvement"
 
 from primitives.instructions import Instruction
 from primitives.instructions import _active_resource, _format_keys, _path_for_name, _path_for_templates
@@ -205,10 +205,11 @@ with description("_expand_docstring"):
             expect(expanded).to(equal(direct))
 
     with context("a kit-local repair action docstring"):
-        with it("should equal the direct load of context_tools/actions/eval/repair.md"):
-            from context_tools.base.base_context_tool import BaseContextTool
+        with it("should equal the direct load of context_tools/actions/improvement/repair.md"):
+            from context_tools.actions.improvement.improvement import Improvement
+
             expanded = _expand_docstring(
-                "repair", BaseContextTool.repair, instance=BaseContextTool()
+                "repair", Improvement.repair, instance=Improvement()
             )
             direct = Instruction("repair", _REPAIR_DIR).expand()
             expect(expanded).to(equal(direct))

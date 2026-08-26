@@ -62,7 +62,8 @@ class Turn:
         self.action = ""
         self.fidelity = ""
         self.format = ""
-        self.pending_correction: Correction | None = None
+        self.mistakes: list[Mistake] = []
+        self.correction: Correction | None = None
         self.artifact_path = ""
 
     @property
@@ -148,13 +149,13 @@ class Turn:
         change: TurnCommit | None = None
         if session.dirty:
             message = self.name
-            if self.pending_correction is not None:
-                message = self.pending_correction.correction_commit_message(
+            if self.correction is not None:
+                message = self.correction.correction_commit_message(
                     subject=self.name
                 )
             sha = session.git.commit(session.scope_paths, message)
-            if self.pending_correction is not None:
-                self.pending_correction.link(session.git, sha)
+            if self.correction is not None:
+                self.correction.link(session.git, sha)
             change = TurnCommit(
                 turn_id=self.id,
                 session_name=session.name,
@@ -195,6 +196,7 @@ class Turn:
             introducing_commit=introducing_commit,
         )
         mistake.annotate(session.git)
+        self.mistakes.append(mistake)
         return mistake
 
     @agent_tool
@@ -210,6 +212,22 @@ class Turn:
         if session is None:
             raise RuntimeError("record_correction requires workSession")
         found = session.git.find_mistakes(entry_ids)
+        if not found and self.mistakes:
+            wanted = set(entry_ids)
+            found = [
+                {
+                    "entry_id": m.entry_id,
+                    "artifact": m.artifact,
+                    "rule": m.rule,
+                    "wrong": m.wrong,
+                    "original": m.original,
+                    "tool": m.tool,
+                    "fidelity": m.fidelity,
+                    "introducing_commit": m.introducing_commit,
+                }
+                for m in self.mistakes
+                if m.entry_id in wanted
+            ]
         correction = Correction(improved=improved, how=how, status=status)
         for row in found:
             correction.add(
@@ -224,7 +242,7 @@ class Turn:
                     introducing_commit=row.get("introducing_commit", ""),
                 )
             )
-        self.pending_correction = correction
+        self.correction = correction
         return correction
 
 
