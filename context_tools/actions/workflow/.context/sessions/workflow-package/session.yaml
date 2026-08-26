@@ -202,3 +202,43 @@ turns:
     name: bdd-mistake-behavior-python
   tool_calls: []
   mistakes: []
+- id: e1d772dc
+  prompt: log mistake — workflow sketch duplicated workspace scope
+  result: entry_id=7c6b38b2
+  context: workflow-package
+  change_commit:
+    session_name: workflow-package
+    tool_names: []
+    mistake_ids:
+    - 7c6b38b2
+    sha: 8ca1c5954168acdd5d72b3f6c102e318ce903928
+    name: bdd-correction-behavior-python
+  tool_calls: []
+  mistakes:
+  - entry_id: 7c6b38b2
+    artifact: context_tools/actions/workflow/.context/workflow-bdd-sketch.md
+    rule: layer-isolation
+    wrong: Copied workspace git branch policy into workflow sketch — HEAD on session
+      branch, clean/dirty tree checkout/create/refuse, mergeable branch, merge conflicts.
+      Workflow depends on workspace for that; its scope is validate session opened
+      and branch set for the work session after start, plus workflow outcomes (Project
+      status, issue body, trailers, finish orchestration).
+    original: "          it should set the current work session to that work session\n\
+      \          with HEAD already on its session branch\n            it should continue\
+      \ without switching branch\n          with a clean working tree not on its session\
+      \ branch\n            with an existing session branch for that ticket\n    \
+      \          it should check out that session branch\n            with no session\
+      \ branch yet\n              it should create the session branch for that work\
+      \ session\n          with a dirty working tree not on its session branch\n \
+      \           it should refuse to switch branch\n...\n              with a clean\
+      \ mergeable session branch\n              with a dirty working tree\n      \
+      \          it should refuse to merge until the tree is clean\n             \
+      \ with merge conflicts\n                it should report the conflict and leave\
+      \ the session open\n"
+    tool: bdd
+    fidelity: behavior
+    folder: mistakes/layer-isolation
+    correction:
+      improved: ''
+      how: ''
+      status: open
