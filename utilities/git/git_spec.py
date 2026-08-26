@@ -77,7 +77,7 @@ with description("a Repo"):
 
         with it("should create tickets and track project state"):
             project = self.repo.attach_project("demo-org", 3)
-            ticket = Ticket.create(self.repo, "Workflow package", "forward requirements")
+            ticket = self.repo.create_ticket("Workflow package", "forward requirements")
             project.add_ticket(ticket, "Backlog")
             expect(ticket.state.name).to(equal("Backlog"))
             project.set_ticket_state(ticket, "In Progress")
@@ -96,7 +96,7 @@ with description("a Repo ticket lifecycle"):
     with before.each:
         self.repo = Repo.memory("/tmp/demo-clone")
         self.project = self.repo.attach_project("demo-org", 3)
-        self.ticket = Ticket.create(self.repo, "Demo", "body")
+        self.ticket = self.repo.create_ticket("Demo", "body")
         self.project.add_ticket(self.ticket, "Backlog")
 
     with it("should close tickets"):

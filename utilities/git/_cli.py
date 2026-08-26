@@ -124,60 +124,6 @@ def _gh_owner_repo(root: Path) -> tuple[str, str]:
     return owner, repo
 
 
-def _gh_view_issue(root: Path, number: int) -> dict[str, str | int] | None:
-    try:
-        raw = _run_gh(
-            "-C",
-            str(root),
-            "issue",
-            "view",
-            str(number),
-            "--json",
-            "number,title,body,url,state",
-        )
-    except _GhConnectError as exc:
-        message = str(exc).lower()
-        if "could not resolve" in message or "not found" in message:
-            return None
-        raise
-    payload = json.loads(raw or "{}")
-    if not payload:
-        return None
-    return {
-        "number": int(payload["number"]),
-        "title": str(payload.get("title") or ""),
-        "body": str(payload.get("body") or ""),
-        "url": str(payload.get("url") or ""),
-        "state": str(payload.get("state") or ""),
-    }
-
-
-def _gh_create_issue(root: Path, title: str, body: str) -> dict[str, str | int]:
-    raw = _run_gh(
-        "-C",
-        str(root),
-        "issue",
-        "create",
-        "--title",
-        title,
-        "--body",
-        body,
-        "--json",
-        "number,title,body,url",
-    )
-    payload = json.loads(raw or "{}")
-    return {
-        "number": int(payload["number"]),
-        "title": str(payload.get("title") or title),
-        "body": str(payload.get("body") or body),
-        "url": str(payload.get("url") or ""),
-    }
-
-
-def _gh_close_issue(root: Path, number: int) -> None:
-    _run_gh("-C", str(root), "issue", "close", str(number))
-
-
 def _gh_set_project_status(
     issue_url: str,
     status: str,

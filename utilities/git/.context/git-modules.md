@@ -69,6 +69,7 @@ commit(paths, message): str
 push(): None
 merge_branch(source, into, message): str
 ticket(ref): Ticket | None
+create_ticket(title, body): Ticket
 attach_project(owner, number): Project
 workflow_commit_message(subject, issue_number, workflow_state, reviewed_by): str
 note(sha, payload): None
@@ -124,7 +125,6 @@ state: TicketState | None
 data: dict
 ----
 closed: bool
-create(repo, title, body): Ticket
 parse_number(ref): int
 github_ref(owner, repo, number): str
 close(): None
