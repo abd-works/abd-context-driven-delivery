@@ -41,17 +41,69 @@ def _write_toolset(path: Path, module: str, class_name: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         f"# @toolset-manifest python -m tools manifest {module}:{class_name}\n"
-        f'"""{class_name}."""\n',
+        f'"""{class_name}."""\n'
+        f"class {class_name}:\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+
+def _write_context_tool(
+    path: Path,
+    module: str,
+    class_name: str,
+    fidelities: dict[str, str],
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    items = ", ".join(f'"{key}": "{value}"' for key, value in fidelities.items())
+    path.write_text(
+        f"# @toolset-manifest python -m tools manifest {module}:{class_name}\n"
+        f'"""{class_name}."""\n'
+        f"class {class_name}:\n"
+        f"    fidelities = {{{items}}}\n",
+        encoding="utf-8",
+    )
+
+
+def _write_action_with_operation(path: Path, module: str, class_name: str, operation: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"# @toolset-manifest python -m tools manifest {module}:{class_name}\n"
+        f'"""{class_name}."""\n'
+        f"class {class_name}:\n"
+        "    @agent_instructions\n"
+        f"    def {operation}(self):\n"
+        f'        """Run {operation}."""\n'
+        "        return None\n",
         encoding="utf-8",
     )
 
 
 def _sandbox() -> Path:
     root = Path(tempfile.mkdtemp())
-    _write_toolset(
+    _write_context_tool(
         root / "context_tools" / "stories" / "stories.py",
         "context_tools.stories.stories",
         "Stories",
+        {"discovery": "story_map", "shaping": "scaffold"},
+    )
+    _write_context_tool(
+        root / "context_tools" / "clean_engineering" / "clean_engineering.py",
+        "context_tools.clean_engineering.clean_engineering",
+        "CleanEngineering",
+        {"engineering": "model"},
+    )
+    _write_context_tool(
+        root / "context_tools" / "ddd" / "ddd.py",
+        "context_tools.ddd.ddd",
+        "Ddd",
+        {"discovery": "bounded_context"},
+    )
+    _write_context_tool(
+        root / "context_tools" / "ux" / "ux.py",
+        "context_tools.ux.ux",
+        "Ux",
+        {"discovery": "ia"},
     )
     _write_toolset(
         root / "utilities" / "widget" / "widget.py",
@@ -62,6 +114,22 @@ def _sandbox() -> Path:
         root / "primitives" / "skipme" / "skipme.py",
         "primitives.skipme.skipme",
         "Skipme",
+    )
+    for slug, class_name in (
+        ("sketch", "Sketcher"),
+        ("echo", "Echoer"),
+        ("handoff", "Handoff"),
+    ):
+        _write_toolset(
+            root / "context_tools" / "actions" / slug / f"{slug}.py",
+            f"context_tools.actions.{slug}.{slug}",
+            class_name,
+        )
+    _write_action_with_operation(
+        root / "context_tools" / "actions" / "workflow" / "workflow.py",
+        "context_tools.actions.workflow.workflow",
+        "Workflow",
+        "backlog",
     )
     (root / "primitives" / "harness").mkdir(parents=True, exist_ok=True)
     stale = root / ".cursor" / "skills" / "grill-context"
@@ -215,7 +283,7 @@ with description("a harness"):
                 expected = ContextToolBody.from_source(
                     name="stories",
                     overview="Stories.",
-                    class_string="stories",
+                    class_string="Stories",
                     guidance="guidance",
                     toolset="context_tools.stories.stories:Stories",
                 )
@@ -241,6 +309,12 @@ with description("a harness"):
                 expect((root / ".cursor" / "skills" / "sketch").exists()).to(equal(False))
                 command = next(c for c in harness.commands if c.name == "sketch")
                 expect(command.body.text).to(contain("Run this action for any provided context tools"))
+
+        with context("with a workflow backlog operation"):
+            with it("should write a prompt from the operation on the walked action"):
+                root = _sandbox()
+                Harness("Cursor", repo_root=root).write_deploy(source="backlog")
+                expect((root / ".cursor" / "commands" / "backlog.md").is_file()).to(equal(True))
 
         with context("with echo"):
             with it("should write a prompt"):

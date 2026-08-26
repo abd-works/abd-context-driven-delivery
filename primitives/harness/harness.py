@@ -43,39 +43,6 @@ _FORMATS = (
     "java",
     "javascript",
 )
-_STAGES = ("discovery", "specification", "engineering")
-_FIDELITIES = (
-    "story_map",
-    "scenarios",
-    "acceptance_tests",
-    "bounded_context",
-    "building_blocks",
-    "tactics",
-    "modules",
-    "model",
-    "code",
-    "ia",
-    "mockup",
-    "front_end_code",
-    "behavior",
-    "development",
-    "spec",
-    "engineer",
-)
-_COMPANIONS = ("echo", "handoff", "backlog", "start", "finish")
-_HOST_ACTIONS = (
-    "partition",
-    "grill",
-    "sketch",
-    "generate",
-    "document",
-    "iterate",
-    "validate",
-    "satisfy",
-    "repair",
-    "improve",
-    "scaffold",
-)
 
 
 def _home() -> Path:
@@ -242,6 +209,125 @@ class Harness:
             "guidance": guidance,
         }
 
+    def _literal_name(self, node: ast.AST) -> str | None:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        if isinstance(node, ast.Attribute):
+            return node.attr.lower()
+        return None
+
+    def _assign_target_name(self, node: ast.AST) -> str | None:
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            return node.attr
+        return None
+
+    def _dict_names(self, node: ast.Dict) -> list[str]:
+        names: list[str] = []
+        for key, value in zip(node.keys, node.values):
+            if key is not None:
+                read = self._literal_name(key)
+                if read:
+                    names.append(read)
+            read = self._literal_name(value)
+            if read:
+                names.append(read)
+        return names
+
+    def _names_from_assign(self, node: ast.Assign, attr: str) -> list[str]:
+        if not any(self._assign_target_name(target) == attr for target in node.targets):
+            return []
+        if isinstance(node.value, ast.Dict):
+            return self._dict_names(node.value)
+        return []
+
+    def _fidelity_names(self, path: Path) -> list[str]:
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError):
+            return []
+        names: list[str] = []
+        for node in tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            for item in node.body:
+                if isinstance(item, ast.Assign):
+                    names.extend(self._names_from_assign(item, "fidelities"))
+                    names.extend(self._names_from_assign(item, "STAGE_ALIASES"))
+                elif isinstance(item, ast.AnnAssign) and item.value is not None:
+                    target = self._assign_target_name(item.target)
+                    if target in {"fidelities", "STAGE_ALIASES"} and isinstance(item.value, ast.Dict):
+                        names.extend(self._dict_names(item.value))
+        seen: set[str] = set()
+        unique: list[str] = []
+        for name in names:
+            if name in seen:
+                continue
+            seen.add(name)
+            unique.append(name)
+        return unique
+
+    def _instruction_operations(self, path: Path) -> list[tuple[str, str]]:
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError):
+            return []
+        found: list[tuple[str, str]] = []
+        for node in tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            for item in node.body:
+                if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                if item.name.startswith("_"):
+                    continue
+                deco_names: list[str] = []
+                for dec in item.decorator_list:
+                    target = dec.func if isinstance(dec, ast.Call) else dec
+                    if isinstance(target, ast.Name):
+                        deco_names.append(target.id)
+                    elif isinstance(target, ast.Attribute):
+                        deco_names.append(target.attr)
+                if "agent_instructions" not in deco_names:
+                    continue
+                found.append((item.name, ast.get_docstring(item) or ""))
+        return found
+
+    def _prompt_job(
+        self,
+        name: str,
+        *,
+        toolset: str,
+        meta: dict,
+        guidance: str,
+        fidelity: bool,
+    ) -> dict:
+        if fidelity and name != "scaffold":
+            text = f"Run at fidelity {name}. Do not treat this as a format."
+        else:
+            text = guidance
+        return {
+            "name": name,
+            "vehicle": "prompt",
+            "body_kind": "action",
+            "toolset": toolset,
+            "overview": meta.get("overview", name),
+            "class_string": meta.get("class_string", name),
+            "guidance": text,
+        }
+
+    def _format_job(self, name: str) -> dict:
+        return {
+            "name": name,
+            "vehicle": "prompt",
+            "body_kind": "format",
+            "toolset": "the in-scope context tool",
+            "overview": name,
+            "class_string": name,
+            "guidance": f"generate and render as {name}",
+        }
+
     def _body_for(self, job: dict):
         kind = job["body_kind"]
         name = job["name"]
@@ -327,52 +413,49 @@ class Harness:
                         "class_string": meta["class_string"],
                         "guidance": doc or meta["guidance"],
                         "operation": operation,
+                        "source_slug": slug,
+                        "derived": "source",
                     }
                 )
-            return jobs
-        jobs.append(
-            {
-                "name": slug,
-                "vehicle": default_vehicle,
-                "body_kind": default_body,
-                "toolset": toolset,
-                **meta,
-            }
-        )
+        else:
+            jobs.append(
+                {
+                    "name": slug,
+                    "vehicle": default_vehicle,
+                    "body_kind": default_body,
+                    "toolset": toolset,
+                    "source_slug": slug,
+                    "derived": "source",
+                    **meta,
+                }
+            )
+        if kind != "action":
+            for fidelity_name in self._fidelity_names(path):
+                job = self._prompt_job(
+                    fidelity_name,
+                    toolset=toolset,
+                    meta=meta,
+                    guidance=f"Run {fidelity_name}.",
+                    fidelity=True,
+                )
+                job["source_slug"] = slug
+                job["derived"] = "fidelity"
+                jobs.append(job)
+        else:
+            for operation, doc in self._instruction_operations(path):
+                if operation == slug:
+                    continue
+                job = self._prompt_job(
+                    operation,
+                    toolset=toolset,
+                    meta=meta,
+                    guidance=doc or f"Run {operation}.",
+                    fidelity=False,
+                )
+                job["source_slug"] = slug
+                job["derived"] = "operation"
+                jobs.append(job)
         return jobs
-
-    def _catalog_job(self, name: str) -> dict | None:
-        if name in _FORMATS:
-            return {
-                "name": name,
-                "vehicle": "prompt",
-                "body_kind": "format",
-                "toolset": "the in-scope context tool",
-                "overview": name,
-                "class_string": name,
-                "guidance": f"generate and render as {name}",
-            }
-        if name in _STAGES or name in _FIDELITIES:
-            return {
-                "name": name,
-                "vehicle": "prompt",
-                "body_kind": "action",
-                "toolset": "the in-scope context tool",
-                "overview": name,
-                "class_string": name,
-                "guidance": f"Run at fidelity {name}. Do not treat this as a format.",
-            }
-        if name in _COMPANIONS or name in _HOST_ACTIONS:
-            return {
-                "name": name,
-                "vehicle": "prompt",
-                "body_kind": "action",
-                "toolset": name,
-                "overview": name,
-                "class_string": name,
-                "guidance": f"Run {name}.",
-            }
-        return None
 
     def _jobs(self, source: str, name_filter: str) -> list[dict]:
         wanted = source.strip()
@@ -386,36 +469,31 @@ class Harness:
             seen.add(key)
             jobs.append(job)
 
-        if wanted:
-            catalog = self._catalog_job(wanted)
-            if catalog is not None:
-                add(catalog)
-                return jobs
-            for entry in json.loads(self.walk(name_filter)):
-                if entry["skill_slug"] == wanted:
-                    for job in self._job_from_entry(entry):
-                        add(job)
-                    return jobs
-            add(
-                {
-                    "name": wanted,
-                    "vehicle": "skill",
-                    "body_kind": "context",
-                    "toolset": wanted,
-                    "overview": wanted,
-                    "class_string": wanted,
-                    "guidance": wanted,
-                }
-            )
-            return jobs
-
         for entry in json.loads(self.walk(name_filter)):
             for job in self._job_from_entry(entry):
                 add(job)
-        for extra in (*_FORMATS, *_STAGES, *_FIDELITIES, *_COMPANIONS, *_HOST_ACTIONS):
-            catalog = self._catalog_job(extra)
-            if catalog is not None:
-                add(catalog)
+        for name in _FORMATS:
+            job = self._format_job(name)
+            job["source_slug"] = name
+            job["derived"] = "format"
+            add(job)
+        if wanted:
+            selected: list[dict] = []
+            selected_keys: set[tuple[str, str]] = set()
+
+            def take(job: dict) -> None:
+                key = (job["name"], job["vehicle"])
+                if key in selected_keys:
+                    return
+                selected_keys.add(key)
+                selected.append(job)
+
+            for job in jobs:
+                if job["name"] == wanted:
+                    take(job)
+                elif job.get("source_slug") == wanted and job.get("derived") != "fidelity":
+                    take(job)
+            return selected
         return jobs
 
     def _write_harness_files(self, roots: list[Path]) -> None:
