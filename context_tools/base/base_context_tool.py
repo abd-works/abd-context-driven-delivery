@@ -141,6 +141,13 @@ class BaseContextTool(AgenticToolset):
         if resolved in defaults:
             self.format = defaults[resolved]
 
+    def _finish_lifecycle_turn(self, action: str) -> None:
+        """Set turn title from this host, then finish via the open work-session turn."""
+        session = self.workspace.current_work_session
+        if session and session.open_turn:
+            session.open_turn.set_commit_title(self, action)
+        self.turn.finish_turn(tools=[self])
+
     # -- workspace  ----------------
     default_workspace_folder: str = "."
     context_index_key: str = ""
@@ -194,7 +201,7 @@ class BaseContextTool(AgenticToolset):
             ok=True,
             role="run",
         )
-        self.turn.finish_turn()
+        self._finish_lifecycle_turn("generate")
         return "When done, run validate."
 
     @agent_instructions
@@ -241,7 +248,7 @@ class BaseContextTool(AgenticToolset):
             ok=True,
             role="run",
         )
-        self.turn.finish_turn()
+        self._finish_lifecycle_turn("document")
         return "Document existing state under {session.path}/ - violations flagged, none corrected."
 
     @agent_instructions
@@ -257,7 +264,7 @@ class BaseContextTool(AgenticToolset):
             ok=True,
             role="run",
         )
-        self.turn.finish_turn()
+        self._finish_lifecycle_turn("validate")
         return "Validation report for artifacts under {session.path}/."
 
     @agent_tool
@@ -303,7 +310,7 @@ class BaseContextTool(AgenticToolset):
             ok=True,
             role="run",
         )
-        self.turn.finish_turn()
+        self._finish_lifecycle_turn("satisfy")
         return "When done, run validate on artifacts under {session.path}/."
 
     @agent_instructions
@@ -320,7 +327,7 @@ class BaseContextTool(AgenticToolset):
             ok=True,
             role="run",
         )
-        self.turn.finish_turn()
+        self._finish_lifecycle_turn("createRule")
         return (
             "Write a new named rule and matching scanner into this tool. "
             "Then run that rule via scan on the asset and detect a failure "

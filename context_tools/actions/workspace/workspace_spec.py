@@ -452,7 +452,9 @@ with description("a context tool"):
                     self.git = NullGitRepo()
                     self.workspace = Workspace(str(self.tmp))
                     self.host = ContextToolHost(self.workspace, git=self.git)
-                    self.session = self.host.run_action("sprint-a")
+                    self.session = self.host.run_action(
+                        "sprint-a", action="generate"
+                    )
                     self.turn = self.session.open_turn
                     self.git.set_dirty(True)
                     self.commit = self.host.finish(result="shipped")
@@ -466,9 +468,46 @@ with description("a context tool"):
                     runs = [r for r in self.turn.tool_calls if r.role == "run"]
                     expect(len(runs)).to(equal(1))
 
+                with it("should set its turn name to its context tool, action, and fidelity"):
+                    expect(self.turn.name).to(equal("bdd - generate - modules"))
+
+                with it("should save that turn name as its commit message"):
+                    expect(self.turn.commit_message).to(equal("bdd - generate - modules"))
+
                 with it("should commit its scoped changes on the session branch"):
                     expect(len(self.git.commits)).to(equal(1))
                     expect(self.commit.sha).to(equal("commit-1"))
+                    expect(self.git.commits[0][1]).to(equal("bdd - generate - modules"))
 
                 with it("should push its session branch to origin"):
                     expect(self.git.pushes).to(equal(["session/sprint-a"]))
+
+                with context("with one supported format only"):
+                    with before.each:
+                        self.tmp = Path(tempfile.mkdtemp(prefix="ws-fmt-"))
+                        self.git = NullGitRepo()
+                        self.workspace = Workspace(str(self.tmp))
+
+                        class SingleFormatHost(ContextToolHost):
+                            supported_formats = frozenset({"python"})
+
+                        self.host = SingleFormatHost(
+                            self.workspace,
+                            git=self.git,
+                            fidelity="development",
+                            format="python",
+                        )
+                        self.session = self.host.run_action(
+                            "sprint-a", action="generate"
+                        )
+                        self.turn = self.session.open_turn
+                        self.git.set_dirty(True)
+                        self.host.finish(result="done")
+
+                    with it("should include that format in its turn name"):
+                        expect(self.turn.name).to(
+                            equal("bdd - generate - development - python")
+                        )
+                        expect(self.git.commits[0][1]).to(
+                            equal("bdd - generate - development - python")
+                        )
