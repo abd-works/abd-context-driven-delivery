@@ -1,0 +1,18 @@
+improved: ﻿# BDD sketch — workspace module (usage story)
+
+Design: `workspace-eval-oo-sketch.md` §2 (Workspace), §4 (turn envelope).
+
+Fidelity: behavior
+
+a context tool
+  with a workspace
+    that has an action run against it
+      with a new work session name
+        it should add the opened work session to its work sessions
+        it should set the current work session to the opened work session
+      with an existing work session name
+        it should load the existing work session from its sessions f...
+how: OO §2 three levels: BaseContextTool composes Workspace (with a workspace) before action-run envelope; §4 openWorkSession + Turn.open then agent work. Design cites workspace-eval-oo-sketch.md only.
+status: fixed
+entry_ids: 3170dd3e
+fix_commit: 2324e2cf49a503957457d0d8a069437af8a98572
