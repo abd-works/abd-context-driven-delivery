@@ -31,12 +31,12 @@ def __getattr__(name: str):
         from workspace import workspace as _w
 
         return getattr(_w, name)
-    if name in ("GitRepo", "NullGitRepo", "find_git_root"):
-        from workspace.git_repo import GitRepo, NullGitRepo, find_git_root
+    if name in ("GitRepo", "NullGitRepo", "Repo"):
+        from workspace.git_repo import GitRepo, NullGitRepo, Repo
 
         return {
             "GitRepo": GitRepo,
             "NullGitRepo": NullGitRepo,
-            "find_git_root": find_git_root,
+            "Repo": Repo,
         }[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

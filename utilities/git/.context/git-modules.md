@@ -59,6 +59,7 @@ Repo(root, memory=False)
 default_branch: str
 root: Path
 ----
+find_root(start): Path | None
 open(start): Repo
 memory(root): Repo
 branch: Branch
@@ -95,7 +96,11 @@ sha: str
 message: str
 data: dict
 ----
+format(subject, trailers): str
 from_message(sha, message): Commit
+trailers(message): dict
+note_text(fields): str
+note_payload(text): dict
 
 ## Project
 
@@ -121,6 +126,8 @@ state: TicketState | None
 data: dict
 ----
 closed: bool
+parse_number(ref): int
+github_ref(owner, repo, number): str
 
 ## TicketState
 
@@ -136,5 +143,5 @@ done(): TicketState
 
 # utilities/git/_cli
 - **Purpose:** Private subprocess adapters for `git` and `gh` CLIs
-- **Seam (terms):** internal only — `_run_git`, `_run_gh`, `_parse_issue_number`, `_format_commit_message`
+- **Seam (terms):** internal only — `_run_git`, `_run_gh`
 - **Dependencies (one-way):** stdlib only; imported only by `git.py`

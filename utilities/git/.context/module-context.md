@@ -33,13 +33,14 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 
 ## Public API
 
-- `Repo.open(start)` — real clone at `find_git_root(start)`
+- `Repo.find_root(start)` / `Repo.open(start)` — locate and open a real clone
 - `Repo.memory(root)` / `NullGitRepo(root)` — in-memory clone for specs
 - `Repo.branch` / `Repo.branch_named(name)` → `Branch`
 - `Branch.checkout()`, `Branch.commit(paths, message)` → `Commit`, `Branch.merge(other)` → `Commit`
-- `Commit` — `sha`, `message`, open `data` map (trailers parsed from message)
+- `Commit.format(subject, trailers)` / `Commit.from_message(sha, message)` — message + trailer `data`
 - `Repo.attach_project(owner, number)` → `Project`
 - `Project.add_ticket(ticket, state)`, `Project.set_ticket_state(ticket, state)`
+- `Ticket.parse_number(ref)` / `Ticket.github_ref(owner, repo, number)`
 - `Ticket` — `number`, `title`, `body`, `url`, `state`, open `data` map
 - `TicketState` — column name (`Backlog`, `In Progress`, `Done`)
 - `Repo.ticket(ref)`, `Repo.create_ticket(title, body)`, `Repo.close_ticket(ref)`

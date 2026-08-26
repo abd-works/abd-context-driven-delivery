@@ -239,7 +239,7 @@ with description("a WorkSession that is started in a git working area"):
     with it("should create a branch named for this session"):
         import shutil
         import tempfile
-        from workspace.git_repo import GitRepo, _git, find_git_root
+        from workspace.git_repo import GitRepo, Repo, _git
         from workspace.workspace import Workspace, WorkSession
 
         tmp = Path(tempfile.mkdtemp(prefix="session_git_started_"))
@@ -249,7 +249,7 @@ with description("a WorkSession that is started in a git working area"):
         _git(tmp, "commit", "--allow-empty", "-m", "init")
         session = Workspace(str(tmp)).open_work_session("sprint")
         session.ensure_started()
-        root = find_git_root(tmp)
+        root = Repo.find_root(tmp)
         expect(root).to(equal(tmp.resolve()))
         expect(GitRepo(tmp).current_branch).to(equal("session/sprint"))
         shutil.rmtree(tmp, ignore_errors=True)

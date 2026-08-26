@@ -12,7 +12,7 @@ from typing import Any
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from workspace.context_index import ContextIndex
-from workspace.git_repo import GitRepo, NullGitRepo, find_git_root
+from workspace.git_repo import GitRepo, NullGitRepo, Repo
 from tools.tool import resource, agent_tool
 
 
@@ -445,7 +445,7 @@ class WorkSession:
         self.body = body
 
     def _default_git(self) -> GitRepo:
-        root = find_git_root(self.workspace.path)
+        root = Repo.find_root(self.workspace.path)
         if root is None:
             return NullGitRepo()
         return GitRepo(root)

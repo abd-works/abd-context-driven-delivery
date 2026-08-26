@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -15,7 +14,6 @@ _GH_DO_NOT_PROCEED = (
     "Do not proceed unless the user tells you to continue without GitHub CLI access."
 )
 
-_ISSUE_NUMBER = re.compile(r"^\d+$")
 _EVAL_MISTAKES_NOTES = "refs/notes/eval-mistakes"
 
 
@@ -43,76 +41,6 @@ class _DirtyBranchSwitchError(RuntimeError):
 
 class _TicketNotFoundError(LookupError):
     """Raised when a GitHub issue reference does not resolve."""
-
-
-def _find_git_root(start: str | Path) -> Path | None:
-    current = Path(start).resolve()
-    if current.is_file():
-        current = current.parent
-    for candidate in (current, *current.parents):
-        if (candidate / ".git").exists():
-            return candidate
-    return None
-
-
-def _parse_issue_number(ticket: str) -> int:
-    """Normalize #87, owner/repo#87, or issue URLs to an issue number."""
-    cleaned = ticket.strip()
-    if not cleaned:
-        raise ValueError(f"not a GitHub issue reference: {ticket!r}")
-    if cleaned.startswith("#"):
-        return int(cleaned[1:])
-    if "#" in cleaned:
-        suffix = cleaned.rsplit("#", 1)[-1]
-        if _ISSUE_NUMBER.match(suffix):
-            return int(suffix)
-    if "/issues/" in cleaned:
-        suffix = cleaned.rstrip("/").split("/")[-1]
-        if _ISSUE_NUMBER.match(suffix):
-            return int(suffix)
-    if _ISSUE_NUMBER.match(cleaned):
-        return int(cleaned)
-    raise ValueError(f"not a GitHub issue reference: {ticket!r}")
-
-
-def _format_github_issue_trailer(owner: str, repo: str, number: int) -> str:
-    return f"{owner}/{repo}#{number}"
-
-
-def _format_commit_message(subject: str, trailers: dict[str, str]) -> str:
-    lines = [subject.strip()]
-    for key, value in trailers.items():
-        text = (value or "").strip()
-        if text:
-            lines.append(f"{key}: {text}")
-    return "\n".join(lines)
-
-
-def _parse_commit_trailers(message: str) -> dict[str, str]:
-    lines = (message or "").splitlines()
-    if not lines:
-        return {}
-    data: dict[str, str] = {}
-    for line in lines[1:]:
-        if ": " not in line:
-            continue
-        key, value = line.split(": ", 1)
-        data[key.strip()] = value.strip()
-    return data
-
-
-def _payload_to_note(fields: dict[str, str]) -> str:
-    return "\n".join(f"{key}: {value}" for key, value in fields.items())
-
-
-def _note_to_payload(text: str) -> dict[str, str]:
-    out: dict[str, str] = {}
-    for line in (text or "").splitlines():
-        if ": " not in line:
-            continue
-        key, value = line.split(": ", 1)
-        out[key.strip()] = value
-    return out
 
 
 def _git_executable() -> str:
@@ -196,8 +124,7 @@ def _gh_owner_repo(root: Path) -> tuple[str, str]:
     return owner, repo
 
 
-def _gh_view_issue(root: Path, ticket: str) -> dict[str, str | int] | None:
-    number = _parse_issue_number(ticket)
+def _gh_view_issue(root: Path, number: int) -> dict[str, str | int] | None:
     try:
         raw = _run_gh(
             "-C",
@@ -247,8 +174,7 @@ def _gh_create_issue(root: Path, title: str, body: str) -> dict[str, str | int]:
     }
 
 
-def _gh_close_issue(root: Path, ticket: str) -> None:
-    number = _parse_issue_number(ticket)
+def _gh_close_issue(root: Path, number: int) -> None:
     _run_gh("-C", str(root), "issue", "close", str(number))
 
 

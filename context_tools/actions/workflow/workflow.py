@@ -9,12 +9,12 @@ from pathlib import Path
 
 import yaml
 
-from git import TicketNotFoundError, parse_issue_number
+from git import Ticket, TicketNotFoundError
 from git.git import Repo
 from handoff.handoff import Handoff
 from primitives.actions.action import agent_instructions
 from tools.tool import agent_tool, toolset
-from workspace import Workspace, find_git_root
+from workspace import Workspace
 from workspace.git_repo import NullGitRepo
 from workspace.workspace import ContextToolHost, Turn
 
@@ -45,7 +45,7 @@ class Workflow:
 
     def _repo_root(self, workspace: str = "") -> Path:
         start = workspace.strip() or self._workspace_path or "."
-        root = find_git_root(start)
+        root = Repo.find_root(start)
         if root is None:
             raise ValueError(f"not a git clone: {start!r}")
         return root
@@ -129,7 +129,7 @@ class Workflow:
     @agent_tool
     def parse_ticket(self, ticket: str) -> int:
         """Normalize a GitHub issue reference to its issue number."""
-        return parse_issue_number(ticket)
+        return Ticket.parse_number(ticket)
 
     @agent_tool
     def session_name_for_issue(self, title: str, number: int) -> str:
@@ -149,7 +149,7 @@ class Workflow:
         repo = self._repo(workspace)
         return repo.workflow_commit_message(
             subject,
-            parse_issue_number(ticket),
+            Ticket.parse_number(ticket),
             workflow_state,
             reviewed_by=reviewed_by,
         )
@@ -295,7 +295,7 @@ class Workflow:
         if ticket.strip():
             message = self._repo(workspace).workflow_commit_message(
                 subject,
-                parse_issue_number(ticket),
+                Ticket.parse_number(ticket),
                 "done",
                 reviewed_by=reviewed_by,
             )

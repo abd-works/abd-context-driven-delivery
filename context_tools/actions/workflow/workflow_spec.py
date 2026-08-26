@@ -19,12 +19,8 @@ sys.modules.pop("workflow", None)
 from expects import be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from git import (
-    format_commit_message,
-    format_github_issue_trailer,
-    parse_issue_number,
-)
-from git.git import Repo, Ticket
+from git import TicketNotFoundError
+from git.git import Commit, Repo, Ticket
 from workflow.workflow import Workflow
 
 
@@ -61,20 +57,20 @@ with description("Workflow helpers"):
         expect(w._kebab("Add workflow package #87")).to(equal("add-workflow-package-87"))
 
     with it("should parse github issue references"):
-        expect(parse_issue_number("87")).to(equal(87))
-        expect(parse_issue_number("#87")).to(equal(87))
-        expect(parse_issue_number("demo-org/demo-repo#87")).to(equal(87))
-        expect(parse_issue_number("https://github.com/demo-org/demo-repo/issues/87")).to(
+        expect(Ticket.parse_number("87")).to(equal(87))
+        expect(Ticket.parse_number("#87")).to(equal(87))
+        expect(Ticket.parse_number("demo-org/demo-repo#87")).to(equal(87))
+        expect(Ticket.parse_number("https://github.com/demo-org/demo-repo/issues/87")).to(
             equal(87)
         )
 
     with it("should format github issue trailers"):
-        expect(format_github_issue_trailer("demo-org", "demo-repo", 87)).to(
+        expect(Ticket.github_ref("demo-org", "demo-repo", 87)).to(
             equal("demo-org/demo-repo#87")
         )
 
     with it("should format commit messages with workflow trailers"):
-        message = format_commit_message(
+        message = Commit.format(
             "start workflow-package-87",
             {
                 "GitHub-Issue": "demo-org/demo-repo#87",

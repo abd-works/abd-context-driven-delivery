@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -15,21 +16,17 @@ from git._cli import (
     _GitConnectError as GitConnectError,
     _TicketNotFoundError as TicketNotFoundError,
     _eval_mistakes_notes_ref as eval_mistakes_notes_ref,
-    _find_git_root as find_git_root,
-    _format_commit_message as format_commit_message,
-    _format_github_issue_trailer as format_github_issue_trailer,
     _gh_close_issue as gh_close_issue,
     _gh_create_issue as gh_create_issue,
     _gh_owner_repo as gh_owner_repo,
     _gh_set_project_status as gh_set_project_status,
     _gh_view_issue as gh_view_issue,
-    _parse_commit_trailers as parse_commit_trailers,
-    _parse_issue_number as parse_issue_number,
     _run_git as run_git,
 )
 
 
 DEFAULT_PROJECT_STATES: tuple[str, ...] = ("Backlog", "In Progress", "Done")
+_ISSUE_NUMBER = re.compile(r"^\d+$")
 
 
 @dataclass
@@ -39,8 +36,44 @@ class Commit:
     data: dict[str, str] = field(default_factory=dict)
 
     @classmethod
+    def format(cls, subject: str, trailers: dict[str, str] | None = None) -> str:
+        lines = [subject.strip()]
+        for key, value in (trailers or {}).items():
+            text = (value or "").strip()
+            if text:
+                lines.append(f"{key}: {text}")
+        return "\n".join(lines)
+
+    @classmethod
     def from_message(cls, sha: str, message: str) -> Commit:
-        return cls(sha=sha, message=message, data=parse_commit_trailers(message))
+        return cls(sha=sha, message=message, data=cls.trailers(message))
+
+    @classmethod
+    def trailers(cls, message: str) -> dict[str, str]:
+        lines = (message or "").splitlines()
+        if not lines:
+            return {}
+        data: dict[str, str] = {}
+        for line in lines[1:]:
+            if ": " not in line:
+                continue
+            key, value = line.split(": ", 1)
+            data[key.strip()] = value.strip()
+        return data
+
+    @classmethod
+    def note_text(cls, fields: dict[str, str]) -> str:
+        return "\n".join(f"{key}: {value}" for key, value in fields.items())
+
+    @classmethod
+    def note_payload(cls, text: str) -> dict[str, str]:
+        out: dict[str, str] = {}
+        for line in (text or "").splitlines():
+            if ": " not in line:
+                continue
+            key, value = line.split(": ", 1)
+            out[key.strip()] = value
+        return out
 
 
 @dataclass
@@ -72,6 +105,29 @@ class Ticket:
     @property
     def closed(self) -> bool:
         return self.data.get("closed") == "true"
+
+    @classmethod
+    def parse_number(cls, ref: str) -> int:
+        cleaned = ref.strip()
+        if not cleaned:
+            raise ValueError(f"not a GitHub issue reference: {ref!r}")
+        if cleaned.startswith("#"):
+            return int(cleaned[1:])
+        if "#" in cleaned:
+            suffix = cleaned.rsplit("#", 1)[-1]
+            if _ISSUE_NUMBER.match(suffix):
+                return int(suffix)
+        if "/issues/" in cleaned:
+            suffix = cleaned.rstrip("/").split("/")[-1]
+            if _ISSUE_NUMBER.match(suffix):
+                return int(suffix)
+        if _ISSUE_NUMBER.match(cleaned):
+            return int(cleaned)
+        raise ValueError(f"not a GitHub issue reference: {ref!r}")
+
+    @classmethod
+    def github_ref(cls, owner: str, repo: str, number: int) -> str:
+        return f"{owner}/{repo}#{number}"
 
 
 class Branch:
@@ -153,8 +209,18 @@ class Repo:
             self._init_memory_state()
 
     @classmethod
+    def find_root(cls, start: str | Path) -> Path | None:
+        current = Path(start).resolve()
+        if current.is_file():
+            current = current.parent
+        for candidate in (current, *current.parents):
+            if (candidate / ".git").exists():
+                return candidate
+        return None
+
+    @classmethod
     def open(cls, start: str | Path) -> Repo:
-        root = find_git_root(start)
+        root = cls.find_root(start)
         if root is None:
             raise GitConnectError(f"not a git clone: {start!r}")
         return cls(root)
@@ -309,9 +375,7 @@ class Repo:
         if self._memory:
             self._notes[sha] = dict(payload)
             return
-        from git._cli import _payload_to_note
-
-        text = _payload_to_note(payload)
+        text = Commit.note_text(payload)
         run_git(
             self.root,
             "notes",
@@ -327,13 +391,11 @@ class Repo:
         note_ref = ref or eval_mistakes_notes_ref()
         if self._memory:
             return dict(self._notes.get(sha, {}))
-        from git._cli import _note_to_payload
-
         try:
             raw = run_git(self.root, "notes", f"--ref={note_ref}", "show", sha)
         except GitConnectError:
             return {}
-        return _note_to_payload(raw)
+        return Commit.note_payload(raw)
 
     def find_mistakes(
         self, entry_ids: list[str], *, ref: str | None = None
@@ -362,7 +424,7 @@ class Repo:
 
     def ticket(self, ref: str) -> Ticket | None:
         if self._memory:
-            number = parse_issue_number(ref)
+            number = Ticket.parse_number(ref)
             ticket = self._tickets.get(number)
             if ticket is None:
                 return None
@@ -371,7 +433,7 @@ class Repo:
                 ticket.state = TicketState(state_name)
             ticket.data["closed"] = "true" if number in self._closed_tickets else "false"
             return ticket
-        payload = gh_view_issue(self.root, ref)
+        payload = gh_view_issue(self.root, Ticket.parse_number(ref))
         if payload is None:
             return None
         return self._ticket_from_payload(payload)
@@ -392,13 +454,13 @@ class Repo:
         return self._ticket_from_payload(payload)
 
     def close_ticket(self, ref: str) -> None:
-        number = parse_issue_number(ref)
+        number = Ticket.parse_number(ref)
         if self._memory:
             if number not in self._tickets:
                 raise TicketNotFoundError(f"GitHub issue not found: {ref}")
             self._closed_tickets.add(number)
             return
-        gh_close_issue(self.root, ref)
+        gh_close_issue(self.root, number)
 
     def workflow_commit_message(
         self,
@@ -410,12 +472,12 @@ class Repo:
     ) -> str:
         owner, repo = self.owner_repo()
         trailers = {
-            "GitHub-Issue": format_github_issue_trailer(owner, repo, issue_number),
+            "GitHub-Issue": Ticket.github_ref(owner, repo, issue_number),
             "Workflow-State": workflow_state,
         }
         if reviewed_by.strip():
             trailers["Reviewed-By"] = reviewed_by.strip()
-        return format_commit_message(subject, trailers)
+        return Commit.format(subject, trailers)
 
     def _set_ticket_project_state(self, ticket: Ticket, state_name: str) -> None:
         if state_name not in DEFAULT_PROJECT_STATES:

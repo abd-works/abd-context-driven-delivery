@@ -9,10 +9,6 @@ from git import (
     NullGitRepo,
     Repo,
     TicketNotFoundError,
-    find_git_root,
-    format_commit_message,
-    format_github_issue_trailer,
-    parse_issue_number,
 )
 
 __all__ = [
@@ -24,8 +20,4 @@ __all__ = [
     "Repo",
     "TicketNotFoundError",
     "_git",
-    "find_git_root",
-    "format_commit_message",
-    "format_github_issue_trailer",
-    "parse_issue_number",
 ]

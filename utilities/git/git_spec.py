@@ -17,28 +17,25 @@ for _cat in ("utilities", "primitives", "context_tools"):
 from expects import be_a, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from git import (
-    TicketNotFoundError,
-    format_commit_message,
-    format_github_issue_trailer,
-    parse_issue_number,
-)
+from git import TicketNotFoundError
 from git.git import Branch, Commit, Project, Repo, Ticket, TicketState
 
 
-with description("git helpers"):
+with description("a Ticket"):
     with it("should parse github issue references"):
-        expect(parse_issue_number("87")).to(equal(87))
-        expect(parse_issue_number("#87")).to(equal(87))
-        expect(parse_issue_number("demo-org/demo-repo#87")).to(equal(87))
+        expect(Ticket.parse_number("87")).to(equal(87))
+        expect(Ticket.parse_number("#87")).to(equal(87))
+        expect(Ticket.parse_number("demo-org/demo-repo#87")).to(equal(87))
 
-    with it("should format github issue trailers"):
-        expect(format_github_issue_trailer("demo-org", "demo-repo", 87)).to(
+    with it("should format its github ref"):
+        expect(Ticket.github_ref("demo-org", "demo-repo", 87)).to(
             equal("demo-org/demo-repo#87")
         )
 
-    with it("should format commit messages with trailers"):
-        message = format_commit_message(
+
+with description("a Commit"):
+    with it("should format a message with trailers"):
+        message = Commit.format(
             "start workflow-package-87",
             {
                 "GitHub-Issue": "demo-org/demo-repo#87",
