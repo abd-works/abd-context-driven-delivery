@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from _workspace_turn import log_mistake_turn
+from _workspace_turn import record_mistake_turn
 
 SESSION = "workflow-package"
 PATH = "context_tools/actions/workflow"
@@ -15,7 +15,7 @@ INTRODUCING_SHA = "10fbeddb53522faf2a54011e982f96cb91ced34e"
 
 def main() -> None:
     original = SKETCH.read_text(encoding="utf-8")
-    entry_id, sha = log_mistake_turn(
+    entry_id, sha = record_mistake_turn(
         path=PATH,
         session_name=SESSION,
         artifact=str(SKETCH).replace("\\", "/"),

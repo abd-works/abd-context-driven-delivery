@@ -1,4 +1,4 @@
-﻿---
+---
 type: ux
 capabilities:
 - tool
@@ -23,16 +23,11 @@ signature:
       path: str | None
       session: str | None
       workspace: str | None
-  begin_eval_turn:
+  begin_turn:
     kind: tool
-    instructions: Open the eval Turn. Listed on generate / validate / document / partition
-      / repair / createRule.
-    returns: str
-  close_session:
-    kind: tool
+    instructions: Open a workspace turn on the current work session.
     parameters:
-      outcome: str
-      handoff: str
+      action: str
     returns: str
   ensure_javascript:
     kind: tool
@@ -44,50 +39,37 @@ signature:
       source_format: str
       content: Any
     returns: dict
-  finish_eval_turn:
+  finish_turn:
     kind: tool
-    instructions: Close the open eval Turn. Listed on generate / validate / document
-      / partition / repair / createRule.
+    instructions: Finish the open workspace turn; commits on the session branch when
+      dirty.
     parameters:
       prompt: str
       result: str
       context: str
     returns: str
-  log_correction:
+  record_correction:
     kind: tool
-    instructions: log_correction ΓÇö Correction.apply through Repair; writes repairedAsset
-      and improvement.md.
+    instructions: Link a correction to mistake entry ids on the open turn.
     parameters:
       entry_id: str
       improved: str
       how: str
       status: str
+      entry_ids: list[str] | None]
     returns: str
-  open:
+  record_mistake:
     kind: tool
-    instructions: '# Open
-
-
-      One tool before lifecycle work ΓÇö ensures sprint, loads context index, records
-      root when keyed. See **Session Guidance** (`session_guidance`). Do not chain
-      `ensure_session`, `read_context_index`, or `record_context_root` when `open`
-      is in the tool list.
-
-
-      ```yaml
-
-      tool: open
-
-      ```
-
-
-      ---'
+    instructions: Annotate a mistake on the introducing commit (git-primary).
     parameters:
-      name: str
-      goal: str
-      fidelities: str
-      contexts: str
-      path: str
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      introducing_commit: str
+      entry_id: str
+      tool: str
+      fidelity: str
     returns: str
   render:
     kind: tool
@@ -113,7 +95,7 @@ signature:
     returns: dict
   active:
     kind: resource
-    type: Session
+    type: WorkSession | None
   mode:
     kind: resource
     type: str
@@ -125,9 +107,7 @@ signature:
     returns: str
   createRule:
     kind: action
-    tools:
-    - begin_eval_turn
-    - finish_eval_turn
+    tools: []
     instructions: '# Create Rule
 
 
@@ -140,7 +120,7 @@ signature:
       Take **failed** (what went wrong on the asset) and **wanted** (what should have
       happened). Using **contexts**, **examples**, and **template**, evaluate a new
       named rule and a matching scanner that can detect that failure deterministically
-      ΓÇö only when the failure is mechanical and that existing surface cannot carry
+      — only when the failure is mechanical and that existing surface cannot carry
       it.
 
 
@@ -157,15 +137,12 @@ signature:
   document:
     kind: action
     tools:
-    - open
-    - begin_eval_turn
     - generate_output
     - add_generate_header_to_generated
-    - finish_eval_turn
     instructions: '# Document
 
 
-      Take the persona of a **neutral observer** ΓÇö describe what exists, do not prescribe
+      Take the persona of a **neutral observer** — describe what exists, do not prescribe
       what should exist.
 
 
@@ -173,13 +150,13 @@ signature:
 
       2. Read the **contexts** to understand the vocabulary and structure of the domain.
 
-      3. Fill the **template** scaffold with observed content ΓÇö describe current state
+      3. Fill the **template** scaffold with observed content — describe current state
       only.
 
       4. Do not apply, suggest, or imply rules or best practices in the generated
       output.
 
-      5. Call **`scan`** and append all violations to the document as-is ΓÇö flag them,
+      5. Call **`scan`** and append all violations to the document as-is — flag them,
       do not correct them.
 
       6. Save the artifact under the session layout from `session_guidance`.
@@ -197,18 +174,15 @@ signature:
   generate:
     kind: action
     tools:
-    - open
-    - begin_eval_turn
     - generate_output
     - add_generate_header_to_generated
-    - finish_eval_turn
     instructions: "# Generate\n\n1. Call **`open`**. Confirm sprint slug with the\
       \ user when run context has no `session=`; pass `name` / `goal` / `fidelities`\
       \ on first create if needed. Follow **`session_guidance`**; use the **`active`**\
-      \ resource for `active.path` / `active.folder`.\n2. **MUST ΓÇö prove-read before\
+      \ resource for `active.path` / `active.folder`.\n2. **MUST — prove-read before\
       \ asking.** Before any grill/iterate question (and before inventing options\
       \ or story/module names):\n   - Identify **every relevant context file referenced\
-      \ or implied** by the decision ΓÇö not one favorite type. Typical set: `{workspace}/.context/context-index.md`,\
+      \ or implied** by the decision — not one favorite type. Typical set: `{workspace}/.context/context-index.md`,\
       \ owning `*-segment.md`, `module-context.md`, session grill-answers / sketches\
       \ / handoff, peer story-context, build-order, and any path the plan or prior\
       \ answers cite. Include index/overlay only for structure hints; **never** treat\
@@ -216,22 +190,34 @@ signature:
       \ the Read tool** (chunk through large ones). Grep, title lists, memory, or\
       \ primer-only skims **do not count**.\n   - **Prove it in the question turn:**\
       \ name the path(s) read and ground options in concrete terms from them. If you\
-      \ cannot cite specifics from the relevant files, you have not read them ΓÇö go\
+      \ cannot cite specifics from the relevant files, you have not read them — go\
       \ read before asking.\n   - Asking from a skim is a **defect**, same class as\
       \ dumping a whole artifact in one iterate tick.\n2b. **`do-not-invent-requirements`**\
-      \ ΓÇö Do not invent requirements, status/maintenance signals, or competing command\
+      \ — Do not invent requirements, status/maintenance signals, or competing command\
       \ surfaces absent from source / the ask. Prefer the existing gap/fallback (or\
       \ the already-specified invoke surface) over minting a new state or a second\
       \ co-equal how-to-call block.\n3. **`sources-scoped-to-generated-context`**\
-      \ ΓÇö Hang `**Sources / context:**` on the node they ground: epic / sub-epic /\
-      \ feature / module, or a lower item (scenario, class, screen, component, ΓÇª).\
+      \ — Hang `**Sources / context:**` on the node they ground: epic / sub-epic /\
+      \ feature / module, or a lower item (scenario, class, screen, component, …).\
       \ Root or parent-level Sources are fine when those files apply to the **entire**\
       \ artifact or subtree.\n4. Apply all guidance and named rules in each **context**\
-      \ ΓÇö each bullet is a requirement.\n5. Match **examples** for shape, depth, and\
+      \ — each bullet is a requirement.\n5. Match **examples** for shape, depth, and\
       \ tone.\n6. Fill the **template** scaffold and save the artifact under the session\
-      \ layout from `session_guidance`.\n7. Follow any extra build steps included\
-      \ in your instructions when present.\n8. Run **validate**. If it fails, fix\
-      \ the artifact and **validate** again until it passes.\n\n---"
+      \ layout from `session_guidance`.\n6b. **Large job — several turns.** Decide\
+      \ the source from the **ask** and what this session already produced (a sketch,\
+      \ a model, a format to transform — not a locked default). If that source is\
+      \ a whole model, sketch, or similarly large artifact, implement **one slice**\
+      \ in this invoke, then stop. `finish_turn` closes this turn. Continue in later\
+      \ generate or iterate turns — even if the user asked for everything once. Filling\
+      \ the whole artifact in one generate is a defect (same class as dumping a map\
+      \ in one iterate tick). A small implied source may finish in one turn. Do not\
+      \ treat a red full-tree **validate** as permission to finish the rest in this\
+      \ invoke; validate the slice you wrote.\n7. Follow any extra build steps included\
+      \ in your instructions when present.\n8. Run **validate** on what this turn\
+      \ wrote. If the job is one slice, a remaining gap in the rest of the source\
+      \ is the next turn, not this one. If the implied source was small enough for\
+      \ one turn and validate fails, fix the artifact and **validate** again until\
+      \ it passes.\n\n---"
     returns: str
   generate_fixes_from_validate:
     kind: action
@@ -242,39 +228,6 @@ signature:
     kind: action
     tools: []
     returns: str
-  grill:
-    kind: action
-    tools:
-    - open
-    - generate
-    instructions: Grill then generate - pure grill loop, then the host generate body.
-    returns: str
-  iterate:
-    kind: action
-    tools:
-    - open
-    - generate
-    instructions: Iterate then generate - grill + formal generate/validate/one-fix
-      ticks.
-    returns: str
-  partition:
-    kind: action
-    tools:
-    - open
-    - begin_eval_turn
-    - finish_eval_turn
-    parameters:
-      context: str
-      mode: str
-      out_root: str | None
-    returns: str
-  repair:
-    kind: sub_agent
-    launch: non_blocking
-    parameters:
-      asset: str
-      violation: str
-    returns: str
   satisfy:
     kind: action
     tools:
@@ -284,20 +237,20 @@ signature:
 
 
       Satisfy runs in **tool mode**: it does not inline a recipe. It hands you two
-      tool calls to make yourself, in order ΓÇö first find the problems, then fix them.
+      tool calls to make yourself, in order — first find the problems, then fix them.
 
 
-      1. **`validate`** ΓÇö run this first. Judge the artifact under the generator **`active`**
+      1. **`validate`** — run this first. Judge the artifact under the generator **`active`**
       root against the **contexts** and every named rule, and call **`scan`** on the
       session-rooted paths. Produce the full list of violations and coverage gaps.
       Do not fix anything in this step.
 
-      2. **`generate_fixes_from_validate`** ΓÇö run this second, once you hold the validate
+      2. **`generate_fixes_from_validate`** — run this second, once you hold the validate
       report. Follow **`session_guidance`** and edit only under that layout. Generate
       any missing artifacts (a missing `.context/module-context.md` IS a violation
-      ΓÇö create it at the current fidelity: thin at modules with Purpose, Seam, Dependencies;
+      — create it at the current fidelity: thin at modules with Purpose, Seam, Dependencies;
       full at model with + Primary use case, Rationale, Public API), then fix every
-      reported violation in the same paths ΓÇö do not invent a divergent folder.
+      reported violation in the same paths — do not invent a divergent folder.
 
 
       When done, run **`validate`** again and repeat the two-call loop until it passes.
@@ -305,30 +258,19 @@ signature:
 
       ---'
     returns: str
-  sketch:
-    kind: action
-    tools:
-    - open
-    - generate
-    instructions: Sketch then generate - grill + sketch cadence, then the host generate
-      body.
-    returns: str
   validate:
     kind: action
-    tools:
-    - open
-    - begin_eval_turn
-    - finish_eval_turn
+    tools: []
     instructions: '# Validate
 
 
-      Take the persona of a **critical judge** ΓÇö do not edit the artifact.
+      Take the persona of a **critical judge** — do not edit the artifact.
 
 
       1. Follow **`session_guidance`**. Scope judgment to artifacts under `session.path`
       / the session layout.
 
-      2. Use **contexts** as the rubric ΓÇö report pass/fail per named context and named
+      2. Use **contexts** as the rubric — report pass/fail per named context and named
       rule with brief evidence.
 
       3. Call **`scan`** on the session-rooted paths under review.
@@ -338,16 +280,4 @@ signature:
 
       ---'
     returns: str
-  log_mistake:
-    kind: sub_agent
-    launch: non_blocking
-    instructions: log_mistake ΓÇö records through Repair onto session.yaml and session/mistakes/.
-    parameters:
-      artifact: str
-      rule: str
-      wrong: str
-      original: str
-      when: str
-    returns: str
 ---
-

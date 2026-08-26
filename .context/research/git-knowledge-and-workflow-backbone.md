@@ -472,7 +472,7 @@ For each gap: **CDD tooling extension**, **artifacts**, **external tools**, **ph
 | Package | Role |
 | --- | --- |
 | `context_tools/actions/workspace` | Turn, WorkSession, SessionLog, GitRepo, ContextIndex, ContextPackage *(new)* |
-| `context_tools/actions/eval` | EvalSession, Repair, CDDRepo, Archive |
+| `context_tools/actions/workspace` | WorkSession, Turn, Mistake, Correction, GitRepo |
 | `context_tools/base` | validate/scan finish → verification trailers |
 | `context_tools/bdd` | agent_bdd judge, regression anchors |
 | `primitives/actions` | expand → SessionLog/SpanLog |
@@ -837,7 +837,7 @@ G-10 (IDE retrieval), G-17 (tokens), G-15 full (model ID without host API).
 ## References
 
 ### CDD
-- `context_tools/actions/eval/.context/sessions/eval/grill-answers.md`
+- `context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/grill-answers.md`
 
 ### Papers (patterns)
 - [Braintrust — Agent observability 2026](https://www.braintrust.dev/articles/agent-observability-complete-guide-2026)

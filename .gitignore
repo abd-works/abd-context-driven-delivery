@@ -18,3 +18,7 @@ utilities/agent_skills/.deploy-state.json
 
 # SessionLog append-only audit trails (runtime; not sprint artifacts)
 **/logs/events.log
+
+# Ephemeral tool run requests (python -m tools run _req.yaml)
+/_req.yaml
+/_req*.yaml

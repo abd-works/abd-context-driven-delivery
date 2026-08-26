@@ -78,12 +78,17 @@ Write-Host "Resetting to fab54f7..."
 git reset --hard fab54f7de84c850917db59c42f417a697dcf8d27
 
 $wsSess = "context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace"
-$evalSess = "context_tools/actions/eval/.context/sessions/eval-consolidate-workspace"
-New-Item -ItemType Directory -Force -Path "$wsSess/logs", $evalSess | Out-Null
+New-Item -ItemType Directory -Force -Path "$wsSess/logs" | Out-Null
 
 $branch = "session/eval-consolidate-workspace"
 $cddAt = "fab54f7de84c850917db59c42f417a697dcf8d27"
 $turnRecords = @()
+
+function Get-TurnName([string]$Prompt) {
+    $slug = ($Prompt -replace '[^a-zA-Z0-9]+', '-').Trim('-').ToLower()
+    if ($slug.Length -gt 72) { $slug = $slug.Substring(0, 72).TrimEnd('-') }
+    return $slug
+}
 
 function Write-SessionYaml {
     param([array]$Turns)
@@ -99,7 +104,7 @@ function Write-SessionYaml {
         $lines += "  result: $($t.result)"
         $lines += "  context: eval-consolidate-workspace"
         $lines += "  change_commit:"
-        $lines += "    turn_id: $($t.id)"
+        $lines += "    name: $($t.name)"
         $lines += "    session_name: eval-consolidate-workspace"
         $lines += "    tool_names: []"
         $lines += "    mistake_ids: []"
@@ -110,8 +115,6 @@ function Write-SessionYaml {
     Write-Utf8 "$wsSess/session.yaml" (($lines -join "`n") + "`n")
 }
 
-function Sync-GrillEval { param([string]$Src); Copy-Item $Src "$evalSess/grill-answers.md" -Force }
-function Sync-SketchEval { param([string]$Src); Copy-Item $Src "$evalSess/workspace-bdd-sketch.md" -Force }
 
 function Commit-Turn {
     param(
@@ -125,15 +128,16 @@ function Commit-Turn {
         git add -- $p
     }
     if (git diff --cached --quiet) { throw "turn $Id would be empty - aborting" }
-    git commit -m "turn $Id" | Out-Null
+    $turnName = Get-TurnName $Prompt
+    git commit -m $turnName | Out-Null
     $sha = (git rev-parse HEAD).Trim()
-    $script:turnRecords += [pscustomobject]@{ id = $Id; prompt = $Prompt; result = $Result; sha = $sha }
+    $script:turnRecords += [pscustomobject]@{ id = $Id; name = $turnName; prompt = $Prompt; result = $Result; sha = $sha }
     Write-SessionYaml -Turns $script:turnRecords
     git add "$wsSess/session.yaml"
     git commit --amend --no-edit | Out-Null
     $sha = (git rev-parse HEAD).Trim()
     $script:turnRecords[-1].sha = $sha
-    Write-Host "turn $Id -> $sha"
+    Write-Host "turn $turnName ($Id) -> $sha"
 }
 
 Copy-Item (Join-Path $staging "bdd-grill-sketch-workflow.md") "context_tools/bdd/.context/bdd-grill-sketch-workflow.md"
@@ -174,13 +178,11 @@ foreach ($step in $turnPlan) {
     $artifacts = @()
     if ($step.grill) {
         Copy-Item (Join-Path $staging $step.grill) "$wsSess/grill-answers.md" -Force
-        Sync-GrillEval "$wsSess/grill-answers.md"
-        $artifacts += "$wsSess/grill-answers.md", "$evalSess/grill-answers.md"
+        $artifacts += "$wsSess/grill-answers.md"
     }
     if ($step.sketch) {
         Copy-Item (Join-Path $staging $step.sketch) "$wsSess/workspace-bdd-sketch.md" -Force
-        Sync-SketchEval "$wsSess/workspace-bdd-sketch.md"
-        $artifacts += "$wsSess/workspace-bdd-sketch.md", "$evalSess/workspace-bdd-sketch.md"
+        $artifacts += "$wsSess/workspace-bdd-sketch.md"
     }
     if ($step.spec) {
         Copy-Item (Join-Path $staging $step.spec) "context_tools/actions/workspace/workspace_spec.py" -Force

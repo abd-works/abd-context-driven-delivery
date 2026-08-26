@@ -1,1 +1,0 @@
-﻿Read context_tools/actions/eval/.context/.agent_bdd_sessions/logs/eval-session-git/judge-prompt.txt and follow it exactly. Reply with only one JSON line as specified in that file.

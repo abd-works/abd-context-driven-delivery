@@ -78,14 +78,27 @@
 + prompt: str
 + result: str
 + context: str
++ name: str
 + commitMessage: str
 + toolCalls: list[ToolCall]
++ mistakes: list[Mistake]
++ correction: Correction | None
++ changeCommit: TurnCommit | None
 ----
 + open(host): Turn
 + finish_turn(tools, prompt, result, context) @agent_tool
 + finish(prompt, result, context): TurnCommit | None
 + record_mistake(…) @agent_tool
 + record_correction(…) @agent_tool
+
+## TurnCommit
+
++ TurnCommit
+------
++ name: str
++ session_name: str
++ tool_names: list[str]
++ sha: str
 
 ## SessionLog
 

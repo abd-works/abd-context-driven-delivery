@@ -1,4 +1,4 @@
-﻿---
+---
 type: bdd
 capabilities:
 - tool
@@ -24,61 +24,43 @@ signature:
       path: str | None
       session: str | None
       workspace: str | None
-  begin_eval_turn:
+  begin_turn:
     kind: tool
-    instructions: Open the eval Turn. Listed on generate / validate / document / partition
-      / repair / createRule.
-    returns: str
-  close_session:
-    kind: tool
+    instructions: Open a workspace turn on the current work session.
     parameters:
-      outcome: str
-      handoff: str
+      action: str
     returns: str
-  finish_eval_turn:
+  finish_turn:
     kind: tool
-    instructions: Close the open eval Turn. Listed on generate / validate / document
-      / partition / repair / createRule.
+    instructions: Finish the open workspace turn; commits on the session branch when
+      dirty.
     parameters:
       prompt: str
       result: str
       context: str
     returns: str
-  log_correction:
+  record_correction:
     kind: tool
-    instructions: log_correction ΓÇö Correction.apply through Repair; writes repairedAsset
-      and improvement.md.
+    instructions: Link a correction to mistake entry ids on the open turn.
     parameters:
       entry_id: str
       improved: str
       how: str
       status: str
+      entry_ids: list[str] | None]
     returns: str
-  open:
+  record_mistake:
     kind: tool
-    instructions: '# Open
-
-
-      One tool before lifecycle work ΓÇö ensures sprint, loads context index, records
-      root when keyed. See **Session Guidance** (`session_guidance`). Do not chain
-      `ensure_session`, `read_context_index`, or `record_context_root` when `open`
-      is in the tool list.
-
-
-      ```yaml
-
-      tool: open
-
-      ```
-
-
-      ---'
+    instructions: Annotate a mistake on the introducing commit (git-primary).
     parameters:
-      name: str
-      goal: str
-      fidelities: str
-      contexts: str
-      path: str
+      artifact: str
+      rule: str
+      wrong: str
+      original: str
+      introducing_commit: str
+      entry_id: str
+      tool: str
+      fidelity: str
     returns: str
   render:
     kind: tool
@@ -104,7 +86,7 @@ signature:
     returns: TransformResult
   active:
     kind: resource
-    type: Session
+    type: WorkSession | None
   mode:
     kind: resource
     type: str
@@ -116,9 +98,7 @@ signature:
     returns: str
   createRule:
     kind: action
-    tools:
-    - begin_eval_turn
-    - finish_eval_turn
+    tools: []
     instructions: '# Create Rule
 
 
@@ -131,7 +111,7 @@ signature:
       Take **failed** (what went wrong on the asset) and **wanted** (what should have
       happened). Using **contexts**, **examples**, and **template**, evaluate a new
       named rule and a matching scanner that can detect that failure deterministically
-      ΓÇö only when the failure is mechanical and that existing surface cannot carry
+      — only when the failure is mechanical and that existing surface cannot carry
       it.
 
 
@@ -148,15 +128,12 @@ signature:
   document:
     kind: action
     tools:
-    - open
-    - begin_eval_turn
     - generate_output
     - add_generate_header_to_generated
-    - finish_eval_turn
     instructions: '# Document
 
 
-      Take the persona of a **neutral observer** ΓÇö describe what exists, do not prescribe
+      Take the persona of a **neutral observer** — describe what exists, do not prescribe
       what should exist.
 
 
@@ -164,13 +141,13 @@ signature:
 
       2. Read the **contexts** to understand the vocabulary and structure of the domain.
 
-      3. Fill the **template** scaffold with observed content ΓÇö describe current state
+      3. Fill the **template** scaffold with observed content — describe current state
       only.
 
       4. Do not apply, suggest, or imply rules or best practices in the generated
       output.
 
-      5. Call **`scan`** and append all violations to the document as-is ΓÇö flag them,
+      5. Call **`scan`** and append all violations to the document as-is — flag them,
       do not correct them.
 
       6. Save the artifact under the session layout from `session_guidance`.
@@ -188,13 +165,13 @@ signature:
   generate:
     kind: action
     tools: []
-    instructions: "At modules fidelity: delegate entirely to ce().generate() ΓÇö no\
+    instructions: "At modules fidelity: delegate entirely to ce().generate() — no\
       \ BDD spec file is written at this stage. Use this to bootstrap CE class structure\
       \ before writing tests.\n        At behavior fidelity: write all BDD test signatures\
       \ (SIGNATURE markers).\n        At development fidelity: write full test bodies\
       \ and production code.\n        When the target module already exists, scan\
       \ the production source for every public method and property and verify each\
-      \ has test coverage ΓÇö add missing signatures for any gap before writing new\
+      \ has test coverage — add missing signatures for any gap before writing new\
       \ ones.\n        BDD tests must conform to CE class structure: describe/it hierarchies\
       \ must map onto public CE interfaces and operations.\n        When BDD artifacts\
       \ are complete, call ce().generate() to produce the matching class skeletons."
@@ -212,30 +189,19 @@ signature:
     kind: action
     tools: []
     instructions: "Run the BDD grill loop to surface assumptions and gaps.\n     \
-      \   When BDD grill is complete, call ce().grill() to do the same for the matching\
-      \ classes."
+      \   When BDD grill is complete, invoke CleanEngineering via /grill (same session)\
+      \ for the matching classes."
     returns: str
   iterate:
     kind: action
     tools: []
     instructions: "Iterate one BDD cycle: write one test, confirm it is RED, then\
-      \ call ce().iterate() to build the minimum production code until GREEN. Repeat\
-      \ ΓÇö one test, one production change, one GREEN ΓÇö until all tests pass.\n   \
-      \     If the same test is still RED after 2 consecutive fix attempts ΓÇö stop\
-      \ guessing. Call diagnostic().diagnose() before a third fix (wrong exception,\
-      \ wrong line, shifting failure mode, or a re-read of the code that does not\
-      \ explain the failure)."
-    returns: str
-  partition:
-    kind: action
-    tools:
-    - open
-    - begin_eval_turn
-    - finish_eval_turn
-    parameters:
-      context: str
-      mode: str
-      out_root: str | None
+      \ invoke CleanEngineering via /iterate to build the minimum production code\
+      \ until GREEN. Repeat — one test, one production change, one GREEN — until all\
+      \ tests pass.\n        If the same test is still RED after 2 consecutive fix\
+      \ attempts — stop guessing. Call diagnostic().diagnose() before a third fix\
+      \ (wrong exception, wrong line, shifting failure mode, or a re-read of the code\
+      \ that does not explain the failure)."
     returns: str
   repair:
     kind: action
@@ -256,7 +222,8 @@ signature:
     kind: action
     tools: []
     instructions: "Sketch the BDD hierarchy at the current fidelity.\n        When\
-      \ BDD sketch is complete, call ce().sketch() to sketch the matching classes."
+      \ BDD sketch is complete, invoke CleanEngineering via /sketch for the matching\
+      \ classes."
     returns: str
   validate:
     kind: action
@@ -265,16 +232,4 @@ signature:
       \ BDD validation passes, call ce().validate() to validate the matching class\
       \ artifacts."
     returns: str
-  log_mistake:
-    kind: sub_agent
-    launch: non_blocking
-    instructions: log_mistake ΓÇö records through Repair onto session.yaml and session/mistakes/.
-    parameters:
-      artifact: str
-      rule: str
-      wrong: str
-      original: str
-      when: str
-    returns: str
 ---
-

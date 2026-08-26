@@ -1,6 +1,6 @@
 ﻿# Grill answers â€” eval-consolidate-workspace Bdd behavior prep
 
-Design source: `context_tools/actions/eval/.context/sessions/eval-consolidate-workspace/workspace-eval-oo-sketch.md`
+Design source: `context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-eval-oo-sketch.md`
 
 Append-only. Runner adds question blocks; judge adds answers beneath.
 

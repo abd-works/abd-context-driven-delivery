@@ -7,7 +7,6 @@
 Peer-kit expansion lives with the kits:
 - ``context_tools/actions/workspace/workspace_session_spec.py``
 - ``context_tools/actions/partition/partition_spec.py``
-- ``context_tools/actions/eval/session_spec.py``
 
 Meta generator face (scaffold templates / create_context_tool.md) lives in
 ``create_context_tool/create_context_tool_spec.py``.

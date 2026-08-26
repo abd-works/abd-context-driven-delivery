@@ -1,7 +1,0 @@
-toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
-context:
-  fidelity: model
-  format: drawio
-  path: c:\dev\paradise-mobile\pml-my
-  session: pml-my-current-state
-action: improve

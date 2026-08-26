@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from _workspace_turn import log_correction_turn
+from _workspace_turn import record_correction_turn
 
 SESSION = "workflow-package"
 PATH = "context_tools/actions/workflow"
@@ -13,7 +13,7 @@ ENTRY_ID = "62fc32d6"
 
 def main() -> None:
     improved = SKETCH.read_text(encoding="utf-8")
-    sha = log_correction_turn(
+    sha = record_correction_turn(
         path=PATH,
         session_name=SESSION,
         entry_id=ENTRY_ID,

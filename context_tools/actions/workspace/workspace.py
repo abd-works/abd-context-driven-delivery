@@ -39,9 +39,9 @@ class ToolCall:
 
 @dataclass
 class TurnCommit:
-    """Session-branch commit for a finished Turn — identity is the SHA."""
+    """Session-branch commit for a finished Turn — name is the commit subject."""
 
-    turn_id: str
+    name: str
     session_name: str
     tool_names: list[str]
     sha: str
@@ -77,7 +77,11 @@ class Turn:
             parts.append(self.fidelity)
         if self.format:
             parts.append(self.format)
-        return "-".join(parts) if parts else f"turn-{self.id}"
+        if not parts:
+            raise ValueError(
+                "Turn.name unset — open with action via bind_from_host before finish"
+            )
+        return "-".join(parts)
 
     @property
     def commit_message(self) -> str:
@@ -157,7 +161,7 @@ class Turn:
             if self.correction is not None:
                 self.correction.link(session.git, sha)
             change = TurnCommit(
-                turn_id=self.id,
+                name=self.name,
                 session_name=session.name,
                 tool_names=[c.name for c in self.tool_calls],
                 sha=sha,

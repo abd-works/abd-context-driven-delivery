@@ -6,7 +6,7 @@ import uuid
 from context_tools.bdd.bdd import Bdd
 
 
-def log_mistake_turn(
+def record_mistake_turn(
     *,
     path: str,
     session_name: str,
@@ -41,7 +41,7 @@ def log_mistake_turn(
     return entry_id, commit.sha if commit else None
 
 
-def log_correction_turn(
+def record_correction_turn(
     *,
     path: str,
     session_name: str,

@@ -1,6 +1,0 @@
-toolset: context_tools.bdd.bdd:Bdd
-context:
-  fidelity: development
-  path: context_tools/actions/eval
-  session: eval-consolidate-workspace
-action: generate

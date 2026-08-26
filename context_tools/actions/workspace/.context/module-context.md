@@ -35,6 +35,7 @@
 - `Turn` — owns `mistakes` and optional `correction` directly; `record_mistake` /
   `record_correction` attach to the open turn before `finish`
 - `Turn` / `Mistake` / `Correction` / `PathOverride` / `ToolCall` / `TurnCommit`
+  (`TurnCommit.name` = git commit subject from `Turn.name`, not a uuid slug)
 - `SessionLog` — `append` → events.log + openTurn.toolCalls; **delete `@log` as host primary**
 - `ContextToolHost` — OO host used by `workspace_spec` (production host is `BaseContextTool`)
 

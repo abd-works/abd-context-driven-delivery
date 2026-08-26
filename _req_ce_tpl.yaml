@@ -1,4 +1,0 @@
-toolset: sketch.sketch:Sketcher
-tool: find_template
-arguments:
-  agent_dir: context_tools/clean_engineering
