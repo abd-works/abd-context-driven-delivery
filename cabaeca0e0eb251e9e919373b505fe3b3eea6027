@@ -1,0 +1,15 @@
+entry_id: 1c9526fa
+artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/grill-answers.md
+rule: usage-order-behaviors
+wrong: Grill tick 9 asked slice-boundary / process options (where should the first extension boundary fall) instead of BDD design-tree questions: highest-level behavior, event, or state change to model; substates under that branch; legitimate it should tests. bdd.md: nest by enabling events and usage story — grill must walk the tree down, not pick sketch scope by checklist letter.
+original: ### Turn — grill tick 9 — slice F boundary (mistake / correction)
+
+**Question:** Slice **F** extends the workspace Bdd sketch for the mistake/correction chain (`workspace-eval-oo-sketch.md` §4 lines 264, 393–394, 427–446, 660–683; §9 item 6). Where should the **first** sketch extension boundary fall?
+
+**Options:**
+
+- **A — Mistake-only under open turn:** enabling event when recording a mistake → on open turn, persist under work session, nest in themed repair backlog. Exclude correction and Tu...
+tool: context_tools.bdd.bdd:Bdd
+fidelity: behavior
+introducing_commit: cabaeca0e0eb251e9e919373b505fe3b3eea6027
+fixed_by: 6a2d321b9d885b751df63483ba39b8bbd941a4c9
