@@ -21,10 +21,10 @@ session-branch lifecycle. Implements the ticket/workflow slice of the git backbo
 
 ## Dependencies
 
-- `workspace` — `WorkSession`, `GitRepo`, turn commit + trailers
-- `handoff` — forward-requirements **content patterns** (issue body at backlog; not local write v1)
-- `gh` CLI — issue create/view/close; project item-add + Status field edit; merge when applicable
-- `utilities/trace_graph` *(future)* — workflow-index regen
+- `git` (`utilities/git`) — `Repo`, `Branch`, `Commit`, `Project`, `Ticket`
+- `workspace` — `WorkSession`, session branch, turns
+- `handoff` — forward-requirements content patterns
+- `gh` CLI — via `Repo` when not using `Repo.memory()`
 
 ## Public API
 

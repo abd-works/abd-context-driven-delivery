@@ -1,18 +1,54 @@
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """BDD spec for context_tools/actions/workflow/workflow.py."""
 
 import sys
+import tempfile
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
+sys.modules.pop("workflow", None)
 
-from expects import equal, expect
-from mamba import description, it
+from expects import be_true, contain, equal, expect, raise_error
+from mamba import before, context, description, it
 
+from git import (
+    format_commit_message,
+    format_github_issue_trailer,
+    parse_issue_number,
+)
+from git.git import Repo, Ticket
 from workflow.workflow import Workflow
+
+
+def _seed_issue(repo: Repo, *, number: int = 87, title: str, body: str) -> Ticket:
+    ticket = Ticket(
+        number=number,
+        title=title,
+        body=body,
+        url=f"https://github.com/demo-org/demo-repo/issues/{number}",
+    )
+    repo._tickets[number] = ticket
+    return ticket
+
+
+def _workflow_fixture(prefix: str) -> tuple[Path, Repo]:
+    tmp = Path(tempfile.mkdtemp(prefix=prefix))
+    (tmp / ".git").mkdir()
+    config_dir = tmp / ".context"
+    config_dir.mkdir()
+    (config_dir / "workflow.yaml").write_text(
+        "project_owner: demo-org\nproject_number: 3\n",
+        encoding="utf-8",
+    )
+    return tmp, Repo.memory(tmp)
 
 
 with description("Workflow helpers"):
@@ -23,3 +59,204 @@ with description("Workflow helpers"):
     with it("should kebab-case issue titles for session slugs"):
         w = Workflow()
         expect(w._kebab("Add workflow package #87")).to(equal("add-workflow-package-87"))
+
+    with it("should parse github issue references"):
+        expect(parse_issue_number("87")).to(equal(87))
+        expect(parse_issue_number("#87")).to(equal(87))
+        expect(parse_issue_number("demo-org/demo-repo#87")).to(equal(87))
+        expect(parse_issue_number("https://github.com/demo-org/demo-repo/issues/87")).to(
+            equal(87)
+        )
+
+    with it("should format github issue trailers"):
+        expect(format_github_issue_trailer("demo-org", "demo-repo", 87)).to(
+            equal("demo-org/demo-repo#87")
+        )
+
+    with it("should format commit messages with workflow trailers"):
+        message = format_commit_message(
+            "start workflow-package-87",
+            {
+                "GitHub-Issue": "demo-org/demo-repo#87",
+                "Workflow-State": "specification",
+            },
+        )
+        expect(message).to(contain("GitHub-Issue: demo-org/demo-repo#87"))
+        expect(message).to(contain("Workflow-State: specification"))
+
+    with it("should derive session names from issue titles"):
+        w = Workflow()
+        expect(w.session_name_for_issue("Add workflow package", 87)).to(
+            equal("add-workflow-package-87")
+        )
+
+
+with description("Workflow manifest"):
+    with it("should expose backlog start finish actions and workflow tools"):
+        sig = Workflow.manifest.signature
+        expect(sig["backlog"]["kind"]).to(equal("action"))
+        expect(sig["start"]["kind"]).to(equal("action"))
+        expect(sig["finish"]["kind"]).to(equal("action"))
+        expect(sig["create_ticket"]["kind"]).to(equal("tool"))
+        expect(sig["open_ticket_session"]["kind"]).to(equal("tool"))
+        expect(sig["merge_session_to_main"]["kind"]).to(equal("tool"))
+
+
+with description("a Workflow"):
+    with context("that is asked to start an item"):
+        with context("with a github issue reference given"):
+            with context("with the issue not found"):
+                with before.each:
+                    self.tmp, self.repo = _workflow_fixture("wf-start-miss-")
+                    self.workflow = Workflow(workspace=str(self.tmp), repo=self.repo)
+
+                with it("should report that the ticket was not found"):
+                    expect(lambda: self.workflow.view_ticket("87", workspace=str(self.tmp))).to(
+                        raise_error(TicketNotFoundError)
+                    )
+
+                with it("should not open a work session"):
+                    try:
+                        self.workflow.open_ticket_session("87", workspace=str(self.tmp))
+                    except TicketNotFoundError:
+                        pass
+                    ws = self.workflow.workspace_tool(path=str(self.tmp))
+                    expect(ws.current_work_session is None).to(be_true)
+
+    with context("that is asked to finish work"):
+        with context("with no open work session"):
+            with before.each:
+                self.tmp, self.repo = _workflow_fixture("wf-finish-none-")
+                self.workflow = Workflow(workspace=str(self.tmp), repo=self.repo)
+
+            with it("should report that no work session is open"):
+                expect(
+                    lambda: self.workflow.require_open_session(workspace=str(self.tmp))
+                ).to(raise_error(RuntimeError, "no open work session"))
+
+
+with description("a Workflow backlog path"):
+    with context("with a memory Repo"):
+        with before.each:
+            self.tmp, self.repo = _workflow_fixture("wf-backlog-")
+            self.workflow = Workflow(workspace=str(self.tmp), repo=self.repo)
+
+        with it("should create a github issue with the handoff body"):
+            created = self.workflow.create_ticket(
+                title="Workflow package",
+                body="forward requirements",
+                workspace=str(self.tmp),
+                project_status="Backlog",
+            )
+            expect(created["number"]).to(equal(1))
+            expect(created["body"]).to(equal("forward requirements"))
+            expect(self.repo._ticket_project_state[1]).to(equal("Backlog"))
+
+        with it("should not open a work session"):
+            self.workflow.create_ticket(
+                title="Workflow package",
+                body="forward requirements",
+                workspace=str(self.tmp),
+            )
+            ws = self.workflow.workspace_tool(path=str(self.tmp))
+            expect(ws.current_work_session is None).to(be_true)
+
+
+with description("a Workflow start path"):
+    with context("with an issue available"):
+        with before.each:
+            self.tmp, self.repo = _workflow_fixture("wf-start-")
+            _seed_issue(
+                self.repo,
+                title="Add workflow package",
+                body="forward requirements from issue",
+            )
+            self.workflow = Workflow(workspace=str(self.tmp), repo=self.repo)
+
+        with it("should open a work session named for that ticket"):
+            opened = self.workflow.open_ticket_session(
+                "87",
+                instructions="resume from issue",
+                workspace=str(self.tmp),
+            )
+            expect(opened["session_name"]).to(equal("add-workflow-package-87"))
+            ws = self.workflow.workspace_tool(path=str(self.tmp))
+            expect(ws.current_work_session.name).to(equal("add-workflow-package-87"))
+
+        with it("should set the branch to the session branch for that work session"):
+            self.workflow.open_ticket_session("87", workspace=str(self.tmp))
+            ws = self.workflow.workspace_tool(path=str(self.tmp))
+            expect(ws.current_work_session.session_branch).to(
+                equal("session/add-workflow-package-87")
+            )
+
+        with it("should open a turn for the action run"):
+            self.workflow.open_ticket_session("87", workspace=str(self.tmp))
+            ws = self.workflow.workspace_tool(path=str(self.tmp))
+            expect(ws.current_work_session.open_turn is not None).to(be_true)
+
+        with it("should move the issue to In Progress on the project"):
+            self.workflow.set_ticket_project_status(
+                "87",
+                "In Progress",
+                workspace=str(self.tmp),
+            )
+            expect(self.repo._ticket_project_state[87]).to(equal("In Progress"))
+
+        with it("should copy issue sections into the work session folder when needed"):
+            path = self.workflow.copy_issue_body_to_session(
+                "87",
+                "add-workflow-package-87",
+                workspace=str(self.tmp),
+            )
+            expect(Path(path).read_text(encoding="utf-8")).to(
+                equal("forward requirements from issue")
+            )
+
+
+with description("a Workflow finish path"):
+    with context("with an open work session from start"):
+        with before.each:
+            self.tmp, self.repo = _workflow_fixture("wf-finish-")
+            _seed_issue(
+                self.repo,
+                title="Add workflow package",
+                body="forward requirements",
+            )
+            self.workflow = Workflow(workspace=str(self.tmp), repo=self.repo)
+            self.workflow.open_ticket_session("87", workspace=str(self.tmp))
+            self.git = self.workflow.workspace_tool(path=str(self.tmp)).current_work_session.git
+            self.git.create_branch("session/add-workflow-package-87")
+            self.git.checkout_or_create("session/add-workflow-package-87")
+
+        with it("should merge its session branch into main"):
+            sha = self.workflow.merge_session_to_main(
+                workspace=str(self.tmp),
+                ticket="87",
+                reviewed_by="human",
+            )
+            expect(self.git.current_branch).to(equal("main"))
+            expect(sha).to(contain("merge-session/add-workflow-package-87-into-main"))
+
+        with it("should carry github issue and workflow-state done trailers on the merge commit"):
+            self.workflow.merge_session_to_main(
+                workspace=str(self.tmp),
+                ticket="87",
+                reviewed_by="human",
+            )
+            _, message = self.git.commits[-1]
+            expect(message).to(contain("GitHub-Issue: demo-org/demo-repo#87"))
+            expect(message).to(contain("Workflow-State: done"))
+            expect(message).to(contain("Reviewed-By: human"))
+
+        with it("should close the github issue"):
+            self.workflow.close_ticket("87", workspace=str(self.tmp))
+            expect(87 in self.repo._closed_tickets).to(be_true)
+
+        with it("should move the issue to Done on the project"):
+            self.workflow.set_ticket_project_status(
+                "87",
+                "Done",
+                workspace=str(self.tmp),
+            )
+            expect(self.repo._ticket_project_state[87]).to(equal("Done"))

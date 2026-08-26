@@ -5,7 +5,7 @@ Workspace-relative roots for each context tool. Prefer these over defaults when 
 ## Current
 
 - bdd = ./context_tools/actions/workspace/*
-- clean_engineering = ./context_tools/actions/workspace/*
+- clean_engineering = ./utilities/git/*
 - stories = ./../story-ui/*
 
 ## Log
@@ -18,3 +18,4 @@ Workspace-relative roots for each context tool. Prefer these over defaults when 
 - 2026-08-21: clean_engineering = ./context_tools/actions/eval/* (was ./../story-ui/*)
 - 2026-08-22: bdd = ./context_tools/actions/workspace/* (was ./context_tools/*)
 - 2026-08-26: bdd = ./context_tools/actions/workspace/*; clean_engineering = ./context_tools/actions/workspace/* (eval package deleted)
+- 2026-08-26: clean_engineering = ./utilities/git/* (was ./context_tools/actions/workspace/*)
