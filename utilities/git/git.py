@@ -257,6 +257,23 @@ class Project:
                 return state
         raise ValueError(f"unknown project state: {name!r}")
 
+    def link_repository(self) -> None:
+        """Attach this org project to the current GitHub repository."""
+        repo = self._repo
+        owner, name = repo.owner_repo()
+        if repo._memory:
+            repo._project_links.append((self.owner, self.number, f"{owner}/{name}"))
+            return
+        repo._gh(
+            "project",
+            "link",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--repo",
+            f"{owner}/{name}",
+        )
+
 
 class Repo:
     """Local git clone with optional GitHub project + tickets."""
@@ -387,6 +404,7 @@ class Repo:
         self._pushes: list[str] = []
         self._dirty = False
         self._notes: dict[str, dict[str, str]] = {}
+        self._project_links: list[tuple[str, int, str]] = []
 
     @property
     def project(self) -> Project | None:
@@ -394,6 +412,7 @@ class Repo:
 
     def attach_project(self, owner: str, number: int) -> Project:
         self._project = Project(self, owner, number)
+        self._project.link_repository()
         return self._project
 
     @property

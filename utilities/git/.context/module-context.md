@@ -36,7 +36,8 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 - `Repo.branch` / `Repo.branch_named(name)` → `Branch`
 - `Branch.checkout()`, `Branch.commit(paths, message)` → `Commit`, `Branch.merge(other)` → `Commit`
 - `Commit.format(subject, trailers)` / `Commit.from_message(sha, message)` — message + trailer `data`
-- `Repo.attach_project(owner, number)` → `Project`
+- `Repo.attach_project(owner, number)` → `Project` (links the board onto this repository)
+- `Project.link_repository()` — `gh project link` so the board appears on the repo Projects tab
 - `Project.state_named(name)` — column on the board
 - `Ticket.set_status(state)` / `Ticket.parse_number(ref)` / `Ticket.github_ref(...)` / `Ticket.close()`
 - `Ticket` — `number`, `title`, `body`, `url`, `state`, open `data` map
@@ -59,7 +60,7 @@ Domain objects hold behavior; `Repo.git` / `Repo.gh` run the CLIs. `Repo.memory(
 stores branches, commits, tickets, project status, and notes in plain dicts/lists — same
 public API as CLI-backed `Repo.open()`. Commit trailers are parsed into `Commit.data`;
 workflow helpers format `GitHub-Issue:` and `Workflow-State:` lines. Project status maps
-to GitHub Projects via `gh project item-add` / `item-edit` when not in memory mode.
+to GitHub Projects via `gh project link` / `item-add` / `item-edit` when not in memory mode.
 
 ## Rationale
 

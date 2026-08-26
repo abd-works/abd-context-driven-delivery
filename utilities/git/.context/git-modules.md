@@ -28,6 +28,7 @@ a kanban *TicketState*.
 ### project
 
 - GitHub Project scoped to owner + number; defines *TicketState* columns
+- Links onto the current repository (`gh project link`) so the board shows on the repo Projects tab
 - Adds tickets to the board and moves them between states
 
 ### ticket
@@ -112,6 +113,7 @@ number: int
 states: list[TicketState]
 ----
 state_named(name): TicketState
+link_repository(): None
 
 ## Ticket
 

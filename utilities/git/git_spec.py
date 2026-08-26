@@ -75,6 +75,12 @@ with description("a Repo"):
             expect(len(project.states)).to(equal(3))
             expect(project.state_named("Backlog").name).to(equal("Backlog"))
 
+        with it("should link the project to the repository"):
+            self.repo.attach_project("demo-org", 3)
+            expect(self.repo._project_links).to(
+                equal([("demo-org", 3, "demo-org/demo-repo")])
+            )
+
         with it("should create tickets and track project state"):
             project = self.repo.attach_project("demo-org", 3)
             ticket = self.repo.create_ticket("Workflow package", "forward requirements")
