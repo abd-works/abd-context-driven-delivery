@@ -1,0 +1,8 @@
+entry_id: 95ae9520
+artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+rule: domain-practice-alignment
+wrong: Sketch used today's persistence filename "context-index" as Bdd subject vocabulary. Target model names pathOverrides on Workspace and PathOverride rows (tool, fidelity, path); context-index.md is persistence only, not a domain concept.
+tool: context_tools.bdd.bdd:Bdd
+fidelity: behavior
+introducing_commit: aebb69a8a7976a974b78803bfa6a02069d7529e0
+fixed_by: a734ec2ad4a8cf1a2d736f85671097cdc2b04668
