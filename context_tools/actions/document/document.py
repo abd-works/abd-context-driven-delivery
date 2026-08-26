@@ -18,15 +18,13 @@ class Document(LifecycleAction):
 
     @agent_instructions
     def document(self, tools: list, paths: list[str]) -> str:
-        """runs on each provided context tool"""
+        """document"""
         self.begin(tools, action="document")
         for tool in self.context_tools(tools):
             tool.contexts
             tool.templates
             tool.scanner.scan(paths)
-            generate_output = getattr(tool, "generate_output", None)
-            if generate_output is not None:
-                generate_output()
+            tool.generate_output()
             SessionLog.instance().append(
                 toolset=type(tool).manifest_path,
                 name="document",

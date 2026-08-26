@@ -14,8 +14,7 @@
 
 - `CreateContextTool(format=None, path=None, session=None, workspace=None)`
 - Class attrs: `default_workspace_folder`, `context_index_key`
-- Inherited lifecycle: `generate`, `validate`, `satisfy`, `repair`, `partition`, `index`, `segment`, …
-- Inherited tools: session tools, `scan`
+- Inherited host face: `guidance`, `contexts`, `examples`, `templates`, session tools. Lifecycle generate / validate / satisfy / repair live on kits (`Generate().generate(tools=[create])`).
 
 ## Dependencies
 

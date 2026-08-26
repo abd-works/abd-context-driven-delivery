@@ -30,6 +30,7 @@ from catalog_generator.catalog_generator import (
 )
 from context_tools.ddd.ddd import Ddd
 from context_tools.stories.stories import Stories
+from generate.generate import Generate
 from partition.partition import Partition
 
 
@@ -43,9 +44,15 @@ with description("Build Run Request From Live Toolset Manifest"):
             expect("mode" in req["arguments"]).to(be_true)
 
         with it("omits arguments when the action declares none"):
-            req = build_run_request(Ddd, action="generate", fidelity="tactics")
-            expect(req["action"]).to(equal("generate"))
+            req = build_run_request(Ddd, action="guidance", fidelity="tactics")
+            expect(req["action"]).to(equal("guidance"))
             expect("arguments" in req).to(equal(False))
+
+        with it("fills Generate kit generate with a tools argument"):
+            req = build_run_request(Generate, action="generate")
+            expect(req["toolset"]).to(equal("generate.generate:Generate"))
+            expect(req["action"]).to(equal("generate"))
+            expect("tools" in req["arguments"]).to(be_true)
 
 
 with description("Load Context Tool And Utility Registry"):
@@ -132,15 +139,15 @@ with description("Resolve Lifecycle Action Source Dir And Calls Via AST Walk"):
             expect(self.by_name["repair"].source_dir.name).to(equal("improvement"))
             expect(self.by_name["repair"].calls).to(equal([]))
 
-        with it("falls back createRule to context_tools/base/"):
-            expect(self.by_name["createRule"].source_dir.name).to(equal("base"))
+        with it("resolves createRule to context_tools/actions/validate/"):
+            expect(self.by_name["createRule"].source_dir.name).to(equal("validate"))
             expect(self.by_name["createRule"].calls).to(equal([]))
 
-        with it("falls back generate/document/validate/satisfy to context_tools/base/"):
+        with it("resolves generate/document/validate/satisfy to their action kits"):
             for name in ("generate", "document", "validate", "satisfy"):
                 resolution = self.by_name[name]
-                expect(resolution.source_dir.name).to(equal("base"))
-                expect(str(resolution.source_dir.parent.name)).to(equal("context_tools"))
+                expect(resolution.source_dir.name).to(equal(name))
+                expect(str(resolution.source_dir.parent.name)).to(equal("actions"))
 
 
 with description("Collect Skill Slash-Command Map From SKILL Frontmatter"):

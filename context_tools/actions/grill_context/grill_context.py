@@ -84,9 +84,14 @@ class GrillContext(LifecycleAction):
         self.begin(tools, action="grill")
         for host in self.context_tools(tools):
             self.grill_with_context()
-            host.generate()
+            self._generate().generate(tools=[host])
         self.end()
         return "Grill complete; generate instructions applied."
+
+    def _generate(self):
+        from generate.generate import Generate
+
+        return Generate()
 
     @agent_instructions
     def grill_with_context(self, plan: str) -> str:

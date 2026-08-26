@@ -1,30 +1,43 @@
 """BDD spec - AgentBdd expands agent-test content and composes bdd actions."""
 
+import sys
 from pathlib import Path
 from typing import Any
 
 from expects import be_true, equal, expect
 from mamba import before, context, description, it
 
+_AGENT_BDD_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _AGENT_BDD_DIR.parents[1]
+for _p in [
+    str(_REPO_ROOT),
+    *[
+        str(_REPO_ROOT / c)
+        for c in ("context_tools", "primitives", "utilities", "context_tools/actions")
+    ],
+]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
 import agent_bdd.conf  # noqa: F401 - repo root on sys.path
 import context_tools  # noqa: F401
 from primitives.instructions import Instruction
-from primitives.instructions import _path_for_name
 from tools.tool import Toolset, _ToolsetLoader
+from validate.validate import Validate
 
-_AGENT_BDD_DIR = Path(__file__).resolve().parent
-_REPO_ROOT = _AGENT_BDD_DIR.parents[1]
 _AGENT_BDD_TOOLSET = "agent_bdd.agent_bdd:AgentBdd"
 _BDD_DIR = _REPO_ROOT / "context_tools" / "bdd"
-_GENERATOR_DIR = _REPO_ROOT / "context_tools" / "base"
-_LIFECYCLE_PROSE_DIR = _GENERATOR_DIR  # sections in base_context_tool.md
+_GENERATE_DIR = _REPO_ROOT / "context_tools" / "actions" / "generate"
+_VALIDATE_DIR = _REPO_ROOT / "context_tools" / "actions" / "validate"
+_GENERATE_TOOLSET = "generate.generate:Generate"
+_VALIDATE_TOOLSET = "validate.validate:Validate"
 
 
-def _lifecycle_prose(action: str) -> str:
-    return Instruction(
-        _path_for_name(_LIFECYCLE_PROSE_DIR, action), _LIFECYCLE_PROSE_DIR
-    ).expand()
+def _kit_prose(action: str, kit_dir: Path) -> str:
+    from primitives.instructions import _path_for_name
+
+    return Instruction(_path_for_name(kit_dir, action), kit_dir).expand()
 
 
 def _load_agent_bdd(*, format_name: str = "python") -> Toolset:
@@ -65,77 +78,45 @@ with description("AgentBdd action expansion"):
             ).expand()
             self.bdd_contexts = Instruction("\u00a7 Contexts", _BDD_DIR).expand()
 
-        with context("the generate action is expanded"):
+        with context("that does not own kit lifecycle actions"):
+            with it("should not expose generate, validate, satisfy, or repair"):
+                for name in ("generate", "validate", "satisfy", "repair"):
+                    expect(name in self.bdd.actions).to(equal(False))
+
+        with context("the guidance action is expanded"):
             with before.each:
                 self.response = _expand_action(
                     self.bdd,
-                    "generate",
+                    "guidance",
                     toolset_path=_AGENT_BDD_TOOLSET,
                     context={"format": "python"},
                 )
 
-            with it("should set action to generate"):
-                expect(self.response["action"]).to(equal("generate"))
+            with it("should set action to guidance"):
+                expect(self.response["action"]).to(equal("guidance"))
 
             with it("should inline agent-BDD concepts from agent_bdd.md"):
                 _assert_text_inlined(self.response["instructions"], self.contexts)
-
-            with it("should inline agent_bdd.md # Generate from generate docstring"):
-                generate_prose = Instruction(
-                    "\u00a7 Generate", _AGENT_BDD_DIR, domain_slug="agent_bdd"
-                ).expand()
-                _assert_text_inlined(self.response["instructions"], generate_prose)
-
-            with it("should inline bdd concepts via nested bdd generate"):
-                _assert_text_inlined(self.response["instructions"], self.bdd_contexts)
-
-            with it("should inline # Generate from base_context_tool.md"):
-                shared = _lifecycle_prose("generate")
-                _assert_text_inlined(self.response["instructions"], shared)
 
             with it("should inline templates/agent_bdd-templates.py from format resource"):
                 template = Instruction(
                     "templates/agent_bdd-templates.py", _AGENT_BDD_DIR
                 ).expand()
-                # Generate may strip scaffold header comments; require distinctive body markers.
                 expect("with description" in self.response["instructions"]).to(be_true)
                 expect("ai_judge" in self.response["instructions"]).to(be_true)
                 expect(len(template) > 0).to(be_true)
 
-        with context("the validate action is expanded"):
+        with context("the Validate kit is expanded with this host"):
             with before.each:
                 self.response = _expand_action(
-                    self.bdd,
+                    Validate(),
                     "validate",
-                    toolset_path=_AGENT_BDD_TOOLSET,
-                    context={"format": "python"},
+                    toolset_path=_VALIDATE_TOOLSET,
+                    arguments={"tools": [self.bdd]},
                 )
 
-            with it("should name scan then finish_turn then validate"):
-                expect(self.response["tools"]).to(
-                    equal(
-                        [
-                            "scan",
-                            "finish_turn",
-                            "validate",
-                        ]
-                    )
+            with it("should inline validate kit prose"):
+                _assert_text_inlined(
+                    self.response["instructions"],
+                    _kit_prose("validate", _VALIDATE_DIR),
                 )
-
-            with it("should inline bdd validate prose via nested bdd validate"):
-                validate_prose = _lifecycle_prose("validate")
-                _assert_text_inlined(self.response["instructions"], validate_prose)
-                _assert_text_inlined(self.response["instructions"], self.bdd_contexts)
-
-        with context("the satisfy action is expanded"):
-            with before.each:
-                self.response = _expand_action(
-                    self.bdd,
-                    "satisfy",
-                    toolset_path=_AGENT_BDD_TOOLSET,
-                    context={"format": "python"},
-                )
-
-            with it("should inline bdd satisfy prose via nested bdd satisfy"):
-                satisfy_prose = _lifecycle_prose("satisfy")
-                _assert_text_inlined(self.response["instructions"], satisfy_prose)

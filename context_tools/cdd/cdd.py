@@ -70,69 +70,19 @@ class Cdd(BaseContextTool):
             for cls in _CONTEXT_TOOLS_BY_STAGE[stage]
         ]
 
-    # -- Actions ---------------------------------------------------------------
-    # grill / sketch: inline each child's high-level pass (action mode).
-    # generate / iterate / validate / satisfy / document: set child mode=tool so
-    # each is a separate tools run — never inline full child recipes.
+    # -- Guidance --------------------------------------------------------------
+    # Stage children are companions: list each as a tool-mode guidance run.
+    # Kits own generate / validate / satisfy / document / grill / sketch / iterate.
 
     @agent_instructions
-    def generate_output(self) -> str:
-        """Invoke each stage child's generate as its own tools run."""
+    def guidance(self) -> str:
+        """Call guidance on each stage child and pass that child to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
+        super().guidance()
         for context_tool in self.context_tools():
             context_tool.mode = "tool"
-            context_tool.generate()
-        return "Invoke each Separate tools run above, one child at a time."
-
-    @agent_instructions
-    def grill(self) -> str:
-        """Inline each stage child's grill via the grill kit (high-level Q&A only)."""
-        from grill_context.grill_context import GrillContext
-
-        grill = GrillContext()
-        for context_tool in self.context_tools():
-            grill.grill(tools=[context_tool])
-        return ""
-
-    @agent_instructions
-    def sketch(self) -> str:
-        """Inline each stage child's sketch via the sketch kit (high-level shape only)."""
-        from sketch.sketch import Sketcher
-
-        sketcher = Sketcher()
-        for context_tool in self.context_tools():
-            sketcher.sketch(tools=[context_tool])
-        return ""
-
-    @agent_instructions
-    def iterate(self) -> str:
-        """Invoke each stage child's iterate via the iterate kit."""
-        from iterate.iterate import Iterator
-
-        iterator = Iterator()
-        for context_tool in self.context_tools():
-            iterator.iterate(tools=[context_tool])
-        return "Invoke each Separate tools run above, one child at a time."
-
-    @agent_instructions
-    def validate(self) -> str:
-        """Invoke each stage child's validate as its own tools run."""
-        for context_tool in self.context_tools():
-            context_tool.mode = "tool"
-            context_tool.validate()
-        return "Invoke each Separate tools run above, one child at a time."
-
-    @agent_instructions
-    def satisfy(self) -> str:
-        """Invoke each stage child's satisfy as its own tools run."""
-        for context_tool in self.context_tools():
-            context_tool.mode = "tool"
-            context_tool.satisfy()
-        return "Invoke each Separate tools run above, one child at a time."
-
-    @agent_instructions
-    def document(self, paths: list[str]) -> str:
-        """Invoke each stage child's document as its own tools run."""
-        for context_tool in self.context_tools():
-            context_tool.mode = "tool"
-            context_tool.document(paths)
-        return "Invoke each Separate tools run above, one child at a time."
+            context_tool.guidance()
+        return (
+            "Call guidance on each stage child and pass that child to this action "
+            "as a separate tools run. The action already knows what to do for every tool. "
+            "Do not inline."
+        )

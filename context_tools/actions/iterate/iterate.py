@@ -26,6 +26,11 @@ class Iterator(LifecycleAction):
         """GrillContext toolset for in-method composition (not a tool)."""
         return GrillContext()
 
+    def _generate(self):
+        from generate.generate import Generate
+
+        return Generate()
+
     @agent_tool
     def mark_iterate_tick(self) -> str:
         """Record that an iterate show/validate/fix tick is due (no I/O).
@@ -47,6 +52,6 @@ class Iterator(LifecycleAction):
         for host in self.context_tools(tools):
             self._grill_context().grill_with_context()
             self.mark_iterate_tick()
-            host.generate()
+            self._generate().generate(tools=[host])
         self.end()
         return "Iterate complete; generate instructions applied."

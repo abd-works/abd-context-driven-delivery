@@ -10,9 +10,9 @@
 Non-primitive kits are held as plain instance attributes and called through
 them (``self.workspace.…``, ``self.scanner.…``, …) — not MI-as-self and not
 ``@`` chain decorators. Domains subclass this class directly.
-``@agent_instructions`` / ``@instruction`` / ``@agent_tool`` stay (primitives only). Host
-``@agent_tool`` / ``@resource`` wrappers forward to kits so agents can still invoke
-them on the domain toolset.
+``@agent_instructions`` / ``@instruction`` / ``@agent_tool`` stay (primitives only).
+Lifecycle generate / validate / document / satisfy / render / createRule live
+on the kits under ``context_tools/actions/``.
 """
 
 from __future__ import annotations
@@ -28,9 +28,7 @@ from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from scanners.scan import Scan
 from workspace.workspace import Workspace, WorkSession
-from workspace import SessionLog
 from tools.tool import resource
-from tools.tool import agent_tool
 
 
 class BaseContextTool(AgenticToolset):
@@ -96,8 +94,6 @@ class BaseContextTool(AgenticToolset):
         cls._is_context = True  # type: ignore[attr-defined]
         cls._is_toolset = True  # type: ignore[attr-defined]
         _ActionRunner.instance().validate_toolset(cls)
-        # Auto-generate generate_{f} / validate_{f} / satisfy_{f} whenever
-        # a subclass declares a ``fidelities`` class dict.
         if "fidelities" in cls.__dict__ and isinstance(cls.__dict__["fidelities"], dict):
             cls._generate_fidelity_methods()
 
@@ -110,6 +106,8 @@ class BaseContextTool(AgenticToolset):
         """
         fidelity_names: set[str] = set(cls.fidelities.values())  # type: ignore[union-attr]
         for action_name in ("generate", "validate", "satisfy"):
+            if not callable(getattr(cls, action_name, None)):
+                continue
             for fidelity_name in fidelity_names:
                 method_name = f"{action_name}_{fidelity_name}"
                 if not hasattr(cls, method_name):
@@ -182,47 +180,14 @@ class BaseContextTool(AgenticToolset):
         self.templates
         return ""
 
-    @agent_instructions
-    def generate_fixes_from_validate(self) -> str:
-        self.guidance
-        self.examples
-        self.templates
-        self.generate_output()
-        return ""
-
-    @agent_instructions
-    def add_generate_header_to_generated(self) -> str:
-        """Prepend the following block verbatim as the very first lines of the file you are writing - before any imports, before any code."""
-        cls = type(self)
-        return (
-            '"""\n'
-            f"# @toolset-manifest {cls.manifest_command}\n"
-            "# Agent reading this file: run line 1 manifest, then python -m tools run -. "
-            "Follow response.instructions only.\n"
-            f"# invoke-edit: action satisfy | toolset: {cls.manifest_path}\n"
-            f"# invoke-check: action validate | toolset: {cls.manifest_path}\n"
-            '"""\n'
-        )
-
-    @agent_instructions
     def generate_output(self) -> str:
-        """"""
+        """Empty default. Domain tools override; Generate.generate calls this per tool."""
         return ""
 
-    @agent_tool
-    def scan(self, paths: list[str]) -> str:
-        """scan"""
-        result = self.scanner.scan(paths)
-        SessionLog.instance().append(
-            toolset=getattr(type(self), "manifest_path", type(self).__name__),
-            name="scan",
-            summary="scan",
-            ok=True,
-            role="run",
-        )
-        return result
+    def generate_fixes_from_validate(self) -> str:
+        """Empty default. Satisfy calls this per tool after validate."""
+        return ""
 
-    @agent_tool
     def render(self, format: str, content: str = "") -> dict:
         """Render already-generated output into ``format``.
 
@@ -239,86 +204,6 @@ class BaseContextTool(AgenticToolset):
         raise ValueError(
             f"{type(self).__name__} has no programmatic renderer for {format!r}"
         )
-
-    @agent_tool
-    def begin_turn(self, action: str = "") -> str:
-        """Open a workspace if needed. The turn hangs off the work session."""
-        if self.workspace.current_work_session is None:
-            self.workspace.open(self)
-        turn = self.workspace.current_work_session.turn
-        if action:
-            turn.action = action
-        return turn.id
-
-    @agent_tool
-    def finish_turn(
-        self, prompt: str = "", result: str = "", context: str = ""
-    ) -> str:
-        """Finish the open workspace turn; commits on the session branch when dirty."""
-        current = self.workspace.current_work_session
-        if current is None or current.open_turn is None:
-            raise RuntimeError("no open turn — call begin_turn first")
-        commit = current.open_turn.finish(
-            prompt=prompt, result=result, context=context
-        )
-        return commit.sha if commit else ""
-
-    @agent_tool
-    def record_mistake(
-        self,
-        artifact: str,
-        rule: str,
-        wrong: str,
-        original: str,
-        introducing_commit: str,
-        entry_id: str = "",
-        tool: str = "",
-        fidelity: str = "",
-    ) -> str:
-        """Annotate a mistake on the introducing commit (git-primary)."""
-        import uuid
-
-        current = self.workspace.current_work_session
-        if current is None or current.open_turn is None:
-            raise RuntimeError("no open turn — call begin_turn first")
-        eid = entry_id or uuid.uuid4().hex[:8]
-        current.open_turn.record_mistake(
-            entry_id=eid,
-            artifact=artifact.replace("\\", "/"),
-            rule=rule,
-            wrong=wrong,
-            original=original,
-            tool=tool or getattr(type(self), "context_index_key", "") or "bdd",
-            fidelity=fidelity or getattr(self, "fidelity", "") or "",
-            introducing_commit=introducing_commit,
-        )
-        return eid
-
-    @agent_tool
-    def record_correction(
-        self,
-        entry_id: str = "",
-        improved: str = "",
-        how: str = "",
-        status: str = "fixed",
-        entry_ids: list[str] | None = None,
-    ) -> str:
-        """Link a correction to mistake entry ids on the open turn."""
-        current = self.workspace.current_work_session
-        if current is None or current.open_turn is None:
-            raise RuntimeError("no open turn — call begin_turn first")
-        ids = list(entry_ids or [])
-        if entry_id and entry_id not in ids:
-            ids.append(entry_id)
-        if not ids:
-            raise ValueError("record_correction requires entry_id or entry_ids")
-        current.open_turn.record_correction(
-            entry_ids=ids,
-            improved=improved,
-            how=how,
-            status=status,
-        )
-        return ids[0]
 
 
 BaseContextTool._is_context = True  # type: ignore[attr-defined]

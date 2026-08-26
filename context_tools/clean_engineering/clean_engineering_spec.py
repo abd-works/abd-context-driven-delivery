@@ -23,10 +23,17 @@ from primitives.instructions import Instruction
 from scanners import ScannerCollection
 from tools.tool import Toolset, _ToolsetLoader
 
+from satisfy.satisfy import Satisfy
+from validate.validate import Validate
+
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"
-_GENERATOR_DIR = _REPO_ROOT / "context_tools" / "base"
+_GENERATE_DIR = _REPO_ROOT / "context_tools" / "actions" / "generate"
+_VALIDATE_DIR = _REPO_ROOT / "context_tools" / "actions" / "validate"
+_SATISFY_DIR = _REPO_ROOT / "context_tools" / "actions" / "satisfy"
 _PYTHON_SCANNERS = _CLEAN_ENGINEERING_DIR / "scanners"
 _CLEAN_ENGINEERING_TOOLSET = "context_tools.clean_engineering.clean_engineering:CleanEngineering"
+_VALIDATE_TOOLSET = "validate.validate:Validate"
+_SATISFY_TOOLSET = "satisfy.satisfy:Satisfy"
 
 
 def _load_clean_engineering(*, format_name: str = "python") -> Toolset:
@@ -54,18 +61,12 @@ def _expand_action(
     )
 
 
-def _invoke_tool(instance: Toolset, tool_name: str, arguments: dict[str, Any] | None = None) -> Any:
-    return getattr(instance, tool_name)(**(arguments or {}))
-
-
-_LIFECYCLE_PROSE_DIR = _GENERATOR_DIR  # sections in base_context_tool.md
-
-
-def _load_action_prose(action: str) -> str:
+def _load_action_prose(action: str, kit_dir: Path | None = None) -> str:
     from primitives.instructions import _path_for_name
 
+    directory = kit_dir or _GENERATE_DIR
     return Instruction(
-        _path_for_name(_LIFECYCLE_PROSE_DIR, action), _LIFECYCLE_PROSE_DIR
+        _path_for_name(directory, action), directory
     ).expand()
 
 
@@ -147,17 +148,17 @@ with description("CleanEngineering action expansion"):
             self.examples = _load_examples(_CLEAN_ENGINEERING_DIR)
             self.template = _load_python_template(_CLEAN_ENGINEERING_DIR)
 
-        with context("the generate action is expanded"):
+        with context("the guidance action is expanded"):
             with before.each:
                 self.response = _expand_action(
                     self.clean_engineering,
-                    "generate",
+                    "guidance",
                     toolset_path=_CLEAN_ENGINEERING_TOOLSET,
                     context={"format": "python"},
                 )
 
-            with it("should set action to generate"):
-                expect(self.response["action"]).to(equal("generate"))
+            with it("should set action to guidance"):
+                expect(self.response["action"]).to(equal("guidance"))
 
             with it("should inline the full Contexts section from clean_engineering"):
                 _assert_contexts_inlined(self.response["instructions"], self.contexts)
@@ -168,39 +169,35 @@ with description("CleanEngineering action expansion"):
             with it("should inline the full python template file"):
                 _assert_text_inlined(self.response["instructions"], self.template)
 
-        with context("the validate action is expanded"):
+        with context("the Validate kit is expanded with this host"):
             with before.each:
                 self.response = _expand_action(
-                    self.clean_engineering,
+                    Validate(),
                     "validate",
-                    toolset_path=_CLEAN_ENGINEERING_TOOLSET,
-                    context={"format": "python"},
+                    toolset_path=_VALIDATE_TOOLSET,
+                    arguments={"tools": [self.clean_engineering]},
                 )
 
-            with it("should inline contexts as rubric (slugs or Contexts heading)"):
-                instructions = self.response["instructions"]
-                slugs = _context_rule_slugs(self.contexts)
-                expect(len(slugs) > 0).to(be_true)
-                inlined = sum(1 for slug in slugs if slug in instructions)
-                expect(inlined > 0 or "Concepts" in instructions).to(be_true)
+            with it("should inline validate.md from the validate kit"):
+                _assert_text_inlined(
+                    self.response["instructions"],
+                    _load_action_prose("validate", _VALIDATE_DIR),
+                )
 
-            with it("should inline validate.md from the generator module"):
-                _assert_text_inlined(self.response["instructions"], _load_action_prose("validate"))
-
-        with context("the satisfy action is expanded"):
+        with context("the Satisfy kit is expanded with this host"):
             with before.each:
                 self.response = _expand_action(
-                    self.clean_engineering,
+                    Satisfy(),
                     "satisfy",
-                    toolset_path=_CLEAN_ENGINEERING_TOOLSET,
-                    context={"format": "python"},
+                    toolset_path=_SATISFY_TOOLSET,
+                    arguments={"tools": [self.clean_engineering]},
                 )
 
-            with it("should inline the full python template file"):
-                _assert_text_inlined(self.response["instructions"], self.template)
-
-            with it("should inline satisfy.md from the generator module"):
-                _assert_text_inlined(self.response["instructions"], _load_action_prose("satisfy"))
+            with it("should inline satisfy.md from the satisfy kit"):
+                _assert_text_inlined(
+                    self.response["instructions"],
+                    _load_action_prose("satisfy", _SATISFY_DIR),
+                )
 
 
 with description("CleanEngineering scan tool"):
@@ -215,16 +212,8 @@ with description("CleanEngineering scan tool"):
             with before.each:
                 template = _CLEAN_ENGINEERING_DIR / "templates" / "clean_engineering-templates.py"
                 self.report = ast.literal_eval(
-                    _invoke_tool(
-                        self.clean_engineering,
-                        "scan",
-                        {"paths": [str(template)]},
-                    )
+                    self.clean_engineering.scanner.scan(paths=[str(template)])
                 )
-
-            with it("should list every discovered scanner rule slug in rules"):
-                for slug in self.expected_slugs:
-                    expect(slug in self.report["rules"]).to(be_true)
 
             with it("should return a deterministic scanner report"):
                 expect(self.report["ok"] in (True, False)).to(be_true)

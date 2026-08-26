@@ -92,8 +92,7 @@ with description("Workflow manifest"):
     with it("should expose backlog start finish actions and workflow tools"):
         sig = Workflow.manifest.signature
         expect(sig["backlog"]["kind"]).to(equal("action"))
-        expect(sig["handoff_tool"]["kind"]).to(equal("action"))
-        expect(sig["backlog"]["tools"]).to(equal(["handoff_tool", "capture_backlog"]))
+        expect(sig["backlog"]["tools"]).to(equal(["capture_backlog"]))
         expect(sig["start"]["kind"]).to(equal("tool"))
         expect(sig["finish"]["kind"]).to(equal("tool"))
         expect(sig["capture_backlog"]["kind"]).to(equal("tool"))

@@ -33,8 +33,9 @@ with description("a Stories generator"):
                 expect("validate" in text).to(be_true)
 
                 response = run_toolset(
-                    toolset=_TOOLSET,
+                    toolset="generate.generate:Generate",
                     action="generate",
+                    arguments={"tools": [_TOOLSET]},
                     context={"fidelity": "discovery", "format": "markdown"},
                     timeout_seconds=180,
                 )

@@ -117,62 +117,40 @@ with description("a CDD orchestrator"):
                 )
             )
 
-    with context("whose lifecycle actions walk the stage tools"):
+    with context("that does not own kit lifecycle actions"):
+        with it("should not expose generate, validate, satisfy, repair, grill, sketch, iterate, or document"):
+            host = Cdd(fidelity="discovery")
+            for name in (
+                "generate",
+                "validate",
+                "satisfy",
+                "repair",
+                "grill",
+                "sketch",
+                "iterate",
+                "document",
+            ):
+                expect(name in host.actions).to(equal(False))
+
+    with context("whose guidance action is expanded"):
         with before.each:
             self.cdd = Cdd(fidelity="discovery")
-            self.expander = _ActionExpander.instance()
+            self.body = _ActionExpander.instance().parse_body(Cdd.guidance, self.cdd)
+            self.joined = "\n".join(self.body.prose_parts)
 
-        with it("should expose generate_output as a callable action"):
-            expect(callable(self.cdd.generate_output)).to(be_true)
+        with it("should defer each child as a separate tools run"):
+            expect(self.joined.count("Separate tools run") >= 4).to(be_true)
 
-        with it("should expose grill as a callable action"):
-            expect(callable(self.cdd.grill)).to(be_true)
+        with it("should not inline CleanEngineering recipes"):
+            expect("Deepen OO design" in self.joined).to(equal(False))
 
-        with it("should expose sketch as a callable action"):
-            expect(callable(self.cdd.sketch)).to(be_true)
+        with it("should name Stories among the deferred runs"):
+            expect("context_tools.stories.stories:Stories" in self.joined).to(be_true)
 
-        with it("should expose iterate as a callable action"):
-            expect(callable(self.cdd.iterate)).to(be_true)
-
-        with it("should expose validate as a callable action"):
-            expect(callable(self.cdd.validate)).to(be_true)
-
-        with it("should expose satisfy as a callable action"):
-            expect(callable(self.cdd.satisfy)).to(be_true)
-
-        with it("should expose document as a callable action"):
-            expect(callable(self.cdd.document)).to(be_true)
-
-        with context("when satisfy is expanded"):
-            with before.each:
-                self.body = self.expander.parse_body(Cdd.satisfy, self.cdd)
-                self.joined = "\n".join(self.body.prose_parts)
-
-            with it("should defer each child satisfy as a separate tools run"):
-                expect(self.joined.count("Separate tools run")).to(equal(4))
-
-            with it("should not inline CleanEngineering satisfy recipes"):
-                expect("Deepen OO design" in self.joined).to(equal(False))
-
-            with it("should name Stories satisfy among the deferred runs"):
-                expect("context_tools.stories.stories:Stories" in self.joined).to(
-                    be_true
-                )
-
-        with context("when sketch is expanded"):
-            with before.each:
-                self.body = self.expander.parse_body(Cdd.sketch, self.cdd)
-                self.joined = "\n".join(self.body.prose_parts)
-
-            with it("should not defer child sketch actions themselves"):
-                expect(
-                    "Separate tools run — toolset: `context_tools.stories.stories:Stories` action: `sketch`"
-                    in self.joined
-                ).to(equal(False))
-                expect(
-                    "Separate tools run — toolset: `context_tools.ddd.ddd:Ddd` action: `sketch`"
-                    in self.joined
-                ).to(equal(False))
+        with it("should tell the caller to call child guidance and pass each child to this action"):
+            expect("Call guidance" in self.joined).to(be_true)
+            expect("pass that child to this action" in self.joined).to(be_true)
+            expect("already knows what to do" in self.joined).to(be_true)
 
     with context("whose contexts slot is expanded"):
         with it("should include the order-themes-by-journey rule slug"):

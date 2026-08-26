@@ -40,8 +40,9 @@ with description("a Clean Code generator"):
                 )
 
                 generate = run_toolset(
-                    toolset=_TOOLSET,
+                    toolset="generate.generate:Generate",
                     action="generate",
+                    arguments={"tools": [_TOOLSET]},
                     context=_CTX,
                     timeout_seconds=180,
                 )
@@ -52,8 +53,9 @@ with description("a Clean Code generator"):
                 )
 
                 validate = run_toolset(
-                    toolset=_TOOLSET,
+                    toolset="validate.validate:Validate",
                     action="validate",
+                    arguments={"tools": [_TOOLSET]},
                     context=_CTX,
                     timeout_seconds=180,
                 )

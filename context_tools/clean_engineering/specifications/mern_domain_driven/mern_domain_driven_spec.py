@@ -15,7 +15,7 @@ for _cat in ("context_tools", "primitives", "utilities"):
 from expects import be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from context_tools.engineering_specification.mern_domain_driven.mern_domain_driven import (
+from context_tools.clean_engineering.specifications.mern_domain_driven.mern_domain_driven import (
     MernDomainDriven,
 )
 from context_tools.stories.stories import Stories
@@ -60,9 +60,9 @@ with description("a MernDomainDriven generator"):
         with it("should resolve module_dir to this package"):
             expect(self.tool.module_dir).to(equal(_MODULE_DIR))
 
-        with it("should expose generate, iterate, and satisfy"):
+        with it("should not expose generate, iterate, or satisfy"):
             for name in ("generate", "iterate", "satisfy"):
-                expect(name in self.tool.actions).to(equal(True))
+                expect(name in self.tool.actions).to(equal(False))
 
     with context("whose _stories() companion is resolved"):
         with before.each:

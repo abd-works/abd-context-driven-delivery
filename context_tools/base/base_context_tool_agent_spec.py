@@ -24,8 +24,9 @@ with description("a BaseContextTool host"):
         with it("should require several turns even if the user asked once"):
             with agent(_REPO_ROOT, _SESSIONS / "base-context-tool.json"):
                 response = run_toolset(
-                    toolset=_TOOLSET,
+                    toolset="generate.generate:Generate",
                     action="generate",
+                    arguments={"tools": [_TOOLSET]},
                     timeout_seconds=300,
                 )
                 expect_ok_action(response, "generate")

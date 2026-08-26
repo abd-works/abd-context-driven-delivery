@@ -1,14 +1,27 @@
 """BDD spec for CarChronicle and ChronicleWithOutput example domain."""
 
+import sys
 from pathlib import Path
 from typing import Any
 
 from expects import equal, expect
 from mamba import before, context, description, it
 
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+for _p in [
+    str(_REPO_ROOT),
+    *[
+        str(_REPO_ROOT / c)
+        for c in ("context_tools", "primitives", "utilities", "context_tools/actions")
+    ],
+]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 import context_tools  # noqa: F401
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
 from tools.tool import Toolset, _ToolsetLoader
+from generate.generate import Generate
 
 _CAR_DIR = Path(__file__).resolve().parent
 _CAR_TOOLSET = (
@@ -18,6 +31,7 @@ _WITH_OUTPUT_TOOLSET = (
     "context_tools.create_context_tool.examples.car_chronicle"
     ".chronicle_with_output:ChronicleWithOutput"
 )
+_GENERATE_TOOLSET = "generate.generate:Generate"
 _LIFECYCLE = ("generate", "validate", "satisfy", "repair")
 
 
@@ -33,6 +47,7 @@ class _CarChronicleSpecSupport:
         action_name: str,
         *,
         toolset_path: str,
+        arguments: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return _ActionRunner.instance().invoke_action(
             _ActionRunRequest(
@@ -40,7 +55,7 @@ class _CarChronicleSpecSupport:
                 toolset_path=toolset_path,
                 action_name=action_name,
                 context={},
-                arguments={},
+                arguments=arguments or {},
                 instance=instance,
             )
         )
@@ -55,9 +70,9 @@ with description("a CarChronicle domain"):
         with it("should resolve module_dir to the car_chronicle package"):
             expect(self.chronicle.module_dir).to(equal(_CAR_DIR.resolve()))
 
-        with it("should expose generate, validate, satisfy, and repair"):
+        with it("should not expose generate, validate, satisfy, or repair"):
             for name in _LIFECYCLE:
-                expect(name in self.chronicle.actions).to(equal(True))
+                expect(name in self.chronicle.actions).to(equal(False))
 
 
 with description("a ChronicleWithOutput domain"):
@@ -89,12 +104,13 @@ with description("a ChronicleWithOutput domain"):
                 equal("Chronicle entries saved.")
             )
 
-    with context("generate expands nested output tools"):
+    with context("Generate kit expands nested output tools"):
         with before.all:
             self.response = self.support.expand(
-                self.chronicle,
+                Generate(),
                 "generate",
-                toolset_path=_WITH_OUTPUT_TOOLSET,
+                toolset_path=_GENERATE_TOOLSET,
+                arguments={"tools": [self.chronicle]},
             )
 
         with it("should name add_epic on the generate tools list"):

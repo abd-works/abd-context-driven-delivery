@@ -62,20 +62,21 @@ with description("@agent_instructions docstring defaults"):
             )
             expect(no_doc.prose_parts).to(equal(with_doc.prose_parts))
 
-    with context("a BaseContextTool framework action with no docstring"):
+    with context("a Validate kit action"):
         with before.all:
-            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
-            self.host = cls()
+            from validate.validate import Validate
+
+            self.host = Validate()
             self.response = _ActionRunner.instance().invoke_action(
                 _ActionRunRequest(
-                    request={"toolset": _BASE_TOOLSET, "context": {}},
-                    toolset_path=_BASE_TOOLSET,
+                    request={"toolset": "validate.validate:Validate", "context": {}},
+                    toolset_path="validate.validate:Validate",
                     action_name="validate",
                     context={},
-                    arguments={},
+                    arguments={"tools": []},
                     instance=self.host,
                 )
             )
 
-        with it("should still inline # Validate from base_context_tool.md"):
+        with it("should still inline # Validate from validate.md"):
             expect("# Validate" in self.response["instructions"]).to(be_true)

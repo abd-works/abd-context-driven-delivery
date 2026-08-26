@@ -18,16 +18,13 @@ class Satisfy(LifecycleAction):
 
     @agent_instructions
     def satisfy(self, tools: list) -> str:
-        """runs on each provided context tool"""
+        """satisfy"""
         self.begin(tools, action="satisfy")
+        from validate.validate import Validate
+
         for tool in self.context_tools(tools):
-            tool.mode = "tool"
-            validate = getattr(tool, "validate", None)
-            if validate is not None:
-                validate()
-            generate_fixes = getattr(tool, "generate_fixes_from_validate", None)
-            if generate_fixes is not None:
-                generate_fixes()
+            Validate().validate(tools=[tool])
+            tool.generate_fixes_from_validate()
             SessionLog.instance().append(
                 toolset=type(tool).manifest_path,
                 name="satisfy",

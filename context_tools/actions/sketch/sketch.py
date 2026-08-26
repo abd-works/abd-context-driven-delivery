@@ -41,6 +41,11 @@ class Sketcher(LifecycleAction):
         """GrillContext toolset for in-method composition (not a tool)."""
         return GrillContext()
 
+    def _generate(self):
+        from generate.generate import Generate
+
+        return Generate()
+
     @agent_tool
     def find_template(self, agent_dir: str = "") -> str:
         """Locate a sketch template using tiered discovery.
@@ -101,6 +106,6 @@ class Sketcher(LifecycleAction):
             self._grill_context().grill_with_context()
             self.find_template()
             self.save_sketch()
-            host.generate()
+            self._generate().generate(tools=[host])
         self.end()
         return "Sketch complete; generate instructions applied."

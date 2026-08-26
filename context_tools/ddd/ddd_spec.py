@@ -91,10 +91,8 @@ with description("a Ddd toolset"):
             ddd.apply_document_workspace_default()
             expect(Path(ddd.workspace.path).name).to(equal("packages"))
 
-        with it("should tell document to apply the domain default first"):
-            steps = _support.tool_steps(_support.ddd(), "document")
-            names = tuple(step.split("(")[0] for step in steps)
-            expect("apply_document_workspace_default" in names).to(be_true)
+        with it("should expose apply_document_workspace_default as a host tool"):
+            expect("apply_document_workspace_default" in _support.ddd().tools).to(be_true)
 
         with it("should pass DDD's working path into CleanEngineering without changing CE's default"):
             ddd = Ddd()
@@ -173,61 +171,49 @@ with description("a Ddd toolset"):
             prose = Ddd().contexts().expand()
             expect("bounded_context" in prose).to(be_true)
 
-    with context("whose generate_output action is expanded"):
-        with it("should tell the agent to call ce().generate()"):
-            prose = _support.expanded(_support.ddd(), "generate_output")
-            expect("ce().generate()" in prose).to(be_true)
+    with context("that does not own kit lifecycle actions"):
+        with it("should not expose generate, validate, satisfy, repair, grill, sketch, iterate, or document"):
+            host = _support.ddd()
+            for name in (
+                "generate",
+                "validate",
+                "satisfy",
+                "repair",
+                "grill",
+                "sketch",
+                "iterate",
+                "document",
+            ):
+                expect(name in host.actions).to(equal(False))
 
-        with it("should NOT inline CleanEngineering generate instructions"):
-            prose = _support.expanded(_support.ddd(), "generate_output")
-            expect("Deepen OO design" in prose).to(equal(False))
+    with context("whose guidance action is expanded"):
+        with it("should tell the agent to call companion guidance and pass it to this action"):
+            prose = _support.expanded(_support.ddd(), "guidance")
+            expect("call guidance" in prose).to(be_true)
+            expect("pass that companion to this action" in prose).to(be_true)
+            expect("already knows what to do" in prose).to(be_true)
+            expect("ce().generate()" in prose).to(equal(False))
 
-    with context("whose validate action is expanded"):
-        with it("should include DDD validation context"):
-            prose = _support.expanded(_support.ddd(), "validate")
-            expect("bounded context" in prose.lower() or "bounded_context" in prose).to(
-                be_true
-            )
-
-        with it("should tell the agent to call ce().validate() when DDD validation passes"):
-            prose = _support.expanded(_support.ddd(), "validate")
-            expect("ce().validate()" in prose).to(be_true)
-
-        with it("should NOT inline CleanEngineering validate instructions"):
-            prose = _support.expanded(_support.ddd(), "validate")
-            expect("Deepen OO design" in prose).to(equal(False))
-
-    with context("whose satisfy action is expanded"):
         with it("should include the RED confirmation instruction"):
-            prose = _support.expanded(_support.ddd(), "satisfy")
+            prose = _support.expanded(_support.ddd(), "guidance")
             expect("RED" in prose).to(be_true)
 
-        with it("should tell the agent to call ce().satisfy() when BDD violations are resolved"):
-            prose = _support.expanded(_support.ddd(), "satisfy")
-            expect("ce().satisfy()" in prose).to(be_true)
-
         with it("should tell the agent to call diagnostic().diagnose() when a test keeps failing"):
-            prose = _support.expanded(_support.ddd(), "satisfy")
+            prose = _support.expanded(_support.ddd(), "guidance")
             expect("diagnostic().diagnose()" in prose).to(be_true)
 
-        with it("should list diagnose as a tool step without inlining the six phases"):
-            steps = _support.tool_steps(_support.ddd(), "satisfy")
-            expect("diagnose" in steps).to(be_true)
-            prose = _support.expanded(_support.ddd(), "satisfy")
-            expect("Phase 1 - Build a feedback loop" in prose).to(equal(False))
-
         with it("should instruct the agent to scan production source for coverage gaps"):
-            prose = _support.expanded(_support.ddd(), "satisfy")
+            prose = _support.expanded(_support.ddd(), "guidance")
             expect("coverage gap" in prose.lower()).to(be_true)
 
-        with it("should NOT inline CleanEngineering satisfy instructions"):
-            prose = _support.expanded(_support.ddd(), "satisfy")
-            expect("Deepen OO design" in prose).to(equal(False))
+        with it("should tell the caller to pass the CE companion to this action as a separate run"):
+            prose = _support.expanded(_support.ddd(), "guidance")
+            expect("separate tools run" in prose).to(be_true)
+            expect("Clean Engineering" in prose).to(be_true)
 
-    with context("whose repair action is expanded"):
-        with it("should tell the agent to call ce().repair() when the DDD artifact is clean"):
-            prose = _support.expanded(_support.ddd(), "repair")
-            expect("ce().repair()" in prose).to(be_true)
+        with it("should NOT inline CleanEngineering generate instructions"):
+            prose = _support.expanded(_support.ddd(), "guidance")
+            expect("Deepen OO design" in prose).to(equal(False))
 
     with context("whose transform tool is called"):
         with it("should delegate to CleanEngineering and return a dict"):

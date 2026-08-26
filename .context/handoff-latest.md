@@ -4,8 +4,8 @@
 
 - **Stage:** (unset)
 - **Last work:** (see session progress below)
-- **Next action:** Optimize running context tools and actions through the CLI with fewer handoffs and fewer agentic tool operations
-- **Next focus:** Optimize running context tools and actions through the CLI with fewer handoffs and fewer agentic tool operations
+- **Next action:** Smarter caching and reuse of guidance already in context so agents stay in the fidelity-tool format without re-calling manifest
+- **Next focus:** Smarter caching and reuse of guidance already in context so agents stay in the fidelity-tool format without re-calling manifest
 
 ## Artifacts to read
 

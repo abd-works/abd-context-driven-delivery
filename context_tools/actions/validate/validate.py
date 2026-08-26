@@ -19,7 +19,7 @@ class Validate(LifecycleAction):
 
     @agent_instructions
     def validate(self, tools: list) -> str:
-        """runs on each provided context tool"""
+        """validate"""
         self.begin(tools, action="validate")
         for tool in self.context_tools(tools):
             tool.contexts

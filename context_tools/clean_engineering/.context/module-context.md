@@ -6,7 +6,7 @@ Multi-fidelity OO design and implementation generator — modules, model, specif
 
 ## Seam
 
-`CleanEngineering` toolset: lifecycle actions (`generate`, `validate`, `satisfy`, …) plus `transform(source_format, target_format, content)` that parses into the canonical class model and renders into another channel at the same fidelity.
+`CleanEngineering` toolset: `guidance` plus `generate_output` (drawio.render when format is drawio) plus `transform(source_format, target_format, content)` that parses into the canonical class model and renders into another channel at the same fidelity. Lifecycle generate / validate / satisfy live on kits (`Generate().generate(tools=[ce])`).
 
 ## Public API
 

@@ -37,8 +37,9 @@ with description("a CarChronicle generator"):
                 read_workspace(_CAR_CHRONICLE_PY)
 
                 response = run_toolset(
-                    toolset=_CAR_TOOLSET,
+                    toolset="generate.generate:Generate",
                     action="generate",
+                    arguments={"tools": [_CAR_TOOLSET]},
                     timeout_seconds=120,
                 )
                 expect_ok_action(response, "generate")
@@ -76,9 +77,10 @@ with description("a CarChronicle generator"):
                 read_workspace(_CAR_CHRONICLE_PY)
 
                 response = run_toolset(
-                    toolset=_CAR_TOOLSET,
+                    toolset="improvement.improvement:Improvement",
                     action="repair",
                     arguments={
+                        "tools": [_CAR_TOOLSET],
                         "asset": f"{_CAR_ROOT}/output/driving-log.md",
                         "violation": (
                             "Scanner use-driving-voice - chronicle reads like a spec sheet"

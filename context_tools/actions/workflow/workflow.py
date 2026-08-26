@@ -107,7 +107,7 @@ class Workflow:
     @agent_instructions
     def backlog(self, focus: str, context: str = "", workspace: str = "") -> str:
         """Capture an idea on the backlog — GitHub issue + Project Backlog, no WorkSession."""
-        self.handoff_tool()
+        self._handoff().handoff_session()
         """Call `capture_backlog` with the handoff markdown as the issue body, not a file path. Do not open a work session."""
         self.capture_backlog()
         return "Backlog captured — GitHub issue created in Project Backlog."
@@ -199,12 +199,6 @@ class Workflow:
         if outcome.strip() and session is not None:
             session.close_session(outcome=outcome)
         return {"commit": sha, "session_name": session_name}
-
-    @agent_instructions
-    def handoff_tool(self, destination: str = "", next_focus: str = "") -> str:
-        """Compose the handoff from current session state — do not invent requirements."""
-        self._handoff().handoff_session()
-        return "Handoff composed."
 
     def _handoff(self) -> Handoff:
         return Handoff()

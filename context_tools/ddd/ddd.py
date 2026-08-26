@@ -165,53 +165,22 @@ class Ddd(BaseContextTool):
         current.path = current._resolve_working_area(None)
         return current.path
 
-    @agent_instructions
-    def document(self, paths: list[str]) -> str:
-        """Default working folder is `domain/` unless path or folder was overridden."""
-        self.apply_document_workspace_default()
-        super().document(paths)
-        return "Document existing state under {session.path}/ - violations flagged, none corrected."
-
     @instruction
     def contexts(self) -> Instruction: ...
 
     @agent_instructions
-    def generate_output(self) -> str:
-        """When DDD scaffolding is ready, call ce().generate() for matching OO artifacts."""
-        self.ce().generate()
-        return ""
-
-    @agent_instructions
-    def validate(self) -> str:
-        """Validate all DDD artifacts at the current fidelity.
-        When DDD validation passes, call ce().validate() to validate the matching class artifacts."""
-        self.contexts
-        self.ce().validate()
-        self.scan()
-        return "Validation report."
-
-    @agent_instructions
-    def satisfy(self) -> str:
-        """Scan the production source for every public method and property; flag any with no corresponding test as a coverage gap. Fix every BDD violation and coverage gap — confirm each failing test is RED for the right reason.
-        When BDD violations and coverage gaps are resolved, call ce().satisfy() to build or fix the minimum production code until GREEN. One test, one production change, one GREEN — repeat until validate passes.
-        If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure)."""
-        self.contexts
-        self.templates
-        self.ce().satisfy()
-        self.diagnostic().diagnose()
-        return "When done, run validate."
-
-    @agent_instructions
-    def repair(self, asset: str, violation: str) -> str:
-        """Repair the DDD artifact that is failing or malformed.
-        When the DDD artifact is clean, call ce().repair() to repair the matching class artifact."""
-        self.scan()
-        self.contexts
-        self.examples
-        self.templates
-        self.ce().repair()
-        self.validate()
-        return "Repair {asset} until validate passes."
+    def guidance(self) -> str:
+        """When DDD scaffolding is ready, call guidance on the CE companion and pass that companion to this action as a separate tools run for matching OO artifacts.
+        Scan the production source for every public method and property; flag any with no corresponding test as a coverage gap. Fix every BDD violation and coverage gap — confirm each failing test is RED for the right reason.
+        If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure).
+        When this DDD work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
+        super().guidance()
+        self.ce().guidance()
+        return (
+            "When this DDD work is done, call guidance on the Clean Engineering companion "
+            "and pass that companion to this action as a separate tools run. "
+            "The action already knows what to do for every tool. Do not inline."
+        )
 
     @agent_tool
     def transform(self, source_format: str, target_format: str, content: str) -> TransformResult:

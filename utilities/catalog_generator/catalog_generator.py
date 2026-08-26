@@ -52,12 +52,9 @@ CONTEXT_TOOL_REGISTRY: tuple[tuple[str, str, str], ...] = (
     ("Domain-Driven Design", "context_tools.ddd.ddd", "Ddd"),
 )
 
-# NOTE: ``deploy_agent_skills`` module/class are the pre-rename names
-# (``agent_skills.agent_skills:AgentSkills``) until the plan's
-# ``rename-utilities`` todo lands. Update this one row when that rename
-# happens - nothing else here should need to change.
+# Harness owns generate (replaces the old deploy_agent_skills utility).
 UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
-    ("deploy_agent_skills", "agent_skills.agent_skills", "AgentSkills"),
+    ("harness", "harness.harness", "Harness"),
     ("diagnose", "diagnose.diagnose", "Diagnose"),
     ("handoff", "handoff.handoff", "Handoff"),
     ("workspace", "workspace.workspace_session", "Session"),
@@ -512,20 +509,21 @@ def _same_instance_action_calls(body: list[ast.stmt], action_names: set[str]) ->
 
 
 def _host_action_calls(body: list[ast.stmt], action_names: set[str]) -> list[str]:
-    """Every ``host.<method>()`` call where ``<method>`` is a host action name."""
+    """``host.<method>()`` or ``Generate().generate(tools=[host])`` kit dispatch."""
     calls: list[str] = []
     for stmt in body:
         for node in ast.walk(stmt):
             if not isinstance(node, ast.Call):
                 continue
             func = node.func
-            if (
-                isinstance(func, ast.Attribute)
-                and isinstance(func.value, ast.Name)
-                and func.value.id == "host"
-                and func.attr in action_names
-                and func.attr not in calls
-            ):
+            if not isinstance(func, ast.Attribute):
+                continue
+            if func.attr not in action_names or func.attr in calls:
+                continue
+            value = func.value
+            if isinstance(value, ast.Name) and value.id == "host":
+                calls.append(func.attr)
+            elif func.attr == "generate":
                 calls.append(func.attr)
     return calls
 
@@ -553,12 +551,19 @@ def _resolve_actions_from_source(
 
 
 def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
-    """AST-walk kit-owned lifecycle actions (partition, grill, sketch, iterate)."""
+    """AST-walk kit-owned lifecycle actions (partition, grill, sketch, iterate,
+    generate, document, validate, satisfy, repair, createRule)."""
     kit_specs: tuple[tuple[str, Path, str], ...] = (
         ("partition", _REPO_ROOT / "context_tools" / "actions" / "partition" / "partition.py", "partition"),
         ("grill", _REPO_ROOT / "context_tools" / "actions" / "grill_context" / "grill_context.py", "grill_context"),
         ("sketch", _REPO_ROOT / "context_tools" / "actions" / "sketch" / "sketch.py", "sketch"),
         ("iterate", _REPO_ROOT / "context_tools" / "actions" / "iterate" / "iterate.py", "iterate"),
+        ("generate", _REPO_ROOT / "context_tools" / "actions" / "generate" / "generate.py", "generate"),
+        ("document", _REPO_ROOT / "context_tools" / "actions" / "document" / "document.py", "document"),
+        ("validate", _REPO_ROOT / "context_tools" / "actions" / "validate" / "validate.py", "validate"),
+        ("satisfy", _REPO_ROOT / "context_tools" / "actions" / "satisfy" / "satisfy.py", "satisfy"),
+        ("repair", _REPO_ROOT / "context_tools" / "actions" / "improvement" / "improvement.py", "improvement"),
+        ("createRule", _REPO_ROOT / "context_tools" / "actions" / "validate" / "validate.py", "validate"),
     )
     results: list[ActionResolution] = []
     for name, path, dir_name in kit_specs:
@@ -1563,10 +1568,10 @@ class Catalog:
         import html as html_mod
 
         board = render_hub_board(board_tools, action_dicts, utility_dicts)
-        agent_skills_href = git_blob_url(
+        harness_href = git_blob_url(
             self.repo_url,
             self.ref,
-            _REPO_ROOT / "utilities" / "agent_skills" / "agent_skills.py",
+            _REPO_ROOT / "primitives" / "harness" / "harness.py",
         )
         hub_body = (
             '<section class="catalog-workflow" aria-labelledby="catalog-workflow-heading">'
@@ -1585,11 +1590,11 @@ class Catalog:
             "<li>Add it to your project (clone into the workspace or add it as a sibling "
             "checkout the agent can see).</li>"
             "<li>Drop "
-            f'<a href="{html_mod.escape(agent_skills_href)}" target="_blank" rel="noopener noreferrer">'
-            "<code>utilities/agent_skills/agent_skills.py</code></a> "
+            f'<a href="{html_mod.escape(harness_href)}" target="_blank" rel="noopener noreferrer">'
+            "<code>primitives/harness/harness.py</code></a> "
             "into the chat and ask the agent to run "
-            "<strong>Deploy Tools as Skills</strong> "
-            "(action <code>deploy_tools_as_skills</code>). "
+            "<strong>generate</strong> "
+            "(action <code>generate</code>). "
             "That deploys each context tool as an IDE skill shim.</li>"
             "</ol>"
             "</section>\n"

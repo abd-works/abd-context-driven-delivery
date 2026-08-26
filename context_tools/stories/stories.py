@@ -114,7 +114,7 @@ class Stories(BaseContextTool):
     def ce(self) -> "BaseContextTool":
         """CleanEngineering companion at code fidelity — used at acceptance_tests fidelity
         to generate or update matching production class implementations after writing specs.
-        Invoke as a tool (not inlined into stories generate). Passes this Stories instance's
+        Invoke as a tool (not inlined into stories guidance). Passes this Stories instance's
         own format through to CleanEngineering when CE recognizes it as a code channel
         (typescript, java, javascript, python) - e.g. format="typescript" here means the
         companion writes TypeScript, not CE's unrelated Python default."""
@@ -139,45 +139,27 @@ class Stories(BaseContextTool):
     def contexts(self) -> Instruction: ...
 
     @agent_instructions
-    def generate(self) -> str:
+    def guidance(self) -> str:
         """Generate story artifacts at the current fidelity.
         At scaffold fidelity: write epic, sub-epic, and story names only.
         At story_map fidelity: write the story map and thin-slice only.
         At scenarios fidelity: write main-flow scenarios (single or multiple per story) with optional variations; fixtures live in examples/ and givens.ts at the lowest shared epic/sub-epic/story folder.
-        At acceptance_tests fidelity: write tests/{epic}/{sub-epic}/{story}.{tier}.ts (one GWT file per story per seam, no story folder). When those files are written, call ce().generate() to produce or update matching wrap classes under domain/."""
-        super().generate()
-        self.ce().generate()
-        return "When done, run validate."
-
-    @agent_instructions
-    def iterate(self) -> str:
-        """Iterate then generate - grill + formal generate/validate/one-fix ticks.
-        At acceptance_tests fidelity: after each spec cycle, call ce().iterate() to wire the minimum production code until GREEN.
-        If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails)."""
-        from iterate.iterate import Iterator
-
-        Iterator().iterate(tools=[self])
-        self.diagnostic().diagnose()
+        At acceptance_tests fidelity: write tests/{epic}/{sub-epic}/{story}.{tier}.ts (one GWT file per story per seam, no story folder). When those files are written, call guidance on the CE companion and pass that companion to this action as a separate tools run so wrap classes under domain/ stay in sync.
+        If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails).
+        When this Stories work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
+        super().guidance()
+        self.ce().guidance()
         return (
-            "Iterate complete for Stories; invoke ce() via /iterate as a separate tools run, "
-            "then validate."
+            "When this Stories work is done, call guidance on the Clean Engineering companion "
+            "and pass that companion to this action as a separate tools run. "
+            "The action already knows what to do for every tool. Do not inline."
         )
-
-    @agent_instructions
-    def satisfy(self) -> str:
-        """Find and fix every problem in the story artifacts under the session root.
-        At acceptance_tests fidelity: after fixing specs, call ce().satisfy() to keep matching production implementations GREEN.
-        If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails)."""
-        super().satisfy()
-        self.ce().satisfy()
-        self.diagnostic().diagnose()
-        return "When done, run validate on artifacts under {session.path}/."
 
     @agent_tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:
         """Parse content from source_format into the canonical StoryMap, then render into target_format.
         All formatters are peer channels. Sideways format move at the same fidelity.
-        At acceptance_tests fidelity: after transforming story artifacts, call ce().transform() or ce().generate() to produce matching production class code alongside the spec output."""
+        At acceptance_tests fidelity: after transforming story artifacts, call ce().transform() or call guidance on the CE companion and pass that companion to this action as a separate tools run."""
         source_cls = _load_channel_class(source_format)
         target_cls = _load_channel_class(target_format)
         source = source_cls()

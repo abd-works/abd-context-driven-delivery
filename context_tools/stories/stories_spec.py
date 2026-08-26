@@ -97,35 +97,43 @@ with description("Stories"):
             stories = Stories(fidelity="story_map", format="markdown")
             expect(stories.ce().format).to(equal("python"))
 
-    with context("whose satisfy action is expanded"):
-        with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):
-            prose = _expanded(Stories(), "satisfy")
-            expect("diagnostic().diagnose()" in prose).to(be_true)
+    with context("that does not own kit lifecycle actions"):
+        with it("should not expose generate, validate, satisfy, repair, grill, sketch, or iterate"):
+            host = Stories()
+            for name in (
+                "generate",
+                "validate",
+                "satisfy",
+                "repair",
+                "grill",
+                "sketch",
+                "iterate",
+            ):
+                expect(name in host.actions).to(equal(False))
 
-        with it("should tell the agent to call ce().satisfy() to keep production GREEN"):
-            prose = _expanded(Stories(), "satisfy")
-            expect("ce().satisfy()" in prose).to(be_true)
-
-        with it("should list diagnose as a tool step without inlining the six phases"):
-            stories = Stories()
-            body = _ActionExpander.instance().parse_body(type(stories).satisfy, stories)
-            expect("diagnose" in body.tool_steps).to(be_true)
-            prose = "\n".join(body.prose_parts)
-            expect("Phase 1 - Build a feedback loop" in prose).to(equal(False))
-
-    with context("whose iterate action is expanded"):
-        with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):
-            prose = _expanded(Stories(), "iterate")
-            expect("diagnostic().diagnose()" in prose).to(be_true)
-
-    with context("whose generate action is expanded"):
+    with context("whose guidance action is expanded"):
         with it("should name `{story}.{tier}.ts` at acceptance_tests"):
-            prose = _expanded(Stories(fidelity="acceptance_tests"), "generate")
+            prose = _expanded(Stories(fidelity="acceptance_tests"), "guidance")
             expect("{story}.{tier}.ts" in prose).to(be_true)
 
         with it("should tell the agent to write epic/sub-epic/story names only at scaffold"):
-            prose = _expanded(Stories(fidelity="scaffold"), "generate")
+            prose = _expanded(Stories(fidelity="scaffold"), "guidance")
             expect("names only" in prose).to(be_true)
+
+        with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):
+            prose = _expanded(Stories(), "guidance")
+            expect("diagnostic().diagnose()" in prose).to(be_true)
+
+        with it("should tell the caller to call companion guidance and pass it to this action"):
+            prose = _expanded(Stories(), "guidance")
+            expect("call guidance" in prose).to(be_true)
+            expect("pass that companion to this action" in prose).to(be_true)
+            expect("already knows what to do" in prose).to(be_true)
+            expect("Clean Engineering" in prose).to(be_true)
+
+        with it("should NOT inline CleanEngineering generate instructions"):
+            prose = _expanded(Stories(), "guidance")
+            expect("Deepen OO design" in prose).to(equal(False))
 
     with context("whose transform tool converts markdown to python"):
         with before.each:

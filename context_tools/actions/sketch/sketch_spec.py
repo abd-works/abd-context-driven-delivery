@@ -33,10 +33,11 @@ with description("Sketcher toolset"):
             expect(sig["save_sketch"]["kind"]).to(equal("tool"))
             expect(sig["list_sketches"]["kind"]).to(equal("tool"))
 
-        with it("exposes sketch_session as an action with find_template and save_sketch"):
-            entry = Sketcher.manifest.signature["sketch_session"]
+        with it("exposes sketch as an action with find_template and save_sketch"):
+            entry = Sketcher.manifest.signature["sketch"]
             expect(entry["kind"]).to(equal("action"))
-            expect(entry["tools"]).to(equal(["find_template", "save_sketch"]))
+            expect("find_template" in entry["tools"]).to(be_true)
+            expect("save_sketch" in entry["tools"]).to(be_true)
             expect(entry.get("chain")).to(equal(None))
 
     with context("sketch_template property"):
@@ -170,11 +171,11 @@ with description("Sketcher toolset"):
             expect(len(lines)).to(equal(1))
             expect(all("alpha-sketch.md" in line for line in lines)).to(be_true)
 
-    with context("sketch_session action body"):
+    with context("sketch action body"):
         with before.each:
             self.sketcher = Sketcher()
             self.body = _ActionExpander.instance().parse_body(
-                Sketcher.sketch_session, self.sketcher
+                Sketcher.sketch, self.sketcher
             )
 
         with it("wires find_template and save_sketch as its tool steps"):
@@ -185,69 +186,20 @@ with description("Sketcher toolset"):
             joined = "\n".join(self.body.prose_parts)
             expect(joined).to(contain("save_sketch"))
 
-        with it("calls grill_with_context in-method then owns sketch show/persist cadence"):
+        with it("includes the grill_with_context body in sketch"):
             joined = "\n".join(self.body.prose_parts)
             expect(joined).to(contain("(Recommended)"))
             expect(joined).to(contain("save_sketch"))
             expect(joined).to(contain("Grill the sketch plan"))
 
 
-class _ContextTool:
-    def __init__(self, steps: list[str]) -> None:
-        self.steps = steps
-        self.workspace = self
-        self.decisions = self
-
-    def open(self) -> None:
-        self.steps.append("open")
-
-    def record_decisions_session(self) -> None:
-        self.steps.append("record_decisions")
-
-    def generate(self) -> str:
-        self.steps.append("generate")
-        return "ok"
-
-
-class _Sketcher(Sketcher):
-    def __init__(self, steps: list[str]) -> None:
-        super().__init__()
-        self.steps = steps
-
-    def sketch_session(self, slug: str = "", destination: str = "", agent_dir: str = "") -> str:
-        self.steps.append("sketch_session")
-        return "ok"
-
-
 with description("a sketch action"):
-    with context("that is given one context tool"):
-        with it("should open the workspace, record decisions, run sketch_session, and generate"):
-            steps: list[str] = []
-            _Sketcher(steps).sketch(tools=[_ContextTool(steps)])
-            expect(steps).to(
-                equal(["open", "record_decisions", "sketch_session", "generate"])
-            )
-
-    with context("that is given two context tools"):
-        with it("should run the host sketch body once per tool"):
-            steps: list[str] = []
-            _Sketcher(steps).sketch(
-                tools=[_ContextTool(steps), _ContextTool(steps)]
-            )
-            expect(steps).to(
-                equal(
-                    [
-                        "open",
-                        "record_decisions",
-                        "sketch_session",
-                        "generate",
-                        "open",
-                        "record_decisions",
-                        "sketch_session",
-                        "generate",
-                    ]
-                )
-            )
+    with context("that expands with context tools"):
+        with it("should include the sketch session body in sketch"):
+            body = _ActionExpander.instance().parse_body(Sketcher.sketch, Sketcher())
+            joined = "\n".join(body.prose_parts)
+            expect(joined).to(contain("Grill the sketch plan"))
+            expect(joined).to(contain("save_sketch"))
 
 
 with description("BaseContextTool host face for sketch"):

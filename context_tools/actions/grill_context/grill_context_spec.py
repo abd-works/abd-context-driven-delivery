@@ -43,12 +43,9 @@ with description("GrillContext toolset"):
             sig = GrillContext.manifest.signature
             expect(sig["grill"]["kind"]).to(equal("action"))
 
-        with it("should expose grill_with_context as an action"):
-            sig = GrillContext.manifest.signature
-            expect(sig["grill_with_context"]["kind"]).to(equal("action"))
-
-        with it("should wire explore_context_files and read_context_file into grill_with_context"):
-            entry = GrillContext.manifest.signature["grill_with_context"]
+        with it("should include the grill_with_context body in grill"):
+            entry = GrillContext.manifest.signature["grill"]
+            expect(entry["kind"]).to(equal("action"))
             expect("explore_context_files" in entry["tools"]).to(be_true)
             expect("read_context_file" in entry["tools"]).to(be_true)
 
@@ -175,80 +172,26 @@ with description("GrillContext toolset"):
                 expect(content).to(contain("Exploration precedes questions."))
                 expect(content).to(contain("Answers are accumulated incrementally."))
 
-    with context("grill_with_context action body"):
+    with context("grill action body"):
         with before.each:
             self.gc = GrillContext()
             self.body = _ActionExpander.instance().parse_body(
-                GrillContext.grill_with_context, self.gc
+                GrillContext.grill, self.gc
             )
 
-        with it("should wire explore_context_files as a tool step"):
-            expect("explore_context_files" in self.body.tool_steps).to(be_true)
-
-        with it("should wire read_context_file as a tool step"):
-            expect("read_context_file" in self.body.tool_steps).to(be_true)
-
-        with it("should carry instructions referencing the grilling workflow"):
+        with it("should include the grill_with_context body in grill"):
             joined = "\n".join(self.body.prose_parts)
             expect(joined).to(contain("grill"))
-
-
-class _ContextTool:
-    def __init__(self, steps: list[str]) -> None:
-        self.steps = steps
-        self.workspace = self
-        self.decisions = self
-
-    def open(self) -> None:
-        self.steps.append("open")
-
-    def record_decisions_session(self) -> None:
-        self.steps.append("record_decisions")
-
-    def generate(self) -> str:
-        self.steps.append("generate")
-        return "ok"
-
-
-class _GrillContext(GrillContext):
-    def __init__(self, steps: list[str]) -> None:
-        super().__init__()
-        self.steps = steps
-
-    def grill_with_context(self, plan: str = "") -> str:
-        self.steps.append("grill_with_context")
-        return "ok"
+            expect("explore_context_files" in self.body.tool_steps).to(be_true)
+            expect("read_context_file" in self.body.tool_steps).to(be_true)
 
 
 with description("a grill action"):
-    with context("that is given one context tool"):
-        with it("should open the workspace, record decisions, run grill_with_context, and generate"):
-            steps: list[str] = []
-            _GrillContext(steps).grill(tools=[_ContextTool(steps)])
-            expect(steps).to(
-                equal(["open", "record_decisions", "grill_with_context", "generate"])
-            )
-
-    with context("that is given two context tools"):
-        with it("should run the host grill body once per tool"):
-            steps: list[str] = []
-            _GrillContext(steps).grill(
-                tools=[_ContextTool(steps), _ContextTool(steps)]
-            )
-            expect(steps).to(
-                equal(
-                    [
-                        "open",
-                        "record_decisions",
-                        "grill_with_context",
-                        "generate",
-                        "open",
-                        "record_decisions",
-                        "grill_with_context",
-                        "generate",
-                    ]
-                )
-            )
+    with context("that expands"):
+        with it("should include grill_with_context in grill"):
+            body = _ActionExpander.instance().parse_body(GrillContext.grill, GrillContext())
+            joined = "\n".join(body.prose_parts)
+            expect(joined).to(contain("AskQuestion"))
 
 
 with description("BaseContextTool host face for grill"):

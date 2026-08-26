@@ -1,17 +1,28 @@
 """BDD spec for CreateContextTool - meta generator face (scaffold domains)."""
 
+import sys
 from pathlib import Path
 from typing import Any
 
 from expects import equal, expect
 from mamba import before, context, description, it
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+for _p in [
+    str(_REPO_ROOT),
+    *[
+        str(_REPO_ROOT / c)
+        for c in ("context_tools", "primitives", "utilities", "context_tools/actions")
+    ],
+]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 import context_tools  # noqa: F401
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
 from primitives.instructions import Instruction
 from tools.tool import Toolset, _ToolsetLoader
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
 _CREATE_DIR = Path(__file__).resolve().parent
 _CREATE_TOOLSET = (
     "context_tools.create_context_tool.create_context_tool:CreateContextTool"
@@ -28,6 +39,7 @@ def _expand_action(
     action_name: str,
     *,
     toolset_path: str,
+    arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return _ActionRunner.instance().invoke_action(
         _ActionRunRequest(
@@ -35,7 +47,7 @@ def _expand_action(
             toolset_path=toolset_path,
             action_name=action_name,
             context={},
-            arguments={},
+            arguments=arguments or {},
             instance=instance,
         )
     )
@@ -79,7 +91,7 @@ with description("CreateContextTool meta generator"):
             expect(self.generator.module_dir).to(equal(_CREATE_DIR.resolve()))
 
         with it(
-            "should expose generate, validate, satisfy, and repair on the host"
+            "should not expose generate, validate, satisfy, or repair on the host"
         ):
             for name in (
                 "generate",
@@ -87,16 +99,13 @@ with description("CreateContextTool meta generator"):
                 "satisfy",
                 "repair",
             ):
-                expect(name in self.generator.actions).to(equal(True))
+                expect(name in self.generator.actions).to(equal(False))
 
-        with it("should expose scan as a host tool"):
-            expect("scan" in self.generator.tools).to(equal(True))
-
-    with context("generate expands meta face"):
+    with context("guidance expands meta face"):
         with before.each:
             self.response = _expand_action(
                 self.generator,
-                "generate",
+                "guidance",
                 toolset_path=_CREATE_TOOLSET,
             )
 

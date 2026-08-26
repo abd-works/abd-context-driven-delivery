@@ -213,12 +213,11 @@ with description("Render Hub Board With Actions And Utilities Rows"):
             expect("generate_cdd_catalog" in self.index_html).to(equal(False))
             expect("regen-note" in self.index_html).to(equal(False))
 
-        with it("shows Install steps under the board with repo URL and agent_skills deploy"):
+        with it("shows Install steps under the board with repo URL and Harness generate"):
             expect("catalog-install-heading" in self.index_html).to(be_true)
             expect("https://github.com/org/repo" in self.index_html or _REPO_URL in self.index_html).to(be_true)
-            expect("agent_skills/agent_skills.py" in self.index_html).to(be_true)
-            expect("Deploy Tools as Skills" in self.index_html).to(be_true)
-            expect("deploy_tools_as_skills" in self.index_html).to(be_true)
+            expect("harness/harness.py" in self.index_html).to(be_true)
+            expect("action <code>generate</code>" in self.index_html).to(be_true)
             utilities_at = self.index_html.find("Utilities</h3>")
             install_at = self.index_html.find("catalog-install-heading")
             expect(utilities_at < install_at).to(be_true)

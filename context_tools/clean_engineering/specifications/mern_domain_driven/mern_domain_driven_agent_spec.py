@@ -37,8 +37,9 @@ with description("a MernDomainDriven generator"):
                 expect("validate" in text).to(be_true)
 
                 response = run_toolset(
-                    toolset=_TOOLSET,
+                    toolset="generate.generate:Generate",
                     action="generate",
+                    arguments={"tools": [_TOOLSET]},
                     context={},
                     timeout_seconds=180,
                 )

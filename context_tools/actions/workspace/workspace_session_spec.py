@@ -70,12 +70,17 @@ with description("WorkSession kit prose"):
 
 
 with description("WorkSession on a BaseContextTool host"):
-    with context("CarChronicle generate"):
+    with context("CarChronicle generate via Generate kit"):
         with before.all:
+            from generate.generate import Generate
+
             cls = _ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
             self.host = cls()
             self.response = _expand(
-                self.host, "generate", toolset_path=_CAR_CHRONICLE_TOOLSET
+                Generate(),
+                "generate",
+                toolset_path="generate.generate:Generate",
+                arguments={"tools": [self.host]},
             )
 
         with it("should name CDR tools then finish_turn"):
@@ -90,7 +95,7 @@ with description("WorkSession on a BaseContextTool host"):
                 )
             )
 
-        with it("should not expand session active resource on the host generate composer"):
+        with it("should not expand session active resource on the generate kit"):
             expect(
                 f"Resource `active` = {self.host.active!r}."
                 in self.response["instructions"]
@@ -101,12 +106,17 @@ with description("WorkSession on a BaseContextTool host"):
 
             expect(isinstance(self.host.workspace, Workspace)).to(be_true)
 
-    with context("ChronicleWithOutput generate"):
+    with context("ChronicleWithOutput generate via Generate kit"):
         with before.all:
+            from generate.generate import Generate
+
             cls = _ToolsetLoader.instance().load(_CHRONICLE_WITH_OUTPUT_TOOLSET)
             self.host = cls()
             self.response = _expand(
-                self.host, "generate", toolset_path=_CHRONICLE_WITH_OUTPUT_TOOLSET
+                Generate(),
+                "generate",
+                toolset_path="generate.generate:Generate",
+                arguments={"tools": [self.host]},
             )
 
         with it("should keep nested generate_output tools ahead of finish_turn"):
@@ -122,12 +132,17 @@ with description("WorkSession on a BaseContextTool host"):
                 )
             )
 
-    with context("BaseContextTool generate"):
+    with context("Generate with no context tool"):
         with before.all:
+            from generate.generate import Generate
+
             cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
             self.host = cls()
             self.response = _expand(
-                self.host, "generate", toolset_path=_BASE_TOOLSET
+                Generate(),
+                "generate",
+                toolset_path="generate.generate:Generate",
+                arguments={"tools": []},
             )
 
         with it("should not inline session guidance on the composer"):

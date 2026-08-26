@@ -30,29 +30,7 @@ class AgentBdd(BaseContextTool):
     @agent_instructions
     def generate_output(self) -> str:
         """"""
-        self._bdd().generate()
+        from generate.generate import Generate
+
+        Generate().generate(tools=[self._bdd()])
         return ""
-
-    @agent_instructions
-    def validate(self) -> str:
-        self.contexts
-        self._bdd().validate()
-        self.scan()
-        return "Validation report."
-
-    @agent_instructions
-    def satisfy(self) -> str:
-        self.contexts
-        self.templates
-        self._bdd().satisfy()
-        return "When done, run validate."
-
-    @agent_instructions
-    def repair(self, asset: str, violation: str) -> str:
-        self.scan()
-        self.contexts
-        self.examples
-        self.templates
-        self._bdd().satisfy()
-        self.validate()
-        return "Repair {{asset}} until validate passes."

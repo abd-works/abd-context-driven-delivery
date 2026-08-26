@@ -33,8 +33,9 @@ with description("a Bdd generator"):
                 expect("validate" in text).to(be_true)
 
                 response = run_toolset(
-                    toolset=_TOOLSET,
+                    toolset="generate.generate:Generate",
                     action="generate",
+                    arguments={"tools": [_TOOLSET]},
                     context={"fidelity": "behavior", "format": "python"},
                     timeout_seconds=300,
                 )

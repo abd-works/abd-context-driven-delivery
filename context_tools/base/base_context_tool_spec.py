@@ -15,7 +15,6 @@ Meta generator face (scaffold templates / create_context_tool.md) lives in
 import sys
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
 
 from expects import be_false, be_true, equal, expect, raise_error
 from mamba import before, context, description, it
@@ -34,10 +33,24 @@ from context_tools.stories.stories import Stories
 from context_tools.ux.ux import Ux
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-for _p in [str(_REPO_ROOT), *[str(_REPO_ROOT / c) for c in ("context_tools", "primitives", "utilities")]]:
+for _p in [str(_REPO_ROOT), *[str(_REPO_ROOT / c) for c in ("context_tools", "primitives", "utilities", "context_tools/actions")]]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
+from document.document import Document
+from generate.generate import Generate
+from satisfy.satisfy import Satisfy
+from validate.validate import CreateRule, Validate
+
 _BASE_DIR = _REPO_ROOT / "context_tools" / "base"
+_GENERATE_DIR = _REPO_ROOT / "context_tools" / "actions" / "generate"
+_VALIDATE_DIR = _REPO_ROOT / "context_tools" / "actions" / "validate"
+_SATISFY_DIR = _REPO_ROOT / "context_tools" / "actions" / "satisfy"
+_DOCUMENT_DIR = _REPO_ROOT / "context_tools" / "actions" / "document"
+_GENERATE_TOOLSET = "generate.generate:Generate"
+_VALIDATE_TOOLSET = "validate.validate:Validate"
+_CREATE_RULE_TOOLSET = "validate.validate:CreateRule"
+_SATISFY_TOOLSET = "satisfy.satisfy:Satisfy"
+_DOCUMENT_TOOLSET = "document.document:Document"
 _CAR_CHRONICLE_DIR = (
     _REPO_ROOT / "context_tools" / "create_context_tool" / "examples" / "car_chronicle"
 )
@@ -65,6 +78,7 @@ def _expand_action(
     action_name: str,
     *,
     toolset_path: str,
+    arguments: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return _ActionRunner.instance().invoke_action(
         _ActionRunRequest(
@@ -72,17 +86,18 @@ def _expand_action(
             toolset_path=toolset_path,
             action_name=action_name,
             context={},
-            arguments={},
+            arguments=arguments or {},
             instance=instance,
         )
     )
 
 
-def _section(name: str) -> str:
+def _section(name: str, kit_dir: Path | None = None) -> str:
     # _path_for_name emits "stem § Heading"; Instruction._split_section only
     # understands "stem # Heading" (or bare "# Heading" via domain_slug).
-    text = _path_for_name(_BASE_DIR, name).replace(" \u00a7 ", " # ", 1)
-    return Instruction(text, _BASE_DIR, domain_slug="base_context_tool").expand()
+    directory = kit_dir or _BASE_DIR
+    text = _path_for_name(directory, name).replace(" \u00a7 ", " # ", 1)
+    return Instruction(text, directory, domain_slug=directory.name).expand()
 
 
 def _load_car_contexts() -> str:
@@ -135,14 +150,14 @@ def _assert_contexts_inlined(instructions: str, concepts_text: str) -> None:
         expect(bullet in instructions).to(equal(True))
 
 
-with description("BaseContextTool lifecycle prose"):
-    with it("should resolve generate / validate / satisfy from base markdown"):
-        expect("# Generate" in _section("generate")).to(be_true)
-        expect("# Validate" in _section("validate")).to(be_true)
-        expect("# Satisfy" in _section("satisfy")).to(be_true)
+with description("lifecycle kit prose"):
+    with it("should resolve generate / validate / satisfy from kit markdown"):
+        expect("# Generate" in _section("generate", _GENERATE_DIR)).to(be_true)
+        expect("# Validate" in _section("validate", _VALIDATE_DIR)).to(be_true)
+        expect("# Satisfy" in _section("satisfy", _SATISFY_DIR)).to(be_true)
 
 
-with description("BaseContextTool composer"):
+with description("Generate kit"):
     with context("a CarChronicle domain host"):
         with before.all:
             self.chronicle = _load_car_chronicle()
@@ -153,9 +168,10 @@ with description("BaseContextTool composer"):
         with context("generate expands domain slots"):
             with before.each:
                 self.response = _expand_action(
-                    self.chronicle,
+                    Generate(),
                     "generate",
-                    toolset_path=_CAR_CHRONICLE_TOOLSET,
+                    toolset_path=_GENERATE_TOOLSET,
+                    arguments={"tools": [self.chronicle]},
                 )
 
             with it("should inline the full Contexts section from car_chronicle.md"):
@@ -178,69 +194,18 @@ with description("BaseContextTool composer"):
                 ).to(equal(False))
 
             with it("should inline generate prose"):
-                expect(_section("generate") in self.response["instructions"]).to(
+                expect(_section("generate", _GENERATE_DIR) in self.response["instructions"]).to(
                     be_true
                 )
 
-        with context("validate expands domain contexts as rubric"):
-            with before.each:
-                self.response = _expand_action(
-                    self.chronicle,
-                    "validate",
-                    toolset_path=_CAR_CHRONICLE_TOOLSET,
-                )
-
-            with it("should inline the full Contexts section as rubric"):
-                _assert_contexts_inlined(self.response["instructions"], self.contexts)
-
-            with it("should name scan then finish_turn"):
-                expect(self.response["tools"]).to(
-                    equal(
-                        [
-                            "scan",
-                            "finish_turn",
-                        ]
-                    )
-                )
-            with it("should inline validate prose"):
-                expect(_section("validate") in self.response["instructions"]).to(
-                    be_true
-                )
-
-        with context("satisfy"):
-            with before.each:
-                self.response = _expand_action(
-                    self.chronicle,
-                    "satisfy",
-                    toolset_path=_CAR_CHRONICLE_TOOLSET,
-                )
-
-            with it("should set action to satisfy"):
-                expect(self.response["action"]).to(equal("satisfy"))
-
-            with it("should name validate then generate_fixes_from_validate then finish_turn"):
-                expect(self.response["tools"]).to(
-                    equal(["validate", "generate_fixes_from_validate", "finish_turn"])
-                )
-
-            with it("should inline satisfy prose"):
-                expect(_section("satisfy") in self.response["instructions"]).to(
-                    be_true
-                )
-
-            with it("should not inline the domain template in tool mode"):
-                expect(self.template in self.response["instructions"]).to(be_false)
-
-    with context("BaseContextTool generate"):
+    with context("Generate with no context tool"):
         with before.all:
-            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
-            self.host = cls()
             self.response = _expand_action(
-                self.host, "generate", toolset_path=_BASE_TOOLSET
+                Generate(), "generate", toolset_path=_GENERATE_TOOLSET, arguments={"tools": []}
             )
 
-        with it("should inline generate prose on the composer"):
-            expect(_section("generate") in self.response["instructions"]).to(be_true)
+        with it("should inline generate prose"):
+            expect(_section("generate", _GENERATE_DIR) in self.response["instructions"]).to(be_true)
 
         with it("should require several turns for a large implied source even if asked once"):
             expect("several turns" in self.response["instructions"]).to(be_true)
@@ -250,39 +215,81 @@ with description("BaseContextTool composer"):
         with before.all:
             self.chronicle = _load_chronicle_with_output()
             self.response = _expand_action(
-                self.chronicle,
+                Generate(),
                 "generate",
-                toolset_path=_CHRONICLE_WITH_OUTPUT_TOOLSET,
+                toolset_path=_GENERATE_TOOLSET,
+                arguments={"tools": [self.chronicle]},
             )
 
         with it("should inline prose from the subclass generate_output action"):
             _assert_text_inlined(self.response["instructions"], _GENERATE_OUTPUT_PROSE)
 
 
-with description("BaseContextTool linear kit delegation"):
-    with context("generate expands providers in-method (no @ chain)"):
+with description("Validate kit"):
+    with context("a CarChronicle domain host"):
         with before.all:
-            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
-            self.host = cls()
-            self.entry = self.host.actions["generate"].signature_entry
-
-        with it("should have no decorator chain on generate"):
-            expect("chain" in self.entry).to(equal(False))
-
-    with context("document expands providers in-method (no @ chain)"):
-        with before.all:
-            cls = _ToolsetLoader.instance().load(_BASE_TOOLSET)
-            self.host = cls()
-            self.entry = self.host.actions["document"].signature_entry
+            self.chronicle = _load_car_chronicle()
+            self.contexts = _load_car_contexts()
             self.response = _expand_action(
-                self.host, "document", toolset_path=_BASE_TOOLSET
+                Validate(),
+                "validate",
+                toolset_path=_VALIDATE_TOOLSET,
+                arguments={"tools": [self.chronicle]},
             )
 
-        with it("should have no decorator chain on document"):
-            expect("chain" in self.entry).to(equal(False))
+        with it("should inline the full Contexts section as rubric"):
+            _assert_contexts_inlined(self.response["instructions"], self.contexts)
 
-        with it("should inline document prose"):
-            expect(_section("document") in self.response["instructions"]).to(be_true)
+        with it("should name finish_turn"):
+            expect("finish_turn" in self.response["tools"]).to(be_true)
+
+        with it("should inline validate prose"):
+            expect(_section("validate", _VALIDATE_DIR) in self.response["instructions"]).to(
+                be_true
+            )
+
+
+with description("Satisfy kit"):
+    with context("a CarChronicle domain host"):
+        with before.all:
+            self.chronicle = _load_car_chronicle()
+            self.template = _load_car_template()
+            self.response = _expand_action(
+                Satisfy(),
+                "satisfy",
+                toolset_path=_SATISFY_TOOLSET,
+                arguments={"tools": [self.chronicle]},
+            )
+
+        with it("should set action to satisfy"):
+            expect(self.response["action"]).to(equal("satisfy"))
+
+        with it("should name finish_turn"):
+            expect("finish_turn" in self.response["tools"]).to(be_true)
+
+        with it("should inline satisfy prose"):
+            expect(_section("satisfy", _SATISFY_DIR) in self.response["instructions"]).to(
+                be_true
+            )
+
+        with it("should not inline the domain template in tool mode"):
+            expect(self.template in self.response["instructions"]).to(be_false)
+
+
+with description("lifecycle kits expand in-method (no @ chain)"):
+    with it("should have no decorator chain on generate"):
+        entry = Generate().actions["generate"].signature_entry
+        expect("chain" in entry).to(equal(False))
+
+    with it("should have no decorator chain on document"):
+        entry = Document().actions["document"].signature_entry
+        expect("chain" in entry).to(equal(False))
+
+    with it("should inline document prose"):
+        response = _expand_action(
+            Document(), "document", toolset_path=_DOCUMENT_TOOLSET, arguments={"tools": []}
+        )
+        expect(_section("document", _DOCUMENT_DIR) in response["instructions"]).to(be_true)
 
 
 with description("BaseContextTool public host face"):
@@ -310,7 +317,17 @@ with description("BaseContextTool public host face"):
         expect(isinstance(self.host.scanner, Scan)).to(be_true)
 
     with it("should not expose kit-owned lifecycle actions on the host"):
-        for name in ("partition", "grill", "sketch", "iterate"):
+        for name in (
+            "partition",
+            "grill",
+            "sketch",
+            "iterate",
+            "generate",
+            "validate",
+            "satisfy",
+            "document",
+            "createRule",
+        ):
             expect(name in self.host.actions).to(equal(False))
 
     with it("should not compose Sketcher, GrillContext, Iterator, or Partition"):
@@ -319,10 +336,8 @@ with description("BaseContextTool public host face"):
         expect(hasattr(self.host, "iterator")).to(be_false)
         expect(hasattr(self.host, "partitioner")).to(be_false)
 
-    with it("should hold RecordDecisions as decisions"):
-        from record_decisions.record_decisions import RecordDecisions
-
-        expect(isinstance(self.host.decisions, RecordDecisions)).to(be_true)
+    with it("should not hold RecordDecisions as decisions"):
+        expect(hasattr(self.host, "decisions")).to(be_false)
 
     with it("should expose active as the current work session"):
         expect(self.host.active).to(equal(self.host.workspace.current_work_session))
@@ -337,11 +352,11 @@ with description("BaseContextTool public host face"):
         expect("begin_eval_turn" in self.host.tools).to(be_false)
         expect("finish_eval_turn" in self.host.tools).to(be_false)
 
-    with it("should expose workspace turn tools on the host"):
-        expect("begin_turn" in self.host.tools).to(be_true)
-        expect("finish_turn" in self.host.tools).to(be_true)
-        expect("record_mistake" in self.host.tools).to(be_true)
-        expect("record_correction" in self.host.tools).to(be_true)
+    with it("should not expose workspace turn tools on the host"):
+        expect("begin_turn" in self.host.tools).to(be_false)
+        expect("finish_turn" in self.host.tools).to(be_false)
+        expect("record_mistake" in self.host.tools).to(be_false)
+        expect("record_correction" in self.host.tools).to(be_false)
 
     with it("should not expose legacy log_mistake or log_correction on the host"):
         expect("log_mistake" in self.host.tools).to(be_false)
@@ -352,9 +367,8 @@ with description("BaseContextTool public host face"):
         expect("ensure_session" in self.host.tools).to(be_false)
         expect("create_session" in self.host.tools).to(be_false)
 
-    with it("should expose render as a host tool"):
-        expect("render" in self.host.tools).to(be_true)
-        expect(self.host.tools["render"].signature_entry["kind"]).to(equal("tool"))
+    with it("should not expose render as a host tool"):
+        expect("render" in self.host.tools).to(be_false)
 
     with it("should default supported_formats to empty"):
         expect(type(self.host).supported_formats).to(equal(frozenset()))
@@ -362,8 +376,8 @@ with description("BaseContextTool public host face"):
     with it("should reject render of an unsupported format"):
         expect(lambda: self.host.render("markdown", content="# x")).to(raise_error(ValueError))
 
-    with it("should prepend a BDD-capable generate header"):
-        header = self.host.add_generate_header_to_generated()
+    with it("should prepend a BDD-capable generate header from Generate"):
+        header = Generate().add_generate_header_to_generated()
         expect("@toolset-manifest" in header).to(be_true)
         expect("invoke-edit: action satisfy" in header).to(be_true)
 
@@ -404,8 +418,7 @@ with description("BaseContextTool.render on channel tools"):
             for name in ("markdown", "json", "drawio"):
                 expect(name in self.stories.supported_formats).to(be_true)
 
-        with it("should expose render as a tool, not an action"):
-            expect("render" in self.stories.tools).to(be_true)
+        with it("should not expose render as an action"):
             expect("render" in self.stories.actions).to(be_false)
 
         with it("should reject an unsupported format"):
@@ -485,19 +498,14 @@ with description("BaseContextTool host slim face"):
         expect(hasattr(BaseContextTool, "eval")).to(be_false)
 
 
-with description("BaseContextTool.createRule action"):
+with description("CreateRule kit"):
     with before.all:
-        cls = _ToolsetLoader.instance().load(_CAR_CHRONICLE_TOOLSET)
-        self.host = cls()
-        self.response = _ActionRunner.instance().invoke_action(
-            _ActionRunRequest(
-                request={"toolset": _CAR_CHRONICLE_TOOLSET, "context": {}},
-                toolset_path=_CAR_CHRONICLE_TOOLSET,
-                action_name="createRule",
-                context={},
-                arguments={"failed": "wrong", "wanted": "right"},
-                instance=self.host,
-            )
+        self.chronicle = _load_car_chronicle()
+        self.response = _expand_action(
+            CreateRule(),
+            "createRule",
+            toolset_path=_CREATE_RULE_TOOLSET,
+            arguments={"tools": [self.chronicle], "failed": "wrong", "wanted": "right"},
         )
 
     with it("should set action to createRule"):
@@ -671,64 +679,20 @@ with description("BaseContextTool._set_fidelity"):
 # ---------------------------------------------------------------------------
 
 with description("BaseContextTool generated fidelity methods"):
-    with context("on Stories class"):
-        with it("should have generate_story_map method"):
-            expect(callable(getattr(Stories, "generate_story_map", None))).to(be_true)
+    with context("when the host has no generate, validate, or satisfy"):
+        with it("should not add generate_{fidelity} methods on Stories"):
+            expect(getattr(Stories, "generate_story_map", None)).to(equal(None))
+            expect(getattr(Stories, "generate_scenarios", None)).to(equal(None))
+            expect(getattr(Stories, "generate_acceptance_tests", None)).to(equal(None))
+            expect(getattr(Stories, "validate_story_map", None)).to(equal(None))
+            expect(getattr(Stories, "satisfy_story_map", None)).to(equal(None))
 
-        with it("should have generate_scenarios method"):
-            expect(callable(getattr(Stories, "generate_scenarios", None))).to(be_true)
+        with it("should not add generate_{fidelity} methods on Bdd"):
+            expect(getattr(Bdd, "generate_modules", None)).to(equal(None))
+            expect(getattr(Bdd, "generate_behavior", None)).to(equal(None))
+            expect(getattr(Bdd, "generate_development", None)).to(equal(None))
 
-        with it("should have generate_acceptance_tests method"):
-            expect(callable(getattr(Stories, "generate_acceptance_tests", None))).to(be_true)
-
-        with it("should have validate_story_map method"):
-            expect(callable(getattr(Stories, "validate_story_map", None))).to(be_true)
-
-        with it("should have satisfy_story_map method"):
-            expect(callable(getattr(Stories, "satisfy_story_map", None))).to(be_true)
-
-    with context("on Bdd class"):
-        with it("should have generate_modules method"):
-            expect(callable(getattr(Bdd, "generate_modules", None))).to(be_true)
-
-        with it("should have generate_behavior method"):
-            expect(callable(getattr(Bdd, "generate_behavior", None))).to(be_true)
-
-        with it("should have generate_development method"):
-            expect(callable(getattr(Bdd, "generate_development", None))).to(be_true)
-
-    with context("on CleanEngineering class"):
-        with it("should have generate_modules method"):
-            expect(callable(getattr(CleanEngineering, "generate_modules", None))).to(be_true)
-
-        with it("should have generate_model method"):
-            expect(callable(getattr(CleanEngineering, "generate_model", None))).to(be_true)
-
-        with it("should have generate_code method"):
-            expect(callable(getattr(CleanEngineering, "generate_code", None))).to(be_true)
-
-    with context("calling generate_story_map on a Stories instance starting at scenarios"):
-        with before.each:
-            self.stories = Stories(fidelity="scenarios")
-
-        with it("should set fidelity to story_map before calling generate"):
-            captured = []
-            with patch.object(type(self.stories), "generate", lambda s: captured.append(s.fidelity)):
-                self.stories.generate_story_map()
-            expect(captured[0]).to(equal("story_map"))
-
-        with it("should set format to markdown before calling generate"):
-            captured = []
-            with patch.object(type(self.stories), "generate", lambda s: captured.append(s.format)):
-                self.stories.generate_story_map()
-            expect(captured[0]).to(equal("markdown"))
-
-    with context("calling validate_scenarios on a Stories instance starting at story_map"):
-        with before.each:
-            self.stories = Stories(fidelity="story_map")
-
-        with it("should set fidelity to scenarios before calling validate"):
-            captured = []
-            with patch.object(type(self.stories), "validate", lambda s: captured.append(s.fidelity)):
-                self.stories.validate_scenarios()
-            expect(captured[0]).to(equal("scenarios"))
+        with it("should not add generate_{fidelity} methods on CleanEngineering"):
+            expect(getattr(CleanEngineering, "generate_modules", None)).to(equal(None))
+            expect(getattr(CleanEngineering, "generate_model", None)).to(equal(None))
+            expect(getattr(CleanEngineering, "generate_code", None)).to(equal(None))

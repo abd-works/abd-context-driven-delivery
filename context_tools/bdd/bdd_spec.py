@@ -90,105 +90,44 @@ with description("a Bdd toolset"):
         with it("should return a Diagnose instance"):
             expect(_bdd().diagnostic()).to(be_a(Diagnose))
 
-    with context("whose generate action is expanded"):
+    with context("whose guidance action is expanded"):
         with it("should include BDD test generation guidance"):
-            prose = _expanded(_bdd(), "generate")
+            prose = _expanded(_bdd(), "guidance")
             expect("SIGNATURE" in prose).to(be_true)
 
-        with it("should include the RED before GREEN cycle instruction"):
-            prose = _expanded(_bdd(), "generate")
-            expect("RED" in prose).to(be_true)
-
-        with it("should tell the agent to call ce().generate() when BDD is complete"):
-            prose = _expanded(_bdd(), "generate")
-            expect("ce().generate()" in prose).to(be_true)
+        with it("should tell the agent to call companion guidance and pass it to this action"):
+            prose = _expanded(_bdd(), "guidance")
+            expect("call guidance" in prose).to(be_true)
+            expect("pass that companion to this action" in prose).to(be_true)
+            expect("already knows what to do" in prose).to(be_true)
+            expect("ce().generate()" in prose).to(equal(False))
 
         with it("should instruct the agent to scan production source for coverage gaps"):
-            prose = _expanded(_bdd(), "generate")
+            prose = _expanded(_bdd(), "guidance")
             expect("scan" in prose.lower()).to(be_true)
 
+        with it("should tell the caller to pass the CE companion to this action as a separate run"):
+            prose = _expanded(_bdd(), "guidance")
+            expect("separate tools run" in prose).to(be_true)
+            expect("Clean Engineering" in prose).to(be_true)
+
         with it("should NOT inline CleanEngineering generate instructions"):
-            prose = _expanded(_bdd(), "generate")
+            prose = _expanded(_bdd(), "guidance")
             expect("Deepen OO design" in prose).to(equal(False))
 
-    with context("whose validate action is expanded"):
-        with it("should include BDD validation context"):
-            prose = _expanded(_bdd(), "validate")
-            expect("Behavior-driven development" in prose).to(be_true)
-
-        with it("should tell the agent to call ce().validate() when BDD validation passes"):
-            prose = _expanded(_bdd(), "validate")
-            expect("ce().validate()" in prose).to(be_true)
-
-        with it("should NOT inline CleanEngineering validate instructions"):
-            prose = _expanded(_bdd(), "validate")
-            expect("Deepen OO design" in prose).to(equal(False))
-
-    with context("whose satisfy action is expanded"):
-        with it("should include the RED confirmation instruction"):
-            prose = _expanded(_bdd(), "satisfy")
-            expect("RED" in prose).to(be_true)
-
-        with it("should defer validate instead of inlining the full BDD contexts"):
-            prose = _expanded(_bdd(), "satisfy")
-            expect("Separate tools run" in prose and "action: `validate`" in prose).to(
-                be_true
-            )
-            expect("Deepen OO design" in prose).to(equal(False))
-
-        with it("should tell the agent to call ce().satisfy() when BDD violations are resolved"):
-            prose = _expanded(_bdd(), "satisfy")
-            expect("ce().satisfy()" in prose).to(be_true)
-
-        with it("should tell the agent to call diagnostic().diagnose() when a test keeps failing"):
-            prose = _expanded(_bdd(), "satisfy")
-            expect("diagnostic().diagnose()" in prose).to(be_true)
-
-        with it("should list diagnose as a tool step without inlining the six phases"):
-            func = getattr(type(_bdd()), "satisfy")
-            body = _ActionExpander.instance().parse_body(func, _bdd())
-            expect("diagnose" in body.tool_steps).to(be_true)
-            prose = "\n".join(body.prose_parts)
-            expect("Phase 1 - Build a feedback loop" in prose).to(equal(False))
-
-        with it("should instruct the agent to scan production source for coverage gaps"):
-            prose = _expanded(_bdd(), "satisfy")
-            expect("coverage gap" in prose.lower()).to(be_true)
-
-        with it("should NOT inline CleanEngineering satisfy instructions"):
-            prose = _expanded(_bdd(), "satisfy")
-            expect("Deepen OO design" in prose).to(equal(False))
-
-    with context("whose iterate action is expanded"):
-        with it("should tell the agent to call ce().iterate() after confirming RED"):
-            prose = _expanded(_bdd(), "iterate")
-            expect("ce().iterate()" in prose).to(be_true)
-
-        with it("should tell the agent to call diagnostic().diagnose() when a test keeps failing"):
-            prose = _expanded(_bdd(), "iterate")
-            expect("diagnostic().diagnose()" in prose).to(be_true)
-
-        with it("should list diagnose as a tool step without inlining the six phases"):
-            func = getattr(type(_bdd()), "iterate")
-            body = _ActionExpander.instance().parse_body(func, _bdd())
-            expect("diagnose" in body.tool_steps).to(be_true)
-            prose = "\n".join(body.prose_parts)
-            expect("Phase 1 - Build a feedback loop" in prose).to(equal(False))
-
-    with context("whose grill action is expanded"):
-        with it("should tell the agent to call ce().grill() when BDD grill is complete"):
-            prose = _expanded(_bdd(), "grill")
-            expect("ce().grill()" in prose).to(be_true)
-
-    with context("whose sketch action is expanded"):
-        with it("should tell the agent to call ce().sketch() when BDD sketch is complete"):
-            prose = _expanded(_bdd(), "sketch")
-            expect("ce().sketch()" in prose).to(be_true)
-
-    with context("whose repair action is expanded"):
-        with it("should tell the agent to call ce().repair() when the BDD artifact is clean"):
-            prose = _expanded(_bdd(), "repair")
-            expect("ce().repair()" in prose).to(be_true)
+    with context("that does not own kit lifecycle actions"):
+        with it("should not expose generate, validate, satisfy, repair, grill, sketch, or iterate"):
+            host = _bdd()
+            for name in (
+                "generate",
+                "validate",
+                "satisfy",
+                "repair",
+                "grill",
+                "sketch",
+                "iterate",
+            ):
+                expect(name in host.actions).to(equal(False))
 
     with context("whose transform tool is called"):
         with it("should delegate to CleanEngineering and return a dict"):

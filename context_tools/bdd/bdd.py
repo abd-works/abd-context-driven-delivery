@@ -119,70 +119,20 @@ class Bdd(BaseContextTool):
     # -- Lifecycle actions: BDD first, then CE classes -----------------------
 
     @agent_instructions
-    def generate(self) -> str:
-        """At modules fidelity: delegate entirely to ce().generate() — no BDD spec file is written at this stage. Use this to bootstrap CE class structure before writing tests.
+    def guidance(self) -> str:
+        """At modules fidelity: no BDD spec file is written — bootstrap CE class structure via the companion.
         At behavior fidelity: write all BDD test signatures (SIGNATURE markers).
         At development fidelity: write full test bodies and production code.
         When the target module already exists, scan the production source for every public method and property and verify each has test coverage — add missing signatures for any gap before writing new ones.
         BDD tests must conform to CE class structure: describe/it hierarchies must map onto public CE interfaces and operations.
-        When BDD artifacts are complete, call ce().generate() to produce the matching class skeletons."""
-        super().generate()
-        self.ce().generate()
-        return "When done, run validate."
-
-    @agent_instructions
-    def grill(self) -> str:
-        """Run the BDD grill loop to surface assumptions and gaps.
-        When BDD grill is complete, invoke CleanEngineering via /grill (same session) for the matching classes."""
-        from grill_context.grill_context import GrillContext
-
-        GrillContext().grill(tools=[self])
-        return "Grill complete for BDD; invoke ce() via /grill as a separate tools run, then generate."
-
-    @agent_instructions
-    def sketch(self) -> str:
-        """Sketch the BDD hierarchy at the current fidelity.
-        When BDD sketch is complete, invoke CleanEngineering via /sketch for the matching classes."""
-        from sketch.sketch import Sketcher
-
-        Sketcher().sketch(tools=[self])
-        return "Sketch complete for BDD; invoke ce() via /sketch as a separate tools run, then generate."
-
-    @agent_instructions
-    def iterate(self) -> str:
-        """Iterate one BDD cycle: write one test, confirm it is RED, then invoke CleanEngineering via /iterate to build the minimum production code until GREEN. Repeat — one test, one production change, one GREEN — until all tests pass.
-        If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure)."""
-        from iterate.iterate import Iterator
-
-        Iterator().iterate(tools=[self])
-        self.diagnostic().diagnose()
-        return "Iterate complete for BDD; invoke ce() via /iterate as a separate tools run, then validate."
-
-    @agent_instructions
-    def satisfy(self) -> str:
-        """When running the fixing part of Satisfy, make sure that you create a breaking test that fails first (RED), and then fix the code.
-        When BDD violations are resolved, call ce().satisfy() to do the same for the matching classes.
-        If the same test keeps failing, call diagnostic().diagnose()."""
-        super().satisfy()
-        self.ce().satisfy()
-        self.diagnostic().diagnose()
-        return "When done, run validate on artifacts under {session.path}/."
-
-    @agent_instructions
-    def validate(self) -> str:
-        """Validate all BDD artifacts at the current fidelity.
-        When BDD validation passes, call ce().validate() to validate the matching class artifacts."""
-        super().validate()
-        self.ce().validate()
-        return "Validation report for artifacts under {session.path}/."
-
-    @agent_instructions
-    def repair(self) -> str:
-        """Repair the BDD artifact that is failing or malformed.
-        When the BDD artifact is clean, call ce().repair() to repair the matching class artifact."""
-        super().repair()
-        self.ce().repair()
-        return "Repair complete; run validate."
+        When this BDD work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
+        super().guidance()
+        self.ce().guidance()
+        return (
+            "When this BDD work is done, call guidance on the Clean Engineering companion "
+            "and pass that companion to this action as a separate tools run. "
+            "The action already knows what to do for every tool. Do not inline."
+        )
 
     # -- Tool: sideways format conversion ------------------------------------
 

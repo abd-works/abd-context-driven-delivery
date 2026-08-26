@@ -59,41 +59,23 @@ class MernDomainDriven(BaseContextTool):
     def contexts(self) -> Instruction: ...
 
     @agent_instructions
-    def generate(self) -> str:
+    def guidance(self) -> str:
         """1. Follow session_guidance (handled by the inherited body below). Fill
         templates/ for the feature package this slice touches ({epicSlug}/ with
         nested domain module + process boot) if not already present.
-        2. Call self._stories().generate() - *_spec.{tier} for tier in
+        2. Call guidance on the Stories companion - *_spec.{tier} for tier in
         (server, client, e2e), applying the testing-architecture rules below.
-        Specs first — small RED cycles before production. Its own ce().generate()
-        then wires the minimum matching production TypeScript under CE's OOAD
-        rules plus the naming/layering rules below.
+        Specs first — small RED cycles before production. Pass that companion
+        to this action as a separate tools run; the action already knows what
+        to do for every tool, including the Stories CE companion.
         3. Cite the ux screen/navigation artifact for this slice under Sources /
         context on the touched view files - this tool does not call ux itself.
-        4. Run validate. If it fails, fix and validate again until it passes."""
-        super().generate()
-        self._stories().generate()
-        return "Ran stories (acceptance tests + ce production) for this slice. Run validate."
-
-    @agent_instructions
-    def iterate(self) -> str:
-        """One cycle: self._stories().iterate() (grill + one spec, RED, then its
-        own ce().iterate() wires the minimum code until GREEN), then run this
-        tool's own scan for MERN-specific naming/layering rules. Repeat - one
-        test, one production change, one GREEN, one scan - until validate passes."""
-        from iterate.iterate import Iterator
-
-        Iterator().iterate(tools=[self])
-        self._stories().iterate()
-        return "Iterate cycle complete for this slice. Run validate."
-
-    @agent_instructions
-    def satisfy(self) -> str:
-        """Find and fix every problem under this slice: call
-        self._stories().satisfy() (specs first; its own ce().satisfy() keeps
-        production GREEN). Run validate - it scans this tool's own MERN
-        naming/layering rules below alongside CE's and Stories' rules - and
-        repeat until it passes."""
-        super().satisfy()
-        self._stories().satisfy()
-        return "Satisfied stories (acceptance tests + ce production) for this slice. Run validate."
+        4. Run validate. If it fails, fix and validate again until it passes.
+        When this MERN work is done, call guidance on the Stories companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
+        super().guidance()
+        self._stories().guidance()
+        return (
+            "When this MERN work is done, call guidance on the Stories companion "
+            "and pass that companion to this action as a separate tools run. "
+            "The action already knows what to do for every tool. Do not inline."
+        )

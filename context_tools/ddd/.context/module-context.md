@@ -18,7 +18,8 @@ Constraint: do not restate CleanEngineering class/module analysis in DDD artifac
 - `ce() -> CleanEngineering` (tool mode)
 - `diagnostic() -> Diagnose`
 - `contexts` instruction
-- Actions: `generate_output`, `validate`, `satisfy`, `repair(asset, violation)`
+- `guidance` — domain generate prose + CleanEngineering companion as a separate tools run. Lifecycle generate / validate / satisfy / document / repair live on kits (`Generate().generate(tools=[ddd])`).
+- Tool: `apply_document_workspace_default` — switches the working folder to `domain/` for `/document` unless path or folder was overridden
 - Tool: `transform(source_format, target_format, content)`
 - Tool: `render(format, content)` — calls `transform` from the current format via CE channels
 

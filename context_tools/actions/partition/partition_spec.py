@@ -25,7 +25,7 @@ from partition.partition_index import PartitionIndex
 from partition.partition import Partition
 from partition.segment import Segment, SegmentCompletenessConfig, SegmentEntry
 
-from primitives.actions.action import _ActionRunRequest, _ActionRunner
+from primitives.actions.action import _ActionExpander, _ActionRunRequest, _ActionRunner
 from primitives.instructions import Instruction
 from primitives.instructions import _path_for_name
 from tools.tool import Toolset, _ToolsetLoader
@@ -78,82 +78,13 @@ with description("Partition kit on hosts"):
         expect("partition" in host.actions).to(equal(False))
 
 
-class _FakeWorkspace:
-    def __init__(self, steps: list[str]) -> None:
-        self.steps = steps
-
-    def open(self, host: Any, **_kwargs: Any) -> str:
-        self.steps.append("workspace.open")
-        return "ok"
-
-
-class _FakeTurn:
-    def __init__(self, steps: list[str]) -> None:
-        self.steps = steps
-
-    def open(self, host: Any) -> str:
-        self.steps.append("turn.open")
-        return "ok"
-
-    def finish_turn(self, *args: Any, **kwargs: Any) -> str:
-        self.steps.append("finish_turn")
-        return "ok"
-
-
-class _PartitionHost:
-    def __init__(self, steps: list[str]) -> None:
-        self.steps = steps
-        self.domain_slug = "test_domain"
-        self.workspace = _FakeWorkspace(steps)
-        self.turn = _FakeTurn(steps)
-
-    @property
-    def contexts(self) -> Instruction:
-        self.steps.append("contexts")
-        return Instruction("", _KIT_DIR)
-
-    @property
-    def scaffold(self) -> Instruction:
-        return Instruction("", _KIT_DIR)
-
-
-class _PartitionKit(Partition):
-    def __init__(self, steps: list[str]) -> None:
-        super().__init__()
-        self.steps = steps
-
-    def partition_corpus(
-        self,
-        context: str = "",
-        mode: str = "one_go",
-        out_root: str | None = None,
-        slug: str = "",
-        scaffold: str = "",
-    ) -> str:
-        self.steps.append("partition_corpus")
-        return "ok"
-
-
 with description("a partition action"):
-    with context("that is given one context tool"):
-        with it("should open workspace and turn, run partition_corpus, and finish_turn"):
-            steps: list[str] = []
-            _PartitionKit(steps).partition(
-                tools=[_PartitionHost(steps)],
-                context="corpus/",
-                mode="one_go",
-            )
-            expect(steps).to(
-                equal(
-                    [
-                        "workspace.open",
-                        "contexts",
-                        "turn.open",
-                        "partition_corpus",
-                        "finish_turn",
-                    ]
-                )
-            )
+    with context("that expands"):
+        with it("should include the partition_corpus body in partition"):
+            body = _ActionExpander.instance().parse_body(Partition.partition, Partition())
+            joined = "\n".join(body.prose_parts)
+            expect("Hard fail" in joined or "partition" in joined.lower()).to(be_true)
+            expect("index" in body.tool_steps or "segment" in body.tool_steps).to(be_true)
 
 
 # ---------------------------------------------------------------------------

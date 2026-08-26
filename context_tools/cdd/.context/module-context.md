@@ -2,17 +2,13 @@
 
 **Purpose:** Orchestrate practice contexts (stories, ddd, ux, clean_engineering, bdd) across CDD delivery stages so agents pick stage + lenses, sketch once, then pipe each child `run` without restating child rules.
 
-**Primary use case:** At a chosen CDD fidelity (`discovery` / `spec` / `engineer`), call lifecycle actions (`grill`, `sketch`, `generate_output`, `iterate`, `validate`, `satisfy`, `document`) and have each walk the ordered child context tools for that stage.
+**Primary use case:** At a chosen CDD fidelity (`discovery` / `spec` / `engineer`), expand `guidance` to list each stage child as a separate tools run, then pass those children (or Cdd itself) into the lifecycle kits.
 
-**Rationale:** CDD owns stage menu and sketch/flow; child generators own domain rules. Stage → child fidelity is the complete contract: each child class declares its own `fidelities` dict keyed by `BaseContextTool` stage constants; `_CONTEXT_TOOLS_BY_STAGE` lists the ordered class sequence per stage; AI may reorder or skip rows.
+**Rationale:** CDD owns stage menu; child generators own domain rules; kits own generate / validate / satisfy / document / grill / sketch / iterate. Stage → child fidelity is the complete contract: each child class declares its own `fidelities` dict keyed by `BaseContextTool` stage constants; `_CONTEXT_TOOLS_BY_STAGE` lists the ordered class sequence per stage; AI may reorder or skip rows.
 
 ## Action fidelity ladder
 
-Actions follow a deliberate context-loading hierarchy — both exploration passes are constrained:
-
-- `grill` — inline action mode, constrained context per child. Calls `workspace.open()` + `contexts` (main context file only) + `grill_context.grill_with_context()` per child. Does NOT call `generate()`. Q&A pass only.
-- `sketch` — inline action mode, constrained context per child. Calls `workspace.open()` + `contexts` (main context file only) + `sketcher.sketch_session()` per child. Does NOT call `generate()`. Shape pass only.
-- `generate_output`, `iterate`, `validate`, `satisfy`, `document` — tool mode. Each child is invoked as a separate, independent tool call (`mode = "tool"` set before each call). Full context per child, isolated from the others.
+`guidance` lists each stage child with `mode = "tool"` so the matching kit action is a separate tools run per child — never inline full child recipes.
 
 ## Seam
 
@@ -22,7 +18,7 @@ Actions follow a deliberate context-loading hierarchy — both exploration passe
 
 - `Cdd(fidelity, format=None, path=None, session=None)`
 - `context_tools() -> list` — returns inline instances (no mode pre-set)
-- Actions: `grill`, `sketch`, `generate_output`, `iterate`, `validate`, `satisfy`, `document(paths)`
+- `guidance` — lists each stage child as a tool-mode companion; kits own generate / validate / satisfy / document / grill / sketch / iterate (`Generate().generate(tools=[cdd])`)
 
 ## Dependencies
 

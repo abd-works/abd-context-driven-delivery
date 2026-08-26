@@ -181,26 +181,28 @@ with description("_expand_docstring"):
             expect(_expand_docstring("", empty_action)).to(equal(""))
 
     with context("a single-word framework action name on a generator subclass"):
-        with it("should equal the direct load of # Generate in base_context_tool.md"):
-            from context_tools.base.base_context_tool import BaseContextTool
+        with it("should equal the direct load of # Generate in generate.md"):
+            from generate.generate import Generate
+            kit_dir = _REPO_ROOT / "context_tools" / "actions" / "generate"
             expanded = _expand_docstring(
-                "generate", BaseContextTool.generate, instance=BaseContextTool()
+                "generate", Generate.generate, instance=Generate()
             )
             direct = Instruction(
-                _path_for_name(_LIFECYCLE_PROSE_DIR, "generate"),
-                _LIFECYCLE_PROSE_DIR,
+                _path_for_name(kit_dir, "generate"),
+                kit_dir,
             ).expand()
             expect(expanded).to(equal(direct))
 
     with context("a kit-local path-ref action docstring"):
-        with it("should equal the direct load of # Generate in base_context_tool.md"):
-            from context_tools.base.base_context_tool import BaseContextTool
+        with it("should equal the direct load of # Generate in generate.md"):
+            from generate.generate import Generate
+            kit_dir = _REPO_ROOT / "context_tools" / "actions" / "generate"
             expanded = _expand_docstring(
-                "generate", BaseContextTool.generate, instance=BaseContextTool()
+                "generate", Generate.generate, instance=Generate()
             )
             direct = Instruction(
-                _path_for_name(_LIFECYCLE_PROSE_DIR, "generate"),
-                _LIFECYCLE_PROSE_DIR,
+                _path_for_name(kit_dir, "generate"),
+                kit_dir,
             ).expand()
             expect(expanded).to(equal(direct))
 

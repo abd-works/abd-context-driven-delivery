@@ -28,17 +28,17 @@ with description("an Iterator"):
             # Assert
             expect(result).to(equal("iterate-tick"))
 
-    with context("with iterate_session in its manifest"):
-        with it("should expose iterate_session as an action with no decorator chain"):
-            entry = Iterator.manifest.signature["iterate_session"]
+    with context("with iterate in its manifest"):
+        with it("should expose iterate as an action with no decorator chain"):
+            entry = Iterator.manifest.signature["iterate"]
             expect(entry["kind"]).to(equal("action"))
             expect(entry.get("chain")).to(equal(None))
 
-    with context("with the iterate_session action body"):
+    with context("with the iterate action body"):
         with it("should require one scan and one fix pass with no rescan"):
             iterator = Iterator()
             body = _ActionExpander.instance().parse_body(
-                Iterator.iterate_session, iterator
+                Iterator.iterate, iterator
             )
             joined = "\n".join(body.prose_parts)
             expect(joined).to(contain("one fix"))
@@ -47,7 +47,7 @@ with description("an Iterator"):
         with it("should forbid dumping the whole artifact in one tick"):
             iterator = Iterator()
             body = _ActionExpander.instance().parse_body(
-                Iterator.iterate_session, iterator
+                Iterator.iterate, iterator
             )
             joined = "\n".join(body.prose_parts)
             expect(joined).to(contain("DEFECT"))
@@ -56,62 +56,22 @@ with description("an Iterator"):
             expect(joined).to(contain("Hard gate"))
             expect(joined).to(contain("Ask ONE question at a time"))
 
-
-class _ContextTool:
-    def __init__(self, steps: list[str]) -> None:
-        self.steps = steps
-        self.workspace = self
-        self.decisions = self
-
-    def open(self) -> None:
-        self.steps.append("open")
-
-    def record_decisions_session(self) -> None:
-        self.steps.append("record_decisions")
-
-    def generate(self) -> str:
-        self.steps.append("generate")
-        return "ok"
-
-
-class _Iterator(Iterator):
-    def __init__(self, steps: list[str]) -> None:
-        self.steps = steps
-
-    def iterate_session(self, plan: str = "") -> str:
-        self.steps.append("iterate_session")
-        return "ok"
+        with it("should include the iterate session body in iterate"):
+            iterator = Iterator()
+            body = _ActionExpander.instance().parse_body(
+                Iterator.iterate, iterator
+            )
+            joined = "\n".join(body.prose_parts)
+            expect(joined).to(contain("grill_with_context"))
 
 
 with description("an iterate action"):
-    with context("that is given one context tool"):
-        with it("should open the workspace, record decisions, run iterate_session, and generate"):
-            steps: list[str] = []
-            _Iterator(steps).iterate(tools=[_ContextTool(steps)])
-            expect(steps).to(
-                equal(["open", "record_decisions", "iterate_session", "generate"])
-            )
-
-    with context("that is given two context tools"):
-        with it("should run the host iterate body once per tool"):
-            steps: list[str] = []
-            _Iterator(steps).iterate(
-                tools=[_ContextTool(steps), _ContextTool(steps)]
-            )
-            expect(steps).to(
-                equal(
-                    [
-                        "open",
-                        "record_decisions",
-                        "iterate_session",
-                        "generate",
-                        "open",
-                        "record_decisions",
-                        "iterate_session",
-                        "generate",
-                    ]
-                )
-            )
+    with context("that expands"):
+        with it("should include the iterate session body in iterate"):
+            body = _ActionExpander.instance().parse_body(Iterator.iterate, Iterator())
+            joined = "\n".join(body.prose_parts)
+            expect(joined).to(contain("mark_iterate_tick"))
+            expect(joined).to(contain("grill_with_context"))
 
 
 with description("BaseContextTool host face for iterate"):

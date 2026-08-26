@@ -18,15 +18,12 @@ class Generate(LifecycleAction):
 
     @agent_instructions
     def generate(self, tools: list) -> str:
-        """runs on each provided context tool"""
+        """generate"""
         self.begin(tools, action="generate")
         for tool in self.context_tools(tools):
-            tool.contexts
-            tool.examples
-            tool.templates
-            generate_output = getattr(tool, "generate_output", None)
-            if generate_output is not None:
-                generate_output()
+            tool.guidance
+            tool.generate_output()
+            self.generate_fixes_from_validate()
             self.add_generate_header_to_generated()
             SessionLog.instance().append(
                 toolset=type(tool).manifest_path,
@@ -58,5 +55,5 @@ class Generate(LifecycleAction):
 
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:
-        self.generate
+        """generate_fixes_from_validate"""
         return ""
