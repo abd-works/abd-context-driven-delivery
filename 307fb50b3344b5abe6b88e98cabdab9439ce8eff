@@ -1,0 +1,8 @@
+entry_id: 1ad49040
+artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+rule: usage-order-behaviors
+wrong: Ordered workspace-bdd-sketch.md by implementation slice (A path overrides, B openWorkSession, C WorkSession.open, D host resolution) instead of operational usage story from context tool open through workspace bind, path resolution, and session creation.
+tool: context_tools.bdd.bdd:Bdd
+fidelity: behavior
+introducing_commit: 307fb50b3344b5abe6b88e98cabdab9439ce8eff
+fixed_by: f8c6fba1ad6f3d84b56047091084d7e30cd94924
