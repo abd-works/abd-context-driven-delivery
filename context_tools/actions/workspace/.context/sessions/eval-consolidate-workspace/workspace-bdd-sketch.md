@@ -68,5 +68,9 @@ a context tool
       that has finished its turn
         it should record the action run on the session trail
         it should attach the action run record to its turn
+        it should set its turn name to its context tool, action, and fidelity
+        it should save that turn name as its commit message
         it should commit its scoped changes on the session branch
         it should push its session branch to origin
+        with one supported format only
+          it should include that format in its turn name

@@ -47,12 +47,26 @@ class TurnCommit:
     sha: str
 
 
+def turn_commit_title(host: Any, action: str) -> str:
+    """Title line: context tool - action - fidelity [- format when one format only]."""
+    tool = getattr(host, "context_index_key", "") or type(host).__name__.lower()
+    fidelity = getattr(host, "fidelity", "") or ""
+    parts = [part for part in (tool, action, fidelity) if part]
+    formats = getattr(type(host), "supported_formats", frozenset())
+    if len(formats) == 1:
+        fmt = getattr(host, "format", None) or next(iter(formats))
+        if fmt:
+            parts.append(fmt)
+    return " - ".join(parts)
+
+
 class Turn:
     """Turn kit + openTurn state — finish commits/pushes via workSession.git."""
 
     def __init__(self, work_session: WorkSession | None = None) -> None:
         self.work_session = work_session
         self.id = uuid.uuid4().hex[:8]
+        self.name = ""
         self.prompt = ""
         self.result = ""
         self.context = ""
@@ -61,6 +75,19 @@ class Turn:
         self.commit_message = ""
         self.pending_correction: Correction | None = None
         self.artifact_path = ""
+
+    def set_commit_title(self, host: Any, action: str) -> str:
+        """Name the turn from host context; same value is used as the git commit message."""
+        title = turn_commit_title(host, action)
+        self.name = title
+        self.commit_message = title
+        return title
+
+    def _action_from_tool_calls(self) -> str:
+        for call in reversed(self.tool_calls):
+            if call.role in ("run", "expansion") and call.name not in ("action_run", ""):
+                return call.name
+        return ""
 
     def open(self, host: ContextToolHost) -> Turn:
         session = host.workspace.current_work_session
@@ -106,9 +133,18 @@ class Turn:
         session.append_trail(run)
         change: TurnCommit | None = None
         if session.dirty:
-            message = self.commit_message or f"turn {self.id}"
             if self.pending_correction is not None:
                 message = self.pending_correction.correction_commit_message()
+            else:
+                if not self.commit_message:
+                    host = getattr(session, "_host", None)
+                    if host is not None:
+                        action = self._action_from_tool_calls() or getattr(
+                            host, "action", ""
+                        )
+                        if action:
+                            self.set_commit_title(host, action)
+                message = self.commit_message or f"turn {self.id}"
             sha = session.git.commit(session.scope_paths, message)
             if self.pending_correction is not None:
                 self.pending_correction.link(session.git, sha)
@@ -942,6 +978,8 @@ class Workspace:
 class ContextToolHost:
     """Spec/host surface from OO — workspace direct; turn/git via currentWorkSession."""
 
+    supported_formats: frozenset[str] = frozenset()
+
     def __init__(
         self,
         workspace: Workspace,
@@ -949,12 +987,15 @@ class ContextToolHost:
         context_index_key: str = "bdd",
         default_workspace_folder: str = "src",
         fidelity: str = "modules",
+        format: str | None = None,
         git: GitRepo | None = None,
     ) -> None:
         self.workspace = workspace
         self.context_index_key = context_index_key
         self.default_workspace_folder = default_workspace_folder
         self.fidelity = fidelity
+        self.format = format
+        self.action = ""
         self._git = git
         self.turn = Turn()
         self.artifact_path = ""
@@ -975,7 +1016,11 @@ class ContextToolHost:
             return override.replace("\\", "/")
         return self.default_path
 
-    def run_action(self, name: str, *, path: str = "", goal: str = "") -> WorkSession:
+    def run_action(
+        self, name: str, *, path: str = "", goal: str = "", action: str = ""
+    ) -> WorkSession:
+        effective_action = action or self.action or "action"
+        self.action = effective_action
         session = self.workspace.open_work_session(
             name=name,
             goal=goal,
@@ -984,11 +1029,14 @@ class ContextToolHost:
             git=self._git,
             context_index_key=self.context_index_key,
             default_workspace_folder=self.default_workspace_folder,
+            format=self.format,
+            host=self,
         )
         resolved = self.resolve_edit_path(explicit=path)
         self.artifact_path = resolved
         open_turn = self.turn.open(self)
         open_turn.artifact_path = resolved
+        open_turn.set_commit_title(self, effective_action)
         self.workspace.upsert_path(
             self.context_index_key,
             self.fidelity,
