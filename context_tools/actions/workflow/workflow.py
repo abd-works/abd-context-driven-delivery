@@ -4,22 +4,17 @@
 """Workflow — backlog, start, finish linking GitHub Issues, handoff, and WorkSession."""
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from handoff.handoff import Handoff
 from primitives.actions.action import agent_instructions
 from tools.tool import agent_tool, toolset
-from workspace import Workspace, docs_dir, find_git_root
-
-_TICKETS_DIR = ".context/workflow"
-_TICKETS_INDEX = "tickets.jsonl"
-_BACKLOG_SESSIONS = ".context/sessions/backlog"
+from workspace import Workspace, find_git_root
 
 
 @toolset
 class Workflow:
-    """Slash /backlog, /start, /finish — ticket + session lifecycle (v1 simple)."""
+    """Slash /backlog, /start, /finish — GitHub issue + session lifecycle (v1 simple)."""
 
     def __init__(self, workspace: str = "") -> None:
         self._workspace_path = workspace.strip()
@@ -37,75 +32,9 @@ class Workflow:
             cleaned = cleaned.replace("--", "-")
         return cleaned.strip("-") or "idea"
 
-    def _tickets_index_path(self) -> Path:
-        return self._repo_root() / _TICKETS_DIR / _TICKETS_INDEX
-
-    def _append_ticket_record(self, record: dict) -> None:
-        path = self._tickets_index_path()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-
-    @agent_tool
-    def backlog_destination(self, focus: str) -> str:
-        """Resolve backlog handoff folder: {repo}/.context/sessions/backlog/{focus-slug}/.
-        Creates parents. Returns absolute path."""
-        slug = self._kebab(focus)
-        dest = self._repo_root() / _BACKLOG_SESSIONS / slug
-        docs_dir(str(dest)).mkdir(parents=True, exist_ok=True)
-        return str(dest.resolve())
-
-    @agent_tool
-    def next_ticket_id(self) -> str:
-        """Return next CDD-N ticket id from tickets.jsonl (1-based counter)."""
-        path = self._tickets_index_path()
-        if not path.is_file():
-            return "CDD-1"
-        count = sum(1 for _ in path.open(encoding="utf-8") if _.strip())
-        return f"CDD-{count + 1}"
-
-    @agent_tool
-    def record_ticket(
-        self,
-        ticket: str,
-        focus: str,
-        handoff_path: str = "",
-        github_issue: str = "",
-    ) -> str:
-        """Append a ticket record to .context/workflow/tickets.jsonl. Returns ticket id."""
-        record = {
-            "ticket": ticket.strip(),
-            "focus": focus.strip(),
-            "handoff_path": handoff_path.strip(),
-            "github_issue": github_issue.strip(),
-            "workflow_state": "backlog",
-        }
-        self._append_ticket_record(record)
-        return ticket.strip()
-
-    @agent_tool
-    def find_ticket(self, ref: str) -> str:
-        """Look up ticket by CDD-N or GitHub issue number. Returns JSON or empty object."""
-        ref = ref.strip().lstrip("#")
-        path = self._tickets_index_path()
-        if not path.is_file():
-            return "{}"
-        matches: list[dict] = []
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            row = json.loads(line)
-            ticket = str(row.get("ticket", ""))
-            gh = str(row.get("github_issue", ""))
-            if ref == ticket or ref == ticket.replace("CDD-", "") or ref in gh:
-                matches.append(row)
-        if not matches:
-            return "{}"
-        return json.dumps(matches[-1], indent=2)
-
     @agent_tool
     def handoff_tool(self) -> Handoff:
-        """Handoff toolset for write_handoff / compact_handoff."""
+        """Handoff toolset — use content/collection patterns when composing issue body text."""
         return Handoff()
 
     @agent_tool
@@ -118,31 +47,32 @@ class Workflow:
 
     @agent_instructions
     def backlog(self, focus: str, context: str = "") -> str:
-        """Capture an idea on the backlog — no open WorkSession required."""
+        """Capture an idea on the backlog — no open WorkSession; no local repo artifacts v1."""
         """1. Read `.context/research/git-knowledge-and-workflow-backbone.md` §8 if ticket/github behavior is unclear."""
-        """2. Call `next_ticket_id` then `backlog_destination` with a short focus label from the user prompt."""
-        """3. Draft a handoff markdown focused on **what is required to move this idea forward** — use prompt context and commentary verbatim where useful; do not invent requirements."""
-        """4. Call `handoff_tool().write_handoff(destination, content, focus=focus)` for that backlog folder."""
-        """5. When a GitHub remote exists: `gh issue create --title "..." --body "..."` including Ticket id, handoff path, and forward-requirements summary; capture `owner/repo#num`."""
-        """6. Call `record_ticket` with ticket id, focus, handoff path, and github_issue when created."""
-        """7. Commit on current branch with trailers: `Ticket:`, `GitHub-Issue:` (if any), `Workflow-State: backlog`, `Handoff:` path. Message subject: `workflow-backlog-{focus-slug}`."""
-        return f"Backlog captured for {focus!r}. Ticket + handoff + GitHub issue (when remote) recorded."
+        """2. Draft **issue body** forward-requirements from prompt context and commentary — use handoff content patterns; do not invent requirements."""
+        """3. `gh issue create --title "..." --body "..."` with that body as the canonical handoff."""
+        """4. Add issue to the repository Project: `gh project item-add` then `gh project item-edit --field Status --value "Backlog"`."""
+        """5. Do not open a WorkSession; do not write a local backlog folder for v1."""
+        return f"Backlog captured for {focus!r} — GitHub issue created in Project Backlog."
 
     @agent_instructions
     def start(self, ticket: str, instructions: str = "", workspace: str = "") -> str:
-        """Start work from a backlog ticket — opens WorkSession + session branch."""
-        """1. Call `find_ticket` with the ticket ref (CDD-N or GitHub #). If `{}`, stop and report not found."""
-        """2. Read handoff at `handoff_path` from the ticket record; merge with `instructions` from the prompt."""
-        """3. Call `workspace_tool(path=workspace)`. `open_work_session(name=session-slug-from-ticket, goal=..., contexts=..., fidelities=...)` — session slug = kebab focus or ticket id lowercased."""
-        """4. Workspace creates/checks out `session/{name}` branch (refuses if dirty tree on another branch)."""
-        """5. Open and finish a turn recording `Ticket:`, `GitHub-Issue:`, `Workflow-State: specification`, prompt/result with merged instructions."""
-        return f"Started work session for ticket {ticket!r}."
+        """Start work from a GitHub issue — opens WorkSession + session branch."""
+        """1. `gh issue view {ticket}` — if not found, stop and report not found."""
+        """2. Read issue body for forward requirements; merge with `instructions` from the prompt."""
+        """3. Refer to the issue as agent context when body is sufficient; copy sections into the work session folder when local artifacts help."""
+        """4. Set Project Status **In Progress** via `gh project item-edit`."""
+        """5. Call `workspace_tool(path=workspace)`. `open_work_session(name=session-slug-from-issue, goal=..., contexts=..., fidelities=...)` — session slug = kebab from issue title or focus."""
+        """6. Workspace creates/checks out `session/{name}` branch (refuses if dirty tree on another branch)."""
+        """7. Open and finish a turn with commit trailers: `GitHub-Issue: owner/repo#num`, `Workflow-State: specification` (or `engineering`). Record prompt instructions on the turn envelope."""
+        return f"Started work session for GitHub issue {ticket!r}."
 
     @agent_instructions
     def finish(self, outcome: str = "", workspace: str = "") -> str:
-        """Finish current WorkSession — merge session branch to main, checkout main, close session."""
+        """Finish current WorkSession — merge session branch to main, close issue, close session."""
         """1. Require `workspace.current_work_session` on its `session/{name}` branch."""
         """2. Refuse if working tree is dirty."""
         """3. Finish open turn; merge session branch into `main` (v1 direct merge — no PR gate unless user asks)."""
-        """4. Checkout `main`; close session with outcome; commit/merge trailers include `Workflow-State: done`."""
-        return "Work session finished — merged to main and checked out main."
+        """4. Set Project Status **Done**; `gh issue close` for the linked issue (no PR auto-close in v1)."""
+        """5. Checkout `main`; close session with outcome; merge commit trailers: `GitHub-Issue:`, `Workflow-State: done`, optional `Reviewed-By:`."""
+        return "Work session finished — merged to main, issue closed, checked out main."

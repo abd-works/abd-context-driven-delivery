@@ -1,7 +1,6 @@
 """BDD spec for context_tools/actions/workflow/workflow.py."""
 
 import sys
-import tempfile
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -21,19 +20,6 @@ with description("Workflow helpers"):
         w = Workflow()
         expect(w._kebab("Git Notes On Deploy")).to(equal("git-notes-on-deploy"))
 
-    with it("should resolve backlog destination under repo"):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / ".git").mkdir()
-            w = Workflow(workspace=str(root))
-            dest = w.backlog_destination("My Idea")
-            expect(dest).to(equal(str((root / ".context/sessions/backlog/my-idea").resolve())))
-
-    with it("should allocate sequential ticket ids"):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / ".git").mkdir()
-            w = Workflow(workspace=str(root))
-            expect(w.next_ticket_id()).to(equal("CDD-1"))
-            w.record_ticket("CDD-1", "first")
-            expect(w.next_ticket_id()).to(equal("CDD-2"))
+    with it("should kebab-case issue titles for session slugs"):
+        w = Workflow()
+        expect(w._kebab("Add workflow package #87")).to(equal("add-workflow-package-87"))

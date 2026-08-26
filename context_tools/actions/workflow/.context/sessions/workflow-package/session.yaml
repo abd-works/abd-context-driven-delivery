@@ -1,5 +1,97 @@
-name: workflow-package
+branch: session/workflow-package
 path: context_tools/actions/workflow
-goal: Sketch workflow kit — backlog, start, finish
-fidelities: behavior
-contexts: bdd, handoff, workspace
+cdd_at: 10fbeddb53522faf2a54011e982f96cb91ced34e
+turns:
+- id: 9a671b1f
+  prompt: log mistake — skipped grill before locking workflow v1 decisions
+  result: entry_id=62fc32d6 introducing=10fbeddb53522faf2a54011e982f96cb91ced34e
+  context: workflow-package
+  change_commit:
+    session_name: workflow-package
+    tool_names: []
+    mistake_ids:
+    - 62fc32d6
+    sha: 9a0b53fbb1bad07da2ca98455edc5f64c93dabff
+    name: bdd-correction-behavior-python
+  tool_calls: []
+  mistakes:
+  - entry_id: 62fc32d6
+    artifact: context_tools/actions/workflow/.context/workflow-bdd-sketch.md
+    rule: (process) bdd-grill-sketch-workflow
+    wrong: Locked four grill ticks and committed sketch/scaffold without AskQuestion
+      or grill turns; inferred v1 decisions and proceeded when user said proceed instead
+      of logging mistake immediately when called out.
+    original: "# BDD sketch — workflow action kit\n\nDesign refs: `.context/research/git-knowledge-and-workflow-backbone.md`\
+      \ §8 (tickets,\nGitHub, kanban), G-36 (ticket create/link), G-37 (PR/merge bridge).\n\
+      \nFidelity: behavior\n\n**SCOPE (v1 — simple):** three slash commands — `/backlog`,\
+      \ `/start`, `/finish`.\nGitHub Issues for team tickets; git turn commits for\
+      \ durable association.\n\n**LOCKED — command map:**\n\n| User syntax | Toolset\
+      \ action | Workflow-State transition |\n| --- | --- | --- |\n| `/backlog` |\
+      \ `backlog` | → `backlog` (issue created) |\n| `/start` | `start` | → `specification`\
+      \ or `engineering` (session open) |\n| `/finish` | `finish` | → `done` (merged\
+      \ + session closed) |\n\n**LOCKED — git trailers on turn commits (backbone §7):**\n\
+      \n- `Ticket:` — session-scoped id (e.g. `CDD-42`)\n- `GitHub-Issue:` — `owner/repo#num`\n\
+      - `Workflow-State:` — column name\n- `Handoff:` — path to handoff doc when backlog\
+      \ ran\n\n---\n\na context tool\n  with a workflow kit\n    that is invoked with\
+      \ backlog\n      with prompt context including commentary from the user\n  \
+      \      it should collect the working context for the idea\n        it should\
+      \ compose a handoff document focused on what is required to move the idea forward\n\
+      \        it should persist the handoff under the session docs layout\n     \
+      \   it should create a github issue for the idea via gh\n        it should attach\
+      \ or post the handoff content to that github issue\n        it should assign\
+      \ a ticket identity for the idea\n        it should open a turn for the backlog\
+      \ action\n        it should finish its turn with ticket and github issue trailers\
+      \ on the session branch commit\n          it should record Workflow-State backlog\
+      \ on that commit\n      with no github remote configured\n        it should\
+      \ still persist the handoff document\n        it should assign a local ticket\
+      \ identity only\n        it should not require a github issue trailer\n    that\
+      \ is invoked with start\n      with a ticket id or github issue number\n   \
+      \     it should find the ticket and its linked github issue when present\n \
+      \       it should read handoff and issue body for forward requirements and additional\
+      \ instructions\n        it should open a new work session named for that ticket\n\
+      \        it should set that work session as the current work session\n     \
+      \   with a clean working tree not on the session branch\n          with an existing\
+      \ session branch for that ticket\n            it should check out that session\
+      \ branch\n          with no session branch yet\n            it should create\
+      \ the session branch for that work session\n        with a dirty working tree\
+      \ not on the session branch\n          it should refuse to switch branch\n \
+      \       it should open a turn for the start action\n        it should finish\
+      \ its turn with ticket and workflow state trailers on the session branch commit\n\
+      \          it should record the additional instructions from the prompt on the\
+      \ turn envelope\n      with a ticket that cannot be found\n        it should\
+      \ report that the ticket was not found\n        it should not open a work session\n\
+      \    that is invoked with finish\n      with an open work session on its session\
+      \ branch\n        with a clean mergeable session branch\n          it should\
+      \ finish its open turn for the finish action\n          it should merge its\
+      \ session branch into main\n          it should check out the main branch\n\
+      \          it should close the work session with outcome and handoff pointer\
+      \ when provided\n          it should finish with Workflow-State done on the\
+      \ merge or finish turn commit\n          it should record Reviewed-By or merge\
+      \ metadata when supplied\n        with a dirty working tree\n          it should\
+      \ refuse to merge until the tree is clean\n        with merge conflicts\n  \
+      \        it should report the conflict and leave the session open\n      with\
+      \ no current work session\n        it should report that no work session is\
+      \ open\n    that collaborates with handoff on backlog\n      it should use handoff\
+      \ write patterns for the forward-requirements document\n      it should name\
+      \ the handoff slug from the ticket or idea focus\n    that collaborates with\
+      \ workspace on start and finish\n      it should delegate session open branch\
+      \ and turn lifecycle to workspace\n      it should not duplicate git note or\
+      \ eval mistake logic owned by workspace eval turns\n\n---\n\n**LOCKED — v1 grill\
+      \ (2026-08-26):**\n\n| # | Decision |\n| --- | --- |\n| 1 | `/backlog` runs\
+      \ **without** an open WorkSession — destination `.context/sessions/backlog/{slug}/`\
+      \ |\n| 2 | Ticket id: **CDD-N** in `.context/workflow/tickets.jsonl` plus **GitHub-Issue:**\
+      \ when remote |\n| 3 | `/finish`: **direct merge** to `main` (PR-only deferred)\
+      \ |\n| 4 | Backlog handoff via **`handoff.write_handoff`** under backlog session\
+      \ folder |\n\n---\n\n## Deferred (not v1)\n\n- GitHub Projects column sync (read\
+      \ git Workflow-State; optional one-way push)\n- PR open as separate step before\
+      \ merge (G-37 full — finish may call `gh pr merge` only when PR exists)\n- `refs/cdd/tickets/*`\
+      \ fast index (notes + trailers first)\n- Kanban HTML projection (G-34)\n\n---\n\
+      \n## Implementation\n\n- `workflow.workflow:Workflow` — agent instructions +\
+      \ path/ticket tools (session `workflow-package`)\n"
+    tool: bdd
+    fidelity: behavior
+    folder: mistakes/bdd-grill-sketch-workflow
+    correction:
+      improved: ''
+      how: ''
+      status: open
