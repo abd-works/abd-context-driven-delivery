@@ -5,4 +5,4 @@ wrong: association lived in session yaml instead of introducing commit
 original: it should append the mistake id to that turn's change_commit in its session yaml
 tool: context_tools.bdd.bdd:Bdd
 fidelity: behavior
-introducing_commit: 65533c27e9d8e6ecce543a10ca1803788af1e342
+introducing_commit: 3cea46d0e73eebc9e8f809eadc9554a55d83854c
