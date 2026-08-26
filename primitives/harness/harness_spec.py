@@ -15,10 +15,11 @@ for _cat in ("primitives", "utilities", "context_tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import expect, raise_error
+from expects import contain, expect, raise_error
 from mamba import context, description, it
 
 from harness.harness import Harness
+from primitives.actions.action import _ActionExpander
 
 
 with description("a harness"):
@@ -26,3 +27,12 @@ with description("a harness"):
         with context("with no type given"):
             with it("should refuse"):
                 expect(lambda: Harness()).to(raise_error(TypeError))
+
+    with context("that generates"):
+        with context("with no IDE given"):
+            with it("should AskQuestion for the IDE"):
+                harness = Harness("Cursor")
+                body = _ActionExpander.instance().parse_body(
+                    type(harness).generate, harness
+                )
+                expect("\n".join(body.prose_parts)).to(contain("Which IDE?"))

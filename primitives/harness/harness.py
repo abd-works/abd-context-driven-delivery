@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from primitives.actions.action import agentic_toolset
+from primitives.actions.action import agent_instructions, agentic_toolset
 
 
 @agentic_toolset
@@ -18,3 +18,8 @@ class Harness:
         if not type:
             raise TypeError("type is required")
         self.type = type
+
+    @agent_instructions
+    def generate(self) -> str:
+        """With no IDE given, AskQuestion: Which IDE? Cursor | VS Code."""
+        return ""
