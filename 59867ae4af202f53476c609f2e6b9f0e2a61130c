@@ -1,0 +1,15 @@
+entry_id: 32453ccf
+artifact: context_tools/actions/workspace/workspace_spec.py
+rule: usage-order-behaviors
+wrong: Hand-edited workspace_spec.py while the consolidated sketch is still in grill/sketch. bdd-grill-sketch-workflow.md: {module}_spec.py only after sketch is judge-clean and iterate unlocks generate — not during grill/sketch turns. Agent-finish slice belongs in workspace-bdd-sketch.md only until generate.
+original:             with context("that the agent is finished working with it"):
+                with it("should finish its turn for the action"):
+                    # BDD: SIGNATURE
+                    pass
+
+            with context("that has finished its turn"):
+
+tool: context_tools.bdd.bdd:Bdd
+fidelity: behavior
+introducing_commit: 59867ae4af202f53476c609f2e6b9f0e2a61130c
+fixed_by: 8d96d5670fef943985dcdbc17bf736bb73aa9517
