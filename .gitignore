@@ -15,6 +15,7 @@ sandbox/node_modules/
 .cursor/commands/
 .cursor/skills/
 utilities/agent_skills/.deploy-state.json
+primitives/harness/.deploy-state.json
 
 # SessionLog append-only audit trails (runtime; not sprint artifacts)
 **/logs/events.log
