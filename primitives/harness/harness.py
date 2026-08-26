@@ -460,7 +460,6 @@ class Harness:
             encoding="utf-8",
         )
 
-    @agent_tool
     def walk(self, name_filter: str = "") -> str:
         """Walk context_tools/ and utilities/ for toolset files. Returns a JSON array."""
         results: list[dict] = []
@@ -498,7 +497,7 @@ class Harness:
 
     @agent_tool
     def write_deploy(self, source: str = "", name_filter: str = "") -> str:
-        """Write scanned sources (or one source) plus Harness skill and prompt into the deploy area."""
+        """Walk if needed, then write sources plus Harness skill and prompt into the deploy area."""
         self._require_implemented()
         self.skills = []
         self.prompts = []
@@ -533,6 +532,5 @@ class Harness:
         """With no source: walk context_tools/ and utilities/, generate each source into the deploy area, also write a Harness skill and a Harness prompt. Generate is the deploy — no separate deploy. Do not confirm the scanned list. Overwrite generated files. Remove stale shortcuts and old slugs. Save the IDE."""
         """With a source: write that source into the deploy area."""
         """With type Claude, Codex, or ChatGPT: must not implement yet."""
-        self.walk()
         self.write_deploy()
         return ""

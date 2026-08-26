@@ -32,6 +32,11 @@ def _recipe(harness: Harness) -> str:
     return "\n".join(body.prose_parts)
 
 
+def _generate_tools(harness: Harness) -> tuple[str, ...]:
+    body = _ActionExpander.instance().parse_body(type(harness).generate, harness)
+    return body.tool_steps
+
+
 def _write_toolset(path: Path, module: str, class_name: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -123,6 +128,7 @@ with description("a harness"):
                 expect(prose).to(contain("Generate is the deploy"))
                 expect(prose).to(contain("no separate deploy"))
                 expect(prose).to(contain("Do not confirm the scanned list"))
+                expect(_generate_tools(harness)).to(equal(("write_deploy",)))
                 harness.write_deploy()
                 expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
                     contain("stories")
