@@ -2,4 +2,4 @@ improved: @agent_instructions/@agent_tool only; SessionLog run append in recipes
 how: rename primitives markers; expander SessionLog.instance().append + plain-run; drop host forwards; kit-owned generate/validate → host action; retarget skills/specs
 status: fixed
 entry_ids: annopr001
-fix_commit: 4042b32d622c3ef901175c63b7b3c57ed1edc772
+fix_commit: e50bb42785294d74837282ddd0a0c5a476571d96
