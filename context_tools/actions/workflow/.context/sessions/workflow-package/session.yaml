@@ -1,0 +1,5 @@
+name: workflow-package
+path: context_tools/actions/workflow
+goal: Sketch workflow kit — backlog, start, finish
+fidelities: behavior
+contexts: bdd, handoff, workspace
