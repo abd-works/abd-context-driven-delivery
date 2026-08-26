@@ -28,9 +28,9 @@ session-branch lifecycle. Implements the ticket/workflow slice of the git backbo
 
 ## Public API
 
-- `backlog(focus, context)` — issue body handoff + GitHub issue + Project Backlog (no WorkSession)
-- `start(ticket, instructions, workspace)` — `gh issue view` → `open_work_session` + branch + trailers
-- `finish(outcome, workspace)` — direct merge to main, Project Done, close issue, close session
+- `backlog(focus, context)` — `@agent_instructions`: expand Handoff, then `capture_backlog` (issue + Project Backlog, no WorkSession)
+- `start(ticket, instructions, workspace)` — In Progress + WorkSession + session branch
+- `finish(outcome, workspace)` — merge to main, Project Done, close issue, close session
 
 ## v1 decisions (locked grill)
 
@@ -44,4 +44,4 @@ session-branch lifecycle. Implements the ticket/workflow slice of the git backbo
 
 ## Status
 
-BDD sketch (usage-story shape) + `workflow.py` agent instructions (session `workflow-package`). Specs and deploy skill next.
+BDD sketch (usage-story shape) + `workflow.py`: `backlog` instruction forwards to Handoff then `capture_backlog`; `start` / `finish` tools (session `workflow-package`).

@@ -105,16 +105,21 @@ _HOST_ACTION_COMMANDS: tuple[str, ...] = (
 
 # Companion toolsets under context_tools/actions/ — not Base @actions; still get
 # IDE skills + commands that run the companion in the current context-tool session.
-_COMPANION_ACTION_COMMANDS: tuple[tuple[str, str, str], ...] = (
-    # (command_slug, manifest_ref, class_name)
-    ("echo", "echo.echo:Echoer", "Echoer"),
-    ("handoff", "handoff.handoff:Handoff", "Handoff"),
+_COMPANION_DEFAULT_INVOKE = "action: <action from this companion's manifest>"
+_COMPANION_ACTION_COMMANDS: tuple[tuple[str, str, str, str], ...] = (
+    # (command_slug, manifest_ref, class_name, invoke)
+    ("echo", "echo.echo:Echoer", "Echoer", _COMPANION_DEFAULT_INVOKE),
+    ("handoff", "handoff.handoff:Handoff", "Handoff", _COMPANION_DEFAULT_INVOKE),
+    ("backlog", "workflow.workflow:Workflow", "Workflow", "action: backlog"),
+    ("start", "workflow.workflow:Workflow", "Workflow", "tool: start"),
+    ("finish", "workflow.workflow:Workflow", "Workflow", "tool: finish"),
 )
 
 # Package-slug skills that are not the action name — remove on deploy.
 _STALE_ACTION_SKILL_SLUGS: tuple[str, ...] = (
     "grill-context",
     "workspace",
+    "workflow",
 )
 
 _ACTION_INVOKE_BODY = """\
@@ -259,7 +264,7 @@ toolset: {toolset_ref}
 context:
   path: <active context-tool path>
   session: <active session name>
-action: <action from this companion's manifest>
+{invoke}
 ```
 
 Delete the request file after the call. Read `examples/` before guessing field shape.
@@ -282,7 +287,7 @@ toolset: {toolset_ref}
 context:
   path: <active context-tool path>
   session: <active session name>
-action: <action from this companion's manifest>
+{invoke}
 ```
 
 Delete the request file after the call. Read `examples/` before guessing field shape.
@@ -312,7 +317,7 @@ toolset: {toolset_ref}
 context:
   path: <active context-tool path>
   session: <active session name>
-action: <action from this companion's manifest>
+{invoke}
 ```
 
 Delete the request file after the call. Read `examples/` before guessing field shape.
@@ -977,6 +982,7 @@ class AgentSkills:
         toolset_ref: str,
         class_name: str,
         ide: str,
+        invoke: str = _COMPANION_DEFAULT_INVOKE,
     ) -> str:
         """Write a companion skill shim (echo/handoff) for the current context-tool session.
         ide=cursor -> .cursor/skills/{command_name}/SKILL.md
@@ -986,6 +992,7 @@ class AgentSkills:
             command_name=command_name,
             class_name=class_name,
             toolset_ref=toolset_ref,
+            invoke=invoke,
         )
         written: list[str] = []
         for ide_root in self._ide_config_roots(ide):
@@ -1003,6 +1010,7 @@ class AgentSkills:
         toolset_ref: str,
         class_name: str,
         ide: str,
+        invoke: str = _COMPANION_DEFAULT_INVOKE,
     ) -> str:
         """Write a companion toolset command/prompt for echo/handoff-style kits.
         ide=cursor -> .cursor/commands/{command_name}.md
@@ -1017,6 +1025,7 @@ class AgentSkills:
                 content = _CURSOR_COMPANION_COMMAND_TEMPLATE.format(
                     class_name=class_name,
                     toolset_ref=toolset_ref,
+                    invoke=invoke,
                 )
             else:
                 target_dir = ide_root / "prompts"
@@ -1026,6 +1035,7 @@ class AgentSkills:
                     class_name=class_name,
                     toolset_ref=toolset_ref,
                     command_name=command_name,
+                    invoke=invoke,
                 )
             target.write_text(content, encoding="utf-8")
             written.append(str(target))
@@ -1177,7 +1187,7 @@ class AgentSkills:
             if ide == "cursor":
                 target = ide_root / "hooks.json"
                 target.parent.mkdir(parents=True, exist_ok=True)
-                existing = json.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
+                existing = json.loads(target.read_text(encoding="utf-8-sig")) if target.exists() else {}
                 merged = self._merge_hooks(existing, gate_config)
                 target.write_text(json.dumps(merged, indent=2), encoding="utf-8")
                 written.append(str(target))
@@ -1236,6 +1246,7 @@ class AgentSkills:
                 )
         for stale_slug in _STALE_ACTION_SKILL_SLUGS:
             self.remove_skill_shim(skill_slug=stale_slug, ide=ide)
+        self.remove_focus_shortcut(command_name="workflow", ide=ide)
         for action_name in _HOST_ACTION_COMMANDS:
             self.write_action_skill_shim(action=action_name, ide=ide)
             self.write_action_command(action=action_name, ide=ide)
@@ -1244,18 +1255,20 @@ class AgentSkills:
         for stage, fidelity in _STAGE_FIDELITY_COMMANDS:
             self.write_stage_fidelity_command(stage=stage, fidelity=fidelity, ide=ide)
             deployed_commands.append(stage)
-        for command_name, toolset_ref, class_name in _COMPANION_ACTION_COMMANDS:
+        for command_name, toolset_ref, class_name, invoke in _COMPANION_ACTION_COMMANDS:
             self.write_companion_skill_shim(
                 command_name=command_name,
                 toolset_ref=toolset_ref,
                 class_name=class_name,
                 ide=ide,
+                invoke=invoke,
             )
             self.write_companion_command(
                 command_name=command_name,
                 toolset_ref=toolset_ref,
                 class_name=class_name,
                 ide=ide,
+                invoke=invoke,
             )
             deployed_skills.append(command_name)
             deployed_commands.append(command_name)

@@ -22,8 +22,9 @@ Packages under `context_tools/actions/` are **not** deployed as kit-manifest ski
   only set `context.fidelity` on the in-scope context tool. Each tool maps the
   stage name to its concrete fidelity via `BaseContextTool.resolve_fidelity` /
   its `fidelities` table.
-- **Companion skills + commands** for `echo` / `handoff`, which do run their own
-  toolset in the current context-tool session frame.
+- **Companion skills + commands** for `echo` / `handoff`, plus Workflow slash
+  commands `/backlog`, `/start`, `/finish`, which do run their own toolset in the
+  current context-tool session frame.
 
 A saved deploy-state file lets subsequent runs re-deploy without re-asking for
 parameters. `deploy_filtered_toolsets` is the one write step the agentic deploy

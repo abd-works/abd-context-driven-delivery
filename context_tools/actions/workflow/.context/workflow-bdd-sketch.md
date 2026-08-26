@@ -116,4 +116,4 @@ a context tool
 
 ## Implementation
 
-- `workflow.workflow:Workflow` — agent instructions + `handoff_tool` / `workspace_tool` (session `workflow-package`)
+- `workflow.workflow:Workflow` — `backlog` instruction forwards to Handoff then `capture_backlog`; `start` / `finish` tools (session `workflow-package`)

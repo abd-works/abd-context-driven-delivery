@@ -358,6 +358,13 @@ with description("_deploy_entries writes action skills and commands"):
         expect("sketch" in deployed_commands).to(be_true)
         expect("echo" in deployed_skills).to(be_true)
         expect("echo" in deployed_commands).to(be_true)
+        expect("backlog" in deployed_skills).to(be_true)
+        expect("start" in deployed_skills).to(be_true)
+        expect("finish" in deployed_skills).to(be_true)
+        expect("backlog" in deployed_commands).to(be_true)
+        expect("start" in deployed_commands).to(be_true)
+        expect("finish" in deployed_commands).to(be_true)
+        expect("workflow" in deployed_skills).to(equal(False))
         expect((self.root / ".cursor" / "skills" / "sketch" / "SKILL.md").is_file()).to(be_true)
         expect((self.root / ".cursor" / "commands" / "sketch.md").is_file()).to(be_true)
         expect((self.root / ".cursor" / "skills" / "grill" / "SKILL.md").is_file()).to(be_true)
@@ -451,6 +458,24 @@ with description("write_companion_command tool"):
             expect(content).to(contain("echo.echo:Echoer"))
             expect(content).to(contain("companion toolset"))
             expect(path).to(contain("echo.md"))
+
+        with it("writes pinned workflow commands for backlog start and finish"):
+            self.skills._deploy_entries([], ide="cursor")
+            backlog = (self.root / ".cursor" / "commands" / "backlog.md").read_text(
+                encoding="utf-8"
+            )
+            start = (self.root / ".cursor" / "commands" / "start.md").read_text(
+                encoding="utf-8"
+            )
+            finish = (self.root / ".cursor" / "commands" / "finish.md").read_text(
+                encoding="utf-8"
+            )
+            expect(backlog).to(contain("action: backlog"))
+            expect(start).to(contain("tool: start"))
+            expect(finish).to(contain("tool: finish"))
+            expect((self.root / ".cursor" / "commands" / "workflow.md").exists()).to(
+                equal(False)
+            )
 
 
 with description("write_focus_shortcut tool"):

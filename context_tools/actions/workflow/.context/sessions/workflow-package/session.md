@@ -3,7 +3,7 @@
 ## Start
 
 - **date:** 2026-08-26
-- **path:** c:\dev\abd-context-driven-delivery\context_tools\actions\workflow
+- **path:** c:\dev\abd-context-driven-delivery
 - **goal:** Sketch workflow kit — backlog, start, finish
-- **fidelities:** behavior
-- **contexts:** bdd, handoff, workspace
+- **fidelities:** (unset)
+- **contexts:** (unset)

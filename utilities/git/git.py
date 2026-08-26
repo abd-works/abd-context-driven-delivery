@@ -139,7 +139,7 @@ class Ticket:
             repo._closed_tickets.add(self.number)
             self.data["closed"] = "true"
             return
-        repo._gh("-C", str(repo.root), "issue", "close", str(self.number))
+        repo._gh("issue", "close", str(self.number))
         self.data["closed"] = "true"
 
     def set_status(self, state_name: str) -> Ticket:
@@ -341,7 +341,12 @@ class Repo:
         return (completed.stdout or "").strip()
 
     @classmethod
-    def gh(cls, *args: str) -> str:
+    def gh(
+        cls,
+        *args: str,
+        cwd: str | Path | None = None,
+        stdin: str | None = None,
+    ) -> str:
         found = shutil.which("gh")
         if not found:
             raise GhConnectError(
@@ -354,6 +359,8 @@ class Repo:
                 text=True,
                 encoding="utf-8",
                 check=False,
+                cwd=str(cwd) if cwd is not None else None,
+                input=stdin,
             )
         except OSError as exc:
             raise GhConnectError(
@@ -361,16 +368,17 @@ class Repo:
             ) from exc
         if completed.returncode != 0:
             err = (completed.stderr or completed.stdout or "").strip()
+            shown = " ".join(a for a in args if a != stdin)
             raise GhConnectError(
-                f"Cannot connect gh: gh {' '.join(args)} failed: {err}. {_GH_DO_NOT_PROCEED}"
+                f"Cannot connect gh: gh {shown} failed: {err}. {_GH_DO_NOT_PROCEED}"
             )
         return (completed.stdout or "").strip()
 
     def _git(self, *args: str) -> str:
         return type(self).git(self.root, *args)
 
-    def _gh(self, *args: str) -> str:
-        return type(self).gh(*args)
+    def _gh(self, *args: str, stdin: str | None = None) -> str:
+        return type(self).gh(*args, cwd=self.root, stdin=stdin)
 
     def _init_memory_state(self) -> None:
         self._branch_names: set[str] = {"main"}
@@ -430,7 +438,7 @@ class Repo:
     def owner_repo(self) -> tuple[str, str]:
         if self._memory:
             return self._owner, self._repo_name
-        raw = self._gh("-C", str(self.root), "repo", "view", "--json", "nameWithOwner")
+        raw = self._gh("repo", "view", "--json", "nameWithOwner")
         payload = json.loads(raw or "{}")
         name = payload.get("nameWithOwner", "")
         if "/" not in name:
@@ -587,8 +595,6 @@ class Repo:
         number = Ticket.parse_number(ref)
         try:
             raw = self._gh(
-                "-C",
-                str(self.root),
                 "issue",
                 "view",
                 str(number),
@@ -619,19 +625,28 @@ class Repo:
             self._tickets[number] = ticket
             return ticket
         raw = self._gh(
-            "-C",
-            str(self.root),
             "issue",
             "create",
             "--title",
             title,
-            "--body",
-            body,
-            "--json",
-            "number,title,body,url",
+            "--body-file",
+            "-",
+            stdin=body,
         )
-        payload = json.loads(raw or "{}")
-        return self._ticket_from_payload(payload)
+        url = (raw or "").strip().splitlines()[-1].strip() if raw else ""
+        if "/issues/" not in url:
+            raise GhConnectError(
+                f"Cannot parse issue URL from gh issue create: {raw!r}. {_GH_DO_NOT_PROCEED}"
+            )
+        number = int(url.rstrip("/").rsplit("/", 1)[-1])
+        ticket = self.ticket(str(number))
+        if ticket is None:
+            return self._ticket_from_payload(
+                {"number": number, "title": title, "body": body, "url": url}
+            )
+        ticket.body = body
+        ticket.title = title
+        return ticket
 
     def workflow_commit_message(
         self,
