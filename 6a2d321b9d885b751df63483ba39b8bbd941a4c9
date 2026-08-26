@@ -1,0 +1,19 @@
+improved: ﻿# Grill answers â€” eval-consolidate-workspace Bdd behavior prep
+
+Design source: `context_tools/actions/eval/.context/sessions/eval-consolidate-workspace/workspace-eval-oo-sketch.md`
+
+Append-only. Runner adds question blocks; judge adds answers beneath.
+
+---
+
+### Turn 9266b3db â€” grill tick 1
+
+**Question:** For the **first** Bdd behavior sketch slice (Â§9 workspace module checklist), where should the boundary fall?
+
+**Options:**
+
+- **A â€” Path overrides only:** `Workspace.load` / `save`, `pat...
+how: Replace slice-boundary grill with BDD design-tree root: highest-level event/state under that has a turn open; tick 10 will drill substates and legitimate tests.
+status: fixed
+entry_ids: 1c9526fa
+fix_commit: 6a2d321b9d885b751df63483ba39b8bbd941a4c9
