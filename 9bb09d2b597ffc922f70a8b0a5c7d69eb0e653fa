@@ -1,0 +1,14 @@
+improved: ﻿# Bdd grill ΓåÆ sketch ΓÇö two-agent workflow
+
+**Purpose:** Bdd behavior prep for iterate must **grill before sketch**. Two agents split responsibility; **eval owns every turn** as its own commit.
+
+## Agents
+
+| Agent | Skill | Owns |
+|---|---|---|
+| **Runner** | `bdd-grill-runner` | One grill question per turn; sketch after 2ΓÇô3 grounded answers unlock a slice; never self-answers from memory |
+| **Judge** | `bdd-grill-judge` | Prove-read repo; answer grill questions with citations; validate sk...
+how: bdd-grill-sketch-workflow.md: two turns; one process per turn; not same turn for mistake+correction.
+status: fixed
+entry_ids: cb4724b1
+fix_commit: 9bb09d2b597ffc922f70a8b0a5c7d69eb0e653fa
