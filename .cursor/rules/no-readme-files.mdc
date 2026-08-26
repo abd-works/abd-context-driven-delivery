@@ -1,0 +1,24 @@
+---
+description: Do not create README files unless the user explicitly asks for one.
+alwaysApply: true
+---
+
+# No README Files
+
+Do **not** create, restore, or "helpfully" add `README.md` (or `README` variants) unless the user **explicitly** asks for a README in that message.
+
+## Rule
+
+- No folder index READMEs "for discoverability"
+- No README alongside new packages, research folders, or `.context/` dirs
+- No README as a substitute for `module-context.md`, BDD sketches, or the doc the user actually asked for
+- If an existing README is missing after a stash/merge, **do not recreate it** unless asked
+
+## Instead
+
+- Put purpose and navigation in the artifact the user requested (e.g. `*-context.md`, sketch, backbone doc)
+- Link from existing docs only when the user asks to wire navigation up
+
+## Exception
+
+Create or edit a README **only** when the user literally requests a README (or says "add readme") for that path.
