@@ -101,10 +101,24 @@ class Ticket:
     url: str = ""
     state: TicketState | None = None
     data: dict[str, str] = field(default_factory=dict)
+    _repo: Repo | None = field(default=None, repr=False, compare=False)
 
     @property
     def closed(self) -> bool:
         return self.data.get("closed") == "true"
+
+    def close(self) -> None:
+        repo = self._repo
+        if repo is None:
+            raise RuntimeError("Ticket.close requires a repo")
+        if repo._memory:
+            if self.number not in repo._tickets:
+                raise TicketNotFoundError(f"GitHub issue not found: {self.number}")
+            repo._closed_tickets.add(self.number)
+            self.data["closed"] = "true"
+            return
+        gh_close_issue(repo.root, self.number)
+        self.data["closed"] = "true"
 
     @classmethod
     def parse_number(cls, ref: str) -> int:
@@ -428,6 +442,7 @@ class Repo:
             ticket = self._tickets.get(number)
             if ticket is None:
                 return None
+            ticket._repo = self
             state_name = self._ticket_project_state.get(number)
             if state_name:
                 ticket.state = TicketState(state_name)
@@ -447,20 +462,12 @@ class Repo:
                 title=title,
                 body=body,
                 url=f"https://github.com/{owner}/{repo}/issues/{number}",
+                _repo=self,
             )
             self._tickets[number] = ticket
             return ticket
         payload = gh_create_issue(self.root, title, body)
         return self._ticket_from_payload(payload)
-
-    def close_ticket(self, ref: str) -> None:
-        number = Ticket.parse_number(ref)
-        if self._memory:
-            if number not in self._tickets:
-                raise TicketNotFoundError(f"GitHub issue not found: {ref}")
-            self._closed_tickets.add(number)
-            return
-        gh_close_issue(self.root, number)
 
     def workflow_commit_message(
         self,
@@ -503,6 +510,7 @@ class Repo:
             title=str(payload.get("title") or ""),
             body=str(payload.get("body") or ""),
             url=str(payload.get("url") or ""),
+            _repo=self,
         )
         self._tickets[number] = ticket
         return ticket

@@ -40,10 +40,10 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 - `Commit.format(subject, trailers)` / `Commit.from_message(sha, message)` — message + trailer `data`
 - `Repo.attach_project(owner, number)` → `Project`
 - `Project.add_ticket(ticket, state)`, `Project.set_ticket_state(ticket, state)`
-- `Ticket.parse_number(ref)` / `Ticket.github_ref(owner, repo, number)`
+- `Ticket.parse_number(ref)` / `Ticket.github_ref(owner, repo, number)` / `Ticket.close()`
 - `Ticket` — `number`, `title`, `body`, `url`, `state`, open `data` map
 - `TicketState` — column name (`Backlog`, `In Progress`, `Done`)
-- `Repo.ticket(ref)`, `Repo.create_ticket(title, body)`, `Repo.close_ticket(ref)`
+- `Repo.ticket(ref)`, `Repo.create_ticket(title, body)`
 - `Repo.workflow_commit_message(subject, issue_number, workflow_state, reviewed_by=...)`
 - Flat legacy surface on `Repo` for workspace: `checkout_or_create`, `commit`, `push`,
   `merge_branch`, `note`, `read_notes`, `find_mistakes`, `is_dirty`, `current_branch`

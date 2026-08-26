@@ -305,7 +305,10 @@ class Workflow:
     @agent_tool
     def close_ticket(self, ticket: str, workspace: str = "") -> str:
         """Close the linked GitHub issue."""
-        self._repo(workspace).close_ticket(ticket)
+        issue = self._repo(workspace).ticket(ticket)
+        if issue is None:
+            raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
+        issue.close()
         return f"closed {ticket}"
 
     @agent_instructions

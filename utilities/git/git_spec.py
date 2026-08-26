@@ -100,8 +100,9 @@ with description("a Repo ticket lifecycle"):
         self.project.add_ticket(self.ticket, "Backlog")
 
     with it("should close tickets"):
-        self.repo.close_ticket(str(self.ticket.number))
-        expect(self.ticket.number in self.repo._closed_tickets).to(be_true)
+        self.ticket.close()
+        expect(self.ticket.closed).to(be_true)
 
     with it("should refuse closing unknown tickets"):
-        expect(lambda: self.repo.close_ticket("999")).to(raise_error(TicketNotFoundError))
+        missing = Ticket(number=999, title="", body="", _repo=self.repo)
+        expect(lambda: missing.close()).to(raise_error(TicketNotFoundError))
