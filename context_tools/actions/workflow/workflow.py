@@ -31,7 +31,7 @@ class WorkflowConfig:
 
 @toolset
 class Workflow:
-    """Slash /backlog, /start, /finish — GitHub issue + session lifecycle (v1 simple)."""
+    """Slash /backlog, /start, /finish — GitHub issue + session lifecycle."""
 
     def __init__(
         self,
@@ -105,19 +105,115 @@ class Workflow:
         config = self._load_workflow_config(repo_root)
         return repo.attach_project(config.project_owner, config.project_number)
 
+    @agent_instructions
+    def backlog(self, focus: str, context: str = "", workspace: str = "") -> str:
+        """Capture an idea on the backlog — GitHub issue + Project Backlog, no WorkSession."""
+        self.handoff_tool()
+        """Call `capture_backlog` with the handoff markdown as the issue body, not a file path. Do not open a work session."""
+        self.capture_backlog()
+        return "Backlog captured — GitHub issue created in Project Backlog."
+
     @agent_tool
-    def handoff_tool(self) -> Handoff:
-        """Handoff toolset — use content/collection patterns when composing issue body text."""
+    def capture_backlog(
+        self, focus: str, body: str, workspace: str = ""
+    ) -> dict[str, str | int]:
+        """Create a GitHub issue whose body is the handoff text, Project Backlog. No WorkSession."""
+        issue_body = self._handoff_issue_body(body)
+        return self.create_ticket(
+            title=focus.strip() or "backlog",
+            body=issue_body,
+            workspace=workspace,
+            project_status="Backlog",
+        )
+
+    def _handoff_issue_body(self, body: str) -> str:
+        text = body.strip()
+        path = Path(text)
+        if text and path.is_file():
+            text = path.read_text(encoding="utf-8")
+        return text
+
+    @agent_tool
+    def start(
+        self,
+        ticket: str,
+        instructions: str = "",
+        workspace: str = "",
+        copy_body: bool = False,
+        workflow_state: str = "specification",
+    ) -> dict[str, str | int]:
+        """Start work from a GitHub issue — In Progress, WorkSession, session branch."""
+        viewed = self.view_ticket(ticket, workspace=workspace)
+        self.set_ticket_project_status(ticket, "In Progress", workspace=workspace)
+        opened = self.open_ticket_session(
+            ticket,
+            instructions=instructions,
+            workspace=workspace,
+            workflow_state=workflow_state,
+        )
+        if copy_body:
+            self.copy_issue_body_to_session(
+                ticket, str(opened["session_name"]), workspace=workspace
+            )
+        ws = self._workspace(workspace)
+        session = ws.current_work_session
+        if session is not None and session.open_turn is not None:
+            message = self.turn_commit_message(
+                subject=f"start {session.name}",
+                ticket=ticket,
+                workflow_state=workflow_state,
+                workspace=workspace,
+            )
+            session.open_turn.finish(
+                prompt=instructions,
+                result=message,
+                context=session.name,
+            )
+        if session is not None:
+            session.git.checkout_or_create(session.session_branch)
+        return {**viewed, **opened}
+
+    @agent_tool
+    def finish(
+        self,
+        outcome: str = "",
+        workspace: str = "",
+        ticket: str = "",
+        reviewed_by: str = "",
+    ) -> dict[str, str]:
+        """Finish the open WorkSession — merge to main, Done, close issue, close session."""
+        session_name = self.require_open_session(workspace=workspace)
+        ws = self._workspace(workspace)
+        session = ws.current_work_session
+        if session is not None and session.open_turn is not None:
+            session.open_turn.finish(
+                prompt=outcome,
+                result="finish",
+                context=session_name,
+            )
+        sha = self.merge_session_to_main(
+            workspace=workspace, ticket=ticket, reviewed_by=reviewed_by
+        )
+        if ticket.strip():
+            self.set_ticket_project_status(ticket, "Done", workspace=workspace)
+            self.close_ticket(ticket, workspace=workspace)
+        if outcome.strip() and session is not None:
+            session.close_session(outcome=outcome)
+        return {"commit": sha, "session_name": session_name}
+
+    @agent_instructions
+    def handoff_tool(self, destination: str = "", next_focus: str = "") -> str:
+        """Compose the handoff from current session state — do not invent requirements."""
+        self._handoff().handoff_session()
+        return "Handoff composed."
+
+    def _handoff(self) -> Handoff:
         return Handoff()
 
-    @agent_tool
     def workspace_tool(self, path: str = "") -> Workspace:
-        """Workspace aggregate for open_work_session (path defaults to repo root)."""
         return self._workspace(path)
 
-    @agent_tool
     def load_project_config(self, workspace: str = "") -> dict[str, str | int]:
-        """Read `.context/workflow.yaml` for GitHub Project owner/number."""
         repo_root = self._repo_root(workspace)
         config = self._load_workflow_config(repo_root)
         return {
@@ -126,17 +222,12 @@ class Workflow:
             "default_branch": config.default_branch,
         }
 
-    @agent_tool
     def parse_ticket(self, ticket: str) -> int:
-        """Normalize a GitHub issue reference to its issue number."""
         return Ticket.parse_number(ticket)
 
-    @agent_tool
     def session_name_for_issue(self, title: str, number: int) -> str:
-        """Build the work-session slug from an issue title and number."""
         return self._session_name_from_issue(title, number)
 
-    @agent_tool
     def turn_commit_message(
         self,
         subject: str,
@@ -145,7 +236,6 @@ class Workflow:
         workspace: str = "",
         reviewed_by: str = "",
     ) -> str:
-        """Format a turn or merge commit message with workflow trailers."""
         repo = self._repo(workspace)
         return repo.workflow_commit_message(
             subject,
@@ -154,9 +244,7 @@ class Workflow:
             reviewed_by=reviewed_by,
         )
 
-    @agent_tool
     def view_ticket(self, ticket: str, workspace: str = "") -> dict[str, str | int]:
-        """Load a GitHub issue via gh; raises when the ticket is not found."""
         repo = self._repo(workspace)
         issue = repo.ticket(ticket)
         if issue is None:
@@ -168,7 +256,6 @@ class Workflow:
             "url": issue.url,
         }
 
-    @agent_tool
     def create_ticket(
         self,
         title: str,
@@ -176,12 +263,11 @@ class Workflow:
         workspace: str = "",
         project_status: str = "Backlog",
     ) -> dict[str, str | int]:
-        """Create a GitHub issue and add it to the repository Project."""
         if project_status not in _PROJECT_STATUSES:
             raise ValueError(f"project_status must be one of {_PROJECT_STATUSES}")
         repo_root = self._repo_root(workspace)
         repo = self._repo(workspace)
-        project = self._ensure_project(repo, repo_root)
+        self._ensure_project(repo, repo_root)
         ticket = repo.create_ticket(title, body)
         ticket.set_status(project_status)
         return {
@@ -192,14 +278,12 @@ class Workflow:
             "project_status": project_status,
         }
 
-    @agent_tool
     def set_ticket_project_status(
         self,
         ticket: str,
         status: str,
         workspace: str = "",
     ) -> str:
-        """Move an issue to Backlog, In Progress, or Done on the repo Project."""
         if status not in _PROJECT_STATUSES:
             raise ValueError(f"status must be one of {_PROJECT_STATUSES}")
         repo_root = self._repo_root(workspace)
@@ -207,11 +291,10 @@ class Workflow:
         issue = repo.ticket(ticket)
         if issue is None:
             raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
-        project = self._ensure_project(repo, repo_root)
+        self._ensure_project(repo, repo_root)
         issue.set_status(status)
         return status
 
-    @agent_tool
     def copy_issue_body_to_session(
         self,
         ticket: str,
@@ -219,7 +302,6 @@ class Workflow:
         workspace: str = "",
         filename: str = "issue-body.md",
     ) -> str:
-        """Copy the GitHub issue body into the work session folder when local artifacts help."""
         repo_root = self._repo_root(workspace)
         issue = self._repo(workspace).ticket(ticket)
         if issue is None:
@@ -230,7 +312,6 @@ class Workflow:
         target.write_text(issue.body, encoding="utf-8")
         return str(target.resolve())
 
-    @agent_tool
     def open_ticket_session(
         self,
         ticket: str,
@@ -238,7 +319,6 @@ class Workflow:
         workspace: str = "",
         workflow_state: str = "specification",
     ) -> dict[str, str]:
-        """Open a WorkSession for a GitHub issue and return session metadata."""
         repo_root = self._repo_root(workspace)
         issue = self._repo(workspace).ticket(ticket)
         if issue is None:
@@ -266,22 +346,18 @@ class Workflow:
             "workflow_state": workflow_state,
         }
 
-    @agent_tool
     def require_open_session(self, workspace: str = "") -> str:
-        """Return the current work session name or raise when none is open."""
         session = self._workspace(workspace).current_work_session
         if session is None:
             raise RuntimeError("no open work session")
         return session.name
 
-    @agent_tool
     def merge_session_to_main(
         self,
         workspace: str = "",
         ticket: str = "",
         reviewed_by: str = "",
     ) -> str:
-        """Merge the open session branch into main with workflow trailers on the merge commit."""
         ws = self._workspace(workspace)
         session = ws.current_work_session
         if session is None:
@@ -302,41 +378,9 @@ class Workflow:
         session.git.merge_branch(source, config.default_branch, message=message)
         return session.git.current_commit
 
-    @agent_tool
     def close_ticket(self, ticket: str, workspace: str = "") -> str:
-        """Close the linked GitHub issue."""
         issue = self._repo(workspace).ticket(ticket)
         if issue is None:
             raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
         issue.close()
         return f"closed {ticket}"
-
-    @agent_instructions
-    def backlog(self, focus: str, context: str = "") -> str:
-        """Capture an idea on the backlog — no open WorkSession; no local repo artifacts v1."""
-        """1. Read `.context/research/git-knowledge-and-workflow-backbone.md` §8 if ticket/github behavior is unclear."""
-        """2. Call `handoff_tool().collect_session_state(...)` and compose the backlog handoff from current fidelity, format, action, session artifacts, and prompt commentary — do not invent requirements."""
-        """3. Call `create_ticket(title=..., body=..., project_status="Backlog")` using the composed handoff as the issue body (canonical; no local backlog folder v1)."""
-        """4. Do not call `open_ticket_session` or `workspace_tool().open_work_session` — backlog is ticket-only v1."""
-        return f"Backlog captured for {focus!r} — GitHub issue created in Project Backlog."
-
-    @agent_instructions
-    def start(self, ticket: str, instructions: str = "", workspace: str = "") -> str:
-        """Start work from a GitHub issue — opens WorkSession + session branch."""
-        """1. Call `view_ticket(ticket)` — if not found, stop and report not found; do not open a work session."""
-        """2. Read the returned body for forward requirements; merge with `instructions` from the prompt."""
-        """3. Refer to the issue as agent context when body is sufficient; call `copy_issue_body_to_session` when local artifacts help."""
-        """4. Call `set_ticket_project_status(ticket, "In Progress")`."""
-        """5. Call `open_ticket_session(ticket, instructions=..., workflow_state="specification" or "engineering")` — branch and dirty-tree policy are workspace scope."""
-        """6. Finish the open turn with `turn_commit_message(...)` trailers: `GitHub-Issue`, `Workflow-State`. Record prompt instructions on the turn envelope."""
-        return f"Started work session for GitHub issue {ticket!r}."
-
-    @agent_instructions
-    def finish(self, outcome: str = "", workspace: str = "", ticket: str = "", reviewed_by: str = "") -> str:
-        """Finish current WorkSession — merge session branch to main, close issue, close session."""
-        """1. Call `require_open_session(workspace=...)` — refuse when none is open."""
-        """2. Finish the open turn for the action before merge."""
-        """3. Call `merge_session_to_main(workspace=..., ticket=..., reviewed_by=...)` — refuse when dirty; direct merge to main v1."""
-        """4. Call `set_ticket_project_status(ticket, "Done")` then `close_ticket(ticket)`."""
-        """5. Checkout main is handled by merge; call `workspace_tool().current_work_session.close_session(outcome=...)` when outcome is provided."""
-        return "Work session finished — merged to main, issue closed, checked out main."
