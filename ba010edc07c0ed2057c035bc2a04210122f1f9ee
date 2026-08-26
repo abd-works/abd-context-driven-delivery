@@ -1,0 +1,8 @@
+entry_id: 23dd937b
+artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+rule: usage-order-behaviors
+wrong: Sketch opened with "a context tool host" binding a workspace at a folder before any action runs. Target model — generate/validate envelope — starts when a context tool is invoked; session prelude is openWorkSession + turn.open inside that action, not a freestanding workspace-create step.
+tool: context_tools.bdd.bdd:Bdd
+fidelity: behavior
+introducing_commit: ba010edc07c0ed2057c035bc2a04210122f1f9ee
+fixed_by: 5863f0c7f23b2021cc582be418bec47ead31ab82
