@@ -1,0 +1,4 @@
+how: legacy session.yaml backfill
+status: fixed
+entry_ids: 0bf09f1e
+fix_commit: 10eb37e332d2ebc3753e2f493e2ab3dbba97e86d
