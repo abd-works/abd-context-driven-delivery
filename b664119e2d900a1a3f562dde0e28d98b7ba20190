@@ -6,5 +6,5 @@ original: class WorkspaceRepo:  # not in OO model — behaviors belong on domain
 # dual WorkSession: workspace_session.WorkSession AND workspace.WorkSession
 tool: context_tools.bdd.bdd:Bdd
 fidelity: development
-introducing_commit: b664119e2d900a1a3f562dde0e28d98b7ba20190
-fixed_by: a9fb7d167e273d55976cacc0f6377e28a2bdb09b
+introducing_commit: 41966b31538657e7a1efe572e6deda26f1cef4ac
+fixed_by: d3ccb6a44c7ccc838c3f4326e41b4cf1ea1907ab
