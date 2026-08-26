@@ -1,19 +1,17 @@
 """Git utility — repo, branch, commit, project, ticket."""
 
-from git._cli import (
-    _DirtyBranchSwitchError as DirtyBranchSwitchError,
-    _GhConnectError as GhConnectError,
-    _GitConnectError as GitConnectError,
-    _TicketNotFoundError as TicketNotFoundError,
-)
 from git.git import (
     Branch,
     Commit,
+    DirtyBranchSwitchError,
+    GhConnectError,
     Git,
+    GitConnectError,
     GitRepo,
     Project,
     Repo,
     Ticket,
+    TicketNotFoundError,
     TicketState,
 )
 

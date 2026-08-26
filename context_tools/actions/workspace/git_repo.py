@@ -1,6 +1,5 @@
 ﻿"""Shim — canonical git model lives in utilities/git."""
 
-from git._cli import _run_git as _git
 from git import (
     DirtyBranchSwitchError,
     GhConnectError,
@@ -10,6 +9,8 @@ from git import (
     Repo,
     TicketNotFoundError,
 )
+
+_git = Repo.git
 
 __all__ = [
     "DirtyBranchSwitchError",

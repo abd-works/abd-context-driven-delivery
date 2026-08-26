@@ -5,8 +5,7 @@
 **Git** utility (`utilities/git/`): object-oriented domain for a local git clone plus
 GitHub workflow surfaces. Models **Repo → Branch → Commit** for version control and
 **Repo → Project → Ticket → TicketState** for kanban/issue workflow. Subprocess
-adapters stay in private `_cli.py`; callers use domain objects, not a monolithic
-service class.
+Callers use domain objects, not a subprocess helper module.
 
 ## Primary use case
 
@@ -23,12 +22,11 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 
 ## Constraint
 
-- Callers depend on **domain types** (`Repo`, `Branch`, …) — not `_cli.py` subprocess helpers.
+- Callers depend on **domain types** (`Repo`, `Branch`, `Project`, `Ticket`, …).
 - **Git-primary** for provenance: commit message trailers (`GitHub-Issue:`, `Workflow-State:`)
   and git notes (`refs/notes/eval-mistakes`) — not parallel yaml indexes.
 - **Workflow** orchestrates; **Repo** executes git/gh — do not embed ticket or merge policy
   inside `Repo` beyond thin wrappers.
-- `_cli.py` is **internal** — only imported by `git.py`.
 - `Repo.memory()` is for **tests and dry runs** — production paths use `Repo.open()`.
 
 ## Public API
@@ -57,7 +55,7 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 
 ## Mechanism
 
-Domain objects hold behavior; `_cli.py` runs `git -C` / `gh` subprocess calls. `Repo.memory()`
+Domain objects hold behavior; `Repo.git` / `Repo.gh` run the CLIs. `Repo.memory()`
 stores branches, commits, tickets, project status, and notes in plain dicts/lists — same
 public API as CLI-backed `Repo.open()`. Commit trailers are parsed into `Commit.data`;
 workflow helpers format `GitHub-Issue:` and `Workflow-State:` lines. Project status maps

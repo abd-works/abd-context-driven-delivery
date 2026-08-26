@@ -5,23 +5,46 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from tools.tool import toolset
 
-from git._cli import (
-    _DirtyBranchSwitchError as DirtyBranchSwitchError,
-    _GhConnectError as GhConnectError,
-    _GitConnectError as GitConnectError,
-    _TicketNotFoundError as TicketNotFoundError,
-    _eval_mistakes_notes_ref as eval_mistakes_notes_ref,
-    _gh_owner_repo as gh_owner_repo,
-    _gh_set_project_status as gh_set_project_status,
-    _run_gh as run_gh,
-    _run_git as run_git,
+_GIT_DO_NOT_PROCEED = (
+    "Do not proceed unless the user tells you to continue without a git connection."
 )
+_GH_DO_NOT_PROCEED = (
+    "Do not proceed unless the user tells you to continue without GitHub CLI access."
+)
+
+
+class GitConnectError(RuntimeError):
+    """Raised when the clone cannot be used for git."""
+
+
+class GhConnectError(RuntimeError):
+    """Raised when gh cannot be used."""
+
+
+class DirtyBranchSwitchError(RuntimeError):
+    """Raised when checkout would move a dirty tree onto another branch."""
+
+    def __init__(self, current: str, wanted: str) -> None:
+        self.current = current
+        self.wanted = wanted
+        super().__init__(
+            f"Working tree has uncommitted changes on {current!r}; "
+            f"not switching to {wanted!r}. Ask whether to bring this work onto "
+            f"the session branch, or create a continuation branch "
+            f"(e.g. {wanted}-2)."
+        )
+
+
+class TicketNotFoundError(LookupError):
+    """Raised when a GitHub issue reference does not resolve."""
 
 
 DEFAULT_PROJECT_STATES: tuple[str, ...] = ("Backlog", "In Progress", "Done")
@@ -116,7 +139,7 @@ class Ticket:
             repo._closed_tickets.add(self.number)
             self.data["closed"] = "true"
             return
-        run_gh("-C", str(repo.root), "issue", "close", str(self.number))
+        repo._gh("-C", str(repo.root), "issue", "close", str(self.number))
         self.data["closed"] = "true"
 
     @classmethod
@@ -190,7 +213,44 @@ class Project:
         raise ValueError(f"unknown project state: {name!r}")
 
     def add_ticket(self, ticket: Ticket, state_name: str) -> Ticket:
-        self._repo._set_ticket_project_state(ticket, state_name)
+        if state_name not in DEFAULT_PROJECT_STATES:
+            raise ValueError(f"status must be one of {DEFAULT_PROJECT_STATES}")
+        repo = self._repo
+        if repo._memory:
+            repo._ticket_project_state[ticket.number] = state_name
+            ticket.state = self.state_named(state_name)
+            return ticket
+        item_raw = repo._gh(
+            "project",
+            "item-add",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--url",
+            ticket.url,
+            "--format",
+            "json",
+        )
+        item = json.loads(item_raw or "{}")
+        item_id = item.get("id")
+        if not item_id:
+            raise GhConnectError(
+                f"Could not add issue to project. {_GH_DO_NOT_PROCEED}"
+            )
+        repo._gh(
+            "project",
+            "item-edit",
+            "--id",
+            str(item_id),
+            "--project-id",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--field",
+            "Status",
+            "--value",
+            state_name,
+        )
         ticket.state = self.state_named(state_name)
         return ticket
 
@@ -200,6 +260,8 @@ class Project:
 
 class Repo:
     """Local git clone with optional GitHub project + tickets."""
+
+    NOTES_REF = "refs/notes/eval-mistakes"
 
     def __init__(
         self,
@@ -242,6 +304,73 @@ class Repo:
     def memory(cls, root: str | Path = ".", *, owner: str = "demo-org", repo_name: str = "demo-repo") -> Repo:
         return cls(root, memory=True, owner=owner, repo_name=repo_name)
 
+    @classmethod
+    def git(cls, root: str | Path, *args: str) -> str:
+        found = shutil.which("git")
+        if not found:
+            for candidate in (
+                Path(r"C:\Program Files\Git\cmd\git.exe"),
+                Path(r"C:\Program Files\Git\bin\git.exe"),
+            ):
+                if candidate.is_file():
+                    found = str(candidate)
+                    break
+        if not found:
+            raise GitConnectError(
+                f"Cannot connect git: `git` is not available. {_GIT_DO_NOT_PROCEED}"
+            )
+        try:
+            completed = subprocess.run(
+                [found, "-C", str(root), *args],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=False,
+            )
+        except OSError as exc:
+            raise GitConnectError(
+                f"Cannot connect git: {exc}. {_GIT_DO_NOT_PROCEED}"
+            ) from exc
+        if completed.returncode != 0:
+            err = (completed.stderr or completed.stdout or "").strip()
+            raise GitConnectError(
+                f"Cannot connect git: git {' '.join(args)} failed in {root}: "
+                f"{err}. {_GIT_DO_NOT_PROCEED}"
+            )
+        return (completed.stdout or "").strip()
+
+    @classmethod
+    def gh(cls, *args: str) -> str:
+        found = shutil.which("gh")
+        if not found:
+            raise GhConnectError(
+                f"Cannot connect gh: `gh` is not available. {_GH_DO_NOT_PROCEED}"
+            )
+        try:
+            completed = subprocess.run(
+                [found, *args],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=False,
+            )
+        except OSError as exc:
+            raise GhConnectError(
+                f"Cannot connect gh: {exc}. {_GH_DO_NOT_PROCEED}"
+            ) from exc
+        if completed.returncode != 0:
+            err = (completed.stderr or completed.stdout or "").strip()
+            raise GhConnectError(
+                f"Cannot connect gh: gh {' '.join(args)} failed: {err}. {_GH_DO_NOT_PROCEED}"
+            )
+        return (completed.stdout or "").strip()
+
+    def _git(self, *args: str) -> str:
+        return type(self).git(self.root, *args)
+
+    def _gh(self, *args: str) -> str:
+        return type(self).gh(*args)
+
     def _init_memory_state(self) -> None:
         self._branch_names: set[str] = {"main"}
         self._branch = "main"
@@ -278,7 +407,7 @@ class Repo:
     def current_branch(self) -> str:
         if self._memory:
             return self._branch
-        return run_git(self.root, "rev-parse", "--abbrev-ref", "HEAD")
+        return self._git("rev-parse", "--abbrev-ref", "HEAD")
 
     @current_branch.setter
     def current_branch(self, name: str) -> None:
@@ -289,18 +418,26 @@ class Repo:
                 raise GitConnectError(f"unknown branch {name}")
             self._branch = name
             return
-        run_git(self.root, "checkout", name)
+        self._git( "checkout", name)
 
     @property
     def current_commit(self) -> str:
         if self._memory:
             return self._commit
-        return run_git(self.root, "rev-parse", "HEAD")
+        return self._git("rev-parse", "HEAD")
 
     def owner_repo(self) -> tuple[str, str]:
         if self._memory:
             return self._owner, self._repo_name
-        return gh_owner_repo(self.root)
+        raw = self._gh("-C", str(self.root), "repo", "view", "--json", "nameWithOwner")
+        payload = json.loads(raw or "{}")
+        name = payload.get("nameWithOwner", "")
+        if "/" not in name:
+            raise GhConnectError(
+                f"Cannot resolve owner/repo for {self.root}. {_GH_DO_NOT_PROCEED}"
+            )
+        owner, repo = name.split("/", 1)
+        return owner, repo
 
     def is_dirty(self, path: str | Path | None = None) -> bool:
         if self._memory:
@@ -308,7 +445,7 @@ class Repo:
         args = ["status", "--porcelain", "--untracked-files=normal"]
         if path is not None:
             args.extend(["--", self._rel(path)])
-        return bool(run_git(self.root, *args))
+        return bool(self._git(*args))
 
     def set_dirty(self, dirty: bool = True) -> None:
         if not self._memory:
@@ -319,7 +456,7 @@ class Repo:
         if self._memory:
             self._branch_names.add(name)
             return
-        run_git(self.root, "branch", name)
+        self._git("branch", name)
 
     def checkout_or_create(self, name: str) -> str:
         if self.current_branch == name:
@@ -330,11 +467,11 @@ class Repo:
             self._branch_names.add(name)
             self._branch = name
             return name
-        existing = run_git(self.root, "branch", "--list", name)
+        existing = self._git( "branch", "--list", name)
         if existing:
-            run_git(self.root, "checkout", name)
+            self._git( "checkout", name)
         else:
-            run_git(self.root, "checkout", "-b", name)
+            self._git( "checkout", "-b", name)
         return name
 
     def commit(self, paths: list[str], message: str) -> str:
@@ -346,18 +483,18 @@ class Repo:
             self._dirty = False
             return self._commit
         rels = [self._rel(path) for path in paths]
-        run_git(self.root, "add", "--", *rels)
-        staged = run_git(self.root, "diff", "--cached", "--name-only", "--", *rels)
+        self._git( "add", "--", *rels)
+        staged = self._git( "diff", "--cached", "--name-only", "--", *rels)
         if not staged:
             return self.current_commit
-        run_git(self.root, "commit", "-m", message, "--", *rels)
+        self._git( "commit", "-m", message, "--", *rels)
         return self.current_commit
 
     def push(self) -> None:
         if self._memory:
             self._pushes.append(self.current_branch)
             return
-        run_git(self.root, "push", "-u", "origin", self.current_branch)
+        self._git( "push", "-u", "origin", self.current_branch)
 
     def merge_branch(self, source: str, into: str = "main", message: str = "") -> str:
         if self.is_dirty():
@@ -370,11 +507,11 @@ class Repo:
             self._commits.append(([], text))
             self._commit = f"merge-{source}-into-{into}"
             return self._commit
-        run_git(self.root, "checkout", into)
+        self._git( "checkout", into)
         if message:
-            run_git(self.root, "merge", source, "-m", message)
+            self._git( "merge", source, "-m", message)
         else:
-            run_git(self.root, "merge", source, "--no-edit")
+            self._git( "merge", source, "--no-edit")
         return self.current_commit
 
     def note(
@@ -384,13 +521,12 @@ class Repo:
         *,
         ref: str | None = None,
     ) -> None:
-        note_ref = ref or eval_mistakes_notes_ref()
+        note_ref = ref or self.NOTES_REF
         if self._memory:
             self._notes[sha] = dict(payload)
             return
         text = Commit.note_text(payload)
-        run_git(
-            self.root,
+        self._git(
             "notes",
             f"--ref={note_ref}",
             "add",
@@ -401,11 +537,11 @@ class Repo:
         )
 
     def read_notes(self, sha: str, *, ref: str | None = None) -> dict[str, str]:
-        note_ref = ref or eval_mistakes_notes_ref()
+        note_ref = ref or self.NOTES_REF
         if self._memory:
             return dict(self._notes.get(sha, {}))
         try:
-            raw = run_git(self.root, "notes", f"--ref={note_ref}", "show", sha)
+            raw = self._git("notes", f"--ref={note_ref}", "show", sha)
         except GitConnectError:
             return {}
         return Commit.note_payload(raw)
@@ -413,7 +549,7 @@ class Repo:
     def find_mistakes(
         self, entry_ids: list[str], *, ref: str | None = None
     ) -> list[dict[str, str]]:
-        note_ref = ref or eval_mistakes_notes_ref()
+        note_ref = ref or self.NOTES_REF
         wanted = set(entry_ids)
         found: list[dict[str, str]] = []
         if self._memory:
@@ -423,7 +559,7 @@ class Repo:
                     row.setdefault("introducing_commit", sha)
                     found.append(row)
             return found
-        listing = run_git(self.root, "notes", f"--ref={note_ref}", "list")
+        listing = self._git( "notes", f"--ref={note_ref}", "list")
         for line in listing.splitlines():
             parts = line.split()
             if len(parts) < 2:
@@ -449,7 +585,7 @@ class Repo:
             return ticket
         number = Ticket.parse_number(ref)
         try:
-            raw = run_gh(
+            raw = self._gh(
                 "-C",
                 str(self.root),
                 "issue",
@@ -481,7 +617,7 @@ class Repo:
             )
             self._tickets[number] = ticket
             return ticket
-        raw = run_gh(
+        raw = self._gh(
             "-C",
             str(self.root),
             "issue",
@@ -513,23 +649,6 @@ class Repo:
             trailers["Reviewed-By"] = reviewed_by.strip()
         return Commit.format(subject, trailers)
 
-    def _set_ticket_project_state(self, ticket: Ticket, state_name: str) -> None:
-        if state_name not in DEFAULT_PROJECT_STATES:
-            raise ValueError(f"status must be one of {DEFAULT_PROJECT_STATES}")
-        if self._memory:
-            self._ticket_project_state[ticket.number] = state_name
-            ticket.state = TicketState(state_name)
-            return
-        if self._project is None:
-            raise RuntimeError("attach_project before setting ticket state")
-        gh_set_project_status(
-            ticket.url,
-            state_name,
-            project_owner=self._project.owner,
-            project_number=self._project.number,
-        )
-        ticket.state = TicketState(state_name)
-
     def _ticket_from_payload(self, payload: dict[str, Any]) -> Ticket:
         number = int(payload["number"])
         ticket = Ticket(
@@ -547,7 +666,7 @@ class Repo:
             if not self._commits:
                 return ""
             return self._commits[-1][1]
-        return run_git(self.root, "log", "-1", "--pretty=%B")
+        return self._git("log", "-1", "--pretty=%B")
 
     def _rel(self, path: str | Path) -> str:
         resolved = Path(path).resolve()

@@ -1,4 +1,4 @@
-**Sources / context:** `utilities/git/git.py`, `utilities/git/_cli.py`, `utilities/git/git_spec.py`, `.context/research/git-knowledge-and-workflow-backbone.md` §8, G-04, G-36, G-37; `workspace/.context/module-context.md`; `workflow/.context/module-context.md`
+**Sources / context:** `utilities/git/git.py`, `utilities/git/git_spec.py`, `.context/research/git-knowledge-and-workflow-backbone.md` §8, G-04, G-36, G-37; `workspace/.context/module-context.md`; `workflow/.context/module-context.md`
 
 ## Language companion
 
@@ -42,14 +42,14 @@ a kanban *TicketState*.
 
 ## Modules
 
-Build order: `_cli` → `git` → (`workspace` shim | `workflow`)
+Build order: `git` → (`workspace` shim | `workflow`)
 
 ---
 
 # utilities/git
 - **Purpose:** OO git + GitHub domain for CDD workspace sessions and workflow commands
 - **Seam (terms):** Repo, Branch, Commit, Project, Ticket, TicketState, Git
-- **Dependencies (one-way):** `tools.tool`; `_cli` (internal); consumed by `workspace`, `workflow`
+- **Dependencies (one-way):** `tools.tool`; consumed by `workspace`, `workflow`
 
 ## Repo
 
@@ -62,6 +62,8 @@ root: Path
 find_root(start): Path | None
 open(start): Repo
 memory(root): Repo
+git(root, *args): str
+gh(*args): str
 branch: Branch
 branch_named(name): Branch
 checkout_or_create(name): str
@@ -138,10 +140,3 @@ name: str
 backlog(): TicketState
 in_progress(): TicketState
 done(): TicketState
-
----
-
-# utilities/git/_cli
-- **Purpose:** Private subprocess adapters for `git` and `gh` CLIs
-- **Seam (terms):** internal only — `_run_git`, `_run_gh`
-- **Dependencies (one-way):** stdlib only; imported only by `git.py`
