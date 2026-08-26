@@ -1,0 +1,8 @@
+entry_id: ad49022f
+artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+rule: usage-order-behaviors
+wrong: Workspace pathOverrides behaviors were sketched as a detached prelude (with its workspace / that has been loaded) before any action run. Usage story starts when an action is run against a context tool; workspace opens for that run — load overrides and resolve path happen under that opening, not as a separate aggregate tour.
+tool: context_tools.bdd.bdd:Bdd
+fidelity: behavior
+introducing_commit: d3b0cc29b4aea076f4c6f16afce487dd9d77a48d
+fixed_by: 03e273471a314d523e22f7373664b84a6665f163
