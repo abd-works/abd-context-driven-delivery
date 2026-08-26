@@ -19,80 +19,88 @@ Fidelity: behavior
 - `Workflow-State:` — column name (`specification`, `engineering`, or `done`)
 - `Reviewed-By:` — optional on finish merge commit
 
-**LOCKED — handoff:** canonical forward-requirements live in the **GitHub issue body**
-at backlog; `/start` reads via `gh issue view` and either refers to the ticket or
-copies sections into the work session folder when local artifacts help.
+**LOCKED — handoff:** `/backlog` runs **Handoff** to capture ticket information; the
+**created issue body** carries that handoff (canonical). `/start` reads via `gh issue view`
+and either refers to the ticket or copies sections into the work session folder when needed.
 
 ---
 
 a context tool
-  with a workflow kit
-    that has an action run against it
-      with the backlog action
-        with prompt context including commentary from the user
-          the github issue
-            it should exist for that idea
-          the issue body
-            it should hold forward-requirements composed using handoff content patterns
+  that has an action run against it
+    with a fidelity in play
+    with a format in play
+    with prompt context including commentary from the user
+    with session artifacts in the working folder
+      it should carry sketches grill progress and module context from the current work
+    that is asked to backlog the current work
+      it should run handoff to capture the backlog ticket information
+      the created handoff
+        it should hold forward-requirements from the current fidelity format and action
+        it should hold enough context for a fresh agent to resume the work
+      it should create a github issue
+      the created issue
+        it should carry the handoff in the body of the issue
+      the repository project
+        it should list the issue with status Backlog
+      it should not open a work session
+      with a github issue from that backlog step
+        that is asked to start that item
+          the forward requirements
+            it should be available from the issue body
+          with issue body sufficient for the agent without local copies
+            the agent context
+              it should refer to that github issue
+          with local session artifacts needed
+            the work session folder
+              it should hold copied sections from the issue body
           the repository project
-            it should list the issue with status Backlog
-          it should not open a work session
-      with the start action
-        with a github issue number given
-          with the issue found
-            the forward requirements
-              it should be available from the issue body
-            with issue body sufficient for the agent without local copies
-              the agent context
-                it should refer to that github issue
-            with local session artifacts needed
-              the work session folder
-                it should hold copied sections from the issue body
-            the repository project
-              it should list the issue with status In Progress
-            it should open a new work session named for that ticket
-            it should set the current work session to that work session
-            with HEAD already on its session branch
-              it should continue without switching branch
-            with a clean working tree not on its session branch
-              with an existing session branch for that ticket
-                it should check out that session branch
-              with no session branch yet
-                it should create the session branch for that work session
-            with a dirty working tree not on its session branch
-              it should refuse to switch branch
-            it should open a turn for the action run
-            that has a turn open
-              that has finished its turn
-                the session branch commit
-                  it should carry GitHub-Issue and Workflow-State trailers
-                the turn envelope
-                  it should record additional instructions from the prompt when provided
-          with the issue not found
-            it should report that the ticket was not found
-            it should not open a work session
-      with the finish action
-        with a current work session open on its session branch
-          with a clean mergeable session branch
-            it should finish its open turn for the action
+            it should list the issue with status In Progress
+          it should open a new work session named for that ticket
+          it should set the current work session to that work session
+          with HEAD already on its session branch
+            it should continue without switching branch
+          with a clean working tree not on its session branch
+            with an existing session branch for that ticket
+              it should check out that session branch
+            with no session branch yet
+              it should create the session branch for that work session
+          with a dirty working tree not on its session branch
+            it should refuse to switch branch
+          it should open a turn for the action run
+          that has a turn open
             that has finished its turn
-              it should merge its session branch into main
-              it should check out the main branch
-              the repository project
-                it should list the issue with status Done
-              the github issue
-                it should be closed
-              the work session
-                it should be closed with outcome when provided
-              the merge commit
-                it should carry GitHub-Issue and Workflow-State done trailers
-                it should carry Reviewed-By when supplied
-          with a dirty working tree
-            it should refuse to merge until the tree is clean
-          with merge conflicts
-            it should report the conflict and leave the session open
-        with no current work session
-          it should report that no work session is open
+              the session branch commit
+                it should carry GitHub-Issue and Workflow-State trailers
+              the turn envelope
+                it should record additional instructions from the prompt when provided
+          with an open work session from that start
+            that is asked to finish that work
+              with a clean mergeable session branch
+                it should finish its open turn for the action
+                that has finished its turn
+                  it should merge its session branch into main
+                  it should check out the main branch
+                  the repository project
+                    it should list the issue with status Done
+                  the github issue
+                    it should be closed
+                  the work session
+                    it should be closed with outcome when provided
+                  the merge commit
+                    it should carry GitHub-Issue and Workflow-State done trailers
+                    it should carry Reviewed-By when supplied
+              with a dirty working tree
+                it should refuse to merge until the tree is clean
+              with merge conflicts
+                it should report the conflict and leave the session open
+    that is asked to start an item
+      with a github issue reference given
+        with the issue not found
+          it should report that the ticket was not found
+          it should not open a work session
+    that is asked to finish work
+      with no open work session
+        it should report that no work session is open
 
 ---
 

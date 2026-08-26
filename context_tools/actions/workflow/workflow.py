@@ -49,10 +49,10 @@ class Workflow:
     def backlog(self, focus: str, context: str = "") -> str:
         """Capture an idea on the backlog — no open WorkSession; no local repo artifacts v1."""
         """1. Read `.context/research/git-knowledge-and-workflow-backbone.md` §8 if ticket/github behavior is unclear."""
-        """2. Draft **issue body** forward-requirements from prompt context and commentary — use handoff content patterns; do not invent requirements."""
-        """3. `gh issue create --title "..." --body "..."` with that body as the canonical handoff."""
+        """2. Call `handoff_tool().collect_session_state(...)` and compose the backlog handoff from current fidelity, format, action, session artifacts, and prompt commentary — do not invent requirements."""
+        """3. `gh issue create --title "..." --body "..."` using the composed handoff as the issue body (canonical; no local backlog folder v1)."""
         """4. Add issue to the repository Project: `gh project item-add` then `gh project item-edit --field Status --value "Backlog"`."""
-        """5. Do not open a WorkSession; do not write a local backlog folder for v1."""
+        """5. Do not open a WorkSession."""
         return f"Backlog captured for {focus!r} — GitHub issue created in Project Backlog."
 
     @agent_instructions
