@@ -182,7 +182,7 @@ class Workflow:
         repo_root = self._repo_root(workspace)
         repo = self._repo(workspace)
         project = self._ensure_project(repo, repo_root)
-        ticket = repo.create_ticket(title=title, body=body)
+        ticket = Ticket.create(repo, title, body)
         project.add_ticket(ticket, project_status)
         return {
             "number": ticket.number,

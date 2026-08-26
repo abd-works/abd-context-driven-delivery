@@ -143,6 +143,23 @@ class Ticket:
     def github_ref(cls, owner: str, repo: str, number: int) -> str:
         return f"{owner}/{repo}#{number}"
 
+    @classmethod
+    def create(cls, repo: Repo, title: str, body: str) -> Ticket:
+        if repo._memory:
+            number = (max(repo._tickets.keys(), default=0) + 1) if repo._tickets else 1
+            owner, repo_name = repo.owner_repo()
+            ticket = cls(
+                number=number,
+                title=title,
+                body=body,
+                url=f"https://github.com/{owner}/{repo_name}/issues/{number}",
+                _repo=repo,
+            )
+            repo._tickets[number] = ticket
+            return ticket
+        payload = gh_create_issue(repo.root, title, body)
+        return repo._ticket_from_payload(payload)
+
 
 class Branch:
     """Named branch on a repo — checkout, commit, merge."""
@@ -451,22 +468,6 @@ class Repo:
         payload = gh_view_issue(self.root, Ticket.parse_number(ref))
         if payload is None:
             return None
-        return self._ticket_from_payload(payload)
-
-    def create_ticket(self, title: str, body: str) -> Ticket:
-        if self._memory:
-            number = (max(self._tickets.keys(), default=0) + 1) if self._tickets else 1
-            owner, repo = self.owner_repo()
-            ticket = Ticket(
-                number=number,
-                title=title,
-                body=body,
-                url=f"https://github.com/{owner}/{repo}/issues/{number}",
-                _repo=self,
-            )
-            self._tickets[number] = ticket
-            return ticket
-        payload = gh_create_issue(self.root, title, body)
         return self._ticket_from_payload(payload)
 
     def workflow_commit_message(
