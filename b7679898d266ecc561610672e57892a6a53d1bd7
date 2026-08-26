@@ -1,0 +1,18 @@
+improved: ﻿# BDD sketch — workspace module (usage story)
+
+Design: `workspace-eval-oo-sketch.md` §2. Grill: `grill-answers.md` (slices A–E; tick 8 usage-story taxonomy).
+
+Fidelity: behavior
+
+a context tool
+  with a workspace
+    that has an action run against it
+      with a new work session name
+        it should add the opened work session to its work sessions
+        it should set the current work session to the opened work session
+      with an existing work session name
+        it should load the exis...
+how: Remove dirty `with`; commit is direct outcome under that has finished its turn.
+status: fixed
+entry_ids: 4b1a8711
+fix_commit: b7679898d266ecc561610672e57892a6a53d1bd7
