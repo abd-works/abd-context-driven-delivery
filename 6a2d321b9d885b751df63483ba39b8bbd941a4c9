@@ -16,4 +16,4 @@ Append-only. Runner adds question blocks; judge adds answers beneath.
 how: Replace slice-boundary grill with BDD design-tree root: highest-level event/state under that has a turn open; tick 10 will drill substates and legitimate tests.
 status: fixed
 entry_ids: 1c9526fa
-fix_commit: 6a2d321b9d885b751df63483ba39b8bbd941a4c9
+fix_commit: 354c51b7dc08c7edf05825e66bf9ad627eb66aef
