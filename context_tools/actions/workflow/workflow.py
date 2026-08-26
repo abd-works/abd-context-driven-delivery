@@ -62,9 +62,8 @@ class Workflow:
         """2. Read issue body for forward requirements; merge with `instructions` from the prompt."""
         """3. Refer to the issue as agent context when body is sufficient; copy sections into the work session folder when local artifacts help."""
         """4. Set Project Status **In Progress** via `gh project item-edit`."""
-        """5. Call `workspace_tool(path=workspace)`. `open_work_session(name=session-slug-from-issue, goal=..., contexts=..., fidelities=...)` — session slug = kebab from issue title or focus."""
-        """6. Workspace creates/checks out `session/{name}` branch (refuses if dirty tree on another branch)."""
-        """7. Open and finish a turn with commit trailers: `GitHub-Issue: owner/repo#num`, `Workflow-State: specification` (or `engineering`). Record prompt instructions on the turn envelope."""
+        """5. Call `workspace_tool(path=workspace)`. `open_work_session(...)` — branch and dirty-tree policy are workspace scope; workflow validates session opened and branch matches that work session."""
+        """6. Open and finish a turn with commit trailers: `GitHub-Issue: owner/repo#num`, `Workflow-State: specification` (or `engineering`). Record prompt instructions on the turn envelope."""
         return f"Started work session for GitHub issue {ticket!r}."
 
     @agent_instructions
@@ -72,7 +71,7 @@ class Workflow:
         """Finish current WorkSession — merge session branch to main, close issue, close session."""
         """1. Require `workspace.current_work_session` on its `session/{name}` branch."""
         """2. Refuse if working tree is dirty."""
-        """3. Finish open turn; merge session branch into `main` (v1 direct merge — no PR gate unless user asks)."""
+        """3. Finish open turn; delegate merge to workspace (v1 direct merge to `main` — no PR gate unless user asks). Refuse-dirty and conflict handling are workspace scope."""
         """4. Set Project Status **Done**; `gh issue close` for the linked issue (no PR auto-close in v1)."""
         """5. Checkout `main`; close session with outcome; merge commit trailers: `GitHub-Issue:`, `Workflow-State: done`, optional `Reviewed-By:`."""
         return "Work session finished — merged to main, issue closed, checked out main."

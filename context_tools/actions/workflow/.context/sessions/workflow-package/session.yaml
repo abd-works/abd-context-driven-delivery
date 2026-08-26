@@ -102,55 +102,62 @@ turns:
         \ (v1):**\n\n- `GitHub-Issue:` — `owner/repo#num` (ticket id = GitHub issue\
         \ `#` only)\n- `Workflow-State:` — column name (`specification`, `engineering`,\
         \ or `done`)\n- `Reviewed-By:` — optional on finish merge commit\n\n**LOCKED\
-        \ — handoff:** canonical forward-requirements live in the **GitHub issue body**\n\
-        at backlog; `/start` reads via `gh issue view` and either refers to the ticket\
-        \ or\ncopies sections into the work session folder when local artifacts help.\n\
-        \n---\n\na context tool\n  with a workflow kit\n    that has an action run\
-        \ against it\n      with the backlog action\n        with prompt context including\
-        \ commentary from the user\n          the github issue\n            it should\
-        \ exist for that idea\n          the issue body\n            it should hold\
-        \ forward-requirements composed using handoff content patterns\n         \
-        \ the repository project\n            it should list the issue with status\
-        \ Backlog\n          it should not open a work session\n      with the start\
-        \ action\n        with a github issue number given\n          with the issue\
-        \ found\n            the forward requirements\n              it should be\
-        \ available from the issue body\n            with issue body sufficient for\
-        \ the agent without local copies\n              the agent context\n      \
-        \          it should refer to that github issue\n            with local session\
-        \ artifacts needed\n              the work session folder\n              \
-        \  it should hold copied sections from the issue body\n            the repository\
-        \ project\n              it should list the issue with status In Progress\n\
-        \            it should open a new work session named for that ticket\n   \
-        \         it should set the current work session to that work session\n  \
-        \          with HEAD already on its session branch\n              it should\
-        \ continue without switching branch\n            with a clean working tree\
-        \ not on its session branch\n              with an existing session branch\
-        \ for that ticket\n                it should check out that session branch\n\
-        \              with no session branch yet\n                it should create\
-        \ the session branch for that work session\n            with a dirty working\
-        \ tree not on its session branch\n              it should refuse to switch\
-        \ branch\n            it should open a turn for the action run\n         \
-        \   that has a turn open\n              that has finished its turn\n     \
-        \           the session branch commit\n                  it should carry GitHub-Issue\
-        \ and Workflow-State trailers\n                the turn envelope\n       \
-        \           it should record additional instructions from the prompt when\
-        \ provided\n          with the issue not found\n            it should report\
-        \ that the ticket was not found\n            it should not open a work session\n\
-        \      with the finish action\n        with a current work session open on\
-        \ its session branch\n          with a clean mergeable session branch\n  \
-        \          it should finish its open turn for the action\n            that\
-        \ has finished its turn\n              it should merge its session branch\
-        \ into main\n              it should check out the main branch\n         \
-        \     the repository project\n                it should list the issue with\
-        \ status Done\n              the github issue\n                it should be\
-        \ closed\n              the work session\n                it should be closed\
-        \ with outcome when provided\n              the merge commit\n           \
-        \     it should carry GitHub-Issue and Workflow-State done trailers\n    \
-        \            it should carry Reviewed-By when supplied\n          with a dirty\
-        \ working tree\n            it should refuse to merge until the tree is clean\n\
-        \          with merge conflicts\n            it should report the conflict\
-        \ and leave the session open\n        with no current work session\n     \
-        \     it should report that no work session is open\n\n---\n\n**LOCKED — v1\
+        \ — handoff:** `/backlog` runs **Handoff** to capture ticket information;\
+        \ the\n**created issue body** carries that handoff (canonical). `/start` reads\
+        \ via `gh issue view`\nand either refers to the ticket or copies sections\
+        \ into the work session folder when needed.\n\n---\n\na context tool\n  that\
+        \ has an action run against it\n    with a fidelity in play\n    with a format\
+        \ in play\n    with prompt context including commentary from the user\n  \
+        \  with session artifacts in the working folder\n      it should carry sketches\
+        \ grill progress and module context from the current work\n    that is asked\
+        \ to backlog the current work\n      it should run handoff to capture the\
+        \ backlog ticket information\n      the created handoff\n        it should\
+        \ hold forward-requirements from the current fidelity format and action\n\
+        \        it should hold enough context for a fresh agent to resume the work\n\
+        \      it should create a github issue\n      the created issue\n        it\
+        \ should carry the handoff in the body of the issue\n      the repository\
+        \ project\n        it should list the issue with status Backlog\n      it\
+        \ should not open a work session\n      with a github issue from that backlog\
+        \ step\n        that is asked to start that item\n          the forward requirements\n\
+        \            it should be available from the issue body\n          with issue\
+        \ body sufficient for the agent without local copies\n            the agent\
+        \ context\n              it should refer to that github issue\n          with\
+        \ local session artifacts needed\n            the work session folder\n  \
+        \            it should hold copied sections from the issue body\n        \
+        \  the repository project\n            it should list the issue with status\
+        \ In Progress\n          it should open a new work session named for that\
+        \ ticket\n          it should set the current work session to that work session\n\
+        \          with HEAD already on its session branch\n            it should\
+        \ continue without switching branch\n          with a clean working tree not\
+        \ on its session branch\n            with an existing session branch for that\
+        \ ticket\n              it should check out that session branch\n        \
+        \    with no session branch yet\n              it should create the session\
+        \ branch for that work session\n          with a dirty working tree not on\
+        \ its session branch\n            it should refuse to switch branch\n    \
+        \      it should open a turn for the action run\n          that has a turn\
+        \ open\n            that has finished its turn\n              the session\
+        \ branch commit\n                it should carry GitHub-Issue and Workflow-State\
+        \ trailers\n              the turn envelope\n                it should record\
+        \ additional instructions from the prompt when provided\n          with an\
+        \ open work session from that start\n            that is asked to finish that\
+        \ work\n              with a clean mergeable session branch\n            \
+        \    it should finish its open turn for the action\n                that has\
+        \ finished its turn\n                  it should merge its session branch\
+        \ into main\n                  it should check out the main branch\n     \
+        \             the repository project\n                    it should list the\
+        \ issue with status Done\n                  the github issue\n           \
+        \         it should be closed\n                  the work session\n      \
+        \              it should be closed with outcome when provided\n          \
+        \        the merge commit\n                    it should carry GitHub-Issue\
+        \ and Workflow-State done trailers\n                    it should carry Reviewed-By\
+        \ when supplied\n              with a dirty working tree\n               \
+        \ it should refuse to merge until the tree is clean\n              with merge\
+        \ conflicts\n                it should report the conflict and leave the session\
+        \ open\n    that is asked to start an item\n      with a github issue reference\
+        \ given\n        with the issue not found\n          it should report that\
+        \ the ticket was not found\n          it should not open a work session\n\
+        \    that is asked to finish work\n      with no open work session\n     \
+        \   it should report that no work session is open\n\n---\n\n**LOCKED — v1\
         \ grill (2026-08-26, complete):**\n\n| # | Decision | Status |\n| --- | ---\
         \ | --- |\n| 1 | `/backlog` **without** WorkSession — GitHub issue + Project\
         \ **Backlog** only | ✓ locked |\n| 2 | Ticket id = **GitHub issue `#`** only\
@@ -166,11 +173,10 @@ turns:
         \ trailers first)\n- Kanban HTML projection (G-34)\n- Local backlog folder\
         \ under `.context/sessions/backlog/`\n\n---\n\n## Implementation\n\n- `workflow.workflow:Workflow`\
         \ — agent instructions + `handoff_tool` / `workspace_tool` (session `workflow-package`)\n"
-      how: 'Grill-complete v1 locked; reshaped sketch to usage-story taxonomy (subject
-        → action run → standing with → enabling that → business-state it should);
-        issue body canonical handoff; GitHub # only; Project Backlog/In Progress/Done;
-        aligned module-context and workflow.py (removed CDD-N/tickets.jsonl/backlog
-        folder tools).'
+      how: 'Connected causal usage story: standing handoff context, backlog runs Handoff,
+        created handoff outcomes, create issue with handoff in body, nested start
+        under issue from backlog step, finish under open session. Removed workflow
+        kit subject.'
       status: fixed
 - id: 2513fd5c
   prompt: log correction — workflow sketch grill-complete usage story
@@ -182,5 +188,17 @@ turns:
     mistake_ids: []
     sha: b12377deb31fa8ed97ea86df57561552812884c7
     name: bdd-correction-behavior-python
+  tool_calls: []
+  mistakes: []
+- id: bf24ff8c
+  prompt: log correction — backlog handoff connected usage story
+  result: entry_id=62fc32d6 fixed
+  context: workflow-package
+  change_commit:
+    session_name: workflow-package
+    tool_names: []
+    mistake_ids: []
+    sha: c3bfee52adef31811799f852afa46a87af7d4242
+    name: bdd-mistake-behavior-python
   tool_calls: []
   mistakes: []

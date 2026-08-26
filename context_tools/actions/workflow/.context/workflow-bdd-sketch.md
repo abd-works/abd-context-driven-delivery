@@ -35,7 +35,7 @@ a context tool
     that is asked to backlog the current work
       it should run handoff to capture the backlog ticket information
       the created handoff
-        it should hold forward-requirements from the current fidelity format and action
+        it should hold forward-requirements from the current fidelity format and action as needed
         it should hold enough context for a fresh agent to resume the work
       it should create a github issue
       the created issue
@@ -57,15 +57,7 @@ a context tool
             it should list the issue with status In Progress
           it should open a new work session named for that ticket
           it should set the current work session to that work session
-          with HEAD already on its session branch
-            it should continue without switching branch
-          with a clean working tree not on its session branch
-            with an existing session branch for that ticket
-              it should check out that session branch
-            with no session branch yet
-              it should create the session branch for that work session
-          with a dirty working tree not on its session branch
-            it should refuse to switch branch
+          it should set the branch to the session branch for that work session
           it should open a turn for the action run
           that has a turn open
             that has finished its turn
@@ -75,24 +67,19 @@ a context tool
                 it should record additional instructions from the prompt when provided
           with an open work session from that start
             that is asked to finish that work
-              with a clean mergeable session branch
-                it should finish its open turn for the action
-                that has finished its turn
-                  it should merge its session branch into main
-                  it should check out the main branch
-                  the repository project
-                    it should list the issue with status Done
-                  the github issue
-                    it should be closed
-                  the work session
-                    it should be closed with outcome when provided
-                  the merge commit
-                    it should carry GitHub-Issue and Workflow-State done trailers
-                    it should carry Reviewed-By when supplied
-              with a dirty working tree
-                it should refuse to merge until the tree is clean
-              with merge conflicts
-                it should report the conflict and leave the session open
+              it should finish its open turn for the action
+              that has finished its turn
+                it should merge its session branch into main
+                it should check out the main branch
+                the repository project
+                  it should list the issue with status Done
+                the github issue
+                  it should be closed
+                the work session
+                  it should be closed with outcome when provided
+                the merge commit
+                  it should carry GitHub-Issue and Workflow-State done trailers
+                  it should carry Reviewed-By when supplied
     that is asked to start an item
       with a github issue reference given
         with the issue not found

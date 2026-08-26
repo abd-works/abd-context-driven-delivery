@@ -1,0 +1,16 @@
+          it should set the current work session to that work session
+          with HEAD already on its session branch
+            it should continue without switching branch
+          with a clean working tree not on its session branch
+            with an existing session branch for that ticket
+              it should check out that session branch
+            with no session branch yet
+              it should create the session branch for that work session
+          with a dirty working tree not on its session branch
+            it should refuse to switch branch
+...
+              with a clean mergeable session branch
+              with a dirty working tree
+                it should refuse to merge until the tree is clean
+              with merge conflicts
+                it should report the conflict and leave the session open
