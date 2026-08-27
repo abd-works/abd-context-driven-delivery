@@ -57,3 +57,13 @@ Not a single field wholly on Agent, Supervisor map, or launch-time copy only.
 **Answer (user):** **Either, different targets** — Supervisor rubric against Outcome; and/or Plan JudgeCheckpoint rubrics on PlannedTurns. Matches the issue “or.”
 
 **Slice unlocked:** deepen Compare Swarm Results rubric lines in the sketch.
+
+## Tick 5 — Swarm WorkSession (Start Agent Swarm)
+
+**Question:** When a Swarm runs PlannedTurns, whose WorkSession holds each Agent’s actual Turns?
+
+**Options offered:** Each Agent opens its own WorkSession | All Agents share the Plan’s WorkSession | Run does not open a WorkSession | Other
+
+**Answer (user):** **Each Agent opens its own WorkSession** — parallel runs stay isolated; compare reads N session trails.
+
+**Slice unlocked:** deepen Run Planned Turns / Create Agent Swarm BDDs — Agent WorkSession is not the Plan’s Start Plan session.

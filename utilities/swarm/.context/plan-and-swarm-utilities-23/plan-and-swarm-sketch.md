@@ -1,15 +1,14 @@
 fidelity: exploration
 scope: solution — plan + swarm utilities and git ticket-flow enhancement (ticket 23)
-# Lenses: Stories + CE. Increment 1 BDDs absorbed from generated scenarios (files left in place). Increment 2 now sketched.
+# Lenses: Stories + CE. Increments 1–3 story BDDs in this sketch. Increment 4 still names only.
 
 flow:
   status: in-progress
   recommend: more-same-stage
-  next: grill Increment 2 only if notes-vs-tags surface forks; else Increment 3 swarm BDDs
+  next: Increment 4 compare BDDs
   note: Generated Increment 1 scenario files remain under scenarios/…/compose-plan-sequence/. Sketch is the working BDD tree.
   open:
     - TODO PlannedTurn invocation bag (tool / action / fidelity / context)  #invocation-bag
-    - TODO Increment 3 story BDDs  #inc3
     - TODO Increment 4 story BDDs  #inc4
   done:
     - pass #scaffold
@@ -19,6 +18,7 @@ flow:
     - pass #rubric-source
     - pass #inc1-bdd
     - pass #inc2-sketch
+    - pass #inc3-sketch
 
 =========
 theme: Compose Plan Sequence  (epic)
@@ -191,30 +191,82 @@ ce:
 theme: Start Agent Swarm  (epic)
 ---------
 stories:
-    Start Agent Swarm                         < scaffold
-        Supervisor --> Create Agent Swarm     < scaffold
+    Start Agent Swarm
+        Supervisor --> Create Agent Swarm
+            swarm is a collection of agents on a plan
+                given a Plan compose-judged-plan with PlannedTurns
+                    and a Supervisor with Outcome fewer-cli-handoffs
+                when the Supervisor creates a Swarm for that Plan
+                then that Swarm holds that Plan
+                    and that Swarm is a collection of Agents
+                    and launch uses existing sub_agent
+                    and there is not a second decorator kit
         Supervisor --> Assign Agent Hypothesis
-            // grill: Supervisor owns Outcome; Agent owns Hypothesis (approach)
-        Swarm agent --> Load Plan Context     < scaffold
+            supervisor assigns approach; agent owns it
+                given a Swarm on Plan compose-judged-plan
+                    and a Supervisor with Outcome fewer-cli-handoffs
+                when the Supervisor assigns Agent thin-templates the Hypothesis thin-templates-first
+                then that Agent owns Hypothesis thin-templates-first
+                    and the Supervisor still owns Outcome fewer-cli-handoffs
+            second agent owns a different hypothesis toward the same outcome
+                given a Swarm with Agent thin-templates owning Hypothesis thin-templates-first
+                    and Supervisor Outcome fewer-cli-handoffs
+                when the Supervisor assigns Agent channel-write the Hypothesis channel-owns-the-file
+                then Agent channel-write owns Hypothesis channel-owns-the-file
+                    and Agent thin-templates still owns Hypothesis thin-templates-first
+                    and Outcome remains on the Supervisor
+        Swarm agent --> Load Plan Context
+            agent holds the plan plus its unique hypothesis
+                given a Swarm on Plan compose-judged-plan
+                    and Agent thin-templates owns Hypothesis thin-templates-first
+                when that Agent loads Plan context
+                then that Agent holds the Plan
+                    and that Agent still owns Hypothesis thin-templates-first
+                    and that Hypothesis is not the Supervisor Outcome
         Swarm agent --> Run Planned Turns
-            // grill: full Plan or selected PlannedTurns
-    ~> Increment 3: Launch a plan swarm: Create Agent Swarm, Assign Agent Hypothesis, Load Plan Context, Run Planned Turns  < scaffold
+            swarm runs the full plan
+                given a Swarm on Plan compose-judged-plan with Stories then CleanEngineering PlannedTurns
+                    and two Agents each with a unique Hypothesis
+                    and that Plan already has a WorkSession from Start Plan
+                when the Swarm runs that Plan
+                then each Agent runs both PlannedTurns
+                    and each Agent has its own WorkSession
+                    and those WorkSessions are not the Plan Start Plan WorkSession
+                    and launch is non-blocking sub_agent
+            swarm runs a selected planned-turn slice
+                given the same Swarm and Plan
+                when the Swarm runs the Stories PlannedTurn only
+                then each Agent runs that PlannedTurn
+                    and each Agent still has its own WorkSession
+                    and the CleanEngineering PlannedTurn is not run
+                    // issue “selected steps” maps to this PlannedTurn slice
+    ~> Increment 3: Launch a plan swarm: Create Agent Swarm, Assign Agent Hypothesis, Load Plan Context, Run Planned Turns
 ---
 ce:
     utilities/swarm/
       Swarm
         plan
         plannedTurns
+        agents
         run
          -> Plan.plannedTurns
+         // full Plan or slice of PlannedTurns; never a Step type
+         -> sub_agent.run
+         // existing non-blocking launch; never a second decorator
       Supervisor
         outcome
         rubric
         assignHypothesis agent
          -> Agent.hypothesis
       Agent
+        plan
         hypothesis
+        workSession
+         -> Workspace.openWorkSession
+         // each Agent opens its own WorkSession on run; never the Plan Start Plan session
+         // “if we do this, we will achieve the Outcome”
       Hypothesis
+      Outcome
 =========
 
 =========
@@ -247,3 +299,5 @@ ce:
 - discovery / Start Agent Swarm / pass #swarm-slice
 - discovery / Start Agent Swarm / pass #hypothesis-own
 - discovery / Compare Swarm Results / pass #rubric-source
+- exploration / Start Agent Swarm / pass #inc3-sketch — create Swarm; split Outcome/Hypothesis; load Plan+Hypothesis; run full Plan or PlannedTurn slice via existing sub_agent
+- exploration / Start Agent Swarm / pass #swarm-session — tick 5: each Agent opens its own WorkSession; not the Plan Start Plan session; not sessionless run
