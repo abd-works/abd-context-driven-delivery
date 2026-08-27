@@ -36,6 +36,8 @@ class Skill(HarnessTool):
                     kind="action",
                     fidelities=meta.get("fidelities") or (),
                     context_tools=meta.get("context_tools") or (),
+                    invoke=meta.get("invoke") or "action",
+                    operation=meta.get("operation") or "",
                 )
             elif meta.get("source_kind") == "utility":
                 self.body = UtilityBody.from_source(
