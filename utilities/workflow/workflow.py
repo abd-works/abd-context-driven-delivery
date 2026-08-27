@@ -343,7 +343,16 @@ class Workflow:
         }
 
     def require_open_session(self, workspace: str = "") -> str:
-        session = self._workspace(workspace).current_work_session
+        ws = self._workspace(workspace)
+        session = ws.current_work_session
+        if session is None:
+            branch = self._repo(workspace).current_branch
+            if isinstance(branch, str) and branch.startswith("session/"):
+                ws.open(
+                    name=branch[len("session/") :],
+                    path=str(self._repo_root(workspace)),
+                )
+                session = ws.current_work_session
         if session is None:
             raise RuntimeError("no open work session")
         return session.name
