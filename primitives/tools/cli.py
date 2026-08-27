@@ -8,13 +8,10 @@ from typing import Any
 
 # Bootstrap repo paths BEFORE any project imports so `python -m tools` works
 # without a pre-set PYTHONPATH (mirrors utilities/manifest_hook/manifest_gate.py).
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
-    _p = str(_REPO_ROOT / _cat)
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+from tools.repo_paths import prepend_sys_path, repo_root  # noqa: E402
+
+_REPO_ROOT = repo_root()
+prepend_sys_path(_REPO_ROOT)
 
 from agent_bdd import build_runbook, read_manifest  # noqa: E402
 from tools.tool import _ManifestYaml, RunError, Toolset, _ToolsetLoader, _ToolsetRunner  # noqa: E402

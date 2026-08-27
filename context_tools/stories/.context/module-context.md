@@ -4,7 +4,7 @@
 
 **Seam:** `Stories` toolset (`context_tools.stories.stories:Stories`)
 
-**Public API:** fidelity/format construction; `guidance` (domain generate prose + CleanEngineering companion as a separate tools run); `transform`; `render(format, content)` (calls `transform` from the current format); `diagnostic()` Diagnose companion; `ce()` CleanEngineering companion; `contexts` instruction. Lifecycle generate / validate / satisfy / iterate live on kits under `context_tools/actions/` — pass this host in (`Generate().generate(tools=[stories])`).
+**Public API:** fidelity/format construction; `guidance` (domain generate prose + CleanEngineering companion as a separate tools run); `transform`; `render(format, content)` (calls `transform` from the current format); `diagnostic()` Diagnose companion; `ce()` CleanEngineering companion; `contexts` instruction. Lifecycle generate / validate / satisfy / iterate live on kits under `context_tools/actions/` — pass this host in (`Generate().generate(tools=[stories])`). Catalog fidelity YAML must invoke that kit, not `action: generate` on this class.
 
 **Dependencies:** `BaseContextTool`; format channel classes under `document` / `diagram` / `code`; `utilities.diagnose.Diagnose` (via `diagnostic()`)
 

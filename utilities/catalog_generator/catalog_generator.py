@@ -771,6 +771,14 @@ def _example_value(name: str, type_str: str) -> object:
     return f"<{name}>"
 
 
+_HOST_LIFECYCLE_KITS = {
+    "generate": "generate.generate:Generate",
+    "validate": "validate.validate:Validate",
+    "satisfy": "satisfy.satisfy:Satisfy",
+    "document": "document.document:Document",
+}
+
+
 def build_run_request(
     cls: type,
     *,
@@ -782,7 +790,30 @@ def build_run_request(
     Constructor parameters become ``context``; the named action's parameters
     become ``arguments``. ``fidelity`` (when the constructor accepts it) is
     filled with the given fidelity key.
+
+    Context tools do not own generate / validate / satisfy / document — those
+    live on the kits. A request for one of those actions on a context tool
+    is rewritten to the kit with ``arguments.tools`` carrying the host.
     """
+    if action in _HOST_LIFECYCLE_KITS and getattr(cls, "_is_context", False):
+        signature = cls.manifest.signature
+        ctor_params = (signature.get("new") or {}).get("parameters") or {}
+        host_context: dict[str, object] = {}
+        for name, type_str in ctor_params.items():
+            if name == "fidelity" and fidelity is not None:
+                host_context[name] = fidelity
+            else:
+                host_context[name] = _example_value(name, str(type_str))
+        return {
+            "toolset": _HOST_LIFECYCLE_KITS[action],
+            "action": action,
+            "arguments": {
+                "tools": [
+                    {"toolset": cls.manifest_path, "context": host_context},
+                ]
+            },
+        }
+
     signature = cls.manifest.signature
     ctor_params = (signature.get("new") or {}).get("parameters") or {}
     action_entry = signature.get(action) or {}

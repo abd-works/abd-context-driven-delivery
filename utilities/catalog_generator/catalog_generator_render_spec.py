@@ -200,7 +200,8 @@ with description("Render Hub Board With Actions And Utilities Rows"):
         with it("writes raw request YAML from each context tool's live manifest"):
             expect((self.tmp / "manifests" / "ddd" / "manifest.yaml").is_file()).to(be_true)
             tactics = (self.tmp / "manifests" / "ddd" / "tactics.yaml").read_text(encoding="utf-8")
-            expect("toolset: context_tools.ddd.ddd:Ddd" in tactics).to(be_true)
+            expect("toolset: generate.generate:Generate" in tactics).to(be_true)
+            expect("context_tools.ddd.ddd:Ddd" in tactics).to(be_true)
             expect("fidelity: tactics" in tactics).to(be_true)
             expect("action: generate" in tactics).to(be_true)
             partition_page = (

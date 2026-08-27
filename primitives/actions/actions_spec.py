@@ -533,6 +533,69 @@ class _ForEachCaller:
             companion.prepare()
         return "inlined"
 
+    @agent_instructions
+    def inline_bare(self) -> str:
+        """FOREACH_BARE_MARKER: inline each companion via bare attribute."""
+        for companion in self.companions():
+            companion.prepare
+        return "inlined"
+
+    @agent_instructions
+    def with_self_step(self) -> str:
+        """FOREACH_SELF_MARKER: walk self tools inside the loop."""
+        for companion in self.companions():
+            companion.prepare()
+            self.note()
+        return "noted"
+
+    @_tool
+    def note(self) -> str:
+        return "noted"
+
+
+@agentic_toolset
+class _ScannerKit:
+    @_tool
+    def scan(self) -> str:
+        return "scanned"
+
+
+@agentic_toolset
+class _HostWithScanner:
+    def __init__(self) -> None:
+        self.scanner = _ScannerKit()
+
+    @agent_instructions
+    def guidance(self) -> str:
+        """FOREACH_GUIDANCE_MARKER: contexts live here."""
+        return ""
+
+
+@agentic_toolset
+class _ScanCaller:
+    def companions(self) -> list:
+        return [_HostWithScanner()]
+
+    @agent_instructions
+    def check(self) -> str:
+        """FOREACH_SCAN_MARKER: guidance then scan."""
+        for host in self.companions():
+            host.guidance
+            host.scanner.scan()
+        return "checked"
+
+
+@agentic_toolset
+class _BrokenProvider:
+    def missing(self):
+        raise RuntimeError("no session")
+
+    @agent_instructions
+    def wrap(self) -> str:
+        """BROKEN_PROVIDER_MARKER: still list the named tool."""
+        self.missing().finish_turn()
+        return ""
+
 
 with description("a for-each action over companion toolsets"):
     with context("when each companion is flipped to tool mode in the loop"):
@@ -565,6 +628,46 @@ with description("a for-each action over companion toolsets"):
 
         with it("should inline companion action instructions"):
             expect("FOREACH_CALLEE_MARKER" in self.joined).to(be_true)
+
+    with context("when the loop names a bare companion action"):
+        with before.each:
+            self.body = _ActionExpander.instance().parse_body(
+                _ForEachCaller.inline_bare, _ForEachCaller()
+            )
+            self.joined = "\n".join(self.body.prose_parts)
+
+        with it("should inline companion action instructions from a bare attribute"):
+            expect("FOREACH_CALLEE_MARKER" in self.joined).to(be_true)
+
+    with context("when the loop also calls a self tool"):
+        with before.each:
+            self.body = _ActionExpander.instance().parse_body(
+                _ForEachCaller.with_self_step, _ForEachCaller()
+            )
+
+        with it("should list the self tool from inside the loop"):
+            expect("note" in self.body.tool_steps).to(be_true)
+
+    with context("when the loop calls a tool on a companion provider"):
+        with before.each:
+            self.body = _ActionExpander.instance().parse_body(
+                _ScanCaller.check, _ScanCaller()
+            )
+            self.joined = "\n".join(self.body.prose_parts)
+
+        with it("should inline bare guidance on the companion"):
+            expect("FOREACH_GUIDANCE_MARKER" in self.joined).to(be_true)
+
+        with it("should list scan from var.scanner.scan"):
+            expect("scan" in self.body.tool_steps).to(be_true)
+
+
+with description("a cross-instance call whose provider cannot resolve"):
+    with it("should still list the named tool"):
+        body = _ActionExpander.instance().parse_body(
+            _BrokenProvider.wrap, _BrokenProvider()
+        )
+        expect("finish_turn" in body.tool_steps).to(be_true)
 
 
 with description("ActionValidationError"):

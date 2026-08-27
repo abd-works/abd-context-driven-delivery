@@ -8,6 +8,7 @@ from agent_bdd import (
     agent,
     expect_instructions_contain,
     expect_ok_action,
+    expect_tools_include,
     repo_root_from,
     run_toolset,
     sessions_dir,
@@ -30,6 +31,10 @@ with description("a BaseContextTool host"):
                     timeout_seconds=300,
                 )
                 expect_ok_action(response, "generate")
+                expect_tools_include(
+                    response,
+                    ["read_cdr_format", "list_cdrs", "write_cdr", "finish_turn"],
+                )
                 expect_instructions_contain(
                     response,
                     "several turns",
