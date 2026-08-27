@@ -72,6 +72,7 @@ The parent then launches one non-blocking sub-agent (`kind: sub_agent` / `launch
 | thin-first-expand combined | `experiment/thin-fidelity-format` | all filters on **one** branch: contexts + examples + templates | **01:05** | **01:06** | Expand **17,767**. Fair first-time; hops 1; no remanifest / invented `action: guidance`. Did **not** beat single-command **00:51 / 00:37**. [thin-first-expand](4760f48e-5536-46ac-9f07-de5eef0247c8) |
 | thin-first-expand + CE | same branch | same Stories filters + CE/DDD/UX/BDD contexts by H2; CE examples by suffix + drop `evals/` | **00:41** | **00:55** | Stories **17,767** / CE **45,100**. Pair A beat single-command **00:51**; Pair B missed **00:37** (beat prior **01:06**). Hops 1; no invented `action: guidance`. [thin-ce](01781ce8-dad9-49e7-9085-6857e1399b3e) |
 | thin-templates | `experiment/thin-templates` | smarter load: templates by format + fidelity filename; **no file split** | **00:33** | **00:31** | Expand **52,878** (from 74,019). No remanifest / invented `action: guidance`. [thin-templates](9ede319c-0d8d-4ea6-9435-ef6293c99867) |
+| channel-write | `experiment/channel-write` | one formatter `@agent_tool` writes the file (6c + 3a) | **01:15** | **00:11*** | Channel wrote both files. Stories emit too thin (lost actors / thin-slice). Pair B clock not fair (body staged before `run -`). **Not a keep.** [channel-write](experiment-channel-write-results.md) |
 
 ---
 
