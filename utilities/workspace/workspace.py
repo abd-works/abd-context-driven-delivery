@@ -840,6 +840,9 @@ class WorkSession:
         if outcome:
             self.outcome = outcome
         self.session_md.write_text(self._render(), encoding="utf-8")
+        if self.git.is_dirty():
+            self.git.commit([str(self.session_md)], "close")
+        self.git.branch_named(self.git.default_branch).checkout()
         return self.session_md
 
     def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:

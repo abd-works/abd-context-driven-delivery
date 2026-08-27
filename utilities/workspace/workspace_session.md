@@ -64,7 +64,7 @@ Eval still only **commits** after a turn. It does not decide the switch.
 
 # Close Session
 
-Write the End section on `{folder}/session.md`.
+Write the End section on `{folder}/session.md`. Commit that write if the tree is dirty, then switch to `main` via the git utility (`Repo.branch_named("main").checkout()`).
 
 ```yaml
 tool: close_session

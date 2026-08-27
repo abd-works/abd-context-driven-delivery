@@ -414,6 +414,24 @@ with description("a WorkSession that is closed"):
         expect("did another thing" in content).to(be_true)
         expect("## End" in content).to(be_true)
 
+    with it("should switch to main via the git utility"):
+        import shutil
+        import tempfile
+        from workspace.git_repo import GitRepo, _git
+        from workspace.workspace import Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_git_closed_"))
+        _git(tmp, "init")
+        _git(tmp, "config", "user.email", "test@example.com")
+        _git(tmp, "config", "user.name", "test")
+        _git(tmp, "commit", "--allow-empty", "-m", "init")
+        session = Workspace(str(tmp)).open_work_session("sprint")
+        session.ensure_started()
+        expect(GitRepo(tmp).current_branch).to(equal("session/sprint"))
+        session.close(outcome="done")
+        expect(GitRepo(tmp).current_branch).to(equal("main"))
+        shutil.rmtree(tmp, ignore_errors=True)
+
 
 with description("a WorkSession tool"):
     with before.each:

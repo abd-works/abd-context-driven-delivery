@@ -12,4 +12,4 @@
 
 - **ended:** 2026-08-27
 - **outcome:** handoff written
-- **handoff:** handoffs/handoff-2026-08-27-toolset-decorator-gaps.md
+- **handoff:** handoffs/handoff-2026-08-27-channel-optimization.md

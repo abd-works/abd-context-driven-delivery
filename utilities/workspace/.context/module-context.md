@@ -33,7 +33,9 @@
   `workspace` path + `session` name (same as `Turn`; session may come from the current
   `session/` git branch). OO callers still pass a `Workspace` object + name.
   Owns `git`, `open_turn`, `turns`, `repairs`, trail; session.md kit
-  (`ensure_started`, `close`, `close_session`, context index helpers);
+  (`ensure_started`, `close`, `close_session`, context index helpers).
+  `close` writes End, commits `session.md` if dirty, then
+  `git.branch_named(default_branch).checkout()` (`main`);
   `start_work_session` / `finish_work_session` `@agent_tool` with `@prompt` names
   `start-work-session` / `finish-work-session` (`tool:` invoke, not `action:`)
 - `SessionPaths` / `docs_dir` — sprint folder vs `{destination}/.context/`
