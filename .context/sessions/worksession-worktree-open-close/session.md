@@ -7,3 +7,9 @@
 - **goal:** (unset)
 - **fidelities:** (unset)
 - **contexts:** (unset)
+
+## End
+
+- **ended:** 2026-08-27
+- **outcome:** Isolated WorkSession open/close in a sibling git worktree
+- **handoff:** (unset)
