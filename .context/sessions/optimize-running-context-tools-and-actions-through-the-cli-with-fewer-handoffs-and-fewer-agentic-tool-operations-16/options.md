@@ -15,6 +15,7 @@ Evaluate only here. Old 1a–7h labels live in the backlog so this page can stay
 |---|---|
 | **Walker** — listed recipe steps on the first generate (`tools:` not `[]`); host guidance inlined | Agent stopped inventing a domain `action: guidance` hop |
 | **Single-command** — `run` slim header + stdin `run -` + skill is the catalog + harness emit (old 1b, 1c, 4c, 5a) | Pair A **01:15 → 00:51**, Pair B **00:51 → 00:37**. One process per pair. |
+| **Channel write** — formatter `@agent_tool` writes the file (old 6c, 3a) | **Miss.** Pair A **01:15**, too thin. Pair B **00:11** not a fair clock. Not a keep. |
 
 **Locked seam:** `@agent_instructions` are parsed, not executed. `@agent_tool` bodies run. Do not author from the `.py` (old 6a stays rejected).
 
@@ -63,13 +64,9 @@ After **thin-fidelity-format**, markdown `story_map` still inlines **every** `ex
 
 Do not implement **thin-examples-pick** until **thin-fidelity-format** has a courier row.
 
-### Channel write
+### Channel write — done, not a keep
 
-**Question:** when a formatter already exists, does one `@agent_tool` that calls the channel (old 6c, plus deterministic header/log as tools — old 3a) beat “read 74k and Write the file”?
-
-Stories markdown / CE markdown already have emitters. Agent still chooses when there is no channel (grill, invent/map).
-
-**Risk:** empty or wrong artifact if the channel is thinner than the agent write. Keep grill interview agentic.
+Formatter owned the write. Stories emit lost actors and thin-slice. Invent still needs the expand blob. Do not re-open as a courier speed bet.
 
 ### Same-kit tool list
 
@@ -103,8 +100,8 @@ Workspace root, AskQuestion, `gh` Status names, multi-folder deploy, MCP, slim-m
 
 ## Suggested order
 
-1. **thin-fidelity-format** then **thin-templates** — separate branches / sub-agents; smarter load only.  
-2. **Channel write** — if a formatter can own the file.  
+1. **Combine + CE** — done. Fair clock **00:41 / 00:55**. Pair A beat **00:51**; Pair B still misses **00:37**. Stop another filter row.  
+2. **Channel write** — done. Miss / too thin. Not a keep.  
 3. **Same-kit tool list** — when the clock is “many `tool:` hops,” not “one fat generate.”  
-4. **Lifecycle in-process** — if Thin first expand still leaves CDR/turn text, or `/finish-turn` comes back as a hop.  
+4. **Lifecycle in-process** — hygiene / later hops; not a courier-map speed bet. Hide-drawio and finish-turn-expand were reversed.  
 5. **Grill explore** — own experiment, own corpus.
