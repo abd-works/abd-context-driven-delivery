@@ -21,7 +21,6 @@ from mamba import before, context, description, it
 
 from git import TicketNotFoundError
 from git.git import Commit, Repo, Ticket
-from primitives.actions.action import _ActionExpander
 from workflow.workflow import Workflow
 
 
@@ -89,10 +88,9 @@ with description("Workflow helpers"):
 
 
 with description("Workflow manifest"):
-    with it("should expose backlog start finish actions and workflow tools"):
+    with it("should expose backlog start finish as tools"):
         sig = Workflow.manifest.signature
-        expect(sig["backlog"]["kind"]).to(equal("action"))
-        expect(sig["backlog"]["tools"]).to(equal(["capture_backlog"]))
+        expect(sig["backlog"]["kind"]).to(equal("tool"))
         expect(sig["start"]["kind"]).to(equal("tool"))
         expect(sig["finish"]["kind"]).to(equal("tool"))
         expect(sig["capture_backlog"]["kind"]).to(equal("tool"))
@@ -101,12 +99,7 @@ with description("Workflow manifest"):
             for name, entry in sig.items()
             if isinstance(entry, dict) and entry.get("kind") == "tool"
         )
-        expect(exposed).to(equal(["capture_backlog", "finish", "start"]))
-
-    with it("should forward to handoff instructions then capture_backlog"):
-        w = Workflow()
-        body = _ActionExpander.instance().parse_body(type(w).backlog, w)
-        expect(list(body.tool_steps)).to(equal(["compact_handoff", "capture_backlog"]))
+        expect(exposed).to(equal(["backlog", "capture_backlog", "finish", "start"]))
 
 
 with description("a Workflow"):
@@ -178,6 +171,22 @@ with description("a Workflow backlog path"):
             )
             ws = self.workflow.workspace_tool(path=str(self.tmp))
             expect(ws.current_work_session is None).to(be_true)
+
+        with it("should create the issue in-process from backlog with handoff and request"):
+            created = self.workflow.backlog(
+                focus="Workflow package",
+                context="need Todo mapping",
+                workspace=str(self.tmp),
+            )
+            expect(created["number"]).to(equal(1))
+            expect(created["project_status"]).to(equal("Backlog"))
+            expect(created["body"]).to(contain("## Resume"))
+            expect(created["body"]).to(contain("**Focus:** Workflow package"))
+            expect(created["body"]).to(contain("need Todo mapping"))
+            expect(self.repo._ticket_project_state[1]).to(equal("Backlog"))
+            ws = self.workflow.workspace_tool(path=str(self.tmp))
+            expect(ws.current_work_session is None).to(be_true)
+            expect((self.tmp / ".context" / "handoff-latest.md").exists()).to(equal(False))
 
 
 with description("a Workflow start path"):

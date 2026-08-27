@@ -173,13 +173,20 @@ class Turn:
 
     @prompt(name="start-turn")
     @agent_tool
-    def open(self, host: ContextToolHost, *, action: str = "") -> Turn:
-        session = host.workspace.current_work_session
+    def open(self, host: ContextToolHost | None = None, *, action: str = "") -> Turn:
+        session = None
+        if host is not None:
+            session = host.workspace.current_work_session
+        if session is None:
+            session = self.work_session
         if session is None:
             raise RuntimeError("open turn requires currentWorkSession")
         if session.open_turn is None:
             session.open_turn = Turn(work_session=session)
-        session.open_turn.bind_from_host(host, action=action)
+        if host is not None:
+            session.open_turn.bind_from_host(host, action=action)
+        elif action:
+            session.open_turn.action = action
         return session.open_turn
 
     @prompt(name="finish-turn")

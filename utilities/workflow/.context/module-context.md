@@ -11,7 +11,7 @@ session-branch lifecycle. Implements the ticket/workflow slice of the git backbo
 
 | Command | Action | Role |
 | --- | --- | --- |
-| `/backlog` | `backlog` `@prompt(name="backlog")` | Compose forward-requirements → GitHub issue body → Project **Backlog** |
+| `/backlog` | `backlog` `@prompt(name="backlog")` | Compose forward-requirements → GitHub issue body → Project **Backlog** (GitHub Status **Todo** when the board uses that option) |
 | `/start-ticket` | `start` `@prompt(name="start-ticket")` | Read issue → Project **In Progress** → open WorkSession + session branch |
 | `/finish-ticket` | `finish` `@prompt(name="finish-ticket")` | Merge session branch → main → Project **Done** → close issue → close session |
 
@@ -30,7 +30,7 @@ There is no `/workflow` command — the kit name is not a slash file.
 
 ## Public API
 
-- `backlog(focus, context)` — `@agent_instructions`: expand Handoff, then `capture_backlog` (issue + Project Backlog)
+- `backlog(focus, context)` — `@agent_tool`: collect+render Handoff in-process (no session files), then `capture_backlog` (issue + Project Backlog)
 - `start(ticket, instructions, workspace)` — In Progress + WorkSession + session branch
 - `finish(outcome, workspace)` — merge to main, Project Done, close issue, close session
 
@@ -46,4 +46,4 @@ There is no `/workflow` command — the kit name is not a slash file.
 
 ## Status
 
-BDD sketch (usage-story shape) + `workflow.py`: `backlog` instruction forwards to Handoff then `capture_backlog`; `start` / `finish` tools (session `workflow-package`).
+BDD sketch (usage-story shape) + `workflow.py`: `backlog` / `start` / `finish` tools (session `workflow-package`). `backlog` builds the issue body in-process; GitHub Status maps workflow **Backlog** → **Todo** when needed.
