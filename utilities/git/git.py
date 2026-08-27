@@ -365,6 +365,14 @@ class Repo:
     ) -> str:
         found = shutil.which("gh")
         if not found:
+            for candidate in (
+                Path(r"C:\Program Files\GitHub CLI\gh.exe"),
+                Path.home() / "AppData" / "Local" / "GitHub CLI" / "gh.exe",
+            ):
+                if candidate.is_file():
+                    found = str(candidate)
+                    break
+        if not found:
             raise GhConnectError(
                 f"Cannot connect gh: `gh` is not available. {_GH_DO_NOT_PROCEED}"
             )
