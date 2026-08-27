@@ -21,6 +21,7 @@ import inspect
 from pathlib import Path
 from typing import ClassVar
 
+from harness.harness_tool import skill
 from primitives.actions.action import _ActionRunner
 from primitives.actions.action import AgenticToolset
 from primitives.actions.action import agent_instructions
@@ -172,9 +173,10 @@ class BaseContextTool(AgenticToolset):
     def scaffold(self) -> Instruction: ...
 
     # -- Guidance (contexts, examples, templates). Lifecycle lives on Generate / Validate / Document / Satisfy / Render. ---
+    @skill
     @agent_instructions
     def guidance(self) -> str:
-        """contexts, examples, templates"""
+        """Provide guidance from contexts, examples, and templates."""
         self.contexts
         self.examples
         self.templates

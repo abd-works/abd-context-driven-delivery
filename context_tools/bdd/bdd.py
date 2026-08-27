@@ -120,7 +120,8 @@ class Bdd(BaseContextTool):
 
     @agent_instructions
     def guidance(self) -> str:
-        """At modules fidelity: no BDD spec file is written — bootstrap CE class structure via the companion.
+        """Provide guidance for creating behavior skeletons and development tests.
+        At modules fidelity: no BDD spec file is written — bootstrap CE class structure via the companion.
         At behavior fidelity: write all BDD test signatures (SIGNATURE markers).
         At development fidelity: write full test bodies and production code.
         When the target module already exists, scan the production source for every public method and property and verify each has test coverage — add missing signatures for any gap before writing new ones.

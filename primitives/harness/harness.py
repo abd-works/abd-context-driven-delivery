@@ -19,19 +19,18 @@ from tools.toolset_header import read_toolset_header
 
 from harness.agent import Agent
 from harness.agent_guidance import AgentGuidance
-from harness.bodies import ActionBody
 from harness.command import Command
 from harness.harness_tool import operation_writes
 from harness.hook import Hook
 from harness.instruction import Instruction
 from harness.prompt import Prompt, prompt
 from harness.rule import Rule
-from harness.skill import Skill, skill
+from harness.skill import Skill
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _IMPLEMENTED = frozenset({"Cursor", "VS Code"})
-_SKIP_DIRS = frozenset({"__pycache__", "examples", "primitives"})
-_STALE_ACTION_SKILL_SLUGS = ("grill-context", "workspace", "workflow")
+_SKIP_DIRS = frozenset({"__pycache__", "examples"})
+_COMPOSER_CLASSES = frozenset({"BaseContextTool", "LifecycleAction"})
 _WALK_TREES = ("context_tools", "utilities")
 _FORMATS = (
     "markdown",
@@ -209,6 +208,7 @@ class Harness:
                 "overview": overview,
                 "class_string": class_string,
                 "guidance": guidance,
+                "fidelities": [],
             }
         module_doc = ast.get_docstring(tree) or ""
         if module_doc.strip():
@@ -219,18 +219,23 @@ class Harness:
             if class_name and node.name != class_name:
                 continue
             class_string = (ast.get_docstring(node) or node.name).strip()
+            guidance_doc = ""
             for item in node.body:
                 if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     continue
-                doc = ast.get_docstring(item)
-                if doc:
-                    guidance = doc.strip()
-                    break
+                if item.name != "guidance":
+                    continue
+                guidance_doc = (ast.get_docstring(item) or "").strip()
+                break
+            if guidance_doc:
+                overview = guidance_doc.splitlines()[0].strip()
+                guidance = guidance_doc
             break
         return {
             "overview": overview,
             "class_string": class_string,
             "guidance": guidance,
+            "fidelities": self._fidelity_option_names(path, class_name),
         }
 
     def _literal_name(self, node: ast.AST) -> str | None:
@@ -259,12 +264,30 @@ class Harness:
                 names.append(read)
         return names
 
+    def _dict_values(self, node: ast.Dict) -> list[str]:
+        names: list[str] = []
+        for value in node.values:
+            read = self._literal_name(value)
+            if read:
+                names.append(read)
+        return names
+
     def _names_from_assign(self, node: ast.Assign, attr: str) -> list[str]:
         if not any(self._assign_target_name(target) == attr for target in node.targets):
             return []
         if isinstance(node.value, ast.Dict):
             return self._dict_names(node.value)
         return []
+
+    def _unique_names(self, names: list[str]) -> list[str]:
+        seen: set[str] = set()
+        unique: list[str] = []
+        for name in names:
+            if name in seen:
+                continue
+            seen.add(name)
+            unique.append(name)
+        return unique
 
     def _fidelity_names(self, path: Path, class_name: str = "") -> list[str]:
         try:
@@ -285,42 +308,62 @@ class Harness:
                     target = self._assign_target_name(item.target)
                     if target in {"fidelities", "STAGE_ALIASES"} and isinstance(item.value, ast.Dict):
                         names.extend(self._dict_names(item.value))
-        seen: set[str] = set()
-        unique: list[str] = []
-        for name in names:
-            if name in seen:
-                continue
-            seen.add(name)
-            unique.append(name)
-        return unique
+        return self._unique_names(names)
 
-    def _instruction_operations(self, path: Path, class_name: str = "") -> list[tuple[str, str]]:
+    def _fidelity_option_names(self, path: Path, class_name: str = "") -> list[str]:
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"))
         except (OSError, SyntaxError):
             return []
-        found: list[tuple[str, str]] = []
+        names: list[str] = []
         for node in tree.body:
             if not isinstance(node, ast.ClassDef):
                 continue
             if class_name and node.name != class_name:
                 continue
             for item in node.body:
-                if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    continue
-                if item.name.startswith("_"):
-                    continue
-                deco_names: list[str] = []
-                for dec in item.decorator_list:
-                    target = dec.func if isinstance(dec, ast.Call) else dec
-                    if isinstance(target, ast.Name):
-                        deco_names.append(target.id)
-                    elif isinstance(target, ast.Attribute):
-                        deco_names.append(target.attr)
-                if "agent_instructions" not in deco_names:
-                    continue
-                found.append((item.name, ast.get_docstring(item) or ""))
-        return found
+                if isinstance(item, ast.Assign) and any(
+                    self._assign_target_name(target) == "fidelities" for target in item.targets
+                ):
+                    if isinstance(item.value, ast.Dict):
+                        names.extend(self._dict_values(item.value))
+                elif isinstance(item, ast.AnnAssign) and item.value is not None:
+                    target = self._assign_target_name(item.target)
+                    if target == "fidelities" and isinstance(item.value, ast.Dict):
+                        names.extend(self._dict_values(item.value))
+        return self._unique_names(names)
+
+    def _action_option_names(self) -> list[str]:
+        names: list[str] = []
+        for entry in json.loads(self.walk()):
+            path = Path(entry["file_path"])
+            if self._classify_path(str(path)) != "action":
+                continue
+            slug = entry["skill_slug"]
+            class_name = entry.get("class_name") or ""
+            if class_name in _COMPOSER_CLASSES:
+                continue
+            writes = operation_writes(path, class_name, repo_root=self.repo_root)
+            if writes:
+                for vehicle, deploy_name, _operation, _doc in writes:
+                    if vehicle != "prompt":
+                        continue
+                    names.append(deploy_name or slug)
+            else:
+                names.append(slug)
+        return sorted(self._unique_names(names))
+
+    def _context_tool_option_names(self) -> list[str]:
+        names: list[str] = []
+        for entry in json.loads(self.walk()):
+            path = Path(entry["file_path"])
+            if self._classify_path(str(path)) != "context_tool":
+                continue
+            slug = entry["skill_slug"]
+            if entry.get("class_name") in _COMPOSER_CLASSES:
+                continue
+            names.append(slug)
+        return sorted(self._unique_names(names))
 
     def _drop_action_skill(self, slug: str, roots: list[Path]) -> None:
         for root in roots:
@@ -328,11 +371,55 @@ class Harness:
             if skill_dir.is_dir():
                 shutil.rmtree(skill_dir)
 
+    def _drop_source_slug(self, slug: str, roots: list[Path]) -> None:
+        self._drop_action_skill(slug, roots)
+        for root in roots:
+            for leftover in (
+                root / "commands" / f"{slug}.md",
+                root / "prompts" / f"{slug}.prompt.md",
+            ):
+                if leftover.is_file():
+                    leftover.unlink()
+
+    def _drop_unwritten_skills(self, roots: list[Path], written: set[str]) -> None:
+        for root in roots:
+            skills_root = root / "skills"
+            if not skills_root.is_dir():
+                continue
+            for child in skills_root.iterdir():
+                if child.is_dir() and child.name not in written:
+                    shutil.rmtree(child)
+
+    def _prompt_stem(self, path: Path) -> str | None:
+        name = path.name
+        if name.endswith(".prompt.md"):
+            return name[: -len(".prompt.md")]
+        if path.suffix == ".md":
+            return path.stem
+        return None
+
+    def _drop_unwritten_prompts(self, roots: list[Path], written: set[str]) -> None:
+        for root in roots:
+            for folder in ("commands", "prompts"):
+                folder_path = root / folder
+                if not folder_path.is_dir():
+                    continue
+                for child in folder_path.iterdir():
+                    if not child.is_file():
+                        continue
+                    stem = self._prompt_stem(child)
+                    if stem is not None and stem not in written:
+                        child.unlink()
+
     def _wanted(self, wanted: str, name: str, source_slug: str, derived: str) -> bool:
         if not wanted:
             return True
         if name == wanted:
             return True
+        if derived == "fidelity":
+            short = name.rsplit(".", 1)[-1]
+            if wanted == short:
+                return True
         return source_slug == wanted and derived != "fidelity"
 
     def _emit(self, kind: str, source: dict, roots: list[Path], seen: set[tuple[str, str]]) -> str | None:
@@ -370,18 +457,33 @@ class Harness:
         path = Path(entry["file_path"])
         slug = entry["skill_slug"]
         class_name = entry.get("class_name") or ""
+        if class_name in _COMPOSER_CLASSES:
+            if self._wanted(wanted, slug, slug, "source"):
+                self._drop_source_slug(slug, roots)
+            return []
         kind = self._classify_path(str(path))
         meta = self._read_meta(path, slug, class_name)
         toolset = entry.get("manifest_command", "").rsplit(" ", 1)[-1]
         names: list[str] = []
 
         def source_for(name: str, guidance: str) -> dict:
-            payload = {**meta, "name": name, "toolset": toolset, "guidance": guidance}
+            payload = {**meta, "name": name, "toolset": toolset, "guidance": guidance, "source_kind": kind}
             if kind == "action":
                 payload["action"] = True
+                payload["context_tools"] = (
+                    self._context_tools_for_ask
+                    if hasattr(self, "_context_tools_for_ask")
+                    else self._context_tool_option_names()
+                )
+            elif kind == "context_tool":
+                payload["actions"] = (
+                    self._actions_for_ask
+                    if hasattr(self, "_actions_for_ask")
+                    else self._action_option_names()
+                )
             return payload
 
-        writes = operation_writes(path, class_name)
+        writes = operation_writes(path, class_name, repo_root=self.repo_root)
         if writes:
             for vehicle, deploy_name, _operation, doc in writes:
                 name = deploy_name or slug
@@ -395,93 +497,74 @@ class Harness:
                 written = self._emit("prompt", source_for(slug, meta["guidance"]), roots, seen)
                 if written:
                     names.append(written)
-        else:
+        elif kind == "context_tool":
             if self._wanted(wanted, slug, slug, "source"):
                 written = self._emit("skill", source_for(slug, meta["guidance"]), roots, seen)
                 if written:
                     names.append(written)
         if kind != "action":
-            for fidelity_name in self._fidelity_names(path, class_name):
-                if not self._wanted(wanted, fidelity_name, slug, "fidelity"):
+            for fidelity_name in self._fidelity_option_names(path, class_name):
+                deploy_name = f"{slug}.{fidelity_name}"
+                if not self._wanted(wanted, deploy_name, slug, "fidelity"):
                     continue
-                if fidelity_name == "scaffold":
-                    guidance = f"Run {fidelity_name}."
-                else:
-                    guidance = f"Run at fidelity {fidelity_name}. Do not treat this as a format."
-                written = self._emit("prompt", source_for(fidelity_name, guidance), roots, seen)
+                guidance = f"Run at fidelity {fidelity_name}."
+                payload = source_for(deploy_name, guidance)
+                payload["fidelity"] = True
+                payload["fidelity_slug"] = fidelity_name
+                written = self._emit("prompt", payload, roots, seen)
                 if written:
                     names.append(written)
-        else:
-            for operation, doc in self._instruction_operations(path, class_name):
-                if operation == slug or (
-                    class_name and operation.casefold() == class_name.casefold()
-                ):
-                    continue
-                if not self._wanted(wanted, operation, slug, "operation"):
-                    continue
-                written = self._emit(
-                    "prompt",
-                    source_for(operation, doc or f"Run {operation}."),
-                    roots,
-                    seen,
-                )
-                if written:
-                    names.append(written)
+        if self._wanted(wanted, slug, slug, "source") and slug not in names:
+            self._drop_source_slug(slug, roots)
         return names
 
     def _write_harness_files(self, roots: list[Path], seen: set[tuple[str, str]]) -> list[str]:
-        body = ActionBody.from_source(
-            name="harness",
-            class_string="Deploy workspace toolsets as IDE skills, prompts, and instructions.",
-            operation_instructions=(
-                "With no IDE given, AskQuestion: Which IDE? Cursor | VS Code. "
-                "With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring. "
-                "With no deploy path given, call suggested_deploy_path, then AskQuestion: "
-                "deploy to that suggested path (recommended) / enter another path."
-            ),
-            toolset="harness.harness:Harness",
-        )
-        source = {
-            "name": "harness",
-            "overview": "Deploy workspace toolsets as IDE skills, prompts, and instructions.",
-            "body": body,
-        }
-        skill_file = Skill(self.type, "harness")
-        skill_file.generate(source, roots)
-        self.skills.append(skill_file)
-        prompt_file = Prompt(self.type, "harness")
-        written = prompt_file.generate(source, roots)
-        self.prompts.append(prompt_file)
-        if isinstance(written, Command):
-            self.commands.append(written)
-        seen.add(("harness", "skill"))
-        seen.add(("harness", "prompt"))
         names: list[str] = []
         path = Path(__file__)
-        for vehicle, deploy_name, operation, doc in operation_writes(path, "Harness"):
+        for vehicle, deploy_name, operation, doc in operation_writes(
+            path, "Harness", repo_root=self.repo_root
+        ):
             name = deploy_name or operation
-            if name in {"harness", "generate"} or operation == "generate":
+            if vehicle == "skill":
+                continue
+            if not deploy_name and operation == "generate":
                 continue
             payload = {
                 "name": name,
                 "overview": doc or name,
                 "guidance": doc or name,
                 "toolset": "harness.harness:Harness",
+                "source_kind": "utility",
             }
+            if operation == "generate":
+                payload["guidance"] = (
+                    "With no IDE given, AskQuestion: Which IDE? Cursor | VS Code. "
+                    "With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring. "
+                    "With no deploy path given, call suggested_deploy_path, then AskQuestion: "
+                    "deploy to that suggested path (recommended) / enter another path."
+                )
             emitted = self._emit(vehicle, payload, roots, seen)
             if emitted:
                 names.append(emitted)
         return names
 
-    def _remove_stale(self, roots: list[Path]) -> None:
+    def _remove_unprefixed_fidelity_files(self, roots: list[Path]) -> None:
+        kept = {item.name for item in self.commands} | {item.name for item in self.prompts}
+        shorts: set[str] = set()
+        for entry in json.loads(self.walk()):
+            path = Path(entry["file_path"])
+            if self._classify_path(str(path)) != "context_tool":
+                continue
+            class_name = entry.get("class_name") or ""
+            shorts.update(self._fidelity_option_names(path, class_name))
+            shorts.update(self._fidelity_names(path, class_name))
         for root in roots:
-            for slug in _STALE_ACTION_SKILL_SLUGS:
-                skill_dir = root / "skills" / slug
-                if skill_dir.is_dir():
-                    shutil.rmtree(skill_dir)
+            for short in shorts:
+                if short in kept:
+                    continue
                 for leftover in (
-                    root / "commands" / f"{slug}.md",
-                    root / "prompts" / f"{slug}.prompt.md",
+                    root / "commands" / f"{short}.md",
+                    root / "prompts" / f"{short}.prompt.md",
                 ):
                     if leftover.is_file():
                         leftover.unlink()
@@ -549,7 +632,7 @@ class Harness:
 
     @agent_tool
     def write_deploy(self, source: str = "", name_filter: str = "", deploy_path: str = "") -> str:
-        """Walk if needed, then write sources plus Harness skill and prompt into the deploy area."""
+        """Walk if needed, then write sources plus Harness prompts into the deploy area."""
         self._require_implemented()
         self.skills = []
         self.prompts = []
@@ -559,6 +642,8 @@ class Harness:
         self.agents = []
         self.hooks = []
         self.agent_guidance = []
+        self._actions_for_ask = self._action_option_names()
+        self._context_tools_for_ask = self._context_tool_option_names()
         roots = self._write_root_paths(deploy_path)
         wanted = source.strip()
         seen: set[tuple[str, str]] = set()
@@ -571,12 +656,16 @@ class Harness:
             written = self._emit("prompt", {"name": fmt, "format": fmt}, roots, seen)
             if written:
                 names.append(written)
+        names.extend(self._write_harness_files(roots, seen))
         skill_names = {item.name for item in self.skills}
+        prompt_names = {item.name for item in self.prompts} | {item.name for item in self.commands}
         for prompt_file in self.prompts:
             if prompt_file.name not in skill_names:
                 self._drop_action_skill(prompt_file.name, roots)
-        names.extend(self._write_harness_files(roots, seen))
-        self._remove_stale(roots)
+        if not wanted:
+            self._drop_unwritten_skills(roots, skill_names)
+            self._drop_unwritten_prompts(roots, prompt_names)
+        self._remove_unprefixed_fidelity_files(roots)
         self._save_ide(str(roots[0]))
         return json.dumps(
             {
@@ -585,8 +674,7 @@ class Harness:
             }
         )
 
-    @skill
-    @prompt
+    @prompt(name="deploy-harness")
     @agent_instructions
     def generate(
         self,
@@ -599,7 +687,7 @@ class Harness:
         """With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring."""
         """With no deploy path given, call suggested_deploy_path, then AskQuestion: deploy to that suggested path (recommended) / enter another path."""
         self.suggested_deploy_path()
-        """With no source: walk context_tools/ and utilities/, generate each source into the deploy area, also write a Harness skill and a Harness prompt. Generate is the deploy — no separate deploy. Do not confirm the scanned list. Overwrite generated files. Remove stale shortcuts and old slugs. Save the IDE."""
+        """With no source: walk context_tools/ and utilities/, generate each source into the deploy area, also write Harness prompts (/deploy-harness, /clean-harness). Generate is the deploy — no separate deploy. Do not confirm the scanned list. Overwrite generated files. Remove files this generate did not write. Save the IDE."""
         """With a source: write that source into the deploy area."""
         """With type Claude, Codex, or ChatGPT: must not implement yet."""
         self.write_deploy()
@@ -623,12 +711,23 @@ class Harness:
         self.type = saved
         return self.write_deploy(deploy_path=deploy_path)
 
-    @prompt
+    @prompt(name="clean-harness")
     @agent_tool
     def clean(self) -> str:
         """Remove this Harness type's deploy files only — not the other IDE."""
         self._require_implemented()
-        roots = self._write_root_paths()
+        deploy_path = ""
+        path = self._state_path()
+        if path.is_file():
+            try:
+                state = json.loads(path.read_text(encoding="utf-8"))
+                saved = state.get("type")
+                if saved:
+                    self.type = saved
+                deploy_path = state.get("deploy_path") or ""
+            except (OSError, json.JSONDecodeError):
+                deploy_path = ""
+        roots = self._write_root_paths(deploy_path)
         removed: list[str] = []
         for root in roots:
             for folder in ("skills", "commands", "prompts", "instructions", "rules"):

@@ -42,7 +42,7 @@ Harness
        // later
   generate
        // @agent_instructions
-       // @skill @prompt — later runs are the skill or /harness
+       // @skill @prompt(name="deploy-harness") — later runs are the skill or /deploy-harness
        with no IDE given
          // AskQuestion: which IDE? Cursor | VS Code
          -> harness = new Harness(type)
@@ -53,12 +53,12 @@ Harness
          // walk context_tools/ and utilities/ like agent_skills.scan_toolsets
          // then generate each source into the deploy area
          // also write Harness itself — skill and prompt (not in that walk)
-         // later runs: the skill or /harness
+         // later runs: the skill or /deploy-harness
          // skills, commands, formats, fidelities, companions — one operation
          // generate is the deploy — no separate deploy
          // no confirm list
          // overwrite generated files
-         // remove stale shortcuts and old slugs — same as agent_skills
+         // remove files this generate did not write
          // save last IDE
        with a source
          // write into the deploy area — .cursor/ or .github/
@@ -66,9 +66,14 @@ Harness
          -> skill = new Skill(type)
          -> skill.generate(contextToolset)
          // one skill for the whole context tool
+         // BaseContextTool is the composer — not a skill; @skill on guidance is for subclasses
        with a utility toolset
          -> skill = new Skill(type)
          -> skill.generate(utilityToolset)
+         // UtilityBody — operation then CLI; no guidance/fidelity AskQuestion
+         // no default skill — @skill or @prompt on the operation writes the file; @agent_tool does not
+         // mark operations as @prompt only if a slash command is needed
+         // catalog: @prompt(name="generate-catalog") on Catalog.generate_catalog — not a skill
        with an action
          -> prompt = new Prompt(type)
          -> prompt.generate(action)
@@ -77,7 +82,9 @@ Harness
        with a slash companion
          -> prompt = new Prompt(type)
          -> prompt.generate(companion)
-         // echo, handoff, backlog, start, finish
+         // echo and handoff are utility @prompt files (UtilityBody)
+         // backlog, start-ticket, finish-ticket — same write vehicles as other actions until they move
+         // Workflow has no /workflow file; named prompts on those three operations
        with scaffold
          -> prompt = new Prompt(type)
          -> prompt.generate(scaffold)
@@ -95,11 +102,14 @@ Harness
        with a CDD stage fidelity
          -> prompt = new Prompt(type)
          -> prompt.generate(stage)
+         // slash name is {context_tool}.{fidelity} — dots are allowed in .cursor/commands
+         // fidelity values only — no stage-key aliases
          // discovery, specification, engineering
        with a tool-specific fidelity
          -> prompt = new Prompt(type)
          -> prompt.generate(fidelity)
-         // hardcoded from each tool's fidelities table
+         // slash name is {context_tool}.{fidelity} e.g. /stories.story_map /ux.ia
+         // hardcoded from each tool's fidelities table values — no stage-key aliases
          // Stories: story_map, scenarios, acceptance_tests
          // DDD: bounded_context, building_blocks, tactics
          // CleanEngineering: modules, model, specification, code
@@ -110,9 +120,14 @@ Harness
          // VS Code names only — no Cursor-specific decorators
          // @prompt from Prompt; @instruction from Instruction; @skill from Skill
          // Cursor: @prompt deploys as a command; @instruction deploys as a rule
-         // write that file kind instead of the default skill / prompt
-         // several decorators on one operation — write each
+         // @prompt / @skill / @instruction on an operation — write those files
+         // several marked operations — write each; unmarked @agent_instructions are not files
+         // several write vehicles on one operation — write each
          // unannotated sources still get the default write
+         // write vehicles inherit: annotate the base; subclasses do not repeat
+         // an override without a write vehicle still inherits the base write
+         // a write vehicle on the subclass operation replaces the inherited one
+         // context tools still write fidelity prompts after inherited writes
          // body still follows source kind
          // body includes class string and the merged operation instructions
        with type Cursor
@@ -131,7 +146,7 @@ Harness
          // refuse
   clean
        // @agent_tool
-       // @prompt — override so generate knows the file kind
+       // @prompt(name="clean-harness")
        // this type's deploy area only — not both IDEs
 
   ----
@@ -222,30 +237,25 @@ Harness
       description
            // autocomplete tooltip — most concise first
       body
-           // filled from source kind (ContextToolBody | ActionBody | FormatBody)
+           // filled from source kind (ContextToolBody | ActionBody | UtilityBody | FormatBody)
       generate source
            // source is the context tool or the action
 
   ----
  Resolve
-      // an action does not require a context tool
-      // a context tool does not require an action
-      // take qualitative guidance from the context when it is there
-      // take the action from the context and/or from what was specified
-      // if you got it from the context: confirm
-      // if the fidelity does not belong to the in-scope tool: guess the correct one and confirm
-      // if you cannot get guidance and cannot get the action: AskQuestion
-      //      constrained list baked from this source
+      // action: if you took guidance from the context and not a tool, confirm the use of the context; AskQuestion constrained to the context tools (baked context-tool slugs plus use existing context only)
+      // guidance: if you took an action from the context versus being given an explicit one, confirm the use of the context; AskQuestion constrained to the actions in context_tools/actions (baked slash names)
+      // if the fidelity does not belong to the in-scope tool or has not been provided: guess the correct one and confirm with AskQuestion constrained to the other fidelities — context-tool skills and action bodies only, never a fidelity prompt
+      // never AskQuestion constrained to this source — the skill is the guidance, the action prompt is the action
+      // context-tool fidelity prompt — first line: Run the action on {context_tool} at {fidelity} fidelity through the tools cli; then the CLI lines; no Then run, no heading, no Instructions, no AskQuestion
+      // utility and format — operation (or format) text; through the tools cli; then the CLI lines; no Then run; no Run this action; no guidance/fidelity AskQuestion
 
   ----
  ContextToolBody
       // same recipe whether the file is a skill or a command
       // does not require an action
-      // 1. guidance clustering (overview) — tooltip first
-      // 2. class string — class-level documentation
-      // 3. operation instructions — guidance
-      // 4. Resolve
-      // 5. then the CLI required to run — unchanged
+      // 1. what this skill does — first line of guidance() on the context tool (tooltip too)
+      // 2. Resolve — then the CLI; per-fidelity and diagnose prose stay on the tool for the manifest
       //      python -m tools manifest {toolset}
       //      python -m tools run _req.yaml
 
@@ -253,7 +263,7 @@ Harness
  ActionBody
       // already locked — do not port the agent_skills kit-owned / chain-tools recipe
       // same recipe whether the file is a skill or a command
-      // does not require a context tool
+      // context_tools/actions only — not utilities, not fidelity prompts, not formats
       // 1. run this action for any provided context tools, or on the context in general
       // 2. class string
       // 3. this operation's instructions — the merged @agent_instructions
@@ -261,10 +271,17 @@ Harness
       // 5. then the CLI required to run
 
   ----
+ UtilityBody
+      // utilities, harness prompts, and other non-action @prompt/@skill files
+      // utilities, harness prompts, and other non-action @prompt files: operation instructions only — no class string
+      // utility skills still include class string until checked
+
+  ----
  FormatBody
       // not a fidelity
       // run the context tool / actions using the following format: {format}
       // mostly generate and render
+      // CLI after the format text — through the tools cli; no Then run; no action resolve
 
   ----
  Skill : HarnessTool
@@ -283,7 +300,8 @@ Harness
   ----
  Prompt : HarnessTool
        // @prompt
-       // VS Code: .github/prompts/{name}.prompt.md
+       // VS Code: .github/prompts/{name}.prompt.md — same {name} as Cursor, including {context_tool}.{fidelity}
+       // VS Code slash name comes from the file stem before .prompt.md and the YAML name field (periods are allowed)
        // Cursor has no prompt files — deploy as a command
        generate source
 

@@ -12,6 +12,7 @@ from pathlib import Path
 
 from grill_context.grill_context import GrillContext
 from lifecycle import LifecycleAction
+from harness.harness_tool import prompt
 from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
 from workspace import docs_dir
@@ -91,6 +92,7 @@ class Sketch(LifecycleAction):
         pattern = f"{slug}-sketch.md" if slug else "*-sketch.md"
         return "\n".join(str(path) for path in sorted(context_dir.glob(pattern)))
 
+    @prompt
     @agent_instructions
     def sketch(self, tools: list) -> str:
         """Sketch then generate - grill + sketch cadence, then the host generate body."""

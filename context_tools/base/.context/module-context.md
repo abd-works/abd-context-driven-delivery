@@ -8,7 +8,7 @@
 
 ## Seam
 
-`BaseContextTool` is the seam: domains subclass it and call through `workspace` / `scanner` / lifecycle actions. Providers return real kit instances — never `self`. Host `@agent_tool` / `@resource` methods are thin forwards for agent CLI. `@agent_instructions` / `@instruction` / `@agent_tool` remain (primitives only).
+`BaseContextTool` is the seam: domains subclass it and call through `workspace` / `scanner` / lifecycle actions. Providers return real kit instances — never `self`. Host `@agent_tool` / `@resource` methods are thin forwards for agent CLI. `@agent_instructions` / `@instruction` / `@agent_tool` remain (primitives only). `@skill` on `guidance` is the harness write vehicle for every **domain** — subclasses inherit it. Harness does not deploy `BaseContextTool` itself as a skill (no domain guidance).
 
 ## Public API
 

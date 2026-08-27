@@ -7,6 +7,7 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
+from harness.harness_tool import prompt
 from lifecycle import LifecycleAction
 from primitives.actions.action import agent_instructions, agentic_toolset
 from primitives.instructions import Instruction, instruction
@@ -28,6 +29,7 @@ class Improvement(LifecycleAction):
         """Deep root-cause recipe — why the toolset's expected behavior failed."""
         ...
 
+    @prompt(name="repair")
     @agent_instructions
     def repair(self, tools: list, asset: str, violation: str) -> str:
         """Open a domain repair on each passed context tool and instruct the fix."""

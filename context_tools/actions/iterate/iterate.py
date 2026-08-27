@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from grill_context.grill_context import GrillContext
 from lifecycle import LifecycleAction
+from harness.harness_tool import prompt
 from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
 
@@ -37,6 +38,7 @@ class Iterate(LifecycleAction):
         Call only after 2-3 grill answers that unlock ONE small slice - never as a prelude to dumping the whole artifact."""
         return "iterate-tick"
 
+    @prompt
     @agent_instructions
     def iterate(self, tools: list) -> str:
         """Iterate then generate - grill + formal generate/validate/one-fix ticks."""

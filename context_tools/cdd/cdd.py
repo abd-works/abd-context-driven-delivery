@@ -76,7 +76,8 @@ class Cdd(BaseContextTool):
 
     @agent_instructions
     def guidance(self) -> str:
-        """Call guidance on each stage child and pass that child to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
+        """Provide guidance for orchestrating CDD stages across stories, ddd, ux, clean_engineering, and bdd.
+        Call guidance on each stage child and pass that child to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
         super().guidance()
         for context_tool in self.context_tools():
             context_tool.mode = "tool"

@@ -20,6 +20,7 @@ from mamba import before, context, description, it
 
 from tools.tool import agent_tool as _tool
 from utilities.sub_agent.sub_agent import (
+    SubAgent,
     SubAgentTool,
     discover_sub_agent_tools,
     sub_agent,
@@ -199,3 +200,32 @@ with description("discover_sub_agent_tools"):
             result = discover_sub_agent_tools(instance)
             # Assert
             expect(result).to(equal({}))
+
+
+with description("SubAgent.run"):
+    with context("that is stacked the same way as other @sub_agent tools"):
+        with it("should mark run as a sub_agent"):
+            expect(getattr(SubAgent.run, "_is_sub_agent", False)).to(be_true)
+
+        with it("should mark run as an action"):
+            expect(getattr(SubAgent.run, "_is_agent_instructions", False)).to(be_true)
+
+        with it("should suppress the tool marker so standard tool discovery skips it"):
+            expect(getattr(SubAgent.run, "_is_agent_tool", True)).to(equal(False))
+
+        with it("should publish kind sub_agent and launch non_blocking"):
+            entry = discover_sub_agent_tools(SubAgent())["run"].signature_entry
+            expect(entry["kind"]).to(equal("sub_agent"))
+            expect(entry["launch"]).to(equal("non_blocking"))
+
+        with it("should take context tools and optional other actions"):
+            params = discover_sub_agent_tools(SubAgent())["run"].signature_entry["parameters"]
+            expect("tools" in params).to(be_true)
+            expect("actions" in params).to(be_true)
+
+        with it("should not expose lifecycle begin or end"):
+            sig = SubAgent.manifest.signature
+            expect("begin" in sig).to(equal(False))
+            expect("end" in sig).to(equal(False))
+            expect("open_workspace" in sig).to(equal(False))
+

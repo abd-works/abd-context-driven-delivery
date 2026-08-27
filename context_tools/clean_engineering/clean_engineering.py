@@ -90,6 +90,11 @@ class CleanEngineering(BaseContextTool):
     def contexts(self) -> Instruction: ...
 
     @agent_instructions
+    def guidance(self) -> str:
+        """Provide guidance for creating OO modules, models, and code."""
+        return super().guidance()
+
+    @agent_instructions
     def generate_output(self) -> str:
         """Write the fidelity artifact under the session.
 

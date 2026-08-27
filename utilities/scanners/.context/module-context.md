@@ -6,7 +6,7 @@
 
 **Rationale:** One kit with ScannerCollection — not a separate `utilities/scan/` peer.
 
-**Seam:** Scan; Scanner; ScannerCollection; ScannerReport; Violation
+**Seam:** `Scan.scan` is `@prompt(name="scan")` plus `@agent_tool`. Slash `/scan` is the command; hosts still call `self.scanner.scan(...)`. `ScannerRunner` is a CLI helper, not a tool or prompt.
 
 **Public API:** `Scan.scan`; `Scan._scanner_collection`; engine types/helpers
 

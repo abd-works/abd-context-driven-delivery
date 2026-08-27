@@ -9,6 +9,7 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
+from harness.harness_tool import prompt
 from lifecycle import LifecycleAction
 from partition.partition_index import PartitionIndex
 from partition.segment import Segment, SegmentCompletenessConfig
@@ -124,6 +125,7 @@ class Partition(LifecycleAction):
             "Hard fail if any new chunk fails named-entry completeness."
         )
 
+    @prompt
     @agent_instructions
     def partition(
         self,

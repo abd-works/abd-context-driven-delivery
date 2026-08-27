@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from harness.bodies import ContextToolBody
+from harness.bodies import ActionBody, ContextToolBody, UtilityBody
 from harness.harness_tool import HarnessTool, _frontmatter, skill as skill_decorator
 
 skill = skill_decorator
@@ -27,13 +27,31 @@ class Skill(HarnessTool):
         if not self.body:
             name = self.name
             meta = source if isinstance(source, dict) else {}
-            self.body = ContextToolBody.from_source(
-                name=name,
-                overview=self.description or meta.get("overview", name),
-                class_string=meta.get("class_string", name),
-                guidance=meta.get("guidance", "guidance"),
-                toolset=meta.get("toolset", ""),
-            )
+            if meta.get("action") or meta.get("source_kind") == "action":
+                self.body = ActionBody.from_source(
+                    name=name,
+                    class_string=meta.get("class_string", name),
+                    operation_instructions=meta.get("guidance", ""),
+                    toolset=meta.get("toolset", ""),
+                    kind="action",
+                    fidelities=meta.get("fidelities") or (),
+                    context_tools=meta.get("context_tools") or (),
+                )
+            elif meta.get("source_kind") == "utility":
+                self.body = UtilityBody.from_source(
+                    name=name,
+                    class_string=meta.get("class_string", name),
+                    operation_instructions=meta.get("guidance", ""),
+                    toolset=meta.get("toolset", ""),
+                )
+            else:
+                self.body = ContextToolBody.from_source(
+                    name=name,
+                    overview=self.description or meta.get("overview", name),
+                    toolset=meta.get("toolset", ""),
+                    fidelities=meta.get("fidelities") or (),
+                    actions=meta.get("actions") or (),
+                )
             if not self.description:
                 self.description = meta.get("overview", name)
         return super().generate(source, roots)

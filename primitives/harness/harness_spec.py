@@ -22,7 +22,7 @@ from mamba import context, description, it
 
 from harness.agent import Agent
 from harness.agent_guidance import AgentGuidance
-from harness.bodies import ActionBody, ContextToolBody, FormatBody
+from harness.bodies import ActionBody, ContextToolBody, FormatBody, UtilityBody
 from harness.command import Command
 from harness.harness import Harness
 from harness.hook import Hook
@@ -111,10 +111,53 @@ def _sandbox() -> Path:
         "Ux",
         {"discovery": "ia"},
     )
-    _write_toolset(
-        root / "utilities" / "widget" / "widget.py",
-        "utilities.widget.widget",
-        "Widget",
+    widget = root / "utilities" / "widget" / "widget.py"
+    widget.parent.mkdir(parents=True, exist_ok=True)
+    widget.write_text(
+        "# @toolset-manifest python -m tools manifest utilities.widget.widget:Widget\n"
+        '"""Widget."""\n'
+        "class Widget:\n"
+        "    @skill\n"
+        "    def run(self):\n"
+        '        """Widget."""\n'
+        "        return None\n",
+        encoding="utf-8",
+    )
+    echo = root / "utilities" / "echo" / "echo.py"
+    echo.parent.mkdir(parents=True, exist_ok=True)
+    echo.write_text(
+        "# @toolset-manifest python -m tools manifest echo.echo:Echo\n"
+        '"""Echo."""\n'
+        "class Echo:\n"
+        "    @prompt\n"
+        "    def echo_session(self):\n"
+        '        """STOP. DO NOT EXECUTE."""\n'
+        "        return None\n",
+        encoding="utf-8",
+    )
+    handoff = root / "utilities" / "handoff" / "handoff.py"
+    handoff.parent.mkdir(parents=True, exist_ok=True)
+    handoff.write_text(
+        "# @toolset-manifest python -m tools manifest handoff.handoff:Handoff\n"
+        '"""Handoff."""\n'
+        "class Handoff:\n"
+        "    @prompt\n"
+        "    def handoff_session(self):\n"
+        '        """Compact the session. Do not open a session."""\n'
+        "        return None\n",
+        encoding="utf-8",
+    )
+    ask = root / "utilities" / "context_setup" / "context_index.py"
+    ask.parent.mkdir(parents=True, exist_ok=True)
+    ask.write_text(
+        "# @toolset-manifest python -m tools manifest context_setup.context_index:ContextIndex\n"
+        '"""Embed partitioned segments into a FAISS index and answer questions with source citations."""\n'
+        "class ContextIndex:\n"
+        '    @prompt(name="ask")\n'
+        "    def ask(self):\n"
+        '        """Answer question using the FAISS index at index_path, citing sources."""\n'
+        "        return None\n",
+        encoding="utf-8",
     )
     _write_toolset(
         root / "primitives" / "skipme" / "skipme.py",
@@ -123,8 +166,6 @@ def _sandbox() -> Path:
     )
     for slug, class_name in (
         ("sketch", "Sketch"),
-        ("echo", "Echo"),
-        ("handoff", "Handoff"),
     ):
         _write_toolset(
             root / "context_tools" / "actions" / slug / f"{slug}.py",
@@ -132,10 +173,10 @@ def _sandbox() -> Path:
             class_name,
         )
     _write_action_with_operation(
-        root / "context_tools" / "actions" / "workflow" / "workflow.py",
-        "context_tools.actions.workflow.workflow",
-        "Workflow",
-        "backlog",
+        root / "context_tools" / "actions" / "helperkit" / "helperkit.py",
+        "context_tools.actions.helperkit.helperkit",
+        "Helperkit",
+        "extra",
     )
     _write_action_with_operation(
         root / "context_tools" / "actions" / "workspace" / "workspace.py",
@@ -160,6 +201,9 @@ def _sandbox() -> Path:
     leftover = root / ".cursor" / "skills" / "stories"
     leftover.mkdir(parents=True, exist_ok=True)
     (leftover / "SKILL.md").write_text("OLD CONTENT", encoding="utf-8")
+    stale_workflow = root / ".cursor" / "commands" / "workflow.md"
+    stale_workflow.parent.mkdir(parents=True, exist_ok=True)
+    stale_workflow.write_text("old workflow command", encoding="utf-8")
     tagged = root / "context_tools" / "actions" / "tagged" / "tagged.py"
     tagged.parent.mkdir(parents=True, exist_ok=True)
     tagged.write_text(
@@ -236,12 +280,25 @@ with description("a harness"):
                 )
                 expect((root / ".cursor" / "skills" / "widget" / "SKILL.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "skills" / "skipme").exists()).to(equal(False))
-                expect((root / ".cursor" / "skills" / "harness" / "SKILL.md").is_file()).to(equal(True))
-                expect((root / ".cursor" / "commands" / "harness.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "harness").exists()).to(equal(False))
+                expect((root / ".cursor" / "commands" / "deploy-harness.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "commands" / "clean-harness.md").is_file()).to(equal(True))
+                expect(
+                    (root / ".cursor" / "commands" / "deploy-harness.md").read_text(encoding="utf-8")
+                ).not_to(contain("Run this action for any provided context tools"))
+                expect(
+                    (root / ".cursor" / "commands" / "deploy-harness.md").read_text(encoding="utf-8")
+                ).not_to(contain("If you took guidance from the context and not a tool"))
+                expect((root / ".cursor" / "commands" / "harness.md").is_file()).to(equal(False))
+                expect((root / ".cursor" / "commands" / "clean.md").is_file()).to(equal(False))
                 expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).not_to(
                     contain("OLD CONTENT")
                 )
                 expect((root / ".cursor" / "skills" / "grill-context").exists()).to(equal(False))
+                expect((root / ".cursor" / "commands" / "workflow.md").is_file()).to(equal(False))
+                expect((root / ".cursor" / "commands" / "stories.story_map.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "commands" / "story_map.md").is_file()).to(equal(False))
+                expect((root / ".cursor" / "commands" / "discovery.md").is_file()).to(equal(False))
                 state = json.loads(
                     (root / "primitives" / "harness" / ".deploy-state.json").read_text(encoding="utf-8")
                 )
@@ -253,7 +310,7 @@ with description("a harness"):
                 Harness("Cursor", repo_root=root).write_deploy(source="stories")
                 expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "skills" / "widget").exists()).to(equal(False))
-                expect((root / ".cursor" / "skills" / "harness" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "harness").exists()).to(equal(False))
 
         with context("with type Cursor"):
             with it("should write under .cursor including the covering workspace copy"):
@@ -294,7 +351,8 @@ with description("a harness"):
                 root = _sandbox()
                 Harness("VS Code", repo_root=root).write_deploy(source="stories")
                 expect((root / ".github" / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
-                expect((root / ".github" / "prompts" / "harness.prompt.md").is_file()).to(equal(True))
+                expect((root / ".github" / "prompts" / "deploy-harness.prompt.md").is_file()).to(equal(True))
+                expect((root / ".github" / "prompts" / "clean-harness.prompt.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
                     equal("OLD CONTENT")
                 )
@@ -324,22 +382,155 @@ with description("a harness"):
                 expected = ContextToolBody.from_source(
                     name="stories",
                     overview="Stories.",
-                    class_string="Stories",
-                    guidance="guidance",
                     toolset="context_tools.stories.stories:Stories",
+                    fidelities=("story_map", "scaffold"),
+                    actions=tuple(harness._action_option_names()),
                 )
                 expect(skill.body).to(equal(expected))
                 text = (root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")
                 expect(text).not_to(contain("disable-model-invocation"))
                 expect(text).to(contain("python -m tools run"))
 
+        with context("with LifecycleAction"):
+            with it("should not write a skill or command"):
+                root = _sandbox()
+                path = root / "context_tools" / "actions" / "lifecycle.py"
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest context_tools.actions.lifecycle:LifecycleAction\n"
+                    '"""LifecycleAction."""\n'
+                    "class LifecycleAction:\n"
+                    "    @agent_tool\n"
+                    "    def open_workspace(self):\n"
+                    '        """Open the workspace."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy()
+                expect((root / ".cursor" / "skills" / "lifecycle_action").exists()).to(
+                    equal(False)
+                )
+                expect((root / ".cursor" / "commands" / "lifecycle_action.md").is_file()).to(
+                    equal(False)
+                )
+
+        with context("with catalog generate_catalog"):
+            with it("should write a generate-catalog prompt and not a catalog_generator skill"):
+                root = _sandbox()
+                path = root / "utilities" / "catalog_generator" / "catalog_generator.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest catalog_generator.catalog_generator:Catalog\n"
+                    '"""Catalog."""\n'
+                    "@toolset\n"
+                    "class Catalog:\n"
+                    '    @prompt(name="generate-catalog")\n'
+                    "    def generate_catalog(self):\n"
+                    '        """Render the whole catalog."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(source="catalog")
+                expect((root / ".cursor" / "commands" / "generate-catalog.md").is_file()).to(
+                    equal(True)
+                )
+                expect((root / ".cursor" / "skills" / "catalog_generator").exists()).to(
+                    equal(False)
+                )
+                expect((root / ".cursor" / "skills" / "catalog").exists()).to(equal(False))
+
+        with context("with git"):
+            with it("should not write a skill"):
+                root = _sandbox()
+                path = root / "utilities" / "git" / "git.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest git.git:Git\n"
+                    '"""Git."""\n'
+                    "@toolset\n"
+                    "class Git:\n"
+                    "    pass\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(source="git")
+                expect((root / ".cursor" / "skills" / "git").exists()).to(equal(False))
+                expect((root / ".cursor" / "commands" / "git.md").is_file()).to(equal(False))
+
+        with context("with workspace"):
+            with it("should not write a skill"):
+                root = _sandbox()
+                path = root / "utilities" / "workspace" / "workspace.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest workspace.workspace:Workspace\n"
+                    '"""Workspace."""\n'
+                    "@toolset\n"
+                    "class Workspace:\n"
+                    "    @agent_tool\n"
+                    "    def open(self):\n"
+                    '        """Open the workspace."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy()
+                expect((root / ".cursor" / "skills" / "workspace").exists()).to(equal(False))
+
+        with context("with record_decisions"):
+            with it("should not write a skill"):
+                root = _sandbox()
+                path = root / "utilities" / "record_decisions" / "record_decisions.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest record_decisions.record_decisions:RecordDecisions\n"
+                    '"""RecordDecisions."""\n'
+                    "@toolset\n"
+                    "class RecordDecisions:\n"
+                    "    @prompt(name=\"record-decisions-session\")\n"
+                    "    @agent_instructions\n"
+                    "    def record_decisions_session(self):\n"
+                    '        """Offer CDRs."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(source="record_decisions")
+                expect((root / ".cursor" / "skills" / "record_decisions").exists()).to(
+                    equal(False)
+                )
+                expect((root / ".cursor" / "commands" / "record_decisions.md").is_file()).to(
+                    equal(False)
+                )
+                expect(
+                    (root / ".cursor" / "commands" / "record-decisions-session.md").is_file()
+                ).to(equal(True))
+
         with context("with a utility toolset"):
-            with it("should add a skill with the context-tool body"):
+            with it("should add a skill with the utility body"):
                 root = _sandbox()
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="widget")
                 skill = next(s for s in harness.skills if s.name == "widget")
-                expect(skill.body.text).to(contain("Guidance:"))
+                expect(isinstance(skill.body, UtilityBody)).to(equal(True))
+                expect(skill.body.text).not_to(contain("Guidance:"))
+                expect(skill.body.text).not_to(contain("Run this action for any provided context tools"))
+                expect(skill.body.text).not_to(contain("If you took"))
+                expect(skill.body.text).to(contain("python -m tools run"))
+
+        with context("with a utility prompt"):
+            with it("should write the operation and CLI without action resolve"):
+                root = _sandbox()
+                harness = Harness("Cursor", repo_root=root)
+                harness.write_deploy(source="ask")
+                body = (root / ".cursor" / "commands" / "ask.md").read_text(encoding="utf-8")
+                expect(body).to(contain("Answer question using the FAISS index"))
+                expect(body).not_to(contain("Embed partitioned segments"))
+                expect(body).not_to(contain("Run this action for any provided context tools"))
+                expect(body).not_to(contain("If you took guidance from the context and not a tool"))
+                expect(body).not_to(contain("If the fidelity does not belong"))
+                expect(body).not_to(contain("If you cannot get guidance"))
+                expect(body).to(contain("through the tools cli"))
+                expect(body).not_to(contain("Then run:"))
+                expect(isinstance(next(p for p in harness.prompts if p.name == "ask").body, UtilityBody)).to(
+                    equal(True)
+                )
 
         with context("with an action"):
             with it("should write a prompt named from the package using the action body"):
@@ -353,11 +544,99 @@ with description("a harness"):
                 expect(prompt.body.text).to(contain("Run this action for any provided context tools"))
                 expect(command.body.text).to(contain("Run this action for any provided context tools"))
 
-        with context("with a workflow backlog operation"):
-            with it("should write a prompt from the operation on the walked action"):
+        with context("with an unmarked helper operation"):
+            with it("should not write a command for an unmarked agent_instructions"):
                 root = _sandbox()
-                Harness("Cursor", repo_root=root).write_deploy(source="backlog")
+                Harness("Cursor", repo_root=root).write_deploy(source="helperkit")
+                expect((root / ".cursor" / "commands" / "helperkit.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "commands" / "extra.md").is_file()).to(equal(False))
+
+        with context("with @prompt(name) on backlog start-ticket and finish-ticket"):
+            with it("should write those commands and not a workflow command"):
+                root = _sandbox()
+                path = root / "context_tools" / "actions" / "workflow" / "workflow.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest context_tools.actions.workflow.workflow:Workflow\n"
+                    '"""Workflow."""\n'
+                    "class Workflow:\n"
+                    '    @prompt(name="backlog")\n'
+                    "    def backlog(self):\n"
+                    '        """Capture an idea."""\n'
+                    "        return None\n"
+                    '    @prompt(name="start-ticket")\n'
+                    "    def start(self):\n"
+                    '        """Start work."""\n'
+                    "        return None\n"
+                    '    @prompt(name="finish-ticket")\n'
+                    "    def finish(self):\n"
+                    '        """Finish work."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(source="workflow")
                 expect((root / ".cursor" / "commands" / "backlog.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "commands" / "start-ticket.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "commands" / "finish-ticket.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "commands" / "start.md").is_file()).to(equal(False))
+                expect((root / ".cursor" / "commands" / "finish.md").is_file()).to(equal(False))
+                expect((root / ".cursor" / "commands" / "workflow.md").is_file()).to(equal(False))
+
+        with context("with @prompt on two operations"):
+            with it("should write a command for each marked operation"):
+                root = _sandbox()
+                path = root / "context_tools" / "actions" / "sessionkit" / "sessionkit.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest context_tools.actions.sessionkit.sessionkit:Sessionkit\n"
+                    '"""Sessionkit."""\n'
+                    "class Sessionkit:\n"
+                    '    @prompt(name="start-turn")\n'
+                    "    def open(self):\n"
+                    '        """Start."""\n'
+                    "        return None\n"
+                    '    @prompt(name="finish-turn")\n'
+                    "    def finish_turn(self):\n"
+                    '        """Finish."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                harness = Harness("Cursor", repo_root=root)
+                harness.write_deploy()
+                expect((root / ".cursor" / "commands" / "start-turn.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "commands" / "finish-turn.md").is_file()).to(equal(True))
+
+        with context("with @prompt on one of several @agent_instructions"):
+            with it("should write only that marked command"):
+                root = _sandbox()
+                path = root / "context_tools" / "actions" / "generate" / "generate.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest context_tools.actions.generate.generate:Generate\n"
+                    '"""Generate."""\n'
+                    "class Generate:\n"
+                    "    @prompt\n"
+                    "    @agent_instructions\n"
+                    "    def generate(self):\n"
+                    '        """generate"""\n'
+                    "        return None\n"
+                    "    @agent_instructions\n"
+                    "    def add_generate_header_to_generated(self):\n"
+                    '        """header"""\n'
+                    "        return None\n"
+                    "    @agent_instructions\n"
+                    "    def generate_output(self):\n"
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(source="generate")
+                expect((root / ".cursor" / "commands" / "generate.md").is_file()).to(equal(True))
+                expect(
+                    (root / ".cursor" / "commands" / "add_generate_header_to_generated.md").is_file()
+                ).to(equal(False))
+                expect((root / ".cursor" / "commands" / "generate_output.md").is_file()).to(
+                    equal(False)
+                )
 
         with context("with turn"):
             with it("should write a prompt named from the class"):
@@ -366,25 +645,41 @@ with description("a harness"):
                 expect((root / ".cursor" / "commands" / "turn.md").is_file()).to(equal(True))
 
         with context("with echo"):
-            with it("should write a prompt"):
+            with it("should write a utility prompt without action resolve"):
                 root = _sandbox()
-                Harness("Cursor", repo_root=root).write_deploy(source="echo")
-                expect((root / ".cursor" / "commands" / "echo.md").is_file()).to(equal(True))
+                harness = Harness("Cursor", repo_root=root)
+                harness.write_deploy(source="echo")
+                body = (root / ".cursor" / "commands" / "echo.md").read_text(encoding="utf-8")
+                expect(body).to(contain("STOP. DO NOT EXECUTE."))
+                expect(body).not_to(contain("Run this action for any provided context tools"))
+                expect(body).not_to(contain("If you took guidance from the context and not a tool"))
+                expect(isinstance(next(p for p in harness.prompts if p.name == "echo").body, UtilityBody)).to(
+                    equal(True)
+                )
 
         with context("with handoff"):
-            with it("should write a prompt"):
+            with it("should write a utility prompt without action resolve"):
                 root = _sandbox()
-                Harness("Cursor", repo_root=root).write_deploy(source="handoff")
-                expect((root / ".cursor" / "commands" / "handoff.md").is_file()).to(equal(True))
+                harness = Harness("Cursor", repo_root=root)
+                harness.write_deploy(source="handoff")
+                body = (root / ".cursor" / "commands" / "handoff.md").read_text(encoding="utf-8")
+                expect(body).to(contain("Do not open a session"))
+                expect(body).not_to(contain("Run this action for any provided context tools"))
+                expect(isinstance(next(p for p in harness.prompts if p.name == "handoff").body, UtilityBody)).to(
+                    equal(True)
+                )
 
         with context("with scaffold"):
-            with it("should write an action prompt and not treat scaffold as a fidelity"):
+            with it("should write the stories scaffold fidelity as a prefixed prompt"):
                 root = _sandbox()
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="scaffold")
-                body = (root / ".cursor" / "commands" / "scaffold.md").read_text(encoding="utf-8")
-                expect(body).to(contain("Run this action for any provided context tools"))
+                body = (root / ".cursor" / "commands" / "stories.scaffold.md").read_text(encoding="utf-8")
+                expect(body).to(contain("Run the action on stories at scaffold fidelity through the tools cli"))
+                expect((root / ".cursor" / "commands" / "scaffold.md").is_file()).to(equal(False))
+                expect(body).not_to(contain("Then run:"))
                 expect(body).not_to(contain("Run at fidelity scaffold"))
+                expect(body).not_to(contain("If the fidelity does not belong"))
 
         with context("with a format"):
             with it("should write a format prompt that names generate and render"):
@@ -396,30 +691,99 @@ with description("a harness"):
                 text = (root / ".github" / "prompts" / "markdown.prompt.md").read_text(encoding="utf-8")
                 expect(text).to(contain("generate and render"))
                 expect(text).to(contain("Do not set a fidelity"))
+                expect(text).not_to(contain("If you took guidance from the context and not a tool"))
+                expect(text).not_to(contain("If the fidelity does not belong"))
+                expect(text).to(contain("through the tools cli"))
+                expect(text).not_to(contain("Then run:"))
 
         with context("with a CDD stage fidelity"):
-            with it("should write a prompt"):
+            with it("should write a prefixed prompt from the fidelity value"):
                 root = _sandbox()
+                _write_context_tool(
+                    root / "context_tools" / "cdd" / "cdd.py",
+                    "context_tools.cdd.cdd",
+                    "Cdd",
+                    {"discovery": "discovery"},
+                )
                 Harness("Cursor", repo_root=root).write_deploy(source="discovery")
-                expect((root / ".cursor" / "commands" / "discovery.md").is_file()).to(equal(True))
+                body = (root / ".cursor" / "commands" / "cdd.discovery.md").read_text(encoding="utf-8")
+                expect(body).to(contain("Run the action on cdd at discovery fidelity through the tools cli"))
+                expect((root / ".cursor" / "commands" / "discovery.md").is_file()).to(equal(False))
+                expect(body).not_to(contain("Then run:"))
+                expect(body).not_to(contain("Run this action for any provided context tools"))
+                expect(body).not_to(contain("# Instructions"))
+                expect(body).not_to(contain("Do not treat this as a format"))
+                expect(body).not_to(contain("If you took guidance from the context and not a tool"))
+                expect(body).not_to(contain("If you cannot get guidance and cannot get the action"))
+                expect(body).not_to(contain("If the fidelity does not belong"))
+                expect(body).not_to(contain("AskQuestion constrained to the other fidelities"))
+                expect(body).to(contain("python -m tools run"))
 
         with context("with CleanEngineering model"):
             with it("should write a model prompt"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="model")
-                expect((root / ".cursor" / "commands" / "model.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "commands" / "clean_engineering.model.md").is_file()).to(equal(True))
 
         with context("with DDD bounded_context"):
             with it("should write a bounded_context prompt"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="bounded_context")
-                expect((root / ".cursor" / "commands" / "bounded_context.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "commands" / "ddd.bounded_context.md").is_file()).to(equal(True))
 
         with context("with UX ia"):
-            with it("should write an ia prompt"):
+            with it("should write a prefixed ia prompt for Cursor and VS Code"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="ia")
-                expect((root / ".cursor" / "commands" / "ia.md").is_file()).to(equal(True))
+                body = (root / ".cursor" / "commands" / "ux.ia.md").read_text(encoding="utf-8")
+                expect(body).to(contain("Run the action on ux at ia fidelity through the tools cli"))
+                expect((root / ".cursor" / "commands" / "ia.md").is_file()).to(equal(False))
+                Harness("VS Code", repo_root=root).write_deploy(source="ia")
+                prompt = (root / ".github" / "prompts" / "ux.ia.prompt.md").read_text(encoding="utf-8")
+                expect(prompt).to(contain("name: ux.ia"))
+                expect(prompt).to(contain("Run the action on ux at ia fidelity through the tools cli"))
+                expect((root / ".github" / "prompts" / "ia.prompt.md").is_file()).to(equal(False))
+
+        with context("with @skill on a base class guidance"):
+            with it("should write the subclass skill and fidelities without repeating the annotation"):
+                root = _sandbox()
+                (root / "context_tools" / "base").mkdir(parents=True, exist_ok=True)
+                (root / "context_tools" / "base" / "base_context_tool.py").write_text(
+                    "# @toolset-manifest python -m tools manifest context_tools.base.base_context_tool:BaseContextTool\n"
+                    '"""Base."""\n'
+                    "class BaseContextTool:\n"
+                    "    @skill\n"
+                    "    @agent_instructions\n"
+                    "    def guidance(self):\n"
+                    '        """base guidance"""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                path = root / "context_tools" / "family" / "family.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest context_tools.family.family:Child\n"
+                    '"""Child."""\n'
+                    "from context_tools.base.base_context_tool import BaseContextTool\n"
+                    "class Child(BaseContextTool):\n"
+                    "    fidelities = {\"discovery\": \"family_map\"}\n"
+                    "    @agent_instructions\n"
+                    "    def extra(self):\n"
+                    '        """helper"""\n'
+                    "        return None\n"
+                    "    def guidance(self):\n"
+                    '        """child guidance"""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy()
+                expect((root / ".cursor" / "skills" / "child" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "base_context_tool").exists()).to(equal(False))
+                expect((root / ".cursor" / "commands" / "child.family_map.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "commands" / "family_map.md").is_file()).to(equal(False))
+                expect((root / ".cursor" / "commands" / "extra.md").is_file()).to(equal(False))
+                text = (root / ".cursor" / "skills" / "child" / "SKILL.md").read_text(encoding="utf-8")
+                expect(text).to(contain("child guidance"))
 
         with context("with @skill, @prompt, or @instruction on the operation"):
             with it("should write each named file kind"):
@@ -429,6 +793,25 @@ with description("a harness"):
                 expect((root / ".cursor" / "skills" / "tagged" / "SKILL.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "commands" / "tagged.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "rules" / "tagged-guide.mdc").is_file()).to(equal(True))
+
+        with context("with @prompt(name) on the operation"):
+            with it("should write a Cursor command under that name"):
+                root = _sandbox()
+                path = root / "context_tools" / "actions" / "turnkit" / "turnkit.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest context_tools.actions.turnkit.turnkit:Turnkit\n"
+                    '"""Turnkit."""\n'
+                    "class Turnkit:\n"
+                    '    @prompt(name="finish-turn")\n'
+                    "    def finish_turn(self):\n"
+                    '        """Close the turn."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                harness = Harness("Cursor", repo_root=root)
+                harness.write_deploy(source="finish-turn")
+                expect((root / ".cursor" / "commands" / "finish-turn.md").is_file()).to(equal(True))
 
         with context("with @skill(name) on the operation"):
             with it("should use that name"):
@@ -451,11 +834,15 @@ with description("a generated harness tool"):
                 expect(skill.description).to(equal("Stories."))
                 text = str(skill.body)
                 expect(text).to(contain("Stories."))
-                expect(text).to(contain("confirm"))
-                expect(text).to(contain("AskQuestion"))
-                expect(text).to(contain("constrained to this source: stories"))
+                expect(text).to(contain("If you took an action from the context versus being given an explicit one"))
+                expect(text).to(contain("AskQuestion constrained to the actions in context_tools/actions:"))
+                expect(text).not_to(contain("cannot get guidance and cannot get the action"))
+                expect(text).not_to(contain("constrained to this source: stories"))
                 expect(text).to(contain("python -m tools run"))
-                expect(text).to(contain("guess the correct fidelity"))
+                expect(text).to(contain("or has not been provided"))
+                expect(text).to(contain("AskQuestion constrained to the other fidelities: story_map | scaffold"))
+                expect(text).not_to(contain("Guidance:"))
+                expect(text).not_to(contain("# Instructions"))
 
         with context("with an action given"):
             with it("should use the action body on skill and command files"):
@@ -465,6 +852,17 @@ with description("a generated harness tool"):
                 text = (root / ".cursor" / "commands" / "sketch.md").read_text(encoding="utf-8")
                 expect(text).to(contain("Run this action for any provided context tools"))
                 expect(text).to(contain("or on the context in general"))
+                expect(text).to(contain("If you took guidance from the context and not a tool"))
+                expect(text).to(
+                    contain(
+                        "AskQuestion constrained to the context tools: "
+                        "clean_engineering | ddd | stories | ux | use existing context only"
+                    )
+                )
+                expect(text).to(contain("AskQuestion constrained to the other fidelities"))
+                expect(text).to(contain("or has not been provided"))
+                expect(text).not_to(contain("cannot get guidance and cannot get the action"))
+                expect(text).not_to(contain("constrained to this source: sketch"))
                 expect(isinstance(next(c for c in harness.commands if c.name == "sketch").body, ActionBody)).to(
                     equal(True)
                 )
@@ -489,6 +887,9 @@ with description("a prompt"):
     with context("that generates"):
         with it("should write a VS Code prompt and a Cursor command"):
             expect(Prompt("VS Code", "echo").relative_path().as_posix()).to(equal("prompts/echo.prompt.md"))
+            expect(Prompt("VS Code", "stories.story_map").relative_path().as_posix()).to(
+                equal("prompts/stories.story_map.prompt.md")
+            )
             root = _sandbox()
             written = Prompt("Cursor", "echo")
             written.body = "echo-body"
@@ -560,8 +961,8 @@ with description("clean"):
             root = _sandbox()
             harness = Harness("VS Code", repo_root=root)
             harness.write_deploy()
-            expect(any(p.name == "clean" for p in harness.prompts)).to(equal(True))
-            expect((root / ".github" / "prompts" / "clean.prompt.md").is_file()).to(equal(True))
+            expect(any(p.name == "clean-harness" for p in harness.prompts)).to(equal(True))
+            expect((root / ".github" / "prompts" / "clean-harness.prompt.md").is_file()).to(equal(True))
         with context("with type Cursor"):
             with it("should clean that Cursor deploy area and not VS Code"):
                 root = _sandbox()

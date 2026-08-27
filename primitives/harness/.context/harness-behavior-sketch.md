@@ -29,12 +29,12 @@ a harness
     with no source
       it should walk the workspace
       it should generate each source into the deploy area
-      it should write a Harness skill
-      it should write a Harness prompt
+      it should not write a Harness skill
+      it should write Harness prompts
       it should not be a separate deploy
       it should not confirm the scanned list
       it should overwrite generated files
-      it should remove stale shortcuts and old slugs
+      it should remove files this generate did not write
       it should save the IDE
     with a source
       it should write that source into the deploy area
@@ -51,7 +51,11 @@ a harness
       -> skill = new Skill(type)
       -> skill.generate(utilityToolset)
       it should add that skill
-      it should use the context-tool body
+      it should use the utility body
+        -> expect(skill.body).to equal UtilityBody.from(utilityToolset)
+    with a utility prompt
+      it should write the operation and the CLI
+      it should not use the action body
     with an action
       -> prompt = new Prompt(type)
       -> prompt.generate(action)
@@ -68,9 +72,11 @@ a harness
       it should add that prompt
       it should use the action body
     with echo
-      it should write a prompt
+      it should write a utility prompt
+      it should not use the action body
     with handoff
-      it should write a prompt
+      it should write a utility prompt
+      it should not use the action body
     with scaffold
       -> prompt = new Prompt(type)
       -> prompt.generate(scaffold)
@@ -86,14 +92,17 @@ a harness
       it should tell the agent to run using that format
       it should name generate and render
       it should not set a fidelity
+      it should not use action resolve
     with a CDD stage fidelity
       -> prompt = new Prompt(type)
       -> prompt.generate(stage)
       it should add that prompt
+      it should not AskQuestion about fidelities
     with a tool-specific fidelity
       -> prompt = new Prompt(type)
       -> prompt.generate(fidelity)
       it should add that prompt
+      it should not AskQuestion about fidelities
     with CleanEngineering model
       it should write a model prompt
     with DDD bounded_context
@@ -122,11 +131,9 @@ a generated harness tool
   that generates
     with a context tool given
       it should not require an action
-      it should lead with guidance clustering
-        -> expect(tool.description).to equal contextTool.overview
-      it should include the class string
-      with attached operation instructions
-        it should generate with those operation instructions
+      it should lead with what the skill does
+        -> expect(tool.description).to equal first line of guidance()
+      it should not copy class string or per-fidelity guidance into the skill
       with a skill file
         it should use the context-tool body
       with a command file
@@ -146,13 +153,14 @@ a generated harness tool
     with qualitative guidance or an action taken from the context
       it should confirm
         -> expect(tool.body).to contain "confirm"
-    with a fidelity that does not belong to the in-scope tool
-      it should guess the correct fidelity
-      it should confirm
+    with a fidelity that does not belong to the in-scope tool or has not been provided
+      with a context-tool skill or an action body
+        it should guess the correct fidelity
+        it should confirm with AskQuestion constrained to the other fidelities
+      with a fidelity prompt
+        it should not AskQuestion about fidelities
     with neither qualitative guidance nor an action available
-      it should AskQuestion
-        -> expect(tool.body).to contain "AskQuestion"
-      it should constrain AskQuestion to this source
+      it should not AskQuestion constrained to this source
     with the action specified
       it should not require it from the context
       it should put the CLI after that

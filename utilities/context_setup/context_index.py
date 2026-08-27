@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Protocol, Sequence
 
 from primitives.actions.action import agent_instructions
+from harness.harness_tool import prompt
 from tools.tool import agent_tool, toolset
 
 if TYPE_CHECKING:
@@ -93,6 +94,7 @@ class ContextIndex:
 
     # ── @tools — deterministic Python ────────────────────────────────────────
 
+    @prompt(name="embed")
     @agent_tool
     def embed(self, segments_paths: list[str], out_path: str) -> EmbedResult:
         """Read every segment markdown file listed in segments_paths, embed using the embedding provider,
@@ -135,6 +137,7 @@ class ContextIndex:
             views_covered=sorted(views_covered),
         )
 
+    @prompt(name="search")
     @agent_tool
     def search(self, query: str, index_path: str, top_k: int = 5) -> SearchResult:
         """Embed query and search the FAISS index at index_path.
@@ -171,6 +174,7 @@ class ContextIndex:
 
     # ── @agent_instructions — AI reads recipe; owns judgment ──────────────────────────────
 
+    @prompt(name="ask")
     @agent_instructions
     def ask(self, question: str, index_path: str) -> str:
         """Answer question using the FAISS index at index_path, citing sources.

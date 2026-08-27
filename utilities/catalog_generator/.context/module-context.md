@@ -37,7 +37,9 @@ Defaults `--out catalog`, `--repo-url` from `git remote get-url origin`, `--ref`
 
 ## Seam
 
-`@tool`-shaped, deterministic, zero agentic judgment points (per the sketch's Clean Engineering grill decision — scrape → render → write is a fixed pipeline, so this module is not itself a `@toolset`/`@action` host; `generate_cdd_catalog.py` just calls it directly). Reads real files/classes; `write_page` is the only place it writes, and only under `out_root`.
+`Catalog` is the deployed toolset (`catalog_generator.catalog_generator:Catalog`). `Catalog.generate_catalog` carries `@prompt(name="generate-catalog")` — slash `/generate-catalog`, not a catalog skill. `CatalogAction` (and the other `generate_catalog` helpers) are page renderers, not IDE files.
+
+Reads real files/classes; `write_page` is the only place it writes, and only under `out_root`. CLI: `python -m utilities.catalog_generator.generate_cdd_catalog`.
 
 ## Dependencies
 

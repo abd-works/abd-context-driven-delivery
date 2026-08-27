@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from lifecycle import LifecycleAction
 from primitives.actions.action import agent_instructions, agentic_toolset
+from harness.harness_tool import prompt
 from workspace import SessionLog
 
 
@@ -16,6 +17,7 @@ from workspace import SessionLog
 class Generate(LifecycleAction):
     """Generate artifacts for provided context tools."""
 
+    @prompt
     @agent_instructions
     def generate(self, tools: list) -> str:
         """generate"""

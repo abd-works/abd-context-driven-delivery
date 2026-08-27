@@ -7,11 +7,11 @@ toolset once with `arguments.tools` listing the in-scope context tool(s).
 
 ## Membership
 Host-action kits: `generate`, `validate`, `document`, `satisfy`, `render`,
-`sketch`, `iterate`, `grill_context`, `partition`, `improvement`, `workspace`
-Companions: `echo`, `handoff`, `workflow`
+`sketch`, `iterate`, `grill_context`, `partition`, `improvement`
+Companions that left this tree: `echo` and `handoff` live under `utilities/`;
+`workflow` is still listed here until it moves.
 
 Host-action skill/command names match the operation (`grill`, not `grill-context`).
-Companions keep their own kit name (`echo`, `handoff`).
 
 `primitives/actions` is the Actions framework (`action.py`, `@agent_instructions`),
 not a place for these kits. First-order kits subclass `LifecycleAction`: open the
@@ -36,4 +36,6 @@ Non-action tooling stays under `utilities/` (`scanners`, `diagnose`, …).
 | `/partition` | `partition.partition:Partition` | `partition(tools, context, …)` |
 | `/repair` | `improvement.improvement:Improvement` | `repair(tools, asset, violation)` |
 
-Inner corpus/session actions (`iterate_session`, `partition_corpus`, …) stay on the kit for in-method composition.
+Inner corpus/session actions (`iterate_session`, `partition_corpus`, `grill_with_context`, …) stay on the kit for in-method composition and keep `@agent_instructions` only — they are not slash files.
+
+Outer actions carry `@prompt` (and `@prompt(name=…)` when the slash name is not the class slug: `/grill`, `/repair`, `/createRule`, `/backlog`, `/start-ticket`, `/finish-ticket`). Unmarked helpers do not get commands.

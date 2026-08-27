@@ -4,6 +4,7 @@
 """Diagnose toolset - launch the disciplined bug-fixing loop as a non-blocking sub-agent."""
 from __future__ import annotations
 
+from harness.harness_tool import prompt
 from sub_agent.sub_agent import sub_agent
 from tools.tool import agent_tool, toolset
 
@@ -16,6 +17,7 @@ class Diagnose:
     Reproduce -> minimise -> hypothesise -> instrument -> fix -> regression-test.
     """
 
+    @prompt(name="diagnose")
     @sub_agent
     @agent_tool
     def diagnose(self) -> str:

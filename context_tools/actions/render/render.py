@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from harness.harness_tool import prompt
 from lifecycle import LifecycleAction
 from primitives.actions.action import agentic_toolset
 from tools.tool import agent_tool
@@ -16,6 +17,7 @@ from tools.tool import agent_tool
 class Render(LifecycleAction):
     """Render already-generated output for provided context tools."""
 
+    @prompt
     @agent_tool
     def render(self, tools: list, format: str, content: str = "") -> list:
         self.begin(tools, action="render")

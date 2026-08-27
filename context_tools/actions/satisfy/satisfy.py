@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from harness.harness_tool import prompt
 from lifecycle import LifecycleAction
 from primitives.actions.action import agent_instructions, agentic_toolset
 from workspace import SessionLog
@@ -16,6 +17,7 @@ from workspace import SessionLog
 class Satisfy(LifecycleAction):
     """Satisfy artifacts for provided context tools."""
 
+    @prompt
     @agent_instructions
     def satisfy(self, tools: list) -> str:
         """satisfy"""

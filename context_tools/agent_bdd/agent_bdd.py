@@ -21,6 +21,11 @@ class AgentBdd(BaseContextTool):
     def __init__(self, format: str = "python", path: str | None = None, session: str | None = None) -> None:
         super().__init__(format=format, path=path, session=session)
 
+    @agent_instructions
+    def guidance(self) -> str:
+        """Provide guidance for writing agent BDD specs against the agent harness."""
+        return super().guidance()
+
     def _bdd(self) -> Bdd:
         active = self.active
         sprint = active.name if active is not None else None

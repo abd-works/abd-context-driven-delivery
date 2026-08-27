@@ -7,6 +7,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from harness.harness_tool import prompt
 from primitives.actions.action import agent_instructions
 from tools.tool import agent_tool, toolset
 
@@ -68,6 +69,7 @@ class RecordDecisions:
         target.write_text(content.strip() + "\n", encoding="utf-8")
         return str(target)
 
+    @prompt(name="record-decisions-session")
     @agent_instructions
     def record_decisions_session(self, root: str = ".") -> str:
         """Offer and write Context Decision Records (CDRs) sparingly as decisions crystallise during the wrapped action - never batch; never invent decisions."""

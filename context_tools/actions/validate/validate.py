@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from harness.harness_tool import prompt
 from lifecycle import LifecycleAction
 from primitives.actions.action import agent_instructions, agentic_toolset
 from workspace import SessionLog
@@ -17,6 +18,7 @@ from workspace import SessionLog
 class Validate(LifecycleAction):
     """Validate artifacts for provided context tools."""
 
+    @prompt
     @agent_instructions
     def validate(self, tools: list) -> str:
         """validate"""
@@ -39,6 +41,7 @@ class Validate(LifecycleAction):
 class CreateRule(LifecycleAction):
     """Write a named rule and scanner into the provided context tool."""
 
+    @prompt(name="createRule")
     @agent_instructions
     def createRule(self, tools: list, failed: str, wanted: str) -> str:
         """createRule"""

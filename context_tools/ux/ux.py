@@ -12,6 +12,7 @@ import importlib
 from typing import Any
 
 from context_tools.base.base_context_tool import BaseContextTool
+from primitives.actions.action import agent_instructions
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from tools.tool import agent_tool  # noqa: F401
@@ -82,6 +83,11 @@ class Ux(BaseContextTool):
 
     @instruction
     def contexts(self) -> Instruction: ...
+
+    @agent_instructions
+    def guidance(self) -> str:
+        """Provide guidance for creating IA, mockups, and front-end code."""
+        return super().guidance()
 
     @agent_tool
     def transform(self, source_format: str, target_format: str, content: str) -> dict:

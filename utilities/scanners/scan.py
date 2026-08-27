@@ -1,3 +1,6 @@
+# @toolset-manifest python -m tools manifest scanners.scan:Scan
+# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Do not author behavior from this Python source.
 """Scan kit - mergeable toolset face over ScannerCollection."""
 
 from __future__ import annotations
@@ -6,7 +9,8 @@ import ast
 from pathlib import Path
 from typing import Any
 
-from tools.tool import agent_tool
+from harness.harness_tool import prompt
+from tools.tool import agent_tool, toolset
 
 from .scanner import Scanner
 from .scanner_collection import ScannerCollection
@@ -41,12 +45,14 @@ class ScanReport:
         return False
 
 
+@toolset
 class Scan:
     """Toolset-facing scan binding; domains override ``_scanner_collection``."""
 
     def _scanner_collection(self) -> ScannerCollection:
         return ScannerCollection()
 
+    @prompt(name="scan")
     @agent_tool
     def scan(self, paths: list[str], root: str | None = None, rule: str | None = None) -> str:
         """scan

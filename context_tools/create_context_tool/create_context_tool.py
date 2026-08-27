@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 from context_tools.base.base_context_tool import BaseContextTool
+from primitives.actions.action import agent_instructions
 
 
 class CreateContextTool(BaseContextTool):
@@ -26,3 +27,8 @@ class CreateContextTool(BaseContextTool):
         workspace: str | None = None,
     ) -> None:
         super().__init__(format=format, path=path, session=session, workspace=workspace)
+
+    @agent_instructions
+    def guidance(self) -> str:
+        """Provide guidance for scaffolding new context-tool domains."""
+        return super().guidance()

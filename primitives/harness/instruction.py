@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from harness.bodies import ActionBody, ContextToolBody
+from harness.bodies import ActionBody, ContextToolBody, UtilityBody
 from harness.harness_tool import HarnessTool, instruction as instruction_decorator
 from harness.rule import Rule
 
@@ -24,10 +24,18 @@ class Instruction(HarnessTool):
         self.apply_source(source)
         if not self.body and isinstance(source, dict):
             name = self.name
-            if source.get("action"):
+            if source.get("action") or source.get("source_kind") == "action":
                 self.body = ActionBody.from_source(
                     name=name,
                     class_string=source.get("class_string", name),
+                    operation_instructions=source.get("guidance", ""),
+                    toolset=source.get("toolset", ""),
+                    context_tools=source.get("context_tools") or (),
+                )
+            elif source.get("source_kind") == "utility":
+                self.body = UtilityBody.from_source(
+                    name=name,
+                    class_string="",
                     operation_instructions=source.get("guidance", ""),
                     toolset=source.get("toolset", ""),
                 )
@@ -35,9 +43,9 @@ class Instruction(HarnessTool):
                 self.body = ContextToolBody.from_source(
                     name=name,
                     overview=self.description or source.get("overview", name),
-                    class_string=source.get("class_string", name),
-                    guidance=source.get("guidance", "guidance"),
                     toolset=source.get("toolset", ""),
+                    fidelities=source.get("fidelities") or (),
+                    actions=source.get("actions") or (),
                 )
             if source.get("overview"):
                 self.description = source["overview"]

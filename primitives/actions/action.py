@@ -921,12 +921,12 @@ class _ActionExpander:
             acc.add_text(f"Could not resolve `{provider_name}`: {exc}")
             return True
         target_cls = type(target_instance)
-        if member in _action_slot_names(target_cls):
-            self._expand_action_call(member, target_instance, ctx.visited, acc)
-        elif member in self._validator._tool_names(target_cls) or self._is_sub_agent_tool(
-            target_cls, member
+        if self._is_sub_agent_tool(target_cls, member) or member in self._validator._tool_names(
+            target_cls
         ):
             acc.tool_steps.append(member)
+        elif member in _action_slot_names(target_cls):
+            self._expand_action_call(member, target_instance, ctx.visited, acc)
         else:
             self._run_plain_call(target_instance, member, expr_node, ctx, acc)
         return True

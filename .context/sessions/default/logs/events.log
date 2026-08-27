@@ -112,3 +112,8 @@
 2026-08-26T23:22:39 kind=expansion toolset=validate.validate:Validate name=validate ok=true summary=tools= role=expansion
 2026-08-26T23:22:39 kind=expansion toolset=validate.validate:Validate name=validate ok=true summary=tools= role=expansion
 2026-08-26T23:22:39 kind=expansion toolset=satisfy.satisfy:Satisfy name=satisfy ok=true summary=tools= role=expansion
+2026-08-27T01:28:10 kind=expansion toolset=generate.generate:Generate name=generate ok=true summary=tools= role=expansion
+2026-08-27T01:28:10 kind=expansion toolset=generate.generate:Generate name=generate ok=true summary=tools=add_epic role=expansion
+2026-08-27T01:28:10 kind=expansion toolset=generate.generate:Generate name=generate ok=true summary=tools= role=expansion
+2026-08-27T04:22:36 kind=expansion toolset=workflow.workflow:Workflow name=backlog ok=true summary=tools=compact_handoff,capture_backlog role=expansion
+2026-08-27T05:04:52 kind=expansion toolset=workflow.workflow:Workflow name=backlog ok=true summary=tools=compact_handoff,capture_backlog role=expansion

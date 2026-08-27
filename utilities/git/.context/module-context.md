@@ -16,9 +16,7 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 
 ## Seam
 
-`git.git:Git` manifest entry; domain types `Repo`, `Branch`, `Commit`, `Project`,
-`Ticket`, `TicketState`. Legacy aliases `GitRepo` / `NullGitRepo` re-exported from
-`workspace.git_repo` shim.
+`git.git:Git` is a **manifest facade** for the domain types — not an IDE skill. Do not deploy `/git`. Slash commands belong on Workflow (`/backlog`, `/start-ticket`, `/finish-ticket`). Mark a git operation with `@prompt` only if a dedicated command is needed.
 
 ## Constraint
 

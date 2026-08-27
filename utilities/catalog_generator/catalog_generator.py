@@ -1,4 +1,4 @@
-# @toolset-manifest python -m tools manifest catalog_generator.catalog_generator:CatalogGenerator
+# @toolset-manifest python -m tools manifest catalog_generator.catalog_generator:Catalog
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
 """catalog_generator - discover-and-render primitives for the CDD HTML catalog.
@@ -33,6 +33,9 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from harness.harness_tool import prompt
+from tools.tool import toolset
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _BASE_CONTEXT_TOOL_PATH = _REPO_ROOT / "context_tools" / "base" / "base_context_tool.py"
 _SKILLS_DIR = _REPO_ROOT / ".cursor" / "skills"
@@ -56,9 +59,10 @@ CONTEXT_TOOL_REGISTRY: tuple[tuple[str, str, str], ...] = (
 UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
     ("harness", "harness.harness", "Harness"),
     ("diagnose", "diagnose.diagnose", "Diagnose"),
+    ("echo", "echo.echo", "Echo"),
     ("handoff", "handoff.handoff", "Handoff"),
-    ("workspace", "workspace.workspace_session", "Session"),
-    ("sub_agent", "sub_agent.sub_agent", "SubAgentTool"),
+    ("workspace", "workspace.workspace", "WorkSession"),
+    ("sub_agent", "sub_agent.sub_agent", "SubAgent"),
 )
 
 
@@ -678,7 +682,7 @@ def skill_slash_name(module_dir_name: str) -> str | None:
         if match:
             return match.group(1)
     return None
-
+\
 
 # -- Portability: git-URL source citations + CLI defaults --------------------
 
@@ -1360,6 +1364,7 @@ class CatalogUtility:
         )
 
 
+@toolset
 class Catalog:
     """The top-level entry point - the only class ``generate_cdd_catalog.py``
     calls. Owns the shared portability config and the fixed roster of live
@@ -1420,6 +1425,7 @@ class Catalog:
             )
         return tools
 
+    @prompt(name="generate-catalog")
     def generate_catalog(
         self,
         context_tool_entries: list[RegistryEntry],

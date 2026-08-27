@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from harness.harness_tool import prompt
 from lifecycle import LifecycleAction
 from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
@@ -78,6 +79,7 @@ class GrillContext(LifecycleAction):
         answers_path.write_text(self._appended_answers_content(existing, heading, body), encoding="utf-8")
         return str(answers_path)
 
+    @prompt(name="grill")
     @agent_instructions
     def grill(self, tools: list) -> str:
         """Grill then generate - pure grill loop, then the host generate body."""

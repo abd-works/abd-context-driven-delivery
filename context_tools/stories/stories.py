@@ -140,7 +140,7 @@ class Stories(BaseContextTool):
 
     @agent_instructions
     def guidance(self) -> str:
-        """Generate story artifacts at the current fidelity.
+        """Provide guidance for creating story maps, scenarios, and acceptance tests.
         At scaffold fidelity: write epic, sub-epic, and story names only.
         At story_map fidelity: write the story map and thin-slice only.
         At scenarios fidelity: write main-flow scenarios (single or multiple per story) with optional variations; fixtures live in examples/ and givens.ts at the lowest shared epic/sub-epic/story folder.

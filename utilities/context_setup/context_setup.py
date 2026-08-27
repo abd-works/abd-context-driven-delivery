@@ -12,13 +12,14 @@ from pathlib import Path
 from typing import Optional
 
 from primitives.actions.action import agent_instructions
+from harness.harness_tool import prompt
 from tools.tool import agent_tool, toolset
+from partition.partition import Partition
 
 from context_tools.clean_engineering.clean_engineering import CleanEngineering
 from context_tools.ddd.ddd import Ddd
 from context_tools.stories.stories import Stories
 from context_tools.ux.ux import Ux
-from context_setup.semantic_indexer import SemanticIndexer
 from context_setup.context_index import ContextIndex
 
 
@@ -133,8 +134,7 @@ class ContextSetup:
         self.ddd.mode = "tool"
         self.ux: Ux = Ux()
         self.ux.mode = "tool"
-        self.default_indexer: SemanticIndexer = SemanticIndexer()
-        self.default_indexer.mode = "tool"
+        self.partition = Partition()
         # ContextIndex.embed is a @agent_tool — deferred automatically (no mode needed).
         self.context_index: ContextIndex = ContextIndex()
 
@@ -299,6 +299,7 @@ class ContextSetup:
 
     # ── @agent_instructions — AI reads recipe; owns judgment; calls @tools + collaborators ─
 
+    @prompt(name="capture-from-live-app")
     @agent_instructions
     def capture_from_live_app(
         self,
@@ -373,6 +374,7 @@ class ContextSetup:
         self.context_index.embed()
         return "Live app captured and indexed."
 
+    @prompt(name="capture-from-documents")
     @agent_instructions
     def capture_from_documents(
         self,
@@ -382,7 +384,7 @@ class ContextSetup:
     ) -> str:
         """Capture documents from folder_path, partition through selected context tools, embed into one FAISS index.
         folder_path={folder_path}, indexers={indexers}, first={first}.
-        Collaborators (compile-time references): Stories, CleanEngineering, Ddd, Ux, SemanticIndexer."""
+        Collaborators (compile-time references): Stories, CleanEngineering, Ddd, Ux, Partition."""
         """Step 1 — call convert(folder_path) to convert every document to markdown.
         Inspect the returned structure_notes.  If any note shows heading_depth=0 and
         word_count > 200, note it for the user — the document may need a semantic re-pass
@@ -391,7 +393,7 @@ class ContextSetup:
         """Step 2 — Choose Indexers:
         If indexers is None or empty, ask the user via AskQuestion (allow_multiple=True):
           Which context tools should index this content?
-          Options: stories | clean_engineering | ddd | ux | cdd | default_indexer
+          Options: stories | clean_engineering | ddd | ux | cdd
         Also ask: which tool runs first? (first)
         No tool fires during this step — just collect the user's selection."""
         """Step 3 — Sequence & Delegate (partition is additive; multi-pass is safe):
@@ -400,12 +402,12 @@ class ContextSetup:
         remaining selected tools. Each call writes segments to folder_path/.context/
         (out_root=folder_path) and accumulates views without wiping prior passes.
         'cdd' means call both stories and clean_engineering.
-        If the user selected nothing, call self.default_indexer.partition() only."""
+        If the user selected nothing, call partition.partition() only."""
         self.stories.partition()
         self.clean_engineering.partition()
         self.ddd.partition()
         self.ux.partition()
-        self.default_indexer.partition()
+        self.partition.partition()
         """Step 4 — Embed:
         segments_paths = glob(folder_path/.context/**/*-segment.md).
         Pass them to context_index.embed with out_path=folder_path/rag.
