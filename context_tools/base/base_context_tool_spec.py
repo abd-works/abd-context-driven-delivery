@@ -198,6 +198,18 @@ with description("Generate kit"):
                     be_true
                 )
 
+            with it("should name finish_turn"):
+                expect("finish_turn" in self.response["tools"]).to(be_true)
+
+            with it("should name CDR tools from begin"):
+                for name in ("read_cdr_format", "list_cdrs", "write_cdr"):
+                    expect(name in self.response["tools"]).to(be_true)
+
+            with it("should inline the generate header recipe"):
+                expect("Prepend the following block verbatim" in self.response["instructions"]).to(
+                    be_true
+                )
+
     with context("Generate with no context tool"):
         with before.all:
             self.response = _expand_action(
@@ -242,6 +254,9 @@ with description("Validate kit"):
 
         with it("should name finish_turn"):
             expect("finish_turn" in self.response["tools"]).to(be_true)
+
+        with it("should name scan"):
+            expect("scan" in self.response["tools"]).to(be_true)
 
         with it("should inline validate prose"):
             expect(_section("validate", _VALIDATE_DIR) in self.response["instructions"]).to(

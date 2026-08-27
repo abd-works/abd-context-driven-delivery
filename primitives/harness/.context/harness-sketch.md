@@ -13,11 +13,9 @@ primitives/
   focus
   harness
     -> Harness.generate
-       // python -m tools manifest harness.harness:Harness
-       // python -m tools run _req.yaml
-       // same two commands as grill, sketch, agent_skills — not a new kind of thing
-       // python -m tools manifest harness.harness:Harness
-       // python -m tools run _req.yaml
+       // python -m tools run -   (pipe the invoke fence; no _req.yaml; no remanifest)
+       // same one command as grill, sketch, agent_skills — not a new kind of thing
+       // python -m tools run -
        // same CLI as every other agentic operation — replaces agent_skills
   context_tools
        // one @agent_instructions — guidance: contexts, examples, templates
@@ -25,7 +23,7 @@ primitives/
 
 Harness
   // @agentic_toolset
-  // python -m tools manifest harness.harness:Harness
+  // python -m tools run -
   type
        // must be given at construction
        // Cursor | VS Code implemented now
@@ -256,8 +254,7 @@ Harness
       // does not require an action
       // 1. what this skill does — first line of guidance() on the context tool (tooltip too)
       // 2. Resolve — then the CLI; per-fidelity and diagnose prose stay on the tool for the manifest
-      //      python -m tools manifest {toolset}
-      //      python -m tools run _req.yaml
+      //      pipe invoke fence; python -m tools run -  (no _req.yaml; skill is the catalog)
 
   ----
  ActionBody

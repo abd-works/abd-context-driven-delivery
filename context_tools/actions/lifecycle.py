@@ -22,10 +22,22 @@ class LifecycleAction:
         return self.workspace.current_work_session
 
     def _decisions(self):
-        return self._session().decisions
+        session = self._session()
+        if session is not None:
+            return session.decisions
+        from record_decisions.record_decisions import RecordDecisions
+
+        return RecordDecisions()
 
     def _turn(self):
-        return self._session().turn
+        session = self._session()
+        if session is not None:
+            return session.turn
+        from workspace.workspace import Turn
+
+        # Expand-only stand-in so ``self._turn().finish_turn()`` still lists the tool
+        # when no work session is open (Turn() would probe git for session/).
+        return Turn.__new__(Turn)
 
     @agent_tool
     def open_workspace(self, name: str = "", path: str = "") -> str:

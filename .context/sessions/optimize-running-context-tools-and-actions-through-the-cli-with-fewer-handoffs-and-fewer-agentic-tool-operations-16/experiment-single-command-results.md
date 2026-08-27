@@ -1,0 +1,21 @@
+# single-command results
+
+- branch: experiment/single-command
+- options: 1b + 1c + 4c + 5a
+- pair_a_story_map_generate:
+  - start: 2026-08-27T13:26:59
+  - end: 2026-08-27T13:28:15
+  - elapsed: 01:16
+  - artifact: C:\dev\abd-cdd-experiment-single-command\sandbox\courier\.context\story-map.md
+- pair_b_model_generate:
+  - start: 2026-08-27T13:28:22
+  - end: 2026-08-27T13:29:21
+  - elapsed: 00:59
+  - artifact: C:\dev\abd-cdd-experiment-single-command\sandbox\courier\.context\clean-engineering-model.md
+- notes:
+  - Stayed on `python -m tools run -` only (stdin YAML). Zero `_req.yaml` writes. Never remanifested.
+  - Each pair was two hops: domain `action: guidance`, then `generate.generate:Generate` with the named tool. `[run] invoking …` printed on stderr for all four invokes.
+  - Did not open a work session (Generate asked for `open` / `finish_turn`; experiment forbids it). Did not AskQuestion. Did not run validate or CE companion after Stories (would have been extra CLI hops).
+  - Generate `.context` is missing under `context_tools/actions/generate/` in the worktree; followed `generate.md` + CLI `response.instructions`.
+  - `PYTHONPATH` was the isolated worktree so Windows did not import the OneDrive nested clone.
+  - Thin-slice lives inside `story-map.md` (template `## Thin slices`); no separate `thin-slice.md`.

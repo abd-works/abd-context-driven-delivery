@@ -54,6 +54,14 @@ with description("Build Run Request From Live Toolset Manifest"):
             expect(req["action"]).to(equal("generate"))
             expect("tools" in req["arguments"]).to(be_true)
 
+        with it("routes Stories generate through the Generate kit so action generate is live"):
+            req = build_run_request(Stories, action="generate", fidelity="story_map")
+            expect(req["toolset"]).to(equal("generate.generate:Generate"))
+            expect(req["action"]).to(equal("generate"))
+            host = req["arguments"]["tools"][0]
+            expect(host["toolset"]).to(equal("context_tools.stories.stories:Stories"))
+            expect(host["context"]["fidelity"]).to(equal("story_map"))
+
 
 with description("Load Context Tool And Utility Registry"):
     with description("given the hardcoded registry lists"):

@@ -25,4 +25,12 @@ $env:PYTHONIOENCODING = "utf-8"
 & $VenvPython -m pip install --upgrade pip
 & $VenvPython -m pip install -r (Join-Path $Root "requirements.txt")
 & $VenvPython -m pip install -e $Root
+$Pth = Join-Path $Root ".venv\abd_cdd_paths.pth"
+@(
+    $Root
+    (Join-Path $Root "primitives")
+    (Join-Path $Root "utilities")
+    (Join-Path $Root "context_tools")
+    (Join-Path $Root "context_tools\actions")
+) -join "`n" | Set-Content -Path $Pth -Encoding utf8
 Write-Host "Ready. Use: .\tools.ps1 manifest <toolset>"

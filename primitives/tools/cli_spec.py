@@ -1,4 +1,6 @@
 """CLI run accepts a toolset class ref — no request YAML file."""
+import os
+import subprocess
 import sys
 from io import StringIO
 from pathlib import Path
@@ -16,6 +18,7 @@ from mamba import context, description, it
 
 from agent_bdd.yaml_fence import load_fenced
 from tools.cli import _ToolsCli
+from tools.repo_paths import pythonpath_entries, write_venv_pth
 
 
 def _run_cli(argv: list[str]) -> tuple[int, dict]:
@@ -78,15 +81,35 @@ with description("python -m tools run"):
                     "run",
                     "context_tools.clean_engineering.clean_engineering:CleanEngineering",
                     "--action",
-                    "grill",
+                    "guidance",
                     "--fidelity",
                     "code",
                 ]
             )
             expect(code).to(equal(0))
             expect(response.get("ok")).to(equal(True))
-            expect(response.get("action")).to(equal("grill"))
+            expect(response.get("action")).to(equal("guidance"))
             expect(bool(response.get("instructions"))).to(equal(True))
+
+        with it("should expand catalog story_map.yaml through the Generate kit"):
+            catalog = _REPO_ROOT / "catalog" / "manifests" / "stories" / "story_map.yaml"
+            code, response = _run_cli(["run", str(catalog)])
+            expect(code).to(equal(0))
+            expect(response.get("ok")).to(equal(True))
+            expect(response.get("toolset")).to(equal("generate.generate:Generate"))
+            expect(response.get("action")).to(equal("generate"))
+            expect(response.get("error")).not_to(equal("unknown action"))
+            expect(bool(response.get("instructions"))).to(equal(True))
+
+        with it("should expand catalog model.yaml through the Generate kit"):
+            catalog = (
+                _REPO_ROOT / "catalog" / "manifests" / "clean_engineering" / "model.yaml"
+            )
+            code, response = _run_cli(["run", str(catalog)])
+            expect(code).to(equal(0))
+            expect(response.get("ok")).to(equal(True))
+            expect(response.get("toolset")).to(equal("generate.generate:Generate"))
+            expect(response.get("error")).not_to(equal("unknown action"))
 
     with context("given a class reference with neither tool nor action"):
         with it("should fail without writing a request file"):
@@ -115,3 +138,25 @@ with description("the tools CLI"):
             expect(response.get("ok")).to(equal(True))
             expect(response.get("tool")).to(equal("run_analysis"))
             expect(response.get("result")).to(equal("analysed:demo"))
+
+
+with description("this checkout's tools package"):
+    with context("when the venv pth is written for this repo"):
+        with it("should list only paths under this repo"):
+            entries = pythonpath_entries(_REPO_ROOT)
+            expect(entries[0]).to(equal(str(_REPO_ROOT.resolve())))
+            for entry in entries:
+                expect(Path(entry).resolve().is_relative_to(_REPO_ROOT.resolve())).to(equal(True))
+
+        with it("should make a fresh python -m tools import this repo"):
+            write_venv_pth(_REPO_ROOT / ".venv", _REPO_ROOT)
+            py = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
+            env = {k: v for k, v in os.environ.items() if k.upper() != "PYTHONPATH"}
+            env["PYTHONIOENCODING"] = "utf-8"
+            out = subprocess.check_output(
+                [str(py), "-c", "import tools; print(tools.__file__)"],
+                env=env,
+                text=True,
+            )
+            expect(str(_REPO_ROOT.resolve()).lower() in out.strip().lower()).to(equal(True))
+            expect("paradise-mobile" in out.lower()).to(equal(False))

@@ -513,6 +513,30 @@ class _ActionExpander:
         return func.attr
 
     @staticmethod
+    def _loop_var_member(expr_node: "ast.AST", var_name: str) -> "str | None":
+        """Return attr if expr is ``var.attr`` or ``var.attr(...)`` (not ``var.provider.attr()``)."""
+        node = expr_node.func if isinstance(expr_node, ast.Call) else expr_node
+        if not isinstance(node, ast.Attribute):
+            return None
+        if not isinstance(node.value, ast.Name) or node.value.id != var_name:
+            return None
+        return node.attr
+
+    @staticmethod
+    def _loop_var_cross_call(expr_node: "ast.AST", var_name: str) -> "tuple[str, str] | None":
+        """Match ``var.provider.member()`` or ``var.provider().member()``."""
+        if not isinstance(expr_node, ast.Call) or not isinstance(expr_node.func, ast.Attribute):
+            return None
+        member = expr_node.func.attr
+        provider_node = expr_node.func.value
+        provider_attr = provider_node.func if isinstance(provider_node, ast.Call) else provider_node
+        if not isinstance(provider_attr, ast.Attribute):
+            return None
+        if not isinstance(provider_attr.value, ast.Name) or provider_attr.value.id != var_name:
+            return None
+        return provider_attr.attr, member
+
+    @staticmethod
     def _super_call_name(node: ast.AST) -> str | None:
         """Return the method name if node is a bare ``super().method(...)`` call, else None."""
         if not isinstance(node, ast.Call):
@@ -847,28 +871,70 @@ class _ActionExpander:
             return statement.value.value
         return None
 
+    def _expand_target_member(
+        self,
+        member: str,
+        target: Any,
+        expr_node: ast.AST,
+        ctx: _WalkContext,
+        acc: _ProseAccumulator,
+    ) -> None:
+        """Expand ``target.member`` the same way ``self.member`` is expanded."""
+        slots = self._build_body_slots(type(target))
+        if member in slots.action_slots:
+            self._expand_action_call(member, target, ctx.visited, acc)
+            return
+        if member in slots.instruction_slots:
+            acc.add_text(_inline(target, member))
+            return
+        if member in slots.tool_names or self._is_sub_agent_tool(type(target), member):
+            acc.tool_steps.append(member)
+            return
+        if member in slots.resource_names:
+            self._describe_resource(member, target, acc)
+            return
+        if isinstance(expr_node, ast.Call):
+            self._run_plain_call(target, member, expr_node, ctx, acc)
+
+    def _expand_loop_var_cross(
+        self,
+        target_item: Any,
+        cross: "tuple[str, str]",
+        expr_node: ast.AST,
+        ctx: _WalkContext,
+        acc: _ProseAccumulator,
+    ) -> None:
+        """Expand ``var.provider.member()``; list the member when the provider cannot resolve."""
+        provider_name, member = cross
+        try:
+            provider = self._resolve_provider(target_item, provider_name)
+        except Exception as exc:  # noqa: BLE001 — expand without live session/provider
+            acc.add_text(f"Could not resolve `{provider_name}`: {exc}")
+            acc.tool_steps.append(member)
+            return
+        self._expand_target_member(member, provider, expr_node, ctx, acc)
+
     def _walk_for_each_body(
         self, stmt: ast.For, var_name: str, target_item: Any,
-        visited: "frozenset[tuple[str, str]]", acc: _ProseAccumulator,
+        ctx: _WalkContext, acc: _ProseAccumulator,
     ) -> None:
-        """Dispatch mode assigns and member calls on target_item inside the for-each body."""
-        target_cls = type(target_item)
-        target_actions = _action_slot_names(target_cls)
-        target_tools = self._validator._tool_names(target_cls)
+        """Dispatch loop-var members, ``var.provider.member()``, and ``self.*`` inside the for-each."""
         for body_stmt in stmt.body:
             mode_value = self._loop_var_mode_assign(body_stmt, var_name)
             if mode_value is not None:
                 target_item.mode = mode_value
                 continue
-            if not isinstance(body_stmt, ast.Expr):
-                continue
-            member_attr = self._member_call_attr(body_stmt.value, var_name)
-            if member_attr is None:
-                continue
-            if member_attr in target_actions:
-                self._expand_action_call(member_attr, target_item, visited, acc)
-            elif member_attr in target_tools:
-                acc.tool_steps.append(member_attr)
+            expr = body_stmt.value if isinstance(body_stmt, ast.Expr) else None
+            if expr is not None:
+                member_attr = self._loop_var_member(expr, var_name)
+                if member_attr is not None:
+                    self._expand_target_member(member_attr, target_item, expr, ctx, acc)
+                    continue
+                cross = self._loop_var_cross_call(expr, var_name)
+                if cross is not None:
+                    self._expand_loop_var_cross(target_item, cross, expr, ctx, acc)
+                    continue
+            self._dispatch_statement(body_stmt, ctx, acc)
 
     def _walk_for_each_statement(self, stmt: ast.For, ctx: _WalkContext, acc: _ProseAccumulator) -> None:
         """Expand: ``for <var> in self.<provider>(): <var>.<action>()``."""
@@ -878,9 +944,14 @@ class _ActionExpander:
         iter_member = _self_member_name(iter_node)
         if iter_member is None:
             return
-        items = getattr(ctx.instance, iter_member)()
+        try:
+            items = getattr(ctx.instance, iter_member)()
+        except Exception:  # noqa: BLE001 — empty for-each must not abort expand
+            items = []
+        if not isinstance(items, (list, tuple)):
+            items = []
         for target_item in items:
-            self._walk_for_each_body(stmt, loop_var.id, target_item, ctx.visited, acc)
+            self._walk_for_each_body(stmt, loop_var.id, target_item, ctx, acc)
 
     @staticmethod
     def _is_sub_agent_tool(toolset_cls: type, member: str) -> bool:
@@ -919,6 +990,7 @@ class _ActionExpander:
             target_instance = self._resolve_provider(ctx.instance, provider_name)
         except Exception as exc:  # noqa: BLE001 — expand without live session/provider
             acc.add_text(f"Could not resolve `{provider_name}`: {exc}")
+            acc.tool_steps.append(member)
             return True
         target_cls = type(target_instance)
         if self._is_sub_agent_tool(target_cls, member) or member in self._validator._tool_names(

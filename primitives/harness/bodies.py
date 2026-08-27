@@ -18,6 +18,27 @@ def _context_tool_name(toolset: str) -> str:
     return ref or "the in-scope context tool"
 
 
+_CATALOG_LINE = (
+    "Pipe the fence to stdin. Do not write a request file. "
+    "Do not remanifest — this skill is the catalog.\n"
+)
+
+
+def _invoke_block(
+    toolset: str, *, action: str | None = None, fidelity: str | None = None
+) -> str:
+    """Filled invoke fence plus one ``run -`` (1b, 1c, 4c, 5a)."""
+    lines = ["```yaml", f"toolset: {toolset}"]
+    if fidelity:
+        lines.append("context:")
+        lines.append(f"  fidelity: {fidelity}")
+    if action:
+        lines.append(f"action: {action}")
+    lines.append("```")
+    lines.append("python -m tools run -")
+    return "\n".join(lines) + "\n"
+
+
 def resolve_text(
     source: str,
     toolset: str,
@@ -30,16 +51,10 @@ def resolve_text(
     """Resolve rules plus the CLI. Action and guidance bodies get opposite confirm lines."""
     toolset = toolset.strip() or "the in-scope context tool"
     if kind == "fidelity":
-        return (
-            f"python -m tools manifest {toolset}\n"
-            + "python -m tools run _req.yaml\n"
-        )
+        return _CATALOG_LINE + _invoke_block(toolset, action="generate", fidelity=source)
     if kind in {"utility", "format"}:
-        return (
-            "through the tools cli\n\n"
-            + f"python -m tools manifest {toolset}\n"
-            + "python -m tools run _req.yaml\n"
-        )
+        action = None if kind == "format" else source
+        return "through the tools cli\n\n" + _CATALOG_LINE + _invoke_block(toolset, action=action)
     if kind == "guidance":
         if actions:
             action_ask = (
@@ -68,12 +83,13 @@ def resolve_text(
     if fidelities:
         fidelity_ask += ": " + " | ".join(fidelities)
     fidelity_ask += ".\n"
+    action = source if kind == "action" else None
     return (
         taken
         + fidelity_ask
         + "Then run:\n"
-        + f"python -m tools manifest {toolset}\n"
-        + "python -m tools run _req.yaml\n"
+        + _CATALOG_LINE
+        + _invoke_block(toolset, action=action)
     )
 
 

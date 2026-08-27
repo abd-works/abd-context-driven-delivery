@@ -1,8 +1,11 @@
-toolset: context_tools.stories.stories:Stories
-context:
-  fidelity: story_map
-  format: null
-  path: null
-  session: null
-  workspace: null
+toolset: generate.generate:Generate
 action: generate
+arguments:
+  tools:
+  - toolset: context_tools.stories.stories:Stories
+    context:
+      fidelity: story_map
+      format: markdown
+      path: null
+      session: null
+      workspace: null
