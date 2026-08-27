@@ -44,7 +44,7 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 - `Repo.ticket(ref)` / `Repo.create_ticket(title, body)`
 - `Repo.workflow_commit_message(subject, issue_number, workflow_state, reviewed_by=...)`
 - Flat legacy surface on `Repo` for workspace: `checkout_or_create`, `commit`, `push`,
-  `merge_branch`, `note`, `read_notes`, `find_mistakes`, `is_dirty`, `current_branch`
+  `merge_branch`, `note`, `read_notes`, `find_mistakes`, `is_dirty` (ignores `events.log`), `current_branch`
 - Worktree surface: `Worktree`, `list_worktrees`, `worktree_for`, `add_worktree`,
   `remove_worktree`, `fetch` / `pull` / `fetch_pull`, `merge_from` (merge into the
   current branch without checking the other out), `push_to`, `has_stash`,

@@ -244,6 +244,7 @@ class Turn:
             role="run",
         )
         session.append_trail(run)
+        session.save()
         change: TurnCommit | None = None
         if session.dirty:
             message = self.name
@@ -251,7 +252,7 @@ class Turn:
                 message = self.correction.correction_commit_message(
                     subject=self.name
                 )
-            sha = session.git.commit(session.scope_paths, message)
+            sha = session.git.commit(session._commit_paths(), message)
             if self.correction is not None:
                 self.correction.link(session.git, sha)
             change = TurnCommit(
@@ -264,7 +265,6 @@ class Turn:
             session.turns.append(self)
         session.git.push()
         session.open_turn = None
-        session.save()
         return change
 
     @prompt(name="mistake")
@@ -584,6 +584,10 @@ class WorkSession:
         return self.folder / "session.md"
 
     @property
+    def session_yaml(self) -> Path:
+        return self.folder / "session.yaml"
+
+    @property
     def context_index(self) -> str:
         return self._context_index or ""
 
@@ -819,6 +823,7 @@ class WorkSession:
         elif goal or fidelities or contexts:
             if not self.ended:
                 self.session_md.write_text(self._render(), encoding="utf-8")
+        self.save()
         return self.session_md
 
     def open(
@@ -900,9 +905,10 @@ class WorkSession:
         if outcome:
             self.outcome = outcome
         self.session_md.write_text(self._render(), encoding="utf-8")
+        self.save()
         if self.git.is_dirty():
             try:
-                self.git.commit([str(self.session_md)], "close")
+                self.git.commit(self._session_artifact_paths(), "close")
             except (GitConnectError, ValueError):
                 pass
         self._land_on_default_branch()
@@ -983,13 +989,23 @@ class WorkSession:
         return self.close_session(outcome=outcome, handoff=handoff)
 
     def save(self) -> Path:
-        path = self.folder / "session.yaml"
+        path = self.session_yaml
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
             f"name: {self.name}\nbranch: {self.session_branch}\npath: {self.path}\n",
             encoding="utf-8",
         )
         return path
+
+    def _session_artifact_paths(self) -> list[str]:
+        return [str(self.session_md), str(self.session_yaml)]
+
+    def _commit_paths(self) -> list[str]:
+        paths = list(self.scope_paths)
+        for extra in self._session_artifact_paths():
+            if extra not in paths:
+                paths.append(extra)
+        return paths
 
     def load_state(self) -> None:
         """Instance load hook — bootstrap yaml only (git-primary association elsewhere)."""

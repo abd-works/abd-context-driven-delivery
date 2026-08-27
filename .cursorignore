@@ -1,0 +1,4 @@
+﻿# SessionLog append-only trails — runtime noise in every worktree
+**/.context/**/logs/events.log
+**/.sessions/**/events.log
+**/logs/events.log

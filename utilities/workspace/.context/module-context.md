@@ -22,8 +22,8 @@ expand|run trails explicitly (not via `@log`).
     context-index.md                    # PathOverride persistence
     sessions/{name}/                    # WorkSession.folder
       session.md
-      session.yaml                      # bootstrap only (not mistake index)
-      logs/events.log
+      session.yaml                      # bootstrap; written before turn/close commit
+      logs/events.log                   # gitignored + .cursorignore; not a dirty signal
 ```
 
 ## Public API
@@ -42,9 +42,11 @@ expand|run trails explicitly (not via `@log`).
   hyphen/underscore token; e.g. this repo `abd-context-driven-delivery` →
   `abd-cdd-<slug>`). Never hardcode a repo prefix.
   **Close** (`close` / `finish_work_session`): finish an open/forgotten turn
-  (commit), write End, commit `session.md` if dirty, push, merge onto main without
+  (commit `session.yaml` before that commit), write End, save `session.yaml` then
+  commit it with `session.md` if dirty, push, merge onto main without
   checking main out in the session tree, then `git worktree remove` only when the
-  tree is clean (no dirty files, no stash).
+  tree is clean (no dirty files, no stash). `events.log` is ignored (Cursor + git)
+  and does not count as dirty.
 - `SessionPaths` / `docs_dir` — sprint folder vs `{destination}/.context/`
 - `GitRepo` / `NullGitRepo` — `checkout_or_create`, `commit`, `push`, worktrees
   (`list_worktrees` / `worktree_for` / `add_worktree` / `remove_worktree`),

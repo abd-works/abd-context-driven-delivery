@@ -202,3 +202,24 @@ with description("a Repo worktree"):
         with it("should push the current head to another branch name"):
             self.repo.push_to("main")
             expect(self.repo.pushes).to(equal(["main"]))
+
+
+with description("Repo dirty detection"):
+    with it("should ignore events.log so session close is not blocked by the trail"):
+        from git.git import GitRepo, Repo
+
+        tmp = Path(tempfile.mkdtemp(prefix="git_events_log_"))
+        Repo.git(tmp, "init")
+        Repo.git(tmp, "config", "user.email", "test@example.com")
+        Repo.git(tmp, "config", "user.name", "test")
+        Repo.git(tmp, "commit", "--allow-empty", "-m", "init")
+        log = tmp / ".context" / "sessions" / "demo" / "logs" / "events.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("trail\n", encoding="utf-8")
+        Repo.git(tmp, "add", "-f", str(log))
+        Repo.git(tmp, "commit", "-m", "track log")
+        log.write_text("more trail\n", encoding="utf-8")
+        repo = GitRepo(tmp)
+        expect(repo.is_dirty()).to(equal(False))
+        (tmp / "real.txt").write_text("keep", encoding="utf-8")
+        expect(repo.is_dirty()).to(equal(True))

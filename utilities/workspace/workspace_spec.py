@@ -492,6 +492,15 @@ with description("a context tool"):
                     expect(self.commit.sha).to(equal("commit-1"))
                     expect(self.git.commits[0][1]).to(equal(self.turn.name))
 
+                with it("should write session.yaml before that commit"):
+                    expect(self.session.session_yaml.is_file()).to(be_true)
+                    expect(
+                        any(
+                            str(path).endswith("session.yaml")
+                            for path in self.git.commits[0][0]
+                        )
+                    ).to(be_true)
+
                 with it("should name its turn from its context tool action fidelity and format"):
                     expect(self.turn.name).to(
                         equal("bdd-run-modules-python")

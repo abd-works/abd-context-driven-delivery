@@ -551,7 +551,17 @@ class Repo:
         args = ["status", "--porcelain", "--untracked-files=normal"]
         if path is not None:
             args.extend(["--", self._rel(path)])
-        return bool(self._git(*args))
+        return any(
+            not self._is_runtime_log(line)
+            for line in self._git(*args).splitlines()
+            if line.strip()
+        )
+
+    @staticmethod
+    def _is_runtime_log(porcelain_line: str) -> bool:
+        raw = porcelain_line[3:] if len(porcelain_line) >= 3 else porcelain_line
+        name = raw.split(" -> ")[-1].replace("\\", "/").strip()
+        return Path(name).name == "events.log"
 
     def set_dirty(self, dirty: bool = True) -> None:
         if not self._memory:
