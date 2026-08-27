@@ -48,6 +48,7 @@ metadata on that *Ticket*, stored git-primary (notes and trailers), not a second
 
 - Named kanban column — default set: Backlog, In Progress, Done
 - **Invariant:** project state names must match a defined *TicketState* on the attached *Project*
+- GitHub Status field may use `Todo` for workflow `Backlog`; exact option name wins, then the synonym map
 
 ## Modules
 

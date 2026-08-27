@@ -18,7 +18,7 @@ from expects import be_a, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from git import TicketNotFoundError
-from git.git import Branch, Commit, Project, Repo, Ticket, TicketState
+from git.git import Branch, Commit, Project, Repo, Ticket, TicketState, resolve_github_status_option
 
 
 with description("a Ticket"):
@@ -86,6 +86,7 @@ with description("a Repo"):
             ticket = self.repo.create_ticket("Workflow package", "forward requirements")
             ticket.set_status("Backlog")
             expect(ticket.state.name).to(equal("Backlog"))
+            expect(self.repo._ticket_project_state[ticket.number]).to(equal("Backlog"))
             ticket.set_status("In Progress")
             expect(self.repo._ticket_project_state[ticket.number]).to(equal("In Progress"))
 
@@ -112,3 +113,49 @@ with description("a Repo ticket lifecycle"):
     with it("should refuse closing unknown tickets"):
         missing = Ticket(number=999, title="", body="", _repo=self.repo)
         expect(lambda: missing.close()).to(raise_error(TicketNotFoundError))
+
+
+with description("GitHub project status names"):
+    with it("should map Backlog to Todo when the board has Todo"):
+        expect(
+            resolve_github_status_option(
+                "Backlog", ["Todo", "In Progress", "Done"]
+            )
+        ).to(equal("Todo"))
+
+    with it("should keep Backlog when the board has Backlog"):
+        expect(
+            resolve_github_status_option(
+                "Backlog", ["Backlog", "In Progress", "Done"]
+            )
+        ).to(equal("Backlog"))
+
+    with it("should send Todo to gh for Backlog while memory still records Backlog"):
+        repo = Repo.memory("/tmp/demo-clone")
+        repo.attach_project("demo-org", 3)
+        ticket = repo.create_ticket("Demo", "body")
+        calls: list[tuple[str, ...]] = []
+
+        def fake_gh(*args: str, stdin: str | None = None) -> str:
+            calls.append(args)
+            if len(args) >= 2 and args[1] == "field-list":
+                return (
+                    '{"fields":[{"name":"Status","options":'
+                    '[{"name":"Todo"},{"name":"In Progress"},{"name":"Done"}]}]}'
+                )
+            if len(args) >= 2 and args[1] == "item-add":
+                return '{"id":"PVTI_1"}'
+            return ""
+
+        repo._gh = fake_gh  # type: ignore[method-assign]
+        repo._memory = False
+        ticket.set_status("Backlog")
+        values = []
+        for call in calls:
+            if "--value" in call:
+                values.append(call[call.index("--value") + 1])
+        expect(values).to(equal(["Todo"]))
+        repo._memory = True
+        ticket.set_status("Backlog")
+        expect(repo._ticket_project_state[ticket.number]).to(equal("Backlog"))
+        expect(ticket.state.name).to(equal("Backlog"))

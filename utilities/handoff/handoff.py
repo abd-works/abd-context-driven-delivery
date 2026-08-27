@@ -394,9 +394,13 @@ class Handoff:
         handoffs/, updates handoff-latest.md, and closes the sprint session when
         destination is under sessions/. Returns the archive path."""
         self.resolve_working_folder(destination)
-        state = self._collect_state(destination)
-        content = self._render_handoff_markdown(state, next_focus=next_focus)
+        content = self.preview_handoff(destination, next_focus=next_focus)
         return self.write_handoff(destination, content, focus=next_focus)
+
+    def preview_handoff(self, destination: str, next_focus: str = "") -> str:
+        """Collect + render handoff markdown without writing files or closing a sprint."""
+        state = self._collect_state(destination)
+        return self._render_handoff_markdown(state, next_focus=next_focus)
 
     @agent_tool
     def write_handoff(

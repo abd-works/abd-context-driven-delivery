@@ -43,6 +43,7 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 - `Ticket.set_status(state)` / `Ticket.parse_number(ref)` / `Ticket.github_ref(...)` / `Ticket.close()`
 - `Ticket` — `number`, `title`, `body`, `url`, `state`, open `data` map
 - `TicketState` — column name (`Backlog`, `In Progress`, `Done`)
+- `resolve_github_status_option(name, options)` — exact GitHub Status match first, then aliases (`Backlog` ↔ `Todo`)
 - `Repo.ticket(ref)` / `Repo.create_ticket(title, body)`
 - `Repo.workflow_commit_message(subject, issue_number, workflow_state, reviewed_by=...)`
 - Flat legacy surface on `Repo` for workspace: `checkout_or_create`, `commit`, `push`,
@@ -62,6 +63,8 @@ stores branches, commits, tickets, project status, and notes in plain dicts/list
 public API as CLI-backed `Repo.open()`. Commit trailers are parsed into `Commit.data`;
 workflow helpers format `GitHub-Issue:` and `Workflow-State:` lines. Project status maps
 to GitHub Projects via `gh project link` / `item-add` / `item-edit` when not in memory mode.
+`Ticket.set_status` sends the live Status option to gh (workflow `Backlog` → GitHub `Todo` when
+that is the board option). Memory mode still records the workflow name (`Backlog`).
 
 ## Rationale
 
