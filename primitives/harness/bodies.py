@@ -104,6 +104,14 @@ def resolve_text(
     if fidelities:
         fidelity_ask += ": " + " | ".join(fidelities)
     fidelity_ask += ".\n"
+    if kind == "action" and invoke == "tool":
+        return (
+            taken
+            + fidelity_ask
+            + "Then run:\n"
+            + _CATALOG_LINE
+            + _invoke_block(toolset, tool=source)
+        )
     action = source if kind == "action" else None
     return (
         taken
@@ -154,6 +162,8 @@ class ActionBody:
         kind: str = "action",
         fidelities: list[str] | tuple[str, ...] = (),
         context_tools: list[str] | tuple[str, ...] = (),
+        invoke: str = "action",
+        operation: str = "",
     ) -> "ActionBody":
         if kind == "fidelity":
             tool_name = _context_tool_name(toolset)
@@ -162,12 +172,13 @@ class ActionBody:
                 f"{resolve_text(name, toolset, kind=kind, fidelities=fidelities)}"
             )
             return cls(text)
+        member = (operation or name).strip()
         text = (
             f"# {name}\n\n"
             "Run this action for any provided context tools, or on the context in general.\n\n"
             f"{class_string}\n\n"
             f"{operation_instructions}\n\n"
-            f"{resolve_text(name, toolset, kind=kind, fidelities=fidelities, context_tools=context_tools)}"
+            f"{resolve_text(member, toolset, kind=kind, fidelities=fidelities, context_tools=context_tools, invoke=invoke)}"
         )
         return cls(text)
 

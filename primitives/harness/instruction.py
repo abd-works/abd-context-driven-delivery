@@ -31,6 +31,8 @@ class Instruction(HarnessTool):
                     operation_instructions=source.get("guidance", ""),
                     toolset=source.get("toolset", ""),
                     context_tools=source.get("context_tools") or (),
+                    invoke=source.get("invoke") or "action",
+                    operation=source.get("operation") or "",
                 )
             elif source.get("source_kind") == "utility":
                 self.body = UtilityBody.from_source(

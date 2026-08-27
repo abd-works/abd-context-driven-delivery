@@ -1,6 +1,6 @@
 # Run python -m tools against this checkout (venv + UTF-8 + PYTHONPATH).
 # Usage (from repo root): .\tools.ps1 manifest <toolset>
-#                         .\tools.ps1 run _req.yaml
+#                         .\tools.ps1 run -   (pipe the YAML fence; stdin is forwarded)
 $ErrorActionPreference = "Stop"
 $Root = $PSScriptRoot
 $VenvPython = Join-Path $Root ".venv\Scripts\python.exe"
@@ -16,5 +16,9 @@ $parts = @(
     (Join-Path $Root "context_tools\actions")
 )
 $env:PYTHONPATH = ($parts -join [IO.Path]::PathSeparator)
-& $VenvPython -m tools @args
+if ($MyInvocation.ExpectingInput) {
+    $input | & $VenvPython -m tools @args
+} else {
+    & $VenvPython -m tools @args
+}
 exit $LASTEXITCODE

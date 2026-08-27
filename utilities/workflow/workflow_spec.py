@@ -141,6 +141,18 @@ with description("a Workflow backlog path"):
             self.tmp, self.repo = _workflow_fixture("wf-backlog-")
             self.workflow = Workflow(workspace=str(self.tmp), repo=self.repo)
 
+        with it("should create a github issue from backlog"):
+            created = self.workflow.backlog(
+                focus="Workflow package",
+                context="theme by package",
+                workspace=str(self.tmp),
+            )
+            expect(created["number"]).to(equal(1))
+            expect(created["title"]).to(equal("Workflow package"))
+            expect(created["body"]).to(contain("**Focus:** Workflow package"))
+            expect(created["body"]).to(contain("theme by package"))
+            expect(self.repo._ticket_project_state[1]).to(equal("Backlog"))
+
         with it("should create a github issue with the handoff body"):
             created = self.workflow.capture_backlog(
                 focus="Workflow package",

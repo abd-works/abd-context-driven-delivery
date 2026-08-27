@@ -51,6 +51,8 @@ class Prompt(HarnessTool):
                     kind="action",
                     fidelities=source.get("fidelities") or (),
                     context_tools=source.get("context_tools") or (),
+                    invoke=source.get("invoke") or "action",
+                    operation=source.get("operation") or "",
                 )
             else:
                 self.body = UtilityBody.from_source(

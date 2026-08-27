@@ -13,8 +13,7 @@ from git import Ticket, TicketNotFoundError
 from git.git import Repo
 from handoff.handoff import Handoff
 from harness.harness_tool import prompt
-from primitives.actions.action import agent_instructions, agentic_toolset
-from tools.tool import agent_tool
+from tools.tool import agent_tool, toolset
 from workspace import Workspace
 from workspace.git_repo import NullGitRepo
 
@@ -29,7 +28,7 @@ class WorkflowConfig:
     default_branch: str = "main"
 
 
-@agentic_toolset
+@toolset
 class Workflow:
     """Slash /backlog, /start-ticket, /finish-ticket — GitHub issue + session lifecycle."""
 
@@ -106,13 +105,27 @@ class Workflow:
         return repo.attach_project(config.project_owner, config.project_number)
 
     @prompt(name="backlog")
-    @agent_instructions
-    def backlog(self, focus: str, context: str = "", workspace: str = "") -> str:
+    @agent_tool
+    def backlog(self, focus: str, context: str = "", workspace: str = "") -> dict[str, str | int]:
         """Capture an idea on the backlog — GitHub issue + Project Backlog."""
-        self._handoff().handoff_session()
-        """Call `capture_backlog` with the handoff markdown as the issue body, not a file path."""
-        self.capture_backlog()
-        return "Backlog captured — GitHub issue created in Project Backlog."
+        destination = str(self._repo_root(workspace))
+        handoff = self._handoff()
+        handoff_md = handoff._render_handoff_markdown(
+            handoff._collect_state(destination), next_focus=focus
+        )
+        body = self._backlog_issue_body(handoff_md, focus=focus, context=context)
+        return self.capture_backlog(focus=focus, body=body, workspace=workspace)
+
+    def _backlog_issue_body(self, handoff_md: str, focus: str, context: str) -> str:
+        parts = [(handoff_md or "").strip()]
+        request: list[str] = []
+        if focus.strip():
+            request.append(f"**Focus:** {focus.strip()}")
+        if context.strip():
+            request.append(context.strip())
+        if request:
+            parts.extend(["", "## Request", "", *request])
+        return "\n".join(part for part in parts if part is not None).strip() + "\n"
 
     @agent_tool
     def capture_backlog(

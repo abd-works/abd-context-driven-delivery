@@ -686,26 +686,44 @@ with description("a harness"):
                     '"""Workflow."""\n'
                     "class Workflow:\n"
                     '    @prompt(name="backlog")\n'
+                    "    @agent_tool\n"
                     "    def backlog(self):\n"
                     '        """Capture an idea."""\n'
                     "        return None\n"
                     '    @prompt(name="start-ticket")\n'
+                    "    @agent_tool\n"
                     "    def start(self):\n"
                     '        """Start work."""\n'
                     "        return None\n"
                     '    @prompt(name="finish-ticket")\n'
+                    "    @agent_tool\n"
                     "    def finish(self):\n"
                     '        """Finish work."""\n'
                     "        return None\n",
                     encoding="utf-8",
                 )
                 Harness("Cursor", repo_root=root).write_deploy(source="workflow")
+                backlog = (root / ".cursor" / "commands" / "backlog.md").read_text(
+                    encoding="utf-8"
+                )
+                start = (root / ".cursor" / "commands" / "start-ticket.md").read_text(
+                    encoding="utf-8"
+                )
+                finish = (root / ".cursor" / "commands" / "finish-ticket.md").read_text(
+                    encoding="utf-8"
+                )
                 expect((root / ".cursor" / "commands" / "backlog.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "commands" / "start-ticket.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "commands" / "finish-ticket.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "commands" / "start.md").is_file()).to(equal(False))
                 expect((root / ".cursor" / "commands" / "finish.md").is_file()).to(equal(False))
                 expect((root / ".cursor" / "commands" / "workflow.md").is_file()).to(equal(False))
+                expect(backlog).to(contain("tool: backlog"))
+                expect(backlog).not_to(contain("action: backlog"))
+                expect(start).to(contain("tool: start"))
+                expect(start).not_to(contain("action: start"))
+                expect(finish).to(contain("tool: finish"))
+                expect(finish).not_to(contain("action: finish"))
 
         with context("with @prompt on two operations"):
             with it("should write a command for each marked operation"):
