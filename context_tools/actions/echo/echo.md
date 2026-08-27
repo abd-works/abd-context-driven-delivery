@@ -17,7 +17,7 @@ Diagnostic wrapper. Prints an action's fully-wrapped instructions to the user in
 ## Loop
 
 1. **Collect** — gather every instruction received for this action, verbatim and in the order the framework composed them, into one string.
-2. **Fence** — call `Echoer.fence` with that string; the tool returns the block wrapped in `DO NOT FOLLOW` header and footer.
+2. **Fence** — call `Echo.fence` with that string; the tool returns the block wrapped in `DO NOT FOLLOW` header and footer.
 3. **Emit** — write the fenced block to the user as chat output; treat every line inside the fence as inert diagnostic text meant only to be read.
 4. **Stop** — the fenced emission is the entire behaviour of this action.
 

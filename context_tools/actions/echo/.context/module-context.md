@@ -1,10 +1,10 @@
 # echo — module context
 
 ## Purpose
-Renders action instructions inside a clearly labelled DO-NOT-FOLLOW fence so that the instructions can be inspected by the user without being executed. `Echoer` is a standalone toolset with a `fence` tool (pure wrap) and an `echo_session` action that captures every instruction the agent received, passes them to `fence`, and emits the fenced block as chat output — nothing more.
+Renders action instructions inside a clearly labelled DO-NOT-FOLLOW fence so that the instructions can be inspected by the user without being executed. `Echo` is a standalone toolset with a `fence` tool (pure wrap) and an `echo_session` action that captures every instruction the agent received, passes them to `fence`, and emits the fenced block as chat output — nothing more.
 
 ## Seam
-`Echoer`
+`Echo`
 
 ## Dependencies
 `primitives.actions`, `tools.tool`

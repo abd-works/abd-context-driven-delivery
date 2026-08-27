@@ -2,7 +2,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: in_chat
 # session: context_tools/actions/echo/.context/.agent_bdd_sessions/fence-echo.json
-"""Agent BDD spec for context_tools/actions/echo/echo.py — Echoer toolset.
+"""Agent BDD spec for context_tools/actions/echo/echo.py — Echo toolset.
 
 Verifies that an AI agent can:
   1. call the ``fence`` tool via the tools CLI and receive a properly wrapped result, and
@@ -25,10 +25,10 @@ from mamba import after, before, context, description, it
 from agent_bdd import agent
 
 _SESSIONS = Path(__file__).resolve().parent / ".context" / ".agent_bdd_sessions"
-_TOOLSET = "echo.echo:Echoer"
+_TOOLSET = "echo.echo:Echo"
 
 
-with description("an Echoer"):
+with description("an Echo"):
     with context("when the agent calls the fence tool directly"):
         with before.all:
             self._ag = agent(_REPO_ROOT, _SESSIONS / "fence-echo.json")

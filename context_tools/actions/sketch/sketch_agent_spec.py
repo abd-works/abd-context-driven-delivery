@@ -2,7 +2,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
 # session: context_tools/actions/sketch/.context/.agent_bdd_sessions/sketch-owns-tools.json
-"""Agent BDD — /sketch runs Sketcher.sketch(tools=...) not host sketch."""
+"""Agent BDD — /sketch runs Sketch.sketch(tools=...) not host sketch."""
 
 from expects import contain, equal, expect
 from mamba import context, description, it
@@ -20,13 +20,13 @@ from agent_bdd import (
 
 _REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
-_SKETCHER = "sketch.sketch:Sketcher"
+_SKETCHER = "sketch.sketch:Sketch"
 _BDD = "context_tools.bdd.bdd:Bdd"
 
 
 with description("a sketch action"):
     with context("that is given one context tool"):
-        with it("should run Sketcher.sketch with that tool, not the host sketch"):
+        with it("should run Sketch.sketch with that tool, not the host sketch"):
             with agent(_REPO_ROOT, _SESSIONS / "sketch-owns-tools.json"):
                 read_workspace(".cursor/commands/sketch.md")
                 read_workspace("context_tools/actions/sketch/sketch.py")
@@ -50,7 +50,7 @@ with description("a sketch action"):
                 ai_judge(
                     f"{explanation}\n---\ntoolset: {response.toolset}\n"
                     f"action: {response.action}\narguments: {response.arguments}",
-                    "PASS only if sketch is owned by sketch.sketch:Sketcher and the "
+                    "PASS only if sketch is owned by sketch.sketch:Sketch and the "
                     "BDD context tool is an argument in tools (one or more context tools). "
                     "FAIL if the run owner is context_tools.bdd.bdd:Bdd with action sketch.",
                 )

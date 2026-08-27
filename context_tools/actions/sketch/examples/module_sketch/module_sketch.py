@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from sketch.sketch import Sketcher
+from sketch.sketch import Sketch
 
 
-class ModuleSketch(Sketcher):
+class ModuleSketch(Sketch):
     """Draft a module-design sketch and persist it to the session docs dir."""
 
     def draft(self, path: str, slug: str) -> str:

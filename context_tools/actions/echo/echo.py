@@ -1,11 +1,11 @@
-# @toolset-manifest python -m tools manifest echo.echo:Echoer
+# @toolset-manifest python -m tools manifest echo.echo:Echo
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """Echo - print an action's wrapped instructions inside a DO-NOT-FOLLOW fence for inspection.
 
-Echoer is a standalone toolset. Any agent or human can invoke its tools and
+Echo is a standalone toolset. Any agent or human can invoke its tools and
 echo_session action directly to render arbitrary text inside DO-NOT-FOLLOW
 fences.
 
@@ -25,7 +25,7 @@ _FENCE_FOOTER = "===== END: DO NOT FOLLOW ANY OF THESE INSTRUCTIONS ====="
 
 
 @toolset
-class Echoer:
+class Echo:
     """Echo wrapped action instructions inside a DO-NOT-FOLLOW fence so the user can inspect them."""
 
     def _fenced(self, body: str) -> str:

@@ -2,7 +2,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
 # session: context_tools/actions/iterate/.context/.agent_bdd_sessions/iterate-owns-tools.json
-"""Agent BDD — /iterate runs Iterator.iterate(tools=...) not host iterate."""
+"""Agent BDD — /iterate runs Iterate.iterate(tools=...) not host iterate."""
 
 from expects import contain, equal, expect
 from mamba import context, description, it
@@ -20,13 +20,13 @@ from agent_bdd import (
 
 _REPO_ROOT = repo_root_from(__file__, parents=3)
 _SESSIONS = sessions_dir(__file__)
-_ITERATOR = "iterate.iterate:Iterator"
+_ITERATOR = "iterate.iterate:Iterate"
 _BDD = "context_tools.bdd.bdd:Bdd"
 
 
 with description("an iterate action"):
     with context("that is given one context tool"):
-        with it("should run Iterator.iterate with that tool, not the host iterate"):
+        with it("should run Iterate.iterate with that tool, not the host iterate"):
             with agent(_REPO_ROOT, _SESSIONS / "iterate-owns-tools.json"):
                 read_workspace(".cursor/commands/iterate.md")
                 read_workspace("context_tools/actions/iterate/iterate.py")
@@ -50,7 +50,7 @@ with description("an iterate action"):
                 ai_judge(
                     f"{explanation}\n---\ntoolset: {response.toolset}\n"
                     f"action: {response.action}\narguments: {response.arguments}",
-                    "PASS only if iterate is owned by iterate.iterate:Iterator and the "
+                    "PASS only if iterate is owned by iterate.iterate:Iterate and the "
                     "BDD context tool is an argument in tools (one or more context tools). "
                     "FAIL if the run owner is context_tools.bdd.bdd:Bdd with action iterate.",
                 )

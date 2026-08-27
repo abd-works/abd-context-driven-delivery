@@ -1,4 +1,4 @@
-# @toolset-manifest python -m tools manifest iterate.iterate:Iterator
+# @toolset-manifest python -m tools manifest iterate.iterate:Iterate
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
@@ -6,7 +6,7 @@
 # Do not author behavior from this Python source.
 """Iterate on formal generate output through a grill loop with validate + one fix pass.
 
-Iterator is a standalone toolset. The complementary @iterate decorator (see
+Iterate is a standalone toolset. The complementary @iterate decorator (see
 _decorator.py) marks an @agent_instructions so framework composition prepends
 iterate_session (which calls grill_with_context in-method).
 """
@@ -19,7 +19,7 @@ from tools.tool import agent_tool
 
 
 @agentic_toolset
-class Iterator(LifecycleAction):
+class Iterate(LifecycleAction):
     """Iterate formal generate output with scanners - tiny grilled slices only; never dump a whole artifact in one tick."""
 
     def _grill_context(self) -> GrillContext:

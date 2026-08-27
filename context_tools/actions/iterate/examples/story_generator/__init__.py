@@ -1,1 +1,1 @@
-"""story_generator — StoryGenerator example for Iterator."""
+"""story_generator — StoryGenerator example for Iterate."""

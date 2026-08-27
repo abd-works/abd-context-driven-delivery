@@ -1,4 +1,4 @@
-"""iterate — Iterator toolset."""
-from iterate.iterate import Iterator
+"""iterate — Iterate toolset."""
+from iterate.iterate import Iterate
 
-__all__ = ["Iterator"]
+__all__ = ["Iterate"]

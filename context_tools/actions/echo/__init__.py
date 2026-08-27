@@ -1,4 +1,4 @@
-"""echo — Echoer toolset."""
-from echo.echo import Echoer
+"""echo — Echo toolset."""
+from echo.echo import Echo
 
-__all__ = ["Echoer"]
+__all__ = ["Echo"]

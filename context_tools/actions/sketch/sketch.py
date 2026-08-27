@@ -1,9 +1,9 @@
-# @toolset-manifest python -m tools manifest sketch.sketch:Sketcher
+# @toolset-manifest python -m tools manifest sketch.sketch:Sketch
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
 """Sketch a solution interactively before generating the formal artifact.
 
-Sketcher is a standalone toolset. Any agent or human can invoke its tools and
+Sketch is a standalone toolset. Any agent or human can invoke its tools and
 sketch_session action directly without decorating anything.
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ _DEFAULT_TEMPLATE = Path(__file__).parent / "templates" / "sketch-template.md"
 
 
 @agentic_toolset
-class Sketcher(LifecycleAction):
+class Sketch(LifecycleAction):
     """Sketch a solution interactively before generating the formal artifact."""
 
     def __init__(self, agent_dir: str = "", path: str = ".", session: str = "") -> None:

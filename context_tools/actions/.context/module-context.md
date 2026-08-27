@@ -30,8 +30,8 @@ Non-action tooling stays under `utilities/` (`scanners`, `diagnose`, …).
 | `/document` | `document.document:Document` | `document(tools, paths)` |
 | `/satisfy` | `satisfy.satisfy:Satisfy` | `satisfy(tools)` |
 | `/render` | `render.render:Render` | `render(tools, format, content)` |
-| `/iterate` | `iterate.iterate:Iterator` | `iterate(tools)` |
-| `/sketch` | `sketch.sketch:Sketcher` | `sketch(tools)` |
+| `/iterate` | `iterate.iterate:Iterate` | `iterate(tools)` |
+| `/sketch` | `sketch.sketch:Sketch` | `sketch(tools)` |
 | `/grill` | `grill_context.grill_context:GrillContext` | `grill(tools)` |
 | `/partition` | `partition.partition:Partition` | `partition(tools, context, …)` |
 | `/repair` | `improvement.improvement:Improvement` | `repair(tools, asset, violation)` |

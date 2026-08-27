@@ -330,7 +330,7 @@ with description("BaseContextTool public host face"):
         ):
             expect(name in self.host.actions).to(equal(False))
 
-    with it("should not compose Sketcher, GrillContext, Iterator, or Partition"):
+    with it("should not compose Sketch, GrillContext, Iterate, or Partition"):
         expect(hasattr(self.host, "sketcher")).to(be_false)
         expect(hasattr(self.host, "grill_context")).to(be_false)
         expect(hasattr(self.host, "iterator")).to(be_false)

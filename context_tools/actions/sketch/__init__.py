@@ -1,4 +1,4 @@
-"""sketch — Sketcher toolset."""
-from sketch.sketch import Sketcher
+"""sketch — Sketch toolset."""
+from sketch.sketch import Sketch
 
-__all__ = ["Sketcher"]
+__all__ = ["Sketch"]

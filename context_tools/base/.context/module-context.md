@@ -16,7 +16,7 @@
 - Stage constants: `SHAPING`, `DISCOVERY`, `SPEC`, `ENGINEER`
 - `fidelities: ClassVar[dict[str, str] | None]` — subclasses declare stage → fidelity_name mapping; triggers auto-generated lifecycle methods
 - `_set_fidelity(fidelity_name)` — updates `self.fidelity` and `self.format` at runtime
-- Composed on host: `workspace` (`Workspace`), `turn` (`Turn`), `scanner` (`Scan`), `decisions` (`RecordDecisions`). **No** `repairer` / `eval` / session-turn re-exports. Stage kits (`Sketcher`, `GrillContext`, `Iterator`, `Partition`, `Improvement`) are **not** composed on the host — slash commands invoke them with `arguments.tools`.
+- Composed on host: `workspace` (`Workspace`), `turn` (`Turn`), `scanner` (`Scan`), `decisions` (`RecordDecisions`). **No** `repairer` / `eval` / session-turn re-exports. Stage kits (`Sketch`, `GrillContext`, `Iterate`, `Partition`, `Improvement`) are **not** composed on the host — slash commands invoke them with `arguments.tools`.
 - Host tools: `scan`, `render`, `begin_turn`, `finish_turn`, `record_mistake`, `record_correction` (not legacy `close_session`, eval turn names)
 - `supported_formats: ClassVar[frozenset[str]]` — formats this tool can render into; empty on the base
 - `render(format, content="")` — `@agent_tool` that renders already-generated output into `format`
@@ -30,5 +30,5 @@
 
 Workspace under `context_tools/actions/workspace`; Scan under
 `utilities/scanners`; Improvement under `context_tools/actions/improvement`;
-Sketcher, GrillContext, Iterator, Partition under `context_tools/actions/`;
+Sketch, GrillContext, Iterate, Partition under `context_tools/actions/`;
 RecordDecisions under `utilities/record_decisions`

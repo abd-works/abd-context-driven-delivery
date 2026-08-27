@@ -1,6 +1,6 @@
 # Sketch template — default terse-indent notation
 
-Fallback template used by Sketcher when no domain-specific template is discovered. Every line is a **thing** — a class, property, operation, or concept — that has not yet earned formal naming.
+Fallback template used by Sketch when no domain-specific template is discovered. Every line is a **thing** — a class, property, operation, or concept — that has not yet earned formal naming.
 
 ## Notation
 

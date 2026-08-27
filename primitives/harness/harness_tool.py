@@ -64,7 +64,9 @@ def _decorator_write(node: ast.expr) -> tuple[str, str | None] | None:
     return None
 
 
-def operation_writes(source_path: Path) -> list[tuple[str, str | None, str, str]]:
+def operation_writes(
+    source_path: Path, class_name: str = ""
+) -> list[tuple[str, str | None, str, str]]:
     """Return (kind, deploy_name, operation, docstring) for harness write decorators."""
     found: list[tuple[str, str | None, str, str]] = []
     try:
@@ -73,6 +75,8 @@ def operation_writes(source_path: Path) -> list[tuple[str, str | None, str, str]
         return found
     for node in tree.body:
         if not isinstance(node, ast.ClassDef):
+            continue
+        if class_name and node.name != class_name:
             continue
         for item in node.body:
             if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):

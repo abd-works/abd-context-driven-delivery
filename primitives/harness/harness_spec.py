@@ -20,7 +20,6 @@ for _cat in ("primitives", "utilities", "context_tools"):
 from expects import contain, equal, expect, raise_error
 from mamba import context, description, it
 
-from harness import harness as harness_mod
 from harness.agent import Agent
 from harness.agent_guidance import AgentGuidance
 from harness.bodies import ActionBody, ContextToolBody, FormatBody
@@ -123,8 +122,8 @@ def _sandbox() -> Path:
         "Skipme",
     )
     for slug, class_name in (
-        ("sketch", "Sketcher"),
-        ("echo", "Echoer"),
+        ("sketch", "Sketch"),
+        ("echo", "Echo"),
         ("handoff", "Handoff"),
     ):
         _write_toolset(
@@ -137,6 +136,22 @@ def _sandbox() -> Path:
         "context_tools.actions.workflow.workflow",
         "Workflow",
         "backlog",
+    )
+    _write_action_with_operation(
+        root / "context_tools" / "actions" / "workspace" / "workspace.py",
+        "context_tools.actions.workspace.workspace",
+        "Workspace",
+        "open",
+    )
+    turn = root / "context_tools" / "actions" / "workspace" / "workspace.py"
+    turn.write_text(
+        turn.read_text(encoding="utf-8")
+        + "\nclass Turn:\n"
+        + "    @agent_tool\n"
+        + "    def finish_turn(self):\n"
+        + '        """Close the open turn."""\n'
+        + "        return None\n",
+        encoding="utf-8",
     )
     (root / "primitives" / "harness").mkdir(parents=True, exist_ok=True)
     stale = root / ".cursor" / "skills" / "grill-context"
@@ -191,6 +206,15 @@ with description("a harness"):
                 expect(prose).to(contain("all toolsets (recommended)"))
                 expect(prose).to(contain("substring"))
 
+        with context("with no deploy path given"):
+            with it("should AskQuestion using the suggested path or an override"):
+                prose = _recipe(Harness("Cursor"))
+                expect(prose).to(contain("suggested path (recommended)"))
+                expect(prose).to(contain("enter another path"))
+                expect(_generate_tools(Harness("Cursor"))).to(
+                    equal(("suggested_deploy_path", "write_deploy"))
+                )
+
         with context("with no source"):
             with it("should walk the workspace and deploy without a confirm list"):
                 root = _sandbox()
@@ -198,12 +222,14 @@ with description("a harness"):
                 slugs = {e["skill_slug"] for e in json.loads(harness.walk())}
                 expect(slugs).to(contain("stories"))
                 expect(slugs).to(contain("widget"))
+                expect(slugs).to(contain("turn"))
+                expect(slugs).to(contain("workspace"))
                 expect("skipme" in slugs).to(equal(False))
                 prose = _recipe(harness)
                 expect(prose).to(contain("Generate is the deploy"))
                 expect(prose).to(contain("no separate deploy"))
                 expect(prose).to(contain("Do not confirm the scanned list"))
-                expect(_generate_tools(harness)).to(equal(("write_deploy",)))
+                expect(_generate_tools(harness)).to(equal(("suggested_deploy_path", "write_deploy")))
                 harness.write_deploy()
                 expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
                     contain("stories")
@@ -230,8 +256,7 @@ with description("a harness"):
                 expect((root / ".cursor" / "skills" / "harness" / "SKILL.md").is_file()).to(equal(True))
 
         with context("with type Cursor"):
-            with it("should write under .cursor including multi-folder copies"):
-                home = Path(tempfile.mkdtemp())
+            with it("should write under .cursor including the covering workspace copy"):
                 root = _sandbox()
                 parent = root.parent
                 (parent / "workspace.code-workspace").write_text(
@@ -245,15 +270,24 @@ with description("a harness"):
                     ),
                     encoding="utf-8",
                 )
-                original_home = harness_mod._home
-                harness_mod._home = lambda: home
-                try:
-                    Harness("Cursor", repo_root=root).write_deploy(source="stories")
-                finally:
-                    harness_mod._home = original_home
-                expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
-                expect((home / ".cursor" / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
-                expect((parent / ".cursor" / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
+                Harness("Cursor", repo_root=root).write_deploy(source="stories")
+                expect((parent / ".cursor" / "skills" / "stories" / "SKILL.md").is_file()).to(
+                    equal(True)
+                )
+                expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
+                    equal("OLD CONTENT")
+                )
+
+            with it("should write only to an overridden deploy path"):
+                root = _sandbox()
+                override = Path(tempfile.mkdtemp()) / ".cursor"
+                Harness("Cursor", repo_root=root).write_deploy(
+                    source="stories", deploy_path=str(override)
+                )
+                expect((override / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
+                    equal("OLD CONTENT")
+                )
 
         with context("with type VS Code"):
             with it("should write under .github"):
@@ -324,6 +358,12 @@ with description("a harness"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="backlog")
                 expect((root / ".cursor" / "commands" / "backlog.md").is_file()).to(equal(True))
+
+        with context("with turn"):
+            with it("should write a prompt named from the class"):
+                root = _sandbox()
+                Harness("Cursor", repo_root=root).write_deploy(source="turn")
+                expect((root / ".cursor" / "commands" / "turn.md").is_file()).to(equal(True))
 
         with context("with echo"):
             with it("should write a prompt"):

@@ -1,4 +1,4 @@
-"""BDD spec for Iterator toolset + ActionExpander integration."""
+"""BDD spec for Iterate toolset + ActionExpander integration."""
 
 import sys
 from pathlib import Path
@@ -16,38 +16,38 @@ from expects import contain, equal, expect
 from mamba import context, description, it
 
 from primitives.actions.action import _ActionExpander
-from iterate import Iterator
+from iterate import Iterate
 from tools.tool import _ToolsetLoader
 
 
-with description("an Iterator"):
+with description("Iterate toolset"):
     with context("that records an iterate tick"):
         with it("should return the iterate-tick marker"):
             # Arrange / Act
-            result = Iterator().mark_iterate_tick()
+            result = Iterate().mark_iterate_tick()
             # Assert
             expect(result).to(equal("iterate-tick"))
 
     with context("with iterate in its manifest"):
         with it("should expose iterate as an action with no decorator chain"):
-            entry = Iterator.manifest.signature["iterate"]
+            entry = Iterate.manifest.signature["iterate"]
             expect(entry["kind"]).to(equal("action"))
             expect(entry.get("chain")).to(equal(None))
 
     with context("with the iterate action body"):
         with it("should require one scan and one fix pass with no rescan"):
-            iterator = Iterator()
+            iterator = Iterate()
             body = _ActionExpander.instance().parse_body(
-                Iterator.iterate, iterator
+                Iterate.iterate, iterator
             )
             joined = "\n".join(body.prose_parts)
             expect(joined).to(contain("one fix"))
             expect(joined).to(contain("Do NOT re-scan"))
 
         with it("should forbid dumping the whole artifact in one tick"):
-            iterator = Iterator()
+            iterator = Iterate()
             body = _ActionExpander.instance().parse_body(
-                Iterator.iterate, iterator
+                Iterate.iterate, iterator
             )
             joined = "\n".join(body.prose_parts)
             expect(joined).to(contain("DEFECT"))
@@ -57,9 +57,9 @@ with description("an Iterator"):
             expect(joined).to(contain("Ask ONE question at a time"))
 
         with it("should include the iterate session body in iterate"):
-            iterator = Iterator()
+            iterator = Iterate()
             body = _ActionExpander.instance().parse_body(
-                Iterator.iterate, iterator
+                Iterate.iterate, iterator
             )
             joined = "\n".join(body.prose_parts)
             expect(joined).to(contain("grill_with_context"))
@@ -68,7 +68,7 @@ with description("an Iterator"):
 with description("an iterate action"):
     with context("that expands"):
         with it("should include the iterate session body in iterate"):
-            body = _ActionExpander.instance().parse_body(Iterator.iterate, Iterator())
+            body = _ActionExpander.instance().parse_body(Iterate.iterate, Iterate())
             joined = "\n".join(body.prose_parts)
             expect(joined).to(contain("mark_iterate_tick"))
             expect(joined).to(contain("grill_with_context"))
