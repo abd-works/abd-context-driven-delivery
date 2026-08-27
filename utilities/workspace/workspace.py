@@ -198,11 +198,26 @@ class Turn:
                 current = getattr(workspace, "current_work_session", None)
                 open_turn = getattr(current, "open_turn", None)
                 if open_turn is not None:
-                    return open_turn.finish(prompt=prompt, result=result, context=context)
+                    return self._commit_payload(
+                        open_turn.finish(prompt=prompt, result=result, context=context)
+                    )
         session = self.work_session
         if session is None:
             raise RuntimeError("Turn.finish_turn requires workSession")
-        return session.turn.finish(prompt=prompt, result=result, context=context)
+        return self._commit_payload(
+            session.turn.finish(prompt=prompt, result=result, context=context)
+        )
+
+    @staticmethod
+    def _commit_payload(change: TurnCommit | None) -> dict[str, Any] | None:
+        if change is None:
+            return None
+        return {
+            "name": change.name,
+            "session_name": change.session_name,
+            "tool_names": list(change.tool_names),
+            "sha": change.sha,
+        }
 
     def finish(
         self, prompt: str = "", result: str = "", context: str = ""
