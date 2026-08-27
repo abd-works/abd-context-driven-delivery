@@ -67,6 +67,12 @@ The parent then launches one non-blocking sub-agent (`kind: sub_agent` / `launch
 |---|---|---|---|---|---|
 | baseline | `experiment/baseline` | *(none + expander lists tools)* | **01:15** | **00:51** | First generate listed tools; wrote from inlined guidance; no domain `action: guidance` hop. [Baseline walker scratch rerun](ca3e3516-64ad-40bf-a55c-556c66c6514b) |
 | single-command | `experiment/single-command` | **1b + 1c + 4c + 5a** + expander lists tools | **00:51** | **00:37** | One stdin `run -` per pair; tools listed; no invented `action: guidance`. [Single-command walker scratch](c5f1607b-3559-4784-b6aa-226cd6f15fa2) |
+| thin-fidelity-format | `experiment/thin-fidelity-format` | smarter load: contexts by fidelity, examples by format; **no file split** | **00:44** | **00:35** | Expand **48,798** (from 74,019). No remanifest / invented `action: guidance`. [thin-fidelity-format](e442d1d8-55ec-4596-b204-84a0fc64db55) |
+| thin-fidelity-format run 2 | same branch | + examples filename-match (`story_map` → story-map + thin-slice) | *(parent-inline)* | *(parent-inline)* | Expand **38,908**. Contexts already fidelity-sliced. Leftover fat is unfiltered **templates**. |
+| thin-first-expand combined | `experiment/thin-fidelity-format` | all filters on **one** branch: contexts + examples + templates | **01:05** | **01:06** | Expand **17,767**. Fair first-time; hops 1; no remanifest / invented `action: guidance`. Did **not** beat single-command **00:51 / 00:37**. [thin-first-expand](4760f48e-5536-46ac-9f07-de5eef0247c8) |
+| thin-first-expand + CE | same branch | same Stories filters + CE/DDD/UX/BDD contexts by H2; CE examples by suffix + drop `evals/` | **00:41** | **00:55** | Stories **17,767** / CE **45,100**. Pair A beat single-command **00:51**; Pair B missed **00:37** (beat prior **01:06**). Hops 1; no invented `action: guidance`. [thin-ce](01781ce8-dad9-49e7-9085-6857e1399b3e) |
+| thin-templates | `experiment/thin-templates` | smarter load: templates by format + fidelity filename; **no file split** | **00:33** | **00:31** | Expand **52,878** (from 74,019). No remanifest / invented `action: guidance`. [thin-templates](9ede319c-0d8d-4ea6-9435-ef6293c99867) |
+| channel-write | `experiment/channel-write` | one formatter `@agent_tool` writes the file (6c + 3a) | **01:15** | **00:11*** | Channel wrote both files. Stories emit too thin (lost actors / thin-slice). Pair B clock not fair (body staged before `run -`). **Not a keep.** [channel-write](experiment-channel-write-results.md) |
 
 ---
 
