@@ -6,7 +6,7 @@
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Literal
 
@@ -19,6 +19,29 @@ from primitives.instructions import (
 
 LocationKind = Literal["file", "folder", "section"]
 
+_FORMAT_DIR_ALIAS = {
+    "markdown": "md",
+    "python": "py",
+    "typescript": "ts",
+    "javascript": "js",
+    "java": "java",
+}
+
+# Filename stems kept when host.format is set and templates/{alias}/ is a folder pack.
+_FIDELITY_TEMPLATE_STEMS: dict[str, frozenset[str]] = {
+    "story_map": frozenset({"story-map", "thin-slice"}),
+    "scenarios": frozenset(
+        {"scenario-inline", "scenario-main-flow", "scenario-outline"}
+    ),
+}
+
+# Frontmatter `artifact:` values that mark a file as belonging to a fidelity
+# (e.g. story-context.md is story_map; components/story-header.md is scenarios).
+_FIDELITY_TEMPLATE_ARTIFACTS: dict[str, frozenset[str]] = {
+    "story_map": frozenset({"story-map", "thin-slice"}),
+    "scenarios": frozenset({"story-scenarios"}),
+}
+
 
 @dataclass(frozen=True)
 class AssetLocation:
@@ -29,6 +52,9 @@ class AssetLocation:
     folder: Path | None = None
     section_file: Path | None = None
     section_heading: str | None = None
+    label: str | None = None
+    fidelity: str | None = None
+    format: str | None = None
 
 
 class AssetLocator:
@@ -39,13 +65,71 @@ class AssetLocator:
         *,
         group: str | None = None,
         filter_key: str | None = None,
+        collection: bool = False,
     ) -> None:
         self._host = host
         self._label = label
         self._group = group
         self._filter_key = filter_key
+        self._collection = collection
+
+    @property
+    def fidelity(self) -> str | None:
+        return _active_resource(self._host, "fidelity")
+
+    @property
+    def format(self) -> str | None:
+        fmt = _active_resource(self._host, "format")
+        if fmt:
+            return fmt
+        fidelity = self.fidelity
+        defaults = getattr(type(self._host), "_fidelity_format_defaults", None) or {}
+        if not defaults:
+            defaults = getattr(self._host, "_fidelity_format_defaults", {}) or {}
+        if fidelity and fidelity in defaults:
+            return str(defaults[fidelity])
+        return None
+
+    @property
+    def contexts(self) -> str:
+        return self._for_label("contexts").expand()
+
+    @property
+    def examples(self) -> str:
+        return self._for_label("examples").expand()
+
+    @property
+    def templates(self) -> str:
+        return self._for_label("templates").expand()
+
+    def _for_label(self, label: str) -> AssetLocator:
+        return AssetLocator(
+            self._host,
+            label,
+            group=self._group,
+            filter_key=self._filter_key,
+            collection=self._collection,
+        )
+
+    def expand(self) -> str:
+        """Locate this slot and merge it, already filtered for fidelity/format."""
+        location = self.locate()
+        if self._collection or location.kind == "folder":
+            return AssetCollection(location).merged()
+        return Asset(location).collect()
+
+    def _stamp(self, location: AssetLocation) -> AssetLocation:
+        return replace(
+            location,
+            label=self._label,
+            fidelity=location.fidelity or self.fidelity,
+            format=location.format or self.format,
+        )
 
     def locate(self) -> AssetLocation:
+        return self._stamp(self._locate())
+
+    def _locate(self) -> AssetLocation:
         module_dir = Path(getattr(self._host, "module_dir", Path(".")))
         domain_slug = getattr(self._host, "domain_slug", getattr(self._host, "toolset_name", module_dir.name))
         filter_value = _active_resource(self._host, self._filter_key) if self._filter_key else None
@@ -54,6 +138,8 @@ class AssetLocator:
             active_format = filter_value or _active_resource(self._host, "format")
             located = self._locate_templates(module_dir, domain_slug, active_format)
             if located.path is not None and located.path.is_file():
+                return located
+            if located.folder is not None and located.folder.is_dir():
                 return located
             # Meta scaffold pack (e.g. context_tools/base/templates/) when no format artifact exists.
             meta = module_dir / "templates"
@@ -149,6 +235,19 @@ class AssetLocator:
                 path = shared / f"{stem}{ext}"
                 if path.is_file():
                     return AssetLocation("file", module_dir, domain_slug, path=path.resolve())
+        if active_format:
+            alias = _FORMAT_DIR_ALIAS.get(active_format, active_format)
+            format_folder = shared / alias
+            if format_folder.is_dir():
+                fidelity = _active_resource(self._host, "fidelity")
+                return AssetLocation(
+                    "folder",
+                    module_dir,
+                    domain_slug,
+                    folder=format_folder.resolve(),
+                    fidelity=fidelity,
+                )
+            return None
         return AssetLocation("folder", module_dir, domain_slug, folder=shared.resolve())
 
     def _locate_in_format_dir(
@@ -173,6 +272,50 @@ class AssetLocator:
         return None
 
 
+def _frontmatter_values(content: str, key: str) -> list[str]:
+    """Read a YAML list or scalar for `key` from a leading --- frontmatter block."""
+    if not content.startswith("---"):
+        return []
+    end = content.find("\n---", 3)
+    if end < 0:
+        return []
+    block = content[3:end]
+    prefix = f"{key}:"
+    for raw_line in block.splitlines():
+        line = raw_line.strip()
+        if not line.startswith(prefix):
+            continue
+        rest = line[len(prefix) :].strip()
+        rest = rest.strip("[]")
+        return [part.strip().strip("'\"") for part in rest.split(",") if part.strip()]
+    return []
+
+
+def keep_template_file(rel: str, content: str, fidelity: str | None) -> bool:
+    """Whether a templates/ file belongs in the merged blob for this fidelity.
+
+    No fidelity → keep everything (same as a whole-folder merge). Never keep
+    stories-sketch on a format-filtered pack. story_map keeps story-map +
+    thin-slice plus files whose frontmatter artifact is clearly story-map.
+    """
+    if not fidelity:
+        return True
+    stem = Path(rel).stem.lower()
+    if stem.endswith("-sketch"):
+        return False
+    stems = _FIDELITY_TEMPLATE_STEMS.get(fidelity)
+    if stems is None:
+        return True
+    if stem in stems:
+        return True
+    artifacts = _frontmatter_values(content, "artifact")
+    allowed = _FIDELITY_TEMPLATE_ARTIFACTS.get(fidelity, frozenset())
+    for art in artifacts:
+        if art.replace("_", "-") in allowed:
+            return True
+    return False
+
+
 class Asset:
     def __init__(self, location: AssetLocation) -> None:
         self._location = location
@@ -181,10 +324,21 @@ class Asset:
     def location(self) -> AssetLocation:
         return self._location
 
-    def collect(self) -> str:
-        from .markdown_extractor import _extract_single
+    @property
+    def fidelity(self) -> str | None:
+        return self._location.fidelity
 
-        return _extract_single(self._location)
+    @property
+    def format(self) -> str | None:
+        return self._location.format
+
+    def collect(self) -> str:
+        from .markdown_extractor import _extract_single, thin_contexts_for_fidelity
+
+        text = _extract_single(self._location)
+        if self._location.label == "contexts":
+            return thin_contexts_for_fidelity(text, self.fidelity)
+        return text
 
 
 class AssetCollection:
@@ -196,10 +350,26 @@ class AssetCollection:
     def location(self) -> AssetLocation:
         return self._location
 
-    def collect(self) -> dict[str, str]:
-        from .markdown_extractor import _extract_collection
+    @property
+    def fidelity(self) -> str | None:
+        return self._location.fidelity
 
-        self.collection = _extract_collection(self._location)
+    @property
+    def format(self) -> str | None:
+        return self._location.format
+
+    def collect(self) -> dict[str, str]:
+        from .markdown_extractor import (
+            _extract_collection,
+            thin_examples_by_fidelity,
+            thin_examples_by_format,
+        )
+
+        items = _extract_collection(self._location)
+        if self._location.label == "examples":
+            items = thin_examples_by_format(items, self.format)
+            items = thin_examples_by_fidelity(items, self.fidelity)
+        self.collection = items
         return self.collection
 
     def merged(self) -> str:

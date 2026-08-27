@@ -47,17 +47,29 @@ def _read_section(file_path: Path, section_heading: str) -> str:
     return content[start:end].strip()
 
 
-def _merge_folder(folder_path: Path) -> str:
+def _merge_folder(
+    folder_path: Path,
+    fidelity: str | None = None,
+    *,
+    _root: Path | None = None,
+) -> str:
+    from .assets import keep_template_file
+
     if not folder_path.is_dir():
         return ""
+    root = _root or folder_path
     parts: list[str] = []
     for path in sorted(folder_path.iterdir()):
         if path.name.startswith(".") or path.name == "__pycache__":
             continue
         if path.is_file():
-            parts.append(f"## {path.stem}\n\n{path.read_text(encoding='utf-8')}")
+            text = path.read_text(encoding="utf-8")
+            rel = path.relative_to(root).as_posix()
+            if not keep_template_file(rel, text, fidelity):
+                continue
+            parts.append(f"## {path.stem}\n\n{text}")
         elif path.is_dir():
-            nested = _merge_folder(path)
+            nested = _merge_folder(path, fidelity, _root=root)
             if nested:
                 parts.append(nested)
     return "\n\n".join(parts)
@@ -96,13 +108,179 @@ def _extract_single(location: AssetLocation) -> str:
             return ""
         return _read_file(location.path)
     if location.kind == "folder" and location.folder is not None:
-        return _merge_folder(location.folder)
+        return _merge_folder(location.folder, location.fidelity)
     if location.kind == "section" and location.section_file is not None:
         heading = location.section_heading or ""
         if heading and not _section_exists(location.section_file, heading):
             return ""
         return _read_section(location.section_file, heading)
     return ""
+
+
+def _h2_block(text: str, heading: str) -> str:
+    """Return the ``## heading`` block through the next ``#`` / ``##``, or empty."""
+    pattern = re.compile(rf"^##\s+{re.escape(heading)}\s*$", re.MULTILINE)
+    match = pattern.search(text)
+    if not match:
+        return ""
+    start = match.start()
+    rest = text[match.end() :]
+    next_match = re.compile(r"^#{1,2}\s+\S", re.MULTILINE).search(rest)
+    end = match.end() + next_match.start() if next_match else len(text)
+    return text[start:end].strip()
+
+
+def _contexts_preamble(text: str) -> str:
+    """Text from the start of ``# Contexts`` through the first ``##`` heading."""
+    match = re.compile(r"^##\s+\S", re.MULTILINE).search(text)
+    if not match:
+        return text.strip()
+    return text[: match.start()].rstrip()
+
+
+# H2 titles that name a kit fidelity. Sibling sections drop; Shared rules /
+# Language companion / Hierarchy shape stay. Same rule for Stories, CE, DDD, UX, BDD.
+_FIDELITY_H2_NAMES = frozenset(
+    {
+        "scaffold",
+        "story_map",
+        "scenarios",
+        "acceptance_tests",
+        "modules",
+        "model",
+        "code",
+        "specification",
+        "behavior",
+        "development",
+        "bounded_context",
+        "building_blocks",
+        "tactics",
+        "ia",
+        "mockup",
+        "front_end_code",
+    }
+)
+
+
+def _h2_slug(heading: str) -> str:
+    cleaned = re.sub(r"<!--.*?-->", "", heading).strip()
+    return cleaned.lower().replace(" ", "_").replace("-", "_")
+
+
+def _iter_h2_blocks(text: str) -> list[tuple[str, str]]:
+    matches = list(re.finditer(r"^##\s+(.+?)\s*$", text, re.MULTILINE))
+    blocks: list[tuple[str, str]] = []
+    for match in matches:
+        start = match.start()
+        rest = text[match.end() :]
+        next_match = re.compile(r"^#{1,2}\s+\S", re.MULTILINE).search(rest)
+        end = match.end() + next_match.start() if next_match else len(text)
+        blocks.append((match.group(1).strip(), text[start:end].strip()))
+    return blocks
+
+
+def thin_contexts_for_fidelity(text: str, fidelity: str | None) -> str:
+    """Keep preamble + shared H2s + ``## {fidelity}`` when that heading exists.
+
+    Drops sibling fidelity H2s (``## model`` when fidelity is ``modules``, etc.).
+    Unset fidelity, or a kit with no matching ``## {fidelity}``, leaves ``text``
+    unchanged. Does not require ``## Shared rules``.
+    """
+    if not fidelity or not str(fidelity).strip():
+        return text
+    name = str(fidelity).strip()
+    blocks = _iter_h2_blocks(text)
+    if not any(_h2_slug(heading) == name for heading, _ in blocks):
+        return text
+    parts = [_contexts_preamble(text)]
+    for heading, block in blocks:
+        slug = _h2_slug(heading)
+        if slug in _FIDELITY_H2_NAMES and slug != name:
+            continue
+        parts.append(block)
+    return "\n\n".join(part for part in parts if part).strip()
+
+
+_FORMAT_FOLDER_ALIAS = {
+    "markdown": "md",
+    "python": "py",
+    "typescript": "ts",
+    "javascript": "js",
+    "java": "java",
+}
+
+
+_FORMAT_FILE_EXT = {
+    "markdown": ".md",
+    "python": ".py",
+    "typescript": ".ts",
+    "javascript": ".js",
+    "java": ".java",
+    "drawio": ".drawio",
+}
+
+
+def thin_examples_by_format(items: dict[str, str], format_name: str | None) -> dict[str, str]:
+    """Keep example files for the active format.
+
+    Prefer ``/{alias}/`` paths (Stories). If none, keep by suffix (CE shopping-cart
+    ``examples.md`` / ``examples.py``). ``examples.md`` is skipped only as a
+    folder-index next to ``/{alias}/`` trees.
+    """
+    if not format_name or not str(format_name).strip():
+        return items
+    alias = _FORMAT_FOLDER_ALIAS.get(str(format_name).strip(), str(format_name).strip())
+    needle = f"/{alias}/"
+    filtered: dict[str, str] = {}
+    for rel, content in items.items():
+        posix = rel.replace("\\", "/")
+        name = posix.rsplit("/", 1)[-1]
+        if name.lower() == "examples.md":
+            continue
+        if needle in f"/{posix}":
+            filtered[rel] = content
+    if filtered:
+        return filtered
+    ext = _FORMAT_FILE_EXT.get(str(format_name).strip())
+    if not ext:
+        return items
+    by_ext: dict[str, str] = {}
+    for rel, content in items.items():
+        if Path(rel.replace("\\", "/")).suffix.lower() == ext:
+            by_ext[rel] = content
+    return by_ext if by_ext else items
+
+
+_STORY_MAP_EXAMPLE_STEMS = frozenset({"story-map", "thin-slice"})
+_CE_GENERATE_FIDELITIES = frozenset({"modules", "model", "code", "specification"})
+
+
+def thin_examples_by_fidelity(
+    items: dict[str, str], fidelity: str | None
+) -> dict[str, str]:
+    """Keep example files whose stem matches the active fidelity.
+
+    ``story_map`` → ``story-map`` / ``thin-slice``. ``scenarios`` → ``scenario-*``.
+    CE generate fidelities (``modules`` / ``model`` / ``code``) drop ``evals/``
+    (repair fixtures) and keep shopping-cart. Unset fidelity, or no matching
+    names, leaves ``items`` unchanged so we never empty the slot.
+    """
+    if not items or not fidelity or not str(fidelity).strip():
+        return items
+    name = str(fidelity).strip()
+    filtered: dict[str, str] = {}
+    for rel, content in items.items():
+        posix = rel.replace("\\", "/")
+        stem = Path(posix).stem
+        if name == "story_map" and stem in _STORY_MAP_EXAMPLE_STEMS:
+            filtered[rel] = content
+        elif name == "scenarios" and stem.startswith("scenario"):
+            filtered[rel] = content
+        elif name in _CE_GENERATE_FIDELITIES:
+            if "/evals/" in f"/{posix}" or posix.startswith("evals/"):
+                continue
+            filtered[rel] = content
+    return filtered if filtered else items
 
 
 def _extract_collection(location: AssetLocation) -> dict[str, str]:
@@ -116,7 +294,12 @@ def _extract_collection(location: AssetLocation) -> dict[str, str]:
             if path.name.startswith(".") or "__pycache__" in path.parts:
                 continue
             rel = path.relative_to(location.folder).as_posix()
-            items[rel] = _read_file(path)
+            content = _read_file(path)
+            from .assets import keep_template_file
+
+            if not keep_template_file(rel, content, location.fidelity):
+                continue
+            items[rel] = content
         return items
     if location.kind == "file" and location.path is not None:
         if not location.path.is_file():

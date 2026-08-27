@@ -74,6 +74,55 @@ with description("Instruction"):
             expect(result).to(contain("Contexts"))
 
 
+_STORIES_DIR = _REPO_ROOT / "context_tools" / "stories"
+
+
+with description("Instruction.ref smarter load"):
+    with context("contexts on a Stories host at story_map"):
+        with before.each:
+            class _Host:
+                module_dir = _STORIES_DIR
+                domain_slug = "stories"
+                fidelity = "story_map"
+                format = "markdown"
+
+            self.ref = Instruction.ref(_Host(), "contexts")
+            self.text = self.ref.expand()
+
+        with it("should include Shared rules and the story_map heading"):
+            expect(self.text).to(contain("## Shared rules"))
+            expect(self.text).to(contain("## story_map"))
+
+        with it("should omit other fidelity headings"):
+            expect("## scenarios" in self.text).to(equal(False))
+            expect("## acceptance_tests" in self.text).to(equal(False))
+
+    with context("contexts on a Stories host with empty fidelity"):
+        with it("should inline the whole Contexts section"):
+            class _Host:
+                module_dir = _STORIES_DIR
+                domain_slug = "stories"
+                fidelity = ""
+                format = "markdown"
+
+            text = Instruction.ref(_Host(), "contexts").expand()
+            expect("## scenarios" in text).to(equal(True))
+            expect("## acceptance_tests" in text).to(equal(True))
+
+    with context("examples on a Stories host at markdown"):
+        with it("should omit python example paths"):
+            class _Host:
+                module_dir = _STORIES_DIR
+                domain_slug = "stories"
+                fidelity = "story_map"
+                format = "markdown"
+
+            text = Instruction.ref(_Host(), "examples").expand()
+            expect("/py/" in text).to(equal(False))
+            expect("examples.md" in text).to(equal(False))
+            expect("/md/" in text).to(equal(True))
+
+
 with description("_path_for_name"):
     with context("when a subfolder with that name exists"):
         with it("should return name with trailing slash"):
