@@ -36,9 +36,11 @@ _VALIDATE_TOOLSET = "validate.validate:Validate"
 _SATISFY_TOOLSET = "satisfy.satisfy:Satisfy"
 
 
-def _load_clean_engineering(*, format_name: str = "python") -> Toolset:
+def _load_clean_engineering(
+    *, format_name: str = "python", fidelity: str = "modules"
+) -> Toolset:
     toolset_cls = _ToolsetLoader.instance().load(_CLEAN_ENGINEERING_TOOLSET)
-    return toolset_cls(format=format_name)
+    return toolset_cls(fidelity=fidelity, format=format_name, session=None)
 
 
 def _expand_action(
@@ -144,9 +146,9 @@ with description("CleanEngineering action expansion"):
     with context("a CleanEngineering generator constructed with format python"):
         with before.all:
             self.clean_engineering = _load_clean_engineering(format_name="python")
-            self.contexts = _load_contexts_section(_CLEAN_ENGINEERING_DIR)
-            self.examples = _load_examples(_CLEAN_ENGINEERING_DIR)
-            self.template = _load_python_template(_CLEAN_ENGINEERING_DIR)
+            self.contexts = self.clean_engineering.contexts().expand()
+            self.examples = self.clean_engineering.examples().expand()
+            self.template = self.clean_engineering.templates().expand()
 
         with context("the guidance action is expanded"):
             with before.each:
@@ -160,13 +162,20 @@ with description("CleanEngineering action expansion"):
             with it("should set action to guidance"):
                 expect(self.response["action"]).to(equal("guidance"))
 
-            with it("should inline the full Contexts section from clean_engineering"):
+            with it("should inline the fidelity-sliced Contexts section"):
                 _assert_contexts_inlined(self.response["instructions"], self.contexts)
+                expect("## modules" in self.response["instructions"]).to(be_true)
+                expect("\n## model\n" in self.response["instructions"]).to(equal(False))
+                expect("\n## code\n" in self.response["instructions"]).to(equal(False))
 
-            with it("should inline the full examples.md file"):
+            with it("should inline shopping-cart python examples and omit evals"):
                 _assert_text_inlined(self.response["instructions"], self.examples)
+                expect("class IShoppingCart" in self.response["instructions"]).to(be_true)
+                expect("evals/faultyAsset" in self.response["instructions"]).to(
+                    equal(False)
+                )
 
-            with it("should inline the full python template file"):
+            with it("should inline the python template file"):
                 _assert_text_inlined(self.response["instructions"], self.template)
 
         with context("the Validate kit is expanded with this host"):
@@ -198,6 +207,25 @@ with description("CleanEngineering action expansion"):
                     self.response["instructions"],
                     _load_action_prose("satisfy", _SATISFY_DIR),
                 )
+
+    with context("a CleanEngineering generator at model markdown"):
+        with before.each:
+            self.host = _load_clean_engineering(
+                format_name="markdown", fidelity="model"
+            )
+            self.contexts = self.host.contexts().expand()
+            self.examples = self.host.examples().expand()
+
+        with it("should keep Language companion and model contexts only"):
+            expect("## Language companion" in self.contexts).to(be_true)
+            expect("## model" in self.contexts).to(be_true)
+            expect("\n## modules\n" in self.contexts).to(equal(False))
+            expect("\n## code\n" in self.contexts).to(equal(False))
+
+        with it("should inline shopping-cart markdown examples and omit evals"):
+            expect("ShoppingCart" in self.examples).to(be_true)
+            expect("evals/" in self.examples).to(equal(False))
+            expect("faultyAsset" in self.examples).to(equal(False))
 
 
 with description("CleanEngineering scan tool"):

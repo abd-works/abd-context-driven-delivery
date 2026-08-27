@@ -204,18 +204,15 @@ class Instruction:
         return Path(f"{resolved}.md").is_file()
 
     def _expand_ref(self) -> str:
-        from primitives.assets import Asset, AssetCollection, AssetLocator
+        from primitives.assets import AssetLocator
 
-        location = AssetLocator(
+        return AssetLocator(
             self._host,
             self._label or "",
             group=self._group,
             filter_key=self._filter_key,
-        ).locate()
-        # Folders always merge as a collection (includes .py scaffolds, not only .md).
-        if self._collection or location.kind == "folder":
-            return AssetCollection(location).merged()
-        return Asset(location).collect()
+            collection=self._collection,
+        ).expand()
 
     def _split_section(self) -> tuple[str, str]:
         if " # " in self.text:

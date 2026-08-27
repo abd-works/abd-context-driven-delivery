@@ -157,7 +157,7 @@ with description("Stories"):
                 expect(isinstance(path, str)).to(be_true)
                 expect(isinstance(text, str)).to(be_true)
 
-    with context("whose contexts slot is expanded"):
+    with context("whose contexts slot is expanded at story_map"):
         with before.each:
             self.stories = Stories(fidelity="story_map")
             self.contexts = self.stories.contexts().expand()
@@ -165,8 +165,24 @@ with description("Stories"):
         with it("should return non-empty prose"):
             expect(len(self.contexts) > 0).to(be_true)
 
+        with it("should include Shared rules and the story_map heading"):
+            expect("## Shared rules" in self.contexts).to(be_true)
+            expect("## story_map" in self.contexts).to(be_true)
+
         with it("should include the verb-noun-format rule slug"):
             expect("verb-noun-format" in self.contexts).to(be_true)
+
+        with it("should omit other fidelity headings"):
+            expect("## scenarios" in self.contexts).to(equal(False))
+            expect("## acceptance_tests" in self.contexts).to(equal(False))
+
+        with it("should omit scenario-only rule slugs"):
+            expect("gwt-steps-trace-to-domain-operations" in self.contexts).to(equal(False))
+
+    with context("whose contexts slot is expanded at scenarios"):
+        with before.each:
+            self.stories = Stories(fidelity="scenarios")
+            self.contexts = self.stories.contexts().expand()
 
         with it("should include the gwt-steps-trace-to-domain-operations rule slug"):
             expect("gwt-steps-trace-to-domain-operations" in self.contexts).to(be_true)
@@ -201,5 +217,37 @@ with description("Stories"):
         with it("should include the seed-prior-story-as-given rule slug"):
             expect("seed-prior-story-as-given" in self.contexts).to(be_true)
 
-        with it("should name the story_map fidelity"):
-            expect("story_map" in self.contexts).to(be_true)
+        with it("should omit the story_map heading"):
+            expect("## story_map" in self.contexts).to(equal(False))
+
+    with context("whose examples slot is expanded at markdown"):
+        with it("should omit python example files"):
+            text = Stories(fidelity="story_map", format="markdown").examples().expand()
+            expect("/py/" in text).to(equal(False))
+            expect("/md/" in text).to(be_true)
+
+        with it("should keep story-map and thin-slice and omit scenario examples"):
+            text = Stories(fidelity="story_map", format="markdown").examples().expand()
+            expect("story-map.md" in text).to(be_true)
+            expect("thin-slice.md" in text).to(be_true)
+            expect("scenario-main-flow.md" in text).to(equal(False))
+            expect("scenario-outline.md" in text).to(equal(False))
+
+    with context("whose templates slot is expanded at story_map markdown"):
+        with before.each:
+            self.templates = Stories(
+                fidelity="story_map", format="markdown", session=None
+            ).templates().expand()
+
+        with it("should inline the markdown story-map and thin-slice templates"):
+            expect("Story Map" in self.templates).to(be_true)
+            expect("Thin slicing" in self.templates).to(be_true)
+
+        with it("should omit scenario templates, sketch, and other-format story classes"):
+            expect("scenario-outline" in self.templates).to(equal(False))
+            expect("Stories sketch — match active fidelity" in self.templates).to(
+                equal(False)
+            )
+            expect("StoryVerbNoun" in self.templates).to(equal(False))
+            expect("_story.ts" in self.templates).to(equal(False))
+            expect("_story.py" in self.templates).to(equal(False))

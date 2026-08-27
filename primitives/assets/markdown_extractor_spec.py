@@ -16,7 +16,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_empty, equal, expect
+from expects import be_empty, equal, expect, contain
 from mamba import context, description, it
 
 
@@ -168,3 +168,153 @@ with description("extracting a collection of assets"):
                 expect(len(result) > 0).to(equal(True))
                 expect("a.md" in result).to(equal(True))
                 expect(result["a.md"]).to(equal("content a"))
+
+
+_THIN_CONTEXTS = """\
+# Contexts
+
+Preamble table mentions story_map and scenarios.
+
+## Shared rules
+
+- shared-rule-here
+
+## story_map
+
+story map only
+
+## scenarios
+
+scenarios only
+
+## acceptance_tests
+
+acceptance only
+"""
+
+
+with description("thinning contexts by fidelity"):
+    with context("when fidelity is story_map"):
+        with it("should keep the preamble, Shared rules, and story_map only"):
+            from primitives.assets.markdown_extractor import thin_contexts_for_fidelity
+
+            result = thin_contexts_for_fidelity(_THIN_CONTEXTS, "story_map")
+            expect(result).to(contain("Preamble table"))
+            expect(result).to(contain("## Shared rules"))
+            expect(result).to(contain("## story_map"))
+            expect(result).to(contain("story map only"))
+            expect("## scenarios" in result).to(equal(False))
+            expect("## acceptance_tests" in result).to(equal(False))
+
+    with context("when fidelity is unset"):
+        with it("should keep the whole Contexts section"):
+            from primitives.assets.markdown_extractor import thin_contexts_for_fidelity
+
+            result = thin_contexts_for_fidelity(_THIN_CONTEXTS, None)
+            expect(result).to(contain("## scenarios"))
+            expect(result).to(contain("## acceptance_tests"))
+
+    with context("when the kit has no Shared rules heading"):
+        with it("should keep companion prose and the named fidelity only"):
+            from primitives.assets.markdown_extractor import thin_contexts_for_fidelity
+
+            ce_shaped = (
+                "# Contexts\n\nintro\n\n"
+                "## Language companion (not a fidelity)\n\nlang\n\n"
+                "## modules\n\nmod\n\n"
+                "## model\n\nmdl\n\n"
+                "## code\n\ncd\n"
+            )
+            result = thin_contexts_for_fidelity(ce_shaped, "model")
+            expect(result).to(contain("intro"))
+            expect(result).to(contain("## Language companion (not a fidelity)"))
+            expect(result).to(contain("## model"))
+            expect(result).to(contain("mdl"))
+            expect("## modules" in result).to(equal(False))
+            expect("## code" in result).to(equal(False))
+
+
+with description("thinning examples by format"):
+    with context("when markdown files live under /md/"):
+        with it("should keep md paths and drop py paths and examples.md"):
+            from primitives.assets.markdown_extractor import thin_examples_by_format
+
+            items = {
+                "orders/md/story-map.md": "map",
+                "orders/py/story.py": "py notes",
+                "orders/examples.md": "index mentions py",
+            }
+            result = thin_examples_by_format(items, "markdown")
+            expect(result).to(equal({"orders/md/story-map.md": "map"}))
+
+    with context("when no path uses the format alias folder"):
+        with it("should keep files by suffix"):
+            from primitives.assets.markdown_extractor import thin_examples_by_format
+
+            items = {
+                "shopping-cart/examples.md": "md cart",
+                "shopping-cart/examples.py": "py cart",
+                "evals/faultyAsset.py": "ce eval",
+            }
+            result = thin_examples_by_format(items, "markdown")
+            expect(result).to(equal({"shopping-cart/examples.md": "md cart"}))
+
+        with it("should keep python suffixes when format is python"):
+            from primitives.assets.markdown_extractor import thin_examples_by_format
+
+            items = {
+                "shopping-cart/examples.md": "md cart",
+                "shopping-cart/examples.py": "py cart",
+            }
+            result = thin_examples_by_format(items, "python")
+            expect(result).to(equal({"shopping-cart/examples.py": "py cart"}))
+
+
+with description("thinning examples by fidelity"):
+    with context("when fidelity is story_map"):
+        with it("should keep story-map and thin-slice and drop scenario files"):
+            from primitives.assets.markdown_extractor import thin_examples_by_fidelity
+
+            items = {
+                "orders/md/story-map.md": "map",
+                "orders/md/thin-slice.md": "slice",
+                "orders/md/scenario-main-flow.md": "scenario",
+            }
+            result = thin_examples_by_fidelity(items, "story_map")
+            expect(result).to(
+                equal(
+                    {
+                        "orders/md/story-map.md": "map",
+                        "orders/md/thin-slice.md": "slice",
+                    }
+                )
+            )
+
+    with context("when fidelity is scenarios"):
+        with it("should keep scenario-* files only"):
+            from primitives.assets.markdown_extractor import thin_examples_by_fidelity
+
+            items = {
+                "orders/md/story-map.md": "map",
+                "orders/md/scenario-outline.md": "outline",
+            }
+            result = thin_examples_by_fidelity(items, "scenarios")
+            expect(result).to(equal({"orders/md/scenario-outline.md": "outline"}))
+
+    with context("when no stem matches"):
+        with it("should leave the collection unchanged"):
+            from primitives.assets.markdown_extractor import thin_examples_by_fidelity
+
+            items = {"evals/faultyAsset.py": "ce example"}
+            expect(thin_examples_by_fidelity(items, "story_map")).to(equal(items))
+
+    with context("when fidelity is a clean-engineering generate fidelity"):
+        with it("should drop evals and keep shopping-cart"):
+            from primitives.assets.markdown_extractor import thin_examples_by_fidelity
+
+            items = {
+                "shopping-cart/examples.md": "cart",
+                "evals/faultyAsset.py": "eval",
+            }
+            result = thin_examples_by_fidelity(items, "model")
+            expect(result).to(equal({"shopping-cart/examples.md": "cart"}))

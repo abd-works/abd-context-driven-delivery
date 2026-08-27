@@ -21,6 +21,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
 
 _CLEAN_ENGINEERING_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"
 _BDD_DIR = _REPO_ROOT / "context_tools" / "bdd"
+_STORIES_DIR = _REPO_ROOT / "context_tools" / "stories"
 
 
 with description("an asset locator"):
@@ -75,6 +76,69 @@ with description("an asset locator"):
             expect(self.location.path).to(
                 equal((_CLEAN_ENGINEERING_DIR / "templates" / "clean_engineering-templates.py").resolve())
             )
+
+    with context("that locates shared templates on a stories host with markdown format"):
+        with before.each:
+            from primitives.assets import AssetLocator
+
+            class _Host:
+                module_dir = _STORIES_DIR
+                format = "markdown"
+                fidelity = "story_map"
+                toolset_name = "stories"
+
+            self.location = AssetLocator(_Host(), "templates").locate()
+
+        with it("should resolve to the md format folder not the whole templates pack"):
+            expect(self.location.kind).to(equal("folder"))
+            expect(self.location.folder).to(
+                equal((_STORIES_DIR / "templates" / "md").resolve())
+            )
+
+        with it("should carry story_map fidelity for filename filtering"):
+            expect(self.location.fidelity).to(equal("story_map"))
+
+    with context("that locates shared templates on a stories host with no format"):
+        with before.each:
+            from primitives.assets import AssetLocator
+
+            class _Host:
+                module_dir = _STORIES_DIR
+                format = None
+                toolset_name = "stories"
+
+            self.location = AssetLocator(_Host(), "templates").locate()
+
+        with it("should resolve to the whole templates folder"):
+            expect(self.location.kind).to(equal("folder"))
+            expect(self.location.folder).to(equal((_STORIES_DIR / "templates").resolve()))
+
+        with it("should not filter by fidelity"):
+            expect(self.location.fidelity).to(be_none)
+
+    with context("whose slot properties expand on a stories host at story_map markdown"):
+        with before.each:
+            from primitives.assets import AssetLocator
+
+            class _Host:
+                module_dir = _STORIES_DIR
+                format = "markdown"
+                fidelity = "story_map"
+                toolset_name = "stories"
+
+            self.assets = AssetLocator(_Host(), "contexts")
+
+        with it("should expose fidelity and format on the locator"):
+            expect(self.assets.fidelity).to(equal("story_map"))
+            expect(self.assets.format).to(equal("markdown"))
+
+        with it("should thin contexts to story_map"):
+            expect("## story_map" in self.assets.contexts).to(equal(True))
+            expect("## scenarios" in self.assets.contexts).to(equal(False))
+
+        with it("should thin examples to story-map and thin-slice"):
+            expect("story-map.md" in self.assets.examples).to(equal(True))
+            expect("scenario-main-flow.md" in self.assets.examples).to(equal(False))
 
     with context("that resolves a label to a folder"):
         with before.each:
