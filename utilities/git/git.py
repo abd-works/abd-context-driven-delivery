@@ -48,7 +48,27 @@ class TicketNotFoundError(LookupError):
 
 
 DEFAULT_PROJECT_STATES: tuple[str, ...] = ("Backlog", "In Progress", "Done")
+# Workflow names first; GitHub Projects often uses Todo instead of Backlog.
+GITHUB_STATUS_ALIASES: dict[str, tuple[str, ...]] = {
+    "Backlog": ("Todo",),
+    "Todo": ("Backlog",),
+}
 _ISSUE_NUMBER = re.compile(r"^\d+$")
+
+
+def resolve_github_status_option(
+    state_name: str, options: list[str] | tuple[str, ...] | None = None
+) -> str:
+    """Pick a Status option: exact match first, then a known synonym."""
+    wanted = (state_name or "").strip()
+    names = [str(item).strip() for item in (options or ()) if str(item).strip()]
+    if wanted in names:
+        return wanted
+    aliases = GITHUB_STATUS_ALIASES.get(wanted, ())
+    for alias in aliases:
+        if not names or alias in names:
+            return alias
+    return wanted
 
 
 @dataclass
@@ -171,6 +191,9 @@ class Ticket:
             raise GhConnectError(
                 f"Could not add issue to project. {_GH_DO_NOT_PROCEED}"
             )
+        gh_value = resolve_github_status_option(
+            state_name, project.status_option_names()
+        )
         repo._gh(
             "project",
             "item-edit",
@@ -182,7 +205,7 @@ class Ticket:
             "--field",
             "Status",
             "--value",
-            state_name,
+            gh_value,
         )
         self.state = state
         return self
@@ -256,6 +279,42 @@ class Project:
             if state.name == name:
                 return state
         raise ValueError(f"unknown project state: {name!r}")
+
+    def status_option_names(self) -> list[str]:
+        """Live GitHub Status field option names, or empty when listing fails."""
+        repo = self._repo
+        if repo._memory:
+            return [state.name for state in self.states]
+        try:
+            raw = repo._gh(
+                "project",
+                "field-list",
+                str(self.number),
+                "--owner",
+                self.owner,
+                "--format",
+                "json",
+            )
+        except GhConnectError:
+            return []
+        payload = json.loads(raw or "{}")
+        fields = payload
+        if isinstance(payload, dict):
+            fields = payload.get("fields") or payload.get("items") or []
+        names: list[str] = []
+        for field in fields or []:
+            if not isinstance(field, dict):
+                continue
+            if str(field.get("name") or "") != "Status":
+                continue
+            for option in field.get("options") or []:
+                if isinstance(option, dict):
+                    label = str(option.get("name") or "").strip()
+                else:
+                    label = str(option).strip()
+                if label:
+                    names.append(label)
+        return names
 
     def link_repository(self) -> None:
         """Attach this org project to the current GitHub repository."""

@@ -13,7 +13,27 @@ from git.git import (
     Ticket,
     TicketNotFoundError,
     TicketState,
+    resolve_github_status_option,
 )
+
+NullGitRepo = Repo.memory
+
+__all__ = [
+    "Branch",
+    "Commit",
+    "DirtyBranchSwitchError",
+    "GhConnectError",
+    "Git",
+    "GitConnectError",
+    "GitRepo",
+    "NullGitRepo",
+    "Project",
+    "Repo",
+    "Ticket",
+    "TicketNotFoundError",
+    "TicketState",
+    "resolve_github_status_option",
+]
 
 NullGitRepo = Repo.memory
 
