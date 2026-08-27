@@ -11,5 +11,5 @@
 ## End
 
 - **ended:** 2026-08-27
-- **outcome:** handoff written
-- **handoff:** handoffs/handoff-2026-08-27-channel-optimization.md
+- **outcome:** Close switches to main via the git utility.
+- **handoff:** handoff.md
