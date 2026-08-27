@@ -47,24 +47,22 @@ Do **not** separately chain `read_context_index` or `record_context_root` from l
 1. context-index entry for `context_index_key`
 2. else `{workspace_root}/{default_workspace_folder}`
 
-## Git branch on every session start
+## Git worktree on every session start
 
-Handoff is only one way a session comes back later. **Every** `open` does this check — new sprint or resume of an existing one.
+Handoff is only one way a session comes back later. **Every** `open` / `ensure_started` isolates session git work.
 
-**Reuse `session/{name}`.** Do not mint `session/{name}-2` just because we started again. After a handoff you may be on `main`, or on a later session branch that was created from `main` (so it does not have this session's commits). Restart still checks out `session/{name}` when that branch already exists — same machine or another person who has the session name. You would have to be on that branch to see the work anyway; the start check is how we get there.
+**Reuse `session/{name}`.** Do not mint `session/{name}-2` just because we started again.
 
-1. Compare HEAD to `session/{name}`.
-2. Already on that branch → continue (dirty tree is fine; you are already there).
-3. Not on it, **and the working tree is dirty** → **do not checkout**. Ask:
-   - bring this work onto the existing session branch (merge / pull latest into it), or
-   - start a continuation branch `session/{name}-2` (then `-3`, …) — only if they choose that.
-4. Not on it, tree clean → checkout `session/{name}` if it exists, otherwise create it.
+1. If the session branch is `main` (or the clone default) → stay in the primary clone. Do not add a worktree for main.
+2. If a worktree for `session/{name}` already exists → switch to it (retarget `WorkSession.git`). Do not create a second one.
+3. Otherwise create a **sibling** worktree next to the primary clone. Never add a worktree inside the clone. Never checkout the session branch in the primary folder (that steals the checkout from other chats).
+4. Fetch/pull so the worktree has the latest from the repository. Do all session work in that tree.
 
-Eval still only **commits** after a turn. It does not decide the switch.
+Sibling path: `{abbrev}-{work-session-name}` beside `primary_root()`. `{work-session-name}` is the WorkSession kebab slug (not `session/...`). `{abbrev}` comes from the **primary clone folder name**: keep the first hyphen/underscore token, then the first letter of each later token (`abd-context-driven-delivery` → `abd-cdd`; `story-ui` → `story-u`; `my-app` → `my-a`; `widgets` → `widgets`).
 
 # Close Session
 
-Write the End section on `{folder}/session.md`.
+Write the End section on `{folder}/session.md`. If a turn is still open, finish (commit) that turn first. Push the session branch. Merge with main so the work lands on main — do **not** checkout `main` in a worktree you are about to delete. If the worktree is clean (no dirty files, no stash), `git worktree remove` it. If dirty or stash remains, leave the worktree.
 
 ```yaml
 tool: close_session

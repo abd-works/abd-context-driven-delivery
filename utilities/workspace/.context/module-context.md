@@ -4,7 +4,9 @@
 
 **Workspace** aggregate (`workspace.py`): parent of `.context/`, owns many **WorkSession**s,
 **currentWorkSession**, and **pathOverrides**. **GitRepo** is the git collaborator on
-`WorkSession.git`. **SessionLog** records expand|run trails explicitly (not via `@log`).
+`WorkSession.git`. Session git work for a non-default branch lives in a **sibling
+worktree** so the primary clone checkout stays put. **SessionLog** records
+expand|run trails explicitly (not via `@log`).
 
 ## Primary use case
 
@@ -31,10 +33,24 @@
 - `WorkSession` — back-ref `workspace`; owns `git`, `open_turn`, `turns`, `repairs`, trail;
   session.md kit (`ensure_started`, `close`, `close_session`, context index helpers);
   `start_work_session` / `finish_work_session` `@agent_tool` with `@prompt` names
-  `start-work-session` / `finish-work-session`
+  `start-work-session` / `finish-work-session`.
+  **Open** (`ensure_started`): stay in the primary clone when the session branch is
+  main/default; otherwise create or reuse a sibling worktree, fetch/pull, and do
+  session work there — do not checkout the session branch in the primary folder.
+  Sibling path is `{abbrev}-{work-session-name}` next to `primary_root()`:
+  abbreviate the clone folder (first token, then first letter of each later
+  hyphen/underscore token; e.g. this repo `abd-context-driven-delivery` →
+  `abd-cdd-<slug>`). Never hardcode a repo prefix.
+  **Close** (`close` / `finish_work_session`): finish an open/forgotten turn
+  (commit), write End, commit `session.md` if dirty, push, merge onto main without
+  checking main out in the session tree, then `git worktree remove` only when the
+  tree is clean (no dirty files, no stash).
 - `SessionPaths` / `docs_dir` — sprint folder vs `{destination}/.context/`
-- `GitRepo` / `NullGitRepo` — `checkout_or_create`, `commit`, `push`, notes (`note` /
-  `read_notes` / `find_mistakes`). Session branch naming is WorkSession policy.
+- `GitRepo` / `NullGitRepo` — `checkout_or_create`, `commit`, `push`, worktrees
+  (`list_worktrees` / `worktree_for` / `add_worktree` / `remove_worktree`),
+  `fetch` / `pull` / `fetch_pull`, `merge_from` / `push_to`, notes (`note` /
+  `read_notes` / `find_mistakes`). Session branch naming and sibling-path policy
+  are WorkSession's.
 - `Turn` — `@toolset` (`workspace.workspace:Turn`); CLI context is `workspace` path + `session` name (session may come from the current `session/` git branch). Owns `mistakes` and optional `correction`; `record_mistake` / `record_correction` attach to the open turn before `finish`. `finish_turn` closes the session's hanging turn.
 - `Turn` / `Mistake` / `Correction` / `PathOverride` / `ToolCall` / `TurnCommit`
   (`TurnCommit.name` = git commit subject from `Turn.name`, not a uuid slug)

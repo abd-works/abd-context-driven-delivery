@@ -13,6 +13,7 @@ from git.git import (
     Ticket,
     TicketNotFoundError,
     TicketState,
+    Worktree,
     resolve_github_status_option,
 )
 
@@ -32,6 +33,7 @@ __all__ = [
     "Ticket",
     "TicketNotFoundError",
     "TicketState",
+    "Worktree",
     "resolve_github_status_option",
 ]
 
@@ -51,4 +53,5 @@ __all__ = [
     "Ticket",
     "TicketNotFoundError",
     "TicketState",
+    "Worktree",
 ]

@@ -47,6 +47,14 @@ class TicketNotFoundError(LookupError):
     """Raised when a GitHub issue reference does not resolve."""
 
 
+@dataclass(frozen=True)
+class Worktree:
+    """One checkout of this repository (primary clone or linked worktree)."""
+
+    path: Path
+    branch: str
+
+
 DEFAULT_PROJECT_STATES: tuple[str, ...] = ("Backlog", "In Progress", "Done")
 # Workflow names first; GitHub Projects often uses Todo instead of Backlog.
 GITHUB_STATUS_ALIASES: dict[str, tuple[str, ...]] = {
@@ -472,6 +480,10 @@ class Repo:
         self._dirty = False
         self._notes: dict[str, dict[str, str]] = {}
         self._project_links: list[tuple[str, int, str]] = []
+        self._worktrees: list[Worktree] = [Worktree(self.root, "main")]
+        self._fetches: list[str] = []
+        self._pulls: list[str] = []
+        self._stash = False
 
     @property
     def project(self) -> Project | None:
@@ -589,6 +601,139 @@ class Repo:
             self._pushes.append(self.current_branch)
             return
         self._git( "push", "-u", "origin", self.current_branch)
+
+    def list_worktrees(self) -> list[Worktree]:
+        if self._memory:
+            return list(self._worktrees)
+        trees: list[Worktree] = []
+        path = ""
+        branch = ""
+        for line in self._git("worktree", "list", "--porcelain").splitlines():
+            if line.startswith("worktree "):
+                if path:
+                    trees.append(Worktree(Path(path), branch))
+                path = line[len("worktree ") :]
+                branch = ""
+            elif line.startswith("branch "):
+                ref = line[len("branch ") :]
+                branch = ref[len("refs/heads/") :] if ref.startswith("refs/heads/") else ref
+            elif line == "":
+                if path:
+                    trees.append(Worktree(Path(path), branch))
+                    path = ""
+                    branch = ""
+        if path:
+            trees.append(Worktree(Path(path), branch))
+        return trees
+
+    def worktree_for(self, branch: str) -> Worktree | None:
+        wanted = (branch or "").strip()
+        for tree in self.list_worktrees():
+            if tree.branch == wanted:
+                return tree
+        return None
+
+    def add_worktree(self, path: str | Path, branch: str) -> Path:
+        dest = Path(path)
+        existing = self.worktree_for(branch)
+        if existing is not None:
+            return existing.path
+        if self._memory:
+            self._branch_names.add(branch)
+            self._worktrees.append(Worktree(dest, branch))
+            return dest
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if self._ref_exists(f"refs/heads/{branch}"):
+            self._git("worktree", "add", str(dest), branch)
+        else:
+            start = self._worktree_start_point()
+            args = ["worktree", "add", "-b", branch, str(dest)]
+            if start:
+                args.append(start)
+            self._git(*args)
+        return dest.resolve()
+
+    def remove_worktree(self, path: str | Path) -> None:
+        dest = Path(path)
+        if self._memory:
+            self._worktrees = [tree for tree in self._worktrees if tree.path != dest]
+            return
+        self._git("worktree", "remove", str(dest))
+
+    def fetch(self) -> None:
+        if self._memory:
+            self._fetches.append("origin")
+            return
+        self._git("fetch", "origin")
+
+    def pull(self) -> None:
+        if self._memory:
+            self._pulls.append(self.current_branch)
+            return
+        self._git("pull", "--ff-only")
+
+    def fetch_pull(self) -> None:
+        self.fetch()
+        self.pull()
+
+    def merge_from(self, other: str, message: str = "") -> str:
+        """Merge *other* into the current branch without checking *other* out."""
+        if not other or other == self.current_branch:
+            return self.current_commit
+        if self._memory:
+            text = message or f"merge {other} into {self.current_branch}"
+            self._commits.append(([], text))
+            self._commit = f"merge-{other}-into-{self.current_branch}"
+            return self._commit
+        if message:
+            self._git("merge", other, "-m", message)
+        else:
+            self._git("merge", other, "--no-edit")
+        return self.current_commit
+
+    def push_to(self, branch: str) -> None:
+        if self._memory:
+            self._pushes.append(branch)
+            return
+        self._git("push", "origin", f"HEAD:{branch}")
+
+    def has_stash(self) -> bool:
+        if self._memory:
+            return self._stash
+        return bool(self._git("stash", "list"))
+
+    def is_linked_worktree(self) -> bool:
+        return (self.root / ".git").is_file()
+
+    def primary_root(self) -> Path:
+        if self._memory:
+            return self.root
+        common = Path(self._git("rev-parse", "--git-common-dir"))
+        if not common.is_absolute():
+            common = (self.root / common).resolve()
+        else:
+            common = common.resolve()
+        return common.parent if common.name == ".git" else common
+
+    def _ref_exists(self, ref: str) -> bool:
+        try:
+            self._git("show-ref", "--verify", "--quiet", ref)
+            return True
+        except GitConnectError:
+            return False
+
+    def _worktree_start_point(self) -> str:
+        for candidate in (
+            f"origin/{self.default_branch}",
+            "origin/main",
+            "origin/master",
+        ):
+            try:
+                self._git("rev-parse", "--verify", candidate)
+                return candidate
+            except GitConnectError:
+                continue
+        return ""
 
     def merge_branch(self, source: str, into: str = "main", message: str = "") -> str:
         if self.is_dirty():

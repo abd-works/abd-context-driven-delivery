@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import inspect
+import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
@@ -16,7 +17,7 @@ from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
-from workspace.git_repo import GitRepo, NullGitRepo, Repo
+from workspace.git_repo import GitConnectError, GitRepo, NullGitRepo, Repo
 from tools.tool import resource, agent_tool, toolset
 from harness.prompt import prompt
 
@@ -572,7 +573,7 @@ class WorkSession:
                 "session name is not set - confirm working path and session slug with the "
                 "user, then call open before grill/sketch/handoff"
             )
-        return Path(self.workspace.path) / ".context" / "sessions" / self.name
+        return Path(self.path) / ".context" / "sessions" / self.name
 
     @property
     def log(self) -> Path:
@@ -661,10 +662,138 @@ class WorkSession:
     def load(cls, path: str, name: str) -> WorkSession:
         parent = Workspace(path)
         session = cls(parent, name, path=path, workspace_root=path)
+        session._attach_existing_session_worktree()
         md = session.session_md
         if not md.is_file():
             return session
         return cls._parse(md.read_text(encoding="utf-8"), path=path, name=name)
+
+    def _retarget_git(self, root: Path) -> None:
+        self.git = GitRepo.open(root)
+        self.path = str(root)
+        self.workspace_root = str(root)
+        self.scope_paths = [str(root)]
+
+    def _session_branch_is_default(self) -> bool:
+        default = getattr(self.git, "default_branch", "main") or "main"
+        return self.session_branch in {default, "main", "master"}
+
+    def _attach_existing_session_worktree(self) -> None:
+        git = self.git
+        if getattr(git, "_memory", False) or not self.name:
+            return
+        if self._session_branch_is_default():
+            return
+        existing = git.worktree_for(self.session_branch)
+        if existing is None:
+            return
+        if existing.path.resolve() != Path(git.root).resolve():
+            self._retarget_git(existing.path)
+
+    def _ensure_session_worktree(self) -> None:
+        git = self.git
+        if getattr(git, "_memory", False):
+            git.checkout_or_create(self.session_branch)
+            return
+        if self._session_branch_is_default():
+            self._try_fetch_pull()
+            return
+        self._attach_existing_session_worktree()
+        git = self.git
+        if git.current_branch == self.session_branch:
+            self._try_fetch_pull()
+            return
+        existing = git.worktree_for(self.session_branch)
+        if existing is not None:
+            self._retarget_git(existing.path)
+            self._try_fetch_pull()
+            return
+        self._try_fetch()
+        primary = git.primary_root()
+        dest = primary.parent / self._worktree_dirname(primary.name, self.name)
+        tree = git.add_worktree(dest, self.session_branch)
+        self._retarget_git(tree)
+        self._try_fetch_pull()
+
+    @staticmethod
+    def _abbrev_repo_name(folder: str) -> str:
+        """Abbreviate a clone folder: first token, then first letter of each later token."""
+        tokens = [part for part in re.split(r"[-_]+", folder or "") if part]
+        if not tokens:
+            return folder
+        if len(tokens) == 1:
+            return tokens[0]
+        return tokens[0] + "-" + "".join(token[0] for token in tokens[1:])
+
+    @classmethod
+    def _worktree_dirname(cls, repo_folder: str, session_name: str) -> str:
+        """Sibling directory `{abbrev}-{work-session-name}` next to the primary clone."""
+        return f"{cls._abbrev_repo_name(repo_folder)}-{session_name}"
+
+    def _try_fetch(self) -> None:
+        try:
+            self.git.fetch()
+        except GitConnectError:
+            return
+
+    def _try_fetch_pull(self) -> None:
+        self._try_fetch()
+        try:
+            self.git.pull()
+        except GitConnectError:
+            return
+
+    def _try_push(self) -> None:
+        try:
+            self.git.push()
+        except GitConnectError:
+            return
+
+    def _land_on_default_branch(self) -> None:
+        default = self.git.default_branch
+        for candidate in (default, f"origin/{default}", "main", "origin/main"):
+            try:
+                self.git.merge_from(
+                    candidate,
+                    message=f"merge {candidate} into {self.session_branch}",
+                )
+                break
+            except GitConnectError:
+                continue
+        self._try_push()
+        try:
+            self.git.push_to(default)
+        except GitConnectError:
+            pass
+        occupier = self.git.worktree_for(default)
+        if occupier is None:
+            try:
+                self.git._git("branch", "-f", default, "HEAD")
+            except GitConnectError:
+                return
+            return
+        if occupier.path.resolve() == Path(self.git.root).resolve():
+            return
+        other = GitRepo(occupier.path)
+        if other.is_dirty() or other.has_stash():
+            return
+        try:
+            other.merge_from(
+                self.session_branch,
+                message=f"merge {self.session_branch} into {default}",
+            )
+        except GitConnectError:
+            return
+
+    def _remove_session_worktree_if_clean(self) -> None:
+        git = self.git
+        if getattr(git, "_memory", False):
+            return
+        if not git.is_linked_worktree():
+            return
+        if git.is_dirty() or git.has_stash():
+            return
+        GitRepo(git.primary_root()).remove_worktree(git.root)
 
     def ensure_started(
         self,
@@ -683,7 +812,7 @@ class WorkSession:
             self.contexts = contexts
         if not self.started:
             self.started = date.today().isoformat()
-        self.git.checkout_or_create(self.session_branch)
+        self._ensure_session_worktree()
         self.folder.mkdir(parents=True, exist_ok=True)
         if not self.session_md.is_file():
             self.session_md.write_text(self._render(), encoding="utf-8")
@@ -759,6 +888,8 @@ class WorkSession:
         return str(self.session_md.resolve())
 
     def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
+        if self.open_turn is not None:
+            self.open_turn.finish(result=outcome or "session close")
         if not self.session_md.is_file():
             self.ensure_started()
         self.ended = date.today().isoformat()
@@ -769,6 +900,13 @@ class WorkSession:
         if outcome:
             self.outcome = outcome
         self.session_md.write_text(self._render(), encoding="utf-8")
+        if self.git.is_dirty():
+            try:
+                self.git.commit([str(self.session_md)], "close")
+            except (GitConnectError, ValueError):
+                pass
+        self._land_on_default_branch()
+        self._remove_session_worktree_if_clean()
         return self.session_md
 
     def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:
@@ -787,7 +925,13 @@ class WorkSession:
         path: str = "",
         host: Any | None = None,
     ) -> WorkSession:
-        """start_work_session — agent starts or resumes a named work session."""
+        """start_work_session — agent starts or resumes a named work session.
+
+        Non-default session branches isolate in a sibling worktree named
+        ``{abbrev}-{work-session-name}`` next to the primary clone (abbrev from
+        the clone folder). Stay in the primary clone when the session branch is
+        the default branch.
+        """
         if tools:
             for item in tools:
                 workspace = getattr(item, "workspace", None)

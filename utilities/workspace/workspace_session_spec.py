@@ -250,127 +250,168 @@ with description("a WorkSession that is started"):
         expect("build feature" in content).to(be_true)
 
 
+def _init_clone(prefix: str) -> Path:
+    import tempfile
+    from workspace.git_repo import _git
+
+    tmp = Path(tempfile.mkdtemp(prefix=prefix))
+    _git(tmp, "init")
+    _git(tmp, "config", "user.email", "test@example.com")
+    _git(tmp, "config", "user.name", "test")
+    _git(tmp, "commit", "--allow-empty", "-m", "init")
+    return tmp
+
+
+def _purge_clone(primary: Path) -> None:
+    import shutil
+    from workspace.git_repo import GitConnectError, GitRepo
+
+    try:
+        repo = GitRepo(primary)
+        for tree in repo.list_worktrees():
+            if tree.path.resolve() != primary.resolve():
+                try:
+                    repo.remove_worktree(tree.path)
+                except GitConnectError:
+                    shutil.rmtree(tree.path, ignore_errors=True)
+    except Exception:
+        pass
+    shutil.rmtree(primary, ignore_errors=True)
+
+
 with description("a WorkSession that is started in a git working area"):
-    with it("should create a branch named for this session"):
-        import shutil
-        import tempfile
-        from workspace.git_repo import GitRepo, Repo, _git
+    with it("should isolate session work in a sibling worktree without stealing the primary checkout"):
+        from workspace.git_repo import GitRepo, Repo
         from workspace.workspace import Workspace, WorkSession
 
-        tmp = Path(tempfile.mkdtemp(prefix="session_git_started_"))
-        _git(tmp, "init")
-        _git(tmp, "config", "user.email", "test@example.com")
-        _git(tmp, "config", "user.name", "test")
-        _git(tmp, "commit", "--allow-empty", "-m", "init")
-        session = Workspace(str(tmp)).open_work_session("sprint")
+        tmp = _init_clone("session_git_started_")
+        started_on = GitRepo(tmp).current_branch
+        session = Workspace(str(tmp)).open_work_session("started-sprint")
         session.ensure_started()
-        root = Repo.find_root(tmp)
-        expect(root).to(equal(tmp.resolve()))
-        expect(GitRepo(tmp).current_branch).to(equal("session/sprint"))
-        shutil.rmtree(tmp, ignore_errors=True)
+        expect(Repo.find_root(tmp)).to(equal(tmp.resolve()))
+        expect(GitRepo(tmp).current_branch).to(equal(started_on))
+        expect(session.git.current_branch).to(equal("session/started-sprint"))
+        expect(session.git.root.resolve()).not_to(equal(tmp.resolve()))
+        expect(session.git.root.name).to(
+            equal(WorkSession._worktree_dirname(tmp.name, "started-sprint"))
+        )
+        expect(session.git.is_linked_worktree()).to(be_true)
+        _purge_clone(tmp)
 
     with context("that is started again while already on the session branch"):
-        with it("should stay on that branch when the tree is dirty"):
-            import shutil
-            import tempfile
-            from workspace.git_repo import GitRepo, _git
-            from workspace.workspace import Workspace, WorkSession
+        with it("should stay on that worktree when the tree is dirty"):
+            from workspace.git_repo import GitRepo
+            from workspace.workspace import Workspace
 
-            tmp = Path(tempfile.mkdtemp(prefix="session_git_already_on_"))
-            _git(tmp, "init")
-            _git(tmp, "config", "user.email", "test@example.com")
-            _git(tmp, "config", "user.name", "test")
-            _git(tmp, "commit", "--allow-empty", "-m", "init")
-            session = Workspace(str(tmp)).open_work_session("sprint")
+            tmp = _init_clone("session_git_already_on_")
+            started_on = GitRepo(tmp).current_branch
+            session = Workspace(str(tmp)).open_work_session("already-on")
             session.ensure_started()
-            (tmp / "wip.txt").write_text("in progress", encoding="utf-8")
+            (session.git.root / "wip.txt").write_text("in progress", encoding="utf-8")
             session.ensure_started()
-            expect(GitRepo(tmp).current_branch).to(equal("session/sprint"))
-            shutil.rmtree(tmp, ignore_errors=True)
+            expect(session.git.current_branch).to(equal("session/already-on"))
+            expect(GitRepo(tmp).current_branch).to(equal(started_on))
+            _purge_clone(tmp)
 
     with context("that is an existing session whose branch we are not on"):
-        with it("should not switch when the tree is dirty"):
-            import shutil
-            import tempfile
-            from workspace.git_repo import (
-                DirtyBranchSwitchError,
-                GitRepo,
-                _git,
-            )
-            from workspace.workspace import Workspace, WorkSession
+        with it("should keep the dirty primary checkout and reuse the session worktree"):
+            from workspace.git_repo import GitRepo
+            from workspace.workspace import Workspace
 
-            tmp = Path(tempfile.mkdtemp(prefix="session_git_resume_dirty_"))
-            _git(tmp, "init")
-            _git(tmp, "config", "user.email", "test@example.com")
-            _git(tmp, "config", "user.name", "test")
-            _git(tmp, "commit", "--allow-empty", "-m", "init")
+            tmp = _init_clone("session_git_resume_dirty_")
             started_on = GitRepo(tmp).current_branch
-            session = Workspace(str(tmp)).open_work_session("sprint")
+            session = Workspace(str(tmp)).open_work_session("resume-dirty")
             session.ensure_started()
-            _git(tmp, "checkout", started_on)
+            worktree = session.git.root
             (tmp / "wip.txt").write_text("in progress", encoding="utf-8")
-            expect(lambda: session.ensure_started()).to(
-                raise_error(DirtyBranchSwitchError)
-            )
+            session.ensure_started()
             expect(GitRepo(tmp).current_branch).to(equal(started_on))
-            shutil.rmtree(tmp, ignore_errors=True)
+            expect(session.git.root.resolve()).to(equal(worktree.resolve()))
+            expect(session.git.current_branch).to(equal("session/resume-dirty"))
+            _purge_clone(tmp)
 
-        with it("should switch to the existing session branch from another branch"):
-            import shutil
-            import tempfile
+        with it("should switch to the existing session worktree from the primary clone"):
             from workspace.git_repo import GitRepo, _git
-            from workspace.workspace import Workspace, WorkSession
+            from workspace.workspace import Workspace
 
-            tmp = Path(tempfile.mkdtemp(prefix="session_git_resume_clean_"))
-            _git(tmp, "init")
-            _git(tmp, "config", "user.email", "test@example.com")
-            _git(tmp, "config", "user.name", "test")
-            _git(tmp, "commit", "--allow-empty", "-m", "init")
+            tmp = _init_clone("session_git_resume_clean_")
             started_on = GitRepo(tmp).current_branch
-            session = Workspace(str(tmp)).open_work_session("sprint")
+            session = Workspace(str(tmp)).open_work_session("resume-clean")
             session.ensure_started()
-            (tmp / "handoff-marker.txt").write_text("user-one-handoff", encoding="utf-8")
-            _git(tmp, "add", "handoff-marker.txt")
-            _git(tmp, "add", ".context")
-            _git(tmp, "commit", "-m", "handoff")
-            _git(tmp, "checkout", started_on)
+            marker = session.git.root / "handoff-marker.txt"
+            marker.write_text("user-one-handoff", encoding="utf-8")
+            _git(session.git.root, "add", "handoff-marker.txt")
+            _git(session.git.root, "add", ".context")
+            _git(session.git.root, "commit", "-m", "handoff")
             session.ensure_started()
-            expect(GitRepo(tmp).current_branch).to(equal("session/sprint"))
-            expect((tmp / "handoff-marker.txt").read_text(encoding="utf-8")).to(
-                equal("user-one-handoff")
-            )
-            shutil.rmtree(tmp, ignore_errors=True)
+            expect(GitRepo(tmp).current_branch).to(equal(started_on))
+            expect(session.git.current_branch).to(equal("session/resume-clean"))
+            expect(marker.read_text(encoding="utf-8")).to(equal("user-one-handoff"))
+            _purge_clone(tmp)
 
-        with it("should return to the first session branch after a later session was created from main"):
-            import shutil
-            import tempfile
+        with it("should return to the first session worktree after a later session was opened"):
             from workspace.git_repo import GitRepo, _git
-            from workspace.workspace import Workspace, WorkSession
+            from workspace.workspace import Workspace
 
-            tmp = Path(tempfile.mkdtemp(prefix="session_git_two_sprints_"))
-            _git(tmp, "init")
-            _git(tmp, "config", "user.email", "test@example.com")
-            _git(tmp, "config", "user.name", "test")
-            _git(tmp, "commit", "--allow-empty", "-m", "init")
-            main = GitRepo(tmp).current_branch
+            tmp = _init_clone("session_git_two_sprints_")
+            started_on = GitRepo(tmp).current_branch
             first = Workspace(str(tmp)).open_work_session("first")
             first.ensure_started()
-            (tmp / "first-handoff.txt").write_text("first-session-work", encoding="utf-8")
-            _git(tmp, "add", "first-handoff.txt")
-            _git(tmp, "add", ".context")
-            _git(tmp, "commit", "-m", "first handoff")
-            _git(tmp, "checkout", main)
-            Workspace(str(tmp)).open_work_session("second").ensure_started()
-            expect(GitRepo(tmp).current_branch).to(equal("session/second"))
-            expect((tmp / "first-handoff.txt").exists()).to(be_false)
-            _git(tmp, "add", ".context")
-            _git(tmp, "commit", "-m", "second handoff")
+            (first.git.root / "first-handoff.txt").write_text(
+                "first-session-work", encoding="utf-8"
+            )
+            _git(first.git.root, "add", "first-handoff.txt")
+            _git(first.git.root, "add", ".context")
+            _git(first.git.root, "commit", "-m", "first handoff")
+            second = Workspace(str(tmp)).open_work_session("second")
+            second.ensure_started()
+            expect(GitRepo(tmp).current_branch).to(equal(started_on))
+            expect(second.git.current_branch).to(equal("session/second"))
+            expect((second.git.root / "first-handoff.txt").exists()).to(be_false)
             first.ensure_started()
-            expect(GitRepo(tmp).current_branch).to(equal("session/first"))
-            expect((tmp / "first-handoff.txt").read_text(encoding="utf-8")).to(
+            expect(first.git.current_branch).to(equal("session/first"))
+            expect((first.git.root / "first-handoff.txt").read_text(encoding="utf-8")).to(
                 equal("first-session-work")
             )
-            shutil.rmtree(tmp, ignore_errors=True)
+            _purge_clone(tmp)
+
+    with it("should stay in the primary clone when the session branch is the default branch"):
+        from workspace.git_repo import GitRepo
+        from workspace.workspace import Workspace, WorkSession
+
+        class DefaultBranchSession(WorkSession):
+            @property
+            def session_branch(self) -> str:
+                return self.git.default_branch
+
+        tmp = _init_clone("session_git_main_")
+        started_on = GitRepo(tmp).current_branch
+        parent = Workspace(str(tmp))
+        session = DefaultBranchSession(parent, "on-main")
+        session.git.default_branch = started_on
+        session._ensure_session_worktree()
+        expect(GitRepo(tmp).current_branch).to(equal(started_on))
+        expect(session.git.root.resolve()).to(equal(tmp.resolve()))
+        expect(session.git.is_linked_worktree()).to(be_false)
+        _purge_clone(tmp)
+
+
+with description("a sibling worktree directory name"):
+    with it("should abbreviate hyphenated clone folders and append the session slug"):
+        from workspace.workspace import WorkSession
+
+        expect(WorkSession._abbrev_repo_name("abd-context-driven-delivery")).to(
+            equal("abd-cdd")
+        )
+        expect(WorkSession._abbrev_repo_name("story-ui")).to(equal("story-u"))
+        expect(WorkSession._abbrev_repo_name("my-app")).to(equal("my-a"))
+        expect(WorkSession._abbrev_repo_name("widgets")).to(equal("widgets"))
+        expect(
+            WorkSession._worktree_dirname("abd-context-driven-delivery", "open-close")
+        ).to(equal("abd-cdd-open-close"))
+        expect(WorkSession._worktree_dirname("story-ui", "fix-nav")).to(
+            equal("story-u-fix-nav")
+        )
 
 
 with description("a WorkSession that is closed"):
@@ -413,6 +454,58 @@ with description("a WorkSession that is closed"):
         expect("did the thing" in content).to(be_true)
         expect("did another thing" in content).to(be_true)
         expect("## End" in content).to(be_true)
+
+
+with description("a WorkSession that is closed in a git worktree"):
+    with it("should merge onto main, keep the primary checkout, and remove a clean worktree"):
+        from workspace.git_repo import GitRepo
+        from workspace.workspace import Workspace
+
+        tmp = _init_clone("session_git_close_clean_")
+        started_on = GitRepo(tmp).current_branch
+        session = Workspace(str(tmp)).open_work_session("close-clean")
+        session.ensure_started()
+        tree = session.git.root
+        expect(tree.exists()).to(be_true)
+        session.close(outcome="done", handoff="")
+        expect(GitRepo(tmp).current_branch).to(equal(started_on))
+        expect(tree.exists()).to(be_false)
+        expect(GitRepo(tmp).worktree_for("session/close-clean")).to(be_none)
+        if started_on == "main":
+            landed = tmp / ".context" / "sessions" / "close-clean" / "session.md"
+            expect(landed.is_file()).to(be_true)
+            expect("## End" in landed.read_text(encoding="utf-8")).to(be_true)
+        _purge_clone(tmp)
+
+    with it("should close a forgotten turn before session close"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import Turn, Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_git_close_turn_"))
+        git = NullGitRepo(tmp)
+        session = Workspace(str(tmp)).open_work_session("close-turn", git=git)
+        session.ensure_started()
+        git.set_dirty(True)
+        session.open_turn = Turn(work_session=session)
+        session.open_turn.action = "forgotten-turn"
+        session.close(outcome="done", handoff="")
+        expect(session.open_turn).to(be_none)
+        expect(git.commits[0][1]).to(equal("forgotten-turn"))
+
+    with it("should not remove a dirty worktree"):
+        from workspace.git_repo import GitRepo
+        from workspace.workspace import Workspace
+
+        tmp = _init_clone("session_git_close_dirty_")
+        session = Workspace(str(tmp)).open_work_session("close-dirty")
+        session.ensure_started()
+        tree = session.git.root
+        leftover = tree / "leftover.txt"
+        leftover.write_text("stash-me", encoding="utf-8")
+        session.close(outcome="done", handoff="")
+        expect(tree.exists()).to(be_true)
+        expect(leftover.is_file()).to(be_true)
+        _purge_clone(tmp)
 
 
 with description("a WorkSession tool"):
