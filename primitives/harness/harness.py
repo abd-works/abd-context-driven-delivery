@@ -15,7 +15,7 @@ from pathlib import Path
 
 from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
-from tools.toolset_header import read_toolset_header
+from tools.toolset_header import manifest_commands
 
 from harness.agent import Agent
 from harness.agent_guidance import AgentGuidance
@@ -345,7 +345,7 @@ class Harness:
                 continue
             writes = operation_writes(path, class_name, repo_root=self.repo_root)
             if writes:
-                for vehicle, deploy_name, _operation, _doc in writes:
+                for vehicle, deploy_name, _operation, _doc, _invoke in writes:
                     if vehicle != "prompt":
                         continue
                     names.append(deploy_name or slug)
@@ -466,8 +466,16 @@ class Harness:
         toolset = entry.get("manifest_command", "").rsplit(" ", 1)[-1]
         names: list[str] = []
 
-        def source_for(name: str, guidance: str) -> dict:
-            payload = {**meta, "name": name, "toolset": toolset, "guidance": guidance, "source_kind": kind}
+        def source_for(name: str, guidance: str, *, operation: str = "", invoke: str = "action") -> dict:
+            payload = {
+                **meta,
+                "name": name,
+                "toolset": toolset,
+                "guidance": guidance,
+                "source_kind": kind,
+                "operation": operation,
+                "invoke": invoke,
+            }
             if kind == "action":
                 payload["action"] = True
                 payload["context_tools"] = (
@@ -485,11 +493,16 @@ class Harness:
 
         writes = operation_writes(path, class_name, repo_root=self.repo_root)
         if writes:
-            for vehicle, deploy_name, _operation, doc in writes:
+            for vehicle, deploy_name, operation, doc, invoke in writes:
                 name = deploy_name or slug
                 if not self._wanted(wanted, name, slug, "source"):
                     continue
-                written = self._emit(vehicle, source_for(name, doc or meta["guidance"]), roots, seen)
+                written = self._emit(
+                    vehicle,
+                    source_for(name, doc or meta["guidance"], operation=operation, invoke=invoke),
+                    roots,
+                    seen,
+                )
                 if written:
                     names.append(written)
         elif kind == "action":
@@ -521,7 +534,7 @@ class Harness:
     def _write_harness_files(self, roots: list[Path], seen: set[tuple[str, str]]) -> list[str]:
         names: list[str] = []
         path = Path(__file__)
-        for vehicle, deploy_name, operation, doc in operation_writes(
+        for vehicle, deploy_name, operation, doc, invoke in operation_writes(
             path, "Harness", repo_root=self.repo_root
         ):
             name = deploy_name or operation
@@ -529,12 +542,19 @@ class Harness:
                 continue
             if not deploy_name and operation == "generate":
                 continue
+            cli_operation = operation
+            cli_invoke = invoke
+            if operation == "generate":
+                cli_operation = "write_deploy"
+                cli_invoke = "tool"
             payload = {
                 "name": name,
                 "overview": doc or name,
                 "guidance": doc or name,
                 "toolset": "harness.harness:Harness",
                 "source_kind": "utility",
+                "operation": cli_operation,
+                "invoke": cli_invoke,
             }
             if operation == "generate":
                 payload["guidance"] = (
@@ -590,36 +610,41 @@ class Harness:
                 if self._should_skip(py_file):
                     continue
                 try:
-                    tree_ast = ast.parse(py_file.read_text(encoding="utf-8"))
+                    text = py_file.read_text(encoding="utf-8")
+                    tree_ast = ast.parse(text)
                 except (OSError, SyntaxError):
                     continue
-                manifest = ""
-                try:
-                    header = read_toolset_header(py_file)
-                    manifest = header.manifest_command
-                except ValueError:
-                    manifest = ""
-                if "{" in manifest:
+                commands = manifest_commands(text)
+                default_manifest = commands[0] if commands else ""
+                if "{" in default_manifest:
                     continue
+                manifest_by_class = {
+                    _header_class(cmd): cmd
+                    for cmd in commands
+                    if _header_class(cmd)
+                }
                 classes = _agentic_class_names(tree_ast)
                 if not classes:
-                    named = _header_class(manifest)
+                    named = _header_class(default_manifest)
                     if named:
                         classes = [named]
                 if not classes:
                     continue
                 for class_name in classes:
                     slug = _class_slug(class_name)
-                    if slug in seen:
+                    key = f"{py_file}:{class_name}"
+                    if key in seen:
                         continue
                     if needle and needle not in slug and needle not in class_name.lower() and needle not in str(py_file).lower():
                         continue
-                    seen.add(slug)
+                    seen.add(key)
                     results.append(
                         {
                             "skill_slug": slug,
                             "class_name": class_name,
-                            "manifest_command": manifest,
+                            "manifest_command": manifest_by_class.get(
+                                class_name, default_manifest
+                            ),
                             "file_path": str(py_file),
                         }
                     )

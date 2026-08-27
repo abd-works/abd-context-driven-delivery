@@ -15,7 +15,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from scanners import Scanner
+from scan import Scanner
 
 _SKIP_DIR_NAMES = frozenset(
     {
@@ -90,7 +90,7 @@ class MissingModuleContextScanner(Scanner):
 
 
 if __name__ == "__main__":
-    from scanners import run_scanner_main
+    from scan import run_scanner_main
     from code_scanner import collect_python_files
 
     raise SystemExit(

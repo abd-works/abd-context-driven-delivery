@@ -17,7 +17,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
 from expects import be_true, expect
 
 from context_tools.bdd.spec_helpers import expect_scan_fails, expect_scan_passes
-from scanners import Scan, ScannerCollection
+from scan import Scan, ScannerCollection
 
 _DDD = _REPO / "context_tools" / "ddd"
 _SCANNERS = _DDD / "scanners"

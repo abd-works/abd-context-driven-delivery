@@ -6,7 +6,7 @@ from pathlib import Path
 from expects import be_none, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
@@ -14,7 +14,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from scanners import ScannerCollection, ScannerReport, Violation
+from scan import ScannerCollection, ScannerReport, Violation
 
 
 _CLEAN_CODE_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"

@@ -1,6 +1,6 @@
 """Base scanners for MERN architecture compliance checks - ported from the
 old-world abd-skills MERN domain-first specification onto the shared
-utilities.scanners.Scanner / ScannerCollection contract used by every other
+scan.Scanner / ScannerCollection contract used by every other
 context tool (clean_engineering, stories, ...).
 
 MERNScanner keeps the same helper methods and names as the old world's
@@ -18,8 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
-from utilities.scanners.scanner import Scanner
-from utilities.scanners.violation import Violation
+from scan.scanner import Scanner
+from scan.violation import Violation
 
 try:
     import tree_sitter as _ts

@@ -3,11 +3,10 @@
 """Example action whose instructions load from an md file with {{}} templating."""
 from __future__ import annotations
 
-from primitives.actions.action import agent_instructions
-from tools.tool import toolset
+from primitives.actions.action import agent_instructions, agentic_toolset
 
 
-@toolset
+@agentic_toolset
 class TemplatedMdDemo:
     """Demo toolset for md instruction templating."""
 

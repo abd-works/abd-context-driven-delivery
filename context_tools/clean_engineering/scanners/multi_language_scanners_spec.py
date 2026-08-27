@@ -6,7 +6,7 @@ from pathlib import Path
 from expects import be_above, equal, expect
 from mamba import context, description, it
 
-from scanners import ScannerCollection
+from scan import ScannerCollection
 
 _CE_DIR = Path(__file__).resolve().parents[1]
 _DISCOVERED = ScannerCollection(_CE_DIR).discover()

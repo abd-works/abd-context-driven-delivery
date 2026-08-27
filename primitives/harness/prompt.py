@@ -58,6 +58,8 @@ class Prompt(HarnessTool):
                     class_string="",
                     operation_instructions=source.get("guidance", ""),
                     toolset=source.get("toolset", ""),
+                    invoke=source.get("invoke") or "tool",
+                    operation=source.get("operation") or "",
                 )
             if source.get("overview"):
                 self.description = source["overview"]

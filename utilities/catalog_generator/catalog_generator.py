@@ -556,7 +556,7 @@ def _resolve_actions_from_source(
 
 def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
     """AST-walk kit-owned lifecycle actions (partition, grill, sketch, iterate,
-    generate, document, validate, satisfy, repair, createRule)."""
+    generate, document, validate, satisfy, repair, createRule, scan)."""
     kit_specs: tuple[tuple[str, Path, str], ...] = (
         ("partition", _REPO_ROOT / "context_tools" / "actions" / "partition" / "partition.py", "partition"),
         ("grill", _REPO_ROOT / "context_tools" / "actions" / "grill_context" / "grill_context.py", "grill_context"),
@@ -568,6 +568,7 @@ def _resolve_kit_lifecycle_actions() -> list[ActionResolution]:
         ("satisfy", _REPO_ROOT / "context_tools" / "actions" / "satisfy" / "satisfy.py", "satisfy"),
         ("repair", _REPO_ROOT / "context_tools" / "actions" / "improvement" / "improvement.py", "improvement"),
         ("createRule", _REPO_ROOT / "context_tools" / "actions" / "validate" / "validate.py", "validate"),
+        ("scan", _REPO_ROOT / "context_tools" / "actions" / "scan" / "scan.py", "scan"),
     )
     results: list[ActionResolution] = []
     for name, path, dir_name in kit_specs:

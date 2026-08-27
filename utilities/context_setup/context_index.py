@@ -11,9 +11,9 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Protocol, Sequence
 
-from primitives.actions.action import agent_instructions
+from primitives.actions.action import agent_instructions, agentic_toolset
 from harness.harness_tool import prompt
-from tools.tool import agent_tool, toolset
+from tools.tool import agent_tool
 
 if TYPE_CHECKING:
     pass
@@ -80,7 +80,7 @@ class OpenAIEmbeddingProvider:
 # ── Toolset ───────────────────────────────────────────────────────────────────
 
 
-@toolset
+@agentic_toolset
 class ContextIndex:
     """Embed partitioned segments into a FAISS index and answer questions with source citations."""
 

@@ -154,6 +154,7 @@ def _sandbox() -> Path:
         '"""Embed partitioned segments into a FAISS index and answer questions with source citations."""\n'
         "class ContextIndex:\n"
         '    @prompt(name="ask")\n'
+        "    @agent_tool\n"
         "    def ask(self):\n"
         '        """Answer question using the FAISS index at index_path, citing sources."""\n'
         "        return None\n",
@@ -283,12 +284,15 @@ with description("a harness"):
                 expect((root / ".cursor" / "skills" / "harness").exists()).to(equal(False))
                 expect((root / ".cursor" / "commands" / "deploy-harness.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "commands" / "clean-harness.md").is_file()).to(equal(True))
-                expect(
-                    (root / ".cursor" / "commands" / "deploy-harness.md").read_text(encoding="utf-8")
-                ).not_to(contain("Run this action for any provided context tools"))
-                expect(
-                    (root / ".cursor" / "commands" / "deploy-harness.md").read_text(encoding="utf-8")
-                ).not_to(contain("If you took guidance from the context and not a tool"))
+                deploy_body = (
+                    root / ".cursor" / "commands" / "deploy-harness.md"
+                ).read_text(encoding="utf-8")
+                expect(deploy_body).not_to(contain("Run this action for any provided context tools"))
+                expect(deploy_body).not_to(contain("If you took guidance from the context and not a tool"))
+                expect(deploy_body).to(contain("tool: write_deploy"))
+                expect(deploy_body).not_to(contain("action: deploy-harness"))
+                expect(deploy_body).not_to(contain("action: generate"))
+                expect(deploy_body).not_to(contain("action: guidance"))
                 expect((root / ".cursor" / "commands" / "harness.md").is_file()).to(equal(False))
                 expect((root / ".cursor" / "commands" / "clean.md").is_file()).to(equal(False))
                 expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).not_to(
@@ -474,6 +478,105 @@ with description("a harness"):
                 Harness("Cursor", repo_root=root).write_deploy()
                 expect((root / ".cursor" / "skills" / "workspace").exists()).to(equal(False))
 
+        with context("with work session tools"):
+            with it("should invoke finish_work_session as a tool on WorkSession"):
+                root = _sandbox()
+                path = root / "utilities" / "workspace" / "workspace.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest workspace.workspace:Turn\n"
+                    "# @toolset-manifest python -m tools manifest workspace.workspace:WorkSession\n"
+                    '"""Workspace."""\n'
+                    "@toolset\n"
+                    "class Turn:\n"
+                    '    @prompt(name="finish-turn")\n'
+                    "    @agent_tool\n"
+                    "    def finish_turn(self):\n"
+                    '        """Close the turn."""\n'
+                    "        return None\n"
+                    "@toolset\n"
+                    "class WorkSession:\n"
+                    '    @prompt(name="finish-work-session")\n'
+                    "    @agent_tool\n"
+                    "    def finish_work_session(self):\n"
+                    '        """Close the work session."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(source="finish-work-session")
+                finish_session = (
+                    root / ".cursor" / "commands" / "finish-work-session.md"
+                ).read_text(encoding="utf-8")
+                expect(finish_session).to(contain("toolset: workspace.workspace:WorkSession"))
+                expect(finish_session).to(contain("tool: finish_work_session"))
+                expect(finish_session).not_to(contain("action: finish_work_session"))
+                expect(finish_session).not_to(contain("action: finish-work-session"))
+
+        with context("with utility turn prompts"):
+            with it("should invoke the tool method name not the prompt slug"):
+                root = _sandbox()
+                path = root / "utilities" / "host_turn" / "host_turn.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest workspace.workspace:Turn\n"
+                    '"""Turn."""\n'
+                    "@toolset\n"
+                    "class HostTurn:\n"
+                    '    @prompt(name="start-turn")\n'
+                    "    @agent_tool\n"
+                    "    def open(self):\n"
+                    '        """Start the turn."""\n'
+                    "        return None\n"
+                    '    @prompt(name="finish-turn")\n'
+                    "    @agent_tool\n"
+                    "    def finish_turn(self):\n"
+                    '        """Close the turn."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(source="start-turn")
+                Harness("Cursor", repo_root=root).write_deploy(source="finish-turn")
+                start = (root / ".cursor" / "commands" / "start-turn.md").read_text(
+                    encoding="utf-8"
+                )
+                finish = (root / ".cursor" / "commands" / "finish-turn.md").read_text(
+                    encoding="utf-8"
+                )
+                expect(start).to(contain("toolset: workspace.workspace:Turn"))
+                expect(start).to(contain("tool: open"))
+                expect(start).not_to(contain("action: start-turn"))
+                expect(start).not_to(contain("action: open"))
+                expect(finish).to(contain("toolset: workspace.workspace:Turn"))
+                expect(finish).to(contain("tool: finish_turn"))
+                expect(finish).not_to(contain("action: finish-turn"))
+                expect(finish).not_to(contain("action: finish_turn"))
+
+        with context("with a utility sub-agent prompt"):
+            with it("should invoke run as a tool not the prompt slug"):
+                root = _sandbox()
+                path = root / "utilities" / "sub_agent" / "sub_agent.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest sub_agent.sub_agent:SubAgent\n"
+                    '"""SubAgent."""\n'
+                    "@toolset\n"
+                    "class SubAgent:\n"
+                    '    @prompt(name="sub-agent")\n'
+                    "    @sub_agent\n"
+                    "    @agent_instructions\n"
+                    "    def run(self):\n"
+                    '        """Launch a sub-agent."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(source="sub-agent")
+                body = (root / ".cursor" / "commands" / "sub-agent.md").read_text(
+                    encoding="utf-8"
+                )
+                expect(body).to(contain("tool: run"))
+                expect(body).not_to(contain("action: sub-agent"))
+                expect(body).not_to(contain("action: run"))
+
         with context("with record_decisions"):
             with it("should not write a skill"):
                 root = _sandbox()
@@ -501,6 +604,11 @@ with description("a harness"):
                 expect(
                     (root / ".cursor" / "commands" / "record-decisions-session.md").is_file()
                 ).to(equal(True))
+                session_body = (
+                    root / ".cursor" / "commands" / "record-decisions-session.md"
+                ).read_text(encoding="utf-8")
+                expect(session_body).not_to(contain("action: record-decisions-session"))
+                expect(session_body).not_to(contain("action: guidance"))
 
         with context("with a utility toolset"):
             with it("should add a skill with the utility body"):
@@ -513,10 +621,25 @@ with description("a harness"):
                 expect(skill.body.text).not_to(contain("Run this action for any provided context tools"))
                 expect(skill.body.text).not_to(contain("If you took"))
                 expect(skill.body.text).to(contain("python -m tools run"))
+                expect(skill.body.text).not_to(contain("action:"))
 
         with context("with a utility prompt"):
             with it("should write the operation and CLI without action resolve"):
                 root = _sandbox()
+                path = root / "utilities" / "index_ask" / "index_ask.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest context_setup.context_index:ContextIndex\n"
+                    '"""IndexAsk."""\n'
+                    "@toolset\n"
+                    "class IndexAsk:\n"
+                    '    @prompt(name="ask")\n'
+                    "    @agent_tool\n"
+                    "    def ask(self):\n"
+                    '        """Answer question using the FAISS index at index_path, citing sources."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="ask")
                 body = (root / ".cursor" / "commands" / "ask.md").read_text(encoding="utf-8")
@@ -528,6 +651,8 @@ with description("a harness"):
                 expect(body).not_to(contain("If you cannot get guidance"))
                 expect(body).to(contain("through the tools cli"))
                 expect(body).not_to(contain("Then run:"))
+                expect(body).to(contain("tool: ask"))
+                expect(body).not_to(contain("action: ask"))
                 expect(isinstance(next(p for p in harness.prompts if p.name == "ask").body, UtilityBody)).to(
                     equal(True)
                 )
@@ -644,6 +769,45 @@ with description("a harness"):
                 Harness("Cursor", repo_root=root).write_deploy(source="turn")
                 expect((root / ".cursor" / "commands" / "turn.md").is_file()).to(equal(True))
 
+        with context("with a utility performTurn prompt"):
+            with it("should invoke performTurn as an action on Turn"):
+                root = _sandbox()
+                (
+                    root / "context_tools" / "actions" / "workspace" / "workspace.py"
+                ).write_text(
+                    "# @toolset-manifest python -m tools manifest context_tools.actions.workspace.workspace:Workspace\n"
+                    '"""Workspace."""\n'
+                    "class Workspace:\n"
+                    "    @agent_instructions\n"
+                    "    def open(self):\n"
+                    '        """Open."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                path = root / "utilities" / "workspace" / "workspace.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest workspace.workspace:Turn\n"
+                    '"""Turn."""\n'
+                    "@agentic_toolset\n"
+                    "class Turn:\n"
+                    '    @prompt(name="turn")\n'
+                    "    @agent_instructions\n"
+                    "    def performTurn(self):\n"
+                    '        """Open, do the work, finish."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(source="turn")
+                body = (root / ".cursor" / "commands" / "turn.md").read_text(
+                    encoding="utf-8"
+                )
+                expect(body).to(contain("toolset: workspace.workspace:Turn"))
+                expect(body).to(contain("action: performTurn"))
+                expect(body).not_to(contain("action: guidance"))
+                expect(body).not_to(contain("tool: performTurn"))
+                expect(body).not_to(contain("action: turn"))
+
         with context("with echo"):
             with it("should write a utility prompt without action resolve"):
                 root = _sandbox()
@@ -653,6 +817,8 @@ with description("a harness"):
                 expect(body).to(contain("STOP. DO NOT EXECUTE."))
                 expect(body).not_to(contain("Run this action for any provided context tools"))
                 expect(body).not_to(contain("If you took guidance from the context and not a tool"))
+                expect(body).not_to(contain("action: echo"))
+                expect(body).not_to(contain("action: echo_session"))
                 expect(isinstance(next(p for p in harness.prompts if p.name == "echo").body, UtilityBody)).to(
                     equal(True)
                 )
@@ -695,6 +861,7 @@ with description("a harness"):
                 expect(text).not_to(contain("If the fidelity does not belong"))
                 expect(text).to(contain("through the tools cli"))
                 expect(text).not_to(contain("Then run:"))
+                expect(text).not_to(contain("action:"))
 
         with context("with a CDD stage fidelity"):
             with it("should write a prefixed prompt from the fidelity value"):

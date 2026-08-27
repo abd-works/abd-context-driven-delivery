@@ -1446,7 +1446,14 @@ def agentic_toolset(cls: type) -> type:
 
     @toolset stays ignorant of actions and is unchanged.
     """
+    if "_is_toolset" in cls.__dict__:
+        return cls
     if getattr(cls, "_is_toolset", False):
+        from workspace import inherit_annotations_from_bases
+        from tools.extensions import ToolsetExtensions
+
+        inherit_annotations_from_bases(cls)
+        ToolsetExtensions.instance().validate_toolset(cls)
         return cls
     if issubclass(cls, Toolset):
         raise TypeError(

@@ -20,12 +20,12 @@ from context_tools.bdd.spec_helpers import (  # noqa: E402
     expect_scan_fails,
     expect_scan_passes,
 )
-from scanners import Scan, ScannerCollection  # noqa: E402
+from scan import Scan, ScannerCollection  # noqa: E402
 
 _FLAG_FAIL_MARKER_SCANNER = '''
 from pathlib import Path
 
-from scanners import Scanner
+from scan import Scanner
 
 
 class FlagFailMarkerScanner(Scanner):

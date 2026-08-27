@@ -57,7 +57,7 @@ class PropertyEncapsulationCodeScanner(CodeScanner):
 
 
 if __name__ == "__main__":
-    from scanners import run_scanner_main
+    from scan import run_scanner_main
     from code_scanner import collect_python_files
 
     raise SystemExit(

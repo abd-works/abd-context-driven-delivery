@@ -13,8 +13,8 @@ from git import Ticket, TicketNotFoundError
 from git.git import Repo
 from handoff.handoff import Handoff
 from harness.harness_tool import prompt
-from primitives.actions.action import agent_instructions
-from tools.tool import agent_tool, toolset
+from primitives.actions.action import agent_instructions, agentic_toolset
+from tools.tool import agent_tool
 from workspace import Workspace
 from workspace.git_repo import NullGitRepo
 
@@ -29,7 +29,7 @@ class WorkflowConfig:
     default_branch: str = "main"
 
 
-@toolset
+@agentic_toolset
 class Workflow:
     """Slash /backlog, /start-ticket, /finish-ticket — GitHub issue + session lifecycle."""
 

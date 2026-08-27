@@ -7,3 +7,9 @@
 - **goal:** Optimize running context tools and actions through the CLI with fewer handoffs and fewer agentic tool operations
 - **fidelities:** (unset)
 - **contexts:** (unset)
+
+## End
+
+- **ended:** 2026-08-27
+- **outcome:** handoff written
+- **handoff:** handoffs/handoff-2026-08-27-toolset-decorator-gaps.md

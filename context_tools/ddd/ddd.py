@@ -11,14 +11,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
-from pathlib import Path
-
 from primitives.actions.action import agent_instructions
 from context_tools.base.base_context_tool import BaseContextTool
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from scanners.scan import Scan
-from scanners.scanner_collection import ScannerCollection
 from tools.tool import agent_tool  # noqa: F401
 
 if TYPE_CHECKING:
@@ -49,19 +45,6 @@ class TransformResult(TypedDict):
 
     format: str
     content: str
-
-
-class _DddScan(Scan):
-    """Discover DDD scanners under ``context_tools/ddd/scanners``."""
-
-    def __init__(self, module_dir: Path) -> None:
-        self._module_dir = Path(module_dir)
-
-    def _scanner_collection(self) -> ScannerCollection:
-        return ScannerCollection(
-            module_dir=self._module_dir,
-            root_path=self._module_dir / "scanners",
-        )
 
 
 class Ddd(BaseContextTool):
@@ -100,7 +83,6 @@ class Ddd(BaseContextTool):
             format=resolved_format, path=path, session=session, workspace=workspace
         )
         self._fidelity = fidelity
-        self.scanner = _DddScan(self.module_dir)
 
     @property
     def fidelity(self) -> str:

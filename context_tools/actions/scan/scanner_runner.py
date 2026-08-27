@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Type
 
-from scanners.scanner import Scanner
-from scanners.violation import Violation
+from .scanner import Scanner
+from .violation import Violation
 
 
 class ScannerRunner:

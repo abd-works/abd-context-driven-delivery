@@ -43,6 +43,8 @@ class Skill(HarnessTool):
                     class_string=meta.get("class_string", name),
                     operation_instructions=meta.get("guidance", ""),
                     toolset=meta.get("toolset", ""),
+                    invoke=meta.get("invoke") or "tool",
+                    operation=meta.get("operation") or "",
                 )
             else:
                 self.body = ContextToolBody.from_source(

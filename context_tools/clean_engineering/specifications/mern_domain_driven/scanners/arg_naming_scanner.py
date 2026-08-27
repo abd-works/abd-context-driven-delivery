@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from mern_scanner_base import TypeScriptScanner
-from utilities.scanners.violation import Violation
+from scan.violation import Violation
 
 _METHOD_WITH_PARAMS_RE = re.compile(r"(?:async\s+)?(\w+)\s*\(([^)]*)\)\s*(?::\s*[^{]+)?\s*\{")
 _PARAM_NAME_RE = re.compile(r"(\w+)\s*[?:]")

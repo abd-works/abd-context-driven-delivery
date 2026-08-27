@@ -7,7 +7,7 @@ toolset once with `arguments.tools` listing the in-scope context tool(s).
 
 ## Membership
 Host-action kits: `generate`, `validate`, `document`, `satisfy`, `render`,
-`sketch`, `iterate`, `grill_context`, `partition`, `improvement`
+`sketch`, `iterate`, `grill_context`, `partition`, `improvement`, `scan`
 Companions that left this tree: `echo` and `handoff` live under `utilities/`;
 `workflow` is still listed here until it moves.
 
@@ -18,7 +18,8 @@ not a place for these kits. First-order kits subclass `LifecycleAction`: open th
 workspace if it is not already open; the turn and decision records hang off the
 work session; finish that session turn at the end.
 
-Non-action tooling stays under `utilities/` (`scanners`, `diagnose`, …).
+Non-action tooling stays under `utilities/` (`diagnose`, …). Scan moved here from
+`utilities/scanners` — `/scan` is a host-action kit, not a path-only utility.
 
 ## Kit-owned actions
 
@@ -35,6 +36,7 @@ Non-action tooling stays under `utilities/` (`scanners`, `diagnose`, …).
 | `/grill` | `grill_context.grill_context:GrillContext` | `grill(tools)` |
 | `/partition` | `partition.partition:Partition` | `partition(tools, context, …)` |
 | `/repair` | `improvement.improvement:Improvement` | `repair(tools, asset, violation)` |
+| `/scan` | `scan.scan:Scan` | `scan(paths, tools)` |
 
 Inner corpus/session actions (`iterate_session`, `partition_corpus`, `grill_with_context`, …) stay on the kit for in-method composition and keep `@agent_instructions` only — they are not slash files.
 

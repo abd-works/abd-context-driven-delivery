@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from primitives.actions.action import agent_instructions
+from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
 from workspace.workspace import Workspace
 
 
+@agentic_toolset
 class LifecycleAction:
     """Open workspace if needed. Turn and decision records hang off the work session."""
 
@@ -44,10 +45,10 @@ class LifecycleAction:
         """Open the workspace if it is not already open. /open-workspace"""
         if self.workspace.current_work_session is not None and not name:
             return self.workspace.current_work_session.name
-        session = self.workspace.open(
+        self.workspace.open(
             name=name or self._session_name, path=path or self.workspace.path
         )
-        return session.name
+        return self.workspace.current_work_session.name
 
     @agent_instructions
     def begin(self, tools: list | None = None, action: str = "") -> str:

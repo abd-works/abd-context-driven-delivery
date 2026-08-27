@@ -1,6 +1,6 @@
 # Instructions
 
-Generate a **toolset with actions** — a `@toolset` class whose `@action` methods are orchestration recipes: prose instructions and a suggested tool sequence that an agent reads and follows, never Python that executes.
+Generate a **toolset with actions** — a `@agentic_toolset` class whose `@agent_instructions` methods are orchestration recipes: prose instructions and a suggested tool sequence that an agent reads and follows, never Python that executes.
 
 Scaffold from `formats/{format}/agent_with_actions-templates.py`. Match `actions/examples/car.py` as the canonical shape.
 
@@ -9,11 +9,11 @@ Scaffold from `formats/{format}/agent_with_actions-templates.py`. Match `actions
 
 ## Actions are prose recipes, not code
 
-- **`actions-are-recipes`** — `@action` methods are never executed. The body is a sequence of `self.<tool>()` calls interleaved with literal string `"""..."""` expressions. The framework reads AST — every `self.X()` in the body must reference a `@tool`, another `@action`, or a cross-instance call. No conditionals, no loops, no assignments.
+- **`actions-are-recipes`** — `@agent_instructions` methods are never executed. The body is a sequence of `self.<tool>()` calls interleaved with literal string `"""..."""` expressions. The framework reads AST — every `self.X()` in the body must reference an `@agent_tool`, another `@agent_instructions` recipe, or a cross-instance call. No conditionals, no loops, no assignments.
 
 ## Tools do the real work
 
-- **`tools-do-work`** — Real computation, file I/O, and external calls all go in `@tool` methods. Actions orchestrate; tools execute. An `@action` body that contains logic instead of tool calls is a violation.
+- **`tools-do-work`** — Real computation, file I/O, and external calls all go in `@agent_tool` methods. Recipes orchestrate; tools execute. An `@agent_instructions` body that contains logic instead of tool calls is a violation.
 
 ## Docstrings are agent instructions
 

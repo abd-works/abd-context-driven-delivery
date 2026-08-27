@@ -20,7 +20,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
 import context_tools  # noqa: F401 - generator package on path
 from primitives.instructions import Instruction
-from scanners import ScannerCollection
+from scan import ScannerCollection
 from tools.tool import Toolset, _ToolsetLoader
 
 from satisfy.satisfy import Satisfy

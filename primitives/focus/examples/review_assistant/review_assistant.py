@@ -7,12 +7,12 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from primitives.actions.action import agent_instructions
+from primitives.actions.action import agent_instructions, agentic_toolset
 from primitives.focus import focus
-from tools.tool import resource, agent_tool, toolset
+from tools.tool import resource, agent_tool
 
 
-@toolset
+@agentic_toolset
 class ReviewAssistant:
     """Review code or documents with guidance tuned to the active fidelity level.
 

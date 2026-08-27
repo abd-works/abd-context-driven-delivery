@@ -712,7 +712,14 @@ def _discover_resources(instance: Toolset) -> dict[str, _Resource]:
 
 def toolset(cls: type) -> type:
     """Mark a class as a toolset and inject toolset behavior."""
+    if "_is_toolset" in cls.__dict__:
+        return cls
     if getattr(cls, "_is_toolset", False):
+        from workspace import inherit_annotations_from_bases
+        from tools.extensions import ToolsetExtensions
+
+        inherit_annotations_from_bases(cls)
+        ToolsetExtensions.instance().validate_toolset(cls)
         return cls
     if issubclass(cls, Toolset):
         raise TypeError(f"{cls.__name__} must use @toolset - do not subclass Toolset")

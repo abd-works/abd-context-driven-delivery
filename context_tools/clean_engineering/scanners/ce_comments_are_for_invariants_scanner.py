@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from scanners import Scanner
+from scan import Scanner
 
 RULE = "ce-comments-are-for-invariants-and-sequencing-notes-only"
 
@@ -70,7 +70,7 @@ def collect_markdown_files(root: Path) -> list[Path]:
 
 
 if __name__ == "__main__":
-    from scanners.scanner_runner import ScannerRunner
+    from scan.scanner_runner import ScannerRunner
 
     raise SystemExit(
         ScannerRunner.run_scanner_main(

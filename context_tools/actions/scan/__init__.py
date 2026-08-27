@@ -1,4 +1,4 @@
-"""Shared scanner infrastructure: named rules, path + files, violations."""
+"""Scan action kit and shared scanner engine: named rules, path + files, violations."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ from .scanner import SKIP_DIR_NAMES, Scanner
 from .scanner_collection import ScannerCollection, ScannerReport
 from .scanner_runner import ScannerRunner
 from .violation import Violation
+
+run_scanner_main = ScannerRunner.run_scanner_main
 
 __all__ = [
     "Scan",
@@ -17,4 +19,5 @@ __all__ = [
     "ScannerReport",
     "ScannerRunner",
     "Violation",
+    "run_scanner_main",
 ]

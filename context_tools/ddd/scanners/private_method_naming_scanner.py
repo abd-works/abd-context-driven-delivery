@@ -5,7 +5,7 @@ import html
 import re
 from pathlib import Path
 
-from scanners import Scanner, ScannerRunner
+from scan import Scanner, ScannerRunner
 
 RULE = "private-method-naming"
 _OP = re.compile(r"([+\-#])\s*(_?[A-Za-z][A-Za-z0-9]*)\s*\(")

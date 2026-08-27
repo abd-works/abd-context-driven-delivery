@@ -8,10 +8,10 @@ import sys
 import tempfile
 from pathlib import Path
 
-from expects import contain, equal, expect
+from expects import contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
@@ -19,14 +19,14 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from scanners import Scan, ScannerCollection
+from scan import Scan, ScannerCollection
 
 
 class _EmptyScan(Scan):
     """Scan binding with no scanner scripts — always returns ok."""
 
     def _scanner_collection(self) -> ScannerCollection:
-        # utilities/scanners/ has no *_scanner.py files, so discover() returns {}
+        # this kit directory has no *_scanner.py files, so discover() returns {}
         scanners_dir = Path(__file__).parent
         return ScannerCollection(module_dir=scanners_dir, root_path=scanners_dir)
 
@@ -34,7 +34,7 @@ class _EmptyScan(Scan):
 _FLAG_EVERY_FILE_SCANNER = '''
 from pathlib import Path
 
-from scanners import Scanner
+from scan import Scanner
 
 
 class FlagEveryFileScanner(Scanner):
@@ -51,6 +51,7 @@ class _FlaggingScan(Scan):
     """Scan binding whose single rule flags whatever reaches it."""
 
     def __init__(self, scanners_dir: Path) -> None:
+        super().__init__()
         self._scanners_dir = scanners_dir
 
     def _scanner_collection(self) -> ScannerCollection:
@@ -105,11 +106,54 @@ with description("Scan"):
             # Assert
             expect(result).not_to(contain("other.py"))
 
+    with context("a Scan with no host and no collection override"):
+        with it("should refuse to scan because there is no rule set"):
+            expect(lambda: Scan().scan([])).to(raise_error(ValueError))
+
+    with context("a Scan bound to a host whose collection flags every file"):
+        with before.each:
+            self.tmp = tempfile.TemporaryDirectory()
+            root = Path(self.tmp.name)
+            scanners_dir = root / "rules"
+            scanners_dir.mkdir()
+            (scanners_dir / "flag_every_file_scanner.py").write_text(
+                _FLAG_EVERY_FILE_SCANNER, encoding="utf-8"
+            )
+            self.fixture = root / "widget.py"
+            self.fixture.write_text("value = 1\n", encoding="utf-8")
+
+            class _Host:
+                def __init__(self, module_dir: Path) -> None:
+                    self.module_dir = module_dir
+
+                def _scanner_collection(self) -> ScannerCollection:
+                    return ScannerCollection(
+                        module_dir=self.module_dir, root_path=self.module_dir
+                    )
+
+            self.host = _Host(scanners_dir)
+            self.scan = Scan.bound_to(self.host)
+
+        with it("should run the host collection against the named path"):
+            result = self.scan.scan([str(self.fixture)])
+            expect(result).to(contain("flag-every-file"))
+
+        with it("should run each listed context tool collection when tools are passed"):
+            class _Kit(Scan):
+                def begin(self, tools=None, action=""):
+                    return ""
+
+                def end(self):
+                    return ""
+
+            result = _Kit().scan(paths=[str(self.fixture)], tools=[self.host])
+            expect(result).to(contain("flag-every-file"))
+
 
 with description("ScanReport"):
     with context("that holds a violation for a Mistake"):
         with it("should match when rule and artifact location agree"):
-            from scanners.scan import ScanReport
+            from scan.scan import ScanReport
             from types import SimpleNamespace
 
             report = ScanReport.from_scan(
@@ -120,7 +164,7 @@ with description("ScanReport"):
             expect(report.matches(mistake)).to(equal(True))
 
         with it("should not match a different rule"):
-            from scanners.scan import ScanReport
+            from scan.scan import ScanReport
             from types import SimpleNamespace
 
             report = ScanReport.from_scan(

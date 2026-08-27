@@ -64,10 +64,30 @@ def _decorator_write(node: ast.expr) -> tuple[str, str | None] | None:
     return None
 
 
+def _decorator_ids(item: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
+    names: set[str] = set()
+    for dec in item.decorator_list:
+        target = dec.func if isinstance(dec, ast.Call) else dec
+        if isinstance(target, ast.Name):
+            names.add(target.id)
+        elif isinstance(target, ast.Attribute):
+            names.add(target.attr)
+    return names
+
+
+def _invoke_kind(item: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+    names = _decorator_ids(item)
+    if "agent_tool" in names or "sub_agent" in names:
+        return "tool"
+    if "agent_instructions" in names:
+        return "action"
+    return "none"
+
+
 def _local_writes(
     node: ast.ClassDef,
-) -> tuple[list[tuple[str, str | None, str, str]], dict[str, str], set[str]]:
-    found: list[tuple[str, str | None, str, str]] = []
+) -> tuple[list[tuple[str, str | None, str, str, str]], dict[str, str], set[str]]:
+    found: list[tuple[str, str | None, str, str, str]] = []
     docs: dict[str, str] = {}
     write_ops: set[str] = set()
     for item in node.body:
@@ -75,12 +95,13 @@ def _local_writes(
             continue
         doc = ast.get_docstring(item) or ""
         docs[item.name] = doc
+        invoke = _invoke_kind(item)
         for dec in item.decorator_list:
             write = _decorator_write(dec)
             if write is None:
                 continue
             kind, deploy_name = write
-            found.append((kind, deploy_name, item.name, doc))
+            found.append((kind, deploy_name, item.name, doc, invoke))
             write_ops.add(item.name)
     return found, docs, write_ops
 
@@ -140,14 +161,17 @@ def operation_writes(
     class_name: str = "",
     repo_root: Path | str | None = None,
     _seen: set[tuple[str, str]] | None = None,
-) -> list[tuple[str, str | None, str, str]]:
-    """Return (kind, deploy_name, operation, docstring) for harness write decorators.
+) -> list[tuple[str, str | None, str, str, str]]:
+    """Return (kind, deploy_name, operation, docstring, invoke) for harness write decorators.
 
     Subclass write vehicles win for that operation. An override without its
     own ``@skill`` / ``@prompt`` / ``@instruction(name=)`` still inherits the
     base annotation (docstring from the subclass method when present).
+    ``invoke`` is ``tool`` when the method is ``@agent_tool`` or ``@sub_agent``,
+    ``action`` when it is ``@agent_instructions`` (CLI ``action:`` is the method
+    name, not ``guidance``), else ``none`` (toolset fence only).
     """
-    found: list[tuple[str, str | None, str, str]] = []
+    found: list[tuple[str, str | None, str, str, str]] = []
     seen = _seen if _seen is not None else set()
     root = Path(repo_root) if repo_root is not None else None
     try:
@@ -169,8 +193,8 @@ def operation_writes(
             for write in operation_writes(base_path, base_name, repo_root=root, _seen=seen):
                 if write[2] in write_ops:
                     continue
-                kind, deploy_name, operation, doc = write
-                found.append((kind, deploy_name, operation, docs.get(operation) or doc))
+                kind, deploy_name, operation, doc, invoke = write
+                found.append((kind, deploy_name, operation, docs.get(operation) or doc, invoke))
     return found
 
 

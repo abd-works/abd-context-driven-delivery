@@ -26,16 +26,20 @@
 
 ## Public API
 
-- `Workspace` — `path`, `work_sessions`, `current_work_session`, `path_overrides`;
+- `Workspace` — `@toolset` (`workspace.workspace:Workspace`); `open` is `@agent_tool`;
+  `path`, `work_sessions`, `current_work_session`, `path_overrides`;
   `load` / `save` / `lookup_path` / `upsert_path` / `open_work_session`
-- `WorkSession` — back-ref `workspace`; owns `git`, `open_turn`, `turns`, `repairs`, trail;
-  session.md kit (`ensure_started`, `close`, `close_session`, context index helpers);
+- `WorkSession` — `@toolset` (`workspace.workspace:WorkSession`); CLI context is
+  `workspace` path + `session` name (same as `Turn`; session may come from the current
+  `session/` git branch). OO callers still pass a `Workspace` object + name.
+  Owns `git`, `open_turn`, `turns`, `repairs`, trail; session.md kit
+  (`ensure_started`, `close`, `close_session`, context index helpers);
   `start_work_session` / `finish_work_session` `@agent_tool` with `@prompt` names
-  `start-work-session` / `finish-work-session`
+  `start-work-session` / `finish-work-session` (`tool:` invoke, not `action:`)
 - `SessionPaths` / `docs_dir` — sprint folder vs `{destination}/.context/`
 - `GitRepo` / `NullGitRepo` — `checkout_or_create`, `commit`, `push`, notes (`note` /
   `read_notes` / `find_mistakes`). Session branch naming is WorkSession policy.
-- `Turn` — `@toolset` (`workspace.workspace:Turn`); CLI context is `workspace` path + `session` name (session may come from the current `session/` git branch). Owns `mistakes` and optional `correction`; `record_mistake` / `record_correction` attach to the open turn before `finish`. `finish_turn` closes the session's hanging turn.
+- `Turn` — `@agentic_toolset` (`workspace.workspace:Turn`); CLI context is `workspace` path + `session` name (session may come from the current `session/` git branch). Host is optional (`if host:` for bind/index/trail). Owns `mistakes` and optional `correction`; `record_mistake` / `record_correction` attach to the open turn before `finish`. `open` / `finish_turn` stay `@agent_tool` (`/start-turn`, `/finish-turn`). `performTurn` is `@agent_instructions` with `@prompt(name="turn")` so `/turn` invokes `action: performTurn` (open, do the work in context, `finish_turn`).
 - `Turn` / `Mistake` / `Correction` / `PathOverride` / `ToolCall` / `TurnCommit`
   (`TurnCommit.name` = git commit subject from `Turn.name`, not a uuid slug)
 - `SessionLog` — `append` → events.log + openTurn.toolCalls; **delete `@log` as host primary**

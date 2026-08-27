@@ -8,7 +8,7 @@ from pathlib import Path
 
 from expects import be_false, be_true, expect
 
-from scanners.scan import Scan, ScanReport
+from scan.scan import Scan, ScanReport
 
 
 def _scan_report(

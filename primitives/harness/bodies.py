@@ -25,14 +25,20 @@ _CATALOG_LINE = (
 
 
 def _invoke_block(
-    toolset: str, *, action: str | None = None, fidelity: str | None = None
+    toolset: str,
+    *,
+    action: str | None = None,
+    tool: str | None = None,
+    fidelity: str | None = None,
 ) -> str:
     """Filled invoke fence plus one ``run -`` (1b, 1c, 4c, 5a)."""
     lines = ["```yaml", f"toolset: {toolset}"]
     if fidelity:
         lines.append("context:")
         lines.append(f"  fidelity: {fidelity}")
-    if action:
+    if tool:
+        lines.append(f"tool: {tool}")
+    elif action:
         lines.append(f"action: {action}")
     lines.append("```")
     lines.append("python -m tools run -")
@@ -47,14 +53,29 @@ def resolve_text(
     fidelities: list[str] | tuple[str, ...] = (),
     actions: list[str] | tuple[str, ...] = (),
     context_tools: list[str] | tuple[str, ...] = (),
+    invoke: str = "action",
 ) -> str:
     """Resolve rules plus the CLI. Action and guidance bodies get opposite confirm lines."""
     toolset = toolset.strip() or "the in-scope context tool"
     if kind == "fidelity":
         return _CATALOG_LINE + _invoke_block(toolset, action="generate", fidelity=source)
     if kind in {"utility", "format"}:
-        action = None if kind == "format" else source
-        return "through the tools cli\n\n" + _CATALOG_LINE + _invoke_block(toolset, action=action)
+        if kind == "format":
+            return "through the tools cli\n\n" + _CATALOG_LINE + _invoke_block(toolset)
+        member = source.strip()
+        if invoke == "tool" and member:
+            return (
+                "through the tools cli\n\n"
+                + _CATALOG_LINE
+                + _invoke_block(toolset, tool=member)
+            )
+        if invoke == "action" and member:
+            return (
+                "through the tools cli\n\n"
+                + _CATALOG_LINE
+                + _invoke_block(toolset, action=member)
+            )
+        return "through the tools cli\n\n" + _CATALOG_LINE + _invoke_block(toolset)
     if kind == "guidance":
         if actions:
             action_ask = (
@@ -166,9 +187,16 @@ class UtilityBody:
         class_string: str,
         operation_instructions: str,
         toolset: str,
+        invoke: str = "tool",
+        operation: str = "",
     ) -> "UtilityBody":
         parts = [part for part in (class_string.strip(), operation_instructions.strip()) if part]
-        text = "\n\n".join(parts) + "\n\n" + resolve_text(name, toolset, kind="utility")
+        member = (operation or "").strip()
+        text = (
+            "\n\n".join(parts)
+            + "\n\n"
+            + resolve_text(member, toolset, kind="utility", invoke=invoke)
+        )
         return cls(text)
 
     def __str__(self) -> str:

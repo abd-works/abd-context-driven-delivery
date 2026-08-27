@@ -93,7 +93,7 @@ with description("a MernDomainDriven generator"):
 
     with context("whose scanners are discovered from its own scanners/ folder"):
         with before.each:
-            from utilities.scanners.scanner_collection import ScannerCollection
+            from scan.scanner_collection import ScannerCollection
 
             self.discovered = ScannerCollection(module_dir=_MODULE_DIR).discover()
 
@@ -102,7 +102,7 @@ with description("a MernDomainDriven generator"):
 
     with context("whose ported scanners run end-to-end against its own templates/"):
         with before.each:
-            from utilities.scanners.scanner_collection import ScannerCollection
+            from scan.scanner_collection import ScannerCollection
 
             collection = ScannerCollection(module_dir=_MODULE_DIR)
             self.report = collection.run(_MODULE_DIR, [_MODULE_DIR / "templates"])

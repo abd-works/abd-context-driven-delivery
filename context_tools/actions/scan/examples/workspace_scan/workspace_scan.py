@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scanners.scan import Scan
+from scan.scan import Scan
 
 
 class WorkspaceScan(Scan):
-    """Run the default scanner collection against every file under a root path."""
+    """Run a host's scanner collection against every file under a root path."""
 
     def run(self, root_path: str) -> dict:
         """Scan all files under *root_path* and return the violation report as a dict.

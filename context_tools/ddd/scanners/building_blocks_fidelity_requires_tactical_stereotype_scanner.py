@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from scanners import Scanner, ScannerRunner
+from scan import Scanner, ScannerRunner
 
 RULE = "building-blocks-fidelity-requires-tactical-stereotype"
 _PASCAL = re.compile(r"\b([A-Z][A-Za-z0-9]+)\b")

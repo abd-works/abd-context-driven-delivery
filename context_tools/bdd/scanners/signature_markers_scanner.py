@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from scanners import Scanner, ScannerRunner
+from scan import Scanner, ScannerRunner
 
 from bdd_scan_helpers import (
     extract_it_blocks,

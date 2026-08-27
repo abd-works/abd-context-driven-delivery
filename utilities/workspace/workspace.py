@@ -1,7 +1,9 @@
 # @toolset-manifest python -m tools manifest workspace.workspace:Turn
+# @toolset-manifest python -m tools manifest workspace.workspace:WorkSession
+# @toolset-manifest python -m tools manifest workspace.workspace:Workspace
 # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
 # Do not author behavior from this Python source.
-"""Workspace domain — from workspace-eval-oo-sketch §2 / §4."""
+"""Workspace domain - from workspace-eval-oo-sketch section 2 / section 4."""
 
 from __future__ import annotations
 
@@ -17,13 +19,14 @@ from primitives.instructions import instruction
 from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
 from workspace.git_repo import GitRepo, NullGitRepo, Repo
+from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import resource, agent_tool, toolset
 from harness.prompt import prompt
 
 
 @dataclass
 class PathOverride:
-    """Sparse override: tool + fidelity → workspace-relative path."""
+    """Sparse override: tool + fidelity -> workspace-relative path."""
 
     tool: str
     fidelity: str
@@ -51,7 +54,7 @@ docs_dir = SessionPaths.docs_dir
 
 @dataclass
 class ToolCall:
-    """One expand|run record — session trail and openTurn.toolCalls."""
+    """One expand|run record - session trail and openTurn.toolCalls."""
 
     toolset: str
     name: str
@@ -63,17 +66,25 @@ class ToolCall:
 
 @dataclass
 class TurnCommit:
-    """Session-branch commit for a finished Turn — name is the commit subject."""
+    """Session-branch commit for a finished Turn - name is the commit subject."""
 
     name: str
     session_name: str
     tool_names: list[str]
     sha: str
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "session_name": self.session_name,
+            "tool_names": list(self.tool_names),
+            "sha": self.sha,
+        }
 
-@toolset
+
+@agentic_toolset
 class Turn:
-    """Turn kit + openTurn state — finish commits/pushes via workSession.git."""
+    """Turn kit + openTurn state - finish commits/pushes via workSession.git."""
 
     def __init__(
         self,
@@ -129,7 +140,7 @@ class Turn:
             parts.append(self.format)
         if not parts:
             raise ValueError(
-                "Turn.name unset — open with action via bind_from_host before finish"
+                "Turn.name unset - open with action via bind_from_host before finish"
             )
         return "-".join(parts)
 
@@ -171,16 +182,53 @@ class Turn:
             if session_format:
                 self.format = str(session_format)
 
+    def to_dict(self) -> dict[str, Any]:
+        session = self.work_session
+        return {
+            "id": self.id,
+            "action": self.action,
+            "fidelity": self.fidelity,
+            "format": self.format,
+            "session_name": session.name if session is not None else "",
+        }
+
     @prompt(name="start-turn")
     @agent_tool
-    def open(self, host: ContextToolHost, *, action: str = "") -> Turn:
-        session = host.workspace.current_work_session
+    def open(self, host: ContextToolHost | None = None, *, action: str = "") -> Turn:
+        session = self.work_session
+        if host is not None:
+            current = getattr(getattr(host, "workspace", None), "current_work_session", None)
+            if current is not None:
+                session = current
         if session is None:
-            raise RuntimeError("open turn requires currentWorkSession")
+            raise RuntimeError("open turn requires workSession")
         if session.open_turn is None:
             session.open_turn = Turn(work_session=session)
-        session.open_turn.bind_from_host(host, action=action)
-        return session.open_turn
+        hanging = session.open_turn
+        if host is not None:
+            hanging.bind_from_host(host, action=action)
+        elif action:
+            hanging.action = action
+        self.work_session = session
+        return hanging
+
+    @prompt(name="turn")
+    @agent_instructions
+    def performTurn(
+        self,
+        host: ContextToolHost | None = None,
+        tools: list[Any] | None = None,
+        *,
+        action: str = "",
+        prompt: str = "",
+        result: str = "",
+        context: str = "",
+    ) -> TurnCommit | None:
+        """Open the hanging turn, do whatever was asked in context, then finish the turn."""
+        self.open(host=host, action=action)
+        """Do whatever was asked in context."""
+        self.finish_turn(tools=tools, prompt=prompt, result=result, context=context)
+        return None
 
     @prompt(name="finish-turn")
     @agent_tool
@@ -191,36 +239,27 @@ class Turn:
         result: str = "",
         context: str = "",
     ) -> TurnCommit | None:
-        """finish_turn — agent closes the open turn after work."""
+        """finish_turn - agent closes the open turn after work."""
         if tools:
             for host in tools:
                 workspace = getattr(host, "workspace", None)
                 current = getattr(workspace, "current_work_session", None)
                 open_turn = getattr(current, "open_turn", None)
                 if open_turn is not None:
-                    return self._commit_payload(
-                        open_turn.finish(prompt=prompt, result=result, context=context)
+                    return open_turn.finish(
+                        prompt=prompt, result=result, context=context, host=host
                     )
         session = self.work_session
         if session is None:
             raise RuntimeError("Turn.finish_turn requires workSession")
-        return self._commit_payload(
-            session.turn.finish(prompt=prompt, result=result, context=context)
-        )
-
-    @staticmethod
-    def _commit_payload(change: TurnCommit | None) -> dict[str, Any] | None:
-        if change is None:
-            return None
-        return {
-            "name": change.name,
-            "session_name": change.session_name,
-            "tool_names": list(change.tool_names),
-            "sha": change.sha,
-        }
+        return session.turn.finish(prompt=prompt, result=result, context=context)
 
     def finish(
-        self, prompt: str = "", result: str = "", context: str = ""
+        self,
+        prompt: str = "",
+        result: str = "",
+        context: str = "",
+        host: Any | None = None,
     ) -> TurnCommit | None:
         session = self.work_session
         if session is None:
@@ -229,13 +268,15 @@ class Turn:
         self.prompt = prompt
         self.result = result
         self.context = context
-        run = ToolCall(
-            toolset="action",
-            name="action_run",
-            summary=result or prompt or "action finished",
-            role="run",
-        )
-        session.append_trail(run)
+        bound = host if host is not None else getattr(session, "_host", None)
+        if bound is not None:
+            run = ToolCall(
+                toolset="action",
+                name="action_run",
+                summary=result or prompt or "action finished",
+                role="run",
+            )
+            session.append_trail(run)
         change: TurnCommit | None = None
         if session.dirty:
             message = self.name
@@ -340,7 +381,7 @@ class Turn:
 
 @dataclass
 class Mistake:
-    """Mistake — annotated on the introducing commit (Git-primary)."""
+    """Mistake - annotated on the introducing commit (Git-primary)."""
 
     entry_id: str
     artifact: str
@@ -372,7 +413,7 @@ class Mistake:
 
 @dataclass
 class Correction:
-    """Correction — linked from the fix commit to mistake introducing SHAs."""
+    """Correction - linked from the fix commit to mistake introducing SHAs."""
 
     improved: str = ""
     how: str = ""
@@ -424,7 +465,7 @@ class Correction:
 
 @dataclass
 class Repair:
-    """Domain repair bucket on a WorkSession — themed improvement nest (not agentic)."""
+    """Domain repair bucket on a WorkSession - themed improvement nest (not agentic)."""
 
     theme: str
     status: str = "backlog"
@@ -433,11 +474,15 @@ class Repair:
     violation: str = ""
     mistakes: list[Mistake] = field(default_factory=list)
 
-    def open(self, host: Any, asset: str, violation: str) -> Repair:
+    def open(self, host: Any | None = None, asset: str = "", violation: str = "") -> Repair:
         self.asset = asset
         self.violation = violation
         self.status = "backlog"
-        session = getattr(getattr(host, "workspace", None), "current_work_session", None)
+        session = self.work_session
+        if host is not None:
+            current = getattr(getattr(host, "workspace", None), "current_work_session", None)
+            if current is not None:
+                session = current
         if session is not None:
             session.turn
         return self
@@ -450,7 +495,7 @@ class Repair:
 
 
 class Repairs:
-    """WorkSession.repairs — lookup by theme / violation."""
+    """WorkSession.repairs - lookup by theme / violation."""
 
     def __init__(self, session: WorkSession) -> None:
         self._session = session
@@ -474,8 +519,9 @@ class Repairs:
         return len(self._by_theme)
 
 
+@toolset
 class WorkSession:
-    """One named work session — owns openTurn, turns, repairs, git; session.md kit."""
+    """One named work session - owns openTurn, turns, repairs, git; session.md kit."""
 
     default_workspace_folder: str = "."
     context_index_key: str = ""
@@ -485,9 +531,10 @@ class WorkSession:
 
     def __init__(
         self,
-        workspace: Workspace,
-        name: str,
+        workspace: Workspace | str | None = None,
+        name: str = "",
         *,
+        session: str = "",
         goal: str = "",
         fidelities: str = "",
         contexts: str = "",
@@ -504,13 +551,15 @@ class WorkSession:
         default_workspace_folder: str | None = None,
         host: Any | None = None,
     ) -> None:
-        self.workspace = workspace
-        self.name = name
+        given = workspace
+        parent, slug = type(self)._workspace_and_name(workspace, name, session)
+        self.workspace = parent
+        self.name = slug
         self.goal = goal
         self.fidelities = fidelities
         self.contexts = contexts
-        self.path = path or workspace.path
-        self.workspace_root = workspace_root if workspace_root is not None else workspace.path
+        self.path = path or parent.path
+        self.workspace_root = workspace_root if workspace_root is not None else parent.path
         self.git = git if git is not None else self._default_git()
         self.open_turn: Turn | None = None
         self.turns: list[Turn] = []
@@ -530,6 +579,35 @@ class WorkSession:
         self.outcome = outcome
         self.handoff = handoff
         self.body = body
+        if not isinstance(given, Workspace) and self.name:
+            md = self.session_md
+            if md.is_file():
+                self._take_from(
+                    type(self)._parse(
+                        md.read_text(encoding="utf-8"),
+                        path=self.path,
+                        name=self.name,
+                    )
+                )
+
+    @staticmethod
+    def _workspace_and_name(
+        workspace: Workspace | str | None,
+        name: str,
+        session: str,
+    ) -> tuple[Workspace, str]:
+        slug = (session or name or "").strip()
+        if isinstance(workspace, Workspace):
+            return workspace, slug if session else name
+        path = (workspace or "").strip()
+        if not slug:
+            git_root = Repo.find_root(path or ".")
+            if git_root is not None:
+                branch = GitRepo(git_root).current_branch
+                if isinstance(branch, str) and branch.startswith("session/"):
+                    slug = branch[len("session/") :]
+                    path = path or str(git_root)
+        return Workspace(path or "."), slug
 
     def _default_git(self) -> GitRepo:
         root = Repo.find_root(self.workspace.path)
@@ -547,7 +625,7 @@ class WorkSession:
 
     @property
     def turn(self) -> Turn:
-        """Turn hangs off the session — present once the session is awake."""
+        """Turn hangs off the session - present once the session is awake."""
         if self.open_turn is None:
             hanging = Turn(work_session=self)
             if self.context_index_key:
@@ -705,7 +783,7 @@ class WorkSession:
             self.path = path
         if not self.name:
             return (
-                "need session name — confirm working path and kebab slug with the user, "
+                "need session name - confirm working path and kebab slug with the user, "
                 "then call open before grill/sketch"
             )
         self.ensure_started(goal=goal, fidelities=fidelities, contexts=contexts)
@@ -731,7 +809,7 @@ class WorkSession:
         effective_name = name.strip() or (self.name or "")
         if not effective_name:
             return (
-                "need session name — confirm working path and kebab slug with the user, "
+                "need session name - confirm working path and kebab slug with the user, "
                 "then call open before grill/sketch"
             )
         loaded = type(self).load(effective_path, effective_name)
@@ -768,6 +846,16 @@ class WorkSession:
         md = self.close(outcome=outcome, handoff=handoff)
         return str(md.resolve())
 
+    def _host_from_tools(self, tools: list[Any] | None, host: Any | None) -> Any | None:
+        if host is not None:
+            return host
+        if not tools:
+            return None
+        for item in tools:
+            if item is not None:
+                return item
+        return None
+
     @prompt(name="start-work-session")
     @agent_tool
     def start_work_session(
@@ -780,39 +868,30 @@ class WorkSession:
         path: str = "",
         host: Any | None = None,
     ) -> WorkSession:
-        """start_work_session — agent starts or resumes a named work session."""
-        if tools:
-            for item in tools:
-                workspace = getattr(item, "workspace", None)
-                if workspace is not None:
-                    return workspace.open(
-                        host=item,
-                        name=name,
-                        goal=goal,
-                        fidelities=fidelities,
-                        contexts=contexts,
-                        path=path,
-                    )
-        if host is not None:
-            workspace = getattr(host, "workspace", None)
-            if workspace is not None:
-                return workspace.open(
-                    host=host,
-                    name=name or self.name,
-                    goal=goal,
-                    fidelities=fidelities,
-                    contexts=contexts,
-                    path=path,
-                )
-        self.open(
-            name=name,
+        """start_work_session - agent starts or resumes a named work session."""
+        bound = self._host_from_tools(tools, host)
+        workspace = self.workspace
+        if bound is not None:
+            host_workspace = getattr(bound, "workspace", None)
+            if host_workspace is not None:
+                workspace = host_workspace
+        opened = workspace.open(
+            host=bound,
+            name=name or self.name,
             goal=goal,
             fidelities=fidelities,
             contexts=contexts,
             path=path,
         )
-        self.workspace.current_work_session = self
-        return self
+        current = workspace.current_work_session
+        if current is not None:
+            self._take_from(current)
+            self.workspace = workspace
+            self.git = current.git
+            self.open_turn = current.open_turn
+            self.workspace.current_work_session = current
+            return current
+        return opened if isinstance(opened, WorkSession) else self
 
     @prompt(name="finish-work-session")
     @agent_tool
@@ -822,7 +901,7 @@ class WorkSession:
         outcome: str = "",
         handoff: str = "handoff.md",
     ) -> str:
-        """finish_work_session — agent closes the current work session."""
+        """finish_work_session - agent closes the current work session."""
         if tools:
             for item in tools:
                 workspace = getattr(item, "workspace", None)
@@ -841,7 +920,7 @@ class WorkSession:
         return path
 
     def load_state(self) -> None:
-        """Instance load hook — bootstrap yaml only (git-primary association elsewhere)."""
+        """Instance load hook - bootstrap yaml only (git-primary association elsewhere)."""
         return None
 
     def append_trail(self, call: ToolCall) -> None:
@@ -963,11 +1042,12 @@ class WorkSession:
         )
 
 
+@toolset
 class Workspace:
-    """Parent of `.context/` — workSessions, currentWorkSession, pathOverrides."""
+    """Parent of `.context/` - workSessions, currentWorkSession, pathOverrides."""
 
-    def __init__(self, path: str) -> None:
-        self.path = str(Path(path))
+    def __init__(self, path: str = ".", workspace: str = "") -> None:
+        self.path = str(Path(workspace or path or "."))
         self.work_sessions: list[WorkSession] = []
         self.current_work_session: WorkSession | None = None
         self.path_overrides: list[PathOverride] = []
@@ -1044,7 +1124,7 @@ class Workspace:
         ).strip()
         if not effective_name:
             raise ValueError(
-                "need session name — confirm working path and kebab slug with the user, "
+                "need session name - confirm working path and kebab slug with the user, "
                 "then open before grill/sketch"
             )
         working = (
@@ -1072,11 +1152,12 @@ class Workspace:
             format=getattr(host, "format", None) if host is not None else None,
             host=host,
         )
-        session.read_context_index()
-        session.record_context_root()
-        session.attach_host(host)
-        if hasattr(host, "_session_name"):
-            host._session_name = session.name
+        if host is not None:
+            session.read_context_index()
+            session.record_context_root()
+            session.attach_host(host)
+            if hasattr(host, "_session_name"):
+                host._session_name = session.name
         return session
 
     def open_work_session(
@@ -1175,7 +1256,7 @@ class Workspace:
 
 
 class ContextToolHost:
-    """Spec/host surface from OO — workspace direct; turn/git via currentWorkSession."""
+    """Spec/host surface from OO - workspace direct; turn/git via currentWorkSession."""
 
     def __init__(
         self,
@@ -1258,7 +1339,7 @@ class ContextToolHost:
         session = self.workspace.current_work_session
         if session is None or session.open_turn is None:
             raise RuntimeError("no open turn")
-        return session.open_turn.finish(result=result)
+        return session.open_turn.finish(result=result, host=self)
 
 
 # Back-compat for specs that imported the stub name during generation.

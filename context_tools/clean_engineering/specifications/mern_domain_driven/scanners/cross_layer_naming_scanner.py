@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import List, Set
 
 from mern_scanner_base import TypeScriptScanner
-from utilities.scanners.violation import Violation
+from scan.violation import Violation
 
 _CRUD_GENERICS = frozenset(
     {

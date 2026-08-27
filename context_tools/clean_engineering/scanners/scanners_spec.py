@@ -6,7 +6,7 @@ from pathlib import Path
 from expects import be_true, equal, expect
 from mamba import context, description, it
 
-from scanners import ScannerCollection
+from scan import ScannerCollection
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _CE_DIR = _REPO_ROOT / "context_tools" / "clean_engineering"

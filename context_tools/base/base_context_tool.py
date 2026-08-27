@@ -27,7 +27,8 @@ from primitives.actions.action import AgenticToolset
 from primitives.actions.action import agent_instructions
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from scanners.scan import Scan
+from scan.scan import Scan
+from scan.scanner_collection import ScannerCollection
 from workspace.workspace import Workspace, WorkSession
 from tools.tool import resource
 
@@ -82,7 +83,7 @@ class BaseContextTool(AgenticToolset):
         root = workspace or path or "."
         self.workspace = Workspace(str(root))
         self.workspace.load()
-        self.scanner = Scan()
+        self.scanner = Scan.bound_to(self)
         if self._session_name:
             self.workspace.open(
                 self,
@@ -144,6 +145,12 @@ class BaseContextTool(AgenticToolset):
     @property
     def module_dir(self) -> Path:
         return Path(inspect.getfile(type(self))).resolve().parent
+
+    def _scanner_collection(self) -> ScannerCollection:
+        return ScannerCollection(
+            module_dir=self.module_dir,
+            root_path=self.module_dir / "scanners",
+        )
    
     @property
     @resource
