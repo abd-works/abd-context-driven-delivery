@@ -11,5 +11,5 @@
 ## End
 
 - **ended:** 2026-08-27
-- **outcome:** Isolated WorkSession open/close in a sibling git worktree
+- **outcome:** done
 - **handoff:** (unset)
