@@ -67,6 +67,11 @@ The parent then launches one non-blocking sub-agent (`kind: sub_agent` / `launch
 |---|---|---|---|---|---|
 | baseline | `experiment/baseline` | *(none + expander lists tools)* | **01:15** | **00:51** | First generate listed tools; wrote from inlined guidance; no domain `action: guidance` hop. [Baseline walker scratch rerun](ca3e3516-64ad-40bf-a55c-556c66c6514b) |
 | single-command | `experiment/single-command` | **1b + 1c + 4c + 5a** + expander lists tools | **00:51** | **00:37** | One stdin `run -` per pair; tools listed; no invented `action: guidance`. [Single-command walker scratch](c5f1607b-3559-4784-b6aa-226cd6f15fa2) |
+| thin-fidelity-format | `experiment/thin-fidelity-format` | smarter load: contexts by fidelity, examples by format; **no file split** | **00:44** | **00:35** | Expand **48,798** (from 74,019). No remanifest / invented `action: guidance`. [thin-fidelity-format](e442d1d8-55ec-4596-b204-84a0fc64db55) |
+| thin-fidelity-format run 2 | same branch | + examples filename-match (`story_map` → story-map + thin-slice) | *(parent-inline)* | *(parent-inline)* | Expand **38,908**. Contexts already fidelity-sliced. Leftover fat is unfiltered **templates**. |
+| thin-first-expand combined | `experiment/thin-fidelity-format` | all filters on **one** branch: contexts + examples + templates | **01:05** | **01:06** | Expand **17,767**. Fair first-time; hops 1; no remanifest / invented `action: guidance`. Did **not** beat single-command **00:51 / 00:37**. [thin-first-expand](4760f48e-5536-46ac-9f07-de5eef0247c8) |
+| thin-first-expand + CE | same branch | same Stories filters + CE/DDD/UX/BDD contexts by H2; CE examples by suffix + drop `evals/` | **00:41** | **00:55** | Stories **17,767** / CE **45,100**. Pair A beat single-command **00:51**; Pair B missed **00:37** (beat prior **01:06**). Hops 1; no invented `action: guidance`. [thin-ce](01781ce8-dad9-49e7-9085-6857e1399b3e) |
+| thin-templates | `experiment/thin-templates` | smarter load: templates by format + fidelity filename; **no file split** | **00:33** | **00:31** | Expand **52,878** (from 74,019). No remanifest / invented `action: guidance`. [thin-templates](9ede319c-0d8d-4ea6-9435-ef6293c99867) |
 
 ---
 
@@ -98,6 +103,61 @@ Worktree: `C:\dev\abd-cdd-experiment-single-command` so this run does not share 
 **Pair B 00:37** (14:04:40–14:05:17) — one stdin `run -`; CDR + Drawio tools listed; Drawio skipped (markdown).  
 
 Zero `_req.yaml`. No remanifest. No invented `action: guidance`. PYTHONPATH was the worktree.
+
+### thin-fidelity-format
+
+Smarter load only — no file split. `contexts` = preamble + Shared rules + `## {fidelity}`. `examples` = active format alias (`markdown`→`md`). `templates/` left alone.
+
+Worktree: `C:\dev\abd-cdd-experiment-thin-fidelity-format`. Scratch: [thin-fidelity-format](e442d1d8-55ec-4596-b204-84a0fc64db55). Detail: [experiment-thin-fidelity-format-results.md](experiment-thin-fidelity-format-results.md).
+
+**Expand 48,798** (from 74,019). No `## scenarios` / `## acceptance_tests` / `examples/**/py/**`.
+
+**Pair A 00:44** (14:50:51–14:51:35) — one stdin `run -`; tools listed; wrote from inlined Stories guidance; no invented `action: guidance`.  
+**Pair B 00:35** (14:51:35–14:52:10) — CE unfiltered (no `## Shared rules`, no `/{alias}/` examples); Drawio listed and skipped.
+
+Leftover Pair A blob after run 1 is still all `md/` examples (including scenarios) plus unfiltered `templates/`.
+
+**Run 2** (same worktree, parent, no new agent): examples filename-match. Expand **38,908**. Scenario example files gone. `scenario-*` strings still in the blob are **templates/** (this experiment does not touch that slot). Courier rewritten parent-inline — do not compare those clocks to run 1.
+
+### thin-templates
+
+Smarter load only — no file split. `templates/` = `templates/{format-alias}/` then fidelity filenames (`story_map` → `story-map.md` + `thin-slice.md` + `story-context.md`). Sketch and `scenario-*.md` stay out. `stories.md` and `examples/` unchanged.
+
+Worktree: `C:\dev\abd-cdd-experiment-thin-templates`. Scratch: [thin-templates](9ede319c-0d8d-4ea6-9435-ef6293c99867). Detail: [experiment-thin-templates-results.md](experiment-thin-templates-results.md).
+
+**Expand 52,878** (from 74,019). Locator now returns the format folder instead of dumping the whole pack.
+
+**Pair A 00:33** (14:52:36–14:53:09) — one stdin `run -`; tools listed; wrote from inlined Stories guidance; no invented `action: guidance`.  
+**Pair B 00:31** (14:53:09–14:53:40) — CE `{slug}-templates.py` still wins; Drawio listed and skipped.
+
+Leftover Pair A blob is still unfiltered `contexts` + all examples (including `md/` scenarios).
+
+### thin-first-expand combined (one branch)
+
+All smarter-load filters on `experiment/thin-fidelity-format` (`C:\dev\abd-cdd-experiment-thin-fidelity-format`). No file split. Isolated `thin-templates` worktree is leftover; do not keep two branches for this.
+
+**Expand 17,767** (from 74,019). Contexts fidelity-sliced; examples format + filename; templates format folder + fidelity filenames. No `## scenarios`, no `/py/` examples, no sketch / other-format story classes / inlined scenario templates.
+
+Scratch: [thin-first-expand](4760f48e-5536-46ac-9f07-de5eef0247c8). Detail: [experiment-thin-first-expand-results.md](experiment-thin-first-expand-results.md).
+
+**Pair A 01:05** (15:59:22–16:00:27) — one stdin `run -`; tools listed; wrote from inlined Stories guidance; no invented `action: guidance`.  
+**Pair B 01:06** (16:00:38–16:01:44) — CE still unfiltered (no `## Shared rules`); Drawio listed and skipped.
+
+Did **not** beat single-command **00:51 / 00:37**. Isolated slices on this same protocol were faster (00:44 / 00:35 and 00:33 / 00:31). One fair sample; blob shrink held; clock did not. Pair B is not explained by Stories filters.
+
+### thin-first-expand + CE (same branch)
+
+Same smarter-load rule as Stories — **no file split** (still one `clean_engineering.md` / `examples/` / `templates/`). Contexts drop sibling fidelity H2s even without `## Shared rules`. Examples: suffix when there is no `/{alias}/` folder, and drop `evals/` for CE generate. Templates already pick `{slug}-templates.{ext}`; `*-sketch` stays out.
+
+**Stories story_map markdown** still **17,767**.  
+**CE model markdown** generate **45,100** (contexts 17,066 + shopping-cart examples 6,011 + templates 6,282 + generate/drawio glue). `faultyAsset` in that blob is repair prose, not the eval files. Unfiltered CE examples tree is ~104k.
+
+Scratch: [thin-ce](01781ce8-dad9-49e7-9085-6857e1399b3e). Detail: [experiment-thin-ce-results.md](experiment-thin-ce-results.md).
+
+**Pair A 00:41** (16:07:05–16:07:46) — beat single-command **00:51** and prior combined **01:05**.  
+**Pair B 00:55** (16:07:51–16:08:46) — beat prior **01:06**; missed single-command **00:37**. Drawio listed and skipped.
+
+Hops 1. No remanifest. No invented `action: guidance`.
 
 ### flatten (2a + 2b + 2c; 3 deferred)
 

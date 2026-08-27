@@ -1,0 +1,8 @@
+toolset: scanners.scan:Scan
+tool: scan
+arguments:
+  paths:
+  - C:\dev\abd-context-driven-delivery\.context\sessions\plan-and-swarm-utilities-23\story-map.md
+  - C:\dev\abd-context-driven-delivery\.context\sessions\plan-and-swarm-utilities-23\thin-slicing.md
+  - C:\dev\abd-context-driven-delivery\.context\sessions\plan-and-swarm-utilities-23\scenarios
+  root: C:\dev\abd-context-driven-delivery\.context\sessions\plan-and-swarm-utilities-23

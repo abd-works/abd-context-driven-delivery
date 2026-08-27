@@ -1,0 +1,16 @@
+toolset: sketch.sketch:Sketch
+action: sketch
+arguments:
+  tools:
+  - toolset: context_tools.stories.stories:Stories
+    context:
+      fidelity: scenarios
+      format: markdown
+      path: C:\dev\abd-context-driven-delivery
+      session: plan-and-swarm-utilities-23
+  - toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+    context:
+      fidelity: modules
+      format: markdown
+      path: C:\dev\abd-context-driven-delivery
+      session: plan-and-swarm-utilities-23

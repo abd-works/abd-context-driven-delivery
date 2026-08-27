@@ -4,8 +4,10 @@
 
 **Git** utility (`utilities/git/`): object-oriented domain for a local git clone plus
 GitHub workflow surfaces. Models **Repo → Branch → Commit** for version control and
-**Repo → Project → Ticket → TicketState** for kanban/issue workflow. Subprocess
-Callers use domain objects, not a subprocess helper module.
+**Repo → Project → Ticket → TicketState** for kanban/issue workflow. Tickets also
+carry **research tags**, **notes**, and **flow** on that same graph (git notes and
+commit trailers) — not a parallel yaml ticket index. Callers use domain objects, not
+a subprocess helper module.
 
 ## Primary use case
 
@@ -16,13 +18,14 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 
 ## Seam
 
-`git.git:Git` is a **manifest facade** for the domain types — not an IDE skill. Do not deploy `/git`. Slash commands belong on Workflow (`/backlog`, `/start-ticket`, `/finish-ticket`). Mark a git operation with `@prompt` only if a dedicated command is needed.
+`git.git:Git` is a **manifest facade** for the domain types — not an IDE skill. Do not deploy `/git`. Slash commands belong on Workflow (`/backlog`, `/start-ticket`, `/finish-ticket`). Mark a git operation with `@prompt` only if a dedicated command is needed. Seam terms: Repo, Branch, Commit, Project, Ticket, TicketState, Git, ResearchTag.
 
 ## Constraint
 
 - Callers depend on **domain types** (`Repo`, `Branch`, `Project`, `Ticket`, …).
 - **Git-primary** for provenance: commit message trailers (`GitHub-Issue:`, `Workflow-State:`)
-  and git notes (`refs/notes/eval-mistakes`) — not parallel yaml indexes.
+  and git notes (`refs/notes/eval-mistakes` and ticket/research notes) — not parallel yaml indexes.
+  Research tags, ticket notes, and flow live on Ticket / Project / TicketState (Backlog / In Progress / Done only).
 - **Workflow** orchestrates; **Repo** executes git/gh — do not embed ticket or merge policy
   inside `Repo` beyond thin wrappers.
 - `Repo.memory()` is for **tests and dry runs** — production paths use `Repo.open()`.

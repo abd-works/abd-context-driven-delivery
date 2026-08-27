@@ -1,0 +1,7 @@
+toolset: generate.generate:Generate
+context:
+  path: C:\dev\abd-context-driven-delivery
+  session: plan-and-swarm-utilities-23
+tool: list_cdrs
+arguments:
+  root: C:\dev\abd-context-driven-delivery

@@ -1,0 +1,23 @@
+---
+description: Write chat links Cursor can actually open
+alwaysApply: true
+---
+
+# Openable chat links
+
+Do not wrap Windows absolute paths (`c:\dev\...`) in markdown `[]()`. Backslashes break the link.
+
+## Files
+
+- Workspace-relative, forward slashes: `.context/sessions/…/experiments.md`
+- Or a fenced path: `` `.context/sessions/…/experiments.md` ``
+- Code citations only as ` ```start:end:path ` (required format)
+
+## Agents
+
+- `[Short name](agent-id)` — id only, no `.jsonl`, no `file://`
+
+## Never
+
+- `c:\…` or `C:\…` inside `[]()`
+- `file:///C:/…` unless the user asked for an OS path

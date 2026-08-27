@@ -6,7 +6,7 @@ See [options.md](options.md) for the grouped bundles. See [experiments.md](exper
 |---|---|---|
 | Walker (list tools + inline host guidance) | 3c, 7f (as already-implemented expand) | **Done** — first generate lists tools |
 | Single-command | 1b, 1c, 4c, 5a | **Done** — 00:51 / 00:37 |
-| Thin first expand | issue 17 restated (not 4a-as-hop-2-cache) | Next if we keep cutting generate clock |
+| Thin first expand | issue 17 restated (not 4a-as-hop-2-cache) | **Done** on one branch (Stories + CE). Fair clock **00:41 / 00:55**. Pair A beat single-command; Pair B still slower than **00:37**. |
 | Channel write | 6c, 3a | Viable |
 | Same-kit tool list | 2d | Viable (different clock than story-map generate) |
 | Lifecycle in-process | 2b, 7g | Viable (hygiene / later hops) |

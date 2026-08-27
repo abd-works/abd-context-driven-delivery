@@ -1,0 +1,7 @@
+toolset: sketch.sketch:Sketch
+context:
+  path: C:\dev\abd-context-driven-delivery
+  session: plan-and-swarm-utilities-23
+tool: find_template
+arguments:
+  agent_dir: C:\dev\abd-context-driven-delivery\context_tools\cdd
