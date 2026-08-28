@@ -93,7 +93,6 @@ Under `{active.folder}` (work session sprint):
 
 - `grill-answers.md` — append-only: question, judge answer, paths cited, slice notes
 - `{slug}-bdd-sketch.md` — behavior hierarchy; runner writes, judge validates
-- `session.yaml` — bootstrap only (name, branch, path) — **not** a mistake/turn index
 - `logs/events.log` — expand|run trail (appended each turn finish)
 
 Under `{active.path}` when behavior signatures exist:

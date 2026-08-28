@@ -1,5 +1,7 @@
 # @toolset-manifest python -m tools manifest workspace.workspace:Turn
-# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# @toolset-manifest python -m tools manifest workspace.workspace:WorkSession
+# @toolset-manifest python -m tools manifest workspace.workspace:Workspace
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # Do not author behavior from this Python source.
 """Workspace domain — from workspace-eval-oo-sketch §2 / §4."""
 
@@ -13,6 +15,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from primitives.actions.action import agentic_toolset
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from record_decisions.record_decisions import RecordDecisions
@@ -509,6 +512,7 @@ class Repairs:
         return len(self._by_theme)
 
 
+@agentic_toolset
 class WorkSession:
     """One named work session — owns openTurn, turns, repairs, git; session.md kit."""
 
@@ -520,9 +524,10 @@ class WorkSession:
 
     def __init__(
         self,
-        workspace: Workspace,
-        name: str,
+        workspace: Workspace | str | None = None,
+        name: str = "",
         *,
+        session: str = "",
         goal: str = "",
         fidelities: str = "",
         contexts: str = "",
@@ -539,13 +544,26 @@ class WorkSession:
         default_workspace_folder: str | None = None,
         host: Any | None = None,
     ) -> None:
-        self.workspace = workspace
+        if isinstance(workspace, Workspace):
+            parent = workspace
+        else:
+            root = (workspace or "").strip() or "."
+            found = Repo.find_root(root)
+            parent = Workspace(str(found) if found is not None else root)
+        name = (name or session).strip()
+        if not name:
+            git_root = Repo.find_root(parent.path)
+            if git_root is not None:
+                branch = GitRepo(git_root).current_branch
+                if isinstance(branch, str) and branch.startswith("session/"):
+                    name = branch[len("session/") :]
+        self.workspace = parent
         self.name = name
         self.goal = goal
         self.fidelities = fidelities
         self.contexts = contexts
-        self.path = path or workspace.path
-        self.workspace_root = workspace_root if workspace_root is not None else workspace.path
+        self.path = path or parent.path
+        self.workspace_root = workspace_root if workspace_root is not None else parent.path
         self.git = git if git is not None else self._default_git()
         self.open_turn: Turn | None = None
         self.turns: list[Turn] = []
@@ -1007,6 +1025,8 @@ class WorkSession:
                 current = getattr(workspace, "current_work_session", None)
                 if current is not None:
                     return current.close_session(outcome=outcome, handoff=handoff)
+        if not self.name:
+            return "no work session to close"
         return self.close_session(outcome=outcome, handoff=handoff)
 
     def _session_artifact_paths(self) -> list[str]:
@@ -1138,11 +1158,12 @@ class WorkSession:
         )
 
 
+@agentic_toolset
 class Workspace:
     """Parent of `.context/` — workSessions, currentWorkSession, pathOverrides."""
 
-    def __init__(self, path: str) -> None:
-        self.path = str(Path(path))
+    def __init__(self, path: str = "", *, workspace: str = "") -> None:
+        self.path = str(Path(workspace or path or "."))
         self.work_sessions: list[WorkSession] = []
         self.current_work_session: WorkSession | None = None
         self.path_overrides: list[PathOverride] = []

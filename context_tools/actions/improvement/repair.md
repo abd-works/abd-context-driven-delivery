@@ -49,7 +49,7 @@ These are the usual places the **kit** fails its own story. They are starting hy
 2. Name a **theme** as an improvement problem (“generate does not cover the sketch,” not a scanner slug dump).
 3. Tag pairs with that theme.
 4. For each theme: Diagnose until one seam explains the cluster. **Propose the kit change.** Then one fail-first test, then that change, then the original scenario.
-5. Mistake turn and correction turn stay separate. One ask → change → `finish_turn` (commit + push on `session/{name}`). Do not add a follow-up commit just to write the SHA into `session.yaml`.
+5. Mistake turn and correction turn stay separate. One ask → change → `finish_turn` (commit + push on `session/{name}`).
 
 ## Tests (after the proposed solution)
 

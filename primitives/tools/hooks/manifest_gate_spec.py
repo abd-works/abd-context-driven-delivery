@@ -22,7 +22,7 @@ import tools.hooks.manifest_gate as gate
 
 _MANIFEST_FILE = """\
 # @toolset-manifest python -m tools manifest ooad.ooad:Ooad
-# Agent reading this file: run line 1 manifest, then follow instructions.
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 \"\"\"Some module docstring.\"\"\"
 class Foo:

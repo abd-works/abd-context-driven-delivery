@@ -27,12 +27,12 @@ expand|run trails explicitly (not via `@log`).
 
 ## Public API
 
-- `Workspace` — `path`, `work_sessions`, `current_work_session`, `path_overrides`;
-  `load` / `save` / `lookup_path` / `upsert_path` / `open_work_session`
-- `WorkSession` — back-ref `workspace`; owns `git`, `open_turn`, `turns`, `repairs`, trail;
+- `Workspace` — `@agentic_toolset` (`workspace.workspace:Workspace`); `path`, `work_sessions`, `current_work_session`, `path_overrides`;
+  `load` / `save` / `lookup_path` / `upsert_path` / `open_work_session`. CLI context is `workspace` path. `open` starts or resumes a named work session.
+- `WorkSession` — `@agentic_toolset` (`workspace.workspace:WorkSession`); back-ref `workspace`; owns `git`, `open_turn`, `turns`, `repairs`, trail;
   session.md kit (`ensure_started`, `close`, `close_session`, context index helpers);
   `start_work_session` / `finish_work_session` `@agent_tool` with `@prompt` names
-  `start-work-session` / `finish-work-session`.
+  `start-work-session` / `finish-work-session`. CLI context is `workspace` path + `session` name (session may come from the current `session/` git branch).
   **Open** (`ensure_started`): stay in the primary clone when the session branch is
   main/default; otherwise create or reuse a sibling worktree, fetch/pull, and do
   session work there — do not checkout the session branch in the primary folder.
