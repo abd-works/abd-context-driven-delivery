@@ -64,6 +64,18 @@ GITHUB_STATUS_ALIASES: dict[str, tuple[str, ...]] = {
 _ISSUE_NUMBER = re.compile(r"^\d+$")
 
 
+def issue_theme_label(theme: str) -> str:
+    """GitHub issue label for a theme — visible on the issue, not a Status column."""
+    text = (theme or "").strip()
+    if text.lower().startswith("theme:"):
+        text = text.split(":", 1)[1].strip()
+    slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in text)
+    while "--" in slug:
+        slug = slug.replace("--", "-")
+    slug = slug.strip("-")
+    return f"theme:{slug}" if slug else ""
+
+
 def resolve_github_status_option(
     state_name: str, options: list[str] | tuple[str, ...] | None = None
 ) -> str:
@@ -150,6 +162,8 @@ class Ticket:
     body: str
     url: str = ""
     state: TicketState | None = None
+    issue_type: str = ""
+    labels: list[str] = field(default_factory=list)
     data: dict[str, str] = field(default_factory=dict)
     _repo: Repo | None = field(default=None, repr=False, compare=False)
 
@@ -169,6 +183,40 @@ class Ticket:
             return
         repo._gh("issue", "close", str(self.number))
         self.data["closed"] = "true"
+
+    def add_label(self, name: str) -> Ticket:
+        """Put a label on this issue (sidebar chip). Empty name is a no-op."""
+        label = (name or "").strip()
+        if not label:
+            return self
+        repo = self._repo
+        if repo is None:
+            raise RuntimeError("Ticket.add_label requires a repo")
+        if label not in self.labels:
+            self.labels.append(label)
+        if repo._memory:
+            return self
+        repo._gh("label", "create", label, "--force")
+        repo._gh("issue", "edit", str(self.number), "--add-label", label)
+        return self
+
+    def add_theme(self, theme: str) -> Ticket:
+        """Theme is an issue label `theme:<slug>` — filter/group on GitHub, not a board column."""
+        return self.add_label(issue_theme_label(theme))
+
+    def set_type(self, name: str) -> Ticket:
+        """Apply a GitHub issue Type name (org type). Mapping lives on WorkTicket."""
+        text = (name or "").strip()
+        if not text:
+            return self
+        self.issue_type = text
+        repo = self._repo
+        if repo is None:
+            raise RuntimeError("Ticket.set_type requires a repo")
+        if repo._memory:
+            return self
+        repo._gh("issue", "edit", str(self.number), "--type", text)
+        return self
 
     def set_status(self, state_name: str) -> Ticket:
         repo = self._repo
@@ -480,6 +528,7 @@ class Repo:
         self._dirty = False
         self._notes: dict[str, dict[str, str]] = {}
         self._project_links: list[tuple[str, int, str]] = []
+        self._org_issue_types: list[dict[str, str]] = []
         self._worktrees: list[Worktree] = [Worktree(self.root, "main")]
         self._fetches: list[str] = []
         self._pulls: list[str] = []
@@ -531,6 +580,60 @@ class Repo:
         if self._memory:
             return self._commit
         return self._git("rev-parse", "HEAD")
+
+    def list_issue_types(self) -> list[dict[str, str]]:
+        if self._memory:
+            return [dict(item) for item in getattr(self, "_org_issue_types", [])]
+        owner, _ = self.owner_repo()
+        raw = self._gh("api", f"orgs/{owner}/issue-types")
+        payload = json.loads(raw or "[]")
+        return [dict(item) for item in payload] if isinstance(payload, list) else []
+
+    def ensure_issue_type(
+        self,
+        name: str,
+        *,
+        description: str = "",
+        color: str = "gray",
+    ) -> str:
+        wanted = (name or "").strip()
+        if not wanted:
+            return ""
+        for item in self.list_issue_types():
+            existing = str(item.get("name") or "").strip()
+            if existing.lower() == wanted.lower():
+                return existing
+        record = {
+            "name": wanted,
+            "description": description,
+            "color": color,
+            "is_enabled": True,
+        }
+        if self._memory:
+            types = getattr(self, "_org_issue_types", None)
+            if types is None:
+                self._org_issue_types = []
+                types = self._org_issue_types
+            types.append(record)
+            return wanted
+        owner, _ = self.owner_repo()
+        self._gh(
+            "api",
+            "--method",
+            "POST",
+            f"orgs/{owner}/issue-types",
+            "--input",
+            "-",
+            stdin=json.dumps(
+                {
+                    "name": wanted,
+                    "is_enabled": True,
+                    "description": description or None,
+                    "color": color,
+                }
+            ),
+        )
+        return wanted
 
     def owner_repo(self) -> tuple[str, str]:
         if self._memory:

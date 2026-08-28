@@ -18,7 +18,16 @@ from expects import be_a, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from git import TicketNotFoundError
-from git.git import Branch, Commit, Project, Repo, Ticket, TicketState, resolve_github_status_option
+from git.git import (
+    Branch,
+    Commit,
+    Project,
+    Repo,
+    Ticket,
+    TicketState,
+    issue_theme_label,
+    resolve_github_status_option,
+)
 
 
 with description("a Ticket"):
@@ -113,6 +122,27 @@ with description("a Repo ticket lifecycle"):
     with it("should refuse closing unknown tickets"):
         missing = Ticket(number=999, title="", body="", _repo=self.repo)
         expect(lambda: missing.close()).to(raise_error(TicketNotFoundError))
+
+    with it("should put a theme label on the ticket"):
+        expect(issue_theme_label("CLI agent")).to(equal("theme:cli-agent"))
+        expect(issue_theme_label("theme:cli-agent")).to(equal("theme:cli-agent"))
+        self.ticket.add_theme("CLI agent")
+        expect(self.ticket.labels).to(equal(["theme:cli-agent"]))
+
+    with it("should apply an issue type name on the ticket"):
+        self.ticket.set_type("Defect")
+        expect(self.ticket.issue_type).to(equal("Defect"))
+
+    with it("should create missing organization issue types"):
+        expect(self.repo.list_issue_types()).to(equal([]))
+        self.repo.ensure_issue_type(
+            "Defect", description="An unexpected problem or behavior", color="red"
+        )
+        expect([item["name"] for item in self.repo.list_issue_types()]).to(
+            equal(["Defect"])
+        )
+        self.repo.ensure_issue_type("Defect")
+        expect(len(self.repo.list_issue_types())).to(equal(1))
 
 
 with description("GitHub project status names"):

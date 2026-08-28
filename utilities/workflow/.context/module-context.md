@@ -24,13 +24,15 @@ There is no `/workflow` command — the kit name is not a slash file.
 ## Dependencies
 
 - `git` (`utilities/git`) — `Repo`, `Branch`, `Commit`, `Project`, `Ticket`
+- `WorkTicket` — workflow issue with first-order `type`, `theme`, getter-only `state`; constructed with the same `Repo` as `Workflow`
 - `workspace` — `WorkSession`, session branch, turns
 - `handoff` — forward-requirements content patterns
 - `gh` CLI — via `Repo` when not using `Repo.memory()`
 
 ## Public API
 
-- `backlog(focus, context)` — `@agent_tool`: preview Handoff in-process, then `capture_backlog` (issue + Project Backlog)
+- `WorkTicket(repo, workflow)` — create/ensure org types; `type` and `theme` are first-order; `state` is read-only. `TYPE_DEFINITIONS` / `TYPE_GUIDE`: **Feature** = stand up a new module/folder. **Small change** = change to an existing feature/utility/tool unless very large. **Refactor** = restructure location/shape without changing functionality. **Defect** = unexpected/wrong current behavior.
+- `backlog(focus, context, theme, category)` — `@agent_tool`: preview Handoff in-process, then `capture_backlog`. Infers type and theme from the request unless `theme` / `category` override. Creates missing org issue types on the repo's organization.
 - `start(ticket, instructions, workspace)` — In Progress + WorkSession + session branch
 - `finish(outcome, workspace)` — merge to main, Project Done, close issue, close session
 
