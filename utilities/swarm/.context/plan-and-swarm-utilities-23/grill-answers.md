@@ -140,3 +140,11 @@ Not a single field wholly on Agent, Supervisor map, or launch-time copy only.
 **Answer (user):** **When the Agent starts the Plan.** Add Agent registers the Agent. `SubAgent.run` launches at `Plan.start` on the Agent WorkSession. Fits tick 5 (WorkSession opens at start) and tick 10 (shared slice; each Agent runs it on start). Mid-run add registers at add and launches when that Agent starts the Plan.
 
 **Slice unlocked:** deepen Add Agent BDDs — register at add; `SubAgent.run` at `Plan.start` on the Agent WorkSession.
+
+## Tick 13 — Turn tools vs action (Compose Plan / CliAgent)
+
+**Question:** How do tools and action sit on a Turn that CliAgent describes?
+
+**Answer (user):** **A Turn has multiple tools and one action.** `CliAgent` describes that shape (`action`, `tool_keys`, `toolCalls`). The CLI opens the hanging `workspace.Turn` and finishes it after the action. `CliAgent` does not open the Turn. No PlannedTurn. No Plan on CliAgent. Keep TicketState, HILCheck, JudgeCheckpoint.
+
+**Slice unlocked:** deepen Manage Turns / CE — `Turn.tool_keys` + one `action`; `CliAgent` describes shape; CLI open/finish.

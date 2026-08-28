@@ -40,6 +40,16 @@ stories:
                     and that Turn TicketState is Backlog
                     and that Turn holds action generate fidelity story_map context plan-and-swarm-utilities-23
                     and that Turn holds that ToolCall
+            turn holds multiple tools and one action
+                given a Plan compose-judged-plan associated with a Workspace
+                when the operator adds a Turn
+                    and that Turn has action Sketch
+                    and that Turn tool_keys are stories and clean_engineering
+                    and ToolCall toolset Stories name Sketch
+                    and ToolCall toolset CleanEngineering name Sketch
+                then that Turn action is Sketch
+                    and that Turn holds both ToolCalls
+                    and that Turn TicketState is Backlog
             later turn follows the earlier turn
                 given a Plan that already has a Turn Stories generate story_map
                 when the operator adds a Turn CleanEngineering generate modules
@@ -127,6 +137,8 @@ ce:
         context
         action
         fidelity
+        format
+        tool_keys
         toolCalls
         state
         judgeCheckpoint
@@ -136,7 +148,15 @@ ce:
         finish prompt result context
         recordMistake
         recordCorrection
-         // existing workspace.Turn; state is TicketState Backlog | In Progress | Done
+         // existing workspace.Turn; one action; multiple tools via tool_keys and toolCalls
+         // state is TicketState Backlog | In Progress | Done
+      CliAgent
+        turn
+        bind
+         -> Turn.action
+         -> Turn.tool_keys
+         -> Turn.toolCalls
+         // binds hanging workspace.Turn; no Plan; no PlannedTurn
       ToolCall
         toolset
         name
@@ -530,3 +550,4 @@ ce:
 - exploration / Swarm Plan / pass #inc4-slice ? Agent runs selected Plan Turns; Agent.turns in CE
 - exploration / Swarm Plan / pass #inc4-slice-lock ? Swarm.turns shared slice once before agents; associate automatic after streamed compare
 - exploration / Swarm Plan / pass #inc4-subagent-launch ? register at Add Agent; SubAgent.run at Plan.start on Agent WorkSession
+- exploration / Compose Plan / pass #turn-multi-tool ? Turn has one action and multiple tool_keys/toolCalls; CliAgent binds Turn (no Plan, no PlannedTurn)

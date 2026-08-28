@@ -1,4 +1,8 @@
 This is an interactive session.
-Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
-Actions: generate.generate:Generate
-Run the listed actions with the listed context tools.
+Turn.action: Sketch
+Turn.tool_keys: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Turn.toolCalls: context_tools.stories.stories:Stories name=Sketch context_tools.stories.stories:Stories fidelity=story_map format=markdown, context_tools.clean_engineering.clean_engineering:CleanEngineering name=Sketch context_tools.clean_engineering.clean_engineering:CleanEngineering fidelity=modules format=markdown
+Turn.fidelity: modules
+Turn.format: markdown
+Turn.prompt: This Turn.action is Sketch only. Do not generate. Align plan-and-swarm-sketch.md: a Turn has multiple tools and one action. CliAgent describes that shape; the CLI opens the hanging workspace.Turn and finishes it after the action. No PlannedTurn. No Plan on CliAgent. Keep TicketState, HILCheck, JudgeCheckpoint. Finish this Turn when the sketch change is in.
+The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
