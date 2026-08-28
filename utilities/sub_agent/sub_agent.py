@@ -95,7 +95,8 @@ def discover_sub_agent_tools(instance: Any) -> dict[str, SubAgentTool]:
 class SubAgent:
     """Slash ``/sub-agent`` runs this prompt, listed context tools, and listed actions as one non-blocking sub-agent.
 
-    Listed actions (and context tools) open the work session and turn. This kit does not.
+    Listed actions already open the work session and turn — do not wrap those in performTurn.
+    When actions is missing or empty, the worker runs performTurn around the listed context-tool work.
     ``context_tools`` is on AgenticToolset (via ``@agentic_toolset``) — same loader iterate/repair use for ``arguments.tools``.
     """
 
@@ -109,15 +110,26 @@ class SubAgent:
         actions — optional other action kits (iterate, generate, grill, …) to run with those context tools.
 
         The parent sees kind: sub_agent / launch: non_blocking and does not wait.
-        Inside this sub-agent: follow this prompt; run each listed action with the
-        listed context tools; if no actions were listed, run each context tool as
-        its own tools run. Do not inline any of that on the parent.
-        Do not open a work session here — the listed action or context tool does that.
+        Inside this sub-agent: follow this prompt. Do not inline any of that on the parent.
+
+        When actions is listed and non-empty: run each listed action with the listed
+        context tools. Listed action kits already open the work session and turn.
+        Do not wrap those in performTurn. This kit does not open a work session itself
+        when actions are listed.
+
+        When actions is missing or empty: do not leave the worker on a bare context-tool
+        tools run. Run performTurn (workspace.workspace:Turn, action: performTurn)
+        around the work — open the hanging turn, run each listed context tool as its
+        own tools run, then finish_turn. finish_turn commits/pushes; report branch
+        and commit back to the parent.
         """
         """Bring in every listed context tool (AgenticToolset.context_tools)."""
         for host in self.context_tools(tools):
             host
-        """Run every listed action kit with those context tools. If actions is empty, run each context tool as a separate tools run."""
-        for kit in self.context_tools(actions or []):
-            kit
+        if actions:
+            """Run every listed action kit with those context tools. Do not wrap those in performTurn."""
+            for kit in self.context_tools(actions):
+                kit
+        else:
+            """Run performTurn (workspace.workspace:Turn, action: performTurn) around the listed context-tool work: open the hanging turn, each context tool as its own tools run, finish_turn; report branch and commit."""
         return "Sub-agent launched with listed context tools and actions."

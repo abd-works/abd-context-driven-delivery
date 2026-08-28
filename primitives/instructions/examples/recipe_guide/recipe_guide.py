@@ -7,12 +7,12 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from primitives.actions.action import agent_instructions
+from primitives.actions.action import agent_instructions, agentic_toolset
 from primitives.instructions import Instruction, instruction
-from tools.tool import resource, agent_tool, toolset
+from tools.tool import resource, agent_tool
 
 
-@toolset
+@agentic_toolset
 class RecipeGuide:
     """Collect and draft recipes - brainstorm ideas, then write step-by-step recipes."""
 

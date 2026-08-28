@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import List, Tuple
 
 from mern_scanner_base import MERNScanner
-from utilities.scanners.violation import Violation
+from scan.violation import Violation
 
 
 class RouteDelegationScanner(MERNScanner):

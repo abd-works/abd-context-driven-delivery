@@ -25,7 +25,7 @@ from low_coupling_scanner import LowCouplingScanner  # noqa: E402
 from module_scanner import collect_module_files  # noqa: E402
 from named_seam_and_constraint_scanner import NamedSeamAndConstraintScanner  # noqa: E402
 from physical_folder_scanner import PhysicalFolderScanner  # noqa: E402
-from scanners import Scan, ScannerCollection  # noqa: E402
+from scan import Scan, ScannerCollection  # noqa: E402
 
 
 def _write(path: Path, content: str) -> None:

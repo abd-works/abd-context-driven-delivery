@@ -116,4 +116,4 @@ a context tool
 
 ## Implementation
 
-- `workflow.workflow:Workflow` — `backlog` / `start` / `finish` tools (session `workflow-package`). `backlog` renders Handoff into the issue body in-process (no `compact_handoff` / session files). GitHub Status **Backlog** maps to **Todo** when that is the board option.
+- `workflow.workflow:Workflow` — `backlog` / `start` / `finish` tools (session `workflow-package`)

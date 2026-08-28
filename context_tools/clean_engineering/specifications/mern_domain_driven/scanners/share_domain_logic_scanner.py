@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import List
 
 from mern_scanner_base import TypeScriptScanner
-from utilities.scanners.violation import Violation
+from scan.violation import Violation
 
 _ZOD_OBJECT_RE = re.compile(r"\bz\.(object|string|number|boolean|enum|array|union)\s*\(")
 _PARSE_CALL_RE = re.compile(r"\.(safe)?[Pp]arse\s*\(")

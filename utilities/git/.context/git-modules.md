@@ -6,7 +6,8 @@
 GitHub project linkage, and tickets (issues). *Branch* names a line of development;
 *Commit* records a snapshot with an open metadata map (trailers, notes payload).
 *Project* is the repository's GitHub Project board; *Ticket* is a GitHub issue with
-a kanban *TicketState*.
+a kanban *TicketState* (Backlog / In Progress / Done). *ResearchTag* is research/flow
+metadata on that *Ticket*, stored git-primary (notes and trailers), not a second issue identity.
 
 ### repo
 
@@ -35,6 +36,13 @@ a kanban *TicketState*.
 
 - GitHub issue identity (`number`, `title`, `body`, `url`) plus optional *TicketState*
 - Open `data` map for extension (e.g. closed flag in memory mode)
+- Holds *ResearchTag*s and notes; flow is *TicketState* plus git trailers/notes — not extra kanban columns
+- **Invariant:** ticket identity remains GitHub issue `#`; tags/notes/flow do not mint a parallel store
+
+### researchtag
+
+- Research or session-flow label associated with a *Ticket* on the existing git API
+- **Invariant:** canonical association is git notes and commit trailers, not session yaml indexes
 
 ### ticket_state
 
@@ -49,8 +57,8 @@ Build order: `git` → (`workspace` shim | `workflow`)
 ---
 
 # utilities/git
-- **Purpose:** OO git + GitHub domain for CDD workspace sessions and workflow commands
-- **Seam (terms):** Repo, Branch, Commit, Project, Ticket, TicketState, Git
+- **Purpose:** OO git + GitHub domain for CDD workspace sessions and workflow commands. Callers manage research tags, notes, and ticket/session flow on the existing Repo / Project / Ticket / TicketState graph — git-primary notes and trailers, not a second ticket store.
+- **Seam (terms):** Repo, Branch, Commit, Project, Ticket, TicketState, Git, ResearchTag
 - **Dependencies (one-way):** `tools.tool`; consumed by `workspace`, `workflow`
 
 ## Repo

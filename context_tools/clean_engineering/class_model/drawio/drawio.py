@@ -15,27 +15,13 @@ from pathlib import Path
 
 from primitives.actions.action import agent_instructions, agentic_toolset
 from primitives.instructions import Instruction, instruction
-from scanners.scan import Scan
-from scanners.scanner_collection import ScannerCollection
+from scan.scan import Scan
 from sub_agent.sub_agent import sub_agent
 from tools.tool import agent_tool
 
 from context_tools.clean_engineering.class_model.drawio.drawio_class_model import (
     DrawIOCleanEngineeringModel,
 )
-
-
-class _DrawioScan(Scan):
-    """Scan binding that discovers layout scanners under this package."""
-
-    def __init__(self, module_dir: Path) -> None:
-        self._module_dir = Path(module_dir)
-
-    def _scanner_collection(self) -> ScannerCollection:
-        return ScannerCollection(
-            module_dir=self._module_dir,
-            root_path=self._module_dir / "scanners",
-        )
 
 
 @agentic_toolset
@@ -48,11 +34,19 @@ class Drawio:
 
     def __init__(self, workspace=None) -> None:
         self.workspace = workspace
-        self.scanner = _DrawioScan(self.module_dir)
+        self.scanner = Scan.bound_to(self)
 
     @property
     def module_dir(self) -> Path:
         return Path(__file__).resolve().parent
+
+    def _scanner_collection(self):
+        from scan.scanner_collection import ScannerCollection
+
+        return ScannerCollection(
+            module_dir=self.module_dir,
+            root_path=self.module_dir / "scanners",
+        )
 
     @property
     def domain_slug(self) -> str:

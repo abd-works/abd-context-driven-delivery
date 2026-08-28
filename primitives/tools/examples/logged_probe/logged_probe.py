@@ -3,12 +3,12 @@
 """Minimal @toolset used by sessions specs — tools/actions with explicit SessionLog run append."""
 from __future__ import annotations
 
-from primitives.actions.action import agent_instructions
+from primitives.actions.action import agent_instructions, agentic_toolset
 from workspace import SessionLog, summarize_mapping
-from tools.tool import agent_tool, toolset
+from tools.tool import agent_tool
 
 
-@toolset
+@agentic_toolset
 class LoggedProbe:
     """Probe toolset for session logging specs."""
 

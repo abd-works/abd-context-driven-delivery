@@ -11,9 +11,9 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from primitives.actions.action import agent_instructions
+from primitives.actions.action import agent_instructions, agentic_toolset
 from harness.harness_tool import prompt
-from tools.tool import agent_tool, toolset
+from tools.tool import agent_tool
 from partition.partition import Partition
 
 from context_tools.clean_engineering.clean_engineering import CleanEngineering
@@ -119,7 +119,7 @@ def _scout_root(repo: Path) -> Path:
     return repo.joinpath(*_SCOUT_DIR)
 
 
-@toolset
+@agentic_toolset
 class ContextSetup:
     """Convert a folder of documents to markdown and delegate partitioning to selected context tools."""
 

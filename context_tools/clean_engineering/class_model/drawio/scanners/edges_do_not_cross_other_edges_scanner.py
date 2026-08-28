@@ -109,7 +109,7 @@ class EdgesDoNotCrossOtherEdgesScanner(DrawioScanner):
 
 
 if __name__ == "__main__":
-    from scanners import ScannerRunner
+    from scan import ScannerRunner
 
     raise SystemExit(
         ScannerRunner.run_scanner_main(

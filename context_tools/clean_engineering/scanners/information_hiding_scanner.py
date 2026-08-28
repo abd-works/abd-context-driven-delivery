@@ -135,7 +135,7 @@ def _mapping_value_type(subscript: ast.Subscript) -> str:
 
 
 if __name__ == "__main__":
-    from scanners import run_scanner_main
+    from scan import run_scanner_main
     from module_scanner import collect_module_files
 
     raise SystemExit(

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scanners import Scanner
+from scan import Scanner
 
 from context_tools.clean_engineering.class_model.base_class_model import OoadClass, Operation
 from context_tools.clean_engineering.class_model.java_class_model import JavaCleanEngineeringModel

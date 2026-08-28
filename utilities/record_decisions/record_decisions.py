@@ -8,14 +8,14 @@ import re
 from pathlib import Path
 
 from harness.harness_tool import prompt
-from primitives.actions.action import agent_instructions
-from tools.tool import agent_tool, toolset
+from primitives.actions.action import agent_instructions, agentic_toolset
+from tools.tool import agent_tool
 
 _FORMAT_PATH = Path(__file__).parent / "CDR-FORMAT.md"
 _CDR_NAME_RE = re.compile(r"^(\d{4})-")
 
 
-@toolset
+@agentic_toolset
 class RecordDecisions:
     """Offer CDRs sparingly and persist them under .context/cdr/."""
 

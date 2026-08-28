@@ -4,11 +4,11 @@
 """Example @toolset with @agent_instructions - orchestrates Car tools via travelTo."""
 from __future__ import annotations
 
-from primitives.actions.action import agent_instructions
-from tools.tool import resource, agent_tool, toolset
+from primitives.actions.action import agent_instructions, agentic_toolset
+from tools.tool import resource, agent_tool
 
 
-@toolset
+@agentic_toolset
 class Car:
     """Operate a car - start, stop, and read current state."""
 

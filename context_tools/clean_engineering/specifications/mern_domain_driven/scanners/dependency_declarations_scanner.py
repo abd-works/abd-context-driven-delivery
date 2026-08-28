@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set
 
 from mern_scanner_base import TypeScriptScanner
-from utilities.scanners.violation import Violation
+from scan.violation import Violation
 
 # Known built-in Node modules (not npm packages)
 _NODE_BUILTINS = frozenset(

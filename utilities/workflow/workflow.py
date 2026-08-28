@@ -109,7 +109,10 @@ class Workflow:
     def backlog(self, focus: str, context: str = "", workspace: str = "") -> dict[str, str | int]:
         """Capture an idea on the backlog — GitHub issue + Project Backlog."""
         destination = str(self._repo_root(workspace))
-        handoff_md = self._handoff().preview_handoff(destination, next_focus=focus)
+        handoff = self._handoff()
+        handoff_md = handoff._render_handoff_markdown(
+            handoff._collect_state(destination), next_focus=focus
+        )
         body = self._backlog_issue_body(handoff_md, focus=focus, context=context)
         return self.capture_backlog(focus=focus, body=body, workspace=workspace)
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scanners import Scanner
+from scan import Scanner
 
 from context_tools.ux.ux_model.workspace import Workspace
 

@@ -19,7 +19,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from scanners import ScannerCollection  # noqa: E402
+from scan import ScannerCollection  # noqa: E402
 
 _BDD_DIR = _REPO_ROOT / "context_tools" / "bdd"
 _RULE = "missing-spec"

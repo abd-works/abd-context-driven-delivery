@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from scanners import Scanner, ScannerRunner
+from scan import Scanner, ScannerRunner
 
 RULE = "screen-interface-not-a-domain-object"
 _TS_SUFFIXES = frozenset({".ts", ".tsx", ".js", ".jsx"})

@@ -18,7 +18,7 @@ from context_tools.bdd.spec_helpers import (  # noqa: E402
     expect_scan_fails,
     expect_scan_passes,
 )
-from scanners import Scan, ScannerCollection  # noqa: E402
+from scan import Scan, ScannerCollection  # noqa: E402
 
 _SCANNERS = Path(__file__).resolve().parent
 _RULE = "ce-comments-are-for-invariants-and-sequencing-notes-only"

@@ -229,3 +229,15 @@ with description("SubAgent.run"):
             expect("end" in sig).to(equal(False))
             expect("open_workspace" in sig).to(equal(False))
 
+    with context("when actions are listed"):
+        with it("should keep listed action kits unwrapped by performTurn"):
+            text = discover_sub_agent_tools(SubAgent())["run"].instructions
+            expect("Do not wrap those in performTurn" in text).to(be_true)
+
+    with context("when actions are missing or empty"):
+        with it("should name performTurn around the listed context-tool work"):
+            text = discover_sub_agent_tools(SubAgent())["run"].instructions
+            expect("action: performTurn" in text).to(be_true)
+            expect("finish_turn" in text).to(be_true)
+            expect("report branch" in text).to(be_true)
+

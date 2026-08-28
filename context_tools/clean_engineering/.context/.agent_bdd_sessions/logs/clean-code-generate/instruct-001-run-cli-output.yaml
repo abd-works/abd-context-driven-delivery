@@ -1,0 +1,1805 @@
+```yaml
+ok: true
+toolset: generate.generate:Generate
+action: generate
+result: When done, run validate.
+instructions: "# Generate\n\n1. Call **`open`**. Confirm sprint slug with the user\
+  \ when run context has no `session=`; pass `name` / `goal` / `fidelities` on first\
+  \ create if needed. Follow **`session_guidance`**; use the **`active`** resource\
+  \ for `active.path` / `active.folder`.\n2. **MUST — prove-read before asking.**\
+  \ Before any grill/iterate question (and before inventing options or story/module\
+  \ names):\n   - Identify **every relevant context file referenced or implied** by\
+  \ the decision — not one favorite type. Typical set: `{workspace}/.context/context-index.md`,\
+  \ owning `*-segment.md`, `module-context.md`, session grill-answers / sketches /\
+  \ handoff, peer story-context, build-order, and any path the plan or prior answers\
+  \ cite. Include index/overlay only for structure hints; **never** treat mid-epic\
+  \ stub columns as inventory.\n   - **Read each of those files with the Read tool**\
+  \ (chunk through large ones). Grep, title lists, memory, or primer-only skims **do\
+  \ not count**.\n   - **Prove it in the question turn:** name the path(s) read and\
+  \ ground options in concrete terms from them. If you cannot cite specifics from\
+  \ the relevant files, you have not read them — go read before asking.\n   - Asking\
+  \ from a skim is a **defect**, same class as dumping a whole artifact in one iterate\
+  \ tick.\n2b. **`do-not-invent-requirements`** — Do not invent requirements, status/maintenance\
+  \ signals, or competing command surfaces absent from source / the ask. Prefer the\
+  \ existing gap/fallback (or the already-specified invoke surface) over minting a\
+  \ new state or a second co-equal how-to-call block.\n3. **`sources-scoped-to-generated-context`**\
+  \ — Hang `**Sources / context:**` on the node they ground: epic / sub-epic / feature\
+  \ / module, or a lower item (scenario, class, screen, component, …). Root or parent-level\
+  \ Sources are fine when those files apply to the **entire** artifact or subtree.\n\
+  4. Apply all guidance and named rules in each **context** — each bullet is a requirement.\n\
+  5. Match **examples** for shape, depth, and tone.\n6. Fill the **template** scaffold\
+  \ and save the artifact under the session layout from `session_guidance`.\n6b. **Large\
+  \ job — several turns.** Decide the source from the **ask** and what this session\
+  \ already produced (a sketch, a model, a format to transform — not a locked default).\
+  \ If that source is a whole model, sketch, or similarly large artifact, implement\
+  \ **one slice** in this invoke, then stop. `finish_turn` closes this turn. Continue\
+  \ in later generate or iterate turns — even if the user asked for everything once.\
+  \ Filling the whole artifact in one generate is a defect (same class as dumping\
+  \ a map in one iterate tick). A small implied source may finish in one turn. Do\
+  \ not treat a red full-tree **validate** as permission to finish the rest in this\
+  \ invoke; validate the slice you wrote.\n7. Follow any extra build steps included\
+  \ in your instructions when present.\n8. Run **validate** on what this turn wrote.\
+  \ If the job is one slice, a remaining gap in the rest of the source is the next\
+  \ turn, not this one. If the implied source was small enough for one turn and validate\
+  \ fails, fix the artifact and **validate** again until it passes.\n\n\nOpen the\
+  \ workspace if it is not already open. The turn hangs off the work session — it\
+  \ is already there when the session is awake. Decision records hang off the work\
+  \ session.\n\nself._session().turn\n\nOffer and write Context Decision Records (CDRs)\
+  \ sparingly as decisions crystallise during the wrapped action - never batch; never\
+  \ invent decisions.\n\nStep 1 - Read the format once via read_cdr_format. Internalise\
+  \ the three-criteria gate and the minimal template.\n\nStep 2 - Optionally call\
+  \ list_cdrs(root) so you do not re-record an already-captured decision.\n\nStep\
+  \ 3 - During the session (grill, sketch, or generate), watch for decisions that\
+  \ meet ALL three: hard to reverse, surprising without context, and a real trade-off.\
+  \ If any criterion is missing, skip the CDR.\n\nStep 4 - When a qualifying decision\
+  \ crystallises, offer a CDR briefly (title + one-line gist). If the user accepts,\
+  \ call write_cdr immediately with a kebab slug and content matching CDR-FORMAT.md.\
+  \ Do not batch; do not wait until the end.\n\nStep 5 - Keep CDRs short. Prefer a\
+  \ single paragraph. Add Status / Considered Options / Consequences only when they\
+  \ add genuine value.\n\nProvide guidance for creating OO modules, models, and code.\n\
+  \nProvide guidance from contexts, examples, and templates.\n\n# Contexts\n\nDeepen\
+  \ OO design from modules toward production code. Each fidelity **adds** artifacts\
+  \ — do not invent detail from a deeper level.\n\n**Progression:** `partition` (action)\
+  \ → **scaffold** → **modules** → **model** → **code**.\n\n| Fidelity | Default format\
+  \ | Produce |\n|---|---|---|\n| **modules** | markdown (+ drawio) | Independent\
+  \ modules, one-way deps, build order, thin seam terms |\n| **model** | python |\
+  \ Empty public seam (on `Class` directly by default, or on a separate `I{Class}`\
+  \ contract **only when interfaces are explicitly requested**) + full module-context;\
+  \ stub example factories |\n| **code** | python | Typed contracts (`Class(I{Class})`\
+  \ when an interface was requested, otherwise `Class` directly) → full production\
+  \ implementation |\n\n**Interfaces (`I{Class}`) are optional, not automatic.** See\
+  \ `## model` § Interfaces for the trigger — ask for one, or a genuine multi-layer/multi-implementation\
+  \ seam.\n\n---\n\n## Language companion (not a fidelity)\n\n**Language is not invocable**\
+  \ (`context.fidelity: language` is rejected). Natural-language identity is a **companion**\
+  \ that deepens at every stage through code.\n\n- At each fidelity, refresh prose\
+  \ for terms/classes already named at that stage — definition, story bullets, invariants\
+  \ in plain English.\n- Keep identity on the class (or `## ClassName` section); member\
+  \ bullets move onto members as model/code deepen.\n- Do **not** invent types, method\
+  \ bodies, relationship kinds, or Public API ahead of the active fidelity.\n- Prose\
+  \ lives under `{session}/{module}/` (markdown sections and/or class docstrings)\
+  \ and is updated in place — never a separate language-only generate run.\n\n---\n\
+  \n## modules\n\n**Default format:** markdown  \n**Diagram format:** `drawio` (modules\
+  \ view — blue boxes, seam-term bullets, one-way dependency arrows; template `templates/modules.drawio`).\
+  \ Language channels (python/java/…) are for **model** and later — not required here.\n\
+  \n**Goal:** Refine **modules** purpose, primary use case, rationale, key terms,\
+  \ and relationship to other modules. Strive for **independent modules with one-way\
+  \ dependencies** and an explicit **build order**. Thin class/term identification\
+  \ only — enough to show independence.\n\nA **module** is a named structural boundary\
+  \ that groups closely related classes — and optionally smaller modules — into a\
+  \ single cohesive unit. Modules can be composed of other modules; a highly complex\
+  \ and nested module can be thought of as a sub-system.\n\n- Consume the existing\
+  \ `{session}/.context/{subject}-index.md` and partition chunks if they exist — **do\
+  \ not edit** or wipe partitions.\n- Create module structure (`physical-folder` /\
+  \ `nested-physical-folder`) under `{session}/{module}/`.\n- When nesting, the **parent\
+  \ module** owns shared base classes/terms (e.g. `powers` owns `Effect`). Specializing\
+  \ children use a path under the parent (`powers/attack`) and depend on the parent\
+  \ — not on siblings. Do **not** invent a `parent/base` submodule (e.g. no `powers/effect`)\
+  \ just to hold shared content; that content belongs on the parent. Diagram: path\
+  \ nesting = containment (children drawn inside the parent box).\n- Seed `{session}/{module}/.context/module-context.md`\
+  \ — thin only: **Purpose** (one paragraph), **Seam** (term/class name list), **Dependencies**\
+  \ (one-way module names), optional **Mechanism** note. No full Public API / `I{Class}`\
+  \ yet.\n- Write `{session}/.context/module-build-order.md` (or a **Build order**\
+  \ section on the subject index): topological order from one-way deps. **Cycles are\
+  \ a hard fail** — grill until deps are one-way.\n- Name terms/classes only enough\
+  \ to show independence. Seed **language companion** prose for those names.\n- Seam\
+  \ terms: **one name per concept** (prefer the type name). Do not list singular and\
+  \ plural of the same term (e.g. `Ability` — not `Ability, Abilities`).\n- Do not\
+  \ add types, method bodies, or relationship kinds (composition / aggregation / association).\n\
+  \n**Dependency rules**\n\n- Dependencies are **one-way** (A → B means B is built\
+  \ before A).\n- Children → parent base; never sibling → sibling.\n- Partition's\
+  \ thin Deps column is a hint; **modules** owns the formal graph and build order.\n\
+  \n### Nested modules\n\nWhen several independently implementable modules share a\
+  \ **real common seam** (shared types, cost rules, activation protocol), nest them\
+  \ under a **parent module** rather than flattening siblings or duplicating the base\
+  \ into every child.\n\n| Kind | Owns | Example |\n|------|------|---------|\n| **Parent**\
+  \ | Shared base types/mechanics + optional parent seam; folder that contains children\
+  \ | `powers/` owns shared **Effect** (rank, duration, descriptors, activate protocol)\
+  \ |\n| **Child** | One independently implementable specialization | `powers/attack`,\
+  \ `powers/movement`, `powers/extras` |\n| **Organisational folder only** | No seam\
+  \ — **not** a module | Do not invent empty parents |\n\n**Rules**\n\n- **`nested-physical-folder`**\
+  \ — Child module path is `{parent}/{child}/` (e.g. `powers/attack/`). Each module\
+  \ that is a real seam owns its own folder and `.context/module-context.md`. Parent\
+  \ shared code lives in the **parent** folder (e.g. types at `powers/`), not copy-pasted\
+  \ into every child — do not invent a `powers/effect` submodule for shared base.\n\
+  - **`shared-base-before-siblings`** — If children would duplicate the same mechanics,\
+  \ extract **parent-owned base** types first; children depend on that base through\
+  \ a thin interface.\n- **`nest-when-shared-else-flat`** — Nest under a parent only\
+  \ when there is shared mechanics or a clear sub-system boundary. Independent top-level\
+  \ concepts (`checks`, `character`) stay flat.\n- **`independent-child`** — A child\
+  \ must still pass \"implement with siblings stubbed\"; it may depend on the **parent\
+  \ base**, not on sibling children.\n- **Naming** — Domain nouns; path form `parent/child`\
+  \ in indexes and sketches (`powers/general`, `conflicts/turns`).\n\nExamples: `powers`\
+  \ (owns Effect) + `powers/attack|control|defense|movement|sensory|general` + `powers/extras|flaws`;\
+  \ `conflicts/turns|actions|conditions`; `gear/equipment|headquarters|vehicles`.\n\
+  \n### Module rules\n\n- **`high-cohesion`** — Classes inside a module share a common\
+  \ purpose and operate on the same domain concept. Cross-class relationships within\
+  \ the module are strong and semantic, not incidental.\n- **`low-coupling`** — Modules\
+  \ depend on each other only through well-defined interfaces. Cross-module dependencies\
+  \ are explicit and minimal — no module reaches into another's internals.\n- **`single-boundary`**\
+  \ — Each module is the single source of truth for its domain concept. No other module\
+  \ holds, mutates, or duplicates that concept's state or rules.\n- **`named-seam-and-constraint`**\
+  \ — Every module owns a *seam* — the public surface of classes and operations callers\
+  \ depend on — paired with a *constraint* stating what callers must do or must not\
+  \ do at that boundary. A module is described by what it requires of its callers,\
+  \ not only by what it holds.\n- **`deep-module`** — The seam stays a short named\
+  \ list of classes and operations with substantial functionality behind it (Ousterhout:\
+  \ small interface, large hidden implementation). If internal helpers leak into the\
+  \ seam, encapsulation is overhead without benefit. Scanner heuristic: at most **40%**\
+  \ of top-level symbols may be public (leading underscore for the rest).\n- **`physical-folder`**\
+  \ — Each module occupies its own folder; class files, markdown documents, and other\
+  \ module-level artifacts live in it. Generated code belongs in that folder — not\
+  \ beside the module, not in a flat dump outside it. Nested modules use child folders\
+  \ under the parent (`nested-physical-folder`). Not every folder is a module — chapter\
+  \ or organisational folders may group several modules and must not be treated as\
+  \ one module unless they own `.context/module-context.md`. **Do not stop at an arbitrary\
+  \ depth** — every folder that is a cohesive functional unit owns `.context/module-context.md`;\
+  \ folders that are only implementation detail (`assets/`, thin config/) are absorbed\
+  \ into the parent description. Stopping mid-tree at `pages/My` while leaving nested\
+  \ pages, hooks, and services undocumented is a defect. **`module-context.md` never\
+  \ lives under `.context/sessions/`** — the session folder is for sprint artifacts;\
+  \ the context file belongs beside the source it describes.\n- **`output-format`**\
+  \ — Written markdown is human-readable only. Strip template markup (`<!-- Mu -->`,\
+  \ `<!-- Mv -->`, and similar) before writing. A module heading sits immediately\
+  \ above its `- **Purpose:**` block — no blank line between them.\n- **`cohesive-file`**\
+  \ — Put a **class family** in one file: the primary type, its subtypes, and tightly\
+  \ connected peers that only make sense together (element + collection, small aggregate\
+  \ + its part). Name the file after the family concept (`abilities.py` for `Ability`\
+  \ + `Abilities`). Split into another file only when a type is independently reused\
+  \ across families or the file becomes a grab-bag of unrelated types. Do not default\
+  \ to one class per file. **Exception:** `{Type}ExampleFactory` (and its `examples`\
+  \ data, plus `I{Type}ExampleFactory` when one was requested) always live in a **sibling\
+  \ file** — never in the production family file (see **Example factories**).\n- **`abstraction-focus`**\
+  \ — Module description names *what* the module does at a higher level than the classes\
+  \ inside it; public verbs are caller-facing, not internal steps or storage layouts.\n\
+  - **`layer-separation`** — Adjacent modules operate at different abstraction levels;\
+  \ collapse pass-through modules.\n- **`complexity-absorption`** — Push configuration\
+  \ and edge-case handling into the module; callers pass intent, not setup flags.\n\
+  - **`information-hiding`** — Volatile implementation choices must not appear in\
+  \ public signatures or return types.\n- **`temporal-independence`** — Every public\
+  \ operation leaves the module in a valid state; avoid order-coupled APIs or document\
+  \ the constraint.\n- **`general-purpose-surface`** — Public interface is not hardcoded\
+  \ to one caller's UI/workflow.\n- **`errors-out-of-existence`** — Prefer total functions\
+  \ / empty states for routine edges; reserve exceptions for real failures.\n\n###\
+  \ Vanilla module vs. mechanism\n\nA module is either a **vanilla module** or a **mechanism**.\
+  \ Most modules are vanilla — they own one domain concept and are instantiated once.\n\
+  \nA **mechanism** is a structural pattern the codebase instantiates more than once.\
+  \ It has:\n- **Variation points** — what changes per instance (the parameters of\
+  \ the pattern).\n- **Fixed parts** — what the pattern enforces across all instances\
+  \ (the constants of the pattern).\n\nWhether a module is a mechanism is stereotyped\
+  \ lightly at **modules** fidelity and made precise at **model** / **code** (variation\
+  \ points and fixed parts listed in the context file). Mechanism identification is\
+  \ optional and exploratory — pursue it when the pattern is genuinely recurring,\
+  \ not as a default.\n\nAt **modules** fidelity, `.context/module-context.md` is\
+  \ thin: Purpose, Seam (term list), Dependencies (one-way), optional Mechanism note\
+  \ — plus `{session}/.context/module-build-order.md`. At **model** fidelity it expands\
+  \ to **Purpose**, **Primary use case**, **Rationale**, **Seam**, **Public API**,\
+  \ and **Dependencies**.\n\n---\n\n## model\n\n**Default format:** Python\n\n**Goal:**\
+  \ Define the public seam — what the module exposes, why it is shaped that way, and\
+  \ what callers depend on. **By default the seam is stubbed directly on `Class` itself**\
+  \ — no production behavior yet, no separate interface either, unless one is asked\
+  \ for. Expand `module-context.md` fully. Stub example factories.\n\n- **Default\
+  \ (no interface):** stub the Public API **directly on `Class`** — no production\
+  \ `Class` yet in the sense of behavior, but the type itself already exists as an\
+  \ empty contract. Public properties and operations are **empty interfaces** (Python:\
+  \ `...` / `@property`+empty body; Java: stub methods; other channels: abstract/empty\
+  \ equivalent). No internals until code.\n- **Opt-in (interface requested):** create\
+  \ a separate **`I{Class}`** contract instead — only when the user explicitly asks\
+  \ for one at this fidelity, or the module genuinely has multiple layers/implementations\
+  \ that need abstracting apart (see **Interfaces** below for the full trigger). Name\
+  \ it `I{Class}` (e.g. `IShoppingCart`) and keep it and its later extender in the\
+  \ **same file** (`cohesive-file`); there is no production `Class` yet in this case.\n\
+  - Do not default to `I{Class}` just because this is model fidelity — interfaces\
+  \ are the exception, not the rule.\n- When the type will be used from Stories examples,\
+  \ stub **`{Type}ExampleFactory`** (empty, named methods only — plus `I{Type}ExampleFactory`\
+  \ only if that interface was also requested) in a **sibling** `{type}_example_factory.{ext}`\
+  \ file — see **Example factories** below. Complete the factory at **code** fidelity.\n\
+  - Expand `.context/module-context.md` (seeded at modules) with **Purpose**, **Primary\
+  \ use case**, **Rationale**, **Seam**, **Public API**, **Dependencies**, optional\
+  \ **Mechanism stereotype**. Nested children list the **parent base** under Dependencies;\
+  \ parents list children as nested modules (not as a flat dump of sibling APIs).\n\
+  - Ensure code and context for a module belong only in that module's folder (parent\
+  \ owns shared base; child owns specialization).\n- Apply **`cohesive-file`**: one\
+  \ file per class family; example factories live in a sibling file (`example-factory-separate-file`).\n\
+  - Edit to carry forward language-companion identity into **Purpose**; expand primary\
+  \ use case and rationale at this fidelity.\n- Edit class docstrings so member bullets\
+  \ move down onto those members; keep everything inside the module folder (`physical-folder`).\n\
+  - Refresh the **language companion** for terms now on the Public API — still no\
+  \ typed signatures in prose ahead of code.\n\n### What is a class\n\nA class is\
+  \ a named idea that earns its own identity because it has at least one of: **distinct\
+  \ identity**, **state**, **behavior**, **structure**, or **interactions** that cannot\
+  \ be collapsed into a property, instance, or subtype of something else.\n\nA class\
+  \ knows things (**state**), does things (**behavior**), interacts with other things\
+  \ (**interactions**), has (**relationships**) with other things, can be a sub type\
+  \ of other things (**inheritance**), and can implement (**interfaces**) — finally,\
+  \ it maintains the (**invariants**) that constrain it.\n\n### Responsibilities\n\
+  \nFor each responsibility a class owns, ask: *hold something, do something, or both?*\
+  \ A responsibility may be a property, an operation, or **both** — the class holds\
+  \ state *and* exposes an action that works with it.\n\n### Properties\n\nThe class\
+  \ must remember something across calls. Named as a **noun phrase**: *remaining budget*,\
+  \ *active status*, *target character*. A **property** encapsulates information a\
+  \ class exposes to its callers together with the logic required to access or update\
+  \ it. A property may be **typed** — carries a concrete type like `Person`, `int`,\
+  \ or `Car` or can be untyped.\n\n- **`use-property-not-accessor`** — Use `@property`\
+  \ (or the language equivalent) for read-only computed values; do not use `get_`\
+  \ / `set_` method prefixes.\n\n### Operations\n\nThe class must do something on\
+  \ demand. Named as a **verb phrase**: *charge card*, *reserve seat*, *compute total*.\
+  \ An **operation** is an action a class performs or a result it computes on demand.\
+  \ Operations may be entirely stateless — depending only on their parameters — or\
+  \ work with the class's own state.\n\n- **`keep-operations-single-responsibility`**\
+  \ — Each operation has one reason to change — pure calculation or orchestration,\
+  \ not both. An operation doing two things reveals either a missing operation or\
+  \ a missing class.\n- **`separate-concerns`** — Pure calculation separate from I/O\
+  \ and mutation.\n- **`use-clear-operation-parameters`** — Prefer 0–2 parameters.\
+  \ When more configuration is needed, the extra parameters reveal a missing value\
+  \ object — promote them to a new class and pass that instead.\n\n### Interfaces\
+  \ (`I{Class}`) — optional\n\nA separate interface is **not generated by default.**\
+  \ A type's public seam lives directly on `Class` itself unless a distinct `I{Class}`\
+  \ contract is explicitly introduced. Add `I{Class}` only when:\n\n- **the user asks\
+  \ for it** — at **model** or **code** fidelity, or\n- **the module genuinely has\
+  \ multiple layers/implementations behind one seam** that need abstracting apart\
+  \ — e.g. swappable backends, more than one concrete adapter, or a boundary hand-written\
+  \ test fakes must satisfy independently of the production class.\n\nA single concrete\
+  \ implementation with no swapping need does not warrant a separate interface — `Class`\
+  \ itself **is** the seam. Do not add `I{Class}` \"for consistency\" with a sibling\
+  \ module, and do not default to it just because a fidelity table mentions it.\n\n\
+  **Default (no interface):** the public seam is the empty `Class` stub introduced\
+  \ at **model** fidelity (properties/operations as empty contracts directly on `Class`,\
+  \ in its own family file) and filled in at **code** fidelity. The `## code` Phase\
+  \ 1 step of adding `Class(I{Class})` is skipped — there is no interface to implement.\n\
+  \n**Opt-in (interface requested):** the public seam is a separate interface named\
+  \ **`I{Class}`**, introduced at **model** fidelity. Properties and operations on\
+  \ the interface are empty contracts — typed signatures with no body.\n\n| Channel\
+  \ | `I{Class}` form |\n|---------|-----------------|\n| Python | `class IClass(ABC):`\
+  \ with `@abstractmethod` / `@property`+`@abstractmethod` |\n| Java | `public interface\
+  \ IClass` |\n| TypeScript / JavaScript | abstract or empty-method contract equivalent\
+  \ |\n| Markdown | `### **I{Class}**` compact block (public members only) |\n\n**Code**\
+  \ adds `Class` that **extends / implements** `I{Class}` in the **same file**. Public\
+  \ members are filled on `Class`; private members are empty interfaces on `Class`\
+  \ only — never added to `I{Class}`. `I{Class}` stays as the stable seam throughout\
+  \ (including for hand-written test fakes). Existing production types may satisfy\
+  \ `I{Class}` informally without a formal extends clause.\n\nEmpty vs filled is inferred\
+  \ from the member body (`...` / empty vs real implementation) — no extra abstract\
+  \ flag on the model.\n\n\n### Inheritance and subtypes\n\nA **base class** defines\
+  \ the common identity, state, and behavior shared by a family of related things.\
+  \ It owns everything that is true of every member of that family — the responsibilities,\
+  \ rules, and collaborations that do not change regardless of which specific variant\
+  \ you are dealing with.\n\nA **subtype** is a class that specialises the base by\
+  \ adding or overriding behavior that only applies to it. The subtype inherits everything\
+  \ the base defines and records **only the delta** — inherited responsibilities are\
+  \ not repeated in the subtype. Use a subtype when the distinction changes what the\
+  \ thing *does*, not just what data it carries.\n\n#### Liskov Substitution rule\n\
+  \n**Anywhere the base is used, a subtype must work correctly in its place.** If\
+  \ swapping in a subtype breaks or weakens a rule the base guarantees, the subtype\
+  \ is not a true specialisation — it is a different thing that happens to share some\
+  \ behavior.\n\n### Relationships\n\nRelationship kind and cardinality are added\
+  \  here. Three kinds, chosen by lifecycle:\n\n1. **Composition** — owner controls\
+  \ the other's lifecycle. (`Order` composes `OrderLine`.)\n2. **Aggregation** — collector\
+  \ groups members that can outlive it. (`Playlist` aggregates `Song`. A **Repository**\
+  \ aggregates the aggregate it collects — hollow diamond.)\n3. **Association** —\
+  \ both sides are independent; they simply use each other. (`Customer` associates\
+  \ with `SupportAgent`.)\n\nValue objects that merely describe (`Money` on a Transaction,\
+  \ `PortingInfo` on a number) are **association** or a property — not composition\
+  \ diamonds. Composition is for parts whose lifecycle the owner controls.\n\n###\
+  \ Interactions (optional at this fidelity)\n\nAn **interaction** is one class's\
+  \ operation calling another class's operation — who talks to whom, and about what.\
+  \ You **may** name interactions at **model** fidelity to capture collaboration/sequencing\
+  \ intent early; naming none is equally valid — this is optional, not a required\
+  \ artifact for reaching model.\n\nReuse the exact notation from `templates/{tool}-sketch.md`'s\
+  \ **Notation**/**Interaction rules** — do not invent a parallel bullet convention:\n\
+  \nDo **not** invent `- **Interaction:** calls {Other}.{operation}` or use `- **Invariant:**\
+  \ …` as the sketch/model collaboration marker — that is a parallel symbol set. Sketch/`##\
+  \ model` interactions and notes use `->` / `//` only. Language companion's `- **Invariant:**\
+  \ … <!-- L -->` and Spec's indented `Interaction:` / `Invariant:` labels are different\
+  \ surfaces; neither replaces the sketch notation.\n\n- Nest `-> {collaborator}.{operation}`\
+  \ directly under the calling operation — a real call on a held property, peer, or\
+  \ `super`. No parameters, no body, just the receiver and the operation (or `x =\
+  \ {collaborator}.{attribute}` for a field read).\n- Nest `// …` under the same operation\
+  \ for any invariant or sequencing note — including looping/conditionals around the\
+  \ call (e.g. `// once per {item} in {collection}`). Control flow is a `//` note,\
+  \ never folded into the `->` line.\n- **`ce-comments-are-for-invariants-and-sequencing-notes-only`**\
+  \ — `//` is must/never/always/before/after notes only. Do not use `//` for descriptive\
+  \ prose, implementation asides, or cross-references.\n- `-> ClassName` alone (pointing\
+  \ at a type, not an operation) is not an interaction.\n- Naming an interaction here\
+  \ does **not** add a method to `I{Class}` or `Class` — it stays prose (or class-docstring\
+  \ bullet) until **code**.\n- At **code** fidelity, any interaction named here becomes\
+  \ a real `@interaction` abstract stub method on `Class` (not on `I{Class}`) — see\
+  \ `## code` Phase 1 — and is dropped once implemented in Phase 2.\n\n### Invariants\
+  \ (optional at this fidelity)\n\nAn **invariant** is a rule that must hold for every\
+  \ valid instance of the class, regardless of which operation last ran. You **may**\
+  \ state invariants at **model** fidelity in plain English; leaving them unstated\
+  \ is equally valid — this is optional, not a required artifact for reaching model.\n\
+  \n- State a class-level invariant (one that holds regardless of which operation\
+  \ ran, not tied to one call) the same way: a `// …` line, on the class rather than\
+  \ nested under one operation (e.g. `// remaining budget never goes negative`).\n\
+  - An invariant named here is prose only — it does not gate any method body until\
+  \ **code**.\n- At **code** fidelity, any invariant named here gets pinned down as\
+  \ a **comment** (not an enforcement method) on `Class` — see `## code` Phase 1 and\
+  \ Phase 2.\n\n### Class Rules\n\nBefore promoting a term to its own class, check\
+  \ whether it fits as a **property** (see *Properties*), an **instance** (see *Instances*),\
+  \ or a **subtype** (see *Inheritance and subtypes*). Only when none of those three\
+  \ fit does something deserve its own class.\n\n- **`keep-classes-single-responsibility`**\
+  \ — Each class has **one reason to change**.\n- **`hide-inner-details`** — Expose\
+  \ **behavior** through named methods; callers see what the class does, not how it\
+  \ stores or arranges its information.\n- **`eliminate-duplication`** — Repeated\
+  \ logic gets one canonical function.\n- **`prefer-class-operations`** — Factory\
+  \ and lifecycle operations are **static methods on the class**, not module-level\
+  \ exported functions (`ParadiseMobile.initialize(config)`, not `export async function\
+  \ open()`). Private helpers used from one class belong on that class.\n- **`use-explicit-dependencies`**\
+  \ — Pass every collaborator through the **constructor**; never reach for a global\
+  \ or construct a collaborator inside construction.\n- **`use-intention-revealing-names`**\
+  \ — Every name — class, property, operation, parameter — answers \"why does this\
+  \ exist?\" No abbreviations, no single-letter identifiers outside trivial loop indices.\n\
+  - **`use-consistent-naming`** — One word per concept across the model. Pick one\
+  \ verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`).\n\
+  - **`reuse-existing-not-invent-parallel`** — When a class wraps or renders an existing\
+  \ type, name it after that type (`CatalogContextTool` wraps `BaseContextTool`; `CatalogAction`\
+  \ wraps `Action`). Do not invent a parallel domain noun for the same concept — especially\
+  \ not a retired synonym the project has already replaced (Foundry **Practice** →\
+  \ CDD **context tool**). Explicit old→new mapping rows (and overview lines that\
+  \ *state* the replacement) are allowed; live class names, constructor args, and\
+  \ row/registry/toolset labels are not.\n- **`reuse-established-notation-not-a-parallel-one`**\
+  \ — Interactions/invariants at sketch and `## model` reuse `->` / `//`; never invent\
+  \ a bold-bullet parallel (`- **Interaction:**` / `- **Invariant:**` as collaboration\
+  \ markers). Language companion `- **Invariant:** <!-- L -->` and Spec indented labels\
+  \ are different surfaces.\n- **`ce-comments-are-for-invariants-and-sequencing-notes-only`**\
+  \ — `//` comments are must/never/always/before/after notes only. Not narrative,\
+  \ not “transient value object”, not cross-references between atoms.\n- **`do-not-invent-parallel-object-models`**\
+  \ — Do not invent a parallel object model when existing objects already carry the\
+  \ data a new requirement needs. Wrap or extend the live hierarchy instead; do not\
+  \ scrape the same information into a second `*Model` / `*Entry` (or similar) family.\n\
+  \n### Example factories (Fake / Isolated / Production **modes**)\n\nWhen a type\
+  \ is used from **Stories** (helpers / scenario setup), the factory lives in a sibling\
+  \ file, separate from the production family:\n\n| File | Contents |\n|---|---|\n\
+  | `{family}.{ext}` | (optionally **`I{Type}`** +) production **`{Type}`** (+ subtypes\
+  \ / peers) — production family only |\n| `{type}_example_factory.{ext}` | (optionally\
+  \ **`I{Type}ExampleFactory`** +) **`{Type}ExampleFactory`** + `examples[{example_key}]`\
+  \ |\n\n`I{Type}` and `I{Type}ExampleFactory` follow the same **opt-in** rule as\
+  \ any other interface (see § Interfaces) — default to the concrete `{Type}` / `{Type}ExampleFactory`\
+  \ directly; only introduce the interface pair when requested or genuinely needed\
+  \ for abstraction. The two decisions are independent: a domain type can skip its\
+  \ interface while its factory keeps one (or vice versa).\n\nDo **not** put factory\
+  \ wiring in the production family file. Do **not** generate `Fake{Type}` / `Isolated{Type}`\
+  \ / `Production{Type}` subclasses — those are **usage modes**, not an inheritance\
+  \ tree.\n\n**PATTERN** (see also `templates/clean_engineering-sketch.md` and templates):\n\
+  \n```\n\n## evals/do-not-invent-parallel-object-models/faultyAsset.py\n\n\"\"\"\
+  Faulty: parallel CatalogModel + *Entry family filled by a scraper.\"\"\"\n\n\nclass\
+  \ PracticeEntry:\n    def __init__(self, name: str, fidelities: list[\"FidelityEntry\"\
+  ]):\n        self.name = name\n        self.fidelities = fidelities\n\n\nclass FidelityEntry:\n\
+  \    def __init__(self, name: str, actions: list[\"LifecycleActionEntry\"]):\n \
+  \       self.name = name\n        self.actions = actions\n\n\nclass LifecycleActionEntry:\n\
+  \    def __init__(self, name: str, tools: list[str]):\n        self.name = name\n\
+  \        self.tools = tools\n\n\nclass UtilityEntry:\n    def __init__(self, name:\
+  \ str, tools: list[str]):\n        self.name = name\n        self.tools = tools\n\
+  \n\nclass CatalogModel:\n    def __init__(self, practices: list[PracticeEntry],\
+  \ utilities: list[UtilityEntry]):\n        self.practices = practices\n        self.utilities\
+  \ = utilities\n\n\nclass CatalogScraper:\n    def scrape(self, roster) -> CatalogModel:\n\
+  \        practices = [\n            PracticeEntry(\n                name=toolset.__class__.__name__,\n\
+  \                fidelities=[\n                    FidelityEntry(\n            \
+  \            name=fidelity_name,\n                        actions=[\n          \
+  \                  LifecycleActionEntry(name=action_name, tools=[])\n          \
+  \                  for action_name in toolset.actions\n                        ],\n\
+  \                    )\n                    for fidelity_name in toolset.fidelities\n\
+  \                ],\n            )\n            for toolset in roster.context_tools\n\
+  \        ]\n        utilities = [\n            UtilityEntry(name=name, tools=list(utility.tools))\n\
+  \            for name, utility in roster.utilities.items()\n        ]\n        return\
+  \ CatalogModel(practices=practices, utilities=utilities)\n\n\n## evals/do-not-invent-parallel-object-models/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\n# Repaired: thin wrappers over live objects - no parallel *Model/*Entry\
+  \ scrape.\n\n\nclass CatalogTool:\n    def __init__(self, repo_url: str, ref: str):\n\
+  \        self.repo_url = repo_url\n        self.ref = ref\n\n    def generate_catalog(self,\
+  \ tool, owner) -> str:\n        return str(getattr(tool, \"name\", tool))\n\n\n\
+  class CatalogAction:\n    def __init__(self, repo_url: str, ref: str, catalog_tool:\
+  \ CatalogTool):\n        self.catalog_tool = catalog_tool\n\n    def generate_catalog(self,\
+  \ action, owner) -> str:\n        return self.catalog_tool.generate_catalog(action,\
+  \ owner)\n\n\nclass Catalog:\n    def __init__(self, catalog_action: CatalogAction):\n\
+  \        self.catalog_action = catalog_action\n\n    def generate_catalog(self,\
+  \ owner) -> str:\n        return self.catalog_action.generate_catalog(owner.actions[\"\
+  generate\"], owner)\n\n\n## evals/eliminate-duplication/faultyAsset.py\n\ndef subtotal(line_items):\n\
+  \    total = 0\n    for item in line_items:\n        total += item.extended_price\n\
+  \    return total\n\ndef backup_subtotal(line_items):\n    total = 0\n    for item\
+  \ in line_items:\n        total += item.extended_price\n    return total\n\n\n##\
+  \ evals/eliminate-duplication/repairedAsset.py\n\n\"\"\"\n# @toolset-manifest python\
+  \ -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef subtotal(line_items):\n    return sum(item.extended_price for item in\
+  \ line_items)\n\n\n## evals/enforce-encapsulation/faultyAsset.py\n\nclass Cart:\n\
+  \    def __init__(self, owner):\n        self.owner = owner\n\n\n## evals/enforce-encapsulation/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\nclass Cart:\n    def __init__(self, owner):\n        self._owner = owner\n\
+  \n    @property\n    def owner(self):\n        return self._owner\n\n\n## evals/keep-classes-single-responsibility/faultyAsset.py\n\
+  \nclass CartTotal:\n    def subtotal(self, line_items):\n        return sum(item.extended_price\
+  \ for item in line_items)\n\n    def write_audit(self, path, value):\n        with\
+  \ open(path, \"w\") as audit:\n            audit.write(str(value))\n\n    def calculate_average(self,\
+  \ values):\n        return sum(values) / len(values)\n\n\n## evals/keep-classes-single-responsibility/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\nclass CartTotal:\n    def subtotal(self, line_items):\n        return sum(item.extended_price\
+  \ for item in line_items)\n\n\n## evals/keep-functions-single-responsibility/faultyAsset.py\n\
+  \ndef subtotal(line_items):\n    print(\"calculating subtotal\")\n    total = line_items[0].extended_price\
+  \ + line_items[1].extended_price\n    return total\n\n\n## evals/keep-functions-single-responsibility/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef subtotal(line_items):\n    return sum(item.extended_price for item in\
+  \ line_items)\n\n\n## evals/keep-operations-small-focused/faultyAsset.py\n\ndef\
+  \ huge():\n    a = 1\n    b = 2\n    c = 3\n    d = 4\n    e = 5\n    f = 6\n  \
+  \  g = 7\n    h = 8\n    i = 9\n    j = 10\n    k = 11\n    l = 12\n    m = 13\n\
+  \    n = 14\n    o = 15\n    p = 16\n    q = 17\n    r = 18\n    s = 19\n    t =\
+  \ 20\n    u = 21\n    return a + b + c\n\n\n## evals/keep-operations-small-focused/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef small():\n    return 1\n\n\n## evals/lots-of-problesm/domain-model copy.drawio\n\
+  \n<mxfile host=\"65bd71144e\">\n    <diagram name=\"Customer — abstract base\" id=\"\
+  page-customer-abstract-base\">\n        <mxGraphModel dx=\"1257\" dy=\"897\" grid=\"\
+  1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"\
+  1\" page=\"1\" pageScale=\"1\" pageWidth=\"1654\" pageHeight=\"1169\" math=\"0\"\
+  \ shadow=\"0\">\n            <root>\n                <mxCell id=\"0\"/>\n      \
+  \          <mxCell id=\"1\" parent=\"0\"/>\n            </root>\n        </mxGraphModel>\n\
+  \    </diagram>\n    <diagram name=\"Plan — catalog\" id=\"page-plan-catalog\">\n\
+  \        <mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"\
+  1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"\
+  1\" pageWidth=\"1654\" pageHeight=\"1169\" math=\"0\" shadow=\"0\">\n          \
+  \  <root>\n                <mxCell id=\"0\"/>\n                <mxCell id=\"1\"\
+  \ parent=\"0\"/>\n                <mxCell id=\"accountcredentials\" value=\"&lt;p\
+  \ style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Customer»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentials&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ email: string&lt;br/&gt;+ password: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"320\" y=\"794\" width=\"260\" height=\"110\" as=\"geometry\"/>\n         \
+  \       </mxCell>\n                <mxCell id=\"plan-aggregate-root-entity\" value=\"\
+  &lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Plan\
+  \ &amp;lt;&amp;lt;Aggregate Root&amp;gt;&amp;gt; &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ id: string&lt;br/&gt;+ name: string&lt;br/&gt;+ description: string&lt;br/&gt;+\
+  \ price: number&lt;br/&gt;+ fees: number&lt;br/&gt;+ totalPrice: number&lt;br/&gt;+\
+  \ features: Feature[]&lt;br/&gt;+ isSellable: boolean&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"40\"\
+  \ width=\"260\" height=\"174\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"feature\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Feature&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ text: string[]&lt;br/&gt;+ icon: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"324\" y=\"40\"\
+  \ width=\"260\" height=\"80\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"planfilter\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PlanFilter&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ isSellable: boolean&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"566\"\
+  \ width=\"260\" height=\"80\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"selectedplan\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SelectedPlan&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ plan: Plan&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"674\"\
+  \ width=\"260\" height=\"80\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"collection-type\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Collection\
+  \ &amp;lt;&amp;lt;type&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ get(key: string): T | undefined&lt;br/&gt;+ has(key: string): boolean&lt;br/&gt;+\
+  \ keys(): string[]&lt;br/&gt;+ values(): T[]&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"428\"\
+  \ width=\"260\" height=\"110\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"catalog-aggregate-root\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Catalog\
+  \ &amp;lt;&amp;lt;Aggregate Root&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ seed(items: Plan[]): void&lt;br/&gt;+ select(plan: Plan): AccountCredentials&lt;br/&gt;+\
+  \ clearSelection(): void&lt;br/&gt;+ getPlans(): Collection&amp;lt;Plan&amp;gt;&lt;br/&gt;+\
+  \ getAvailablePlans(): Collection&amp;lt;Plan&amp;gt;&lt;br/&gt;+ findAvailable(filter:\
+  \ PlanFilter): Plan[]&lt;br/&gt;+ findById(planId: string): Plan&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"242\"\
+  \ width=\"260\" height=\"158\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"plan-aggregate-root-entity\" target=\"feature\" parent=\"\
+  1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"/>\n       \
+  \         </mxCell>\n                <mxCell id=\"3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"catalog-aggregate-root\" target=\"collection-type\" parent=\"\
+  1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"/>\n       \
+  \         </mxCell>\n                <mxCell id=\"4\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;entryX=0.85;entryY=1.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"catalog-aggregate-root\" target=\"plan-aggregate-root-entity\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  />\n                </mxCell>\n                <mxCell id=\"5\" value=\"\" style=\"\
+  edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"catalog-aggregate-root\" target=\"planfilter\" parent=\"1\"\
+  >\n                    <mxGeometry relative=\"1\" as=\"geometry\">\n           \
+  \             <Array as=\"points\">\n                            <mxPoint x=\"261\"\
+  \ y=\"410\"/>\n                            <mxPoint x=\"320\" y=\"410\"/>\n    \
+  \                        <mxPoint x=\"320\" y=\"544\"/>\n                      \
+  \      <mxPoint x=\"170\" y=\"544\"/>\n                        </Array>\n      \
+  \              </mxGeometry>\n                </mxCell>\n                <mxCell\
+  \ id=\"6\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;entryX=0.15;entryY=1.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"selectedplan\" target=\"plan-aggregate-root-entity\" parent=\"\
+  1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\">\n        \
+  \                <Array as=\"points\">\n                            <mxPoint x=\"\
+  170\" y=\"664\"/>\n                            <mxPoint x=\"604\" y=\"664\"/>\n\
+  \                            <mxPoint x=\"604\" y=\"224\"/>\n                  \
+  \          <mxPoint x=\"79\" y=\"224\"/>\n                        </Array>\n   \
+  \                 </mxGeometry>\n                </mxCell>\n                <mxCell\
+  \ id=\"7\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"catalog-aggregate-root\" target=\"accountcredentials\" parent=\"\
+  1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\">\n        \
+  \                <Array as=\"points\">\n                            <mxPoint x=\"\
+  79\" y=\"410\"/>\n                            <mxPoint x=\"20\" y=\"410\"/>\n  \
+  \                          <mxPoint x=\"20\" y=\"784\"/>\n                     \
+  \       <mxPoint x=\"450\" y=\"784\"/>\n                        </Array>\n     \
+  \               </mxGeometry>\n                </mxCell>\n            </root>\n\
+  \        </mxGraphModel>\n    </diagram>\n    <diagram name=\"Prospect — onboarding\"\
+  \ id=\"page-prospect-onboarding\">\n        <mxGraphModel dx=\"1200\" dy=\"800\"\
+  \ grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"\
+  1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"1654\" pageHeight=\"1169\"\
+  \ math=\"0\" shadow=\"0\">\n            <root>\n                <mxCell id=\"0\"\
+  />\n                <mxCell id=\"1\" parent=\"0\"/>\n                <mxCell id=\"\
+  accountcredentials\" value=\"&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Customer»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentials&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ email: string&lt;br/&gt;+ password: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"1440\" y=\"376\" width=\"260\" height=\"110\" as=\"geometry\"/>\n        \
+  \        </mxCell>\n                <mxCell id=\"address-entity\" value=\"&lt;p\
+  \ style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Customer»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Address\
+  \ &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ street: string&lt;br/&gt;+\
+  \ complement: string&lt;br/&gt;+ city: string&lt;br/&gt;+ parish: string&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"320\" y=\"1808\" width=\"260\" height=\"142\" as=\"geometry\"/>\n        \
+  \        </mxCell>\n                <mxCell id=\"customer-abstract-entity\" value=\"\
+  &lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Customer»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Customer\
+  \ &amp;lt;&amp;lt;Abstract&amp;gt;&amp;gt; &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ id: string&lt;br/&gt;+ identity: Identity&lt;br/&gt;+ address: Address&lt;br/&gt;+\
+  \ kycVerified: boolean&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"40\" y=\"40\" width=\"260\" height=\"142\" as=\"geometry\"/>\n           \
+  \     </mxCell>\n                <mxCell id=\"identity-entity\" value=\"&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Customer»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Identity\
+  \ &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ email: string&lt;br/&gt;+\
+  \ name: string&lt;br/&gt;+ lastName: string&lt;br/&gt;+ fullName: string&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"320\" y=\"1988\" width=\"260\" height=\"142\" as=\"geometry\"/>\n        \
+  \        </mxCell>\n                <mxCell id=\"plan-aggregate-root-entity\" value=\"\
+  &lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Plan»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Plan\
+  \ &amp;lt;&amp;lt;Aggregate Root&amp;gt;&amp;gt; &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ id: string&lt;br/&gt;+ name: string&lt;br/&gt;+ description: string&lt;br/&gt;+\
+  \ price: number&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"600\" y=\"798\" width=\"260\" height=\"142\" as=\"geometry\"/>\n         \
+  \       </mxCell>\n                <mxCell id=\"prospect-aggregate-root-entity-extends-customer\"\
+  \ value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Prospect\
+  \ &amp;lt;&amp;lt;Aggregate Root&amp;gt;&amp;gt; &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ billing: null | { id: string }&lt;br/&gt;+ cart: Cart&lt;br/&gt;+ verification:\
+  \ IdentityVerification | null&lt;br/&gt;+ onboardingStep: OnboardingStep&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ isAtOnboardingStep(step: OnboardingStep): boolean&lt;br/&gt;+ verifyIdentity():\
+  \ IdentityVerification&lt;br/&gt;+ submitKycProfile(profile: KycProfile): void&lt;br/&gt;+\
+  \ getVerificationFailure(): string | null&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"238\"\
+  \ width=\"260\" height=\"174\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"prospectrepository-repository\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ProspectRepository\
+  \ &amp;lt;&amp;lt;Repository&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ prospect: Prospect&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ load(accountCredentials: AccountCredentials): Prospect&lt;br/&gt;+ seed(fixture:\
+  \ ProspectSeed): Prospect&lt;br/&gt;+ save(prospect: Prospect): void&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"1160\" y=\"238\"\
+  \ width=\"260\" height=\"110\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"onboardingstep-type\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;OnboardingStep\
+  \ &amp;lt;&amp;lt;type&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"1576\"\
+  \ width=\"260\" height=\"80\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"cart-entity\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Cart\
+  \ &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+\
+  \ bundle: Plan | null&lt;br/&gt;+ msisdn: string&lt;br/&gt;+ simType: SimType&lt;br/&gt;+\
+  \ iccid: string&lt;br/&gt;+ portingInfo: PortingInfo | null&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ getAvailableNumbers(): string[]&lt;br/&gt;+ isContinueEnabled(): boolean&lt;br/&gt;+\
+  \ pickNumber(msisdn: string): void&lt;br/&gt;+ portNumber(info: PortingInfo): void&lt;br/&gt;+\
+  \ selectPlan(plan: Plan): void&lt;br/&gt;+ selectNumber(msisdn: string): void&lt;br/&gt;+\
+  \ selectSim(type: SimType, iccid?: string): void&lt;br/&gt;+ attemptSelectPhysicalSim(iccid:\
+  \ string): void&lt;br/&gt;+ getIccidValidationMessage(): string | null&lt;br/&gt;+\
+  \ checkout(): Checkout&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"324\" y=\"238\"\
+  \ width=\"260\" height=\"302\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"portinginfo\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PortingInfo&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ donorOperator: string&lt;br/&gt;+ accountNumber: string&lt;br/&gt;+ portNumber:\
+  \ string&lt;br/&gt;+ userType: string&lt;br/&gt;+ accountType: string&lt;br/&gt;+\
+  \ device: string&lt;br/&gt;+ planSelected: string&lt;br/&gt;+ verified: boolean&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"608\" y=\"238\"\
+  \ width=\"260\" height=\"174\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"checkout\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Checkout&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ getReview(): CheckoutReview&lt;br/&gt;+ seedPayment(options: { status?: 'completed'\
+  \ | 'failed'; payUpFront?: boolean; orderSuccess?: boolean }): void&lt;br/&gt;+\
+  \ pay(): Order&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"1192\"\
+  \ width=\"260\" height=\"94\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"checkoutreview\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CheckoutReview&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ planName: string&lt;br/&gt;+ msisdn: string&lt;br/&gt;+ simType: string&lt;br/&gt;+\
+  \ identityName: string&lt;br/&gt;+ voucherCredit: string | null&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"1314\"\
+  \ width=\"260\" height=\"126\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"order-entity\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Order\
+  \ &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+\
+  \ customer: Customer&lt;br/&gt;+ number: string&lt;br/&gt;+ plan: Plan&lt;br/&gt;+\
+  \ msisdn: string&lt;br/&gt;+ portingInfo: PortingInfo | null&lt;br/&gt;+ simType:\
+  \ string&lt;br/&gt;+ iccid: string&lt;br/&gt;+ identity: Identity&lt;br/&gt;+ voucher:\
+  \ string&lt;br/&gt;+ payUpFront: boolean&lt;br/&gt;+ status: string&lt;br/&gt;+\
+  \ verified: boolean&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ getHeadline(): string&lt;br/&gt;+ getSummary(): string | null&lt;br/&gt;+ getSimInfo():\
+  \ string | null&lt;br/&gt;+ getInvoiceInfo(): string | null&lt;br/&gt;+ getOrderError():\
+  \ string | null&lt;br/&gt;+ getPaymentError(): string | null&lt;br/&gt;+ getContactUsHref():\
+  \ string | null&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"798\"\
+  \ width=\"260\" height=\"366\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"kycprofile\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;KycProfile&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ identity: Identity&lt;br/&gt;+ address: Address&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"1468\"\
+  \ width=\"260\" height=\"80\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"profilekyc\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ProfileKyc&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ submitProfile(data: ProfileFormData): void&lt;br/&gt;+ getVerificationFailure():\
+  \ string | null&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"1684\"\
+  \ width=\"260\" height=\"80\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"identityverification\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;IdentityVerification&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ verified: boolean&lt;br/&gt;+ inquiryId: string&lt;br/&gt;+ fields: Record&amp;lt;string,\
+  \ unknown&amp;gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"568\"\
+  \ width=\"260\" height=\"94\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"identityverificationservice-domain-service\" value=\"\
+  &lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;IdentityVerificationService\
+  \ &amp;lt;&amp;lt;Domain Service&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ seedOutcome(options: { verified: boolean; inquiryId?: string }): void&lt;br/&gt;+\
+  \ waitForCompletion(): IdentityVerification&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"690\"\
+  \ width=\"260\" height=\"80\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"cart-entity\" target=\"portinginfo\" parent=\"1\">\n     \
+  \               <mxGeometry relative=\"1\" as=\"geometry\"/>\n                </mxCell>\n\
+  \                <mxCell id=\"3\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"prospect-aggregate-root-entity-extends-customer\" target=\"\
+  cart-entity\" parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"\
+  geometry\"/>\n                </mxCell>\n                <mxCell id=\"4\" value=\"\
+  \" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=0;startSize=14;exitX=0.0;exitY=0.5;exitDx=0;exitDy=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"prospectrepository-repository\" target=\"prospect-aggregate-root-entity-extends-customer\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  >\n                        <Array as=\"points\">\n                            <mxPoint\
+  \ x=\"1160\" y=\"283\"/>\n                            <mxPoint x=\"24\" y=\"283\"\
+  />\n                            <mxPoint x=\"24\" y=\"335\"/>\n                \
+  \            <mxPoint x=\"300\" y=\"335\"/>\n                        </Array>\n\
+  \                    </mxGeometry>\n                </mxCell>\n                <mxCell\
+  \ id=\"5\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"identityverificationservice-domain-service\" target=\"identityverification\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  />\n                </mxCell>\n                <mxCell id=\"6\" value=\"\" style=\"\
+  edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"checkout\" target=\"checkoutreview\" parent=\"1\">\n     \
+  \               <mxGeometry relative=\"1\" as=\"geometry\"/>\n                </mxCell>\n\
+  \                <mxCell id=\"7\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=block;endSize=16;endFill=0;html=1;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;entryX=0.85;entryY=1.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"prospect-aggregate-root-entity-extends-customer\" target=\"\
+  customer-abstract-entity\" parent=\"1\">\n                    <mxGeometry relative=\"\
+  1\" as=\"geometry\"/>\n                </mxCell>\n                <mxCell id=\"\
+  8\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"checkout\" target=\"order-entity\" parent=\"1\">\n       \
+  \             <mxGeometry relative=\"1\" as=\"geometry\"/>\n                </mxCell>\n\
+  \                <mxCell id=\"9\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"prospect-aggregate-root-entity-extends-customer\" target=\"\
+  identityverification\" parent=\"1\">\n                    <mxGeometry relative=\"\
+  1\" as=\"geometry\"/>\n                </mxCell>\n                <mxCell id=\"\
+  10\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"prospectrepository-repository\" target=\"accountcredentials\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  />\n                </mxCell>\n                <mxCell id=\"11\" value=\"\" style=\"\
+  edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"kycprofile\" target=\"address-entity\" parent=\"1\">\n   \
+  \                 <mxGeometry relative=\"1\" as=\"geometry\">\n                \
+  \        <Array as=\"points\">\n                            <mxPoint x=\"261\" y=\"\
+  1558\"/>\n                            <mxPoint x=\"320\" y=\"1558\"/>\n        \
+  \                    <mxPoint x=\"320\" y=\"1798\"/>\n                         \
+  \   <mxPoint x=\"450\" y=\"1798\"/>\n                        </Array>\n        \
+  \            </mxGeometry>\n                </mxCell>\n                <mxCell id=\"\
+  12\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"order-entity\" target=\"plan-aggregate-root-entity\" parent=\"\
+  1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"/>\n       \
+  \         </mxCell>\n                <mxCell id=\"13\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"cart-entity\" target=\"plan-aggregate-root-entity\" parent=\"\
+  1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"/>\n       \
+  \         </mxCell>\n                <mxCell id=\"14\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.85;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"kycprofile\" target=\"identity-entity\" parent=\"1\">\n  \
+  \                  <mxGeometry relative=\"1\" as=\"geometry\">\n               \
+  \         <Array as=\"points\">\n                            <mxPoint x=\"79\" y=\"\
+  1558\"/>\n                            <mxPoint x=\"20\" y=\"1558\"/>\n         \
+  \                   <mxPoint x=\"20\" y=\"1978\"/>\n                           \
+  \ <mxPoint x=\"541\" y=\"1978\"/>\n                        </Array>\n          \
+  \          </mxGeometry>\n                </mxCell>\n                <mxCell id=\"\
+  15\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=0.0;exitDx=0;exitDy=0;entryX=0.15;entryY=1.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"order-entity\" target=\"customer-abstract-entity\" parent=\"\
+  1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\">\n        \
+  \                <Array as=\"points\">\n                            <mxPoint x=\"\
+  79\" y=\"788\"/>\n                            <mxPoint x=\"-20\" y=\"788\"/>\n \
+  \                           <mxPoint x=\"-20\" y=\"192\"/>\n                   \
+  \         <mxPoint x=\"79\" y=\"192\"/>\n                        </Array>\n    \
+  \                </mxGeometry>\n                </mxCell>\n                <mxCell\
+  \ id=\"16\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"cart-entity\" target=\"checkout\" parent=\"1\">\n        \
+  \            <mxGeometry relative=\"1\" as=\"geometry\">\n                     \
+  \   <Array as=\"points\">\n                            <mxPoint x=\"545\" y=\"550\"\
+  />\n                            <mxPoint x=\"2000\" y=\"550\"/>\n              \
+  \              <mxPoint x=\"2000\" y=\"1170\"/>\n                            <mxPoint\
+  \ x=\"170\" y=\"1170\"/>\n                        </Array>\n                   \
+  \ </mxGeometry>\n                </mxCell>\n                <mxCell id=\"17\" value=\"\
+  \" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"prospect-aggregate-root-entity-extends-customer\" target=\"\
+  kycprofile\" parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"\
+  geometry\">\n                        <Array as=\"points\">\n                   \
+  \         <mxPoint x=\"261\" y=\"422\"/>\n                            <mxPoint x=\"\
+  -260\" y=\"422\"/>\n                            <mxPoint x=\"-260\" y=\"1446\"/>\n\
+  \                            <mxPoint x=\"170\" y=\"1446\"/>\n                 \
+  \       </Array>\n                    </mxGeometry>\n                </mxCell>\n\
+  \                <mxCell id=\"18\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=0.0;exitDx=0;exitDy=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"order-entity\" target=\"portinginfo\" parent=\"1\">\n    \
+  \                <mxGeometry relative=\"1\" as=\"geometry\">\n                 \
+  \       <Array as=\"points\">\n                            <mxPoint x=\"261\" y=\"\
+  788\"/>\n                            <mxPoint x=\"2000\" y=\"788\"/>\n         \
+  \                   <mxPoint x=\"2000\" y=\"614\"/>\n                          \
+  \  <mxPoint x=\"738\" y=\"614\"/>\n                        </Array>\n          \
+  \          </mxGeometry>\n                </mxCell>\n                <mxCell id=\"\
+  19\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"prospect-aggregate-root-entity-extends-customer\" target=\"\
+  onboardingstep-type\" parent=\"1\">\n                    <mxGeometry relative=\"\
+  1\" as=\"geometry\">\n                        <Array as=\"points\">\n          \
+  \                  <mxPoint x=\"170\" y=\"422\"/>\n                            <mxPoint\
+  \ x=\"-260\" y=\"422\"/>\n                            <mxPoint x=\"-260\" y=\"1566\"\
+  />\n                            <mxPoint x=\"170\" y=\"1566\"/>\n              \
+  \          </Array>\n                    </mxGeometry>\n                </mxCell>\n\
+  \                <mxCell id=\"20\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.15;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"order-entity\" target=\"identity-entity\" parent=\"1\">\n\
+  \                    <mxGeometry relative=\"1\" as=\"geometry\">\n             \
+  \           <Array as=\"points\">\n                            <mxPoint x=\"170\"\
+  \ y=\"1174\"/>\n                            <mxPoint x=\"1160\" y=\"1174\"/>\n \
+  \                           <mxPoint x=\"1160\" y=\"1954\"/>\n                 \
+  \           <mxPoint x=\"359\" y=\"1954\"/>\n                        </Array>\n\
+  \                    </mxGeometry>\n                </mxCell>\n            </root>\n\
+  \        </mxGraphModel>\n    </diagram>\n    <diagram name=\"Subscriber — selfcare\"\
+  \ id=\"page-subscriber-selfcare\">\n        <mxGraphModel dx=\"1200\" dy=\"800\"\
+  \ grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"\
+  1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"1654\" pageHeight=\"1169\"\
+  \ math=\"0\" shadow=\"0\">\n            <root>\n                <mxCell id=\"0\"\
+  />\n                <mxCell id=\"1\" parent=\"0\"/>\n                <mxCell id=\"\
+  customer-abstract-entity\" value=\"&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Customer»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Customer\
+  \ &amp;lt;&amp;lt;Abstract&amp;gt;&amp;gt; &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ id: string&lt;br/&gt;+ identity: Identity&lt;br/&gt;+ address: Address&lt;br/&gt;+\
+  \ kycVerified: boolean&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"40\" y=\"40\" width=\"260\" height=\"142\" as=\"geometry\"/>\n           \
+  \     </mxCell>\n                <mxCell id=\"identity-entity\" value=\"&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Customer»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Identity\
+  \ &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ email: string&lt;br/&gt;+\
+  \ name: string&lt;br/&gt;+ lastName: string&lt;br/&gt;+ fullName: string&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"320\" y=\"1598\" width=\"260\" height=\"142\" as=\"geometry\"/>\n        \
+  \        </mxCell>\n                <mxCell id=\"invoice-entity\" value=\"&lt;p\
+  \ style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Billing»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Invoice\
+  \ &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ invoiceId: string&lt;br/&gt;+\
+  \ billDate: string&lt;br/&gt;+ dueDate: string&lt;br/&gt;+ dueAmount: string&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"600\" y=\"918\" width=\"260\" height=\"142\" as=\"geometry\"/>\n         \
+  \       </mxCell>\n                <mxCell id=\"paymentmethod-entity\" value=\"\
+  &lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Billing»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;PaymentMethod\
+  \ &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+\
+  \ status: string&lt;br/&gt;+ brand: string&lt;br/&gt;+ lastFourDigits: string&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"320\" y=\"1768\" width=\"260\" height=\"142\" as=\"geometry\"/>\n        \
+  \        </mxCell>\n                <mxCell id=\"plan-aggregate-root-entity\" value=\"\
+  &lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Plan»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Plan\
+  \ &amp;lt;&amp;lt;Aggregate Root&amp;gt;&amp;gt; &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ id: string&lt;br/&gt;+ name: string&lt;br/&gt;+ description: string&lt;br/&gt;+\
+  \ price: number&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"600\" y=\"1136\" width=\"260\" height=\"142\" as=\"geometry\"/>\n        \
+  \        </mxCell>\n                <mxCell id=\"portinginfo\" value=\"&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Prospect»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;PortingInfo&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ donorOperator: string&lt;br/&gt;+ accountNumber: string&lt;br/&gt;+ portNumber:\
+  \ string&lt;br/&gt;+ userType: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"600\" y=\"1428\" width=\"260\" height=\"142\" as=\"geometry\"/>\n        \
+  \        </mxCell>\n                <mxCell id=\"subscriber-aggregate-root-entity-extends-customer\"\
+  \ value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Subscriber\
+  \ &amp;lt;&amp;lt;Aggregate Root&amp;gt;&amp;gt; &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ paymentMethod: PaymentMethod | null&lt;br/&gt;+ subscriptions: Subscription[]&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ getInvoices(): Invoice[]&lt;br/&gt;+ viewDashboard(): Dashboard&lt;br/&gt;+ viewSupport():\
+  \ Support&lt;br/&gt;+ openFeedback(): FeedbackForm&lt;br/&gt;+ viewProfile(): Identity&lt;br/&gt;+\
+  \ savePreferredName(preferredName: string): Identity&lt;br/&gt;&lt;/p&gt;\" style=\"\
+  verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"238\"\
+  \ width=\"260\" height=\"174\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"subscriberrepository-repository\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SubscriberRepository\
+  \ &amp;lt;&amp;lt;Repository&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ subscriber:\
+  \ Subscriber&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ seed(subscriber: Subscriber, extras?: SubscriberSeedExtras): Subscriber&lt;br/&gt;+\
+  \ load(): Subscriber&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"880\" y=\"238\"\
+  \ width=\"260\" height=\"94\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"subscription-entity\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Subscription\
+  \ &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+\
+  \ number: string&lt;br/&gt;+ simtype: string&lt;br/&gt;+ status: string&lt;br/&gt;+\
+  \ bundle: SubscriptionBundle&lt;br/&gt;+ usage: { local: { used: number; quota:\
+  \ number } }&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ changePlan(plan: Plan): PlanChangeConfirmation&lt;br/&gt;+ viewPortability():\
+  \ Portability&lt;br/&gt;+ portNumber(info: PortingInfo): Portability&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"324\" y=\"238\"\
+  \ width=\"260\" height=\"190\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"subscriptionbundle-entity\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SubscriptionBundle\
+  \ &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+\
+  \ name: string&lt;br/&gt;+ description: string&lt;br/&gt;+ fees: number&lt;br/&gt;+\
+  \ price: number&lt;br/&gt;+ totalPrice: number&lt;br/&gt;+ features: SubscriptionFeature[]&lt;br/&gt;+\
+  \ plan: Plan | null&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"320\" y=\"456\"\
+  \ width=\"260\" height=\"174\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"subscriptionfeature\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SubscriptionFeature&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ text: string[]&lt;br/&gt;+ icon: string&lt;br/&gt;+ disabled: boolean&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"604\" y=\"456\"\
+  \ width=\"260\" height=\"94\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"planchangeconfirmation\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PlanChangeConfirmation&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ acceptTerms(): void&lt;br/&gt;+ confirm(): void&lt;br/&gt;+ goBack(): void&lt;br/&gt;+\
+  \ isConfirmEnabled(): boolean&lt;br/&gt;+ areTermsAccepted(): boolean&lt;br/&gt;+\
+  \ getCatalogHeading(): string | null&lt;br/&gt;+ getSummary(): string | null&lt;br/&gt;+\
+  \ getInfoMessage(matcher?: RegExp): string | null&lt;br/&gt;+ getError(): string\
+  \ | null&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"1150\"\
+  \ width=\"260\" height=\"190\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"portability\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Portability&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ getInfoHeading(): string | null&lt;br/&gt;+ continueToForm(): PortabilityForm&lt;br/&gt;+\
+  \ goBackToServices(): string | null&lt;br/&gt;+ getError(): string | null&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"658\"\
+  \ width=\"260\" height=\"110\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"portabilityform\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PortabilityForm&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ getHeading(): string | null&lt;br/&gt;+ isContinueEnabled(): boolean&lt;br/&gt;+\
+  \ enterPortNumber(value: string): void&lt;br/&gt;+ getPortNumberValidationMessage():\
+  \ string | null&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"324\" y=\"658\"\
+  \ width=\"260\" height=\"110\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"dashboard\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Dashboard&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ usedLabel: string&lt;br/&gt;+ quotaLabel: string&lt;br/&gt;+ latestInvoiceAmount:\
+  \ string&lt;br/&gt;+ billsHeading: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"796\"\
+  \ width=\"260\" height=\"110\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"support\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Support&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ helpPrompt: string&lt;br/&gt;+ feedbackPrompt: string&lt;br/&gt;+ knowledgeBasePrompt:\
+  \ string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"1368\"\
+  \ width=\"260\" height=\"94\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"feedbackform\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FeedbackForm&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ heading: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ submit(subject: string, message: string): FeedbackReceipt&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"934\"\
+  \ width=\"260\" height=\"80\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"feedbackreceipt\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FeedbackReceipt&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ message: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"1042\"\
+  \ width=\"260\" height=\"80\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscription-entity\" target=\"subscriptionbundle-entity\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  />\n                </mxCell>\n                <mxCell id=\"3\" value=\"\" style=\"\
+  edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"portability\" target=\"portabilityform\" parent=\"1\">\n \
+  \                   <mxGeometry relative=\"1\" as=\"geometry\"/>\n             \
+  \   </mxCell>\n                <mxCell id=\"4\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=0;startSize=14;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscriber-aggregate-root-entity-extends-customer\" target=\"\
+  subscription-entity\" parent=\"1\">\n                    <mxGeometry relative=\"\
+  1\" as=\"geometry\"/>\n                </mxCell>\n                <mxCell id=\"\
+  5\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=1;startSize=14;exitX=1.0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscriptionbundle-entity\" target=\"subscriptionfeature\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  />\n                </mxCell>\n                <mxCell id=\"6\" value=\"\" style=\"\
+  edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=none;html=1;startArrow=diamondThin;startFill=0;startSize=14;exitX=0.0;exitY=0.5;exitDx=0;exitDy=0;entryX=1.0;entryY=0.5;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscriberrepository-repository\" target=\"subscriber-aggregate-root-entity-extends-customer\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  >\n                        <Array as=\"points\">\n                            <mxPoint\
+  \ x=\"868\" y=\"285\"/>\n                            <mxPoint x=\"868\" y=\"225\"\
+  />\n                            <mxPoint x=\"304\" y=\"225\"/>\n               \
+  \             <mxPoint x=\"312\" y=\"225\"/>\n                            <mxPoint\
+  \ x=\"312\" y=\"325\"/>\n                        </Array>\n                    </mxGeometry>\n\
+  \                </mxCell>\n                <mxCell id=\"7\" value=\"\" style=\"\
+  edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"feedbackform\" target=\"feedbackreceipt\" parent=\"1\">\n\
+  \                    <mxGeometry relative=\"1\" as=\"geometry\"/>\n            \
+  \    </mxCell>\n                <mxCell id=\"8\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=block;endSize=16;endFill=0;html=1;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscriber-aggregate-root-entity-extends-customer\" target=\"\
+  customer-abstract-entity\" parent=\"1\">\n                    <mxGeometry relative=\"\
+  1\" as=\"geometry\"/>\n                </mxCell>\n                <mxCell id=\"\
+  9\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.43;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscriber-aggregate-root-entity-extends-customer\" target=\"\
+  dashboard\" parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"\
+  geometry\">\n                        <Array as=\"points\">\n                   \
+  \         <mxPoint x=\"152\" y=\"422\"/>\n                            <mxPoint x=\"\
+  20\" y=\"422\"/>\n                            <mxPoint x=\"20\" y=\"786\"/>\n  \
+  \                          <mxPoint x=\"170\" y=\"786\"/>\n                    \
+  \    </Array>\n                    </mxGeometry>\n                </mxCell>\n  \
+  \              <mxCell id=\"10\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.71;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscriber-aggregate-root-entity-extends-customer\" target=\"\
+  feedbackform\" parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"\
+  geometry\">\n                        <Array as=\"points\">\n                   \
+  \         <mxPoint x=\"225\" y=\"422\"/>\n                            <mxPoint x=\"\
+  -260\" y=\"422\"/>\n                            <mxPoint x=\"-260\" y=\"924\"/>\n\
+  \                            <mxPoint x=\"170\" y=\"924\"/>\n                  \
+  \      </Array>\n                    </mxGeometry>\n                </mxCell>\n\
+  \                <mxCell id=\"11\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.675;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscription-entity\" target=\"portability\" parent=\"1\"\
+  >\n                    <mxGeometry relative=\"1\" as=\"geometry\">\n           \
+  \             <Array as=\"points\">\n                            <mxPoint x=\"500\"\
+  \ y=\"438\"/>\n                            <mxPoint x=\"1160\" y=\"438\"/>\n   \
+  \                         <mxPoint x=\"1160\" y=\"636\"/>\n                    \
+  \        <mxPoint x=\"170\" y=\"636\"/>\n                        </Array>\n    \
+  \                </mxGeometry>\n                </mxCell>\n                <mxCell\
+  \ id=\"12\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.85;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscriptionbundle-entity\" target=\"plan-aggregate-root-entity\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  >\n                        <Array as=\"points\">\n                            <mxPoint\
+  \ x=\"450\" y=\"640\"/>\n                            <mxPoint x=\"1164\" y=\"640\"\
+  />\n                            <mxPoint x=\"1164\" y=\"1126\"/>\n             \
+  \               <mxPoint x=\"821\" y=\"1126\"/>\n                        </Array>\n\
+  \                    </mxGeometry>\n                </mxCell>\n                <mxCell\
+  \ id=\"13\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.57;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscriber-aggregate-root-entity-extends-customer\" target=\"\
+  support\" parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  >\n                        <Array as=\"points\">\n                            <mxPoint\
+  \ x=\"188\" y=\"422\"/>\n                            <mxPoint x=\"-260\" y=\"422\"\
+  />\n                            <mxPoint x=\"-260\" y=\"1358\"/>\n             \
+  \               <mxPoint x=\"170\" y=\"1358\"/>\n                        </Array>\n\
+  \                    </mxGeometry>\n                </mxCell>\n                <mxCell\
+  \ id=\"14\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.15;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscription-entity\" target=\"plan-aggregate-root-entity\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  >\n                        <Array as=\"points\">\n                            <mxPoint\
+  \ x=\"454\" y=\"438\"/>\n                            <mxPoint x=\"1440\" y=\"438\"\
+  />\n                            <mxPoint x=\"1440\" y=\"1066\"/>\n             \
+  \               <mxPoint x=\"639\" y=\"1066\"/>\n                        </Array>\n\
+  \                    </mxGeometry>\n                </mxCell>\n                <mxCell\
+  \ id=\"15\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.325;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscription-entity\" target=\"planchangeconfirmation\" parent=\"\
+  1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\">\n        \
+  \                <Array as=\"points\">\n                            <mxPoint x=\"\
+  408\" y=\"438\"/>\n                            <mxPoint x=\"-260\" y=\"438\"/>\n\
+  \                            <mxPoint x=\"-260\" y=\"1140\"/>\n                \
+  \            <mxPoint x=\"170\" y=\"1140\"/>\n                        </Array>\n\
+  \                    </mxGeometry>\n                </mxCell>\n                <mxCell\
+  \ id=\"16\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.29;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscriber-aggregate-root-entity-extends-customer\" target=\"\
+  invoice-entity\" parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"\
+  geometry\">\n                        <Array as=\"points\">\n                   \
+  \         <mxPoint x=\"115\" y=\"422\"/>\n                            <mxPoint x=\"\
+  -260\" y=\"422\"/>\n                            <mxPoint x=\"-260\" y=\"908\"/>\n\
+  \                            <mxPoint x=\"730\" y=\"908\"/>\n                  \
+  \      </Array>\n                    </mxGeometry>\n                </mxCell>\n\
+  \                <mxCell id=\"17\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscription-entity\" target=\"portinginfo\" parent=\"1\"\
+  >\n                    <mxGeometry relative=\"1\" as=\"geometry\">\n           \
+  \             <Array as=\"points\">\n                            <mxPoint x=\"545\"\
+  \ y=\"438\"/>\n                            <mxPoint x=\"1440\" y=\"438\"/>\n   \
+  \                         <mxPoint x=\"1440\" y=\"1418\"/>\n                   \
+  \         <mxPoint x=\"730\" y=\"1418\"/>\n                        </Array>\n  \
+  \                  </mxGeometry>\n                </mxCell>\n                <mxCell\
+  \ id=\"18\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscriber-aggregate-root-entity-extends-customer\" target=\"\
+  identity-entity\" parent=\"1\">\n                    <mxGeometry relative=\"1\"\
+  \ as=\"geometry\">\n                        <Array as=\"points\">\n            \
+  \                <mxPoint x=\"261\" y=\"422\"/>\n                            <mxPoint\
+  \ x=\"-300\" y=\"422\"/>\n                            <mxPoint x=\"-300\" y=\"1588\"\
+  />\n                            <mxPoint x=\"450\" y=\"1588\"/>\n              \
+  \          </Array>\n                    </mxGeometry>\n                </mxCell>\n\
+  \                <mxCell id=\"19\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"subscriber-aggregate-root-entity-extends-customer\" target=\"\
+  paymentmethod-entity\" parent=\"1\">\n                    <mxGeometry relative=\"\
+  1\" as=\"geometry\">\n                        <Array as=\"points\">\n          \
+  \                  <mxPoint x=\"79\" y=\"422\"/>\n                            <mxPoint\
+  \ x=\"-300\" y=\"422\"/>\n                            <mxPoint x=\"-300\" y=\"1758\"\
+  />\n                            <mxPoint x=\"450\" y=\"1758\"/>\n              \
+  \          </Array>\n                    </mxGeometry>\n                </mxCell>\n\
+  \            </root>\n        </mxGraphModel>\n    </diagram>\n    <diagram name=\"\
+  Billing — invoices &amp; payment\" id=\"page-billing-invoices-payment\">\n     \
+  \   <mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"1\"\
+  \ tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\"\
+  \ pageWidth=\"1654\" pageHeight=\"1169\" math=\"0\" shadow=\"0\">\n            <root>\n\
+  \                <mxCell id=\"0\"/>\n                <mxCell id=\"1\" parent=\"\
+  0\"/>\n                <mxCell id=\"subscriber-aggregate-root-entity-extends-customer\"\
+  \ value=\"&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Subscriber»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Subscriber\
+  \ &amp;lt;&amp;lt;Aggregate Root&amp;gt;&amp;gt; &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ paymentMethod: PaymentMethod | null&lt;br/&gt;+ subscriptions: Subscription[]&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"320\" y=\"730\" width=\"260\" height=\"110\" as=\"geometry\"/>\n         \
+  \       </mxCell>\n                <mxCell id=\"invoice-entity\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Invoice\
+  \ &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ invoiceId: string&lt;br/&gt;+\
+  \ billDate: string&lt;br/&gt;+ dueDate: string&lt;br/&gt;+ dueAmount: string&lt;br/&gt;+\
+  \ status: string&lt;br/&gt;+ subscriber: Subscriber | null&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ pay(): PaymentReceipt&lt;br/&gt;+ payExpectingFailure(): PaymentReceipt&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"40\"\
+  \ width=\"260\" height=\"174\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"paymentmethod-entity\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PaymentMethod\
+  \ &amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+\
+  \ status: string&lt;br/&gt;+ brand: string&lt;br/&gt;+ lastFourDigits: string&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ update(): PaymentMethodUpdateConfirmation&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"242\"\
+  \ width=\"260\" height=\"126\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"paymentmethodupdateconfirmation\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PaymentMethodUpdateConfirmation&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ isSubmitEnabled(): boolean&lt;br/&gt;+ acceptTerms(): void&lt;br/&gt;+ confirm():\
+  \ void&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"396\"\
+  \ width=\"260\" height=\"94\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"paymentreceipt\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PaymentReceipt&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ message: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"518\"\
+  \ width=\"260\" height=\"80\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"paymentmethod-entity\" target=\"paymentmethodupdateconfirmation\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  />\n                </mxCell>\n                <mxCell id=\"3\" value=\"\" style=\"\
+  edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"invoice-entity\" target=\"paymentreceipt\" parent=\"1\">\n\
+  \                    <mxGeometry relative=\"1\" as=\"geometry\">\n             \
+  \           <Array as=\"points\">\n                            <mxPoint x=\"261\"\
+  \ y=\"224\"/>\n                            <mxPoint x=\"320\" y=\"224\"/>\n    \
+  \                        <mxPoint x=\"320\" y=\"496\"/>\n                      \
+  \      <mxPoint x=\"170\" y=\"496\"/>\n                        </Array>\n      \
+  \              </mxGeometry>\n                </mxCell>\n                <mxCell\
+  \ id=\"4\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"invoice-entity\" target=\"subscriber-aggregate-root-entity-extends-customer\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  >\n                        <Array as=\"points\">\n                            <mxPoint\
+  \ x=\"79\" y=\"224\"/>\n                            <mxPoint x=\"20\" y=\"224\"\
+  />\n                            <mxPoint x=\"20\" y=\"720\"/>\n                \
+  \            <mxPoint x=\"450\" y=\"720\"/>\n                        </Array>\n\
+  \                    </mxGeometry>\n                </mxCell>\n            </root>\n\
+  \        </mxGraphModel>\n    </diagram>\n    <diagram name=\"Inventory\" id=\"\
+  page-inventory\">\n        <mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"\
+  10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\"\
+  \ pageScale=\"1\" pageWidth=\"1654\" pageHeight=\"1169\" math=\"0\" shadow=\"0\"\
+  >\n            <root>\n                <mxCell id=\"0\"/>\n                <mxCell\
+  \ id=\"1\" parent=\"0\"/>\n                <mxCell id=\"msisdninventory-domain-service\"\
+  \ value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MsisdnInventory\
+  \ &amp;lt;&amp;lt;Domain Service&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ seed(items: string[]): void&lt;br/&gt;+ findAvailable(): string[]&lt;br/&gt;+\
+  \ reserve(msisdn: string, previousMsisdn: string | null): void&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"40\"\
+  \ width=\"260\" height=\"94\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \         </root>\n        </mxGraphModel>\n    </diagram>\n    <diagram name=\"\
+  ParadiseMobile — application handle\" id=\"page-paradisemobile-application-handle\"\
+  >\n        <mxGraphModel dx=\"1200\" dy=\"800\" grid=\"1\" gridSize=\"10\" guides=\"\
+  1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"\
+  1\" pageWidth=\"1654\" pageHeight=\"1169\" math=\"0\" shadow=\"0\">\n          \
+  \  <root>\n                <mxCell id=\"0\"/>\n                <mxCell id=\"1\"\
+  \ parent=\"0\"/>\n                <mxCell id=\"authenticationservice-domain-service\"\
+  \ value=\"&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Customer»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentialsRepository\
+  \ &amp;lt;&amp;lt;Repository&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ accountCredentials:\
+  \ AccountCredentials&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ load(): AccountCredentials&lt;br/&gt;&lt;/p&gt;\" style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"320\" y=\"374\" width=\"260\" height=\"78\" as=\"geometry\"/>\n          \
+  \      </mxCell>\n                <mxCell id=\"catalog-aggregate-root\" value=\"\
+  &lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Plan»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Catalog\
+  \ &amp;lt;&amp;lt;Aggregate Root&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"600\" y=\"162\" width=\"260\" height=\"78\" as=\"geometry\"/>\n          \
+  \      </mxCell>\n                <mxCell id=\"identityverificationservice-domain-service\"\
+  \ value=\"&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Prospect»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;IdentityVerificationService\
+  \ &amp;lt;&amp;lt;Domain Service&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"320\" y=\"480\" width=\"260\" height=\"78\" as=\"geometry\"/>\n          \
+  \      </mxCell>\n                <mxCell id=\"msisdninventory-domain-service\"\
+  \ value=\"&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Inventory»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;MsisdnInventory\
+  \ &amp;lt;&amp;lt;Domain Service&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"600\" y=\"268\" width=\"260\" height=\"78\" as=\"geometry\"/>\n          \
+  \      </mxCell>\n                <mxCell id=\"prospectrepository-repository\" value=\"\
+  &lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Prospect»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;ProspectRepository\
+  \ &amp;lt;&amp;lt;Repository&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ prospect: Prospect&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"320\" y=\"650\" width=\"260\" height=\"94\" as=\"geometry\"/>\n          \
+  \      </mxCell>\n                <mxCell id=\"subscriberrepository-repository\"\
+  \ value=\"&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from:\
+  \ Subscriber»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;SubscriberRepository\
+  \ &amp;lt;&amp;lt;Repository&amp;gt;&amp;gt;&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p\
+  \ style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ subscriber:\
+  \ Subscriber&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8\
+  \ 8;strokeColor=#666666;\" vertex=\"1\" parent=\"1\">\n                    <mxGeometry\
+  \ x=\"600\" y=\"772\" width=\"260\" height=\"94\" as=\"geometry\"/>\n          \
+  \      </mxCell>\n                <mxCell id=\"paradisemobile\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ParadiseMobile&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ accountCredentialsRepository(): AccountCredentialsRepository&lt;br/&gt;+ catalogPage():\
+  \ CatalogPage&lt;br/&gt;+ planRepository(): PlanRepository&lt;br/&gt;+ prospectRepository():\
+  \ ProspectRepository&lt;br/&gt;+ subscriberRepository(): SubscriberRepository&lt;br/&gt;+\
+  \ msisdnInventory(): MsisdnInventory&lt;br/&gt;+ close(): void&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"162\"\
+  \ width=\"260\" height=\"158\" as=\"geometry\"/>\n                </mxCell>\n  \
+  \              <mxCell id=\"config\" value=\"&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Config&lt;/b&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+\
+  \ connected: Connection&lt;br/&gt;+ application: Application&lt;br/&gt;+ mode: Mode&lt;br/&gt;&lt;/p&gt;&lt;hr\
+  \ size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;\"\
+  \ style=\"verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;\"\
+  \ vertex=\"1\" parent=\"1\">\n                    <mxGeometry x=\"40\" y=\"40\"\
+  \ width=\"260\" height=\"94\" as=\"geometry\"/>\n                </mxCell>\n   \
+  \             <mxCell id=\"2\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.15;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"paradisemobile\" target=\"authenticationservice-domain-service\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  />\n                </mxCell>\n                <mxCell id=\"3\" value=\"\" style=\"\
+  edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.85;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"paradisemobile\" target=\"identityverificationservice-domain-service\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  >\n                        <Array as=\"points\">\n                            <mxPoint\
+  \ x=\"261\" y=\"330\"/>\n                            <mxPoint x=\"300\" y=\"330\"\
+  />\n                            <mxPoint x=\"300\" y=\"458\"/>\n               \
+  \             <mxPoint x=\"450\" y=\"458\"/>\n                        </Array>\n\
+  \                    </mxGeometry>\n                </mxCell>\n                <mxCell\
+  \ id=\"4\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=1.0;exitY=0.15;exitDx=0;exitDy=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"paradisemobile\" target=\"catalog-aggregate-root\" parent=\"\
+  1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"/>\n       \
+  \         </mxCell>\n                <mxCell id=\"5\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=1.0;exitY=0.85;exitDx=0;exitDy=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"paradisemobile\" target=\"msisdninventory-domain-service\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  />\n                </mxCell>\n                <mxCell id=\"6\" value=\"\" style=\"\
+  edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.383;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"paradisemobile\" target=\"prospectrepository-repository\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  >\n                        <Array as=\"points\">\n                            <mxPoint\
+  \ x=\"140\" y=\"485\"/>\n                        </Array>\n                    </mxGeometry>\n\
+  \                </mxCell>\n                <mxCell id=\"7\" value=\"\" style=\"\
+  edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=open;endSize=12;html=1;exitX=0.617;exitY=1.0;exitDx=0;exitDy=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;\"\
+  \ edge=\"1\" source=\"paradisemobile\" target=\"subscriberrepository-repository\"\
+  \ parent=\"1\">\n                    <mxGeometry relative=\"1\" as=\"geometry\"\
+  >\n                        <Array as=\"points\">\n                            <mxPoint\
+  \ x=\"200\" y=\"330\"/>\n                            <mxPoint x=\"260\" y=\"330\"\
+  />\n                            <mxPoint x=\"260\" y=\"762\"/>\n               \
+  \             <mxPoint x=\"730\" y=\"762\"/>\n                        </Array>\n\
+  \                    </mxGeometry>\n                </mxCell>\n            </root>\n\
+  \        </mxGraphModel>\n    </diagram>\n</mxfile>\n\n## evals/lots-of-problesm/Untitled\n\
+  \nplesae runplaywrigjt trest in visual mode so i can see them\n\n## evals/maintain-abstraction-levels/faultyAsset.py\n\
+  \ndef orchestrate_checkout(cart, payment_gateway):\n    with open(\"audit.log\"\
+  , \"w\") as audit:\n        audit.write(str(cart.subtotal()))\n    return payment_gateway.charge(cart.subtotal())\n\
+  \n\n## evals/maintain-abstraction-levels/repairedAsset.py\n\n\"\"\"\n# @toolset-manifest\
+  \ python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef orchestrate_checkout(cart, payment_gateway):\n    total = cart.subtotal()\n\
+  \    return payment_gateway.charge(total)\n\n\n## evals/never-swallow-exceptions/faultyAsset.py\n\
+  \ndef load_cart(path):\n    try:\n        return open(path).read()\n    except:\n\
+  \        pass\n\n\n## evals/never-swallow-exceptions/repairedAsset.py\n\n\"\"\"\n\
+  # @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef load_cart(path):\n    try:\n        return open(path).read()\n    except\
+  \ OSError as error:\n        raise RuntimeError(\"cart unavailable\") from error\n\
+  \n\n## evals/provide-meaningful-context/faultyAsset.py\n\ndef apply_tax(subtotal):\n\
+  \    return subtotal * 0.13\n\ndef split_items(item1, item2):\n    return item1,\
+  \ item2\n\n\n## evals/provide-meaningful-context/repairedAsset.py\n\n\"\"\"\n# @toolset-manifest\
+  \ python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\nTAX_RATE = 0.13\n\ndef apply_tax(subtotal):\n    return subtotal * TAX_RATE\n\
+  \n\n## evals/reuse-established-notation-not-a-parallel-one/faultyAsset.md\n\n##\
+  \ CatalogFidelity\n\n*CatalogFidelity* is the fidelity page for one stage.\n\nCatalogFidelity(repo_url:\
+  \ str, ref: str, catalog_action: CatalogAction)\n------\nrepo_url: str\nref: str\n\
+  catalog_action: CatalogAction\n----\ngenerate_catalog(fidelity_name, owner): str\n\
+  \n- **Interaction:** calls `CatalogAction.generate_catalog(action, owner)` once\
+  \ per lifecycle-action name, in BaseContextTool's declared source order, each name\
+  \ resolved via `owner.actions`\n- **Invariant:** never mutates owner — read-only\
+  \ render of a live object\n\n\n## evals/reuse-established-notation-not-a-parallel-one/repairedAsset.md\n\
+  \n## CatalogFidelity\n\n*CatalogFidelity* is the fidelity page for one stage.\n\n\
+  CatalogFidelity(repo_url: str, ref: str, catalog_action: CatalogAction)\n------\n\
+  repo_url: str\nref: str\ncatalog_action: CatalogAction\n----\ngenerate_catalog(fidelity_name,\
+  \ owner): str\n  -> catalog_action.generate_catalog\n  // once per lifecycle-action\
+  \ name, in BaseContextTool's declared source\n  //   order (partition, grill, sketch,\
+  \ generate, document, iterate,\n  //   validate, satisfy, repair)\n  // never mutates\
+  \ owner — read-only render of a live object\n\n\n## evals/reuse-existing-not-invent-parallel/faultyAsset.py\n\
+  \n# Faulty: wrapper named after retired Foundry synonym, not the wrapped type.\n\
+  class CatalogPractice:\n    def __init__(self, catalog_practice):\n        self.catalog_practice\
+  \ = catalog_practice\n\n\n## evals/reuse-existing-not-invent-parallel/repairedAsset.py\n\
+  \n# Repaired: wrapper named after the wrapped type, not a retired synonym.\nclass\
+  \ CatalogContextTool:\n    def __init__(self, base_context_tool):\n        self.base_context_tool\
+  \ = base_context_tool\n\n\n## evals/separate-concerns/faultyAsset.py\n\ndef subtotal(line_items):\n\
+  \    print(\"subtotal\")\n    return sum(item.extended_price for item in line_items)\n\
+  \n\n## evals/separate-concerns/repairedAsset.py\n\n\"\"\"\n# @toolset-manifest python\
+  \ -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef subtotal(line_items):\n    return sum(item.extended_price for item in\
+  \ line_items)\n\n\n## evals/simplify-control-flow/faultyAsset.py\n\ndef checkout(cart):\n\
+  \    if cart:\n        if not cart.is_empty():\n            if cart.has_items():\n\
+  \                if cart.subtotal() > 0:\n                    if cart.owner:\n \
+  \                       return cart.subtotal()\n    return None\n\n\n## evals/simplify-control-flow/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef checkout(cart):\n    if cart.is_empty():\n        return None\n    return\
+  \ cart.subtotal()\n\n\n## evals/stop-writing-useless-comments/faultyAsset.py\n\n\
+  def checkout(cart):\n    # return the subtotal\n    return cart.subtotal()\n\n\n\
+  ## evals/stop-writing-useless-comments/repairedAsset.py\n\n\"\"\"\n# @toolset-manifest\
+  \ python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef checkout(cart):\n    # Loyalty discount applies only after the configured\
+  \ threshold.\n    return cart.subtotal()\n\n\n## evals/use-clear-function-parameters/faultyAsset.py\n\
+  \ndef place_order(cart, payment_gateway, data):\n    return payment_gateway.charge(cart.subtotal())\n\
+  \n\n## evals/use-clear-function-parameters/repairedAsset.py\n\n\"\"\"\n# @toolset-manifest\
+  \ python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef place_order(cart, payment_gateway):\n    return payment_gateway.charge(cart.subtotal())\n\
+  \n\n## evals/use-consistent-naming/faultyAsset.py\n\ndef checkout_total(line_items):\n\
+  \    return sum(item.extended_price for item in line_items)\n\ndef applyDiscount(total):\n\
+  \    return total * 0.9\n\n\n## evals/use-consistent-naming/repairedAsset.py\n\n\
+  \"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef checkout_total(line_items):\n    return sum(item.extended_price for\
+  \ item in line_items)\n\ndef apply_discount(total):\n    return total * 0.9\n\n\n\
+  ## evals/use-domain-language/faultyAsset.py\n\nclass Manager:\n    def process(self):\n\
+  \        return None\n\n\n## evals/use-domain-language/repairedAsset.py\n\n\"\"\"\
+  \n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\nclass Cart:\n    def place_order(self):\n        return Order()\n\n\n##\
+  \ evals/use-exceptions-properly/faultyAsset.py\n\ndef load_cart(path):\n    try:\n\
+  \        return open(path).read()\n    except:\n        pass\n\n\n## evals/use-exceptions-properly/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef load_cart(path):\n    try:\n        return open(path).read()\n    except\
+  \ OSError as error:\n        raise RuntimeError(\"cart unavailable\") from error\n\
+  \n\n## evals/use-explicit-dependencies/faultyAsset.py\n\nclass Cart:\n    def __init__(self):\n\
+  \        self._repository = CartRepository()\n\n\n## evals/use-explicit-dependencies/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\nclass Cart:\n    def __init__(self, repository):\n        self._repository\
+  \ = repository\n\n\n## evals/use-intention-revealing-names/faultyAsset.py\n\ndef\
+  \ checkout_total(to):\n    return to\n\n\n## evals/use-intention-revealing-names/repairedAsset.py\n\
+  \n\"\"\"\n# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \"\"\"\ndef checkout_total(line_items):\n    return sum(line_item.extended_price\
+  \ for line_item in line_items)\n\n\n## shopping-cart/examples.md\n\n<!-- @toolset-manifest\
+  \ python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\
+  \ -->\n<!-- Agent reading this file: run line 1 manifest, then python -m tools run\
+  \ -. Follow response.instructions only. -->\n<!-- invoke-edit: action satisfy |\
+  \ toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering -->\n\
+  <!-- invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\
+  \ -->\n\n<!--\n  clean_engineering markdown examples — ShoppingCart domain — unified\
+  \ across all fidelities.\n  Structure: H1 = module, H2 = class.\n  Interface (I{Type})\
+  \ and implementation ({Type}) sit together under the same module H1.\n  Language\
+  \ companion and modules overview go as prose before the first H1.\n-->\n\n## Language\
+  \ companion                                             <!-- L -->\n\n*ShoppingCart*\
+  \ is a running tally of what a customer intends to buy in a single shopping session.\n\
+  \n### shopping_cart                                                  <!-- L -->\n\
+  \n- Belongs to exactly one *Customer* whose identity anchors the cart. <!-- L -->\n\
+  - Collects *CartItems* as the customer browses and keeps the running total current.\
+  \ <!-- L -->\n- Accepts an optional *Discount* applied before the total is computed.\
+  \ <!-- L -->\n- **Invariant:** Once checked out, the cart may not be modified. \
+  \ <!-- L -->\n\n### discount                                                   \
+  \    <!-- L -->\n\n- **Invariant:** A discount may not reduce the total below zero.\
+  \  <!-- L -->\n\n## Modules                                                    \
+  \    <!-- Mu -->\n\nBuild order: `inventory` → `cart`\n\n---\n\n# cart         \
+  \                                                   <!-- Mu -->\n\n- **Purpose:**\
+  \ Owns the shopping-session tally and checkout gate. <!-- Mu -->\n- **Seam (terms):**\
+  \ ShoppingCart, CartItem, Discount              <!-- Mu -->\n- **Dependencies (one-way):**\
+  \ inventory                           <!-- Mu -->\n\n## IShoppingCart          \
+  \                                        <!-- Md -->\n\nIShoppingCart(customer:\
+  \ Customer)\n------\ncustomer: Customer\nitems: list[CartItem]\ndiscount: Discount\
+  \ | None\nchecked_out: bool\n\tInvariant: Once true, never reverts to false.\n----\n\
+  add_item(product: str, quantity: int, unit_price: Decimal): None\n\tInvariant: Cart\
+  \ may not be modified after checkout.\n\tInvariant: Quantity must be at least 1.\n\
+  remove_item(product: str): None\n\tInvariant: Cart may not be modified after checkout.\n\
+  apply_discount(discount: Discount): None\n\tInvariant: Cart may not be modified\
+  \ after checkout.\ncompute_total(): Decimal\ncheckout(inventory: Inventory): None\n\
+  \tInvariant: May not be called when already checked out.\n- _find_item(product:\
+  \ str): CartItem | None\n\n## ShoppingCart                                     \
+  \              <!-- S -->\n\n+ ShoppingCart(customer: Customer)\n------\n+ << association\
+  \ >> customer: Customer\n+ << composition >> items: list[CartItem]\n+ << association\
+  \ >> discount: Discount | None\n+ checked_out: bool\n\tInvariant: Once true, never\
+  \ reverts to false.\n----\n+ add_item(product: str, quantity: int, unit_price: Decimal):\
+  \ None\n\tInvariant: Cart may not be modified after checkout.\n\tInvariant: Quantity\
+  \ must be at least 1.\n\tInteraction:\n\t\texisting: CartItem | None = _find_item(product)\n\
+  \t\tif existing: existing.update_quantity(quantity)\n\t\telse: items.append(CartItem(product,\
+  \ quantity, unit_price))\n+ remove_item(product: str): None\n\tInvariant: Cart may\
+  \ not be modified after checkout.\n+ apply_discount(discount: Discount): None\n\t\
+  Invariant: Cart may not be modified after checkout.\n+ compute_total(): Decimal\n\
+  \tInteraction:\n\t\tsubtotal: Decimal = sum(item.line_total() for item in items)\n\
+  \t\treturn discount.compute_reduction(subtotal) if discount else subtotal\n+ checkout(inventory:\
+  \ Inventory): None\n\tInvariant: May not be called when already checked out.\n\t\
+  Interaction:\n\t\tinventory.assert_available(items)\n\t\tchecked_out = True\n- _find_item(product:\
+  \ str): CartItem | None\n\n## ICartItem                                        \
+  \              <!-- Md -->\n\nCartItem(product: str, quantity: int, unit_price:\
+  \ Decimal)\n------\nproduct: str\nquantity: int\n\tInvariant: quantity >= 1.\nunit_price:\
+  \ Decimal\n\tInvariant: unit_price >= 0.\n----\nline_total(): Decimal\nupdate_quantity(quantity:\
+  \ int): None\n\n## CartItem                                                    \
+  \   <!-- S -->\n\n+ CartItem(product: str, quantity: int, unit_price: Decimal)\n\
+  ------\n+ product: str\n+ quantity: int\n\tInvariant: quantity >= 1.\n+ unit_price:\
+  \ Decimal\n\tInvariant: unit_price >= 0.\n----\n+ line_total(): Decimal\n\tInteraction:\n\
+  \t\treturn quantity * unit_price\n+ update_quantity(quantity: int): None\n\n## IDiscount\
+  \                                                      <!-- Md -->\n\nDiscount(code:\
+  \ str, reduction: Decimal)\n------\ncode: str\nreduction: Decimal\n\tInvariant:\
+  \ reduction > 0.\n----\nis_valid(cart: ShoppingCart): bool\ncompute_reduction(subtotal:\
+  \ Decimal): Decimal\n\tInvariant: Total may not be reduced below zero.\n\n## Discount\
+  \                                                       <!-- S -->\n\n+ Discount(code:\
+  \ str, reduction: Decimal)\n------\n+ code: str\n+ reduction: Decimal\n\tInvariant:\
+  \ reduction > 0.\n----\n+ is_valid(cart: ShoppingCart): bool\n+ compute_reduction(subtotal:\
+  \ Decimal): Decimal\n\tInvariant: Total may not be reduced below zero.\n\tInteraction:\n\
+  \t\treduced: Decimal = subtotal - reduction\n\t\treturn max(reduced, Decimal(\"\
+  0\"))\n\n---\n\n# inventory                                                    \
+  \   <!-- Mu -->\n\n- **Purpose:** Asserts stock availability at checkout.      \
+  \      <!-- Mu -->\n- **Seam (terms):** Inventory                              \
+  \       <!-- Mu -->\n- **Dependencies (one-way):** *(none)*                    \
+  \        <!-- Mu -->\n\n## IInventory                                          \
+  \           <!-- Md -->\n\nIInventory()\n------\n----\nassert_available(items: list[CartItem]):\
+  \ None\n\n## Inventory                                                      <!--\
+  \ S -->\n\n+ Inventory()\n------\n----\n+ assert_available(items: list[CartItem]):\
+  \ None\n\n\n## shopping-cart/examples.py\n\n# @toolset-manifest python -m tools\
+  \ manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow\
+  \ response.instructions only.\n# invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  # invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  from __future__ import annotations\nfrom abc import ABC, abstractmethod\nfrom decimal\
+  \ import Decimal\n\n\nclass IShoppingCart(ABC):\n    \"\"\"Running tally of what\
+  \ a customer intends to buy in a single shopping session.\"\"\"\n\n    @property\n\
+  \    @abstractmethod\n    def customer(self) -> Customer: ...\n\n    @property\n\
+  \    @abstractmethod\n    def items(self) -> list[CartItem]: ...\n\n    @property\n\
+  \    @abstractmethod\n    def discount(self) -> Discount | None: ...\n\n    @property\n\
+  \    @abstractmethod\n    def checked_out(self) -> bool: ...\n\n    @abstractmethod\n\
+  \    def __init__(self, customer: Customer) -> None: ...\n\n    @abstractmethod\n\
+  \    def add_item(self, product: str, quantity: int, unit_price: Decimal) -> None:\
+  \ ...\n\n    @abstractmethod\n    def remove_item(self, product: str) -> None: ...\n\
+  \n    @abstractmethod\n    def apply_discount(self, discount: Discount) -> None:\
+  \ ...\n\n    @abstractmethod\n    def compute_total(self) -> Decimal: ...\n\n  \
+  \  @abstractmethod\n    def checkout(self, inventory: Inventory) -> None: ...\n\n\
+  \nclass ShoppingCart(IShoppingCart):\n    \"\"\"Running tally of what a customer\
+  \ intends to buy in a single shopping session.\"\"\"\n\n    \"\"\"@association -\
+  \ belongs to exactly one customer whose identity anchors the cart.\"\"\"\n    @property\n\
+  \    def customer(self) -> Customer:\n        return self._customer\n\n    \"\"\"\
+  @composition - collects CartItems as the customer browses; keeps the total current.\"\
+  \"\"\n    @property\n    def items(self) -> list[CartItem]:\n        return self._items\n\
+  \n    \"\"\"@association - optional reduction rule applied before the total is computed.\"\
+  \"\"\n    @property\n    def discount(self) -> Discount | None:\n        return\
+  \ self._discount\n\n    \"\"\"Seals the cart permanently once the customer commits\
+  \ to checkout.\"\"\"\n    # Invariant: once true, never reverts to false.\n    @property\n\
+  \    def checked_out(self) -> bool:\n        return self._checked_out\n\n    def\
+  \ __init__(self, customer: Customer) -> None:\n        self._customer = customer\n\
+  \        self._items: list[CartItem] = []\n        self._discount: Discount | None\
+  \ = None\n        self._checked_out = False\n\n    # region Public operations\n\n\
+  \    \"\"\"Adds a line to the cart; merges quantity if the product is already present.\"\
+  \"\"\n    # Invariant: cart may not be modified after checkout.\n    # Invariant:\
+  \ quantity must be at least 1.\n    def add_item(self, product: str, quantity: int,\
+  \ unit_price: Decimal) -> None:\n        ...\n\n    def remove_item(self, product:\
+  \ str) -> None:\n        ...\n\n    \"\"\"Attaches a reduction rule; replaces any\
+  \ previously applied discount.\"\"\"\n    def apply_discount(self, discount: Discount)\
+  \ -> None:\n        ...\n\n    \"\"\"Sums line totals and applies the discount if\
+  \ one is present.\"\"\"\n    def compute_total(self) -> Decimal:\n        ...\n\n\
+  \    \"\"\"Verifies availability with Inventory, then seals the cart; raises if\
+  \ already checked out.\"\"\"\n    def checkout(self, inventory: Inventory) -> None:\n\
+  \        ...\n\n    # endregion\n\n    # region Private operations (empty until\
+  \ code)\n\n    @abstractmethod\n    def _find_item(self, product: str) -> CartItem\
+  \ | None: ...\n\n    # endregion\n\n    # region Interactions (specification only)\n\
+  \n    @abstractmethod\n    def adding_an_item_merges_if_product_already_present(self)\
+  \ -> None:\n        \"\"\"@interaction\"\"\"\n        ...\n\n    @abstractmethod\n\
+  \    def checkout_verifies_availability_before_sealing(self) -> None:\n        \"\
+  \"\"@interaction\"\"\"\n        ...\n\n    # endregion\n\n\nclass ICartItem(ABC):\n\
+  \    \"\"\"A single product choice inside a ShoppingCart.\"\"\"\n\n    @property\n\
+  \    @abstractmethod\n    def product(self) -> str: ...\n\n    @property\n    @abstractmethod\n\
+  \    def quantity(self) -> int: ...\n\n    @property\n    @abstractmethod\n    def\
+  \ unit_price(self) -> Decimal: ...\n\n    @abstractmethod\n    def __init__(self,\
+  \ product: str, quantity: int, unit_price: Decimal) -> None: ...\n\n    @abstractmethod\n\
+  \    def line_total(self) -> Decimal: ...\n\n    @abstractmethod\n    def update_quantity(self,\
+  \ quantity: int) -> None: ...\n\n\nclass CartItem(ICartItem):\n    \"\"\"A single\
+  \ product choice inside a ShoppingCart.\"\"\"\n\n    # Invariant: quantity is at\
+  \ least one.\n    # Invariant: unit_price is non-negative.\n\n    @property\n  \
+  \  def product(self) -> str:\n        return self._product\n\n    @property\n  \
+  \  def quantity(self) -> int:\n        return self._quantity\n\n    @property\n\
+  \    def unit_price(self) -> Decimal:\n        return self._unit_price\n\n    def\
+  \ __init__(self, product: str, quantity: int, unit_price: Decimal) -> None:\n  \
+  \      self._product = product\n        self._quantity = quantity\n        self._unit_price\
+  \ = unit_price\n\n    def line_total(self) -> Decimal:\n        ...\n\n    def update_quantity(self,\
+  \ quantity: int) -> None:\n        ...\n\n\nclass IDiscount(ABC):\n    \"\"\"A reduction\
+  \ rule a customer applies to a ShoppingCart.\"\"\"\n\n    @property\n    @abstractmethod\n\
+  \    def code(self) -> str: ...\n\n    @property\n    @abstractmethod\n    def reduction(self)\
+  \ -> Decimal: ...\n\n    @abstractmethod\n    def __init__(self, code: str, reduction:\
+  \ Decimal) -> None: ...\n\n    @abstractmethod\n    def is_valid(self, cart: IShoppingCart)\
+  \ -> bool: ...\n\n    @abstractmethod\n    def compute_reduction(self, subtotal:\
+  \ Decimal) -> Decimal: ...\n\n\nclass Discount(IDiscount):\n    \"\"\"A reduction\
+  \ rule a customer applies to a ShoppingCart.\"\"\"\n\n    # Invariant: discount\
+  \ cannot reduce total below zero.\n\n    @property\n    def code(self) -> str:\n\
+  \        return self._code\n\n    @property\n    def reduction(self) -> Decimal:\n\
+  \        return self._reduction\n\n    def __init__(self, code: str, reduction:\
+  \ Decimal) -> None:\n        self._code = code\n        self._reduction = reduction\n\
+  \n    def is_valid(self, cart: IShoppingCart) -> bool:\n        ...\n\n    def compute_reduction(self,\
+  \ subtotal: Decimal) -> Decimal:\n        ...\n\n\n\"\"\"\n# @toolset-manifest python\
+  \ -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  # Agent reading this file: run line 1 manifest, then python -m tools run -. Follow\
+  \ response.instructions only.\n# invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  # invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering\n\
+  \nCleanEngineering Python template - two files when Stories-bound:\n\n    {family_slug}.py\
+  \                 - (I{Class} +) {Class} (+ subtypes)   PRODUCTION\n    {type_slug}_example_factory.py\
+  \   - (I{Class}ExampleFactory +) factory  SEPARATE\n\nINTERFACES ARE OPTIONAL (see\
+  \ clean_engineering.md SS Interfaces). I{Class} and\nI{Class}ExampleFactory below\
+  \ are shown because this is the richer case to document -\ndefault to OMITTING both\
+  \ and stubbing {Class} / {Class}ExampleFactory directly\n(empty bodies at Md, filled\
+  \ at S/C, no ABC base needed) unless the user asked for an\ninterface, or the module\
+  \ genuinely has multiple layers/implementations behind one\nseam. The two decisions\
+  \ (domain type vs. factory) are independent.\n\nA production file holds the public\
+  \ seam (I{Class} when one exists), the production\nClass that extends it (or stands\
+  \ alone when no interface exists), subtypes, and\ntightly connected peers. Not one\
+  \ class per file. Example factories are NEVER in\nthat file (example-factory-separate-file).\n\
+  \nLayout (physical-folder): write each file under the **module** folder\n(e.g. {module_slug}/{family_slug}.py).\
+  \ Module context:\n{module_slug}/.context/module-context.md.\n\nNaming:\n    File\
+  \ (production)  {family_slug}.py\n    File (factory)     {type_slug}_example_factory.py\n\
+  \    Interface          I{Class}                (OPTIONAL - public seam only when\
+  \ requested; model fidelity)\n    Class              {Class}(I{Class})       (production;\
+  \ drop \"(I{Class})\" when no interface exists)\n    ExampleFactory     {Class}ExampleFactory\
+  \   (plain class; no Loader base; Md+/S+)\n    Modes              Fake | Isolated\
+  \ | Production  (factory behavior - not subclasses)\n    Property           {owned_property},\
+  \ ...     (snake_case slots)\n    Operation          {operation_name}, ...     (snake_case\
+  \ slots)\n    Params             {param}, {dep}\n    Type slots         {Type},\
+  \ {ReturnType}\n    Invariant          comment                 (plain-English; not\
+  \ a method)\n    Interaction        abstract method at S    (on Class only; dropped\
+  \ at code)\n\nFidelity tags:\n    L  = language companion (prose; refined every\
+  \ stage - not a fidelity)\n    Mu = modules       (thin terms, one-way deps, build\
+  \ order - markdown / module-context)\n    Md = model         (empty public props/ops\
+  \ directly on Class by default; I{Class} - and\n                       optional\
+  \ I{Class}ExampleFactory in factory file - only when requested)\n    S  = specification\
+  \ (Class extends I{Class} when one exists, else stands alone; public\n         \
+  \              filled; privates empty on Class; {Class}ExampleFactory modes in\n\
+  \                       sibling factory file when Stories-bound)\n    C  = code\
+  \          (fill remaining empties on Class; drop interactions)\n\"\"\"\n\nfrom\
+  \ __future__ import annotations\nfrom abc import ABC, abstractmethod\n\n\n# =============================================================================\n\
+  # FILE: {family_slug}.py - production family only (cohesive-file)\n# =============================================================================\n\
+  \n\n# OPTIONAL - omit this whole class by default. Only add I{ClassName} when the\n\
+  # user requested an interface, or {ClassName} has multiple layers/implementations\n\
+  # behind one seam. Otherwise skip straight to `class {ClassName}:` below with the\n\
+  # same empty (# Md) bodies, and drop `(I{ClassName})` from its base list.\nclass\
+  \ I{ClassName}(ABC):                                                # Md\n    \"\
+  \"\"*{ClassName}* is - one sentence: what it is, its unique role.\n    Identity\
+  \ only. No relationship or behavior sentences here.\"\"\"     # L\n\n    # -- Public\
+  \ properties (empty interfaces) --------------------------------\n\n    @property\
+  \                                                           # Md\n    @abstractmethod\
+  \                                                     # Md\n    def {owned_property}(self)\
+  \ -> {Type}: ...                           # Md\n\n    @property               \
+  \                                            # Md\n    @abstractmethod         \
+  \                                            # Md\n    def {plain_property}(self)\
+  \ -> {Type}: ...                           # Md\n\n    # -- Public operations (empty\
+  \ interfaces) --------------------------------\n\n    @abstractmethod          \
+  \                                           # Md\n    def __init__(self, {param}:\
+  \ {Type}) -> None: ...                    # Md\n\n    @abstractmethod          \
+  \                                           # Md\n    def {operation_name}(self,\
+  \ {param}: {Type}) -> {ReturnType}: ...    # Md\n\n    @abstractmethod         \
+  \                                            # Md\n    def {another_operation}(self)\
+  \ -> {ReturnType}: ...                  # Md\n\n\nclass {ClassName}(I{ClassName}):\
+  \                                        # S\n    # Drop \"(I{ClassName})\" above\
+  \ when no interface exists - {ClassName} then\n    # carries the # Md empty-body\
+  \ members itself instead of inheriting them.\n    \"\"\"*{ClassName}* is - one sentence:\
+  \ what it is, its unique role.\"\"\"  # L\n\n    # -- Public properties (filled\
+  \ at specification) -------------------------\n\n    \"\"\"{sentence about this\
+  \ property - what it holds and why.}\n    @composition\"\"\"                   \
+  \                                  # S\n    @property                          \
+  \                                 # S\n    def {owned_property}(self) -> {Type}:\
+  \                               # S\n        ...                               \
+  \                              # S\n\n    \"\"\"{sentence about this plain property.}\"\
+  \"\"                         # L\n    # Invariant: {constraint sentence - the rule\
+  \ in plain English.}    # S\n    @property                                     \
+  \                      # S\n    def {plain_property}(self) -> {Type}:          \
+  \                     # S\n        ...                                         \
+  \                    # S\n\n    # -- Constructor / public operations (filled at\
+  \ specification) -----------\n\n    def __init__(self, {param}: {Type}) -> None:\
+  \                        # S\n        self._{plain_property} = {param}         \
+  \                       # S\n\n    \"\"\"{language bullet for this operation}\"\"\
+  \"                          # L\n    # Invariant: {constraint sentence applicable\
+  \ to this operation.}   # S\n    def {operation_name}(self, {param}: {Type}) ->\
+  \ {ReturnType}:        # S\n        ...                                        \
+  \                     # S / C\n\n    def {another_operation}(self) -> {ReturnType}:\
+  \                      # S\n        \"\"\"{language bullet for this operation}\"\
+  \"\"                      # L\n        ...                                     \
+  \                        # S / C\n\n    # -- Private operations (empty interfaces\
+  \ at S; filled at C) -------------\n\n    \"\"\"{what this helper does}\"\"\"  \
+  \                                     # S\n    @abstractmethod                 \
+  \                                    # S\n    def _{private_helper}(self, {param}:\
+  \ {Type}) -> {ReturnType}: ...   # S\n\n    def _{private_helper}(self, {param}:\
+  \ {Type}) -> {ReturnType}:       # C\n        \"\"\"{what this helper does}\"\"\"\
+  \                                   # S\n        ...                           \
+  \                                  # C\n\n    # -- Interactions (specification only;\
+  \ omit at code) ---------------------\n\n    @abstractmethod                   \
+  \                                  # S\n    def {interaction_summary_as_a_method_name}(self)\
+  \ -> None:           # S\n        \"\"\"@interaction\"\"\"\n        ...\n\n\n# Subtype\
+  \ - delta only; parent members are inherited, not repeated     # Md/S\nclass I{ChildClass}(ABC):\
+  \                                               # Md\n    \"\"\"{delta - what {ChildClass}\
+  \ adds}\"\"\"                              # L\n\n    @abstractmethod          \
+  \                                           # Md\n    def {delta_operation}(self,\
+  \ {param}: {Type}) -> {ReturnType}: ...   # Md\n\n\nclass {ChildClass}({ClassName},\
+  \ I{ChildClass}):                         # S\n    \"\"\"{delta - what {ChildClass}\
+  \ adds or overrides}\"\"\"                 # L\n\n    def {delta_operation}(self,\
+  \ {param}: {Type}) -> {ReturnType}:       # S/C\n        ...                   \
+  \                                          # S/C\n\n\n# =============================================================================\n\
+  # FILE: {type_slug}_example_factory.py - Stories factory (separate file)\n# from\
+  \ .{family_slug} import {ClassName}, I{ClassName}\n# Pattern only - no ExampleLoader\
+  \ base. examples[{example_key}] is a\n# multi-type bundle (not examples[{Type}][...]).\n\
+  # Fake / Isolated / Production are modes - not Fake{ClassName} subclasses.\n# =============================================================================\n\
+  \n\n# OPTIONAL - same opt-in rule as I{ClassName} above; omit by default and go\n\
+  # straight to `class {ClassName}ExampleFactory:` below.\nclass I{ClassName}ExampleFactory(ABC):\
+  \                                  # Md\n    \"\"\"Loads examples[{example_key}]\
+  \ as Fake | Isolated | Production modes.\"\"\"  # L\n\n    @abstractmethod     \
+  \                                                # Md\n    def load_{example_key}(self,\
+  \ *, mode: str = \"fake\") -> I{ClassName}: ...  # Md\n\n\nclass {ClassName}ExampleFactory(I{ClassName}ExampleFactory):\
+  \            # S\n    # Drop \"(I{ClassName}ExampleFactory)\" above when no interface\
+  \ exists.\n    \"\"\"Fake: mock framework + examples; Isolated: {ClassName}(injected\
+  \ mocks);\n    Production: {ClassName}(real collaborators).\"\"\"              \
+  \       # L\n\n    def load_{example_key}(self, *, mode: str = \"fake\") -> I{ClassName}:\
+  \  # S\n        # examples[{example_key}] -> I{ClassName} (+ peer types if needed)\
+  \  # S\n        ...                                                            \
+  \ # S/C\n\n\n\nWrite the fidelity artifact under the session.\n\nWhen ``format``\
+  \ is ``drawio``, call ``drawio.render`` (create diagram →\nscan layout rules in\
+  \ drawio contexts → repair sub-agent on definitive\nlayout failures). Otherwise\
+  \ produce the active channel output\n(markdown / python / …) from contexts, examples,\
+  \ and templates — do\nnot invoke drawio.render.\n\n# Render\n\nCreate a Draw.io\
+  \ class (or modules) diagram, then **validate** layout rules, then **repair** on\
+  \ failure.\n\nLayout violations are always a **coding** problem in the render/layout\
+  \ path (`drawio_class_model.py` / `drawio_tools.py`) — never hand-edit the `.drawio`\
+  \ to greenwash scanners while leaving the generator broken. Follow the shared **repair**\
+  \ loop (faultyAsset / repairedAsset under `examples/evals/`).\n\n## Steps\n\n1.\
+  \ **Create** — call `create_diagram` with the source model text (or path). When\
+  \ the user asks to keep positioning, pass `keep_positioning=true`: look for an existing\
+  \ `.drawio` at the output path, update matching class contents in place, leave existing\
+  \ relationship routing, and layout only new classes/edges. Full regeneration (the\
+  \ default) destroys manual positioning.\n2. **Validate** — load **contexts** (`drawio.md`)\
+  \ and run **scan** on the written `.drawio` path(s). Definitive failures: `edges-do-not-cross-classes`,\
+  \ class overlap, `base-above-derived`. Minimize: overlap / shared-anchor / approach.\n\
+  3. **Repair** — when scan reports definitive layout violations, invoke **repair**\
+  \ as a **sub-agent** with `asset` = the diagram path and `violation` = the scan\
+  \ report. Repair fixes the **generator**, regenerates, and re-validates until clean.\n\
+  \nDo not declare the diagram done while `edges-do-not-cross-classes` (or class overlap)\
+  \ violations remain.\n\n\nJudge the diagram against drawio contexts; call scan on\
+  \ the asset paths under review.\n\n# Contexts\n\nRules for rendering and auditing\
+  \ UML class diagrams in Draw.io under clean engineering. Layout is a judgment call\
+  \ constrained by these rules — not a script dump. Prefer incremental edits when\
+  \ a `.drawio` already exists; full regeneration destroys manual positioning. Pass\
+  \ **`keep_positioning=true`** on `render` / `create_diagram` (or `transform` with\
+  \ `previous` XML) to update class contents in place, leave existing relationship\
+  \ routing, and layout only new classes.\n\n**Scanners** live under `scanners/` (`*_scanner.py`,\
+  \ rule slug = `RULE` / filename). Run them via the Drawio kit **scan** / **validate**\
+  \ after every **render**; iterate until hard violations are gone. On failure, **repair**\
+  \ (sub-agent) fixes the layout generator.\n\n---\n\n## Page and hierarchy\n\nOne\
+  \ page per module / Key Abstraction (KA). Page name matches the module/KA name.\
+  \ Local classes live on that page; cross-boundary types appear as **imported** cards\
+  \ at the top.\n\n- **`class-title-no-markdown-bold`** — Class titles are plain text\
+  \ inside the HTML `<b>` tag. Do not bake markdown `**name**` into the label; bold\
+  \ is already the `<b>` wrapper. `**Prospect**` displayed inside `<b>` shows the\
+  \ asterisks.\n- **`stereotype-above-class-name`** — UML stereotype sits **above**\
+  \ the class name on its own line, italic, not bold. The class name is bold. Do not\
+  \ put `<<Stereotype>>` on the same line as the name inside `<b>`.\n\n### Hierarchy\
+  \ rules\n\n- **`base-above-derived`** — Base and imported ancestor classes sit at\
+  \ higher vertical positions (lower `y`) than their derived classes. Inheritance\
+  \ arrows point **upward** (child → parent). Sibling subtypes share a `y` row side\
+  \ by side below the parent. Do not put a base below its children, and do not flatten\
+  \ grandchild and grandparent onto the same row.\n- **`cross-model-ancestors-on-page`**\
+  \ — When a local type extends or uses a type from another module/KA, import the\
+  \ **full ancestor chain** needed to read the ancestry — grandparents included —\
+  \ at the top of the page. Imported cards use a **dashed border** and a `«from: Module/KA\
+  \ Name»` stereotype above the class name; show only key properties (enough to recognise\
+  \ the type). Do not render imports as solid local cards, and do not omit a grandparent\
+  \ that explains where the immediate parent comes from.\n- **`module-spatial-cohesion`**\
+  \ — Classes of the same module/KA form a tight cluster (short internal edges). Different\
+  \ modules/KAs on the same page sit with a clear gap (~200px+). Cross-boundary edges\
+  \ may be longer — that length is the signal. Instance notes sit beside their class\
+  \ inside the cluster, not in the gap. On multi-module pages, if mental bounding\
+  \ boxes overlap, reposition until they separate. A single-module page satisfies\
+  \ cohesion by default — still avoid scattering classes unnecessarily far apart.\
+  \ Wrap long edge labels; leave ~60–80px corridors so labels do not sit on boxes.\n\
+  - **`aggregate-layout-cohesion`** — Cluster an aggregate root with its members and\
+  \ its repository. Do not insert unrelated objects (auth cards) in the gap between\
+  \ a root and its value objects. Repositories sit beside the aggregate they collect.\n\
+  - **`repository-aggregation-diamond`** — A Repository relates to its aggregate with\
+  \ an aggregation (hollow diamond) and a `<<Repository>>` tag. A repo with no diamond\
+  \ is an unlabeled box, not a collection.\n- **`leaf-nodes-not-in-horizontal-row`**\
+  \ — A hub with 4+ leaf neighbours must not place those leaves in one wide horizontal\
+  \ row (same `y`, large `x` span). Fan leaves into multiple rows or a compact cluster.\n\
+  \n---\n\n## Edge routing\n\nAn edge relates exactly two classes. Routing that cuts\
+  \ a third class, stacks on another edge, or shares a default anchor makes relationships\
+  \ unreadable.\n\n### Routing rules\n\n- **`prefer-short-routes`** — Related classes\
+  \ sit near each other so arrows stay short. Prefer **0–2** explicit waypoints; more\
+  \ than 2 across a short gap is a violation. Endpoint boxes should leave only a small\
+  \ clear gap (≲320px — about one intervening card or row gutter). Do not park imports\
+  \ far from the locals they link to, and do not stretch a tall single-column stack\
+  \ when a 2–3 column pack would keep ownership edges short. Cross-boundary length\
+  \ is a signal only when two *modules* share one page — on a single-module / per-aggregate\
+  \ page, every edge should be short.\n- **`edges-do-not-cross-classes`** — No edge\
+  \ segment may enter the bounding box of any class except its two endpoints. Prefer\
+  \ exit/entry sides that keep obstacles off the direct path; otherwise add explicit\
+  \ waypoints so the edge dog-legs around the obstacle. Do not rely on Draw.io’s auto-router\
+  \ for long inheritance edges across siblings.\n- **`edges-do-not-overlap-edges`**\
+  \ — Two orthogonal edges must not share the same column or row for more than ~12px.\
+  \ Spread parallel runs ~20–40px apart with waypoints, and give each edge a unique\
+  \ exit/entry on a shared side.\n- **`edges-do-not-cross-other-edges`** — Transverse\
+  \ crossings (one segment through another) are distinct from collinear overlap —\
+  \ both fail readability; crossings are definitive.\n- **`distinct-anchor-points`**\
+  \ — When two or more edges leave or arrive on the same side of a class, assign explicit\
+  \ `exitX`/`exitY` or `entryX`/`entryY` so paths are visually distinct. Do not leave\
+  \ a shared side on the default center anchor for every edge.\n- **`edges-approach-perpendicular`**\
+  \ — The first and last segments must hit the exit/entry side head-on (perpendicular),\
+  \ not slide along the class border.\n\n### Audit\n\n- **`run-audit-after-every-render`**\
+  \ — After every generate or layout change, run Drawio **scan** / `audit_diagram_report`\
+  \ and iterate until done. Priority:\n  1. class box overlap → **must be zero**\n\
+  \  2. **`edges-do-not-cross-classes`** → **must be zero**\n  3. **`prefer-short-routes`**\
+  \ → **must be zero** (excessive gap / >2 waypoints)\n  4. **`edges-do-not-overlap-edges`**\
+  \ / **`edges-do-not-cross-other-edges`** → **minimize** / definitive\n  5. **`distinct-anchor-points`**\
+  \ / **`edges-approach-perpendicular`** → **minimize**\n\n  Use orthogonal inheritance\
+  \ routing when a subtype is not directly under its parent. Do not skip the audit\
+  \ because the layout “looks right” during generation.\n\n---\n\n## Domain Language\
+  \ → diagram\n\nWhen the source is a Domain Language file (`*-domain-language.md`,\
+  \ `state: domain-language`), the diagram uses the same card / row / collaborator\
+  \ shape as a domain model, but structure comes from prose, not typed blocks.\n\n\
+  | ULL element | Diagram element |\n|---|---|\n| `## KAName` / module heading | One\
+  \ page named exactly that |\n| `### concept_name` | One class card |\n| Verb-led\
+  \ behavior bullet | One row: `<bullet text> : <Collaborator>, …` |\n| `*italicized*`\
+  \ terms in a bullet | Collaborator list on that row |\n| `**Invariant:** …` bullet\
+  \ | Row in the invariant compartment |\n| `### Subtype *is a type of* Base` | Inheritance\
+  \ edge child → parent |\n| Stub whose first bullet is `is a property of *parent*`\
+  \ | Property row on parent, or lightweight stub with `«property of: Parent»` |\n\
+  | `### term *(boundary)*` | Imported dashed card with `«boundary: OwningModule»`\
+  \ |\n| Parenthetical primitive (e.g. `(integer)`) | Inline value on the row — no\
+  \ separate card |\n\n### Mapping rules\n\n- **`ull-bullets-become-rows`** — One\
+  \ card per `### concept`, one row per behavior bullet (italic markers stripped;\
+  \ collaborators = italicized terms). Fold duplicate cross-concept references into\
+  \ **one** association edge. Inheritance comes only from `*is a type of*` headings\
+  \ — do not also draw an association to the base for inherited behavior. Boundary\
+  \ stubs are dashed imports; property stubs are a parent row or a `«property of:\
+  \ …»` stub. Do not drop bullets, italic terms, or invariants; do not invent type\
+  \ annotations the source lacks; do not emit one edge per bullet hit; do not treat\
+  \ italic terms inside `**Invariant:**` lines as association edges (invariants never\
+  \ produce edges).\n\n**Notes**\n\n- Italicized terms must already resolve to named\
+  \ concepts in the Domain Language source — fix unresolved italics upstream; do not\
+  \ invent cards here.\n- Domain Language sync-to-model is one-way for **new/deleted\
+  \ concepts** only. Bullet text does not round-trip; prose in markdown remains authoritative.\n\
+  \n---\n\n## Relationship notation (class view)\n\nReuse clean engineering relationship\
+  \ kinds on Draw.io edges (hollow triangle for inheritance; filled/unfilled diamond\
+  \ for composition/aggregation; open arrow for association). Cardinality and navigability\
+  \ belong on the edge when the source model states them. Modules-view diagrams use\
+  \ dependency arrows and containment nesting instead — see `drawio_class_model.py`\
+  \ — not these UML edge styles.\n\nSeparate tools run — toolset: `context_tools.clean_engineering.class_model.drawio.drawio:Drawio`\
+  \ action: `repair`\n\nPrepend the following block verbatim as the very first lines\
+  \ of the file you are writing - before any imports, before any code.\n\nRan SessionLog.append\
+  \ (plain): error cannot evaluate plain-call argument type(tool).manifest_path\n\n\
+  Finish the turn that hangs off the work session.\n\nEvery tool call uses this shape\
+  \ - set `tool` and `arguments`, pipe to CLI:\n\n```yaml\ntoolset: generate.generate:Generate\n\
+  context:\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m tools\
+  \ run -\n\nSuggested flow (repeat and reorder as the story needs):\n\n1. tool: read_cdr_format\n\
+  \n2. tool: list_cdrs\n\n3. tool: write_cdr\n\n4. tool: create_diagram\n\n5. tool:\
+  \ scan\n\n6. tool: repair\n\n7. tool: finish_turn\n\nRead `resources` from each\
+  \ response before choosing the next tool."
+arguments:
+  tools:
+  - toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+    context:
+      format: python
+tools:
+- read_cdr_format
+- list_cdrs
+- write_cdr
+- create_diagram
+- scan
+- repair
+- finish_turn
+resources:
+  mode: action
+```

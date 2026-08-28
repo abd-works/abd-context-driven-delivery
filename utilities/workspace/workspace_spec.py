@@ -3,6 +3,7 @@
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """BDD — workspace usage story (workspace-bdd-sketch.md) at development."""
 
+import inspect
 import sys
 import tempfile
 from pathlib import Path
@@ -15,9 +16,10 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_none, be_true, equal, expect, raise_error
+from expects import be_none, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
+from primitives.actions.action import _ActionExpander
 from workspace.git_repo import DirtyBranchSwitchError, NullGitRepo
 from workspace.workspace import ContextToolHost, PathOverride, Turn, Workspace
 from tools.tool import _ToolsetLoader
@@ -529,3 +531,131 @@ with description("Turn"):
             kit.finish_turn(result="done")
             expect(bound).not_to(be_none)
             expect(bound.open_turn).to(be_none)
+
+        with it("should open the hanging turn from workspace and session context without a host"):
+            tmp = Path(tempfile.mkdtemp(prefix="ws-turn-open-cli-"))
+            git = NullGitRepo()
+            workspace = Workspace(str(tmp))
+            host = ContextToolHost(workspace, git=git)
+            host.run_action("sprint-open", goal="open turn")
+            kit = Turn(workspace=str(tmp), session="sprint-open")
+            opened = kit.open(action="start-turn")
+            expect(opened.action).to(equal("start-turn"))
+            expect(kit.work_session.open_turn).to(equal(opened))
+            expect("host" in kit.tools["open"].manifest["inputSchema"].get("required", [])).to(
+                equal(False)
+            )
+
+    with context("that performs a turn"):
+        with it("should keep open and finish_turn as tools and performTurn as an action"):
+            loaded = _ToolsetLoader.instance().load("workspace.workspace:Turn")
+            kit = loaded()
+            expect(getattr(loaded, "_is_toolset", False)).to(equal(True))
+            expect("open" in kit.tools).to(equal(True))
+            expect("finish_turn" in kit.tools).to(equal(True))
+            expect("performTurn" in kit.actions).to(equal(True))
+            expect("performTurn" in kit.tools).to(equal(False))
+
+        with it("should open then finish the hanging turn in the performTurn recipe"):
+            tools = Turn.manifest.signature["performTurn"]["tools"]
+            expect(tools).to(equal(["open", "finish_turn"]))
+            kit = Turn()
+            prose = "\n".join(
+                _ActionExpander.instance()
+                .parse_body(type(kit).performTurn, kit)
+                .prose_parts
+            )
+            expect(prose).to(contain("Do whatever was asked in context"))
+
+        with it("should not require a host to perform a turn"):
+            params = Turn.manifest.signature["performTurn"].get("parameters") or {}
+            expect("host" in params).to(equal(True))
+            expect("prompt" in params).to(equal(True))
+            expect("result" in params).to(equal(True))
+            expect("context" in params).to(equal(True))
+            host_param = inspect.signature(Turn.performTurn).parameters["host"]
+            expect(host_param.default).to(equal(None))
+
+        with it("should return a turn commit not a dict"):
+            expect(Turn.manifest.signature["performTurn"]["returns"]).to(
+                equal("TurnCommit | None")
+            )
+            expect(Turn.manifest.signature["finish_turn"]["returns"]).to(
+                equal("TurnCommit | None")
+            )
+            expect(Turn.manifest.signature["open"]["returns"]).to(equal("Turn"))
+
+
+with description("WorkSession"):
+    with context("that is a toolset"):
+        with it("should load as workspace.workspace:WorkSession"):
+            from workspace.workspace import WorkSession
+
+            tmp = Path(tempfile.mkdtemp(prefix="ws-session-load-"))
+            loaded = _ToolsetLoader.instance().load("workspace.workspace:WorkSession")
+            kit = loaded(workspace=str(tmp), session="probe-tools")
+            expect(getattr(loaded, "_is_toolset", False)).to(equal(True))
+            expect("finish_work_session" in kit.tools).to(equal(True))
+            expect("start_work_session" in kit.tools).to(equal(True))
+
+        with it("should finish from workspace and session context"):
+            from workspace.workspace import WorkSession
+
+            tmp = Path(tempfile.mkdtemp(prefix="ws-session-cli-"))
+            git = NullGitRepo()
+            workspace = Workspace(str(tmp))
+            host = ContextToolHost(workspace, git=git)
+            host.run_action("sprint-finish-cli", goal="close session")
+            kit = WorkSession(workspace=str(tmp), session="sprint-finish-cli")
+            kit.git = git
+            path = kit.finish_work_session(outcome="cli closed")
+            expect("sprint-finish-cli" in path).to(equal(True))
+            expect(kit.ended).not_to(equal(""))
+
+        with it("should start from workspace and session context without a host"):
+            from workspace.workspace import WorkSession
+
+            tmp = Path(tempfile.mkdtemp(prefix="ws-session-start-cli-"))
+            kit = WorkSession(workspace=str(tmp), session="sprint-start-cli")
+            kit.git = NullGitRepo()
+            started = kit.start_work_session(goal="ship")
+            expect(started.name).to(equal("sprint-start-cli"))
+            expect(started.goal).to(equal("ship"))
+            expect(kit.session_md.is_file()).to(equal(True))
+            expect(
+                "host"
+                in kit.tools["start_work_session"].manifest["inputSchema"].get(
+                    "required", []
+                )
+            ).to(equal(False))
+            expect(
+                "tools"
+                in kit.tools["start_work_session"].manifest["inputSchema"].get(
+                    "required", []
+                )
+            ).to(equal(False))
+
+
+with description("Workspace"):
+    with context("that is a toolset"):
+        with it("should open a work session from path context without a host"):
+            tmp = Path(tempfile.mkdtemp(prefix="ws-open-cli-"))
+            kit = Workspace(workspace=str(tmp))
+            opened = kit.open(name="sprint-ws-open", goal="open from path")
+            expect(opened.name).to(equal("sprint-ws-open"))
+            expect(kit.current_work_session.name).to(equal("sprint-ws-open"))
+            expect(
+                "host" in kit.tools["open"].manifest["inputSchema"].get("required", [])
+            ).to(equal(False))
+
+
+with description("Repair"):
+    with it("should open from the session on the repair without a host"):
+        tmp = Path(tempfile.mkdtemp(prefix="ws-repair-open-"))
+        workspace = Workspace(str(tmp))
+        session = workspace.open_work_session("sprint-repair", path=str(tmp))
+        repair = session.repairs.for_violation("asset.py", "leak")
+        opened = repair.open(asset="asset.py", violation="leak")
+        expect(opened.asset).to(equal("asset.py"))
+        expect(opened.violation).to(equal("leak"))
+        expect(session.open_turn).not_to(be_none)

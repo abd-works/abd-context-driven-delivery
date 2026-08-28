@@ -3,7 +3,7 @@
 ## Purpose
 `sub_agent` provides the `@sub_agent` decorator and `SubAgentTool` dataclass that together mark a toolset method as a non-blocking background sub-agent launch. When the decorator is applied on top of `@agent_tool` or `@agent_instructions`, it sets `_is_sub_agent = True` and suppresses `_is_agent_tool` so the standard tool-discovery path skips it; `discover_sub_agent_tools` picks it up instead and produces `SubAgentTool` objects whose `signature_entry` renders as `kind: sub_agent / launch: non_blocking` in the manifest.
 
-`SubAgent.run` is the slash action `/sub-agent`. It does **not** open a work session or turn — listed actions (and context tools) already do that. `AgenticToolset.context_tools` loads `tools` (context tools) plus optional `actions` (other action kits). The parent launches **this prompt plus those context tools plus those actions** as one non-blocking sub-agent and does not wait.
+`SubAgent.run` is the slash action `/sub-agent`. When `actions` is listed and non-empty, those kits already open the work session and turn — this kit does **not** wrap them in `performTurn`. When `actions` is missing or empty, the worker runs `performTurn` (`workspace.workspace:Turn`, `action: performTurn`) around the listed context-tool work (open the hanging turn, each context tool as its own tools run, `finish_turn`; report branch and commit). `AgenticToolset.context_tools` loads `tools` (context tools) plus optional `actions` (other action kits). The parent launches **this prompt plus those context tools plus those actions** as one non-blocking sub-agent and does not wait.
 
 ## Seam
 `SubAgent.run` (`kind: sub_agent`, `launch: non_blocking`); `SubAgentTool`, `sub_agent`, `discover_sub_agent_tools`

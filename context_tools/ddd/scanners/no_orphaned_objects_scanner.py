@@ -6,7 +6,7 @@ import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from scanners import Scanner, ScannerRunner
+from scan import Scanner, ScannerRunner
 
 RULE = "no-orphaned-objects"
 _SUFFIXES = frozenset({".drawio", ".xml"})

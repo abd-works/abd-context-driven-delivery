@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from scanners import Scanner
+from scan import Scanner
 
 RULE = "reuse-existing-not-invent-parallel"
 
@@ -119,7 +119,7 @@ def collect_design_files(root: Path) -> list[Path]:
 
 
 if __name__ == "__main__":
-    from scanners import run_scanner_main
+    from scan import run_scanner_main
 
     raise SystemExit(
         run_scanner_main(

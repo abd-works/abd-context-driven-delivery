@@ -14,8 +14,8 @@ from pathlib import Path
 
 from harness.harness_tool import prompt
 from workspace import WorkSession, Workspace, docs_dir
-from primitives.actions.action import agent_instructions
-from tools.tool import agent_tool, toolset
+from primitives.actions.action import agent_instructions, agentic_toolset
+from tools.tool import agent_tool
 
 _STATE_NAMES = (
     "grill-answers.md",
@@ -26,13 +26,16 @@ _STATE_NAMES = (
 _RESERVED_SLUGS = frozenset({"handoff", "handoff-latest", "latest"})
 
 
-@toolset
+@agentic_toolset
 class Handoff:
     """Compact the current conversation into a handoff for the next agent session."""
 
-    def __init__(self, path: str = ".") -> None:
-        self.workspace = Workspace(str(path))
+    def __init__(self, path: str = ".", workspace: str = "", session: str = "") -> None:
+        root = workspace or path
+        self.workspace = Workspace(str(root))
         self.workspace.load()
+        if session:
+            self.workspace.open(name=session, path=root)
 
     # ------------------------------------------------------------------
     # Private helpers (pure unless noted)

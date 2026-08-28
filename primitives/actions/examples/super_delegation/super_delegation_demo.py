@@ -1,11 +1,11 @@
 """Plain demo for super() delegation in action bodies - no chain decorators."""
 from __future__ import annotations
 
-from primitives.actions.action import _ActionRunner, agent_instructions
-from tools.tool import Toolset, agent_tool, toolset
+from primitives.actions.action import _ActionRunner, agent_instructions, agentic_toolset
+from tools.tool import agent_tool
 
 
-@toolset
+@agentic_toolset
 class SuperBase:
     """Base toolset with a plain @agent_instructions."""
 
@@ -25,7 +25,7 @@ SuperBase._is_toolset = True  # type: ignore[attr-defined]
 _ActionRunner.instance().validate_toolset(SuperBase)
 
 
-@toolset
+@agentic_toolset
 class ExplicitSuperChild(SuperBase):
     """Child that calls super().generate() explicitly."""
 
@@ -40,7 +40,7 @@ ExplicitSuperChild._is_toolset = True  # type: ignore[attr-defined]
 _ActionRunner.instance().validate_toolset(ExplicitSuperChild)
 
 
-@toolset
+@agentic_toolset
 class EmptySuperChild(SuperBase):
     """Child with empty body - auto-delegates to parent generate."""
 
@@ -52,7 +52,7 @@ EmptySuperChild._is_toolset = True  # type: ignore[attr-defined]
 _ActionRunner.instance().validate_toolset(EmptySuperChild)
 
 
-@toolset
+@agentic_toolset
 class EmptyWithReturn(SuperBase):
     """Empty steps but custom return - parent tools/prose, child result template."""
 

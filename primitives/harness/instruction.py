@@ -40,6 +40,8 @@ class Instruction(HarnessTool):
                     class_string="",
                     operation_instructions=source.get("guidance", ""),
                     toolset=source.get("toolset", ""),
+                    invoke=source.get("invoke") or "tool",
+                    operation=source.get("operation") or "",
                 )
             else:
                 self.body = ContextToolBody.from_source(

@@ -49,7 +49,9 @@ def read_toolset_header(source_path: Path) -> ToolsetHeader:
     )
 
 
-def _find_marker_command(text: str) -> str | None:
+def manifest_commands(text: str) -> list[str]:
+    """All ``@toolset-manifest`` commands in header comments, in file order."""
+    found: list[str] = []
     for line in text.splitlines():
         stripped = line.strip()
         if not stripped.startswith("#"):
@@ -63,8 +65,13 @@ def _find_marker_command(text: str) -> str | None:
         if remainder.startswith(":"):
             remainder = remainder[1:].strip()
         if remainder:
-            return remainder
-    return None
+            found.append(remainder)
+    return found
+
+
+def _find_marker_command(text: str) -> str | None:
+    commands = manifest_commands(text)
+    return commands[0] if commands else None
 
 
 def _read_request_generate_block(text: str) -> str | None:

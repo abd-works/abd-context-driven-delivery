@@ -14,7 +14,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from scanners import ScannerCollection
+from scan import ScannerCollection
 
 _STORIES = _REPO / "context_tools" / "stories"
 _SCANNERS = _STORIES / "scanners"

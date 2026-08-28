@@ -25,7 +25,9 @@ Nested expand (old 3c / 7f) is already how Generate works. The leftover is the *
 
 ## What is still expensive
 
-After single-command + walker, Pair A is **one** `run -` (~0.1s expand) then **~51s** of the model reading ~74k characters of inlined guidance and writing the story map.
+After single-command + walker, Pair A is **one** `run -` (~0.1s expand) then the model reading inlined guidance and writing the story map.
+
+Thin first expand cut that payload **74,019 → 17,767**. The fair combined clock was **01:05 / 01:06** — it did **not** beat single-command **00:51 / 00:37**. Isolated thinner slices were faster; one more filter cut is not the next bet. Leftover time is write, not hop 2.
 
 Listing unused tools (`finish_turn`, CDR, Drawio) did **not** move that clock. Remanifest, `_req.yaml`, and a second guidance action are gone.
 
@@ -45,11 +47,13 @@ Current first generate is **74,019** chars. Almost all of it is unfiltered `exam
 
 | Experiment | Load rule | Do not touch | Expected blob (story_map + markdown) |
 |---|---|---|---|
-| **thin-fidelity-format** | `contexts`: preamble + Shared rules + `## {fidelity}` only (whole `# Contexts` if fidelity is unset). `examples`: only files under the active format alias (`markdown`→`md`, `python`→`py`, …), using default format when the caller omitted one. | `templates/` | ~74k → ~**40k** (contexts −6k, examples drop `py/` −16k; leftover is all `md/` examples including scenarios) |
-| **thin-templates** | `templates`: only `templates/{format-alias}/`, then filenames for this fidelity (`story_map` → `story-map.md` + `thin-slice.md`). Drop `stories-sketch.md` from generate. | `stories.md`, `examples/` | ~74k → ~**52k** (drop ~22k of wrong-format / sketch / scenario templates) |
-| **thin-examples-pick** | *Analysis only — do not implement yet.* See below. | — | — |
+| **thin-fidelity-format** (isolated) | `contexts`: preamble + Shared rules + `## {fidelity}`. `examples`: format alias, then filename-match. | `templates/` | Run 1 **48,798**. Run 2 **38,908**. |
+| **thin-templates** (isolated) | `templates`: `templates/{format-alias}/` + fidelity filenames. Drop `stories-sketch.md`. | `stories.md`, `examples/` | **52,878**. Pair A **00:33** / Pair B **00:31**. |
+| **thin-first-expand** (combined, one branch) | All three filters on `experiment/thin-fidelity-format`. No file split. | physical trees | Stories **17,767**. Fair clock **01:05 / 01:06**. |
+| **thin-first-expand + CE** (same branch) | Same load filters for CE (and any kit with `## {fidelity}`). Drop `evals/`. | physical trees | CE **45,100**. Fair clock **00:41 / 00:55**. Pair A beat **00:51**; Pair B missed **00:37**. |
+| **thin-examples-pick** | *Analysis only — already folded into examples filename-match.* | — | — |
 
-Do **not** combine the first two on one branch. Templates live in a different locator path; experiment 1 will not fix them. Clock vs single-command Pair A **00:51**. Hop back to remanifest / invented `action: guidance` = miss.
+Isolated rows stay on the sheet for history. Combined work lives on **one** branch: `experiment/thin-fidelity-format`. Expand is the keep: **17,767**. Fair clock did not beat single-command. Do not open another filter experiment. Hop back to remanifest / invented `action: guidance` = miss.
 
 #### Do not load every example (analysis, not a courier row yet)
 
@@ -62,7 +66,7 @@ After **thin-fidelity-format**, markdown `story_map` still inlines **every** `ex
 | **Same smarter load, filename match** | Do this when we touch examples again: `story_map`+`md` → `story-map.md` + `thin-slice.md` only. Still one folder, no split. That is the fidelity cascade on examples — fold into a later **thin-fidelity-format** follow-up, not a recency experiment. |
 | **Canonical / tagged pick when n>3** | Only after several same-fidelity same-format examples exist. `examples.md` is already the tag index. |
 
-Do not implement **thin-examples-pick** until **thin-fidelity-format** has a courier row.
+Filename-match on examples is already on the combined branch. Do not open a new examples experiment.
 
 ### Channel write — done, not a keep
 

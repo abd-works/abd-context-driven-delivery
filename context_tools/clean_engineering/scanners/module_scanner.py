@@ -10,7 +10,7 @@ import ast
 from dataclasses import dataclass
 from pathlib import Path
 
-from scanners import Scanner
+from scan import Scanner
 
 _SKIP_DIRS = {
     "node_modules",

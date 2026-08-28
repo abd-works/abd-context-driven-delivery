@@ -327,7 +327,7 @@ with description("BaseContextTool public host face"):
         expect(isinstance(self.host.workspace, Workspace)).to(be_true)
 
     with it("should hold a Scan as scanner"):
-        from scanners.scan import Scan
+        from scan.scan import Scan
 
         expect(isinstance(self.host.scanner, Scan)).to(be_true)
 
@@ -342,6 +342,7 @@ with description("BaseContextTool public host face"):
             "satisfy",
             "document",
             "createRule",
+            "scan",
         ):
             expect(name in self.host.actions).to(equal(False))
 

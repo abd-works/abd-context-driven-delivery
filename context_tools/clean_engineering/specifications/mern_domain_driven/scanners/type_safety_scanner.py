@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import List
 
 from mern_scanner_base import TypeScriptScanner
-from utilities.scanners.violation import Violation
+from scan.violation import Violation
 
 _REQ_CUSTOM_PROP_RE = re.compile(r"\breq\.(user|session|auth|claims|tenant)\b")
 _AS_ANY_REQ_RE = re.compile(r"\(\s*req\s+as\s+any\s*\)\.")
