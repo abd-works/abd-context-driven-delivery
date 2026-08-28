@@ -27,6 +27,7 @@ from cli_agent.cli_agent import (
     CursorCli,
     IdeCli,
     NEXT_TURN,
+    JUDGE_SOURCE_SCOPE,
     VALIDATE_SAME_LENS,
     VscodeCli,
     align_tools,
@@ -188,7 +189,7 @@ with description("IdeCli"):
             expect(turn_prompt(hanging)).to(contain("Turn.action: (none)"))
             expect(turn_prompt(hanging)).to(contain("Turn.prompt: summarize the session"))
 
-        with it("should tell the CLI to start the next Turn after finish"):
+        with it("should offer later items as guidance and leave the next Turn to the CLI"):
             hanging = bind_turn(
                 blank_turn(),
                 ["context_tools.stories.stories:Stories"],
@@ -196,13 +197,15 @@ with description("IdeCli"):
             )
             text = turn_prompt(hanging, ["generate.generate:Generate"])
             expect(text).to(contain("Turn.action: Sketch"))
-            expect(text).to(contain("Next Turn.action: Generate"))
+            expect(text).to(contain("guidance"))
+            expect(text).to(contain("Guidance: Generate"))
             expect(text).to(contain(NEXT_TURN))
+            expect(text).not_to(contain("Next Turn.action:"))
             extra = turn_prompt(
                 hanging, ["handoff.handoff:Handoff", "write a one-line status"]
             )
-            expect(extra).to(contain("Next Turn.action: Handoff"))
-            expect(extra).to(contain("Next Turn.prompt: write a one-line status"))
+            expect(extra).to(contain("Guidance: Handoff"))
+            expect(extra).to(contain("Guidance: write a one-line status"))
 
         with it("should copy generate lenses onto judge validate tools"):
             generate = [
@@ -252,7 +255,28 @@ with description("IdeCli"):
             expect(text).to(contain("fidelity=model"))
             expect(text).to(contain("format=markdown"))
             expect(text).to(contain(VALIDATE_SAME_LENS))
+            expect(text).to(contain(JUDGE_SOURCE_SCOPE))
             expect(text).to(contain("Turn.action: Validate"))
+
+        with it("should give the judge the original job as source scope"):
+            hanging = bind_turn(
+                blank_turn(),
+                [
+                    {
+                        "toolset": "context_tools.stories.stories:Stories",
+                        "context": {"fidelity": "scenarios", "format": "markdown"},
+                    }
+                ],
+                "generate.generate:Generate",
+            )
+            hanging.prompt = "scenarios for the story map"
+            worker = turn_prompt(hanging)
+            text = IdeCli(judge=True).judge_task_prompt(
+                worker, generate_tools=hanging.tool_keys, turn=hanging
+            )
+            expect(text).to(contain(JUDGE_SOURCE_SCOPE))
+            expect(text).to(contain("--- JOB / SOURCE SCOPE ---"))
+            expect(text).to(contain("scenarios for the story map"))
 
 
 with description("CursorCli"):

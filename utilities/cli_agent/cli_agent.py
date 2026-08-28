@@ -39,15 +39,25 @@ VALIDATE_SAME_LENS = (
     "Judge the artifacts produced at that fidelity and format. "
     "When format is markdown, validate the markdown; do not look for source code."
 )
+JUDGE_SOURCE_SCOPE = (
+    "Compare what was written to the source scope of the original job. "
+    "The job is the worker prompt and its sources (story map, sketch, "
+    "model, or named subset). Scope may be the whole artifact or a "
+    "stated slice — use that scope, not only the files that happen to "
+    "exist. Missing nodes, epics, or files that the source scope called "
+    "for are a fail. Do not treat a leftover or partial tree as complete."
+)
 TURN_CLOSE = (
     "The CLI opens the hanging workspace.Turn when it runs the action. "
     "Finish that Turn after the action so it commits. "
     "CliAgent does not open the Turn."
 )
 NEXT_TURN = (
-    "After finish, immediately open the next hanging Turn. "
-    "That Turn may be an action kit, a utility, or a prompt. "
-    "No action kit is fine. Do not wait for the operator."
+    "Listed actions are guidance, not a locked sequence. "
+    "The CLI has the final say on what the next Turn is — "
+    "same as a chat agent. After finish, decide the next Turn "
+    "from that guidance and the work in front of you. "
+    "Do not wait for the operator."
 )
 PARENT_CHECKIN = (
     "The parent does not block on the CLI. Every once in a while, check "
@@ -119,14 +129,14 @@ def action_name(item: object) -> str:
 
 
 def later_step(item: object) -> str:
-    """Next Turn may be a kit, a utility, or a prompt."""
+    """One suggested follow-on — not a mandated next Turn."""
     if item is None or str(item).strip() == "":
-        return "Next Turn: no action kit"
+        return "Guidance: (none)"
     if is_toolset_ref(item):
-        return f"Next Turn.action: {action_name(item)}"
+        return f"Guidance: {action_name(item)}"
     if isinstance(item, str):
-        return f"Next Turn.prompt: {item}"
-    return f"Next Turn.action: {action_name(item)}"
+        return f"Guidance: {item}"
+    return f"Guidance: {action_name(item)}"
 
 
 def bind_turn(turn, tools: list | None, action: object | None = None):
@@ -185,7 +195,7 @@ def turn_prompt(turn, later_actions: list | None = None) -> str:
     ) or "(none)"
     lines = [
         "This is an interactive session.",
-        f"Turn.action: {turn.action or '(none)'}",
+        f"Turn.action: {turn.action or '(none)'} (guidance — the CLI decides the Turn)",
         f"Turn.tool_keys: {keys}",
         f"Turn.toolCalls: {calls}",
     ]
@@ -355,28 +365,36 @@ class IdeCli:
     ) -> str:
         """Judge the same Turn: same tool_keys, action Validate."""
         task = self.judge
-        extras = [VALIDATE_SAME_LENS]
+        extras = [VALIDATE_SAME_LENS, JUDGE_SOURCE_SCOPE]
         if isinstance(task, str):
             extras.insert(0, task)
         elif isinstance(task, dict):
             prior = str(task.get("context") or task.get("prompt") or "").strip()
             if prior:
                 extras.insert(0, prior)
+        job = (worker_prompt or "").strip()
         if turn is not None:
             hanging = blank_turn()
             hanging.tool_keys = list(turn.tool_keys)
             hanging.tool_calls = list(turn.tool_calls)
             hanging.fidelity = turn.fidelity
             hanging.format = turn.format
+            hanging.prompt = getattr(turn, "prompt", "") or ""
             hanging.action = "Validate"
-            return turn_prompt(hanging) + "\n".join(extras) + "\n"
+            body = turn_prompt(hanging) + "\n".join(extras)
+            if job:
+                body += "\n--- JOB / SOURCE SCOPE ---\n" + job + "\n"
+            return body if body.endswith("\n") else body + "\n"
         tools = generate_tools
         if isinstance(task, dict):
             tools = align_tools(task.get("tools") or generate_tools or [], generate_tools)
         else:
             tools = align_tools(generate_tools or [], generate_tools)
         hanging = bind_turn(blank_turn(), tools, "validate.validate:Validate")
-        return turn_prompt(hanging) + "\n".join(extras) + "\n"
+        body = turn_prompt(hanging) + "\n".join(extras)
+        if job:
+            body += "\n--- JOB / SOURCE SCOPE ---\n" + job + "\n"
+        return body if body.endswith("\n") else body + "\n"
 
     def write_task_file(self, task: str, workspace: str, name: str) -> str:
         """Write task text under workspace and return the relative path."""
@@ -717,7 +735,7 @@ class CliAgent(SubAgent):
         return work
 
     def _described_turn(self, tools: list, actions: list | None):
-        """Current Turn shape plus later actions. The CLI opens each Turn."""
+        """Suggested Turn shape plus later items as guidance. The CLI decides each Turn."""
         acts = list(actions or [])
         hanging = bind_turn(blank_turn(), tools, acts[0] if acts else None)
         if self._prompt:
@@ -735,7 +753,8 @@ class CliAgent(SubAgent):
         """Run this prompt, the listed context tools, and any listed actions via the IDE CLI.
 
         tools — context tools (same arguments.tools as iterate / repair / generate).
-        actions — optional other action kits to run with those context tools.
+        actions — optional guidance (kits, utilities, or prompts). The CLI
+        decides each Turn.
 
         Reuse this instance's ide (model, mode, agent_mode, judge). Do not pass
         those per run.
@@ -744,7 +763,10 @@ class CliAgent(SubAgent):
         Pass workspace (and session when known) on this kit. This run opens or
         resumes the WorkSession, switches to that path, binds doer and judge,
         then starts an interactive session. If ide.judge is set, a second
-        process is the judge.
+        process is the judge. The judge uses the same tools, fidelity, and
+        format, and compares written artifacts to the source scope of the
+        original job (whole artifact or a stated slice). Missing source
+        nodes are a fail. Markdown generate is judged as markdown.
 
         When this is launched from a chat, always include a process reference
         so a person can get at the CLI: pid when known, and each cursor-agent
@@ -761,8 +783,8 @@ class CliAgent(SubAgent):
         -> IdeCli.run_all
         -> IdeCli.spawn
 
-        Tell the CLI the first Turn shape. After finish, the CLI opens the
-        next Turn for each remaining action. Do not wait for the operator.
+        Give the CLI the tools, a suggested first Turn, and any later items as
+        guidance. The CLI decides each Turn. Do not wait for the operator.
         """
         """Bring in every listed context tool (AgenticToolset.context_tools)."""
         refs = [item for item in (tools or []) if is_toolset_ref(item)]
@@ -770,7 +792,7 @@ class CliAgent(SubAgent):
             host
         action_refs = [item for item in (actions or []) if is_toolset_ref(item)]
         if action_refs:
-            """Name each listed action kit — the CLI runs one per Turn."""
+            """Name each listed action kit as guidance — the CLI decides the Turns."""
             for kit in self.context_tools(action_refs):
                 kit
         work = self._attach_cli_sessions()

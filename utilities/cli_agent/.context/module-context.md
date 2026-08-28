@@ -63,9 +63,12 @@ One cohesive file: `cli_agent.py`.
 - `judge_command` is a second spawn using the instance `agent_mode`. `commands`
   returns doer argv, then judge argv when `judge` is set. CliAgent describes the
   Turn (`action`, `tool_keys`, `toolCalls`) in the prompt. The CLI opens and
-  finishes the hanging `workspace.Turn`. After finish, remaining actions are
-  the next Turns — the CLI starts them without waiting for the operator.
-  Judge validate uses that Turn's tools, fidelity, and format. The parent
+  finishes the hanging `workspace.Turn`. Listed later actions are guidance;
+  the CLI decides each next Turn the way a chat agent would. It does not wait
+  for the operator.
+  Judge validate uses that Turn's tools, fidelity, and format, and
+  compares artifacts to the original job's source scope (whole or slice).
+  The parent
   checks the CLI every once in a while and reports back; it does not drive
   with `-p`.
 - `spawn` is `Popen` of that argv (Windows: new console). `run` / `run_all`

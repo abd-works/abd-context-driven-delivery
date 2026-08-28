@@ -16,7 +16,7 @@ tool: open
 
 1. Call **`open`**. Confirm sprint slug with the user when run context has no `session=`; pass `name` / `goal` / `fidelities` on first create if needed. Follow **`session_guidance`**; use the **`active`** resource for `active.path` / `active.folder`.
 2. **MUST — prove-read before asking.** Before any grill/iterate question (and before inventing options or story/module names):
-   - Identify **every relevant context file referenced or implied** by the decision — not one favorite type. Typical set: `{workspace}/.context/context-index.md`, owning `*-segment.md`, `module-context.md`, session grill-answers / sketches / handoff, peer story-context, build-order, and any path the plan or prior answers cite. Include index/overlay only for structure hints; **never** treat mid-epic stub columns as inventory.
+   - Identify **every relevant context file referenced or implied** by the decision — not one favorite type. Typical set: `{workspace}/.context/context-index.md`, owning `*-segment.md`, `module-context.md`, grill-answers, sketches, peer story-context, build-order, and any path the plan or prior answers cite. Do not treat a consumed handoff (or `handoffs/` archive) as current state. Include index/overlay only for structure hints; **never** treat mid-epic stub columns as inventory.
    - **Read each of those files with the Read tool** (chunk through large ones). Grep, title lists, memory, or primer-only skims **do not count**.
    - **Prove it in the question turn:** name the path(s) read and ground options in concrete terms from them. If you cannot cite specifics from the relevant files, you have not read them — go read before asking.
    - Asking from a skim is a **defect**, same class as dumping a whole artifact in one iterate tick.

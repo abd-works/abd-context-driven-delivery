@@ -67,6 +67,7 @@ with description("WorkSession kit prose"):
         expect("# Session Guidance" in text).to(be_true)
         expect("session.path" in text or "active.path" in text or "path" in text).to(be_true)
         expect("context-index.md" in text).to(be_true)
+        expect("Consumed handoff" in text or "consume" in text.lower()).to(be_true)
 
 
 with description("WorkSession on a BaseContextTool host"):
@@ -578,6 +579,33 @@ with description("a WorkSession tool"):
             idx = ContextIndex.context_index_path(str(self.tmp))
             expect(idx.is_file()).to(be_true)
             expect("test-kit" in idx.read_text(encoding="utf-8")).to(be_true)
+
+        with it("should consume and delete a live handoff on open"):
+            from workspace.workspace import Workspace, WorkSession
+
+            session = WorkSession(Workspace(str(self.tmp)), "handoff-sprint")
+            session.folder.mkdir(parents=True)
+            latest = session.folder / "handoff-latest.md"
+            latest.write_text("# Handoff\n\nResume here.\n", encoding="utf-8")
+            archive = session.folder / "handoffs"
+            archive.mkdir()
+            (archive / "handoff-2026-08-28.md").write_text("old archive\n", encoding="utf-8")
+            result = session.open(name="handoff-sprint", path=str(self.tmp))
+            expect("Resume here" in result).to(be_true)
+            expect("Consumed and deleted the handoff" in result).to(be_true)
+            expect(latest.exists()).to(equal(False))
+            expect(archive.exists()).to(equal(False))
+
+        with it("should delete a docs_dir handoff on open"):
+            from workspace.workspace import Workspace, WorkSession
+
+            session = WorkSession(Workspace(str(self.tmp)), "docs-handoff")
+            session.docs_dir.mkdir(parents=True)
+            latest = session.docs_dir / "handoff-latest.md"
+            latest.write_text("# Handoff\n\nFrom docs dir.\n", encoding="utf-8")
+            result = session.open(name="docs-handoff", path=str(self.tmp))
+            expect("From docs dir" in result).to(be_true)
+            expect(latest.exists()).to(equal(False))
 
     with context("_ensure_sprint"):
         with it("should create the session folder and return the session.md path"):

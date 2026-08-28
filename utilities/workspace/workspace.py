@@ -10,6 +10,7 @@ from __future__ import annotations
 import inspect
 import json
 import re
+import shutil
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
@@ -989,12 +990,56 @@ class WorkSession:
         self.load_cli_sessions()
         self.read_context_index()
         self.record_context_root()
-        return (
+        consumed = self.consume_handoff()
+        opened = (
             "Workspace open. "
             "durable root = path; "
             "sprint docs = folder; "
             "context index loaded when present."
         )
+        if not consumed:
+            return opened
+        return (
+            f"{opened} Consumed and deleted the handoff. "
+            "Use this text only for this open. "
+            "After that, grill-answers, sketches, and generated files are the source of truth.\n\n"
+            f"{consumed}"
+        )
+
+    def _handoff_search_roots(self) -> list[Path]:
+        roots: list[Path] = []
+        try:
+            roots.append(self.folder)
+        except ValueError:
+            pass
+        roots.append(self.docs_dir)
+        if self.name:
+            sibling = self.docs_dir / self.name
+            if sibling.is_dir() and sibling not in roots:
+                roots.append(sibling)
+        return roots
+
+    def consume_handoff(self) -> str:
+        """Read a live handoff once, then delete it.
+
+        Deletes ``handoff-latest.md``, ``handoff.md``, and ``handoffs/`` under
+        the session folder and docs_dir. A consumed handoff is not session state.
+        """
+        text = ""
+        for root in self._handoff_search_roots():
+            for name in ("handoff-latest.md", "handoff.md"):
+                path = root / name
+                if not path.is_file():
+                    continue
+                if not text:
+                    text = path.read_text(encoding="utf-8")
+                path.unlink()
+            archive = root / "handoffs"
+            if archive.is_dir():
+                shutil.rmtree(archive)
+        if text:
+            self.handoff = ""
+        return text
 
     def _ensure_sprint(
         self,

@@ -37,6 +37,8 @@ arguments:
 
 Resume leaves `session.md` Start as written. Goal / fidelities / contexts apply on first create only.
 
+**Consumed handoff.** If `handoff-latest.md` (or `handoff.md` / `handoffs/`) is present, `open` reads it once and **deletes** it. That text is only for this open. Do not keep tracking Resume / next-action / increment state from a handoff. After consume, the source of truth is `session.md`, `grill-answers.md`, sketches, and generated artifacts. Do not re-read a deleted or archived handoff as current work.
+
 When launching `/cli-agent`, the parent does not call `open` or `start_work_session`. CliAgent opens the session, switches to that path, and binds doer/judge.
 
 Do **not** separately chain `read_context_index` or `record_context_root` from lifecycle bodies — `open` already does that.
@@ -47,7 +49,7 @@ Two different folders. Do not invent `{path}/.context/{session-name}/` and do no
 
 - **path** — durable tool root; code/modules → `{path}/` (or `{path}/{default_workspace_folder}/` for code channels)
 - **docs_dir** — `{path}/.context/` — sketches, generated artifacts (`story-map.md`, `scenarios/`, models, module-context), and `grill-answers.md` (survives across sessions). `save_sketch` / `write_grill_answer` destination is `session.path` (or `session.docs_dir`).
-- **folder** — `{path}/.context/sessions/{name}/` — `session.md`, handoff, `handoff-latest.md`, `mistakes.log`, `logs/`
+- **folder** — `{path}/.context/sessions/{name}/` — `session.md`, `mistakes.log`, `logs/`. A live `handoff-latest.md` exists only until the next `open`, which consumes and deletes it.
 - **context-index** — `{workspace_root}/.context/context-index.md`
 
 ## Root when `path` omitted

@@ -25,7 +25,7 @@ expand|run trails explicitly (not via `@log`).
     context-index.md                    # PathOverride persistence
     sessions/{name}/                    # WorkSession.folder — session temps only
       session.md
-      handoff-latest.md
+      handoff-latest.md                 # deleted on the next open (consume_handoff)
       logs/events.log                   # gitignored + .cursorignore; not a dirty signal
 ```
 
