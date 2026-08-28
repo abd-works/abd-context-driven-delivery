@@ -1,5 +1,5 @@
 fidelity: exploration
-scope: solution — plan + swarm utilities and git ticket-flow enhancement (ticket 23)
+scope: solution ? plan + swarm utilities and git ticket-flow enhancement (ticket 23)
 # Lenses: Stories + CE. Story map is Compose / Manage Ticket / Execute / Swarm.
 
 flow:
@@ -144,7 +144,7 @@ ce:
       Correction
       Repair
       TicketState
-        // Backlog | In Progress | Done — same work states as Ticket
+        // Backlog | In Progress | Done ? same work states as Ticket
 =========
 
 =========
@@ -214,7 +214,7 @@ ce:
         parseNumber
       ResearchTag
       TicketState
-        // Backlog | In Progress | Done — same type on Ticket and on Turn
+        // Backlog | In Progress | Done ? same type on Ticket and on Turn
       Project
         stateNamed
 =========
@@ -518,15 +518,15 @@ ce:
 
 ## log
 - discovery / solution / whole-design / pass #scaffold
-- exploration / Compose Plan Sequence / pass #turn-ticket-state — Plan holds workspace.Turn; Turn.state is TicketState
-- discovery / Run Planned Work / pass #map-execute-swarm — Compose, Execute Plan, Swarm Plan; HIL and Judge stay two Manage stories; Comparative Association is Supervisor rubric across Agents
-- exploration / Compose Plan / pass #inc1-bdd — Create Plan; Manage Turns add/edit/delete; Manage HIL Checks; Manage Judge Checkpoints
-- exploration / Execute Plan / pass #inc3-sketch — Execute Turn; HIL validate; Judge evaluate; Review Progress; Advance Turn; Fix and Rerun on existing Mistake/Correction/Repair
-- exploration / Swarm Plan / pass #inc4-sketch — Create Supervisor then Add Agent; Compare Swarm Results is Execute judgment; Comparative Association is Supervisor rubric
-- exploration / Compose Plan / pass #inc1-deepen — second Plan; edit keeps ToolCall; HIL and Judge each stay when the other is added; JudgeCheckpoint.rubric is ai_judge rubric
-- exploration / Manage Ticket Flow / pass #inc2-deepen — ResearchTag and notes on Ticket 23; setStatus is TicketState; parseNumber on # and issues URL; same TicketState type as Turn
-- exploration / Execute Plan / pass #inc3-deepen — Start Plan openWorkSession; Execute Turn performTurn; ai_judge JudgeResult; Advance Turn finish; last turn Done; Fix and Rerun stays In Progress
-- exploration / Swarm Plan / pass #inc4-deepen — Agent opens own WorkSession; compare streams after Judge and HIL; mid-run addAgent; Comparative Association as results arrive
-- exploration / Swarm Plan / pass #inc4-slice — Agent runs selected Plan Turns; Agent.turns in CE
-- exploration / Swarm Plan / pass #inc4-slice-lock — Swarm.turns shared slice once before agents; associate automatic after streamed compare
-- exploration / Swarm Plan / pass #inc4-subagent-launch — register at Add Agent; SubAgent.run at Plan.start on Agent WorkSession
+- exploration / Compose Plan Sequence / pass #turn-ticket-state ? Plan holds workspace.Turn; Turn.state is TicketState
+- discovery / Run Planned Work / pass #map-execute-swarm ? Compose, Execute Plan, Swarm Plan; HIL and Judge stay two Manage stories; Comparative Association is Supervisor rubric across Agents
+- exploration / Compose Plan / pass #inc1-bdd ? Create Plan; Manage Turns add/edit/delete; Manage HIL Checks; Manage Judge Checkpoints
+- exploration / Execute Plan / pass #inc3-sketch ? Execute Turn; HIL validate; Judge evaluate; Review Progress; Advance Turn; Fix and Rerun on existing Mistake/Correction/Repair
+- exploration / Swarm Plan / pass #inc4-sketch ? Create Supervisor then Add Agent; Compare Swarm Results is Execute judgment; Comparative Association is Supervisor rubric
+- exploration / Compose Plan / pass #inc1-deepen ? second Plan; edit keeps ToolCall; HIL and Judge each stay when the other is added; JudgeCheckpoint.rubric is ai_judge rubric
+- exploration / Manage Ticket Flow / pass #inc2-deepen ? ResearchTag and notes on Ticket 23; setStatus is TicketState; parseNumber on # and issues URL; same TicketState type as Turn
+- exploration / Execute Plan / pass #inc3-deepen ? Start Plan openWorkSession; Execute Turn performTurn; ai_judge JudgeResult; Advance Turn finish; last turn Done; Fix and Rerun stays In Progress
+- exploration / Swarm Plan / pass #inc4-deepen ? Agent opens own WorkSession; compare streams after Judge and HIL; mid-run addAgent; Comparative Association as results arrive
+- exploration / Swarm Plan / pass #inc4-slice ? Agent runs selected Plan Turns; Agent.turns in CE
+- exploration / Swarm Plan / pass #inc4-slice-lock ? Swarm.turns shared slice once before agents; associate automatic after streamed compare
+- exploration / Swarm Plan / pass #inc4-subagent-launch ? register at Add Agent; SubAgent.run at Plan.start on Agent WorkSession

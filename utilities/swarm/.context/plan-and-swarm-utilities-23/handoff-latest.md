@@ -6,9 +6,9 @@
 - **Worktree:** `C:\dev\abd-cdd-plan-and-swarm-utilities-23` on `session/plan-and-swarm-utilities-23`. Do not checkout or edit the primary clone `C:\dev\abd-context-driven-delivery` (stale sketch there).
 - **Session folder:** `utilities/swarm/.context/plan-and-swarm-utilities-23/`
 - **Source of truth:** `plan-and-swarm-sketch.md` (stories + CE). Generated Increment 1 scenario files under `scenarios/` are leftovers — do not treat as SoT. Do not generate more scenario files until the operator says generate.
-- **Last work:** Execute Plan Increment 3 deepened (`performTurn`, `ai_judge` / `JudgeResult`, `Turn.finish`, `recordMistake` / `recordCorrection` / `WorkSession.repairs`).
-- **Next action:** Deepen Increment 4 Swarm Plan in the sketch: Create Supervisor, Add Agent, Compare Swarm Results, Comparative Association. Grill + sketch cadence. Borrow existing domain. Do not invent names.
-- **Next focus:** Increment 4 Swarm Plan
+- **Last work:** Increment 4 deepened through tick 12 — shared Swarm.turns slice, automatic associate, SubAgent.run at Plan.start (`pass #inc4-subagent-launch`).
+- **Next action:** Increment 4 sketch stable — scenario generation when the operator says generate.
+- **Next focus:** Increment 4 validation / scenario pass (when requested)
 
 ## Locked grill answers (`grill-answers.md`)
 
@@ -23,6 +23,9 @@
 | 7 | Human gate is **HILCheck** (not HipCheckpoint). |
 | 8 | No PlannedTurn class. Plan holds existing `workspace.Turn`. `Turn.state` is **TicketState**: Backlog / In Progress / Done. |
 | 9 | **Start Plan** opens the WorkSession and moves the first Backlog Turn to In Progress. **Execute Turn** runs an already In Progress Turn (`performTurn`). |
+| 10 | One shared turn slice for the whole Swarm, selected once before any Agent runs. Each Agent runs that same slice on its own WorkSession. |
+| 11 | Comparative Association runs automatically after each streamed compare event (Judge or HIL). Associate updates under Supervisor rubric toward Outcome. |
+| 12 | Add Agent registers the Agent. `SubAgent.run` launches at `Plan.start` on the Agent WorkSession. Mid-run add launches when that Agent starts the Plan. |
 
 ## Story map (current)
 

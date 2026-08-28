@@ -1,0 +1,162 @@
+
+--- spawn 2026-08-28 01:41:13 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume a083cfd9-5d7b-423b-aa53-51081b5e47f8 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 This is an interactive session.
+Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: sketch.sketch:Sketch
+Run the listed actions with the listed context tools.
+
+**Interactive session** — Increment 4 Swarm Plan sketch
+
+**Locked:** ticks 1–11 in `grill-answers.md`  
+**Pending:** tick 12 (SubAgent launch timing)
+
+---
+
+**Tick 12 — When does `SubAgent.run` launch the Agent?**
+
+1. **At Add Agent** — launch immediately when the Supervisor adds the Agent  
+2. **When the Agent starts the Plan** — Add Agent registers only; launch at `Plan.start` on the Agent WorkSession *(Recommended)*  
+3. **When the Swarm run begins** — one launch wave after the shared turn slice is selected  
+4. **Other / I'll specify**
+
+Reply with **1**, **2**, **3**, or **4** to continue.
+
+--- spawn 2026-08-28 01:42:07 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume a083cfd9-5d7b-423b-aa53-51081b5e47f8 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 This is an interactive session.
+Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: sketch.sketch:Sketch
+Run the listed actions with the listed context tools.
+
+**Interactive session active** — waiting on you.
+
+**Blocker:** Tick 12 (SubAgent launch timing) — answer not received yet.
+
+Reply in chat with **1**, **2**, **3**, or **4**:
+
+1. At **Add Agent**  
+2. At **Plan.start** on the Agent WorkSession *(recommended)*  
+3. At **Swarm run begin** (after slice selected)  
+4. Other  
+
+Once you answer, I'll lock tick 12, deepen the sketch, `save_sketch`, and either ask the next question or declare `INCREMENT_4_STABLE`.
+
+--- spawn 2026-08-28 01:43:36 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume a083cfd9-5d7b-423b-aa53-51081b5e47f8 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 This is an interactive session.
+Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: sketch.sketch:Sketch
+Run the listed actions with the listed context tools.
+
+**Tick 12 locked** (already in `grill-answers.md`): Add Agent registers; `SubAgent.run` launches at `Plan.start` on the Agent WorkSession. Mid-run add registers at add, launches when that Agent starts the Plan.
+
+**Deepened (`pass #inc4-subagent-launch`):**
+- Add Agent → `SubAgent.run has not launched yet`
+- Plan start → `SubAgent.run launches` + own WorkSession
+- Mid-run add → register without launch; launch on that Agent's Plan start
+- CE: `Plan.start -> SubAgent.run`
+
+**Saved** via `save_sketch`.
+
+---
+
+**INCREMENT_4_STABLE**
+
+All four Swarm Plan stories have main-flow BDDs + CE; grill ticks 1–12 locked. No open Increment 4 branches remain at exploration fidelity. Scenario generation waits for operator say-so.
+
+--- spawn 2026-08-28 01:44:56 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume a083cfd9-5d7b-423b-aa53-51081b5e47f8 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 This is an interactive session.
+Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: sketch.sketch:Sketch
+Run the listed actions with the listed context tools.
+
+**Interactive session** — `plan-and-swarm-utilities-23`
+
+**Status:** **INCREMENT_4_STABLE** · grill ticks 1–12 locked · SoT `utilities/swarm/.context/plan-and-swarm-utilities-23/plan-and-swarm-sketch.md`
+
+**Increment 4 covered:** Create Supervisor · Add Agent · Compare Swarm Results · Comparative Association (BDDs + CE through `pass #inc4-subagent-launch`)
+
+**No open grill branches.** No sketch **Interactive session.** `plan-and-swarm-utilities-23` · Increment 4 stable · ticks 1–12 locked.
+
+**INCREMENT_4_STABLE**
+
+Waiting for your next instruction (validate, generate scenarios when you say **generate**, or another action).
+
+--- spawn 2026-08-28 01:45:57 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume a083cfd9-5d7b-423b-aa53-51081b5e47f8 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 This is an interactive session.
+Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: sketch.sketch:Sketch
+Run the listed actions with the listed context tools.
+
+**Interactive session** — idle, no open grill.
+
+**INCREMENT_4_STABLE** · ticks 1–12 locked · SoT `utilities/swarm/.context/plan-and-swarm-utilities-23/plan-and-swarm-sketch.md`
+
+Reply when you want the next step — e.g. **generate** (scenarios), **validate**, or a new slice.
+stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: validate.validate:Validate
+Run the listed actions with the listed context tools.
+
+I'm in the **plan-and-swarm-utilities-23** worktree on `session/plan-and-swarm-utilities-23`.
+
+**Where things stand**
+
+| Area | Status |
+|------|--------|
+| Increments 1–3 | Deepened (Compose Plan, Manage Ticket Flow, Execute Plan) |
+| Increment 4 — Swarm Plan | Sketch stable through tick 12 (shared `Swarm.turns` slice, automatic associate, `SubAgent.run` at `Plan.start`) |
+| Source of truth | `utilities/swarm/.context/plan-and-swarm-utilities-23/plan-and-swarm-sketch.md` |
+| Locked decisions | `grill-answers.md` (ticks 1–12) |
+
+**Held until you ask**
+
+- Formal scenario generation under `scenarios/`
+- Implementation in plan/swarm utilities
+
+**Swarm Plan stories in the sketch**
+
+- Create Supervisor (Outcome + rubric, shared turn slice)
+- Add Agent (Hypothesis, own WorkSession, `SubAgent.run` at `Plan.start`)
+- Compare Swarm Results (stream after Judge/HIL; no wait for all agents)
+- Comparative Association (automatic after streamed compare)
+
+What should we do next — deepen or validate Increment 4, adjust the sketch, generate scenarios, or something else?
+
+--- spawn 2026-08-28 01:46:44 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume a083cfd9-5d7b-423b-aa53-51081b5e47f8 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 This is an interactive session.
+Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: sketch.sketch:Sketch
+Run the listed actions with the listed context tools.
+
+**Interactive session** — standing by.
+
+**INCREMENT_4_STABLE** · ticks 1–12 locked · SoT `utilities/swarm/.context/plan-and-swarm-utilities-23/plan-and-swarm-sketch.md`
+
+No open grill. No sketch work this turn.
+
+Say **generate**, **validate**, or name the next slice when you want to continue.
+context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: validate.validate:Validate
+Run the listed actions with the listed context tools.
+
+Ready — interactive session on **plan-and-swarm-utilities-23**. Increment 4 sketch is stable; scenarios stay on hold until you say generate.
+
+What do you want to work on?
+
+--- spawn 2026-08-28 01:47:36 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume a083cfd9-5d7b-423b-aa53-51081b5e47f8 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 This is an interactive session.
+Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: sketch.sketch:Sketch
+Run the listed actions with the listed context tools.
+
+
+--- spawn 2026-08-28 01:47:36 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume f970d568-2f2f-49db-b55b-1f921f101c71 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 This is an interactive session.
+Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: validate.validate:Validate
+Run the listed actions with the listed context tools.
+
+
+--- spawn 2026-08-28 01:49:10 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume a083cfd9-5d7b-423b-aa53-51081b5e47f8 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 01:49:10 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume f970d568-2f2f-49db-b55b-1f921f101c71 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-judge.txt and follow it exactly.

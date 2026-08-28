@@ -110,3 +110,33 @@ Not a single field wholly on Agent, Supervisor map, or launch-time copy only.
 **Options offered:** Execute Turn opens it | Plan still has its own start | Other
 
 **Answer (user):** **Plan still has its own start.** Start Plan opens the WorkSession. Execute Turn runs a Turn that is already In Progress.
+
+## Tick 10 — Turn slice binding (Add Agent / swarm run)
+
+**Question:** When are the Plan Turns bound for an Agent's Execute Plan run?
+
+**Options offered:** One shared turn slice for the whole Swarm, selected once before any Agent runs (Recommended) | Each Agent gets its own turn slice at Add Agent time | Slice is implied by Hypothesis — Agent runs the Plan Turn(s) matching its Hypothesis action/fidelity/context | Other / I'll specify
+
+**Answer (user):** **One shared turn slice for the whole Swarm, selected once before any Agent runs.** Same noun as tick 2 (selected Turns). Each Agent runs that same slice on its own WorkSession.
+
+**Slice unlocked:** deepen Add Agent / Swarm turn-slice BDDs — shared selected Turns on Swarm; every Agent runs that slice in its own WorkSession.
+
+## Tick 11 — Comparative Association timing (Compare Swarm Results / Comparative Association)
+
+**Question:** When does Comparative Association run relative to Compare Swarm Results streaming?
+
+**Options offered:** Automatic after each streamed compare event (Judge or HIL) — associate updates under the Supervisor rubric toward Outcome (Recommended) | Explicit operator step — compare streams per tick 6; associate is a separate Supervisor invoke when ready | Automatic only when the Supervisor rubric is set — compare alone until then, then associate on each stream | Other / I'll specify
+
+**Answer (user):** **Automatic after each streamed compare event (Judge or HIL).** Associate updates under the Supervisor rubric toward Outcome. Matches tick 6 stream; not a second wait.
+
+**Slice unlocked:** deepen Compare / Comparative Association BDDs — associate follows each streamed Judge or HIL compare; no separate operator wait.
+
+## Tick 12 — SubAgent launch timing (Add Agent)
+
+**Question:** When does SubAgent.run launch the Agent?
+
+**Options offered:** At Add Agent — SubAgent.run launches immediately when the Supervisor adds the Agent | When the Agent starts the Plan — Add Agent registers the Agent; SubAgent.run launches at Plan.start on the Agent WorkSession (Recommended) | When the Swarm run begins — one launch wave after the shared turn slice is selected | Other / I'll specify
+
+**Answer (user):** **When the Agent starts the Plan.** Add Agent registers the Agent. `SubAgent.run` launches at `Plan.start` on the Agent WorkSession. Fits tick 5 (WorkSession opens at start) and tick 10 (shared slice; each Agent runs it on start). Mid-run add registers at add and launches when that Agent starts the Plan.
+
+**Slice unlocked:** deepen Add Agent BDDs — register at add; `SubAgent.run` at `Plan.start` on the Agent WorkSession.

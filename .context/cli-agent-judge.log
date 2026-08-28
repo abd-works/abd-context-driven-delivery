@@ -1,0 +1,49 @@
+
+--- spawn 2026-08-28 01:41:13 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 73d1fa34-2a71-4297-9ecd-4be46a2ea055 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 --mode ask This is an interactive session.
+Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: validate.validate:Validate
+
+**Interactive session** = this chat is the grill/sketch loop. Decisions land here; artifacts get persisted when the turn closes.
+
+**Where we are:** ticks 1–11 locked · tick 12 open · Increment 4 sketched in `plan-and-swarm-sketch.md`
+
+**Tick 12 — recommended lock (B):** Add Agent registers the Agent; `SubAgent.run` launches at **Plan.start** on the Agent WorkSession.
+
+- Fits tick 5 (WorkSession opens at start, not at add)
+- Fits tick 10 (slice selected once; each Agent runs it on start)
+- Mid-run add (tick 6): new Agent registers at add; launches when it starts the Plan
+
+**Confirm B**, or give A / C / D — one line is enough. Then we lock tick 12 and check whether Increment 4 has any branches left before validation.
+
+--- spawn 2026-08-28 01:42:07 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 73d1fa34-2a71-4297-9ecd-4be46a2ea055 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 --mode ask This is an interactive session.
+Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: validate.validate:Validate
+
+**Got it.** This chat is the **cursor-agent interactive session** — one persistent CLI chat (`agent_cli_bdd`: multiple instructs share the same session). Work happens here via Shell + `.\tools.ps1 run -`, not via in-chat Task.
+
+**State:** `plan-and-swarm-utilities-23` · inc 4 sketched · ticks 1–11 locked · tick 12 open
+
+**Tick 12 — locking B** (Add Agent registers; `SubAgent.run` at `Plan.start` on the Agent WorkSession) unless you say otherwise:
+
+- Mid-run add registers immediately; launch when that Agent starts the Plan
+- WorkSession opens at start, not at add (tick 5)
+- Shared slice already selected (tick 10)
+
+**After tick 12:** Increment 4 grill is complete → validate Stories + CE → `finish_turn` when you're ready to persist.
+
+Reply **yes** to confirm B, or **A/C/D** to override. One word is fine.
+
+--- spawn 2026-08-28 01:43:36 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 73d1fa34-2a71-4297-9ecd-4be46a2ea055 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 --mode ask This is an interactive session.
+Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Actions: validate.validate:Validate
+
+Understood — interactive session, this chat.
+
+**Tick 12:** B — Add Agent registers; `SubAgent.run` at `Plan.start`.
+
+**Grill:** complete (ticks 1–12).
+
+**Next:** validate Stories + CE, update sketch/`grill-answers.md` for tick 12, `finish_turn`. Ask mode blocks CLI and file writes here — say **go** or switch to Agent mode and I’ll run the worker loop.
