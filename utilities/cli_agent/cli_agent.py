@@ -34,11 +34,196 @@ The JSON must have keys verdict (PASS or FAIL) and reason (one sentence).
 
 LAUNCH = "Read {path} and follow it exactly."
 JUDGE_LAUNCH = LAUNCH
+VALIDATE_SAME_LENS = (
+    "Validate at the same fidelity and format as that Turn. "
+    "Judge the artifacts produced at that fidelity and format. "
+    "When format is markdown, validate the markdown; do not look for source code."
+)
+TURN_CLOSE = (
+    "The CLI opens the hanging workspace.Turn when it runs the action. "
+    "Finish that Turn after the action so it commits. "
+    "CliAgent does not open the Turn."
+)
+NEXT_TURN = (
+    "After finish, immediately open the next hanging Turn. "
+    "That Turn may be an action kit, a utility, or a prompt. "
+    "No action kit is fine. Do not wait for the operator."
+)
+PARENT_CHECKIN = (
+    "The parent does not block on the CLI. Every once in a while, check "
+    "the CLI (logs, transcript tail, hanging Turn, artifacts) and report "
+    "back how it is doing. Do not drive the work with -p."
+)
 
 _CHAT_ID_RE = re.compile(
     r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
     re.IGNORECASE,
 )
+
+
+def tool_lens(item: object) -> dict[str, str]:
+    """Fidelity and format on one tools item (string or mapping)."""
+    if isinstance(item, dict):
+        ctx = item.get("context") if isinstance(item.get("context"), dict) else {}
+        return {
+            "toolset": str(item.get("toolset") or item.get("tool") or "").strip(),
+            "fidelity": str(item.get("fidelity") or ctx.get("fidelity") or "").strip(),
+            "format": str(item.get("format") or ctx.get("format") or "").strip(),
+        }
+    return {"toolset": str(item).strip(), "fidelity": "", "format": ""}
+
+
+def lens_label(item: object) -> str:
+    """Prompt token: toolset plus fidelity= and format= when set."""
+    lens = tool_lens(item)
+    parts = [lens["toolset"] or str(item)]
+    if lens["fidelity"]:
+        parts.append(f"fidelity={lens['fidelity']}")
+    if lens["format"]:
+        parts.append(f"format={lens['format']}")
+    return " ".join(parts)
+
+
+def blank_turn():
+    """Turn fields only — do not open a WorkSession."""
+    from workspace.workspace import Turn
+
+    hanging = object.__new__(Turn)
+    hanging.work_session = None
+    hanging.tool_keys = []
+    hanging.tool_calls = []
+    hanging.action = ""
+    hanging.fidelity = ""
+    hanging.format = ""
+    hanging.prompt = ""
+    return hanging
+
+
+def is_toolset_ref(item: object) -> bool:
+    """True when the item is a module:Class toolset, not prose."""
+    if isinstance(item, dict):
+        raw = str(item.get("toolset") or item.get("tool") or "")
+        return ":" in raw
+    return isinstance(item, str) and ":" in item
+
+
+def action_name(item: object) -> str:
+    raw = str(item or "").strip()
+    if not raw:
+        return ""
+    if ":" in raw:
+        raw = raw.rsplit(":", 1)[-1]
+    if "." in raw and is_toolset_ref(item):
+        raw = raw.rsplit(".", 1)[-1]
+    return raw
+
+
+def later_step(item: object) -> str:
+    """Next Turn may be a kit, a utility, or a prompt."""
+    if item is None or str(item).strip() == "":
+        return "Next Turn: no action kit"
+    if is_toolset_ref(item):
+        return f"Next Turn.action: {action_name(item)}"
+    if isinstance(item, str):
+        return f"Next Turn.prompt: {item}"
+    return f"Next Turn.action: {action_name(item)}"
+
+
+def bind_turn(turn, tools: list | None, action: object | None = None):
+    """Reuse workspace.Turn: optional action, many tool_keys and toolCalls."""
+    from workspace.workspace import ToolCall
+
+    if action is not None and str(action).strip():
+        if is_toolset_ref(action):
+            turn.action = action_name(action)
+        elif isinstance(action, str):
+            turn.prompt = action
+            if not turn.action:
+                turn.action = ""
+        else:
+            turn.action = action_name(action)
+    act = turn.action or "run"
+    prose = [
+        item
+        for item in (tools or [])
+        if isinstance(item, str) and not is_toolset_ref(item)
+    ]
+    if prose:
+        turn.prompt = " ".join(prose)
+    for item in tools or []:
+        if not is_toolset_ref(item):
+            continue
+        lens = tool_lens(item)
+        ref = lens["toolset"]
+        if ref and ref not in turn.tool_keys:
+            turn.tool_keys.append(ref)
+        already = any(
+            call.toolset == ref and call.name == act for call in turn.tool_calls
+        )
+        if not already:
+            turn.tool_calls.append(
+                ToolCall(
+                    toolset=ref,
+                    name=act,
+                    summary=lens_label(item),
+                    role="run",
+                )
+            )
+        if lens["fidelity"]:
+            turn.fidelity = lens["fidelity"]
+        if lens["format"]:
+            turn.format = lens["format"]
+    return turn
+
+
+def turn_prompt(turn, later_actions: list | None = None) -> str:
+    """Prompt text from Turn.action, tool_keys, and toolCalls."""
+    keys = ", ".join(turn.tool_keys) or "(none)"
+    calls = ", ".join(
+        f"{call.toolset} name={call.name} {call.summary}".strip()
+        for call in turn.tool_calls
+    ) or "(none)"
+    lines = [
+        "This is an interactive session.",
+        f"Turn.action: {turn.action or '(none)'}",
+        f"Turn.tool_keys: {keys}",
+        f"Turn.toolCalls: {calls}",
+    ]
+    if turn.fidelity:
+        lines.append(f"Turn.fidelity: {turn.fidelity}")
+    if turn.format:
+        lines.append(f"Turn.format: {turn.format}")
+    if getattr(turn, "prompt", ""):
+        lines.append(f"Turn.prompt: {turn.prompt}")
+    lines.append(TURN_CLOSE)
+    if later_actions:
+        lines.extend(later_step(item) for item in later_actions)
+        lines.append(NEXT_TURN)
+    return "\n".join(lines) + "\n"
+
+
+def align_tools(tools: list | None, generate_tools: list | None) -> list:
+    """Copy generate fidelity/format onto matching judge tools."""
+    by_ref = {tool_lens(item)["toolset"]: tool_lens(item) for item in generate_tools or []}
+    aligned: list = []
+    for item in tools or []:
+        lens = tool_lens(item)
+        src = by_ref.get(lens["toolset"])
+        if src is None or not (src["fidelity"] or src["format"]):
+            aligned.append(item)
+            continue
+        ctx = {}
+        if isinstance(item, dict) and isinstance(item.get("context"), dict):
+            ctx.update(item["context"])
+        if src["fidelity"] and not ctx.get("fidelity"):
+            ctx["fidelity"] = src["fidelity"]
+        if src["format"] and not ctx.get("format"):
+            ctx["format"] = src["format"]
+        if isinstance(item, dict):
+            aligned.append({**item, "context": ctx})
+        else:
+            aligned.append({"toolset": lens["toolset"], "context": ctx})
+    return aligned
 
 
 @dataclass
@@ -50,6 +235,7 @@ class IdeCliResult:
     stderr: str
     argv: list[str] = field(default_factory=list)
     elapsed_seconds: float = 0.0
+    pid: int = 0
 
 
 class IdeCli:
@@ -57,9 +243,7 @@ class IdeCli:
 
     Pass model, mode, agent_mode, and judge once; they are properties afterward
     and every command() / run() reuses them.
-    judge is the judge task: False, a validation string, or tools/actions/context
-    like the worker run. Launch is the same for worker and judge: put the task
-    on argv, or write it and pass LAUNCH when it is longer than CMDLINE_SAFE.
+    Default launch is an interactive session.
     // always one of CursorCli or VscodeCli after detect
     """
 
@@ -71,6 +255,7 @@ class IdeCli:
         judge: bool | str | dict = False,
         resume: str = "",
         judge_resume: str = "",
+        print_mode: bool = False,
     ) -> None:
         self._model = (model or "").strip()
         self._mode = (mode or "").strip().lower()
@@ -78,6 +263,7 @@ class IdeCli:
         self._judge = False if judge in (None, "") else judge
         self._resume = (resume or "").strip()
         self._judge_resume = (judge_resume or "").strip()
+        self._print_mode = bool(print_mode)
 
     @property
     def model(self) -> str:
@@ -103,6 +289,10 @@ class IdeCli:
     def judge_resume(self) -> str:
         return self._judge_resume
 
+    @property
+    def print_mode(self) -> bool:
+        return self._print_mode
+
     def _as_vendor(self, vendor: type[IdeCli]) -> IdeCli:
         return vendor(
             model=self.model,
@@ -111,6 +301,7 @@ class IdeCli:
             judge=self.judge,
             resume=self.resume,
             judge_resume=self.judge_resume,
+            print_mode=self.print_mode,
         )
 
     def create_chat(self, workspace: str, *, timeout_seconds: int = 60) -> str:
@@ -149,32 +340,43 @@ class IdeCli:
         self, tools: list | None = None, actions: list | None = None, context: str = ""
     ) -> str:
         """Worker-shaped task text: context tools, actions, and optional context."""
-        tool_names = ", ".join(str(item) for item in (tools or [])) or "(none)"
-        action_names = ", ".join(str(item) for item in (actions or [])) or (
-            "(none — use performTurn)"
-        )
-        text = (
-            "Run the listed context tools and actions through this IDE CLI session. "
-            "Do not treat this as an in-chat Task.\n"
-            f"Context tools: {tool_names}\n"
-            f"Actions: {action_names}\n"
-        )
+        acts = list(actions or [])
+        hanging = bind_turn(blank_turn(), tools, acts[0] if acts else None)
+        text = turn_prompt(hanging)
         if context:
             text += f"{context}\n"
         return text
 
-    def judge_task_prompt(self, worker_prompt: str = "") -> str:
-        """Full judge task text. Same shape as the worker: string or tools/actions/context."""
+    def judge_task_prompt(
+        self,
+        worker_prompt: str = "",
+        generate_tools: list | None = None,
+        turn=None,
+    ) -> str:
+        """Judge the same Turn: same tool_keys, action Validate."""
         task = self.judge
+        extras = [VALIDATE_SAME_LENS]
         if isinstance(task, str):
-            return task
+            extras.insert(0, task)
+        elif isinstance(task, dict):
+            prior = str(task.get("context") or task.get("prompt") or "").strip()
+            if prior:
+                extras.insert(0, prior)
+        if turn is not None:
+            hanging = blank_turn()
+            hanging.tool_keys = list(turn.tool_keys)
+            hanging.tool_calls = list(turn.tool_calls)
+            hanging.fidelity = turn.fidelity
+            hanging.format = turn.format
+            hanging.action = "Validate"
+            return turn_prompt(hanging) + "\n".join(extras) + "\n"
+        tools = generate_tools
         if isinstance(task, dict):
-            return self.task_prompt(
-                task.get("tools") or [],
-                task.get("actions"),
-                str(task.get("context") or task.get("prompt") or ""),
-            )
-        return worker_prompt
+            tools = align_tools(task.get("tools") or generate_tools or [], generate_tools)
+        else:
+            tools = align_tools(generate_tools or [], generate_tools)
+        hanging = bind_turn(blank_turn(), tools, "validate.validate:Validate")
+        return turn_prompt(hanging) + "\n".join(extras) + "\n"
 
     def write_task_file(self, task: str, workspace: str, name: str) -> str:
         """Write task text under workspace and return the relative path."""
@@ -187,30 +389,27 @@ class IdeCli:
             return path.as_posix()
 
     def launch_prompt(self, task: str, workspace: str, *, name: str) -> str:
-        """Argv-safe prompt: the task itself, or LAUNCH pointing at the written file."""
-        if len(task) <= CMDLINE_SAFE:
-            return task
-        return LAUNCH.format(path=self.write_task_file(task, workspace, name))
+        """Argv-safe prompt: one line, or LAUNCH pointing at the written file."""
+        if os.name == "nt" or "\n" in task or len(task) > CMDLINE_SAFE:
+            return LAUNCH.format(path=self.write_task_file(task, workspace, name))
+        return task
 
     def commands(
         self, prompt: str, workspace: str, judge_prompt: str = ""
     ) -> list[list[str]]:
-        """Worker argv, plus judge argv when judge is set. Same launch for both."""
+        """Doer argv, then judge argv when judge is set."""
         chosen = self if type(self) is not IdeCli else self.detect()
         worker_prompt = chosen.launch_prompt(
             prompt, workspace, name="cli-agent-task.txt"
         )
         argv = [chosen.command(worker_prompt, workspace)]
-        if chosen.judge:
-            task = judge_prompt or chosen.judge_task_prompt(prompt)
-            argv.append(
-                chosen.judge_command(
-                    chosen.launch_prompt(
-                        task, workspace, name="cli-agent-judge.txt"
-                    ),
-                    workspace,
-                )
-            )
+        if not chosen.judge:
+            return argv
+        judge_text = judge_prompt or chosen.judge_task_prompt(prompt)
+        judge_launch = chosen.launch_prompt(
+            judge_text, workspace, name="cli-agent-judge.txt"
+        )
+        argv.append(chosen.judge_command(judge_launch, workspace))
         return argv
 
     def spawn(
@@ -220,24 +419,28 @@ class IdeCli:
         *,
         timeout_seconds: int = 300,
     ) -> IdeCliResult:
-        """Run argv as a subprocess. This is the backend CLI call."""
+        """Start an interactive session and return. Do not wait."""
         started = time.perf_counter()
-        completed = subprocess.run(
-            argv,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout_seconds,
-            cwd=workspace or None,
-            check=False,
-        )
+        root = Path(workspace) if workspace else Path.cwd()
+        logs = root / ".context"
+        logs.mkdir(parents=True, exist_ok=True)
+        role = "judge" if "--mode" in argv and "ask" in argv else "doer"
+        log_path = logs / f"cli-agent-{role}.log"
+        log = log_path.open("a", encoding="utf-8")
+        log.write(f"\n--- spawn {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+        log.write(" ".join(argv) + "\n")
+        log.close()
+        kwargs: dict = {"cwd": workspace or None}
+        if os.name == "nt" and hasattr(subprocess, "CREATE_NEW_CONSOLE"):
+            kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE
+        proc = subprocess.Popen(argv, **kwargs)
         return IdeCliResult(
-            exit_code=completed.returncode,
-            text=completed.stdout or "",
-            stderr=completed.stderr or "",
+            exit_code=0,
+            text=f"pid: {proc.pid}",
+            stderr="",
             argv=list(argv),
             elapsed_seconds=time.perf_counter() - started,
+            pid=int(proc.pid or 0),
         )
 
     def run(
@@ -263,7 +466,7 @@ class IdeCli:
         *,
         timeout_seconds: int = 300,
     ) -> list[IdeCliResult]:
-        """Spawn the worker, then the judge when judge is set."""
+        """Spawn the doer, and the judge when judge is set."""
         chosen = self if type(self) is not IdeCli else self.detect()
         return [
             chosen.spawn(argv, workspace, timeout_seconds=timeout_seconds)
@@ -284,13 +487,13 @@ class CursorCli(IdeCli):
         return shutil.which("cursor-agent") or shutil.which("agent")
 
     def command(self, prompt: str, workspace: str) -> list[str]:
-        return self._print_args(
+        return self._session_args(
             prompt, workspace, agent_mode=self.agent_mode, resume=self.resume
         )
 
     def judge_command(self, prompt: str, workspace: str) -> list[str]:
-        return self._print_args(
-            prompt, workspace, agent_mode="ask", resume=self.judge_resume
+        return self._session_args(
+            prompt, workspace, agent_mode=self.agent_mode, resume=self.judge_resume
         )
 
     def create_chat(self, workspace: str, *, timeout_seconds: int = 60) -> str:
@@ -329,7 +532,7 @@ class CursorCli(IdeCli):
             return f"{name}[fast=false]"
         return name
 
-    def _print_args(
+    def _session_args(
         self,
         prompt: str,
         workspace: str,
@@ -338,29 +541,25 @@ class CursorCli(IdeCli):
         resume: str,
     ) -> list[str]:
         exe = self._require_launcher("cursor-agent not found on PATH")
-        args = [
-            exe,
-            "-p",
-            "--force",
-            "--trust",
-        ]
+        args = [exe]
+        if self.print_mode:
+            args.extend(["-p", "--force", "--trust"])
+        else:
+            args.extend(["--force", "--trust"])
         if resume:
             args.extend(["--resume", resume])
-        args.extend(
-            [
-                "--workspace",
-                str(workspace),
-                "--output-format",
-                "stream-json",
-                "--stream-partial-output",
-            ]
-        )
+        args.extend(["--workspace", str(workspace)])
+        if self.print_mode:
+            args.extend(
+                ["--output-format", "stream-json", "--stream-partial-output"]
+            )
         model = self._cursor_model()
         if model:
             args.extend(["--model", model])
         if agent_mode in {"plan", "ask"}:
             args.extend(["--mode", agent_mode])
-        args.append(prompt)
+        if prompt:
+            args.append(prompt)
         return args
 
 
@@ -374,7 +573,7 @@ class VscodeCli(IdeCli):
         return self._chat_args(prompt, workspace, agent_mode=self.agent_mode)
 
     def judge_command(self, prompt: str, workspace: str) -> list[str]:
-        return self._chat_args(prompt, workspace, agent_mode="ask")
+        return self._chat_args(prompt, workspace, agent_mode=self.agent_mode)
 
     def _vscode_mode(self, agent_mode: str) -> str:
         if agent_mode == "ask":
@@ -421,16 +620,20 @@ class CliAgent(SubAgent):
         judge: bool | str | dict = False,
         workspace: str = "",
         session: str = "",
+        prompt: str = "",
+        print_mode: bool = False,
         ide: IdeCli | None = None,
     ) -> None:
         self._workspace = (workspace or os.getcwd()).strip()
         self._session = (session or "").strip()
+        self._prompt = (prompt or "").strip()
         self._work = None
         self._ide = ide or IdeCli(
             model=model,
             mode=mode,
             agent_mode=agent_mode,
             judge=judge,
+            print_mode=print_mode,
         )
 
     @property
@@ -439,6 +642,15 @@ class CliAgent(SubAgent):
 
     @property
     def workspace(self) -> str:
+        work = self.work_session
+        if work is not None:
+            git = getattr(work, "git", None)
+            root = getattr(git, "root", None)
+            if root is not None:
+                return str(root)
+            path = getattr(work, "path", None)
+            if path:
+                return str(path)
         return self._workspace
 
     @property
@@ -500,20 +712,21 @@ class CliAgent(SubAgent):
             judge=vendor.judge,
             resume=work.cli_doer,
             judge_resume=work.cli_judge,
+            print_mode=vendor.print_mode,
         )
         return work
 
+    def _described_turn(self, tools: list, actions: list | None):
+        """Current Turn shape plus later actions. The CLI opens each Turn."""
+        acts = list(actions or [])
+        hanging = bind_turn(blank_turn(), tools, acts[0] if acts else None)
+        if self._prompt:
+            hanging.prompt = self._prompt
+        return hanging, acts[1:]
+
     def _worker_prompt(self, tools: list, actions: list | None) -> str:
-        tool_names = ", ".join(str(item) for item in tools) or "(none)"
-        action_names = ", ".join(str(item) for item in (actions or [])) or (
-            "(none — use performTurn)"
-        )
-        return (
-            "Run the listed context tools and actions through this IDE CLI session. "
-            "Do not treat this as an in-chat Task.\n"
-            f"Context tools: {tool_names}\n"
-            f"Actions: {action_names}\n"
-        )
+        hanging, later = self._described_turn(tools, actions)
+        return turn_prompt(hanging, later)
 
     @prompt(name="cli-agent")
     @sub_agent
@@ -527,39 +740,62 @@ class CliAgent(SubAgent):
         Reuse this instance's ide (model, mode, agent_mode, judge). Do not pass
         those per run.
 
+        The parent must not call start_work_session, open, or ensure_started.
+        Pass workspace (and session when known) on this kit. This run opens or
+        resumes the WorkSession, switches to that path, binds doer and judge,
+        then starts an interactive session. If ide.judge is set, a second
+        process is the judge.
+
+        When this is launched from a chat, always include a process reference
+        so a person can get at the CLI: pid when known, and each cursor-agent
+        --resume id. Those ids are CLI sessions, not IDE chats — do not wrap
+        them as chat links.
+
         The parent sees kind: sub_agent / launch: non_blocking and does not wait.
-        This method also calls ide.detect().run_all which subprocess-runs
-        cursor-agent or code chat. If ide.judge is true, a second process is the judge.
+        The parent does not block on the CLI. Every once in a while, check
+        the CLI (logs, transcript tail, hanging Turn, artifacts) and report
+        back how it is doing. Do not drive the work with -p.
+        ide.detect().run_all starts the interactive session(s) and returns.
 
         -> IdeCli.detect
         -> IdeCli.run_all
         -> IdeCli.spawn
 
-        When actions is listed and non-empty: run each listed action with the listed
-        context tools. Listed action kits already open the work session and turn.
-        Do not wrap those in performTurn.
-
-        When actions is missing or empty: run performTurn
-        (workspace.workspace:Turn, action: performTurn) around the listed
-        context-tool work — open the hanging turn, each context tool as its own
-        tools run, then finish_turn. Report branch and commit back to the parent.
+        Tell the CLI the first Turn shape. After finish, the CLI opens the
+        next Turn for each remaining action. Do not wait for the operator.
         """
         """Bring in every listed context tool (AgenticToolset.context_tools)."""
-        for host in self.context_tools(tools):
+        refs = [item for item in (tools or []) if is_toolset_ref(item)]
+        for host in self.context_tools(refs):
             host
-        if actions:
-            """Run every listed action kit with those context tools. Do not wrap those in performTurn."""
-            for kit in self.context_tools(actions):
+        action_refs = [item for item in (actions or []) if is_toolset_ref(item)]
+        if action_refs:
+            """Name each listed action kit — the CLI runs one per Turn."""
+            for kit in self.context_tools(action_refs):
                 kit
-        else:
-            """Run performTurn (workspace.workspace:Turn, action: performTurn) around the listed context-tool work: open the hanging turn, each context tool as its own tools run, finish_turn; report branch and commit."""
-        self._attach_cli_sessions()
-        results = self.ide.detect().run_all(
-            self._worker_prompt(tools, actions), self.workspace
+        work = self._attach_cli_sessions()
+        hanging, later = self._described_turn(tools, actions)
+        worker = turn_prompt(hanging, later)
+        judge_prompt = (
+            self.ide.judge_task_prompt(worker, generate_tools=tools, turn=hanging)
+            if self.ide.judge
+            else ""
         )
+        results = self.ide.detect().run_all(worker, self.workspace, judge_prompt)
         failed = next((item for item in results if item.exit_code != 0), None)
         if failed is not None:
             raise RuntimeError(
                 failed.stderr.strip() or failed.text.strip() or "IDE CLI exited non-zero"
             )
-        return "\n".join(item.text for item in results if item.text)
+        parts = [item.text for item in results if item.text]
+        parts.append("CLI processes (not IDE chats):")
+        for item in results:
+            if item.pid:
+                parts.append(f"pid: {item.pid}")
+        if work.cli_doer:
+            parts.append(f"cursor-agent --resume {work.cli_doer}")
+        if work.cli_judge:
+            parts.append(f"cursor-agent --resume {work.cli_judge}")
+        parts.append(f"workspace: {self.workspace}")
+        parts.append(f"session: {work.name}")
+        return "\n".join(parts)

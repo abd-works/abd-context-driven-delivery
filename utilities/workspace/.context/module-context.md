@@ -18,10 +18,14 @@ expand|run trails explicitly (not via `@log`).
 
 ```
 {workspace.path}/                       # Workspace.path — parent of .context/
-  .context/
+  .context/                             # WorkSession.docs_dir — sketches, generated, grill-answers
+    story-map.md
+    scenarios/
+    grill-answers.md                    # durable across sessions
     context-index.md                    # PathOverride persistence
-    sessions/{name}/                    # WorkSession.folder
+    sessions/{name}/                    # WorkSession.folder — session temps only
       session.md
+      handoff-latest.md
       logs/events.log                   # gitignored + .cursorignore; not a dirty signal
 ```
 
@@ -33,6 +37,8 @@ expand|run trails explicitly (not via `@log`).
   session.md kit (`ensure_started`, `close`, `close_session`, context index helpers);
   `start_work_session` / `finish_work_session` `@agent_tool` with `@prompt` names
   `start-work-session` / `finish-work-session`. CLI context is `workspace` path + `session` name (session may come from the current `session/` git branch).
+  A `/cli-agent` parent does not call `start_work_session`; CliAgent opens the
+  session, switches to that path, and binds doer/judge. Resume does not rewrite Start.
   **Open** (`ensure_started`): stay in the primary clone when the session branch is
   main/default; otherwise create or reuse a sibling worktree, fetch/pull, and do
   session work there — do not checkout the session branch in the primary folder.
@@ -45,7 +51,7 @@ expand|run trails explicitly (not via `@log`).
   checking main out in the session tree, then `git worktree remove` only when the
   tree is clean (no dirty files, no stash). `events.log` is ignored (Cursor + git)
   and does not count as dirty.
-- `SessionPaths` / `docs_dir` — sprint folder vs `{destination}/.context/`
+- `SessionPaths` / `docs_dir` / `session_dir` — durable `{path}/.context/` vs temps `{path}/.context/sessions/{name}/`
 - `GitRepo` / `NullGitRepo` — `checkout_or_create`, `commit`, `push`, worktrees
   (`list_worktrees` / `worktree_for` / `add_worktree` / `remove_worktree`),
   `fetch` / `pull` / `fetch_pull`, `merge_from` / `push_to`, notes (`note` /

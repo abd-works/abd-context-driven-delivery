@@ -18,6 +18,7 @@ __all__ = [
     "SessionLog",
     "SessionPaths",
     "docs_dir",
+    "session_dir",
     "inherit_annotations",
     "inherit_annotations_from_bases",
     "summarize_mapping",
@@ -34,6 +35,7 @@ def __getattr__(name: str):
         "Correction",
         "SessionPaths",
         "docs_dir",
+        "session_dir",
     ):
         from workspace import workspace as _w
 

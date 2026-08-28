@@ -71,11 +71,11 @@ class Sketch(LifecycleAction):
         content: str,
     ) -> str:
         """Persist a sketch to the destination docs dir as {slug}-sketch.md.
-        Engagement sketches: destination = session.folder
-        ({path}/.context/sessions/{name}/) - files are written flat in that sprint.
-        Module sketches: destination = {session.path}/{module} - files go under
-        {destination}/.context/. Creates parents if missing. Overwrites same path.
-        Returns the resolved sketch path."""
+        Destination is session.path (or session.docs_dir). Files land in
+        {path}/.context/{slug}-sketch.md — never sessions/{name}/ and never
+        {path}/.context/{session-name}/. Module sketches: destination =
+        {session.path}/{module} → {destination}/.context/. Creates parents
+        if missing. Overwrites same path. Returns the resolved sketch path."""
         target = self._sketch_path(destination, slug)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
@@ -96,9 +96,9 @@ class Sketch(LifecycleAction):
     @agent_instructions
     def sketch(self, tools: list) -> str:
         """Sketch then generate - grill + sketch cadence, then the host generate body."""
-        """Sketch interactively - rough artifact through an explicit grill_with_context call. MUST persist via save_sketch on the first interim draft and overwrite on every refinement. Never leave the sketch only in chat. destination defaults to session.folder (sprint) for engagement sketches, or {session.path}/{module} for module sketches. Question shape (frame + options) comes from grill_with_context - do not restate bare options here."""
+        """Sketch interactively - rough artifact through an explicit grill_with_context call. MUST persist via save_sketch on the first interim draft and overwrite on every refinement. Never leave the sketch only in chat. destination defaults to session.path (durable {path}/.context/) — not session.folder. Module sketches: {session.path}/{module}. Question shape (frame + options) comes from grill_with_context - do not restate bare options here."""
         """Step 0 - Grill the sketch plan (concept-grounded questions via grill_with_context)."""
-        """Step 1 - Resolve destination: engagement -> session.folder; module -> {session.path}/{module}. If no session sprint exists yet, confirm path with the user, suggest a kebab slug, open, then use session.folder. Do not invent a divergent folder."""
+        """Step 1 - Resolve destination: session.path (or session.docs_dir). Module -> {session.path}/{module}. If no session sprint exists yet, confirm path with the user, suggest a kebab slug, open, then use session.path. Do not invent {path}/.context/{session-name}/ or write the sketch into sessions/{name}/."""
         """Step 2 - locate the sketch template via find_template(agent_dir=agent_dir). agent_dir is the concrete host toolset module directory (manifest chain agent_dir / module_dir of the invoked Context). If the caller supplied a template directly in context, use that instead."""
         """Step 3 - draft a rough sketch inspired by the template. Show it in chat, then IMMEDIATELY call save_sketch(destination, slug, content) before continuing the grill. A sketch that exists only in chat is a defect - the file under the destination docs dir is the working record."""
         """Step 4 - After every 2-3 grill answers, regenerate the sketch showing exactly what changed, show it in chat, and IMMEDIATELY call save_sketch again (same path). Use placeholders for unresolved branches. Do not write formal generate artifacts during the sketch loop - that is iterate/generate territory."""

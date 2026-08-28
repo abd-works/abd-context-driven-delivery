@@ -22,7 +22,20 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
 from expects import be_a, be_false, be_true, contain, equal, expect, raise_error
 from mamba import context, description, it
 
-from cli_agent.cli_agent import CliAgent, CursorCli, IdeCli, VscodeCli
+from cli_agent.cli_agent import (
+    CliAgent,
+    CursorCli,
+    IdeCli,
+    NEXT_TURN,
+    VALIDATE_SAME_LENS,
+    VscodeCli,
+    align_tools,
+    bind_turn,
+    blank_turn,
+    lens_label,
+    tool_lens,
+    turn_prompt,
+)
 from sub_agent.sub_agent import discover_sub_agent_tools
 from workspace.workspace import Workspace, WorkSession
 
@@ -80,10 +93,13 @@ def _read_cli(root: Path, name: str) -> dict:
     return json.loads(_cli_file(root, name).read_text(encoding="utf-8"))
 
 
+def _popen(pid: int = 4242):
+    return SimpleNamespace(pid=pid)
+
+
 def _run_agent(**kwargs) -> CliAgent:
-    completed = SimpleNamespace(returncode=0, stdout="launched", stderr="")
     with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
-        with patch("cli_agent.cli_agent.subprocess.run", return_value=completed):
+        with patch("cli_agent.cli_agent.subprocess.Popen", return_value=_popen()):
             agent = CliAgent(**kwargs)
             agent.run(tools=[], actions=None)
             return agent
@@ -116,6 +132,128 @@ with description("IdeCli"):
 
             expect(_detect).to(raise_error(RuntimeError))
 
+    with context("that writes a task prompt"):
+        with it("should bind tools and one action onto a workspace Turn"):
+            hanging = bind_turn(
+                blank_turn(),
+                [
+                    {
+                        "toolset": "context_tools.stories.stories:Stories",
+                        "context": {"fidelity": "scenarios", "format": "markdown"},
+                    },
+                    {
+                        "toolset": "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                        "context": {"fidelity": "model", "format": "markdown"},
+                    },
+                ],
+                "generate.generate:Generate",
+            )
+            expect(hanging.action).to(equal("Generate"))
+            expect(len(hanging.tool_keys)).to(equal(2))
+            expect(len(hanging.tool_calls)).to(equal(2))
+            expect(hanging.tool_calls[0].name).to(equal("Generate"))
+            expect(hanging.tool_calls[1].name).to(equal("Generate"))
+            text = turn_prompt(hanging)
+            expect(text).to(contain("Turn.action: Generate"))
+            expect(text).to(contain("Turn.tool_keys:"))
+            expect(text).to(contain("Turn.toolCalls:"))
+            expect(text).to(contain("fidelity=scenarios"))
+            expect(text).to(contain("fidelity=model"))
+            expect(text).to(contain("format=markdown"))
+
+        with it("should open a Turn when no tools and no action are passed"):
+            hanging = bind_turn(blank_turn(), [], None)
+            expect(hanging.action).to(equal(""))
+            expect(hanging.tool_keys).to(equal([]))
+            expect(hanging.tool_calls).to(equal([]))
+            expect(turn_prompt(hanging)).to(contain("Turn.action: (none)"))
+
+        with it("should keep a utility action with no context tools"):
+            hanging = bind_turn(blank_turn(), [], "handoff.handoff:Handoff")
+            expect(hanging.action).to(equal("Handoff"))
+            expect(hanging.tool_keys).to(equal([]))
+            expect(turn_prompt(hanging)).to(contain("Turn.action: Handoff"))
+
+        with it("should keep prose on Turn.prompt instead of loading it as a toolset"):
+            hanging = bind_turn(blank_turn(), ["summarize the session"], None)
+            expect(hanging.action).to(equal(""))
+            expect(hanging.tool_keys).to(equal([]))
+            expect(hanging.prompt).to(equal("summarize the session"))
+            expect(turn_prompt(hanging)).to(contain("Turn.prompt: summarize the session"))
+
+        with it("should treat a prompt as the Turn when actions is prose"):
+            hanging = bind_turn(blank_turn(), [], "summarize the session")
+            expect(hanging.action).to(equal(""))
+            expect(hanging.prompt).to(equal("summarize the session"))
+            expect(turn_prompt(hanging)).to(contain("Turn.action: (none)"))
+            expect(turn_prompt(hanging)).to(contain("Turn.prompt: summarize the session"))
+
+        with it("should tell the CLI to start the next Turn after finish"):
+            hanging = bind_turn(
+                blank_turn(),
+                ["context_tools.stories.stories:Stories"],
+                "sketch.sketch:Sketch",
+            )
+            text = turn_prompt(hanging, ["generate.generate:Generate"])
+            expect(text).to(contain("Turn.action: Sketch"))
+            expect(text).to(contain("Next Turn.action: Generate"))
+            expect(text).to(contain(NEXT_TURN))
+            extra = turn_prompt(
+                hanging, ["handoff.handoff:Handoff", "write a one-line status"]
+            )
+            expect(extra).to(contain("Next Turn.action: Handoff"))
+            expect(extra).to(contain("Next Turn.prompt: write a one-line status"))
+
+        with it("should copy generate lenses onto judge validate tools"):
+            generate = [
+                {
+                    "toolset": "context_tools.stories.stories:Stories",
+                    "context": {"fidelity": "scenarios", "format": "markdown"},
+                },
+                {
+                    "toolset": "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                    "context": {"fidelity": "model", "format": "markdown"},
+                },
+            ]
+            aligned = align_tools(
+                [
+                    "context_tools.stories.stories:Stories",
+                    "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                ],
+                generate,
+            )
+            expect(tool_lens(aligned[0])["fidelity"]).to(equal("scenarios"))
+            expect(tool_lens(aligned[1])["fidelity"]).to(equal("model"))
+            expect(tool_lens(aligned[0])["format"]).to(equal("markdown"))
+            expect(lens_label(aligned[1])).to(contain("fidelity=model"))
+
+        with it("should tell the judge to validate at those same lenses"):
+            cli = IdeCli(
+                judge={
+                    "tools": [
+                        "context_tools.stories.stories:Stories",
+                        "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                    ],
+                    "actions": ["validate.validate:Validate"],
+                }
+            )
+            generate = [
+                {
+                    "toolset": "context_tools.stories.stories:Stories",
+                    "context": {"fidelity": "scenarios", "format": "markdown"},
+                },
+                {
+                    "toolset": "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                    "context": {"fidelity": "model", "format": "markdown"},
+                },
+            ]
+            text = cli.judge_task_prompt(generate_tools=generate)
+            expect(text).to(contain("fidelity=scenarios"))
+            expect(text).to(contain("fidelity=model"))
+            expect(text).to(contain("format=markdown"))
+            expect(text).to(contain(VALIDATE_SAME_LENS))
+            expect(text).to(contain("Turn.action: Validate"))
+
 
 with description("CursorCli"):
     with context("that finds a launcher"):
@@ -127,8 +265,8 @@ with description("CursorCli"):
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_agent_only):
                 expect(CursorCli().launcher()).to(equal("/bin/agent"))
 
-    with context("that builds print-mode argv"):
-        with it("should pass workspace, stream-json, model, and plan"):
+    with context("that builds interactive-session argv"):
+        with it("should pass trust, workspace, model, and plan"):
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
                 argv = CursorCli(model="sonnet", agent_mode="plan").command(
                     "do the work", "/ws"
@@ -137,14 +275,10 @@ with description("CursorCli"):
                 equal(
                     [
                         "/bin/cursor-agent",
-                        "-p",
                         "--force",
                         "--trust",
                         "--workspace",
                         "/ws",
-                        "--output-format",
-                        "stream-json",
-                        "--stream-partial-output",
                         "--model",
                         "sonnet",
                         "--mode",
@@ -153,6 +287,16 @@ with description("CursorCli"):
                     ]
                 )
             )
+            expect("-p" in argv).to(be_false)
+
+        with it("should pass print-mode flags only when print_mode is set"):
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                argv = CursorCli(
+                    model="sonnet", agent_mode="plan", print_mode=True
+                ).command("do the work", "/ws")
+            expect(argv).to(contain("-p"))
+            expect(argv).to(contain("--force"))
+            expect(argv).to(contain("stream-json"))
 
         with it("should map mode fast onto the Cursor model override"):
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
@@ -191,24 +335,34 @@ with description("CursorCli"):
             expect(_command).to(raise_error(RuntimeError))
 
     with context("that is asked for a judge session"):
-        with it("should force --mode ask on judge_command"):
+        with it("should use the instance agent_mode on judge_command"):
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
                 argv = CursorCli(agent_mode="plan").judge_command("grade it", "/ws")
             expect(argv).to(contain("--mode"))
-            expect(argv).to(contain("ask"))
-            expect("plan" in argv).to(be_false)
+            expect(argv).to(contain("plan"))
             expect(argv[-1]).to(equal("grade it"))
 
         with it("should return worker then judge argv from commands"):
+            tmp = tempfile.mkdtemp(prefix="cli_cmd_")
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
                 argv = CursorCli(judge=True, agent_mode="plan").commands(
-                    "do work", "/ws", judge_prompt="grade it"
+                    "do work", tmp, judge_prompt="grade it"
                 )
             expect(len(argv)).to(equal(2))
-            expect(argv[0]).to(contain("do work"))
+            expect(argv[0][-1]).to(contain("cli-agent-task.txt"))
             expect(argv[0]).to(contain("plan"))
-            expect(argv[1]).to(contain("grade it"))
-            expect(argv[1]).to(contain("ask"))
+            expect(argv[1][-1]).to(contain("cli-agent-judge.txt"))
+            expect(argv[1]).to(contain("plan"))
+            expect(
+                (Path(tmp) / ".context" / "cli-agent-task.txt").read_text(
+                    encoding="utf-8"
+                )
+            ).to(contain("do work"))
+            expect(
+                (Path(tmp) / ".context" / "cli-agent-judge.txt").read_text(
+                    encoding="utf-8"
+                )
+            ).to(contain("grade it"))
 
         with it("should return only the worker when judge is false"):
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
@@ -216,20 +370,21 @@ with description("CursorCli"):
             expect(len(argv)).to(equal(1))
 
     with context("that spawns cursor-agent"):
-        with it("should subprocess.run the print-mode argv"):
-            completed = SimpleNamespace(returncode=0, stdout="ok", stderr="")
+        with it("should Popen an interactive session"):
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
                 with patch(
-                    "cli_agent.cli_agent.subprocess.run", return_value=completed
+                    "cli_agent.cli_agent.subprocess.Popen", return_value=_popen(99)
                 ) as spawned:
                     result = CursorCli(model="sonnet").run("do work", "/ws")
             expect(spawned.called).to(be_true)
             argv = spawned.call_args[0][0]
             expect(argv[0]).to(equal("/bin/cursor-agent"))
-            expect(argv).to(contain("-p"))
+            expect("-p" in argv).to(be_false)
+            expect(argv).to(contain("--force"))
             expect(argv).to(contain("do work"))
             expect(result.exit_code).to(equal(0))
-            expect(result.text).to(equal("ok"))
+            expect(result.pid).to(equal(99))
+            expect(result.text).to(equal("pid: 99"))
 
         with it("should subprocess.run create-chat"):
             completed = SimpleNamespace(
@@ -305,34 +460,45 @@ with description("VscodeCli"):
             expect(_command).to(raise_error(RuntimeError))
 
     with context("that is asked for a judge session"):
-        with it("should force --mode ask on judge_command"):
+        with it("should use the instance agent mode on judge_command"):
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_code_only):
                 argv = VscodeCli(agent_mode="agent").judge_command("grade it", "/ws")
-            expect(argv).to(contain("ask"))
+            expect(argv).to(contain("agent"))
             expect(argv[-1]).to(equal("grade it"))
 
         with it("should return worker then judge argv from commands"):
+            tmp = tempfile.mkdtemp(prefix="cli_vscmd_")
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_code_only):
                 argv = VscodeCli(judge=True).commands(
-                    "do work", "/ws", judge_prompt="grade it"
+                    "do work", tmp, judge_prompt="grade it"
                 )
             expect(len(argv)).to(equal(2))
-            expect(argv[0]).to(contain("do work"))
-            expect(argv[1]).to(contain("grade it"))
-            expect(argv[1]).to(contain("ask"))
+            expect(argv[0][-1]).to(contain("cli-agent-task.txt"))
+            expect(argv[1][-1]).to(contain("cli-agent-judge.txt"))
+            expect(argv[1]).to(contain("agent"))
+            expect(
+                (Path(tmp) / ".context" / "cli-agent-task.txt").read_text(
+                    encoding="utf-8"
+                )
+            ).to(contain("do work"))
+            expect(
+                (Path(tmp) / ".context" / "cli-agent-judge.txt").read_text(
+                    encoding="utf-8"
+                )
+            ).to(contain("grade it"))
 
     with context("that spawns code chat"):
-        with it("should subprocess.run the chat argv"):
-            completed = SimpleNamespace(returncode=0, stdout="reviewed", stderr="")
+        with it("should Popen the chat argv"):
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_code_only):
                 with patch(
-                    "cli_agent.cli_agent.subprocess.run", return_value=completed
+                    "cli_agent.cli_agent.subprocess.Popen", return_value=_popen(77)
                 ) as spawned:
                     result = VscodeCli(agent_mode="ask").run("review", "/ws")
             argv = spawned.call_args[0][0]
             expect(argv[0]).to(equal("/bin/code"))
             expect(argv).to(contain("chat"))
-            expect(result.text).to(equal("reviewed"))
+            expect(result.pid).to(equal(77))
+            expect(result.text).to(equal("pid: 77"))
 
 
 with description("CliAgent"):
@@ -365,24 +531,39 @@ with description("CliAgent"):
             text = discover_sub_agent_tools(CliAgent())["run"].instructions
             expect("run_all" in text).to(be_true)
             expect("IdeCli.spawn" in text).to(be_true)
+            expect("start_work_session" in text).to(be_true)
+            expect("must not call" in text).to(be_true)
+            expect("process reference" in text).to(be_true)
+            expect("--resume" in text).to(be_true)
+            expect("not IDE chats" in text).to(be_true)
+            expect("check" in text).to(be_true)
+            expect("report" in text).to(be_true)
+            expect("-p" in text).to(be_true)
 
-        with it("should subprocess.run cursor-agent from run"):
+        with it("should Popen cursor-agent from run"):
             tmp = tempfile.mkdtemp(prefix="cli_run_")
-            completed = SimpleNamespace(returncode=0, stdout="launched", stderr="")
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
                 with patch(
                     "cli_agent.cli_agent.CursorCli.create_chat",
                     return_value="11111111-1111-1111-1111-111111111111",
                 ):
                     with patch(
-                        "cli_agent.cli_agent.subprocess.run", return_value=completed
+                        "cli_agent.cli_agent.subprocess.Popen",
+                        return_value=_popen(4242),
                     ) as spawned:
                         text = CliAgent(workspace=tmp, session="run-spec").run(
                             tools=[], actions=None
                         )
             expect(spawned.called).to(be_true)
             expect(spawned.call_args[0][0][0]).to(equal("/bin/cursor-agent"))
-            expect(text).to(equal("launched"))
+            expect("-p" in spawned.call_args[0][0]).to(be_false)
+            expect(spawned.call_args[0][0][-1]).to(contain("cli-agent-task.txt"))
+            expect("pid: 4242" in text).to(be_true)
+            expect(
+                "cursor-agent --resume 11111111-1111-1111-1111-111111111111" in text
+            ).to(be_true)
+            expect("CLI processes (not IDE chats):" in text).to(be_true)
+            expect("session: run-spec" in text).to(be_true)
 
 
 with description("a CLI agent run"):

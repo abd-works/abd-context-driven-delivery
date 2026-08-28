@@ -122,6 +122,20 @@ with description("GrillContext toolset"):
             self.tmp = tempfile.TemporaryDirectory()
             self.root = self.tmp.name
 
+        with context("that writes when root is a session folder"):
+            with it("should write grill-answers.md in path/.context not the session folder"):
+                sprint = Path(self.root) / ".context" / "sessions" / "my-sprint"
+                sprint.mkdir(parents=True)
+                self.gc.write_grill_answer(
+                    root=str(sprint),
+                    heading="Session insight",
+                    body="Answers survive across sprints.",
+                )
+                expect((Path(self.root) / ".context" / "grill-answers.md").exists()).to(
+                    be_true
+                )
+                expect((sprint / "grill-answers.md").exists()).to(equal(False))
+
         with context("that writes when no grill-answers.md exists yet"):
             with it("should create grill-answers.md under .context/ in the root"):
                 self.gc.write_grill_answer(

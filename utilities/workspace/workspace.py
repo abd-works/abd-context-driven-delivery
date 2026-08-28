@@ -36,22 +36,58 @@ class PathOverride:
 
 
 class SessionPaths:
-    """Path helpers for resolving where process docs live relative to a destination."""
+    """Where files go relative to a workspace path.
+
+    Durable artifacts (sketches, generated markdown, grill-answers) live in
+    ``{path}/.context/``. Session temps (session.md, handoff, logs) live in
+    ``{path}/.context/sessions/{name}/``. Those two are never the same folder.
+    """
+
+    @staticmethod
+    def is_session_folder(destination: str | Path) -> bool:
+        dest = Path(destination)
+        return bool(dest.name) and dest.parent.name == "sessions"
 
     @staticmethod
     def docs_dir(destination: str | Path) -> Path:
-        """Resolve where process docs live for a destination.
+        """Durable artifact dir: ``{path}/.context/`` (sketches, generate, grill-answers).
 
-        - Sprint folder (``.../.context/sessions/{name}``) -> write flat into that folder
-        - Working area or module root -> ``{destination}/.context/``
+        Never returns a ``sessions/{name}`` folder. If *destination* is already
+        ``.context``, a session folder, or a mistaken sibling under ``.context``
+        (``{path}/.context/{session-name}``), walk up to that ``.context``.
+        Otherwise ``{destination}/.context/``.
         """
         dest = Path(destination)
-        if dest.name and dest.parent.name == "sessions":
+        if dest.name == ".context":
             return dest
+        if dest.name == "sessions" and dest.parent.name == ".context":
+            return dest.parent
+        if SessionPaths.is_session_folder(dest):
+            return dest.parent.parent
+        if dest.parent.name == ".context" and dest.name != "sessions":
+            return dest.parent
         return dest / ".context"
+
+    @staticmethod
+    def session_dir(destination: str | Path, name: str = "") -> Path:
+        """Session temp dir: ``{path}/.context/sessions/{name}/``.
+
+        If *destination* is already a session folder, return it. Otherwise
+        *name* is required.
+        """
+        dest = Path(destination)
+        if SessionPaths.is_session_folder(dest):
+            return dest
+        slug = (name or "").strip()
+        if not slug:
+            raise ValueError(
+                "session name is required when destination is not a session folder"
+            )
+        return SessionPaths.docs_dir(dest) / "sessions" / slug
 
 
 docs_dir = SessionPaths.docs_dir
+session_dir = SessionPaths.session_dir
 
 
 @dataclass
@@ -162,8 +198,8 @@ class Turn:
         key = getattr(host, "context_index_key", "") or getattr(
             type(host), "context_index_key", ""
         )
-        if key:
-            self.tool_keys = [key]
+        if key and key not in self.tool_keys:
+            self.tool_keys.append(key)
         if action:
             self.action = action
         host_fidelity = getattr(host, "fidelity", "") or ""
@@ -620,13 +656,19 @@ class WorkSession:
         return self.open_turn
 
     @property
+    def docs_dir(self) -> Path:
+        """Durable artifacts: sketches, generated files, grill-answers — ``{path}/.context/``."""
+        return SessionPaths.docs_dir(self.path)
+
+    @property
     def folder(self) -> Path:
+        """Session temps: session.md, handoff, logs."""
         if not self.name:
             raise ValueError(
                 "session name is not set - confirm working path and session slug with the "
                 "user, then call open before grill/sketch/handoff"
             )
-        return Path(self.path) / ".context" / "sessions" / self.name
+        return SessionPaths.session_dir(self.path, self.name)
 
     @property
     def log(self) -> Path:
@@ -904,21 +946,19 @@ class WorkSession:
     ) -> Path:
         if not self.name:
             raise ValueError("session name is required to create a sprint folder")
-        if goal:
-            self.goal = goal
-        if fidelities:
-            self.fidelities = fidelities
-        if contexts:
-            self.contexts = contexts
-        if not self.started:
-            self.started = date.today().isoformat()
         self._ensure_session_worktree()
         self.folder.mkdir(parents=True, exist_ok=True)
-        if not self.session_md.is_file():
+        creating = not self.session_md.is_file()
+        if creating:
+            if goal:
+                self.goal = goal
+            if fidelities:
+                self.fidelities = fidelities
+            if contexts:
+                self.contexts = contexts
+            if not self.started:
+                self.started = date.today().isoformat()
             self.session_md.write_text(self._render(), encoding="utf-8")
-        elif goal or fidelities or contexts:
-            if not self.ended:
-                self.session_md.write_text(self._render(), encoding="utf-8")
         return self.session_md
 
     def open(
@@ -1031,6 +1071,9 @@ class WorkSession:
         Non-default session branches isolate in a sibling worktree named
         ``{abbrev}-{ticket}`` (or a short slug) next to the primary clone.
         Stay in the primary clone when the session branch is the default branch.
+
+        Do not call this from a /cli-agent parent. CliAgent opens the session,
+        switches to that path, and binds doer/judge. Resume does not rewrite Start.
         """
         if tools:
             for item in tools:

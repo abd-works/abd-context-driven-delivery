@@ -5,7 +5,8 @@
 | Name | Meaning | Example |
 |------|---------|---------|
 | **path** | Durable tool root (`active.path`) | `…/sandbox` |
-| **folder** | Sprint folder (`active.folder`) | `…/sandbox/.context/sessions/{name}/` |
+| **docs_dir** | Sketches + generated artifacts (`active.docs_dir`) | `…/sandbox/.context/` |
+| **folder** | Session temps (`active.folder`) | `…/sandbox/.context/sessions/{name}/` |
 | **context_index** | `{workspace_root}/.context/context-index.md` when present | tool → root map |
 
 ## Constructor / run context
@@ -34,12 +35,19 @@ arguments:
   contexts: <optional; first create only>
 ```
 
+Resume leaves `session.md` Start as written. Goal / fidelities / contexts apply on first create only.
+
+When launching `/cli-agent`, the parent does not call `open` or `start_work_session`. CliAgent opens the session, switches to that path, and binds doer/judge.
+
 Do **not** separately chain `read_context_index` or `record_context_root` from lifecycle bodies — `open` already does that.
 
 ## Layout
 
-- **path** — docs → `{path}/.context/`; code/modules → `{path}/`
-- **folder** — `session.md`, grill-answers, engagement sketches, handoff, `mistakes.log`
+Two different folders. Do not invent `{path}/.context/{session-name}/` and do not write markdown generate under `{default_workspace_folder}/.context/` or `Scenarios/.context`.
+
+- **path** — durable tool root; code/modules → `{path}/` (or `{path}/{default_workspace_folder}/` for code channels)
+- **docs_dir** — `{path}/.context/` — sketches, generated artifacts (`story-map.md`, `scenarios/`, models, module-context), and `grill-answers.md` (survives across sessions). `save_sketch` / `write_grill_answer` destination is `session.path` (or `session.docs_dir`).
+- **folder** — `{path}/.context/sessions/{name}/` — `session.md`, handoff, `handoff-latest.md`, `mistakes.log`, `logs/`
 - **context-index** — `{workspace_root}/.context/context-index.md`
 
 ## Root when `path` omitted
@@ -82,7 +90,7 @@ tool: open
 arguments:
   name: <optional kebab-slug>
   path: <optional>
-  goal: <optional>
-  fidelities: <optional>
-  contexts: <optional>
+  goal: <optional; first create only>
+  fidelities: <optional; first create only>
+  contexts: <optional; first create only>
 ```

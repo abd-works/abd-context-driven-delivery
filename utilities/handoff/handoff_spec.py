@@ -58,6 +58,13 @@ with description("a handoff archive path"):
     with it("should resolve .context under destination"):
         expect(str(_h._context_dir("sandbox/play"))).to(equal(str(Path("sandbox/play") / ".context")))
 
+    with it("should write handoff files into a sprint folder not parent .context"):
+        sprint = Path("/work/.context/sessions/my-sprint")
+        expect(str(_h._write_dir(str(sprint)))).to(equal(str(sprint)))
+        expect(str(_h._latest_handoff_path(str(sprint)))).to(
+            equal(str(sprint / "handoff-latest.md"))
+        )
+
     with it("should resolve dated archive under .context/handoffs"):
         expect(str(_h._handoff_path("sandbox/play", "handoff-2026-07-22-modules"))).to(
             equal(

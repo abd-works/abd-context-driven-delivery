@@ -86,6 +86,20 @@ with description("Sketch toolset"):
             self.destination = self.tmp.name
             self.sketcher = Sketch()
 
+        with it("writes a sprint-folder destination up into path/.context"):
+            sprint = Path(self.destination) / ".context" / "sessions" / "my-sprint"
+            sprint.mkdir(parents=True)
+            path = Path(
+                self.sketcher.save_sketch(
+                    destination=str(sprint),
+                    slug="engagement",
+                    content="rough\n",
+                )
+            )
+            expect(path.parent).to(equal(Path(self.destination) / ".context"))
+            expect(path.name).to(equal("engagement-sketch.md"))
+            expect((sprint / "engagement-sketch.md").exists()).to(equal(False))
+
         with it("writes to .context/{slug}-sketch.md under the destination"):
             path = self.sketcher.save_sketch(
                 destination=self.destination,

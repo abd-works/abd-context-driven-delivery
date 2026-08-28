@@ -157,6 +157,9 @@ with description("a WorkSession with a name and path"):
         SessionLog.set_instance(None)
         self.session = Workspace(str(self.tmp)).open_work_session("my-sprint")
 
+    with it("should expose docs_dir as path/.context"):
+        expect(self.session.docs_dir).to(equal(self.tmp / ".context"))
+
     with it("should expose folder under .context/sessions/{name}"):
         # Act / Assert
         expect(self.session.folder).to(
@@ -234,6 +237,21 @@ with description("a WorkSession that is loaded"):
             # Assert
             expect(loaded.goal).to(equal("test goal"))
             expect(loaded.fidelities).to(equal("development"))
+
+        with it("should keep Start when ensure_started is called again with a new goal"):
+            import tempfile
+            from workspace.workspace import Workspace, WorkSession
+
+            tmp = Path(tempfile.mkdtemp(prefix="session_resume_no_rewrite_"))
+            s = Workspace(str(tmp)).open_work_session(
+                "keep-start", goal="original goal", fidelities="modules"
+            )
+            before = s.session_md.read_text(encoding="utf-8")
+            s.ensure_started(goal="rewritten by parent", fidelities="story_map")
+            after = s.session_md.read_text(encoding="utf-8")
+            expect(after).to(equal(before))
+            expect("original goal" in after).to(be_true)
+            expect("rewritten by parent" in after).to(be_false)
 
 
 with description("a WorkSession that is started"):
@@ -618,14 +636,37 @@ with description("a WorkSession tool"):
 
 
 with description("docs_dir"):
-    with it("should return a sprint folder unchanged when the parent is 'sessions'"):
+    with it("should resolve a sprint folder up to path/.context"):
         from workspace.workspace import SessionPaths
         sprint = Path("/work/.context/sessions/my-sprint")
         # Act / Assert
-        expect(SessionPaths.docs_dir(sprint)).to(equal(sprint))
+        expect(SessionPaths.docs_dir(sprint)).to(equal(Path("/work/.context")))
 
     with it("should return path/.context for a working area path"):
         from workspace.workspace import SessionPaths
         working = Path("/work/sandbox")
         # Act / Assert
         expect(SessionPaths.docs_dir(working)).to(equal(working / ".context"))
+
+    with it("should not nest .context when destination is already .context"):
+        from workspace.workspace import SessionPaths
+        ctx = Path("/work/sandbox/.context")
+        expect(SessionPaths.docs_dir(ctx)).to(equal(ctx))
+
+    with it("should treat a sibling under .context as the durable docs dir"):
+        from workspace.workspace import SessionPaths
+        invented = Path("/work/sandbox/.context/my-sprint")
+        expect(SessionPaths.docs_dir(invented)).to(equal(Path("/work/sandbox/.context")))
+
+with description("session_dir"):
+    with it("should return a sprint folder unchanged"):
+        from workspace.workspace import SessionPaths
+        sprint = Path("/work/.context/sessions/my-sprint")
+        expect(SessionPaths.session_dir(sprint)).to(equal(sprint))
+
+    with it("should build sessions/{name} under docs_dir"):
+        from workspace.workspace import SessionPaths
+        working = Path("/work/sandbox")
+        expect(SessionPaths.session_dir(working, "my-sprint")).to(
+            equal(working / ".context" / "sessions" / "my-sprint")
+        )
