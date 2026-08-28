@@ -1,5 +1,5 @@
 # @toolset-manifest python -m tools manifest agent_bdd.agent_bdd:AgentBdd
-# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # Do not author behavior from this Python source.
 # invoke-new: action generate | context.format python
 # invoke-edit: action satisfy | context.format python

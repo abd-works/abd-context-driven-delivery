@@ -1,5 +1,5 @@
 # @toolset-manifest python -m tools manifest handoff.handoff:Handoff
-# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # Do not author behavior from this Python source.
 """Handoff - compact the current session so a fresh agent can continue.
 
@@ -13,7 +13,7 @@ from datetime import date
 from pathlib import Path
 
 from harness.harness_tool import prompt
-from workspace import WorkSession, Workspace, docs_dir
+from workspace import SessionPaths, WorkSession, Workspace, docs_dir
 from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
 
@@ -66,20 +66,30 @@ class Handoff:
             fragment = cleaned
         return self._archive_slug(focus=fragment, today=today)
 
+    def _write_dir(self, destination: str) -> Path:
+        """Where handoff files are written.
+
+        Sprint folder → session.folder. Working area → {destination}/.context/.
+        """
+        dest = Path(destination)
+        if SessionPaths.is_session_folder(dest):
+            return dest
+        return docs_dir(dest)
+
     def _handoffs_dir(self, destination: str) -> Path:
-        """Resolve handoffs/ archive folder under docs_dir(destination) (pure)."""
-        return docs_dir(destination) / "handoffs"
+        """Resolve handoffs/ archive folder under the write dir (pure)."""
+        return self._write_dir(destination) / "handoffs"
 
     def _handoff_path(self, destination: str, slug: str) -> Path:
-        """Resolve archive handoff markdown under docs_dir(destination)/handoffs/ (pure)."""
+        """Resolve archive handoff markdown under write_dir/handoffs/ (pure)."""
         return self._handoffs_dir(destination) / f"{slug}.md"
 
     def _latest_handoff_path(self, destination: str) -> Path:
-        """Resolve handoff-latest.md at docs root (resume pointer; not in handoffs/) (pure)."""
-        return docs_dir(destination) / "handoff-latest.md"
+        """Resolve handoff-latest.md at the write dir (resume pointer; not in handoffs/) (pure)."""
+        return self._write_dir(destination) / "handoff-latest.md"
 
     def _context_dir(self, destination: str) -> Path:
-        """Alias for docs_dir - kept for specs / callers (pure)."""
+        """Durable artifact dir — sketches/generated, not session temps (pure)."""
         return docs_dir(destination)
 
     def _read_if_exists(self, path: Path) -> str | None:
@@ -165,13 +175,11 @@ class Handoff:
         return None
 
     def _context_search_roots(self, destination: str) -> list[Path]:
-        """Docs folder for destination, plus parent ``.context`` when destination is a sprint."""
-        primary = docs_dir(destination)
-        roots = [primary]
-        if primary.parent.name == "sessions":
-            parent_ctx = primary.parent.parent
-            if parent_ctx.is_dir() and parent_ctx.name == ".context":
-                roots.append(parent_ctx)
+        """Durable ``.context`` plus the session folder when destination is a sprint."""
+        dest = Path(destination)
+        roots = [docs_dir(dest)]
+        if SessionPaths.is_session_folder(dest):
+            roots.append(dest)
         return roots
 
     def _first_existing(self, roots: list[Path], name: str) -> Path | None:
@@ -368,10 +376,10 @@ class Handoff:
 
     @agent_tool
     def resolve_working_folder(self, destination: str) -> str:
-        """Resolve docs folder via docs_dir(destination).
-        For a sprint ({path}/.context/sessions/{name}/) writes flat there; otherwise
-        {destination}/.context/. Creates the folder if missing. Returns absolute path."""
-        folder = docs_dir(destination)
+        """Resolve the write folder for this destination.
+        Sprint → session.folder; otherwise {destination}/.context/.
+        Creates the folder if missing. Returns absolute path."""
+        folder = self._write_dir(destination)
         folder.mkdir(parents=True, exist_ok=True)
         return str(folder.resolve())
 
@@ -410,8 +418,8 @@ class Handoff:
         slug: str = "",
         focus: str = "",
     ) -> str:
-        """Persist an archived handoff under docs_dir(destination)/handoffs/{slug}.md
-        and overwrite handoff-latest.md at the docs root as the stable resume pointer.
+        """Persist an archived handoff under write_dir/handoffs/{slug}.md
+        and overwrite handoff-latest.md there as the stable resume pointer.
 
         Naming: slug defaults to handoff-YYYY-MM-DD, or handoff-YYYY-MM-DD-{focus}
         when focus (or a non-archive slug) is provided. Do not use plain 'handoff'

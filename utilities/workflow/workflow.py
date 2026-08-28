@@ -1,5 +1,5 @@
 # @toolset-manifest python -m tools manifest workflow.workflow:Workflow
-# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # Do not author behavior from this Python source.
 """Workflow — backlog, start, finish linking GitHub Issues, handoff, and WorkSession."""
 from __future__ import annotations
@@ -201,8 +201,11 @@ class Workflow:
         session_name = self.require_open_session(workspace=workspace)
         ws = self._workspace(workspace)
         session = ws.current_work_session
-        if session is not None and session.open_turn is not None:
-            session.open_turn.finish(
+        if session is not None and (
+            session.open_turn is not None
+            or session.git.is_dirty(untracked=False)
+        ):
+            session.turn.finish(
                 prompt=outcome,
                 result="finish",
                 context=session_name,
@@ -380,7 +383,7 @@ class Workflow:
         session = ws.current_work_session
         if session is None:
             raise RuntimeError("no open work session")
-        if session.dirty:
+        if session.git.is_dirty(untracked=False):
             raise RuntimeError("working tree is dirty")
         config = self._load_workflow_config(self._repo_root(workspace))
         source = session.session_branch

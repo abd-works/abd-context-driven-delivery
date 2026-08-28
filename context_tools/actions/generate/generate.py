@@ -1,5 +1,5 @@
 # @toolset-manifest python -m tools manifest generate.generate:Generate
-# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
@@ -43,8 +43,7 @@ class Generate(LifecycleAction):
         return (
             '"""\n'
             "# @toolset-manifest python -m tools manifest <toolset>\n"
-            "# Agent reading this file: run line 1 manifest, then python -m tools run -. "
-            "Follow response.instructions only.\n"
+            "# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.\n"
             "# invoke-edit: action satisfy | toolset: <toolset>\n"
             "# invoke-check: action validate | toolset: <toolset>\n"
             '"""\n'

@@ -13,6 +13,7 @@ from git.git import (
     Ticket,
     TicketNotFoundError,
     TicketState,
+    Worktree,
     resolve_github_status_option,
 )
 
@@ -32,23 +33,6 @@ __all__ = [
     "Ticket",
     "TicketNotFoundError",
     "TicketState",
+    "Worktree",
     "resolve_github_status_option",
-]
-
-NullGitRepo = Repo.memory
-
-__all__ = [
-    "Branch",
-    "Commit",
-    "DirtyBranchSwitchError",
-    "GhConnectError",
-    "Git",
-    "GitConnectError",
-    "GitRepo",
-    "NullGitRepo",
-    "Project",
-    "Repo",
-    "Ticket",
-    "TicketNotFoundError",
-    "TicketState",
 ]

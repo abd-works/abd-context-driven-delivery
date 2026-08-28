@@ -1,6 +1,6 @@
 """BDD spec for utilities/handoff/handoff.py – Handoff toolset.
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """
@@ -57,6 +57,13 @@ theme: Place New Order
 with description("a handoff archive path"):
     with it("should resolve .context under destination"):
         expect(str(_h._context_dir("sandbox/play"))).to(equal(str(Path("sandbox/play") / ".context")))
+
+    with it("should write handoff files into a sprint folder not parent .context"):
+        sprint = Path("/work/.context/sessions/my-sprint")
+        expect(str(_h._write_dir(str(sprint)))).to(equal(str(sprint)))
+        expect(str(_h._latest_handoff_path(str(sprint)))).to(
+            equal(str(sprint / "handoff-latest.md"))
+        )
 
     with it("should resolve dated archive under .context/handoffs"):
         expect(str(_h._handoff_path("sandbox/play", "handoff-2026-07-22-modules"))).to(

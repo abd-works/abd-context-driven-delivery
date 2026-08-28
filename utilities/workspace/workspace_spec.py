@@ -16,7 +16,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_none, be_true, contain, equal, expect, raise_error
+from expects import be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from primitives.actions.action import _ActionExpander
@@ -494,6 +494,26 @@ with description("a context tool"):
                     expect(self.commit.sha).to(equal("commit-1"))
                     expect(self.git.commits[0][1]).to(equal(self.turn.name))
 
+                with it("should include session.md in that commit"):
+                    expect(self.session.session_md.is_file()).to(be_true)
+                    expect(
+                        any(
+                            str(path).endswith("session.md")
+                            for path in self.git.commits[0][0]
+                        )
+                    ).to(be_true)
+
+                with it("should not write session.yaml"):
+                    expect((self.session.folder / "session.yaml").is_file()).to(
+                        be_false
+                    )
+                    expect(
+                        any(
+                            str(path).endswith("session.yaml")
+                            for path in self.git.commits[0][0]
+                        )
+                    ).to(be_false)
+
                 with it("should name its turn from its context tool action fidelity and format"):
                     expect(self.turn.name).to(
                         equal("bdd-run-modules-python")
@@ -522,6 +542,19 @@ with description("Turn"):
             kit.finish_turn(result="done")
             expect(bound).not_to(be_none)
             expect(bound.open_turn).to(be_none)
+
+        with it("should commit the current checkout when no work session is bound"):
+            git = NullGitRepo()
+            git.set_dirty(True)
+            kit = Turn()
+            kit.work_session = None
+            kit._checkout_git = git
+            payload = kit.finish_turn(result="tracked on current work")
+            expect(kit.work_session).to(be_none)
+            expect(payload["name"]).to(equal("finish"))
+            expect(payload["sha"]).to(equal("commit-1"))
+            expect(git.commits[0][1]).to(equal("finish"))
+            expect(git.pushes).to(equal([git.current_branch]))
 
         with it("should open the hanging turn from workspace and session context without a host"):
             tmp = Path(tempfile.mkdtemp(prefix="ws-turn-open-cli-"))

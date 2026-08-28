@@ -165,7 +165,9 @@ class AgentSession:
 
     @staticmethod
     def launcher() -> str | None:
-        return shutil.which("cursor-agent")
+        from cli_agent.cli_agent import CursorCli
+
+        return CursorCli().launcher()
 
     @classmethod
     def load(cls, session_file: Path) -> AgentSession | None:
@@ -194,141 +196,63 @@ class AgentSession:
             if existing is not None:
                 _log_harness("cursor_channel", f"session resumed: {existing.chat_id} ({session_file.name})")
                 return existing
-        exe = cls.launcher()
-        if exe is None:
-            raise RuntimeError("cursor-agent not found on PATH")
+        from cli_agent.cli_agent import CursorCli
+
         _log_harness("cursor_channel", f"creating new session for {session_file.name} in {workspace} ...")
-        completed = subprocess.run(
-            [exe, "create-chat", "--workspace", str(workspace.resolve())],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=60,
-        )
-        if completed.returncode != 0:
-            raise RuntimeError(
-                f"cursor-agent create-chat failed (exit {completed.returncode}).\n"
-                f"stdout: {completed.stdout}\nstderr: {completed.stderr}"
-            )
-        match = _CHAT_ID_RE.search(completed.stdout)
-        if not match:
-            raise RuntimeError(
-                f"cursor-agent create-chat returned no chat id.\n"
-                f"stdout: {completed.stdout}\nstderr: {completed.stderr}"
-            )
-        session = cls(chat_id=match.group(0), session_file=session_file)
+        chat_id = CursorCli().create_chat(str(workspace.resolve()))
+        session = cls(chat_id=chat_id, session_file=session_file)
         session.save()
         _log_harness("cursor_channel", f"session created: {session.chat_id}")
         return session
 
     def run(self, prompt: str, workspace: Path, *, timeout_seconds: int = 300) -> AgentResult:
-        exe = self.launcher()
-        if exe is None:
-            raise RuntimeError("cursor-agent not found on PATH")
+        from cli_agent.cli_agent import CursorCli
+
         _log_harness(
             "cursor_channel",
             f"agent run starting (session={self.chat_id[:8]}..., timeout={timeout_seconds}s)",
         )
-        args = [
-            exe,
-            "-p",
-            "--force",
-            "--trust",
-            "--resume",
-            self.chat_id,
-            "--workspace",
-            str(workspace.resolve()),
-            "--output-format",
-            "stream-json",
-            "--stream-partial-output",
+        spawned = CursorCli(resume=self.chat_id).run(
             prompt,
-        ]
-        narrative: list[str] = []
-        raw_lines: list[str] = []
-        stderr_buf: list[str] = []
-        thread_errors: list[str] = []
-
-        def _on_stdout() -> None:
-            try:
-                assert proc.stdout
-                for raw in proc.stdout:
-                    raw_lines.append(raw)
-                    try:
-                        event = json.loads(raw.strip())
-                    except json.JSONDecodeError:
-                        sys.__stdout__.write(raw)
-                        sys.__stdout__.flush()
-                        continue
-                    etype = event.get("type", "?")
-                    if etype == "assistant":
-                        for block in (event.get("message") or {}).get("content") or []:
-                            if not isinstance(block, dict):
-                                continue
-                            btype = block.get("type", "")
-                            if btype == "text":
-                                text = block.get("text", "")
-                                narrative.append(text)
-                                sys.__stdout__.write(text)
-                                sys.__stdout__.flush()
-                            elif btype == "tool_use":
-                                name = block.get("name", "?")
-                                inp = json.dumps(block.get("input", {}))[:120]
-                                _log_harness("cursor_channel", f"tool_use: {name}({inp})")
-                    elif etype == "result":
-                        text = event.get("result", "")
-                        narrative.append(text)
-                        sys.__stdout__.write(text + "\n")
-                        sys.__stdout__.flush()
-            except Exception as exc:  # noqa: BLE001
-                thread_errors.append(f"stdout thread error: {exc}")
-
-        def _on_stderr() -> None:
-            try:
-                assert proc.stderr
-                for chunk in iter(lambda: proc.stderr.read(4096), ""):
-                    stderr_buf.append(chunk)
-                    sys.__stderr__.write(chunk)
-                    sys.__stderr__.flush()
-            except Exception as exc:  # noqa: BLE001
-                thread_errors.append(f"stderr thread error: {exc}")
-
-        started = time.perf_counter()
-        proc = subprocess.Popen(
-            args,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            bufsize=1,
+            str(workspace.resolve()),
+            timeout_seconds=timeout_seconds,
         )
-        threads = [
-            threading.Thread(target=_on_stdout, daemon=True),
-            threading.Thread(target=_on_stderr, daemon=True),
-        ]
-        for t in threads:
-            t.start()
-
-        try:
-            exit_code = proc.wait(timeout=timeout_seconds)
-        except subprocess.TimeoutExpired:
-            _log_harness("cursor_channel", f"TIMEOUT after {timeout_seconds}s - killing cursor-agent")
-            proc.kill()
-            proc.wait()
-            raise
-        for t in threads:
-            t.join()
-
-        elapsed = time.perf_counter() - started
-        if thread_errors:
-            _log_harness("cursor_channel", f"stream errors: {'; '.join(thread_errors)}")
+        if spawned.stderr:
+            sys.__stderr__.write(spawned.stderr)
+            sys.__stderr__.flush()
+        narrative = _narrative_from_cli_stdout(spawned.text)
+        text = narrative or spawned.text
+        if text:
+            sys.__stdout__.write(text if text.endswith("\n") else text + "\n")
+            sys.__stdout__.flush()
         return AgentResult(
-            exit_code=exit_code,
-            text="".join(narrative) or "".join(raw_lines),
-            stderr="".join(stderr_buf),
-            elapsed_seconds=elapsed,
+            exit_code=spawned.exit_code,
+            text=text,
+            stderr=spawned.stderr,
+            elapsed_seconds=spawned.elapsed_seconds,
         )
+
+
+def _narrative_from_cli_stdout(stdout: str) -> str:
+    """Pull assistant/result text out of cursor-agent stream-json stdout."""
+    narrative: list[str] = []
+    for raw in (stdout or "").splitlines():
+        try:
+            event = json.loads(raw.strip())
+        except json.JSONDecodeError:
+            continue
+        etype = event.get("type", "")
+        if etype == "assistant":
+            for block in (event.get("message") or {}).get("content") or []:
+                if isinstance(block, dict) and block.get("type") == "text":
+                    text = str(block.get("text", ""))
+                    if text:
+                        narrative.append(text)
+        elif etype == "result":
+            text = str(event.get("result", ""))
+            if text:
+                narrative.append(text)
+    return "".join(narrative)
 
 
 def _log_harness(name: str, msg: str) -> None:

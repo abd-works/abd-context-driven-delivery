@@ -159,3 +159,67 @@ with description("GitHub project status names"):
         ticket.set_status("Backlog")
         expect(repo._ticket_project_state[ticket.number]).to(equal("Backlog"))
         expect(ticket.state.name).to(equal("Backlog"))
+
+
+with description("a Repo worktree"):
+    with context("opened in memory"):
+        with before.each:
+            self.repo = Repo.memory("/tmp/demo-clone")
+
+        with it("should list the primary checkout"):
+            trees = self.repo.list_worktrees()
+            expect(len(trees)).to(equal(1))
+            expect(trees[0].branch).to(equal("main"))
+
+        with it("should add a worktree for a session branch"):
+            path = self.repo.add_worktree("/tmp/wt-demo", "session/demo")
+            expect(path).to(equal(Path("/tmp/wt-demo")))
+            found = self.repo.worktree_for("session/demo")
+            expect(found is not None).to(be_true)
+            expect(found.branch).to(equal("session/demo"))
+
+        with it("should reuse an existing worktree for the same branch"):
+            first = self.repo.add_worktree("/tmp/wt-demo", "session/demo")
+            second = self.repo.add_worktree("/tmp/wt-demo-2", "session/demo")
+            expect(second).to(equal(first))
+            expect(len(self.repo.list_worktrees())).to(equal(2))
+
+        with it("should remove a worktree"):
+            path = self.repo.add_worktree("/tmp/wt-demo", "session/demo")
+            self.repo.remove_worktree(path)
+            expect(self.repo.worktree_for("session/demo")).to(equal(None))
+
+        with it("should fetch and pull in the current tree"):
+            self.repo.fetch_pull()
+            expect(self.repo._fetches).to(equal(["origin"]))
+            expect(self.repo._pulls).to(equal(["main"]))
+
+        with it("should merge another branch into the current branch"):
+            sha = self.repo.merge_from("session/demo", message="merge with main")
+            expect(sha).to(equal("merge-session/demo-into-main"))
+            expect(self.repo.current_branch).to(equal("main"))
+
+        with it("should push the current head to another branch name"):
+            self.repo.push_to("main")
+            expect(self.repo.pushes).to(equal(["main"]))
+
+
+with description("Repo dirty detection"):
+    with it("should ignore events.log so session close is not blocked by the trail"):
+        from git.git import GitRepo, Repo
+
+        tmp = Path(tempfile.mkdtemp(prefix="git_events_log_"))
+        Repo.git(tmp, "init")
+        Repo.git(tmp, "config", "user.email", "test@example.com")
+        Repo.git(tmp, "config", "user.name", "test")
+        Repo.git(tmp, "commit", "--allow-empty", "-m", "init")
+        log = tmp / ".context" / "sessions" / "demo" / "logs" / "events.log"
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text("trail\n", encoding="utf-8")
+        Repo.git(tmp, "add", "-f", str(log))
+        Repo.git(tmp, "commit", "-m", "track log")
+        log.write_text("more trail\n", encoding="utf-8")
+        repo = GitRepo(tmp)
+        expect(repo.is_dirty()).to(equal(False))
+        (tmp / "real.txt").write_text("keep", encoding="utf-8")
+        expect(repo.is_dirty()).to(equal(True))

@@ -80,6 +80,18 @@ checkout_or_create(name): str
 commit(paths, message): str
 push(): None
 merge_branch(source, into, message): str
+list_worktrees(): list
+worktree_for(branch): Worktree | None
+add_worktree(path, branch): Path
+remove_worktree(path): None
+fetch(): None
+pull(): None
+fetch_pull(): None
+merge_from(other, message): str
+push_to(branch): None
+has_stash(): bool
+is_linked_worktree(): bool
+primary_root(): Path
 ticket(ref): Ticket | None
 create_ticket(title, body): Ticket
 attach_project(owner, number): Project

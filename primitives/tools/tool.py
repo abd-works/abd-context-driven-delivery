@@ -1,11 +1,10 @@
 """_Tool and toolset primitives for discoverable capabilities.
 
 Workflow for a @toolset class file:
-1. Read the mandatory @toolset-manifest comment at the top of the file.
-2. Read the Agent reading this file line - instructions load via CLI, not Python source.
-3. Run manifest to load YAML front matter (signature with kind tags).
-4. Invoke: python -m tools run <request.yaml|-> with tool: or action:.
-5. Follow response.instructions before authoring behavior.
+1. Read the mandatory @toolset-manifest comment at the top of the file (identity only — do not remanifest).
+2. Read the Agent reading this file line — slash/skill is the catalog; instructions load via CLI, not Python source.
+3. Pipe a yaml fence to stdin; python -m tools run - with tool: or action:. Do not write a request file.
+4. Follow response.instructions before authoring behavior.
 
 Parse headers with tools.toolset_header.read_toolset_header(path).
 """

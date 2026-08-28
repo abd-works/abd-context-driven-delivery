@@ -1,5 +1,5 @@
 # @toolset-manifest python -m tools manifest grill_context.grill_context:GrillContext
-# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # Do not author behavior from this Python source.
 """Grill a plan against codebase context - relentless interview with context-aware exploration."""
 from __future__ import annotations
@@ -19,10 +19,11 @@ class GrillContext(LifecycleAction):
     """Interview a plan relentlessly against the codebase context until reaching shared understanding."""
 
     def _grill_answers_path(self, root: str) -> Path:
-        """Resolve grill-answers under the destination docs dir (pure).
+        """Resolve grill-answers.md under the durable docs dir (pure).
 
-        Engagement grilling: ``root`` is ``session.folder``
-        (``{path}/.context/sessions/{name}/``) - file is written flat there.
+        Survives multiple sessions: ``{path}/.context/grill-answers.md``.
+        ``root`` may be ``session.path``, ``session.docs_dir``, or ``session.folder``
+        — all resolve to the same ``.context`` file.
         """
         return docs_dir(root) / "grill-answers.md"
 
@@ -68,8 +69,9 @@ class GrillContext(LifecycleAction):
     @agent_tool
     def write_grill_answer(self, root: str, heading: str, body: str) -> str:
         """Append one insight to grill-answers.md under the given heading.
-        root defaults to session.folder ({path}/.context/sessions/{name}/) for engagement grilling.
-        If no sprint exists yet: confirm path, suggest slug, open, then use session.folder.
+        root defaults to session.path (or session.docs_dir). File is
+        {path}/.context/grill-answers.md — durable across sessions, not under
+        sessions/{name}/. If no sprint exists yet: confirm path, suggest slug, open.
         Creates the file if it does not exist. Call immediately when an insight is resolved - do not batch.
         heading: short title for the insight (e.g. 'How actions are discovered').
         body: 1-3 concise sentences. Reference file paths and names instead of repeating logic."""
@@ -98,15 +100,15 @@ class GrillContext(LifecycleAction):
     @agent_instructions
     def grill_with_context(self, plan: str) -> str:
         """Conduct a relentless grilling interview about {plan} - ask each question with concept-grounded framing and option rationales (never bare choices), using the AskQuestion Cursor tool when available. Stage-specific show/persist/validate cadence belongs to the wrapping stage (sketch, iterate, ...), not here."""
-        """Step 0 - Resolve roots: explore under session.path; write grill-answers under session.folder. If no sprint exists yet, confirm path with the user, suggest a kebab slug from goal/context, open, then continue. Do not invent a divergent root."""
+        """Step 0 - Resolve roots: explore under session.path; write grill-answers under session.docs_dir ({path}/.context/grill-answers.md). If no sprint exists yet, confirm path with the user, suggest a kebab slug from goal/context, open, then continue. Do not invent a divergent root."""
         """Step 1 - Context discovery: call explore_context_files(root=session.path) and any folders referenced in the plan."""
         self.explore_context_files()
-        """Step 2 - MUST prove-read before asking. Upward context is more general; downward is more specific. Read every relevant context file referenced or implied by the decision - owning `*-segment.md`, module-context, session grill-answers/sketches/handoff, peer story-context, build-order, and any path the plan or prior answers cite. Index/overlay mid-epic stubs are never enough for inventory. Call read_context_file (or Read) on each - chunk large files. Grep, titles, memory, or primer-only reads do not count."""
+        """Step 2 - MUST prove-read before asking. Upward context is more general; downward is more specific. Read every relevant context file referenced or implied by the decision - owning `*-segment.md`, module-context, grill-answers, sketches, peer story-context, build-order, and any path the plan or prior answers cite. A consumed handoff is gone — do not hunt archives for current state. Index/overlay mid-epic stubs are never enough for inventory. Call read_context_file (or Read) on each - chunk large files. Grep, titles, memory, or primer-only reads do not count."""
         self.read_context_file()
         """Step 2a - Proof gate: do not proceed to Step 3 until this turn can name the path(s) read and cite concrete terms from them. Missing a referenced file means read it - do not ask yet. Asking from a skim is a defect."""
         """Step 3 - Only after Step 2a: ask ONE focused question using the AskQuestion Cursor tool (or structured multiple-choice in chat if that tool is unavailable). Never present bare options: the user must have enough concept context to decide."""
         """Step 3a - Frame the decision first (2-5 sentences): name the branch of the design tree, state what is already agreed, name the source file(s) just read, and ground the choice in concepts from those files and the active practice material for this session (whatever domain or generator is in play - do not assume a particular practice). Do not invent trade-offs untethered from that evidence."""
         """Step 3b - Present 3-5 options. Put the recommended answer first (label it "(Recommended)"). For each option, give one short rationale tied to those concepts - what choosing it implies for the design under discussion. Always include an "Other / I'll specify" option last. Wait for the answer before proceeding."""
         """Step 4 - If a question can be answered by exploring the codebase, explore first instead of asking."""
-        """Step 5 - After each resolved insight, call write_grill_answer(root=session.folder, ...) immediately. Do not batch. Keep entries concise; reference code paths rather than repeating logic."""
+        """Step 5 - After each resolved insight, call write_grill_answer(root=session.path, ...) immediately. Do not batch. Keep entries concise; reference code paths rather than repeating logic."""
         return "Grilling session for: {plan}"

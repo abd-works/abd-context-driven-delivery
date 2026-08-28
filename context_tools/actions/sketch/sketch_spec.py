@@ -1,6 +1,6 @@
 """BDD spec for Sketch toolset + ActionExpander integration.
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """
@@ -85,6 +85,20 @@ with description("Sketch toolset"):
             self.tmp = tempfile.TemporaryDirectory()
             self.destination = self.tmp.name
             self.sketcher = Sketch()
+
+        with it("writes a sprint-folder destination up into path/.context"):
+            sprint = Path(self.destination) / ".context" / "sessions" / "my-sprint"
+            sprint.mkdir(parents=True)
+            path = Path(
+                self.sketcher.save_sketch(
+                    destination=str(sprint),
+                    slug="engagement",
+                    content="rough\n",
+                )
+            )
+            expect(path.parent).to(equal(Path(self.destination) / ".context"))
+            expect(path.name).to(equal("engagement-sketch.md"))
+            expect((sprint / "engagement-sketch.md").exists()).to(equal(False))
 
         with it("writes to .context/{slug}-sketch.md under the destination"):
             path = self.sketcher.save_sketch(

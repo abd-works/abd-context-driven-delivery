@@ -1,5 +1,5 @@
 # @toolset-manifest python -m tools manifest primitives.assets.examples.card_file:CardFile
-# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # Do not author behavior from this Python source.
 """Example showing AssetLocator and Asset — load named markdown cards from local files."""
 from __future__ import annotations

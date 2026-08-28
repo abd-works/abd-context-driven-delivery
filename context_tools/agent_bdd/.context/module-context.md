@@ -17,6 +17,6 @@
 - Spec helpers: `repo_root_from`, `sessions_dir`, `dump_run_yaml`, `tools_run_prompt`, `run_toolset`, `read_workspace`, `follow_instructions`, `manifest_command_from_header`, `run_manifest_from_header`, `expect_ok_action`, `expect_ok_tool`, `expect_tools_include`, `expect_tools_exclude`, `expect_instructions_contain`, `expect_instructions_contain_any`, `tools_run_captures`, `combined_capture_text`, `expect_capture_mentions`, `generate_similar_prompt`, `generate_similar_rubric`, `generate_and_judge` (pass-file generate + AI judge; mistake specs use this instead of a parallel eval harness)
 - `AgentBdd` generator: `generate_output` composes vanilla `Bdd` via the Generate kit. Lifecycle validate / satisfy / repair live on kits (`Generate().generate(tools=[agent_bdd])`).
 
-**Dependencies:** `Bdd` / `BaseContextTool` (generator); cursor-agent CLI or in-chat inbox (harness backends); fenced YAML CLI envelope parsing.
+**Dependencies:** `Bdd` / `BaseContextTool` (generator); `cli_agent.CursorCli` for cursor-agent spawn; in-chat inbox; fenced YAML CLI envelope parsing.
 
 **Mechanism:** Thread-local free functions delegate into the active harness block. Specs stay end-to-end — never mock the harness.

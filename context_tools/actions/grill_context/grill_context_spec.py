@@ -1,5 +1,5 @@
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# Agent reading this file: run line 1 manifest, then python -m tools run -. Follow response.instructions only.
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """BDD spec for GrillContext toolset."""
@@ -121,6 +121,20 @@ with description("GrillContext toolset"):
             self.gc = GrillContext()
             self.tmp = tempfile.TemporaryDirectory()
             self.root = self.tmp.name
+
+        with context("that writes when root is a session folder"):
+            with it("should write grill-answers.md in path/.context not the session folder"):
+                sprint = Path(self.root) / ".context" / "sessions" / "my-sprint"
+                sprint.mkdir(parents=True)
+                self.gc.write_grill_answer(
+                    root=str(sprint),
+                    heading="Session insight",
+                    body="Answers survive across sprints.",
+                )
+                expect((Path(self.root) / ".context" / "grill-answers.md").exists()).to(
+                    be_true
+                )
+                expect((sprint / "grill-answers.md").exists()).to(equal(False))
 
         with context("that writes when no grill-answers.md exists yet"):
             with it("should create grill-answers.md under .context/ in the root"):
