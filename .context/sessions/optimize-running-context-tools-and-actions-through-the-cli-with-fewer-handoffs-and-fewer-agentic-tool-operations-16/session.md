@@ -11,5 +11,5 @@
 ## End
 
 - **ended:** 2026-08-27
-- **outcome:** Close switches to main via the git utility.
+- **outcome:** Finished CLI handoff/operation experiments (baseline, single-command, thin-fidelity-format, thin-templates, channel-write). Session branch merged; issue closed.
 - **handoff:** handoff.md
