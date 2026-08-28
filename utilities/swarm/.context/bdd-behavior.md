@@ -70,5 +70,5 @@ a themed defect ticket under one common theme
 a Practitioner reviewing themed Workflow progress
   that reviews after Judge and HIL
     it should show Turn result, HIL validation, and JudgeResult on the Plan
-      -> progress = plan.review_progress()
-      -> expect(progress["result"]).not_to be none
+      -> progress = PlanExecution(plan).review_progress()
+      -> expect(progress.result).not_to be none

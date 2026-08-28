@@ -26,7 +26,7 @@ format: md
   *And* that **Turn** holds **result**  
 *When* **CliAgent** doer-judge evaluates that **Turn**  
 *Then* that **JudgeCheckpoint** holds the **JudgeResult**  
-  *And* **Plan.evaluate_results** records that **JudgeResult** on the **JudgeCheckpoint**  
+  *And* **PlanExecution.evaluate_results** records that **JudgeResult** on the **JudgeCheckpoint**  
   *And* that **Turn** **TicketState** is *In Progress*
 
 ### Evidence

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from cli_agent.cli_agent import CliAgent, IdeCli
-from plan.plan import Plan
+from plan.plan import Plan, PlanExecution
 from primitives.actions.action import agentic_toolset
 from workspace.workspace import Turn, WorkSession, Workspace
 
@@ -26,31 +26,40 @@ class Hypothesis:
     name: str
 
 
-class Agent(CliAgent):
-    """CliAgent running the Plan under one Hypothesis.
+@dataclass
+class AgentProgress:
+    """Snapshot of one Agent for Supervisor.compare."""
 
-    Registered at Add Agent; CliAgent.launch_sessions starts at Plan.start on its WorkSession.
-    Judge hangs on the Turn (JudgeCheckpoint) via CliAgent doer-judge — not judge-as-agent on Agent.
-    """
+    hypothesis: str
+    launched: bool
+    open_turn: str | None
+
+
+class Agent(CliAgent):
+    """CliAgent running the Plan under one Hypothesis."""
 
     def __init__(
         self,
         hypothesis: Hypothesis,
+        ide: IdeCli,
         plan: Plan | None = None,
         work_session: WorkSession | None = None,
-        ide: IdeCli | None = None,
         workspace: str = "",
         session: str = "",
     ) -> None:
-        super().__init__(
-            ide=ide or IdeCli(judge=True),
-            workspace=workspace,
-            session=session,
-        )
-        self.hypothesis = hypothesis
-        self.plan = plan
+        super().__init__(ide=ide, workspace=workspace, session=session)
+        self._hypothesis = hypothesis
+        self._plan = plan
         self._agent_work_session = work_session
         self._launched = False
+
+    @property
+    def hypothesis(self) -> Hypothesis:
+        return self._hypothesis
+
+    @property
+    def plan(self) -> Plan | None:
+        return self._plan
 
     @property
     def launched(self) -> bool:
@@ -69,11 +78,29 @@ class Agent(CliAgent):
         tools: list[object] | None = None,
         actions: list[object] | None = None,
     ) -> WorkSession:
-        """Launch via CliAgent at Plan.start on this Agent's own WorkSession."""
-        if self.plan is None:
+        session = self._open_agent_session(workspace, plan_work_session)
+        self._bind_first_turn(session, swarm_turns)
+        self.launch_sessions(tools=tools or [], actions=actions)
+        return session
+
+    def execute_turn(self) -> Turn | None:
+        if self._plan is None:
+            raise RuntimeError("Agent.execute_turn requires a Plan")
+        execution = PlanExecution(self._plan)
+        previous = self._plan.work_session
+        self._plan.work_session = self._agent_work_session
+        try:
+            return execution.execute_turn()
+        finally:
+            self._plan.work_session = previous
+
+    def _open_agent_session(
+        self, workspace: Workspace, plan_work_session: WorkSession | None
+    ) -> WorkSession:
+        if self._plan is None:
             raise RuntimeError("Agent.start_plan requires a Plan")
         session = workspace.open_work_session(
-            name=f"agent-{self.hypothesis.name}",
+            name=f"agent-{self._hypothesis.name}",
             path=getattr(workspace, "path", ".") or ".",
         )
         if plan_work_session is not None and session is plan_work_session:
@@ -82,22 +109,11 @@ class Agent(CliAgent):
             )
         self._agent_work_session = session
         self._launched = True
-        if swarm_turns:
-            first = swarm_turns[0]
-            session.open_turn = first
-        self.launch_sessions(tools=tools or [], actions=actions)
         return session
 
-    def execute_turn(self) -> Turn | None:
-        """Run Execute Plan on this Agent WorkSession (same stories as Plan.execute_turn)."""
-        if self.plan is None:
-            raise RuntimeError("Agent.execute_turn requires a Plan")
-        previous = self.plan.work_session
-        self.plan.work_session = self._agent_work_session
-        try:
-            return self.plan.execute_turn()
-        finally:
-            self.plan.work_session = previous
+    def _bind_first_turn(self, session: WorkSession, swarm_turns: list[Turn]) -> None:
+        if swarm_turns:
+            session.open_turn = swarm_turns[0]
 
 
 @agentic_toolset
@@ -105,101 +121,151 @@ class Supervisor:
     """Owns Outcome and rubric; compare reads Turn JudgeCheckpoint results — does not judge."""
 
     def __init__(self, outcome: Outcome, rubric: str = "") -> None:
-        self.outcome = outcome
-        self.rubric = rubric
-        self.agents: list[Agent] = []
-        self.compare_events: list[dict[str, Any]] = []
-        self.associations: list[Agent] = []
+        self._outcome = outcome
+        self._rubric = rubric
+        self._agents: list[Agent] = []
+        self._compare_events: list[dict[str, Any]] = []
+        self._associations: list[Agent] = []
+
+    @property
+    def outcome(self) -> Outcome:
+        return self._outcome
+
+    @property
+    def rubric(self) -> str:
+        return self._rubric
+
+    @property
+    def agents(self) -> list[Agent]:
+        return self._agents
+
+    @property
+    def compare_events(self) -> list[dict[str, Any]]:
+        return list(self._compare_events)
+
+    @property
+    def associations(self) -> list[Agent]:
+        return list(self._associations)
 
     def set_rubric(self, rubric: str) -> str:
-        self.rubric = rubric
-        return self.rubric
+        self._rubric = rubric
+        return str(self._rubric)
 
-    def add_agent(self, hypothesis: Hypothesis, plan: Plan | None = None) -> Agent:
+    def add_agent(
+        self, hypothesis: Hypothesis, plan: Plan | None, ide: IdeCli
+    ) -> Agent:
         """Register the Agent; CliAgent has not launched yet."""
         workspace = ""
         if plan is not None and plan.workspace is not None:
             workspace = getattr(plan.workspace, "path", "") or ""
-        agent = Agent(hypothesis=hypothesis, plan=plan, workspace=workspace)
-        self.agents.append(agent)
+        agent = Agent(
+            hypothesis=hypothesis, ide=ide, plan=plan, workspace=workspace
+        )
+        self._agents.append(agent)
         return agent
 
     def compare(self, event: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-        """Stream after each Turn JudgeCheckpoint or HIL result; does not judge.
-
-        Reads judge_result / validation from the event (CliAgent doer-judge already ran).
-        Does not wait for all agents. Automatic associate follows each streamed compare.
-        """
+        """Stream after each Turn JudgeCheckpoint or HIL result; does not judge."""
         if event is not None:
-            payload = dict(event)
-            payload.setdefault("outcome", self.outcome.name)
-            payload.setdefault("rubric", self.rubric)
-            turn = event.get("turn")
-            if turn is not None:
-                judge = getattr(turn, "judge_checkpoint", None)
-                hil = getattr(turn, "hil_check", None)
-                payload.setdefault(
-                    "judge_result",
-                    getattr(judge, "judge_result", None) if judge else None,
-                )
-                payload.setdefault(
-                    "hil_validation",
-                    getattr(hil, "validation", None) if hil else None,
-                )
-            payload.setdefault(
-                "agent_progress",
-                [
-                    {
-                        "hypothesis": a.hypothesis.name,
-                        "launched": a.launched,
-                        "open_turn": getattr(
-                            getattr(a.agent_work_session, "open_turn", None),
-                            "action",
-                            None,
-                        ),
-                    }
-                    for a in self.agents
-                ],
-            )
-            self.compare_events.append(payload)
+            payload = self._payload_from_event(event)
+            self._compare_events.append(payload)
             self.associate(payload)
-        return list(self.compare_events)
+        return list(self._compare_events)
 
     def associate(self, event: dict[str, Any] | None = None) -> list[Agent]:
-        """Update automatically after each streamed compare toward Outcome."""
-        agent = None if event is None else event.get("agent")
-        if isinstance(agent, Agent) and agent not in self.associations:
-            self.associations.append(agent)
-        return list(self.associations)
+        if event is None:
+            return list(self._associations)
+        agent = self._agent_from_event(event)
+        if agent is not None and agent not in self._associations:
+            self._associations.append(agent)
+        return list(self._associations)
+
+    def _agent_from_event(self, event: dict[str, Any]) -> Agent | None:
+        agent = event.get("agent")
+        return agent if isinstance(agent, Agent) else None
+
+    def _payload_from_event(self, event: dict[str, Any]) -> dict[str, Any]:
+        compare_event = dict(event)
+        compare_event.setdefault("outcome", self._outcome.name)
+        compare_event.setdefault("rubric", self._rubric)
+        self._copy_turn_results(event, compare_event)
+        compare_event.setdefault(
+            "agent_progress",
+            [self._progress_for(agent) for agent in self._agents],
+        )
+        return compare_event
+
+    def _copy_turn_results(
+        self, event: dict[str, Any], compare_event: dict[str, Any]
+    ) -> None:
+        turn = event.get("turn")
+        if turn is None:
+            return
+        judge = getattr(turn, "judge_checkpoint", None)
+        hil = getattr(turn, "hil_check", None)
+        compare_event.setdefault(
+            "judge_result",
+            getattr(judge, "judge_result", None) if judge else None,
+        )
+        compare_event.setdefault(
+            "hil_validation",
+            getattr(hil, "validation", None) if hil else None,
+        )
+
+    def _progress_for(self, agent: Agent) -> dict[str, Any]:
+        open_turn = getattr(agent.agent_work_session, "open_turn", None)
+        view = AgentProgress(
+            hypothesis=agent.hypothesis.name,
+            launched=agent.launched,
+            open_turn=getattr(open_turn, "action", None),
+        )
+        return {
+            "hypothesis": view.hypothesis,
+            "launched": view.launched,
+            "open_turn": view.open_turn,
+        }
 
 
 @agentic_toolset
 class Swarm:
-    """Plan plus shared turns slice, Supervisor, and Agents.
-
-    Shared Swarm.turns is selected once before any Agent runs. Each Agent runs
-    that same slice on its own WorkSession. CliAgent.launch_sessions starts at Plan.start.
-    Git is the store; Swarm is a front-end. Supervisor.compare reads Turn judge results.
-    """
+    """Plan plus shared turns slice, Supervisor, and Agents. Front-end to git."""
 
     def __init__(self, plan: Plan | None = None) -> None:
-        self.plan = plan
-        self.turns: list[Turn] = []
-        self.supervisor: Supervisor | None = None
-        self.agents: list[Agent] = []
+        self._plan = plan
+        self._turns: list[Turn] = []
+        self._supervisor: Supervisor | None = None
+        self._agents: list[Agent] = []
+
+    @property
+    def plan(self) -> Plan | None:
+        return self._plan
+
+    @property
+    def turns(self) -> list[Turn]:
+        return self._turns
+
+    @property
+    def supervisor(self) -> Supervisor | None:
+        return self._supervisor
+
+    @property
+    def agents(self) -> list[Agent]:
+        return self._agents
 
     def create_supervisor(self, outcome: Outcome, rubric: str = "") -> Supervisor:
-        self.supervisor = Supervisor(outcome=outcome, rubric=rubric)
-        return self.supervisor
+        supervisor = Supervisor(outcome=outcome, rubric=rubric)
+        self._supervisor = supervisor
+        return supervisor
 
     def select_turns(self, turns: list[Turn]) -> list[Turn]:
-        """Shared turn slice selected once before any Agent runs."""
-        self.turns = list(turns)
-        return self.turns
+        self._turns = list(turns)
+        return list(self._turns)
 
-    def add_agent(self, hypothesis: Hypothesis) -> Agent:
-        if self.supervisor is None:
+    def add_agent(self, hypothesis: Hypothesis, ide: IdeCli) -> Agent:
+        if self._supervisor is None:
             raise RuntimeError("Swarm.add_agent requires a Supervisor")
-        agent = self.supervisor.add_agent(hypothesis=hypothesis, plan=self.plan)
-        self.agents.append(agent)
+        agent = self._supervisor.add_agent(
+            hypothesis=hypothesis, plan=self._plan, ide=ide
+        )
+        self._agents.append(agent)
         return agent

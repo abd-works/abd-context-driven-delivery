@@ -22,27 +22,18 @@ format: md
 
 ### Scenario: Human asks to fix now
 
-*Given* a **Turn** with a **HILCheck** validation that calls for a fix  
-  *And* that **Turn** holds **result**  
-  *And* that **Turn** **TicketState** is *In Progress*  
-*When* the operator **recordMistake** on that **Turn**  
-  *And* **recordCorrection** on that **Turn**  
-  *And* **WorkSession.repairs** holds the **Repair**  
+*Given* a **Turn** *In Progress* with a **HILCheck** validation that calls for a fix and holds **result**  
+*When* the operator **recordMistake** and **recordCorrection** on that **Turn** with **WorkSession.repairs** holding the **Repair**  
   *And* the operator executes that **Turn** again  
-*Then* that **Turn** holds the **Mistake**  
-  *And* that **Turn** holds the **Correction**  
-  *And* that **Turn** holds a new **result**  
+*Then* that **Turn** holds the **Mistake**, the **Correction**, and a new **result**  
   *And* that **Turn** **TicketState** is *In Progress*
 
 ### Scenario: Judge evaluation can also drive Fix and Rerun
 
 *Given* a **Turn** with a **JudgeResult** that calls for a fix  
-*When* the operator **recordMistake** on that **Turn**  
-  *And* **recordCorrection** on that **Turn**  
-  *And* **WorkSession.repairs** holds the **Repair**  
+*When* the operator **recordMistake** and **recordCorrection** on that **Turn** with **WorkSession.repairs** holding the **Repair**  
   *And* the operator executes that **Turn** again  
-*Then* that **Turn** holds the **Mistake** and the **Correction**  
-  *And* that **Turn** holds a new **result**  
+*Then* that **Turn** holds the **Mistake**, the **Correction**, and a new **result**  
   *And* that **Turn** **TicketState** is *In Progress*
 
 ### Evidence

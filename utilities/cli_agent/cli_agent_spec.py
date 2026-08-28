@@ -28,6 +28,7 @@ from cli_agent.cli_agent import (
     IdeCli,
     VscodeCli,
     _CliSpawner,
+    JobQueue,
     _Pickup,
 )
 from sub_agent.sub_agent import discover_sub_agent_tools
@@ -934,3 +935,65 @@ with description("a doer that does not take the new job"):
             tmp = Path(tempfile.mkdtemp(prefix="cli_got_")) / "t.jsonl"
             tmp.write_text('{"role":"user","message":{}}\n', encoding="utf-8")
             expect(_Pickup().accepted(tmp, 0, seconds=0.0)).to(be_true)
+
+
+with description("a CLI agent job_queue"):
+    with context("when the parent assigns two jobs"):
+        with it("should store them on the WorkSession without spawning"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_q_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-q"):
+                    with patch("cli_agent.cli_agent.subprocess.Popen", return_value=_popen()):
+                        agent = CliAgent(
+                            ide=IdeCli(), workspace=str(tmp), session="queue"
+                        )
+                        agent.job_queue = [
+                            {
+                                "tools": ["context_tools.stories.stories:Stories"],
+                                "actions": ["generate"],
+                                "prompt": "job one",
+                            },
+                            {
+                                "tools": [
+                                    "context_tools.clean_engineering.clean_engineering:CleanEngineering"
+                                ],
+                                "actions": ["generate"],
+                                "prompt": "job two",
+                            },
+                        ]
+            expect(len(agent.job_queue)).to(equal(2))
+            expect(agent.job_queue[0]["prompt"]).to(equal("job one"))
+            expect(JobQueue().path_for(agent.work_session).is_file()).to(be_true)
+
+        with it("should send the oldest job on launch_next and leave the rest"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_q2_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-q"):
+                    with patch("cli_agent.cli_agent.subprocess.Popen", return_value=_popen()):
+                        with patch.object(CliAgent, "_await_pickup", lambda *a, **k: None):
+                            agent = CliAgent(
+                                ide=IdeCli(), workspace=str(tmp), session="queue"
+                            )
+                            agent.job_queue = [
+                                {"tools": [], "actions": ["generate"], "prompt": "job one"},
+                                {"tools": [], "actions": ["generate"], "prompt": "job two"},
+                            ]
+                            text = agent.launch_next()
+            expect("taken up: yes" in text).to(be_true)
+            expect("job_queue: 1" in text).to(be_true)
+            expect(len(agent.job_queue)).to(equal(1))
+            expect(agent.job_queue[0]["prompt"]).to(equal("job two"))
+
+    with context("when the job_queue is empty"):
+        with it("should raise so the parent does not wait"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_q0_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-q"):
+                    agent = CliAgent(
+                        ide=IdeCli(), workspace=str(tmp), session="queue"
+                    )
+
+                    def _fail():
+                        agent.launch_next()
+
+                    expect(_fail).to(raise_error(RuntimeError))

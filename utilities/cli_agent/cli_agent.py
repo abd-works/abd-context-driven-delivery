@@ -4,6 +4,7 @@
 """Slash /cli-agent — SubAgent turn policy, IDE CLI spawn instead of in-chat Task."""
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -344,6 +345,49 @@ class _CliSpawner:
     def with_elapsed(self, result: IdeCliResult, started: float) -> IdeCliResult:
         result.elapsed_seconds = time.perf_counter() - started
         return result
+
+
+class JobQueue:
+    """FIFO jobs on the WorkSession — assign or append; launch_next sends one."""
+
+    filename = "cli-agent-job-queue.json"
+    empty = "job_queue empty: nothing to send to the CLI"
+
+    def path_for(self, work) -> Path:
+        folder = getattr(work, "folder", None)
+        if folder:
+            return Path(folder) / self.filename
+        name = getattr(work, "name", "") or "work"
+        root = getattr(work, "path", None) or "."
+        return Path(root) / ".context" / "sessions" / name / self.filename
+
+    def load(self, work) -> list:
+        path = self.path_for(work)
+        if not path.is_file():
+            return []
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(raw, list):
+            return raw
+        return []
+
+    def save(self, work, items: list) -> None:
+        path = self.path_for(work)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(items, indent=2), encoding="utf-8")
+
+    def push(self, work, item: dict) -> int:
+        items = self.load(work)
+        items.append(item)
+        self.save(work, items)
+        return len(items)
+
+    def pop(self, work) -> dict | None:
+        items = self.load(work)
+        if not items:
+            return None
+        head, rest = items[0], items[1:]
+        self.save(work, rest)
+        return head
 
 
 class _Pickup:
@@ -949,6 +993,9 @@ them as chat links.
 The parent sees kind: sub_agent / launch: non_blocking and does not wait.
 If launch reports NOT TAKEN UP, stop immediately. Do not wait on an
 idle console. A live pid is not proof the doer accepted the job.
+Later jobs live on the job_queue property. Append there; send only
+the next one with launch_next after the current job is taken up.
+Do not stack --resume prompts.
 The parent talks to the doer only. Every once in a while, check the
 doer (logs, transcript tail, hanging Turn, artifacts) and report
 back how it is doing. Do not prompt, launch, or score the judge.
@@ -1144,7 +1191,31 @@ class CliAgent(SubAgent):
         parts.append(f"workspace: {self._workspace_root()}")
         parts.append(f"session: {work.name}")
         parts.append("taken up: yes")
+        parts.append(f"job_queue: {len(self.job_queue)}")
         return "\n".join(parts)
+
+    @property
+    def job_queue(self) -> list:
+        work = self._attach_cli_sessions()
+        return JobQueue().load(work)
+
+    @job_queue.setter
+    def job_queue(self, items: list) -> None:
+        work = self._attach_cli_sessions()
+        JobQueue().save(work, list(items or []))
+
+    def launch_next(self) -> str:
+        """Send the oldest job_queue item. One send. Do not stack resumes."""
+        work = self._attach_cli_sessions()
+        item = JobQueue().pop(work)
+        if item is None:
+            raise RuntimeError(JobQueue.empty)
+        if item.get("prompt"):
+            self.prompt = str(item["prompt"])
+        return self.launch_sessions(
+            item.get("tools") or [],
+            item.get("actions") or None,
+        )
 
     @prompt_name(name="cli-agent")
     @sub_agent

@@ -6,7 +6,10 @@ CliAgent is the interactive CLI worker for listed context tools and actions. Pla
 
 ## Seam
 
-CliAgent, IdeCli, CursorCli, VscodeCli
+CliAgent, IdeCli, CursorCli, VscodeCli, JobQueue
+
+`job_queue` is a CliAgent property (list of jobs on the WorkSession).
+`launch_next` sends the oldest item. One send at a time — do not stack resumes.
 
 ## Dependencies
 
