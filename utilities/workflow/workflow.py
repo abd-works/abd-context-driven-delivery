@@ -201,8 +201,8 @@ class Workflow:
         session_name = self.require_open_session(workspace=workspace)
         ws = self._workspace(workspace)
         session = ws.current_work_session
-        if session is not None and session.open_turn is not None:
-            session.open_turn.finish(
+        if session is not None:
+            session.turn.finish(
                 prompt=outcome,
                 result="finish",
                 context=session_name,

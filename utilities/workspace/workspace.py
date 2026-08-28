@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -583,6 +584,8 @@ class WorkSession:
         self.outcome = outcome
         self.handoff = handoff
         self.body = body
+        self.cli_doer = ""
+        self.cli_judge = ""
 
     def _default_git(self) -> GitRepo:
         root = Repo.find_root(self.workspace.path)
@@ -627,6 +630,45 @@ class WorkSession:
     @property
     def session_md(self) -> Path:
         return self.folder / "session.md"
+
+    @property
+    def cli_agent_file(self) -> Path:
+        return self.folder / "cli-agent.json"
+
+    def load_cli_sessions(self) -> None:
+        path = self.cli_agent_file
+        if not path.is_file():
+            return
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return
+        self.cli_doer = str(data.get("doer") or "").strip()
+        self.cli_judge = str(data.get("judge") or "").strip()
+
+    def save_cli_sessions(self) -> None:
+        self.folder.mkdir(parents=True, exist_ok=True)
+        self.cli_agent_file.write_text(
+            json.dumps(
+                {"doer": self.cli_doer, "judge": self.cli_judge},
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+    def associate_cli(self, role: str, chat_id: str) -> None:
+        chat_id = (chat_id or "").strip()
+        if role == "judge":
+            self.cli_judge = chat_id
+        else:
+            self.cli_doer = chat_id
+        self.save_cli_sessions()
+
+    def close_cli_sessions(self) -> None:
+        self.cli_doer = ""
+        self.cli_judge = ""
+        if self.cli_agent_file.is_file():
+            self.cli_agent_file.unlink()
 
     @property
     def context_index(self) -> str:
@@ -891,6 +933,7 @@ class WorkSession:
             )
         self.ensure_started(goal=goal, fidelities=fidelities, contexts=contexts)
         self._bind_session_log()
+        self.load_cli_sessions()
         self.read_context_index()
         self.record_context_root()
         return (
@@ -933,8 +976,8 @@ class WorkSession:
         return str(self.session_md.resolve())
 
     def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
-        if self.open_turn is not None:
-            self.open_turn.finish(result=outcome or "session close")
+        self.turn.finish(result=outcome or "session close")
+        self.close_cli_sessions()
         if not self.session_md.is_file():
             self.ensure_started()
         self.ended = date.today().isoformat()

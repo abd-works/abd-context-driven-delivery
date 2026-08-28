@@ -340,31 +340,15 @@ class _ToolAgentBlock:
         )
 
     def _build_agent_args(self, session: AgentSession, prompt: str) -> list[str]:
-        exe = AgentSession.launcher()
-        if exe is None:
-            raise RuntimeError("cursor-agent not found on PATH")
-        args = [
-            exe,
-            "-p",
-            "--force",
-            "--trust",
-            "--resume",
-            session.chat_id,
-            "--workspace",
-            str(self._workspace),
-            "--output-format",
-            "stream-json",
-            "--stream-partial-output",
-        ]
+        from cli_agent.cli_agent import CursorCli
+
         if len(prompt) > CMDLINE_SAFE:
             prompt_path = self._log_dir / f"prompt-{self._instruct_count + 1:03d}.txt"
             prompt_path.parent.mkdir(parents=True, exist_ok=True)
             prompt_path.write_text(prompt, encoding="utf-8")
             relative = prompt_path.relative_to(self._workspace).as_posix()
-            args.append(f"Read and follow the instructions in {relative}")
-        else:
-            args.append(prompt)
-        return args
+            prompt = f"Read and follow the instructions in {relative}"
+        return CursorCli(resume=session.chat_id).command(prompt, str(self._workspace))
 
 
 @dataclass
