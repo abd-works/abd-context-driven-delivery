@@ -6,9 +6,9 @@
 - **Worktree:** `C:\dev\abd-cdd-plan-and-swarm-utilities-23` on `session/plan-and-swarm-utilities-23`. Do not checkout or edit the primary clone `C:\dev\abd-context-driven-delivery` (stale sketch there).
 - **Session folder:** `utilities/swarm/.context/plan-and-swarm-utilities-23/`
 - **Source of truth:** `plan-and-swarm-sketch.md` (stories + CE). Generated Increment 1 scenario files under `scenarios/` are leftovers — do not treat as SoT. Do not generate more scenario files until the operator says generate.
-- **Last work:** Increment 4 deepened through tick 12 — shared Swarm.turns slice, automatic associate, SubAgent.run at Plan.start (`pass #inc4-subagent-launch`).
-- **Next action:** Increment 4 sketch stable — scenario generation when the operator says generate.
-- **Next focus:** Increment 4 validation / scenario pass (when requested)
+- **Last work:** Generate slice — story_map + modules synced from locked Increment 4 sketch (ticks 10–12: shared Swarm.turns, automatic associate, SubAgent.run at Plan.start).
+- **Next action:** Further generate/validate slices, or scenarios when requested.
+- **Next focus:** Remaining generate coverage or scenarios fidelity (when requested)
 
 ## Locked grill answers (`grill-answers.md`)
 

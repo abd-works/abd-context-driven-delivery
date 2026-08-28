@@ -30,18 +30,20 @@
 ### swarm
 
 - *Supervisor* plus *Agent*s on a *Plan*
-- Each Agent runs Execute Plan on its *WorkSession*
+- Holds shared *turns* (selected Plan Turns) chosen once before Agents run
+- Each Agent runs Execute Plan on that shared slice in its *WorkSession*
 
 ### supervisor
 
-- Owns the overarching *Outcome*
-- *Comparative Association*: Supervisor rubric across Agent results toward Outcome
+- Owns the overarching *Outcome* and *rubric*
+- *compare* streams after each Judge or HIL evaluation
+- *associate* updates automatically after each streamed compare toward Outcome
 
 ### agent
 
 - A *SubAgent* running the *Plan* under one *Hypothesis*
 - Owns *Hypothesis* (the approach toward the Supervisor *Outcome*)
-- Launched through existing `sub_agent` (non-blocking)
+- Registered at Add Agent; *SubAgent.run* launches at *Plan.start* on its *WorkSession*
 
 ### hypothesis
 
@@ -75,6 +77,6 @@ Physical module context lives beside source (`utilities/{module}/.context/module
 - **Dependencies (one-way):** `workspace`
 
 # utilities/swarm
-- **Purpose:** Create Supervisor (Outcome) then Add Agent (Hypothesis). Each Agent runs Execute Plan on its own WorkSession. Compare Swarm Results is that judgment. Comparative Association applies the Supervisor rubric across Agent results. Launch uses the existing `sub_agent` non-blocking seam.
+- **Purpose:** Create Supervisor (Outcome) then select shared Swarm.turns once; Add Agent registers Hypothesis; SubAgent.run launches at Plan.start on each Agent WorkSession running that slice. Compare streams after Judge/HIL; associate updates automatically under Supervisor rubric toward Outcome. Launch uses the existing `sub_agent` non-blocking seam.
 - **Seam (terms):** Swarm, Supervisor, Agent, Hypothesis, Outcome
 - **Dependencies (one-way):** `plan`, `sub_agent`
