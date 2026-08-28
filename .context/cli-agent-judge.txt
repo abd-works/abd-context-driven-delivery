@@ -1,9 +1,15 @@
 This is an interactive session.
-Turn.action: Validate
-Turn.tool_keys: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
-Turn.toolCalls: context_tools.stories.stories:Stories name=Generate context_tools.stories.stories:Stories fidelity=story_map format=markdown, context_tools.clean_engineering.clean_engineering:CleanEngineering name=Generate context_tools.clean_engineering.clean_engineering:CleanEngineering fidelity=model format=markdown
-Turn.fidelity: model
-Turn.format: markdown
+Turn.action: Validate (guidance — the CLI decides the Turn)
+Turn.tool_keys: (none)
+Turn.toolCalls: (none)
+Turn.prompt: Complete generation of the story map and missing clean engineering files. I do not see the classes anywhere as well so I think we had the same issue.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
-Validate only the generated markdown files for this Turn. Do not look for source code.
 Validate at the same fidelity and format as that Turn. Judge the artifacts produced at that fidelity and format. When format is markdown, validate the markdown; do not look for source code.
+Compare what was written to the source scope of the original job. The job is the worker prompt and its sources (story map, sketch, model, or named subset). Scope may be the whole artifact or a stated slice — use that scope, not only the files that happen to exist. Missing nodes, epics, or files that the source scope called for are a fail. Do not treat a leftover or partial tree as complete.
+--- JOB / SOURCE SCOPE ---
+This is an interactive session.
+Turn.action: (none) (guidance — the CLI decides the Turn)
+Turn.tool_keys: (none)
+Turn.toolCalls: (none)
+Turn.prompt: Complete generation of the story map and missing clean engineering files. I do not see the classes anywhere as well so I think we had the same issue.
+The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
