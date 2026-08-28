@@ -10,26 +10,27 @@ format: md
 
 **Actor:** Judge
 
-**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/plan/.context/module-context.md`; `context_tools/agent_bdd/.context/module-context.md`
+**Sources / context:** `utilities/swarm/.context/story-map.md`; `utilities/plan/.context/module-context.md`; `utilities/cli_agent/.context/module-context.md`
 
 ### Domain terms
 
-- *JudgeCheckpoint* — **ai_judge** runs on **Turn** result against **rubric**
-- *JudgeResult* — held on **JudgeCheckpoint** after evaluation
+- *JudgeCheckpoint* — hangs on the **Turn**; filled by **CliAgent** doer-judge (own console, never print mode)
+- *JudgeResult* — held on **JudgeCheckpoint** after the doer-judge finishes
+- *CliAgent* — worker that runs doer and judge sessions on the same **WorkSession**
 
 ## Behaviors
 
-### Scenario: Judge Checkpoint evaluates the Turn result
+### Scenario: CliAgent doer-judge fills JudgeCheckpoint on the Turn
 
 *Given* a **Turn** *In Progress* with a **JudgeCheckpoint** rubric *stories-scenarios*  
   *And* that **Turn** holds **result**  
-*When* the Judge evaluates that **Turn**  
-*Then* **ai_judge** runs on that **Turn** result against rubric *stories-scenarios*  
-  *And* that **JudgeCheckpoint** holds the **JudgeResult**  
+*When* **CliAgent** doer-judge evaluates that **Turn**  
+*Then* that **JudgeCheckpoint** holds the **JudgeResult**  
+  *And* **Plan.evaluate_results** records that **JudgeResult** on the **JudgeCheckpoint**  
   *And* that **Turn** **TicketState** is *In Progress*
 
 ### Evidence
 
 | Scenario | Source | Location |
 | --- | --- | --- |
-| Judge Checkpoint evaluates the Turn result | plan-and-swarm-sketch.md | Execute Plan / Evaluate Results |
+| CliAgent doer-judge fills JudgeCheckpoint on the Turn | story-map.md | JudgeCheckpoint / CliAgent |

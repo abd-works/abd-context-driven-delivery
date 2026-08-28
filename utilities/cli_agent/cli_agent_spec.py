@@ -27,6 +27,8 @@ from cli_agent.cli_agent import (
     CursorCli,
     IdeCli,
     VscodeCli,
+    _CliSpawner,
+    _Pickup,
 )
 from sub_agent.sub_agent import discover_sub_agent_tools
 from workspace.workspace import Workspace, WorkSession
@@ -105,9 +107,10 @@ def _run_agent(**kwargs) -> CliAgent:
         ide._prompt = prompt
     with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
         with patch("cli_agent.cli_agent.subprocess.Popen", return_value=_popen()):
-            agent = CliAgent(ide=ide, workspace=workspace, session=session)
-            agent.launch_sessions(tools=[], actions=None)
-            return agent
+            with patch.object(CliAgent, "_await_pickup", lambda *a, **k: None):
+                agent = CliAgent(ide=ide, workspace=workspace, session=session)
+                agent.launch_sessions(tools=[], actions=None)
+                return agent
 
 
 with description("IdeCli"):
@@ -596,9 +599,10 @@ with description("CliAgent"):
                         "cli_agent.cli_agent.subprocess.Popen",
                         return_value=_popen(_SPAWN_PID),
                     ) as spawned:
-                        text = CliAgent(
-                            ide=IdeCli(), workspace=tmp, session="run-spec"
-                        ).launch_sessions(tools=[], actions=None)
+                        with patch.object(CliAgent, "_await_pickup", lambda *a, **k: None):
+                            text = CliAgent(
+                                ide=IdeCli(), workspace=tmp, session="run-spec"
+                            ).launch_sessions(tools=[], actions=None)
             expect(spawned.called).to(be_true)
             expect(spawned.call_args[0][0][0]).to(equal("/bin/cursor-agent"))
             expect("-p" in spawned.call_args[0][0]).to(be_false)
@@ -609,6 +613,15 @@ with description("CliAgent"):
             ).to(be_true)
             expect("CLI processes (not IDE chats):" in text).to(be_true)
             expect("session: run-spec" in text).to(be_true)
+            expect("taken up: yes" in text).to(be_true)
+            expect("NOT TAKEN UP" in text).to(be_false)
+
+        with it("should tell the parent to stop when the doer does not take the job"):
+            text = discover_sub_agent_tools(CliAgent(ide=IdeCli()))[
+                "launch_sessions"
+            ].instructions
+            expect("NOT TAKEN UP" in text).to(be_true)
+            expect("idle console" in text).to(be_true)
 
 
 with description("a CLI agent run"):
@@ -886,3 +899,38 @@ with description("a folder that has no workspace sessions"):
                 cli_record = _read_cli(tmp, "from-folder")
                 expect(cli_record["judge"]).to(equal("judge-folder"))
                 expect(agent.work_session.name).to(equal("from-folder"))
+
+
+with description("a CLI spawn when a doer pid is already alive"):
+    with context("that is asked to launch a new job"):
+        with it("should still Popen so the new job is injected"):
+            with patch(
+                "cli_agent.cli_agent.subprocess.Popen", return_value=_popen(88)
+            ) as spawned:
+                result = _CliSpawner().start(
+                    ["/bin/cursor-agent", "--resume", "abc"],
+                    tempfile.mkdtemp(prefix="cli_inject_"),
+                    existing_pid=158184,
+                )
+            expect(spawned.called).to(be_true)
+            expect(result.pid).to(equal(88))
+
+
+with description("a doer that does not take the new job"):
+    with context("when the transcript never gains a user turn"):
+        with it("should raise NOT TAKEN UP so the parent does not wait"):
+            pickup = _Pickup()
+            missing = Path(tempfile.mkdtemp(prefix="cli_miss_")) / "none.jsonl"
+            expect(pickup.accepted(missing, 0, seconds=0.0)).to(be_false)
+
+            def _fail():
+                agent = CliAgent(ide=IdeCli(pickup_seconds=0.0), workspace=".")
+                agent._await_pickup("no-such-resume", 0)
+
+            expect(_fail).to(raise_error(RuntimeError))
+
+    with context("when the transcript gains a user turn"):
+        with it("should accept the pickup"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_got_")) / "t.jsonl"
+            tmp.write_text('{"role":"user","message":{}}\n', encoding="utf-8")
+            expect(_Pickup().accepted(tmp, 0, seconds=0.0)).to(be_true)

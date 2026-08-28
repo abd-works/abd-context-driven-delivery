@@ -3,7 +3,7 @@
 """Plan — ordered workspace.Turns with optional JudgeCheckpoint / HILCheck."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from git.git import TicketState
@@ -13,7 +13,7 @@ from workspace.workspace import Turn, WorkSession, Workspace
 
 @dataclass
 class JudgeCheckpoint:
-    """AI judge against a rubric on a Turn — same rubric argument as ai_judge."""
+    """Judge hangs on a Turn; CliAgent doer-judge fills judge_result (own console, never -p)."""
 
     rubric: str
     judge_result: str | None = None
@@ -30,11 +30,10 @@ class HILCheck:
 class Plan:
     """Plan associated with a Workspace; holds ordered Turns.
 
-    Start opens a WorkSession and moves the first Backlog Turn to In Progress.
-    Execute Turn runs that Turn (performTurn). Advance finishes it (Done) and
-    the next Backlog Turn becomes In Progress. HILCheck / JudgeCheckpoint hang
-    on Turns; Fix and Rerun uses Turn.recordMistake / recordCorrection plus
-    WorkSession.repairs.
+    Front-end to git: Turn.state is TicketState (Backlog / In Progress / Done), the same
+    Project/Workflow columns — not a parallel store. Workspace is the working folder;
+    Repo is the git backend. CliAgent is the worker that opens/finishes hanging Turns.
+    JudgeCheckpoint hangs on the Turn; evaluate_results records the CliAgent judge result.
     """
 
     def __init__(self, name: str = "", workspace: Workspace | None = None) -> None:
@@ -53,9 +52,6 @@ class Plan:
         plans.append(plan)
         return plan
 
-    _BDD_KEY = "context_tools.bdd.bdd:Bdd"
-    _CE_KEY = "context_tools.clean_engineering.clean_engineering:CleanEngineering"
-
     def add_turn(self, turn: Turn | None = None, **fields: Any) -> Turn:
         if turn is None:
             turn = Turn(work_session=None)
@@ -67,31 +63,8 @@ class Plan:
             turn.judge_checkpoint = None  # type: ignore[attr-defined]
         if not hasattr(turn, "hil_check"):
             turn.hil_check = None  # type: ignore[attr-defined]
-        self._ensure_bdd_includes_ce(turn)
         self.turns.append(turn)
         return turn
-
-    def _ensure_bdd_includes_ce(self, turn: Turn) -> None:
-        """/bdd must run Clean Engineering under the hood — companion on the same Turn."""
-        keys = list(getattr(turn, "tool_keys", None) or [])
-        if self._BDD_KEY in keys and self._CE_KEY not in keys:
-            keys.append(self._CE_KEY)
-            turn.tool_keys = keys
-        calls = list(getattr(turn, "tool_calls", None) or [])
-        has_bdd = any(getattr(c, "toolset", "") == self._BDD_KEY for c in calls)
-        has_ce = any(getattr(c, "toolset", "") == self._CE_KEY for c in calls)
-        if has_bdd and not has_ce:
-            from workspace.workspace import ToolCall
-
-            action = getattr(turn, "action", "") or "Generate"
-            calls.append(
-                ToolCall(
-                    toolset=self._CE_KEY,
-                    name=action,
-                    summary="CleanEngineering companion under /bdd",
-                )
-            )
-            turn.tool_calls = calls
 
     def edit_turn(self, turn: Turn, **fields: Any) -> Turn:
         for key, value in fields.items():
@@ -135,7 +108,7 @@ class Plan:
         turn.judge_checkpoint = None  # type: ignore[attr-defined]
 
     def start(self) -> WorkSession:
-        """Open WorkSession; first Backlog Turn becomes In Progress."""
+        """Open WorkSession; first Backlog Turn becomes In Progress (git Project column)."""
         if self.workspace is None:
             raise RuntimeError("Plan.start requires a Workspace")
         session = self.workspace.open_work_session(
@@ -150,7 +123,7 @@ class Plan:
         return session
 
     def execute_turn(self) -> Turn | None:
-        """Run the In Progress Turn (performTurn); TicketState stays In Progress."""
+        """Run the In Progress Turn; TicketState stays In Progress."""
         session = self.work_session
         if session is None or session.open_turn is None:
             return None
@@ -172,7 +145,7 @@ class Plan:
         return check
 
     def evaluate_results(self, judge_result: str) -> JudgeCheckpoint | None:
-        """ai_judge against JudgeCheckpoint.rubric; holds JudgeResult."""
+        """Record CliAgent doer-judge result on the Turn's JudgeCheckpoint (does not judge itself)."""
         turn = self.work_session.open_turn if self.work_session else None
         if turn is None:
             return None

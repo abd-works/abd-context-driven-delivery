@@ -329,19 +329,8 @@ class _CliSpawner:
     def start(
         self, argv: list[str], workspace: str, existing_pid: int = 0
     ) -> IdeCliResult:
-        from git.git import CliAgentBinding
-
         role = self.spawn_role(argv)
         self.append_log(workspace, argv, role)
-        if existing_pid and CliAgentBinding.pid_is_alive(existing_pid):
-            return IdeCliResult(
-                exit_code=0,
-                text=f"pid: {existing_pid}",
-                stderr="",
-                argv=list(argv),
-                elapsed_seconds=0.0,
-                pid=int(existing_pid),
-            )
         proc = subprocess.Popen(argv, **self.popen_kwargs(workspace))
         return IdeCliResult(
             exit_code=0,
@@ -355,6 +344,53 @@ class _CliSpawner:
     def with_elapsed(self, result: IdeCliResult, started: float) -> IdeCliResult:
         result.elapsed_seconds = time.perf_counter() - started
         return result
+
+
+class _Pickup:
+    """Fail launch if the doer transcript does not take the new job."""
+
+    not_taken_up = (
+        "NOT TAKEN UP: the doer did not accept the new job. "
+        "Do not wait. A live pid is not proof the Turn started."
+    )
+    _user_mark = '"role":"user"'
+
+    def cursor_transcript(self, workspace: str, resume: str) -> Path:
+        resume = (resume or "").strip()
+        raw = str(Path(workspace).resolve())
+        slug = raw.replace(":", "").replace("\\", "-").replace("/", "-")
+        return (
+            Path.home()
+            / ".cursor"
+            / "projects"
+            / slug
+            / "agent-transcripts"
+            / resume
+            / f"{resume}.jsonl"
+        )
+
+    def user_count(self, path: Path) -> int:
+        if not path.is_file():
+            return 0
+        text = path.read_text(encoding="utf-8", errors="replace")
+        return text.count(self._user_mark)
+
+    def accepted(
+        self,
+        path: Path,
+        before: int,
+        *,
+        seconds: float,
+        sleep=time.sleep,
+        clock=time.time,
+    ) -> bool:
+        deadline = clock() + max(0.0, seconds)
+        while True:
+            if self.user_count(path) > before:
+                return True
+            if clock() >= deadline:
+                return False
+            sleep(0.25)
 
 
 class _ChatMint:
@@ -508,6 +544,7 @@ class IdeCli:
     _parent_checkin = (
         "The parent talks to the doer only. Every once in a while, check "
         "the doer (logs, transcript tail, hanging Turn, artifacts). "
+        "If the doer did not take the job (NOT TAKEN UP), stop — do not wait. "
         "Do not prompt, launch, or score the judge. The doer runs the "
         "judge and waits. Do not drive the work with -p."
     )
@@ -521,6 +558,7 @@ class IdeCli:
         resume: str = "",
         judge_resume: str = "",
         print_mode: bool = False,
+        pickup_seconds: float = 12.0,
     ) -> None:
         self._model = (model or "").strip()
         self._mode = (mode or "").strip().lower()
@@ -529,6 +567,7 @@ class IdeCli:
         self._resume = (resume or "").strip()
         self._judge_resume = (judge_resume or "").strip()
         self._print_mode = bool(print_mode)
+        self._pickup_seconds = float(pickup_seconds)
         self._job = ""
         self._prompt = ""
         self._source_scope = type(self)._default_source_scope
@@ -573,6 +612,10 @@ class IdeCli:
     def print_mode(self) -> bool:
         return self._print_mode
 
+    @property
+    def pickup_seconds(self) -> float:
+        return self._pickup_seconds
+
     def _listed(self, tools) -> list:
         if tools is None:
             return []
@@ -599,6 +642,7 @@ class IdeCli:
             "resume": self.resume,
             "judge_resume": self.judge_resume,
             "print_mode": self.print_mode,
+            "pickup_seconds": self.pickup_seconds,
         }
 
     def _as_vendor(self, vendor: type[IdeCli]) -> IdeCli:
@@ -903,6 +947,8 @@ so a person can get at the CLI: pid when known, and each cursor-agent
 them as chat links.
 
 The parent sees kind: sub_agent / launch: non_blocking and does not wait.
+If launch reports NOT TAKEN UP, stop immediately. Do not wait on an
+idle console. A live pid is not proof the doer accepted the job.
 The parent talks to the doer only. Every once in a while, check the
 doer (logs, transcript tail, hanging Turn, artifacts) and report
 back how it is doing. Do not prompt, launch, or score the judge.
@@ -971,10 +1017,6 @@ class CliAgent(SubAgent):
         work = self.work_session
         if work is None:
             return str(self._workspace)
-        git = getattr(work, "git", None)
-        root = getattr(git, "root", None)
-        if root is not None:
-            return str(root)
         path = getattr(work, "path", None)
         if path:
             return str(path)
@@ -1046,21 +1088,29 @@ class CliAgent(SubAgent):
                 return spawned
         return None
 
+    def _await_pickup(self, resume: str, before: int) -> None:
+        pickup = _Pickup()
+        path = pickup.cursor_transcript(self._workspace_root(), resume)
+        if pickup.accepted(path, before, seconds=self.ide.pickup_seconds):
+            return
+        raise RuntimeError(pickup.not_taken_up)
+
     def _spawn_worker(self, tools, hanging):
         judge_prompt = ""
         if self.ide.judge:
             judge_prompt = self.ide._judge_task_prompt(
                 self.job, generate_tools=tools, turn=hanging
             )
-        binding = (
-            self.work_session.cli_agent_binding if self.work_session is not None else None
+        work = self.work_session
+        pickup = _Pickup()
+        resume = "" if work is None else (work.cli_doer or "")
+        before = pickup.user_count(
+            pickup.cursor_transcript(self._workspace_root(), resume)
         )
         results = self.ide._detect()._launch_all(
             self.job,
             self._workspace_root(),
             judge_prompt,
-            doer_pid=0 if binding is None else binding.doer_pid,
-            judge_pid=0 if binding is None else binding.judge_pid,
         )
         failed = self._first_failure(results)
         if failed is not None:
@@ -1068,6 +1118,7 @@ class CliAgent(SubAgent):
                 failed.stderr.strip() or failed.text.strip() or "IDE CLI exited non-zero"
             )
         self._record_cli_binding(results)
+        self._await_pickup(resume, before)
         return results
 
     def _record_cli_binding(self, results: list[IdeCliResult]) -> None:
@@ -1092,6 +1143,7 @@ class CliAgent(SubAgent):
             parts.append(f"cursor-agent --resume {work.cli_judge}")
         parts.append(f"workspace: {self._workspace_root()}")
         parts.append(f"session: {work.name}")
+        parts.append("taken up: yes")
         return "\n".join(parts)
 
     @prompt_name(name="cli-agent")

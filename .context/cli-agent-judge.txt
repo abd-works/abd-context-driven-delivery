@@ -1,20 +1,16 @@
 This is an interactive session.
 Turn.action: Validate (guidance — the CLI decides the Turn)
-Turn.tool_keys: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
-Turn.toolCalls: context_tools.stories.stories:Stories name=Generate context_tools.stories.stories:Stories fidelity=scenarios format=markdown, context_tools.clean_engineering.clean_engineering:CleanEngineering name=Generate context_tools.clean_engineering.clean_engineering:CleanEngineering fidelity=code format=python
-Turn.fidelity: code
-Turn.format: python
-Turn.prompt: Judge FAIL 1 of 3. Retry the same job. Story-map scenarios now have files for all 19 stories under utilities/swarm/.context/scenarios/. CE class files exist but are thin stubs. Implement Plan, JudgeCheckpoint, HILCheck, Swarm, Supervisor, Agent, Hypothesis, Outcome to match the sketch and scenarios. Keep durable generate under path/.context/ and session temps under path/.context/sessions/name/ only. Finish the Turn when the work is done. This is executor attempt 2 of 3 after a judge FAIL.
+Turn.tool_keys: (none)
+Turn.toolCalls: (none)
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
 The doer invoked you after it finished the Turn. Validate now. Reply PASS or FAIL to the doer and finish this Turn. Do not wait for the parent. The parent is not in this loop.
+validate using the scanners
 Validate at the same fidelity and format as that Turn. Judge the artifacts produced at that fidelity and format. When format is markdown, validate the markdown; do not look for source code.
 Compare what was written to the source scope of the original job. The job is the worker prompt and its sources (story map, sketch, model, or named subset). Scope may be the whole artifact or a stated slice — use that scope, not only the files that happen to exist. Missing nodes, epics, or files that the source scope called for are a fail. Do not treat a leftover or partial tree as complete.
 --- JOB / SOURCE SCOPE ---
 This is an interactive session.
-Turn.action: Generate (guidance — the CLI decides the Turn)
-Turn.tool_keys: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
-Turn.toolCalls: context_tools.stories.stories:Stories name=Generate context_tools.stories.stories:Stories fidelity=scenarios format=markdown, context_tools.clean_engineering.clean_engineering:CleanEngineering name=Generate context_tools.clean_engineering.clean_engineering:CleanEngineering fidelity=code format=python
-Turn.fidelity: code
-Turn.format: python
-Turn.prompt: Judge FAIL 1 of 3. Retry the same job. Story-map scenarios now have files for all 19 stories under utilities/swarm/.context/scenarios/. CE class files exist but are thin stubs. Implement Plan, JudgeCheckpoint, HILCheck, Swarm, Supervisor, Agent, Hypothesis, Outcome to match the sketch and scenarios. Keep durable generate under path/.context/ and session temps under path/.context/sessions/name/ only. Finish the Turn when the work is done. This is executor attempt 2 of 3 after a judge FAIL.
+Turn.action: (none) (guidance — the CLI decides the Turn)
+Turn.tool_keys: (none)
+Turn.toolCalls: (none)
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
+After you finish the Turn, you contact the judge. Do not ask the parent to run the judge. The parent is not in this loop. Open the judge in its own console window so the operator can watch. Never use print mode. On Windows: Start-Process cursor-agent -ArgumentList '--force','--trust','--resume','judge-folder','--workspace','C:\dev\abd-cdd-plan-and-swarm-utilities-23','Read .context/cli-agent-judge.txt and follow it exactly.' -WorkingDirectory 'C:\dev\abd-cdd-plan-and-swarm-utilities-23' -WindowStyle Normal. Wait for PASS or FAIL from the judge transcript or finish_turn, not by reading this console. On PASS, stop. On FAIL, fix, finish the Turn, and send again (attempt n of 3). After three FAILs, stop and wait.

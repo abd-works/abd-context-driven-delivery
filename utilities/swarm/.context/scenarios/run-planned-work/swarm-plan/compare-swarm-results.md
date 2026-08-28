@@ -14,8 +14,8 @@ format: md
 
 ### Domain terms
 
-- *Compare Swarm Results* — same judgment shape as Evaluate Results / Review Progress
-- *JudgeCheckpoint* — AI judge on a **Turn**; holds **JudgeResult**
+- *Compare Swarm Results* — **Supervisor.compare** reads **Turn** **JudgeCheckpoint** / **HILCheck** results; does not judge
+- *JudgeCheckpoint* — hangs on the **Turn**; filled by **CliAgent** doer-judge
 - *HILCheck* — human-in-the-loop check on a **Turn**
 - *Comparative Association* — automatic after each streamed compare under **Supervisor** rubric toward **Outcome**
 

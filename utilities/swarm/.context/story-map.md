@@ -55,9 +55,9 @@ section: body
 
 ## Scope boundary
 
-**In scope:** A Plan associated with a Workspace, holding ordered Turns (existing `workspace.Turn`). First thin slice runs an **already configured** Plan as a **project Workflow**: assign GitHub tickets under one theme (defects and small changes), do root cause, run `/bdd` with **Clean Engineering under the hood** (`Bdd.ce()` / companion CleanEngineering tool run on the same Turn), fix one issue at a time, and move each ticket Backlog → In Progress → Done via existing Workflow `/backlog` / `/start-ticket` / `/finish-ticket`. A Turn has one action and may hold multiple tools (`tool_keys`, `toolCalls`) — BDD Turns must also list CleanEngineering. CliAgent describes hanging Turn shape and does not open the Turn; the CLI opens and finishes it. No Plan on CliAgent. No PlannedTurn. Compose/configure Plan and Swarm are later increments. Git `Repo` / `Ticket` / `Project` / `TicketState` and Workflow manage ticket flow. Related seams: `@sub_agent`, `ai_judge`, `context_tools.bdd.bdd:Bdd`, `context_tools.clean_engineering.clean_engineering:CleanEngineering`.
+**In scope:** Git is the store (`Repo`, GitHub Projects, issues, Backlog / In Progress / Done). Plan, Swarm, and Workflow are front-ends to git — not a parallel ticket machine. Workspace is the working folder (its root is that folder); Repo is the git backend — never treat git root as workspace. Plan holds ordered `workspace.Turn`s; `Turn.state` is TicketState mapped to Project/Workflow columns. CliAgent is the worker for Plan and Swarm Agents (`CliAgent.launch_sessions` at Plan.start). JudgeCheckpoint hangs on the Turn; when a Turn needs a judge, use CliAgent doer-judge (own console, never print mode, 3-fail). Supervisor.compare reads that result and does not judge — no judge-as-agent policy on Swarm Agent. CliAgent describes hanging Turn shape and does not open the Turn; the CLI opens and finishes it. No Plan on CliAgent. No PlannedTurn. Plan does not depend on Bdd or CleanEngineering (BDD owns its companion tools). Compose/configure Plan and Swarm follow the thin-slice order.
 
-**Out of scope:** New slash-command product UX beyond existing kits (`/backlog`, `/start-ticket`, `/finish-ticket`, `/sub-agent`, `/bdd`). Invented kanban columns or status badges. A second ticket identity besides GitHub issue `#`. A parallel yaml/store beside `utilities/git`. Production Python outside plan/swarm in this pass.
+**Out of scope:** New slash-command product UX beyond existing kits. Invented kanban columns or status badges. A second ticket identity besides GitHub issue `#`. A parallel yaml/store beside `utilities/git`. Plan owning BDD/CE companion rules.
 
 ---
 
@@ -113,7 +113,7 @@ section: body
 
 ### Increment 4: Swarm Plan
 
-**Outcome:** A Supervisor is created with an Outcome and a shared `Swarm.turns` slice selected once; Agents are added with a Hypothesis (register only); each Agent’s `SubAgent.run` launches at `Plan.start` on its own WorkSession and runs that shared slice; Compare Swarm Results streams after each Judge or HIL evaluation; Comparative Association updates automatically under the Supervisor rubric toward Outcome.
+**Outcome:** A Supervisor is created with an Outcome and a shared `Swarm.turns` slice selected once; Agents are added with a Hypothesis (register only); each Agent’s `CliAgent.launch_sessions` starts at `Plan.start` on its own WorkSession and runs that shared slice; Compare Swarm Results streams after each Turn JudgeCheckpoint or HIL result (Supervisor reads, does not judge); Comparative Association updates automatically under the Supervisor rubric toward Outcome.
 
 **Slicing notes:** Create Supervisor before Add Agent. Shared turn slice before any Agent runs. Mid-run Add Agent registers then launches when that Agent starts the Plan. Comparative Association is automatic after each streamed compare (not a second wait).
 

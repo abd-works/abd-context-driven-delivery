@@ -217,3 +217,75 @@ C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --res
 
 --- spawn 2026-08-28 18:14:17 ---
 C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 16a29473-000a-4915-8a2a-7fc8df3ac22d --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:31:28 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 16a29473-000a-4915-8a2a-7fc8df3ac22d --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume 11111111-1111-1111-1111-111111111111 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-1 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-1 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-1 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-open --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-open --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume id-1 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume id-1 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume id-1 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume id-1 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-close --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-close --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-new --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-new --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-new --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume id-1 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume id-1 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume id-1 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume id-1 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-folder --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-folder --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-folder --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 18:37:08 ---
+/bin/cursor-agent --force --trust --resume doer-folder --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.

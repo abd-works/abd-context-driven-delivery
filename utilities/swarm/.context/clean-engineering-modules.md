@@ -1,27 +1,38 @@
-**Sources / context:** `utilities/swarm/.context/issue-body.md`; `utilities/swarm/.context/grill-answers.md`; `utilities/git/.context/module-context.md`; `utilities/git/.context/git-modules.md`; `utilities/sub_agent/.context/module-context.md`; `utilities/workspace/.context/module-context.md`; `utilities/workflow/.context/module-context.md`; `.context/research/git-knowledge-and-workflow-backbone.md` §8; `context_tools/agent_bdd/.context/module-context.md` (judge vocabulary only)
+---
+fidelity: [discovery]
+artifact: [clean_engineering]
+format: md
+---
+
+**Sources / context:** `utilities/swarm/.context/story-map.md`; `utilities/plan/.context/module-context.md`; `utilities/swarm/.context/module-context.md`; `utilities/cli_agent/.context/module-context.md`; `utilities/workflow/.context/module-context.md`; `utilities/git/.context/module-context.md`; `utilities/workspace/.context/module-context.md`
 
 ## Language companion
 
-*Plan* is associated with a *Workspace*. It holds ordered *Turn*s. Each *Turn* has action, fidelity, context, and toolCalls. *Turn.state* is *TicketState* (Backlog / In Progress / Done). A *JudgeCheckpoint* and/or *HILCheck* may hang on a *Turn*. *Start Plan* opens a *WorkSession*; the first Backlog Turn becomes In Progress. *Execute Turn* runs that Turn. *Advance Turn* finishes it (Done) and the next Backlog Turn becomes In Progress.
+*Git* is the store. *Plan*, *Swarm*, and *Workflow* are front-ends to *Repo* / *Project* / *Ticket* / *TicketState*. *Workspace* is the working folder; *Repo* is the backend — not the same.
 
-*Swarm* comes after Execute Plan. *Create Supervisor* owns *Outcome*. A shared *Swarm.turns* slice is selected once before any Agent runs. *Add Agent* owns *Hypothesis* and registers the Agent. *SubAgent.run* launches at *Plan.start* on that Agent’s own *WorkSession*; each Agent runs the shared slice. *Compare Swarm Results* streams after each Judge or HIL evaluation. *Comparative Association* updates automatically under the Supervisor rubric toward *Outcome*.
+*Plan* holds ordered *Turn*s. *Turn.state* maps to Project/Workflow columns (Backlog / In Progress / Done). *JudgeCheckpoint* and/or *HILCheck* hang on a *Turn*. *CliAgent* is the worker; it describes hanging *Turn* shape and does not open the *Turn*. When a *Turn* needs a judge, *CliAgent* doer-judge fills *JudgeCheckpoint.judgeResult*.
 
-*ResearchTag* is ticket metadata on the existing *Ticket* / *Project* graph in **git**, keyed by GitHub issue `#`. Notes stay git notes (and trailers for flow). *TicketState* remains Backlog / In Progress / Done.
+*Swarm* *Agent* is a *CliAgent* under one *Hypothesis*. *CliAgent.launch_sessions* starts at *Plan.start*. *Supervisor.compare* reads *Turn* judge/HIL results and does not judge. *Plan* does not depend on *Bdd* or *CleanEngineering*.
 
 ### plan
 
-- Associated with a *Workspace*; holds ordered *Turn*s
+- Front-end to git; associated with a *Workspace*; holds ordered *Turn*s
 - *start* opens a *WorkSession*
 
 ### turn
 
-- Existing *workspace.Turn*: action, fidelity, context, toolCalls
-- *state* is *TicketState*: Backlog / In Progress / Done
+- Existing *workspace.Turn*; *state* is *TicketState* (Project/Workflow columns)
 - Optional *JudgeCheckpoint* and/or *HILCheck*
+
+### cliagent
+
+- Worker for Plan and Swarm Agents
+- Describes hanging *Turn* shape; does not open the *Turn*
+- Doer-judge fills *JudgeCheckpoint* on the *Turn*
 
 ### judgecheckpoint
 
-- AI judge against a rubric on a *Turn* — same *rubric* argument as *ai_judge*
+- Hangs on a *Turn*; filled by *CliAgent* doer-judge
 
 ### hilcheck
 
@@ -29,25 +40,22 @@
 
 ### swarm
 
-- *Supervisor* plus *Agent*s on a *Plan*
-- Holds shared *turns* (selected Plan Turns) chosen once before Agents run
-- Each Agent runs Execute Plan on that shared slice in its *WorkSession*
+- Front-end to git and *Plan*; *Supervisor* plus *Agent*s; shared *turns* once
 
 ### supervisor
 
-- Owns the overarching *Outcome* and *rubric*
-- *compare* streams after each Judge or HIL evaluation
-- *associate* updates automatically after each streamed compare toward Outcome
+- Owns *Outcome* and *rubric*
+- *compare* reads *Turn* judge/HIL results — does not judge
+- *associate* updates toward *Outcome*
 
 ### agent
 
-- A *SubAgent* running the *Plan* under one *Hypothesis*
-- Owns *Hypothesis* (the approach toward the Supervisor *Outcome*)
-- Registered at Add Agent; *SubAgent.run* launches at *Plan.start* on its *WorkSession*
+- A *CliAgent* under one *Hypothesis*
+- Registered at Add Agent; *CliAgent.launch_sessions* at *Plan.start*
 
 ### hypothesis
 
-- The unique first-order approach: “if we do this, we will achieve the Outcome”
+- Unique first-order approach toward the Supervisor *Outcome*
 
 ### outcome
 
@@ -55,28 +63,46 @@
 
 ### researchtag
 
-- Label on an existing *Ticket* for research/flow metadata
-- Stored on the git Ticket/Project API (notes/trailers/data)
+- Label on an existing *Ticket* (git store)
 
 ## Modules
 
-Build order: `git` | `workspace` | `sub_agent` → `plan` → `swarm`
-
-Physical module context lives beside source (`utilities/{module}/.context/module-context.md`). Session build order: `module-build-order.md`.
+Build order: `git` | `workspace` | `cli_agent` → `plan` → `swarm` | `workflow`
 
 ---
 
 # utilities/git
-- **Purpose:** OO git + GitHub domain for CDD workspace sessions and workflow commands. Callers manage research tags, notes, and ticket/session flow on the existing Repo / Project / Ticket / TicketState graph — git-primary notes and trailers, not a second ticket store.
-- **Seam (terms):** Repo, Branch, Commit, Project, Ticket, TicketState, Git, ResearchTag
-- **Dependencies (one-way):** `tools.tool`; consumed by `workspace`, `workflow`
+
+- **Purpose:** Git + GitHub store for tickets and Project columns.
+- **Seam (terms):** Repo, Branch, Commit, Project, Ticket, TicketState, ResearchTag
+- **Dependencies (one-way):** consumed by `workspace`, `workflow`, `plan`, `swarm`
+
+# utilities/workspace
+
+- **Purpose:** Working folder aggregate (root is that folder). Not the git Repo.
+- **Seam (terms):** Workspace, WorkSession, Turn, ToolCall, Mistake, Correction, Repair
+- **Dependencies (one-way):** `git`
+
+# utilities/cli_agent
+
+- **Purpose:** Interactive CLI worker and doer-judge for Plan/Swarm.
+- **Seam (terms):** CliAgent, IdeCli, CursorCli, VscodeCli
+- **Dependencies (one-way):** `sub_agent`, `workspace`
 
 # utilities/plan
-- **Purpose:** Owns a Plan associated with a Workspace: an ordered sequence of Turns. Each Turn already has action, fidelity, context, and toolCalls. Turn.state is TicketState (Backlog / In Progress / Done). Optional JudgeCheckpoint and/or HILCheck hang on a Turn. Start Plan opens a WorkSession; Execute Turn runs the In Progress Turn.
-- **Seam (terms):** Plan, Turn, JudgeCheckpoint, HILCheck, TicketState
-- **Dependencies (one-way):** `workspace`
+
+- **Purpose:** Front-end to git — ordered Turns; TicketState maps to Project columns.
+- **Seam (terms):** Plan, JudgeCheckpoint, HILCheck
+- **Dependencies (one-way):** `workspace`, `git`
 
 # utilities/swarm
-- **Purpose:** Create Supervisor (Outcome) then select shared Swarm.turns once; Add Agent registers Hypothesis; SubAgent.run launches at Plan.start on each Agent WorkSession running that slice. Compare streams after Judge/HIL; associate updates automatically under Supervisor rubric toward Outcome. Launch uses the existing `sub_agent` non-blocking seam.
+
+- **Purpose:** Front-end to git and Plan — Supervisor + CliAgent Agents on a shared turn slice.
 - **Seam (terms):** Swarm, Supervisor, Agent, Hypothesis, Outcome
-- **Dependencies (one-way):** `plan`, `sub_agent`
+- **Dependencies (one-way):** `plan`, `cli_agent`, `workspace`, `git`
+
+# utilities/workflow
+
+- **Purpose:** Front-end to git — backlog / start / finish Project columns.
+- **Seam (terms):** Workflow
+- **Dependencies (one-way):** `git`, `workspace`
