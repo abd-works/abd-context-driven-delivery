@@ -762,12 +762,17 @@ class Repo:
             self._commits.append(([], text))
             self._commit = f"merge-{source}-into-{into}"
             return self._commit
-        self._git( "checkout", into)
+        target = self.worktree_for(into)
+        merge_root = Path(target.path) if target is not None else Path(self.root)
+        if target is None and self.current_branch != into:
+            self._git("checkout", into)
+            merge_root = Path(self.root)
+        merge_git = type(self)
         if message:
-            self._git( "merge", source, "-m", message)
+            merge_git.git(merge_root, "merge", source, "-m", message)
         else:
-            self._git( "merge", source, "--no-edit")
-        return self.current_commit
+            merge_git.git(merge_root, "merge", source, "--no-edit")
+        return merge_git.git(merge_root, "rev-parse", "HEAD")
 
     def note(
         self,
