@@ -85,6 +85,8 @@ class Turn:
         if work_session is None:
             work_session = type(self)._work_session_from_context(workspace, session)
         self.work_session = work_session
+        self._workspace_root = workspace
+        self._checkout_git: GitRepo | None = None
         self.id = uuid.uuid4().hex[:8]
         self.prompt = ""
         self.result = ""
@@ -199,7 +201,7 @@ class Turn:
         result: str = "",
         context: str = "",
     ) -> TurnCommit | None:
-        """finish_turn — agent closes the open turn after work."""
+        """finish_turn — close the hanging turn, or commit the current checkout if no work session."""
         if tools:
             for host in tools:
                 workspace = getattr(host, "workspace", None)
@@ -211,7 +213,9 @@ class Turn:
                     )
         session = self.work_session
         if session is None:
-            raise RuntimeError("Turn.finish_turn requires workSession")
+            return self._commit_payload(
+                self.finish(prompt=prompt, result=result, context=context)
+            )
         return self._commit_payload(
             session.turn.finish(prompt=prompt, result=result, context=context)
         )
@@ -227,12 +231,24 @@ class Turn:
             "sha": change.sha,
         }
 
+    def _git_for_finish(self) -> GitRepo | None:
+        if self.work_session is not None:
+            return self.work_session.git
+        if self._checkout_git is not None:
+            return self._checkout_git
+        start = (self._workspace_root or "").strip() or "."
+        root = Repo.find_root(start)
+        if root is None:
+            return None
+        return GitRepo(root)
+
     def finish(
         self, prompt: str = "", result: str = "", context: str = ""
     ) -> TurnCommit | None:
         session = self.work_session
-        if session is None:
-            raise RuntimeError("Turn.finish requires workSession")
+        git = self._git_for_finish()
+        if git is None:
+            return None
         self._ensure_named()
         self.prompt = prompt
         self.result = result
@@ -243,28 +259,39 @@ class Turn:
             summary=result or prompt or "action finished",
             role="run",
         )
-        session.append_trail(run)
-        session.save()
+        if session is not None:
+            session.append_trail(run)
         change: TurnCommit | None = None
-        if session.dirty:
+        dirty = session.dirty if session is not None else git.is_dirty()
+        if dirty:
             message = self.name
             if self.correction is not None:
                 message = self.correction.correction_commit_message(
                     subject=self.name
                 )
-            sha = session.git.commit(session._commit_paths(), message)
+            paths = (
+                session._commit_paths() if session is not None else [str(git.root)]
+            )
+            sha = git.commit(paths, message)
             if self.correction is not None:
-                self.correction.link(session.git, sha)
+                self.correction.link(git, sha)
             change = TurnCommit(
                 name=self.name,
-                session_name=session.name,
+                session_name=session.name if session is not None else git.current_branch,
                 tool_names=[c.name for c in self.tool_calls],
                 sha=sha,
             )
             self.change_commit = change
-            session.turns.append(self)
-        session.git.push()
-        session.open_turn = None
+            if session is not None:
+                session.turns.append(self)
+        if session is not None:
+            git.push()
+            session.open_turn = None
+        else:
+            try:
+                git.push()
+            except GitConnectError:
+                pass
         return change
 
     @prompt(name="mistake")
@@ -584,10 +611,6 @@ class WorkSession:
         return self.folder / "session.md"
 
     @property
-    def session_yaml(self) -> Path:
-        return self.folder / "session.yaml"
-
-    @property
     def context_index(self) -> str:
         return self._context_index or ""
 
@@ -823,7 +846,6 @@ class WorkSession:
         elif goal or fidelities or contexts:
             if not self.ended:
                 self.session_md.write_text(self._render(), encoding="utf-8")
-        self.save()
         return self.session_md
 
     def open(
@@ -905,7 +927,6 @@ class WorkSession:
         if outcome:
             self.outcome = outcome
         self.session_md.write_text(self._render(), encoding="utf-8")
-        self.save()
         if self.git.is_dirty():
             try:
                 self.git.commit(self._session_artifact_paths(), "close")
@@ -988,17 +1009,8 @@ class WorkSession:
                     return current.close_session(outcome=outcome, handoff=handoff)
         return self.close_session(outcome=outcome, handoff=handoff)
 
-    def save(self) -> Path:
-        path = self.session_yaml
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            f"name: {self.name}\nbranch: {self.session_branch}\npath: {self.path}\n",
-            encoding="utf-8",
-        )
-        return path
-
     def _session_artifact_paths(self) -> list[str]:
-        return [str(self.session_md), str(self.session_yaml)]
+        return [str(self.session_md)]
 
     def _commit_paths(self) -> list[str]:
         paths = list(self.scope_paths)
@@ -1006,10 +1018,6 @@ class WorkSession:
             if extra not in paths:
                 paths.append(extra)
         return paths
-
-    def load_state(self) -> None:
-        """Instance load hook — bootstrap yaml only (git-primary association elsewhere)."""
-        return None
 
     def append_trail(self, call: ToolCall) -> None:
         self.trail.append(call)

@@ -22,7 +22,6 @@ expand|run trails explicitly (not via `@log`).
     context-index.md                    # PathOverride persistence
     sessions/{name}/                    # WorkSession.folder
       session.md
-      session.yaml                      # bootstrap; written before turn/close commit
       logs/events.log                   # gitignored + .cursorignore; not a dirty signal
 ```
 
@@ -41,9 +40,8 @@ expand|run trails explicitly (not via `@log`).
   abbreviate the clone folder (first token, then first letter of each later
   hyphen/underscore token; e.g. this repo `abd-context-driven-delivery` →
   `abd-cdd-<slug>`). Never hardcode a repo prefix.
-  **Close** (`close` / `finish_work_session`): finish an open/forgotten turn
-  (commit `session.yaml` before that commit), write End, save `session.yaml` then
-  commit it with `session.md` if dirty, push, merge onto main without
+  **Close** (`close` / `finish_work_session`): finish an open/forgotten turn,
+  write End, commit `session.md` if dirty, push, merge onto main without
   checking main out in the session tree, then `git worktree remove` only when the
   tree is clean (no dirty files, no stash). `events.log` is ignored (Cursor + git)
   and does not count as dirty.
@@ -53,7 +51,7 @@ expand|run trails explicitly (not via `@log`).
   `fetch` / `pull` / `fetch_pull`, `merge_from` / `push_to`, notes (`note` /
   `read_notes` / `find_mistakes`). Session branch naming and sibling-path policy
   are WorkSession's.
-- `Turn` — `@toolset` (`workspace.workspace:Turn`); CLI context is `workspace` path + `session` name (session may come from the current `session/` git branch). Owns `mistakes` and optional `correction`; `record_mistake` / `record_correction` attach to the open turn before `finish`. `finish_turn` closes the session's hanging turn.
+- `Turn` — `@toolset` (`workspace.workspace:Turn`); CLI context is `workspace` path + `session` name (session may come from the current `session/` git branch). Owns `mistakes` and optional `correction`; `record_mistake` / `record_correction` attach to the open turn before `finish`. `finish_turn` closes the hanging turn when a work session is bound; if none is, it commits (and pushes when it can) on the current checkout so the work is still tracked.
 - `Turn` / `Mistake` / `Correction` / `PathOverride` / `ToolCall` / `TurnCommit`
   (`TurnCommit.name` = git commit subject from `Turn.name`, not a uuid slug)
 - `SessionLog` — `append` → events.log + openTurn.toolCalls; **delete `@log` as host primary**

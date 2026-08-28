@@ -509,10 +509,10 @@ with description("a WorkSession that is closed in a git worktree"):
         session.close(outcome="done", handoff="")
         expect(session.open_turn).to(be_none)
         expect(git.commits[0][1]).to(equal("forgotten-turn"))
-        expect(session.session_yaml.is_file()).to(be_true)
+        expect((session.folder / "session.yaml").is_file()).to(be_false)
         expect(
             any(str(path).endswith("session.yaml") for path in git.commits[0][0])
-        ).to(be_true)
+        ).to(be_false)
 
     with it("should not remove a dirty worktree"):
         from workspace.git_repo import GitRepo
