@@ -1,4 +1,4 @@
-**Sources / context:** `utilities/swarm/.context/plan-and-swarm-utilities-23/issue-body.md`; `utilities/swarm/.context/plan-and-swarm-utilities-23/grill-answers.md`; `utilities/git/.context/module-context.md`; `utilities/git/.context/git-modules.md`; `utilities/sub_agent/.context/module-context.md`; `utilities/workspace/.context/module-context.md`; `utilities/workflow/.context/module-context.md`; `.context/research/git-knowledge-and-workflow-backbone.md` §8; `context_tools/agent_bdd/.context/module-context.md` (judge vocabulary only)
+**Sources / context:** `utilities/swarm/.context/issue-body.md`; `utilities/swarm/.context/grill-answers.md`; `utilities/git/.context/module-context.md`; `utilities/git/.context/git-modules.md`; `utilities/sub_agent/.context/module-context.md`; `utilities/workspace/.context/module-context.md`; `utilities/workflow/.context/module-context.md`; `.context/research/git-knowledge-and-workflow-backbone.md` §8; `context_tools/agent_bdd/.context/module-context.md` (judge vocabulary only)
 
 ## Language companion
 

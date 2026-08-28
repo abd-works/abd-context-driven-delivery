@@ -4,11 +4,11 @@
 
 - **Stage:** exploration / sketch. Increments 1–3 BDDs deepened. Increment 4 Swarm Plan is next.
 - **Worktree:** `C:\dev\abd-cdd-plan-and-swarm-utilities-23` on `session/plan-and-swarm-utilities-23`. Do not checkout or edit the primary clone `C:\dev\abd-context-driven-delivery` (stale sketch there).
-- **Session folder:** `utilities/swarm/.context/plan-and-swarm-utilities-23/`
+- **Session folder:** `utilities/swarm/.context/sessions/plan-and-swarm-utilities-23/`
 - **Source of truth:** `plan-and-swarm-sketch.md` (stories + CE). Generated Increment 1 scenario files under `scenarios/` are leftovers — do not treat as SoT. Do not generate more scenario files until the operator says generate.
-- **Last work:** Execute Plan Increment 3 deepened (`performTurn`, `ai_judge` / `JudgeResult`, `Turn.finish`, `recordMistake` / `recordCorrection` / `WorkSession.repairs`).
-- **Next action:** Deepen Increment 4 Swarm Plan in the sketch: Create Supervisor, Add Agent, Compare Swarm Results, Comparative Association. Grill + sketch cadence. Borrow existing domain. Do not invent names.
-- **Next focus:** Increment 4 Swarm Plan
+- **Last work:** Generate — story_map, scenarios (Turn/CliAgent + Swarm Plan), and clean-engineering-model.md from locked sketch. Removed PlannedTurn leftover scenario files.
+- **Next action:** Further scenario coverage (Execute Plan / Manage Ticket / remaining Compose stories) or validate pass.
+- **Next focus:** Scenario completeness or CE model deepen
 
 ## Locked grill answers (`grill-answers.md`)
 
@@ -23,6 +23,10 @@
 | 7 | Human gate is **HILCheck** (not HipCheckpoint). |
 | 8 | No PlannedTurn class. Plan holds existing `workspace.Turn`. `Turn.state` is **TicketState**: Backlog / In Progress / Done. |
 | 9 | **Start Plan** opens the WorkSession and moves the first Backlog Turn to In Progress. **Execute Turn** runs an already In Progress Turn (`performTurn`). |
+| 10 | One shared turn slice for the whole Swarm, selected once before any Agent runs. Each Agent runs that same slice on its own WorkSession. |
+| 11 | Comparative Association runs automatically after each streamed compare event (Judge or HIL). Associate updates under Supervisor rubric toward Outcome. |
+| 12 | Add Agent registers the Agent. `SubAgent.run` launches at `Plan.start` on the Agent WorkSession. Mid-run add launches when that Agent starts the Plan. |
+| 13 | Turn has multiple tools and one action. CliAgent describes that shape. CLI opens hanging Turn and finishes after the action. CliAgent does not open the Turn. No PlannedTurn. No Plan on CliAgent. |
 
 ## Story map (current)
 
@@ -47,10 +51,10 @@ Do not use issue-16 experiment nicknames (thin-templates, channel-write). Do not
 
 ## Artifacts to read
 
-- `utilities/swarm/.context/plan-and-swarm-utilities-23/plan-and-swarm-sketch.md`
-- `utilities/swarm/.context/plan-and-swarm-utilities-23/grill-answers.md`
-- `utilities/swarm/.context/plan-and-swarm-utilities-23/story-map.md`
-- `utilities/swarm/.context/plan-and-swarm-utilities-23/thin-slicing.md`
+- `utilities/swarm/.context/plan-and-swarm-sketch.md`
+- `utilities/swarm/.context/grill-answers.md`
+- `utilities/swarm/.context/story-map.md`
+- `utilities/swarm/.context/thin-slicing.md`
 - `utilities/plan/.context/module-context.md`
 - `utilities/swarm/.context/module-context.md`
 - `utilities/workspace/.context/module-context.md`

@@ -8,10 +8,10 @@ section: body
 # Story Map — Plan And Swarm Utilities
 
 **Sources / context:**
-`utilities/swarm/.context/plan-and-swarm-utilities-23/issue-body.md`;
-`utilities/swarm/.context/plan-and-swarm-utilities-23/session.md`;
-`utilities/swarm/.context/plan-and-swarm-utilities-23/grill-answers.md`;
-`utilities/swarm/.context/plan-and-swarm-utilities-23/plan-and-swarm-sketch.md`;
+`utilities/swarm/.context/issue-body.md`;
+`utilities/swarm/.context/session.md`;
+`utilities/swarm/.context/grill-answers.md`;
+`utilities/swarm/.context/plan-and-swarm-sketch.md`;
 `utilities/plan/.context/module-context.md`;
 `utilities/git/.context/module-context.md`;
 `utilities/git/.context/git-modules.md`;

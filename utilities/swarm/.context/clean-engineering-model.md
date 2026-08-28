@@ -1,4 +1,4 @@
-**Sources / context:** `utilities/swarm/.context/plan-and-swarm-utilities-23/plan-and-swarm-sketch.md`; `utilities/swarm/.context/plan-and-swarm-utilities-23/grill-answers.md`; `utilities/swarm/.context/plan-and-swarm-utilities-23/story-map.md`; `utilities/plan/.context/module-context.md`; `utilities/swarm/.context/module-context.md`; `utilities/workspace/.context/module-context.md`; `utilities/git/.context/module-context.md`; `utilities/sub_agent/.context/module-context.md`; `context_tools/agent_bdd/.context/module-context.md`
+**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/swarm/.context/grill-answers.md`; `utilities/swarm/.context/story-map.md`; `utilities/plan/.context/module-context.md`; `utilities/swarm/.context/module-context.md`; `utilities/workspace/.context/module-context.md`; `utilities/git/.context/module-context.md`; `utilities/sub_agent/.context/module-context.md`; `context_tools/agent_bdd/.context/module-context.md`
 
 ## Language companion
 

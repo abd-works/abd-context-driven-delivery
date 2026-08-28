@@ -10,7 +10,7 @@ format: md
 
 **Actor:** Practitioner
 
-**Sources / context:** `utilities/swarm/.context/plan-and-swarm-utilities-23/plan-and-swarm-sketch.md`; `utilities/swarm/.context/plan-and-swarm-utilities-23/grill-answers.md` ticks 8, 13; `utilities/workspace/.context/module-context.md`
+**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/swarm/.context/grill-answers.md` ticks 8, 13; `utilities/workspace/.context/module-context.md`
 
 ### Domain terms
 
