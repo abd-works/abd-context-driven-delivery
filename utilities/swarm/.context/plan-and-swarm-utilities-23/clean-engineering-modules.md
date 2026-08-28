@@ -2,49 +2,46 @@
 
 ## Language companion
 
-*Plan* is associated with a *Workspace*. It holds ordered *PlannedTurn*s. A *PlannedTurn* invokes context tools, actions, fidelities, and context. A *JudgeCheckpoint* and/or *HipCheckpoint* may hang on a *PlannedTurn* — they are not distinct turns. Starting the Plan opens a *WorkSession*; after each actual *Turn* finishes, the next *PlannedTurn* runs. Plan does not run agents and does not own ticket flow.
+*Plan* is associated with a *Workspace*. It holds ordered *Turn*s. Each *Turn* has action, fidelity, context, and toolCalls. *Turn.state* is *TicketState* (Backlog / In Progress / Done). A *JudgeCheckpoint* and/or *HILCheck* may hang on a *Turn*. *Start Plan* opens a *WorkSession*; the first Backlog Turn becomes In Progress. *Execute Turn* runs that Turn. *Advance Turn* finishes it (Done) and the next Backlog Turn becomes In Progress.
 
-*Swarm* is a collection of *Agent*s executing the same *Plan* (or a slice of *PlannedTurn*s). *Supervisor* owns the overarching *Outcome*. Each *Agent* owns a unique *Hypothesis* — the “if we do this we will achieve the Outcome” approach. *Supervisor* compares results with its rubric against Outcome and/or *JudgeCheckpoint* rubrics on *PlannedTurn*s. Launch is the existing *sub_agent* seam.
+*Swarm* comes after Execute Plan. *Create Supervisor* owns *Outcome*. *Add Agent* owns *Hypothesis*. Each Agent runs Execute Plan on its own *WorkSession*. *Compare Swarm Results* is that same judgment. *Comparative Association* applies the Supervisor rubric across Agent results.
 
-*ResearchTag* is ticket metadata on the existing *Ticket* / *Project* graph in **git** — not a second identity besides GitHub issue `#`. Notes stay git notes (and trailers for flow). *TicketState* remains Backlog / In Progress / Done; this work does not add kanban columns.
+*ResearchTag* is ticket metadata on the existing *Ticket* / *Project* graph in **git**, keyed by GitHub issue `#`. Notes stay git notes (and trailers for flow). *TicketState* remains Backlog / In Progress / Done.
 
 ### plan
 
-- Associated with a *Workspace*; holds ordered *PlannedTurn*s
-- *start* opens a *WorkSession* (no second session type)
-- **Invariant:** a plan is a sequence, not a swarm; it does not launch agents
+- Associated with a *Workspace*; holds ordered *Turn*s
+- *start* opens a *WorkSession*
 
-### plannedturn
+### turn
 
-- One slot in a *Plan*: context tools, actions, fidelities, and context
-- Optional *JudgeCheckpoint* and/or *HipCheckpoint*
-- **Invariant:** checkpoints are not distinct turns; after actual *Turn*.finish, the next *PlannedTurn* is due
+- Existing *workspace.Turn*: action, fidelity, context, toolCalls
+- *state* is *TicketState*: Backlog / In Progress / Done
+- Optional *JudgeCheckpoint* and/or *HILCheck*
 
 ### judgecheckpoint
 
-- AI judge against a rubric on a *PlannedTurn*
-- Rubrics here can later be consumed by a *Supervisor*; plan still does not depend on swarm
+- AI judge against a rubric on a *Turn* — same *rubric* argument as *ai_judge*
 
-### hipcheckpoint
+### hilcheck
 
-- Human-in-process gate on a *PlannedTurn*
-- **Invariant:** HIP is not an AI judge and not a new ticket status
+- Human-in-the-loop check on a *Turn*
 
 ### swarm
 
-- Aggregates *Agent*s that share a *Plan* or a slice of *PlannedTurn*s
-- Does not own plan structure or git ticket identity
+- *Supervisor* plus *Agent*s on a *Plan*
+- Each Agent runs Execute Plan on its *WorkSession*
 
 ### supervisor
 
 - Owns the overarching *Outcome*
-- Compares *Agent* results: own rubric against Outcome, and/or *JudgeCheckpoint* rubrics on *PlannedTurn*s
+- *Comparative Association*: Supervisor rubric across Agent results toward Outcome
 
 ### agent
 
-- One member of a *Swarm*
+- A *SubAgent* running the *Plan* under one *Hypothesis*
 - Owns *Hypothesis* (the approach toward the Supervisor *Outcome*)
-- Launched through existing `sub_agent` (non-blocking), not a second decorator
+- Launched through existing `sub_agent` (non-blocking)
 
 ### hypothesis
 
@@ -52,12 +49,12 @@
 
 ### outcome
 
-- Overarching result owned by *Supervisor* — not the Agent approach
+- Overarching result owned by *Supervisor*
 
 ### researchtag
 
 - Label on an existing *Ticket* for research/flow metadata
-- **Invariant:** stored on the git Ticket/Project API (notes/trailers/data) — not a parallel yaml ticket index
+- Stored on the git Ticket/Project API (notes/trailers/data)
 
 ## Modules
 
@@ -73,11 +70,11 @@ Physical module context lives beside source (`utilities/{module}/.context/module
 - **Dependencies (one-way):** `tools.tool`; consumed by `workspace`, `workflow`
 
 # utilities/plan
-- **Purpose:** Owns a Plan associated with a Workspace: an ordered sequence of PlannedTurns. Each PlannedTurn invokes context tools, actions, fidelities, and context. Optional JudgeCheckpoint and/or HipCheckpoint hang on a PlannedTurn — they are not distinct turns. Starting the Plan opens a WorkSession; after each actual Turn finishes, the next PlannedTurn runs.
-- **Seam (terms):** Plan, PlannedTurn, JudgeCheckpoint, HipCheckpoint
+- **Purpose:** Owns a Plan associated with a Workspace: an ordered sequence of Turns. Each Turn already has action, fidelity, context, and toolCalls. Turn.state is TicketState (Backlog / In Progress / Done). Optional JudgeCheckpoint and/or HILCheck hang on a Turn. Start Plan opens a WorkSession; Execute Turn runs the In Progress Turn.
+- **Seam (terms):** Plan, Turn, JudgeCheckpoint, HILCheck, TicketState
 - **Dependencies (one-way):** `workspace`
 
 # utilities/swarm
-- **Purpose:** Runs a Plan (or a slice of PlannedTurns) with several agents at once. Supervisor owns the overarching Outcome; each Agent owns a unique Hypothesis (the “if we do this we will achieve the Outcome” approach). Supervisor compares results with its own rubric against Outcome and/or Plan JudgeCheckpoint rubrics on PlannedTurns. Launch reuses the existing `sub_agent` non-blocking seam — this module is not a second decorator kit.
+- **Purpose:** Create Supervisor (Outcome) then Add Agent (Hypothesis). Each Agent runs Execute Plan on its own WorkSession. Compare Swarm Results is that judgment. Comparative Association applies the Supervisor rubric across Agent results. Launch uses the existing `sub_agent` non-blocking seam.
 - **Seam (terms):** Swarm, Supervisor, Agent, Hypothesis, Outcome
 - **Dependencies (one-way):** `plan`, `sub_agent`

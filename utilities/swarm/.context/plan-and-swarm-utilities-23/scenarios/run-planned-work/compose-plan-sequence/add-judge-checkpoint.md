@@ -15,7 +15,7 @@ format: md
 ### Domain terms
 
 - *Plan* — holds ordered **PlannedTurn**s
-- *PlannedTurn* — may optionally have a **JudgeCheckpoint** and/or a **HipCheckpoint**
+- *PlannedTurn* — may optionally have a **JudgeCheckpoint** and/or a **HILCheck**
 - *JudgeCheckpoint* — AI judge against a rubric on that **PlannedTurn**; not a distinct turn
 
 > In steps: bold domain concepts (`**<Concept>**`); italic concrete values (`*<value>*`).
@@ -28,7 +28,7 @@ format: md
 *When* the operator adds a **JudgeCheckpoint** to that **PlannedTurn** against rubric *stories-scenarios*  
 *Then* that **PlannedTurn** has the **JudgeCheckpoint** against rubric *stories-scenarios*  
   *But* the **Plan** does not gain another **PlannedTurn**  
-  *And* that **JudgeCheckpoint** is not a **HipCheckpoint**
+  *And* that **JudgeCheckpoint** is not a **HILCheck**
 
 ### Scenario: Later PlannedTurn can have its own JudgeCheckpoint
 

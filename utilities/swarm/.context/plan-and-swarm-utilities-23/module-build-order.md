@@ -13,8 +13,8 @@
 | 1 | `git` | *(none among this work)* | Existing. Research tags, notes, flow on Ticket/Project. |
 | 2 | `workspace` | *(existing)* | WorkSession + actual Turn. Plan starts a WorkSession. |
 | 3 | `sub_agent` | *(none among this work)* | Existing launch seam reused by swarm. |
-| 4 | `plan` | `workspace` | PlannedTurns; optional JudgeCheckpoint / HipCheckpoint on a PlannedTurn. |
-| 5 | `swarm` | `plan`, `sub_agent` | Supervisor Outcome + Agent Hypothesis; slice is PlannedTurns. |
+| 4 | `plan` | `workspace` | Plan holds Turns; Turn.state is TicketState; optional JudgeCheckpoint / HILCheck on a Turn. |
+| 5 | `swarm` | `plan`, `sub_agent` | Supervisor Outcome + Agent Hypothesis; slice is Turns. |
 
 ## Layers (summary)
 

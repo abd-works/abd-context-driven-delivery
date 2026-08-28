@@ -1,120 +1,118 @@
 fidelity: exploration
 scope: solution — plan + swarm utilities and git ticket-flow enhancement (ticket 23)
-# Lenses: Stories + CE. Increments 1–3 story BDDs in this sketch. Increment 4 still names only.
+# Lenses: Stories + CE. Story map is Compose / Manage Ticket / Execute / Swarm.
 
 flow:
   status: in-progress
   recommend: more-same-stage
-  next: Increment 4 compare BDDs
-  note: Generated Increment 1 scenario files remain under scenarios/…/compose-plan-sequence/. Sketch is the working BDD tree.
-  open:
-    - TODO PlannedTurn invocation bag (tool / action / fidelity / context)  #invocation-bag
-    - TODO Increment 4 story BDDs  #inc4
+  next: Increment 4 Swarm Plan
+  note: Increment 3 Execute Plan deepened. Next working slice is Create Supervisor / Add Agent.
+  open: []
   done:
     - pass #scaffold
-    - pass #judge-shape
-    - pass #swarm-slice
-    - pass #hypothesis-own
-    - pass #rubric-source
-    - pass #inc1-bdd
-    - pass #inc2-sketch
-    - pass #inc3-sketch
+    - pass #turn-ticket-state
+    - pass #map-execute-swarm
+    - pass #execute-session
 
 =========
-theme: Compose Plan Sequence  (epic)
+theme: Compose Plan  (epic)
 ---------
 stories:
-    Compose Plan Sequence
-        Practitioner --> Record Planned Turn
-            planned turn is on the plan with context tool, action, fidelity, and context
+    Compose Plan
+        Practitioner --> Create Plan
+            plan is on the workspace
+                given a Workspace
+                when the operator creates a Plan compose-judged-plan
+                then that Plan is associated with that Workspace
+                    and that Plan holds no Turns yet
+            second plan is its own plan
+                given a Workspace that already has a Plan compose-judged-plan
+                when the operator creates a Plan ticket-flow-plan
+                then that Workspace has both Plans
+                    and each Plan holds its own Turns
+        Practitioner --> Manage Turns
+            add a turn in backlog
                 given a Plan compose-judged-plan associated with a Workspace
-                when the operator records a PlannedTurn on that Plan
-                    and context tool Stories
-                    and action generate
-                    and fidelity story_map
-                    and context plan-and-swarm-utilities-23
-                then that Plan shows the PlannedTurn in sequence
-                    and that PlannedTurn names those four fields
-                    and that PlannedTurn is not a JudgeCheckpoint
-                    and that PlannedTurn is not a HipCheckpoint
-            later planned turn follows the earlier planned turn
-                given a Plan compose-judged-plan associated with a Workspace
-                    and that Plan already has a PlannedTurn Stories generate story_map
-                when the operator records a PlannedTurn CleanEngineering generate modules
-                then that Plan shows the Stories PlannedTurn before the CleanEngineering PlannedTurn
-        Practitioner --> View Planned Turns
-            ordered planned turns show context tool, action, fidelity, and context
-                given a Plan with a PlannedTurn Stories generate story_map
-                    and a later PlannedTurn CleanEngineering generate modules
-                when the operator views PlannedTurns on that Plan
-                then that Plan shows Stories before CleanEngineering
-                    and each PlannedTurn shows its four fields
-            view shows checkpoints on the planned turn they belong to
-                given a first PlannedTurn with a JudgeCheckpoint rubric stories-scenarios
-                    and a later PlannedTurn with a HipCheckpoint
-                when the operator views PlannedTurns on that Plan
-                then the JudgeCheckpoint is on the first PlannedTurn
-                    and the HipCheckpoint is on the later PlannedTurn
-                    and neither checkpoint appears as its own PlannedTurn
-        Practitioner --> Add Judge Checkpoint
-            judge checkpoint hangs on the planned turn
-                given a Plan with a PlannedTurn Stories generate story_map
-                when the operator adds a JudgeCheckpoint to that PlannedTurn against rubric stories-scenarios
-                then that PlannedTurn has the JudgeCheckpoint
-                    and the Plan does not gain another PlannedTurn
-                    and that JudgeCheckpoint is not a HipCheckpoint
-            later planned turn can have its own judge checkpoint
-                given a PlannedTurn that already has JudgeCheckpoint stories-scenarios
-                    and a later PlannedTurn CleanEngineering generate modules
-                when the operator adds a JudgeCheckpoint to the later PlannedTurn against rubric plan-modules
-                then the first PlannedTurn still has stories-scenarios
-                    and the later PlannedTurn has plan-modules
-                    and neither JudgeCheckpoint is its own PlannedTurn
-        Practitioner --> Add Hip Checkpoint
-            hip checkpoint hangs on the planned turn
-                given a Plan with a PlannedTurn Stories generate story_map
-                when the operator adds a HipCheckpoint to that PlannedTurn
-                then that PlannedTurn has the HipCheckpoint
-                    and the Plan does not gain another PlannedTurn
-                    and that HipCheckpoint is not a JudgeCheckpoint
-            planned turn can hold both checkpoints
-                given a PlannedTurn that already has a JudgeCheckpoint stories-scenarios
-                when the operator adds a HipCheckpoint to that PlannedTurn
-                then that PlannedTurn has the JudgeCheckpoint and the HipCheckpoint
-                    and the Plan still has one PlannedTurn
-                    and the HipCheckpoint is not an AI judge
-        Practitioner --> Start Plan
-            starting the plan opens a work session
-                given a Plan compose-judged-plan associated with a Workspace
-                    and that Plan has a PlannedTurn Stories generate story_map
-                when the operator starts that Plan
-                then that Workspace has a WorkSession for that Plan
-                    and that WorkSession is not a second session type
-                    and that Plan still holds the same PlannedTurns
-            after the actual turn finishes the next planned turn is due
-                given a Plan with Stories then CleanEngineering PlannedTurns
-                    and the operator has started that Plan so a WorkSession is open
-                when the WorkSession Turn for the first PlannedTurn finishes
-                then the next PlannedTurn due is the CleanEngineering PlannedTurn
-                    and the finished Turn remains an actual Turn on the WorkSession
-    ~> Increment 1: Compose a judged plan: Record Planned Turn, View Planned Turns, Add Judge Checkpoint, Add Hip Checkpoint, Start Plan
+                when the operator adds a Turn
+                    and that Turn has action generate fidelity story_map context plan-and-swarm-utilities-23
+                    and a ToolCall toolset Stories name generate
+                then that Plan shows the Turn in sequence
+                    and that Turn TicketState is Backlog
+                    and that Turn holds action generate fidelity story_map context plan-and-swarm-utilities-23
+                    and that Turn holds that ToolCall
+            later turn follows the earlier turn
+                given a Plan that already has a Turn Stories generate story_map
+                when the operator adds a Turn CleanEngineering generate modules
+                then that Plan shows the Stories Turn before the CleanEngineering Turn
+                    and both Turns TicketState is Backlog
+            edit a turn
+                given a Plan with a Turn Stories generate story_map
+                when the operator edits that Turn fidelity to scenarios
+                then that Turn fidelity is scenarios
+                    and that Turn TicketState is still Backlog
+                    and that Turn still holds ToolCall toolset Stories name generate
+            delete a turn
+                given a Plan with a Stories Turn and a CleanEngineering Turn
+                when the operator deletes the CleanEngineering Turn
+                then that Plan holds the Stories Turn
+                    and that Stories Turn TicketState is still Backlog
+        Practitioner --> Manage HIL Checks
+            add a hil check
+                given a Plan with a Turn Stories generate story_map
+                when the operator adds a HILCheck to that Turn
+                then that Turn has the HILCheck
+                    and the Plan still has that one Turn
+            edit a hil check
+                given a Turn that already has a HILCheck
+                when the operator edits that HILCheck
+                then that Turn still has one HILCheck
+            delete a hil check
+                given a Turn that already has a HILCheck
+                when the operator deletes that HILCheck
+                then that Turn has no HILCheck
+            hil check stays when a judge checkpoint is added
+                given a Turn that already has a HILCheck
+                when the operator adds a JudgeCheckpoint to that Turn against rubric stories-scenarios
+                then that Turn has the HILCheck
+                    and that Turn has the JudgeCheckpoint
+        Practitioner --> Manage Judge Checkpoints
+            add a judge checkpoint
+                given a Plan with a Turn Stories generate story_map
+                when the operator adds a JudgeCheckpoint to that Turn against rubric stories-scenarios
+                then that Turn has the JudgeCheckpoint
+                    and that JudgeCheckpoint rubric is stories-scenarios
+                    and the Plan still has that one Turn
+                    // rubric is the same argument ai_judge already takes
+            later turn can have its own judge checkpoint
+                given a Turn that already has JudgeCheckpoint stories-scenarios
+                    and a later Turn CleanEngineering generate modules
+                when the operator adds a JudgeCheckpoint to the later Turn against rubric plan-modules
+                then the first Turn still has stories-scenarios
+                    and the later Turn has plan-modules
+            edit a judge checkpoint
+                given a Turn with JudgeCheckpoint stories-scenarios
+                when the operator edits that JudgeCheckpoint rubric to stories-validate
+                then that Turn JudgeCheckpoint rubric is stories-validate
+            delete a judge checkpoint
+                given a Turn with a JudgeCheckpoint
+                when the operator deletes that JudgeCheckpoint
+                then that Turn has no JudgeCheckpoint
+            judge checkpoint stays when a hil check is added
+                given a Turn that already has a JudgeCheckpoint
+                when the operator adds a HILCheck to that Turn
+                then that Turn has the JudgeCheckpoint
+                    and that Turn has the HILCheck
+    ~> Increment 1: Compose Plan: Create Plan, Manage Turns, Manage HIL Checks, Manage Judge Checkpoints
 ---
 ce:
     utilities/plan/
       Plan
         workspace
-        plannedTurns
-        start
-         -> Workspace.openWorkSession
-         // start initiates WorkSession; never a second session type
-      PlannedTurn
-        ? contextTools actions fidelities context
-        judgeCheckpoint
-        hipCheckpoint
-        // checkpoints optional; never distinct turns
-        // after WorkSession.Turn.finish next PlannedTurn
+        turns
+        create
       JudgeCheckpoint
-      HipCheckpoint
+        rubric
+      HILCheck
       ----
       Workspace
         workSessions
@@ -122,13 +120,31 @@ ce:
       WorkSession
         turns
         openTurn
+        repairs
       Turn
         prompt
         result
         context
+        action
+        fidelity
         toolCalls
+        state
+        judgeCheckpoint
+        hilCheck
+        mistakes
+        correction
         finish prompt result context
-         // actual turn; Plan does not own Turn
+        recordMistake
+        recordCorrection
+         // existing workspace.Turn; state is TicketState Backlog | In Progress | Done
+      ToolCall
+        toolset
+        name
+      Mistake
+      Correction
+      Repair
+      TicketState
+        // Backlog | In Progress | Done — same work states as Ticket
 =========
 
 =========
@@ -139,17 +155,26 @@ stories:
         Practitioner --> Record Research Tags
             research tags live on the existing ticket
                 given a Repo with a Ticket number 23
-                when the operator records a ResearchTag thin-templates on that Ticket
-                then that Ticket holds ResearchTag thin-templates
+                when the operator records a ResearchTag specification on that Ticket
+                then that Ticket holds ResearchTag specification
                     and that Ticket number is still 23
-                    and there is no second ticket store
+            a second research tag stays on the same ticket
+                given that Ticket already holds ResearchTag specification
+                when the operator records a ResearchTag workflow on that Ticket
+                then that Ticket holds ResearchTag specification
+                    and that Ticket holds ResearchTag workflow
+                    and that Ticket number is still 23
         Practitioner --> Record Flow Notes
             flow notes live on the existing ticket
                 given a Repo with a Ticket number 23
-                when the operator records a flow note swarm-slice-planned-turns on that Ticket
-                then that Ticket shows the flow note swarm-slice-planned-turns
-                    and identity remains GitHub issue 23
-                    and eval-mistakes notes are not the flow-note surface
+                when the operator records a flow note that Start Plan opened a WorkSession
+                then Repo.readNotes for that Ticket show that Start Plan opened a WorkSession
+                    and that Ticket number is still 23
+            a later flow note stays with the earlier note
+                given that Ticket already has the Start Plan note
+                when the operator records a flow note that Execute Turn holds result
+                then Repo.readNotes show both notes
+                    and that Ticket number is still 23
         Practitioner --> Update Ticket Status
             ticket status is an existing project state
                 given a Repo with a Ticket number 23
@@ -157,13 +182,21 @@ stories:
                     and that Ticket TicketState is Backlog
                 when the operator sets that Ticket status to In Progress
                 then that Ticket TicketState is In Progress
-                    and the states remain Backlog, In Progress, Done
+                    and Project.state_named In Progress is that TicketState
+            ticket can move to done
+                given that Ticket TicketState is In Progress
+                when the operator sets that Ticket status to Done
+                then that Ticket TicketState is Done
+                    and Turn on a Plan uses that same TicketState type
         Agent --> Resolve Ticket Number
             ticket number resolves from a github issue ref
                 given a Repo
                 when the agent resolves ticket ref #23
-                then the Ticket number is 23
-                    // same mechanic for owner/repo#23 and issues URL — examples, not extra stories
+                then Ticket.parseNumber is 23
+            issue url resolves the same number
+                given a Repo
+                when the agent resolves an issues URL for 23
+                then Ticket.parseNumber is 23
     ~> Increment 2: Manage ticket flow on git: Record Research Tags, Record Flow Notes, Update Ticket Status, Resolve Ticket Number
 ---
 ce:
@@ -179,125 +212,280 @@ ce:
         state
         setStatus
         parseNumber
-        // identity is GitHub issue #; no parallel yaml
       ResearchTag
-        // git-primary notes + trailers — not Ticket.data as SoT
       TicketState
-        // Backlog | In Progress | Done only
+        // Backlog | In Progress | Done — same type on Ticket and on Turn
       Project
+        stateNamed
 =========
 
 =========
-theme: Start Agent Swarm  (epic)
+theme: Execute Plan  (epic)
 ---------
 stories:
-    Start Agent Swarm
-        Supervisor --> Create Agent Swarm
-            swarm is a collection of agents on a plan
-                given a Plan compose-judged-plan with PlannedTurns
-                    and a Supervisor with Outcome fewer-cli-handoffs
-                when the Supervisor creates a Swarm for that Plan
-                then that Swarm holds that Plan
-                    and that Swarm is a collection of Agents
-                    and launch uses existing sub_agent
-                    and there is not a second decorator kit
-        Supervisor --> Assign Agent Hypothesis
-            supervisor assigns approach; agent owns it
-                given a Swarm on Plan compose-judged-plan
-                    and a Supervisor with Outcome fewer-cli-handoffs
-                when the Supervisor assigns Agent thin-templates the Hypothesis thin-templates-first
-                then that Agent owns Hypothesis thin-templates-first
-                    and the Supervisor still owns Outcome fewer-cli-handoffs
-            second agent owns a different hypothesis toward the same outcome
-                given a Swarm with Agent thin-templates owning Hypothesis thin-templates-first
-                    and Supervisor Outcome fewer-cli-handoffs
-                when the Supervisor assigns Agent channel-write the Hypothesis channel-owns-the-file
-                then Agent channel-write owns Hypothesis channel-owns-the-file
-                    and Agent thin-templates still owns Hypothesis thin-templates-first
-                    and Outcome remains on the Supervisor
-        Swarm agent --> Load Plan Context
-            agent holds the plan plus its unique hypothesis
-                given a Swarm on Plan compose-judged-plan
-                    and Agent thin-templates owns Hypothesis thin-templates-first
-                when that Agent loads Plan context
-                then that Agent holds the Plan
-                    and that Agent still owns Hypothesis thin-templates-first
-                    and that Hypothesis is not the Supervisor Outcome
-        Swarm agent --> Run Planned Turns
-            swarm runs the full plan
-                given a Swarm on Plan compose-judged-plan with Stories then CleanEngineering PlannedTurns
-                    and two Agents each with a unique Hypothesis
-                    and that Plan already has a WorkSession from Start Plan
-                when the Swarm runs that Plan
-                then each Agent runs both PlannedTurns
-                    and each Agent has its own WorkSession
-                    and those WorkSessions are not the Plan Start Plan WorkSession
-                    and launch is non-blocking sub_agent
-            swarm runs a selected planned-turn slice
-                given the same Swarm and Plan
-                when the Swarm runs the Stories PlannedTurn only
-                then each Agent runs that PlannedTurn
-                    and each Agent still has its own WorkSession
-                    and the CleanEngineering PlannedTurn is not run
-                    // issue “selected steps” maps to this PlannedTurn slice
-    ~> Increment 3: Launch a plan swarm: Create Agent Swarm, Assign Agent Hypothesis, Load Plan Context, Run Planned Turns
+    Execute Plan
+        Practitioner --> Start Plan
+            start opens a work session and moves the first backlog turn to in progress
+                given a Plan compose-judged-plan associated with a Workspace
+                    and that Plan has a Turn Stories generate story_map
+                    and that Turn TicketState is Backlog
+                when the operator starts that Plan
+                then Workspace.openWorkSession has a WorkSession for that Plan
+                    and that WorkSession openTurn is that Turn
+                    and that Turn TicketState is In Progress
+            later backlog turn stays backlog
+                given that Plan also has a later Turn CleanEngineering generate modules
+                when the operator starts that Plan
+                then the Stories Turn TicketState is In Progress
+                    and the CleanEngineering Turn TicketState is Backlog
+        Practitioner --> Execute Turn
+            execute runs the in-progress turn
+                given a Plan with a WorkSession already open
+                    and the Stories Turn TicketState is In Progress
+                when the operator executes that Turn
+                then that WorkSession openTurn is that Turn
+                    and that Turn runs performTurn
+                    and that Turn action is generate
+                    and that Turn fidelity is story_map
+                    and that Turn holds result
+                    and that Turn holds toolCalls
+            execute leaves ticketstate in progress
+                given that Turn already holds result
+                when the operator reviews that Turn TicketState
+                then that Turn TicketState is In Progress
+        Practitioner --> Validate with Human
+            hil check presents results to the human
+                given a Turn In Progress with a HILCheck
+                    and that Turn holds result
+                when the human validates that Turn
+                then that HILCheck holds the human validation
+                    and that Turn still holds result
+                    and that Turn TicketState is In Progress
+        Judge --> Evaluate Results
+            judge checkpoint evaluates the turn result
+                given a Turn In Progress with a JudgeCheckpoint rubric stories-scenarios
+                    and that Turn holds result
+                when the Judge evaluates that Turn
+                then ai_judge runs on that Turn result against rubric stories-scenarios
+                    and that JudgeCheckpoint holds the JudgeResult
+                    and that Turn TicketState is In Progress
+        Practitioner --> Review Progress
+            progress and results are on the plan
+                given a Turn In Progress with result
+                    and a HILCheck validation
+                    and a JudgeCheckpoint JudgeResult
+                when the operator reviews progress
+                then that Plan shows that Turn TicketState
+                    and that Plan shows that Turn result
+                    and that Plan shows the HILCheck validation
+                    and that Plan shows the JudgeResult
+            review after hil only
+                given a Turn In Progress with result
+                    and a HILCheck validation
+                when the operator reviews progress
+                then that Plan shows that Turn result
+                    and that Plan shows the HILCheck validation
+            review after judge only
+                given a Turn In Progress with result
+                    and a JudgeCheckpoint JudgeResult
+                when the operator reviews progress
+                then that Plan shows that Turn result
+                    and that Plan shows the JudgeResult
+        Practitioner --> Advance Turn
+            finished turn is done and the next backlog turn is in progress
+                given a Plan with Stories then CleanEngineering Turns
+                    and the Stories Turn TicketState is In Progress
+                    and a WorkSession is open
+                when the operator advances
+                    and the Stories Turn finish runs
+                then the Stories Turn TicketState is Done
+                    and the CleanEngineering Turn TicketState is In Progress
+                    and that WorkSession openTurn is the CleanEngineering Turn
+            last turn advance leaves the plan on done
+                given a Plan whose only In Progress Turn is the last Turn
+                when the operator advances
+                    and that Turn finish runs
+                then that Turn TicketState is Done
+                    and that WorkSession openTurn is empty
+        Practitioner --> Fix and Rerun
+            human asks to fix now
+                given a Turn with a HILCheck validation that calls for a fix
+                    and that Turn holds result
+                    and that Turn TicketState is In Progress
+                when the operator recordMistake on that Turn
+                    and recordCorrection on that Turn
+                    and WorkSession.repairs holds the Repair
+                    and the operator executes that Turn again
+                then that Turn holds the Mistake
+                    and that Turn holds the Correction
+                    and that Turn holds a new result
+                    and that Turn TicketState is In Progress
+            judge evaluation can also drive fix and rerun
+                given a Turn with a JudgeResult that calls for a fix
+                when the operator recordMistake on that Turn
+                    and recordCorrection on that Turn
+                    and WorkSession.repairs holds the Repair
+                    and the operator executes that Turn again
+                then that Turn holds the Mistake and the Correction
+                    and that Turn holds a new result
+                    and that Turn TicketState is In Progress
+    ~> Increment 3: Execute Plan: Start Plan, Execute Turn, Validate with Human, Evaluate Results, Review Progress, Advance Turn, Fix and Rerun
+---
+ce:
+    utilities/plan/
+      Plan
+        start
+         -> Workspace.openWorkSession
+        executeTurn
+         -> Turn.performTurn
+        advanceTurn
+         -> Turn.finish
+      ----
+      Turn
+        performTurn
+        finish
+        recordMistake
+        recordCorrection
+         -> WorkSession.repairs
+      JudgeCheckpoint
+        rubric
+        judgeResult
+         -> ai_judge
+=========
+
+=========
+theme: Swarm Plan  (epic)
+---------
+stories:
+    Swarm Plan
+        Supervisor --> Create Supervisor
+            supervisor holds the outcome
+                given a Plan compose-judged-plan with Turns
+                when the operator creates a Supervisor with Outcome Plan-started
+                then that Supervisor owns Outcome Plan-started
+                    and that Supervisor is on that Plan
+                    and that Supervisor holds no Agents yet
+            supervisor rubric hangs on the supervisor
+                given a Supervisor with Outcome Plan-started
+                when the operator sets that Supervisor rubric to plan-started
+                then that Supervisor rubric is plan-started
+                    and that Supervisor still owns Outcome Plan-started
+        Supervisor --> Add Agent
+            agent holds the hypothesis
+                given a Supervisor with Outcome Plan-started
+                when the Supervisor adds an Agent with Hypothesis Stories generate story_map
+                then that Agent owns Hypothesis Stories generate story_map
+                    and that Agent is a SubAgent
+                    and the Supervisor still owns Outcome Plan-started
+            second agent holds a different hypothesis
+                given a Supervisor with an Agent that owns Hypothesis Stories generate story_map
+                when the Supervisor adds an Agent with Hypothesis CleanEngineering generate modules
+                then that Agent owns Hypothesis CleanEngineering generate modules
+                    and the first Agent still owns Hypothesis Stories generate story_map
+            agent opens its own work session
+                given an Agent that owns Hypothesis Stories generate story_map
+                when that Agent starts the Plan
+                then Workspace.openWorkSession has a WorkSession for that Agent
+                    and that WorkSession is not the Plan Start Plan WorkSession
+            agent runs execute plan on its work session
+                given an Agent that owns Hypothesis Stories generate story_map
+                    and that Agent WorkSession is open
+                when that Agent executes its In Progress Turn
+                then that Agent WorkSession runs Execute Plan
+                    and Validate with Human, Evaluate Results, Review Progress, Advance Turn, and Fix and Rerun are those same stories
+            supervisor may add an agent while the swarm is running
+                given a Supervisor with an Agent that is still running Execute Plan
+                when the Supervisor adds an Agent with Hypothesis CleanEngineering generate modules
+                then that new Agent owns Hypothesis CleanEngineering generate modules
+                    and the first Agent is still running
+                    and the Supervisor still owns Outcome Plan-started
+        Supervisor --> Compare Swarm Results
+            compare streams after a judge checkpoint
+                given an Agent that owns Hypothesis Stories generate story_map
+                    and that Agent WorkSession Turn just finished a JudgeCheckpoint
+                    and another Agent is still running
+                when the Supervisor compares swarm results
+                then Supervisor.compare includes that JudgeCheckpoint evaluation
+                    and Supervisor.compare shows progress for every Agent
+                    and the other Agent is still running
+                    // stream after each Judge evaluation; same shape as Evaluate Results and Review Progress
+            compare streams after a hil check
+                given an Agent WorkSession Turn just finished a HILCheck
+                    and another Agent is still running
+                when the Supervisor compares swarm results
+                then Supervisor.compare includes that HILCheck validation
+                    and Supervisor.compare shows progress for every Agent
+            compare does not wait for all agents
+                given two Agents still running Execute Plan
+                    and the Stories Agent Turn just finished a JudgeCheckpoint
+                when the Supervisor compares swarm results
+                then Supervisor.compare includes that JudgeCheckpoint evaluation
+                    and the CleanEngineering Agent is still running
+            compare can use a plan judge checkpoint rubric
+                given a Plan Turn with JudgeCheckpoint rubric stories-scenarios
+                    and an Agent WorkSession Turn just finished that JudgeCheckpoint
+                when the Supervisor compares swarm results
+                then Supervisor.compare includes that JudgeCheckpoint rubric evaluation
+        Supervisor --> Comparative Association
+            supervisor rubric associates agent results toward the outcome
+                given Supervisor.compare holds a JudgeCheckpoint from the Stories generate story_map Agent
+                    and a Supervisor rubric for Outcome Plan-started
+                when the Supervisor associates results
+                then those Agent results are associated under that rubric toward Outcome Plan-started
+                    and each Agent still owns its Hypothesis
+            association can include a second agent as it arrives
+                given Supervisor.compare already associates the Stories Agent
+                    and the CleanEngineering Agent JudgeCheckpoint has just finished
+                when the Supervisor associates results
+                then both Agent results are associated under the Supervisor rubric toward Outcome Plan-started
+            association updates when a mid-run agent arrives
+                given Supervisor.compare already associates the Stories Agent
+                    and the Supervisor just added an Agent with Hypothesis CleanEngineering generate modules
+                when the CleanEngineering Agent JudgeCheckpoint finishes
+                    and the Supervisor associates results
+                then both Agent results are associated under the Supervisor rubric toward Outcome Plan-started
+    ~> Increment 4: Swarm Plan: Create Supervisor, Add Agent, Compare Swarm Results, Comparative Association
 ---
 ce:
     utilities/swarm/
       Swarm
         plan
-        plannedTurns
+        supervisor
         agents
-        run
-         -> Plan.plannedTurns
-         // full Plan or slice of PlannedTurns; never a Step type
-         -> sub_agent.run
-         // existing non-blocking launch; never a second decorator
+         -> SubAgent.run
       Supervisor
         outcome
         rubric
-        assignHypothesis agent
-         -> Agent.hypothesis
+        agents
+        addAgent
+        compare
+        associate
+         -> Agent.workSession
+         -> Turn.judgeCheckpoint
+         -> Turn.hilCheck
+         -> JudgeResult
+         -> Outcome
       Agent
         plan
         hypothesis
         workSession
+         -> SubAgent.run
          -> Workspace.openWorkSession
-         // each Agent opens its own WorkSession on run; never the Plan Start Plan session
-         // “if we do this, we will achieve the Outcome”
+         -> Plan.start
+         -> Plan.executeTurn
+         // Agent runs Execute Plan on this WorkSession; not the Plan Start Plan session
       Hypothesis
       Outcome
 =========
 
-=========
-theme: Compare Swarm Results  (epic)
----------
-stories:
-    Compare Swarm Results                     < scaffold
-        Supervisor --> Collect Swarm Results  < scaffold
-        Supervisor --> Compare Agent Outcomes < scaffold
-        Supervisor --> Review Supervisor Rubric
-            // Supervisor rubric scores Outcome
-        Supervisor --> Review Plan Judges
-            // Plan JudgeCheckpoint rubrics score PlannedTurns; and/or Supervisor rubric
-    ~> Increment 4: Compare swarm results: Collect Swarm Results, Compare Agent Outcomes, Review Supervisor Rubric, Review Plan Judges  < scaffold
----
-ce:
-    utilities/swarm/
-      Supervisor
-        rubric
-        compare
-         -> outcome
-         -> PlannedTurn.judgeCheckpoint
-=========
-
 ## log
 - discovery / solution / whole-design / pass #scaffold
-- discovery / Compose Plan Sequence / pass #judge-shape
-- exploration / Compose Plan Sequence / pass #inc1-bdd — absorbed generated Increment 1 scenarios into stories notation; files left on disk
-- exploration / Manage Ticket Flow / pass #inc2-sketch — main-flow BDDs; tags + notes on existing Ticket; status is existing TicketState; resolve is parse_number
-- discovery / Start Agent Swarm / pass #swarm-slice
-- discovery / Start Agent Swarm / pass #hypothesis-own
-- discovery / Compare Swarm Results / pass #rubric-source
-- exploration / Start Agent Swarm / pass #inc3-sketch — create Swarm; split Outcome/Hypothesis; load Plan+Hypothesis; run full Plan or PlannedTurn slice via existing sub_agent
-- exploration / Start Agent Swarm / pass #swarm-session — tick 5: each Agent opens its own WorkSession; not the Plan Start Plan session; not sessionless run
+- exploration / Compose Plan Sequence / pass #turn-ticket-state — Plan holds workspace.Turn; Turn.state is TicketState
+- discovery / Run Planned Work / pass #map-execute-swarm — Compose, Execute Plan, Swarm Plan; HIL and Judge stay two Manage stories; Comparative Association is Supervisor rubric across Agents
+- exploration / Compose Plan / pass #inc1-bdd — Create Plan; Manage Turns add/edit/delete; Manage HIL Checks; Manage Judge Checkpoints
+- exploration / Execute Plan / pass #inc3-sketch — Execute Turn; HIL validate; Judge evaluate; Review Progress; Advance Turn; Fix and Rerun on existing Mistake/Correction/Repair
+- exploration / Swarm Plan / pass #inc4-sketch — Create Supervisor then Add Agent; Compare Swarm Results is Execute judgment; Comparative Association is Supervisor rubric
+- exploration / Compose Plan / pass #inc1-deepen — second Plan; edit keeps ToolCall; HIL and Judge each stay when the other is added; JudgeCheckpoint.rubric is ai_judge rubric
+- exploration / Manage Ticket Flow / pass #inc2-deepen — ResearchTag and notes on Ticket 23; setStatus is TicketState; parseNumber on # and issues URL; same TicketState type as Turn
+- exploration / Execute Plan / pass #inc3-deepen — Start Plan openWorkSession; Execute Turn performTurn; ai_judge JudgeResult; Advance Turn finish; last turn Done; Fix and Rerun stays In Progress
+- exploration / Swarm Plan / pass #inc4-deepen — Agent opens own WorkSession; compare streams after Judge and HIL; mid-run addAgent; Comparative Association as results arrive

@@ -17,7 +17,7 @@ format: md
 - *Plan* — associated with a **Workspace**; holds ordered **PlannedTurn**s; does not launch agents
 - *PlannedTurn* — one slot on a **Plan**; invokes context tools, actions, fidelities, and context
 - *JudgeCheckpoint* — optional on a **PlannedTurn**; not a distinct turn
-- *HipCheckpoint* — optional on a **PlannedTurn**; not a distinct turn
+- *HILCheck* — optional on a **PlannedTurn**; not a distinct turn
 
 > In steps: bold domain concepts (`**<Concept>**`); italic concrete values (`*<value>*`).
 
@@ -32,9 +32,7 @@ format: md
     fidelity {fidelity}  
     and context {context}  
 *Then* that **Plan** shows the **PlannedTurn** in sequence  
-  *And* that **PlannedTurn** names context tool {context_tool}, action {action}, fidelity {fidelity}, and context {context}  
-  *But* that **PlannedTurn** is not a **JudgeCheckpoint**  
-  *And* that **PlannedTurn** is not a **HipCheckpoint**
+  *And* that **PlannedTurn** names context tool {context_tool}, action {action}, fidelity {fidelity}, and context {context}
 
 ### Examples
 

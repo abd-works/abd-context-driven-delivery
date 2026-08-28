@@ -20,3 +20,5 @@
 - **2026-08-27:** Increment 1 BDDs absorbed into `plan-and-swarm-sketch.md` (generated scenario files left in place). Increment 2 **Manage Ticket Flow** sketched with main-flow GWT. Increments 3–4 still story names only.
 - **2026-08-27:** Increment 3 **Start Agent Swarm** sketched with main-flow GWT (create, assign hypothesis, load plan, run full Plan or PlannedTurn slice). Increment 4 still names only.
 - **2026-08-27:** Grill tick 5 — each Swarm Agent opens its own WorkSession on run (not the Plan Start Plan session).
+- **2026-08-27:** Increment 4 sketched from ticks 4–5 — collect each Agent WorkSession trail; Supervisor rubric scores Outcome; Plan JudgeCheckpoints score PlannedTurns. Collect-timing question did not land.
+- **2026-08-27:** Grill tick 6 — stream collect after each judge/HIP; do not wait for an agent or all agents; may add a new Agent+Hypothesis while the swarm is still running.

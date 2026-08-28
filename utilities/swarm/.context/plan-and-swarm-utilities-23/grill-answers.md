@@ -67,3 +67,46 @@ Not a single field wholly on Agent, Supervisor map, or launch-time copy only.
 **Answer (user):** **Each Agent opens its own WorkSession** — parallel runs stay isolated; compare reads N session trails.
 
 **Slice unlocked:** deepen Run Planned Turns / Create Agent Swarm BDDs — Agent WorkSession is not the Plan’s Start Plan session.
+
+## Tick 6 — Collect timing (Compare Swarm Results)
+
+**Question:** When Collect Swarm Results runs, what is collected?
+
+**Options offered:** Wait until every Agent WorkSession has finished | Collect only finished Agents | Collect a Result object | Other
+
+**Answer (user):** **Other — stream after each in-loop evaluation.**
+
+- Report progress of **every Agent** after every **HIP** or **judge** evaluation.
+- As soon as that evaluation finishes, put it on the running report (dashboard / whatever the compare surface is).
+- Do **not** wait for an Agent to be done.
+- Do **not** wait for all Agents.
+- From those learnings, the Supervisor **may add a new sub-agent** with a **new Hypothesis** while the Swarm is still running.
+
+**Slice unlocked:** Incremental collect/compare after each JudgeCheckpoint or HILCheck. Mid-run Create + Assign stays on existing stories.
+
+## Tick 7 — HILCheck name (Compose Plan Sequence)
+
+**Question:** What is the human gate on a PlannedTurn called?
+
+**Answer (user):** **HILCheck** — human-in-the-loop check on a Turn. Same attachment as tick 1.
+
+## Tick 8 — PlannedTurn envelope (Compose Plan Sequence)
+
+**Question:** What does a PlannedTurn hold when it is recorded?
+
+**Options offered:** Same slots as Turn | One kit run | Other
+
+**Answer (user):** **Other — extend existing Turn with TicketState.**
+
+- A **Plan** holds existing **workspace.Turn** objects.
+- **Turn** already has action, fidelity, context, and toolCalls.
+- **Turn.state** is **TicketState**: Backlog, In Progress, Done — the same work states as **Ticket**.
+- Recorded onto a Plan, a Turn starts in **Backlog**. **Start Plan** opens a **WorkSession** and that Turn becomes **In Progress**. **Turn.finish** sets **Done** and the next Backlog Turn becomes In Progress.
+
+## Tick 9 — Execute Turn and WorkSession (Execute Plan)
+
+**Question:** When the first Execute Turn runs on a Plan, what opens the WorkSession?
+
+**Options offered:** Execute Turn opens it | Plan still has its own start | Other
+
+**Answer (user):** **Plan still has its own start.** Start Plan opens the WorkSession. Execute Turn runs a Turn that is already In Progress.

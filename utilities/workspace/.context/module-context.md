@@ -42,6 +42,7 @@
 - `GitRepo` / `NullGitRepo` — `checkout_or_create`, `commit`, `push`, notes (`note` /
   `read_notes` / `find_mistakes`). Session branch naming is WorkSession policy.
 - `Turn` — `@agentic_toolset` (`workspace.workspace:Turn`); CLI context is `workspace` path + `session` name (session may come from the current `session/` git branch). Host is optional (`if host:` for bind/index/trail). Owns `mistakes` and optional `correction`; `record_mistake` / `record_correction` attach to the open turn before `finish`. `open` / `finish_turn` stay `@agent_tool` (`/start-turn`, `/finish-turn`). `performTurn` is `@agent_instructions` with `@prompt(name="turn")` so `/turn` invokes `action: performTurn` (open, do the work in context, `finish_turn`).
+- `Turn` — `state` is **TicketState** (Backlog / In Progress / Done), the same work states as **Ticket**. A Plan holds these Turns.
 - `Turn` / `Mistake` / `Correction` / `PathOverride` / `ToolCall` / `TurnCommit`
   (`TurnCommit.name` = git commit subject from `Turn.name`, not a uuid slug)
 - `SessionLog` — `append` → events.log + openTurn.toolCalls; **delete `@log` as host primary**
