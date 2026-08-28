@@ -1,4 +1,20 @@
+---
+fidelity: [discovery]
+artifact: [thin-slice]
+format: md
+---
+
 # Thin slicing — Plan And Swarm Utilities
+
+**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/swarm/.context/story-map.md`; `utilities/swarm/.context/grill-answers.md`
+
+## Product / context
+
+**Product:** Plan and Swarm utilities — ordered Turns on a Plan, ticket flow on git, Execute Plan, then Swarm with Supervisor + Agents.
+
+**Slicing intent:** Compose first, then ticket flow on the existing git API, then Execute Plan on workspace.Turn, then Swarm Plan. Each increment leaves a usable spine before the next.
+
+## Increments
 
 ### Increment 1: Compose Plan
 

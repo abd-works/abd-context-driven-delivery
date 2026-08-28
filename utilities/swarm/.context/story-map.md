@@ -9,7 +9,6 @@ section: body
 
 **Sources / context:**
 `utilities/swarm/.context/issue-body.md`;
-`utilities/swarm/.context/session.md`;
 `utilities/swarm/.context/grill-answers.md`;
 `utilities/swarm/.context/plan-and-swarm-sketch.md`;
 `utilities/plan/.context/module-context.md`;
@@ -18,6 +17,7 @@ section: body
 `utilities/workflow/.context/module-context.md`;
 `utilities/sub_agent/.context/module-context.md`;
 `utilities/workspace/.context/module-context.md`;
+`utilities/cli_agent/.context/module-context.md`;
 `context_tools/agent_bdd/.context/module-context.md`;
 `context_tools/stories/stories.md`;
 `context_tools/stories/templates/md/story-map.md`
