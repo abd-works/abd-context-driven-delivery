@@ -1,6 +1,0 @@
-toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
-context:
-  fidelity: modules
-  format: markdown
-  path: C:\dev\abd-context-driven-delivery
-action: validate

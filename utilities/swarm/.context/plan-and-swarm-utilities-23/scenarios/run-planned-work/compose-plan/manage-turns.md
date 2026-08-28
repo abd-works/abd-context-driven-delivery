@@ -8,16 +8,17 @@ format: md
 
 **Story type:** user
 
-**Actor:** Practitioner (operator composing the **Plan**)
+**Actor:** Practitioner
 
-**Sources / context:** `utilities/swarm/.context/plan-and-swarm-utilities-23/plan-and-swarm-sketch.md`; `utilities/swarm/.context/plan-and-swarm-utilities-23/grill-answers.md` ticks 8 and 13; `utilities/workspace/.context/module-context.md` (`Turn`, `tool_keys`, `toolCalls`); `utilities/plan/.context/module-context.md`
+**Sources / context:** `utilities/swarm/.context/plan-and-swarm-utilities-23/plan-and-swarm-sketch.md`; `utilities/swarm/.context/plan-and-swarm-utilities-23/grill-answers.md` ticks 8, 13; `utilities/workspace/.context/module-context.md`
 
 ### Domain terms
 
 - *Plan* — associated with a **Workspace**; holds ordered **Turn**s
 - *Turn* — existing `workspace.Turn`; one **action**; multiple tools via **tool_keys** and **toolCalls**; **TicketState** Backlog / In Progress / Done
-- *ToolCall* — one toolset invoke on a **Turn**
-- *CliAgent* — binds a hanging **Turn** (`action`, `tool_keys`, `toolCalls`); no **Plan** on **CliAgent**
+- *ToolCall* — one toolset and name recorded on a **Turn**
+- *CliAgent* — describes hanging **Turn** shape (`action`, `tool_keys`, `toolCalls`); does not open the **Turn**; holds no **Plan**
+- *TicketState* — Backlog / In Progress / Done on **Turn** and **Ticket**
 
 > In steps: bold domain concepts (`**<Concept>**`); italic concrete values (`*<value>*`).
 
@@ -25,28 +26,42 @@ format: md
 
 ### Scenario: Turn holds multiple tools and one action
 
-*Given* a **Plan** *compose judged plan* associated with a **Workspace**  
+*Given* a **Plan** *compose-judged-plan* associated with a **Workspace**  
 *When* the operator adds a **Turn**  
     with action *Sketch*  
-    tool_keys *stories* and *clean_engineering*  
+    and **tool_keys** *Stories* and *CleanEngineering*  
     and a **ToolCall** toolset *Stories* name *Sketch*  
     and a **ToolCall** toolset *CleanEngineering* name *Sketch*  
 *Then* that **Turn** action is *Sketch*  
   *And* that **Turn** holds both **ToolCall**s  
   *And* that **Turn** **TicketState** is *Backlog*
 
-### Scenario: CliAgent binds the hanging Turn
+### Scenario: CliAgent describes the Turn shape without opening it
 
 *Given* a hanging **Turn** with action *Sketch*  
-  *And* that **Turn** tool_keys are *stories* and *clean_engineering*  
-  *And* that **Turn** holds **ToolCall**s for *Stories* and *CleanEngineering*  
-*When* a **CliAgent** binds that **Turn**  
-*Then* that **CliAgent** runs that **Turn** action with those tool_keys and **ToolCall**s  
-  *And* that **CliAgent** does not hold a **Plan**
+  *And* **tool_keys** *Stories* and *CleanEngineering*  
+  *And* **toolCalls** for *Stories* *Sketch* and *CleanEngineering* *Sketch*  
+*When* **CliAgent** describes that **Turn**  
+*Then* **CliAgent** shows action *Sketch*  
+  *And* **CliAgent** shows those **tool_keys**  
+  *And* **CliAgent** shows those **toolCalls**  
+  *And* **CliAgent** does not open that **Turn**  
+  *And* **CliAgent** holds no **Plan**
+
+### Scenario: CLI opens and finishes the hanging Turn
+
+*Given* that hanging **Turn** with action *Sketch*  
+*When* the CLI opens that **Turn**  
+  *And* runs *Sketch* with *Stories* and *CleanEngineering*  
+  *And* finishes that **Turn**  
+*Then* that **Turn** holds result  
+  *And* that **Turn** still uses **TicketState**  
+  *And* that **Turn** may still hold **HILCheck** and **JudgeCheckpoint**
 
 ### Evidence
 
 | Scenario | Source | Location |
 | --- | --- | --- |
 | Turn holds multiple tools and one action | grill-answers.md | tick 13 |
-| CliAgent binds the hanging Turn | grill-answers.md | tick 13; workspace.Turn tool_keys |
+| CliAgent describes the Turn shape without opening it | grill-answers.md | tick 13 |
+| CLI opens and finishes the hanging Turn | grill-answers.md | tick 13 |

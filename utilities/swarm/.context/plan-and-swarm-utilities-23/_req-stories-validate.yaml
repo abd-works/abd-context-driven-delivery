@@ -1,9 +1,0 @@
-toolset: validate.validate:Validate
-action: validate
-arguments:
-  tools:
-  - toolset: context_tools.stories.stories:Stories
-    context:
-      fidelity: story_map
-      format: markdown
-      path: C:\dev\abd-context-driven-delivery\.context\sessions\plan-and-swarm-utilities-23

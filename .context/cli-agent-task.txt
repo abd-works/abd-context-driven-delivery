@@ -1,8 +1,8 @@
 This is an interactive session.
-Turn.action: Sketch
+Turn.action: Generate
 Turn.tool_keys: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
-Turn.toolCalls: context_tools.stories.stories:Stories name=Sketch context_tools.stories.stories:Stories fidelity=story_map format=markdown, context_tools.clean_engineering.clean_engineering:CleanEngineering name=Sketch context_tools.clean_engineering.clean_engineering:CleanEngineering fidelity=modules format=markdown
-Turn.fidelity: modules
+Turn.toolCalls: context_tools.stories.stories:Stories name=Generate context_tools.stories.stories:Stories fidelity=story_map format=markdown, context_tools.clean_engineering.clean_engineering:CleanEngineering name=Generate context_tools.clean_engineering.clean_engineering:CleanEngineering fidelity=model format=markdown
+Turn.fidelity: model
 Turn.format: markdown
-Turn.prompt: This Turn.action is Sketch only. Do not generate. Align plan-and-swarm-sketch.md: a Turn has multiple tools and one action. CliAgent describes that shape; the CLI opens the hanging workspace.Turn and finishes it after the action. No PlannedTurn. No Plan on CliAgent. Keep TicketState, HILCheck, JudgeCheckpoint. Finish this Turn when the sketch change is in.
+Turn.prompt: Sketch Turn is finished. This is the next Turn. Generate Stories story_map markdown, Stories scenarios markdown, and CleanEngineering model markdown from the locked sketch. Validate only those generated files, not source code. Finish this Turn when generate is in.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.

@@ -6,9 +6,9 @@
 - **Worktree:** `C:\dev\abd-cdd-plan-and-swarm-utilities-23` on `session/plan-and-swarm-utilities-23`. Do not checkout or edit the primary clone `C:\dev\abd-context-driven-delivery` (stale sketch there).
 - **Session folder:** `utilities/swarm/.context/plan-and-swarm-utilities-23/`
 - **Source of truth:** `plan-and-swarm-sketch.md` (stories + CE). Generated Increment 1 scenario files under `scenarios/` are leftovers — do not treat as SoT. Do not generate more scenario files until the operator says generate.
-- **Last work:** Sketch-only — Turn multi-tool + one action; CliAgent describes shape; CLI opens/finishes hanging Turn (`pass #turn-multi-tool`).
-- **Next action:** Generate when requested (story_map / scenarios / modules).
-- **Next focus:** Generate or validate from locked sketch
+- **Last work:** Generate — story_map, scenarios (Turn/CliAgent + Swarm Plan), and clean-engineering-model.md from locked sketch. Removed PlannedTurn leftover scenario files.
+- **Next action:** Further scenario coverage (Execute Plan / Manage Ticket / remaining Compose stories) or validate pass.
+- **Next focus:** Scenario completeness or CE model deepen
 
 ## Locked grill answers (`grill-answers.md`)
 

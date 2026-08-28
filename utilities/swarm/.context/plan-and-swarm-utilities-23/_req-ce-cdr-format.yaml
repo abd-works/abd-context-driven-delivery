@@ -1,6 +1,0 @@
-toolset: generate.generate:Generate
-context:
-  path: C:\dev\abd-context-driven-delivery
-  session: plan-and-swarm-utilities-23
-tool: read_cdr_format
-arguments: {}
