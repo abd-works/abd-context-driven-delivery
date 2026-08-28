@@ -6,9 +6,9 @@
 - **Worktree:** `C:\dev\abd-cdd-plan-and-swarm-utilities-23` on `session/plan-and-swarm-utilities-23`. Do not checkout or edit the primary clone `C:\dev\abd-context-driven-delivery` (stale sketch there).
 - **Session folder:** `utilities/swarm/.context/plan-and-swarm-utilities-23/`
 - **Source of truth:** `plan-and-swarm-sketch.md` (stories + CE). Generated Increment 1 scenario files under `scenarios/` are leftovers — do not treat as SoT. Do not generate more scenario files until the operator says generate.
-- **Last work:** Generate slice — story_map + modules synced from locked Increment 4 sketch (ticks 10–12: shared Swarm.turns, automatic associate, SubAgent.run at Plan.start).
-- **Next action:** Further generate/validate slices, or scenarios when requested.
-- **Next focus:** Remaining generate coverage or scenarios fidelity (when requested)
+- **Last work:** Sketch-only — Turn multi-tool + one action; CliAgent describes shape; CLI opens/finishes hanging Turn (`pass #turn-multi-tool`).
+- **Next action:** Generate when requested (story_map / scenarios / modules).
+- **Next focus:** Generate or validate from locked sketch
 
 ## Locked grill answers (`grill-answers.md`)
 
@@ -26,6 +26,7 @@
 | 10 | One shared turn slice for the whole Swarm, selected once before any Agent runs. Each Agent runs that same slice on its own WorkSession. |
 | 11 | Comparative Association runs automatically after each streamed compare event (Judge or HIL). Associate updates under Supervisor rubric toward Outcome. |
 | 12 | Add Agent registers the Agent. `SubAgent.run` launches at `Plan.start` on the Agent WorkSession. Mid-run add launches when that Agent starts the Plan. |
+| 13 | Turn has multiple tools and one action. CliAgent describes that shape. CLI opens hanging Turn and finishes after the action. CliAgent does not open the Turn. No PlannedTurn. No Plan on CliAgent. |
 
 ## Story map (current)
 

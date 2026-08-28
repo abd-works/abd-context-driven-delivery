@@ -44,12 +44,30 @@ stories:
                 given a Plan compose-judged-plan associated with a Workspace
                 when the operator adds a Turn
                     and that Turn has action Sketch
-                    and that Turn tool_keys are stories and clean_engineering
+                    and that Turn tool_keys are Stories and CleanEngineering
                     and ToolCall toolset Stories name Sketch
                     and ToolCall toolset CleanEngineering name Sketch
                 then that Turn action is Sketch
                     and that Turn holds both ToolCalls
                     and that Turn TicketState is Backlog
+            cli agent describes the turn shape
+                given a hanging workspace.Turn with action Sketch
+                    and tool_keys Stories and CleanEngineering
+                    and toolCalls for Stories Sketch and CleanEngineering Sketch
+                when CliAgent describes that Turn
+                then CliAgent shows action Sketch
+                    and CliAgent shows those tool_keys
+                    and CliAgent shows those toolCalls
+                    and CliAgent does not open that Turn
+                    and CliAgent holds no Plan
+            cli opens and finishes the hanging turn
+                given that hanging workspace.Turn with action Sketch
+                when the CLI opens that Turn
+                    and runs Sketch with Stories and CleanEngineering
+                    and finishes that Turn
+                then that Turn holds result
+                    and that Turn TicketState stays with TicketState
+                    and that Turn still may hold HILCheck and JudgeCheckpoint
             later turn follows the earlier turn
                 given a Plan that already has a Turn Stories generate story_map
                 when the operator adds a Turn CleanEngineering generate modules
@@ -151,12 +169,15 @@ ce:
          // existing workspace.Turn; one action; multiple tools via tool_keys and toolCalls
          // state is TicketState Backlog | In Progress | Done
       CliAgent
-        turn
-        bind
+        action
+        tool_keys
+        toolCalls
          -> Turn.action
          -> Turn.tool_keys
          -> Turn.toolCalls
-         // binds hanging workspace.Turn; no Plan; no PlannedTurn
+         // describes hanging workspace.Turn shape; does not open the Turn
+         // CLI opens the hanging Turn and finishes after the action
+         // no Plan; no PlannedTurn
       ToolCall
         toolset
         name
@@ -550,4 +571,4 @@ ce:
 - exploration / Swarm Plan / pass #inc4-slice ? Agent runs selected Plan Turns; Agent.turns in CE
 - exploration / Swarm Plan / pass #inc4-slice-lock ? Swarm.turns shared slice once before agents; associate automatic after streamed compare
 - exploration / Swarm Plan / pass #inc4-subagent-launch ? register at Add Agent; SubAgent.run at Plan.start on Agent WorkSession
-- exploration / Compose Plan / pass #turn-multi-tool ? Turn has one action and multiple tool_keys/toolCalls; CliAgent binds Turn (no Plan, no PlannedTurn)
+- exploration / Compose Plan / pass #turn-multi-tool ? Turn has one action and multiple tool_keys/toolCalls; CliAgent describes shape; CLI opens and finishes hanging Turn (no Plan, no PlannedTurn)
