@@ -405,7 +405,7 @@ class Repo:
             )
         try:
             completed = subprocess.run(
-                [found, "-C", str(root), *args],
+                [found, "-c", "core.longpaths=true", "-C", str(root), *args],
                 capture_output=True,
                 text=True,
                 encoding="utf-8",

@@ -266,7 +266,9 @@ class Turn:
         if session is not None:
             session.append_trail(run)
         change: TurnCommit | None = None
-        dirty = session.dirty if session is not None else git.is_dirty()
+        dirty = (
+            session.dirty if session is not None else git.is_dirty(untracked=False)
+        )
         if dirty:
             message = self.name
             if self.correction is not None:
@@ -602,7 +604,7 @@ class WorkSession:
 
     @property
     def dirty(self) -> bool:
-        return self.git.is_dirty()
+        return self.git.is_dirty(untracked=False)
 
     @property
     def turn(self) -> Turn:
