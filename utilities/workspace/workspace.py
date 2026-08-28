@@ -819,8 +819,13 @@ class WorkSession:
 
     @classmethod
     def _worktree_dirname(cls, repo_folder: str, session_name: str) -> str:
-        """Sibling directory `{abbrev}-{work-session-name}` next to the primary clone."""
-        return f"{cls._abbrev_repo_name(repo_folder)}-{session_name}"
+        """Sibling directory `{abbrev}-{ticket-or-short-slug}` next to the primary clone."""
+        slug = (session_name or "").strip().strip("-")
+        ticket = re.search(r"-(\d+)$", slug)
+        short = ticket.group(1) if ticket else slug
+        if ticket is None and len(short) > 24:
+            short = short[:24].rstrip("-")
+        return f"{cls._abbrev_repo_name(repo_folder)}-{short}"
 
     def _try_fetch(self) -> None:
         try:
@@ -885,7 +890,10 @@ class WorkSession:
             return
         if git.is_dirty() or git.has_stash():
             return
-        GitRepo(git.primary_root()).remove_worktree(git.root)
+        try:
+            GitRepo(git.primary_root()).remove_worktree(git.root)
+        except GitConnectError:
+            return
 
     def ensure_started(
         self,
@@ -1021,9 +1029,8 @@ class WorkSession:
         """start_work_session — agent starts or resumes a named work session.
 
         Non-default session branches isolate in a sibling worktree named
-        ``{abbrev}-{work-session-name}`` next to the primary clone (abbrev from
-        the clone folder). Stay in the primary clone when the session branch is
-        the default branch.
+        ``{abbrev}-{ticket}`` (or a short slug) next to the primary clone.
+        Stay in the primary clone when the session branch is the default branch.
         """
         if tools:
             for item in tools:

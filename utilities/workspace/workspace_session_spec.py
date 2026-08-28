@@ -412,6 +412,12 @@ with description("a sibling worktree directory name"):
         expect(WorkSession._worktree_dirname("story-ui", "fix-nav")).to(
             equal("story-u-fix-nav")
         )
+        expect(
+            WorkSession._worktree_dirname(
+                "abd-context-driven-delivery",
+                "action-to-run-a-context-tool-plus-another-action-from-the-cli-including-with-a-separate-judge-15",
+            )
+        ).to(equal("abd-cdd-15"))
 
 
 with description("a WorkSession that is closed"):
