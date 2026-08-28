@@ -26,16 +26,7 @@ from cli_agent.cli_agent import (
     CliAgent,
     CursorCli,
     IdeCli,
-    NEXT_TURN,
-    JUDGE_SOURCE_SCOPE,
-    VALIDATE_SAME_LENS,
     VscodeCli,
-    align_tools,
-    bind_turn,
-    blank_turn,
-    lens_label,
-    tool_lens,
-    turn_prompt,
 )
 from sub_agent.sub_agent import discover_sub_agent_tools
 from workspace.workspace import Workspace, WorkSession
@@ -135,8 +126,9 @@ with description("IdeCli"):
 
     with context("that writes a task prompt"):
         with it("should bind tools and one action onto a workspace Turn"):
-            hanging = bind_turn(
-                blank_turn(),
+            cli = IdeCli()
+            hanging = cli.bind_turn(
+                cli.blank_turn(),
                 [
                     {
                         "toolset": "context_tools.stories.stories:Stories",
@@ -154,7 +146,7 @@ with description("IdeCli"):
             expect(len(hanging.tool_calls)).to(equal(2))
             expect(hanging.tool_calls[0].name).to(equal("Generate"))
             expect(hanging.tool_calls[1].name).to(equal("Generate"))
-            text = turn_prompt(hanging)
+            text = cli.turn_prompt(hanging)
             expect(text).to(contain("Turn.action: Generate"))
             expect(text).to(contain("Turn.tool_keys:"))
             expect(text).to(contain("Turn.toolCalls:"))
@@ -163,45 +155,50 @@ with description("IdeCli"):
             expect(text).to(contain("format=markdown"))
 
         with it("should open a Turn when no tools and no action are passed"):
-            hanging = bind_turn(blank_turn(), [], None)
+            cli = IdeCli()
+            hanging = cli.bind_turn(cli.blank_turn(), [], None)
             expect(hanging.action).to(equal(""))
             expect(hanging.tool_keys).to(equal([]))
             expect(hanging.tool_calls).to(equal([]))
-            expect(turn_prompt(hanging)).to(contain("Turn.action: (none)"))
+            expect(cli.turn_prompt(hanging)).to(contain("Turn.action: (none)"))
 
         with it("should keep a utility action with no context tools"):
-            hanging = bind_turn(blank_turn(), [], "handoff.handoff:Handoff")
+            cli = IdeCli()
+            hanging = cli.bind_turn(cli.blank_turn(), [], "handoff.handoff:Handoff")
             expect(hanging.action).to(equal("Handoff"))
             expect(hanging.tool_keys).to(equal([]))
-            expect(turn_prompt(hanging)).to(contain("Turn.action: Handoff"))
+            expect(cli.turn_prompt(hanging)).to(contain("Turn.action: Handoff"))
 
         with it("should keep prose on Turn.prompt instead of loading it as a toolset"):
-            hanging = bind_turn(blank_turn(), ["summarize the session"], None)
+            cli = IdeCli()
+            hanging = cli.bind_turn(cli.blank_turn(), ["summarize the session"], None)
             expect(hanging.action).to(equal(""))
             expect(hanging.tool_keys).to(equal([]))
             expect(hanging.prompt).to(equal("summarize the session"))
-            expect(turn_prompt(hanging)).to(contain("Turn.prompt: summarize the session"))
+            expect(cli.turn_prompt(hanging)).to(contain("Turn.prompt: summarize the session"))
 
         with it("should treat a prompt as the Turn when actions is prose"):
-            hanging = bind_turn(blank_turn(), [], "summarize the session")
+            cli = IdeCli()
+            hanging = cli.bind_turn(cli.blank_turn(), [], "summarize the session")
             expect(hanging.action).to(equal(""))
             expect(hanging.prompt).to(equal("summarize the session"))
-            expect(turn_prompt(hanging)).to(contain("Turn.action: (none)"))
-            expect(turn_prompt(hanging)).to(contain("Turn.prompt: summarize the session"))
+            expect(cli.turn_prompt(hanging)).to(contain("Turn.action: (none)"))
+            expect(cli.turn_prompt(hanging)).to(contain("Turn.prompt: summarize the session"))
 
         with it("should offer later items as guidance and leave the next Turn to the CLI"):
-            hanging = bind_turn(
-                blank_turn(),
+            cli = IdeCli()
+            hanging = cli.bind_turn(
+                cli.blank_turn(),
                 ["context_tools.stories.stories:Stories"],
                 "sketch.sketch:Sketch",
             )
-            text = turn_prompt(hanging, ["generate.generate:Generate"])
+            text = cli.turn_prompt(hanging, ["generate.generate:Generate"])
             expect(text).to(contain("Turn.action: Sketch"))
             expect(text).to(contain("guidance"))
             expect(text).to(contain("Guidance: Generate"))
-            expect(text).to(contain(NEXT_TURN))
+            expect(text).to(contain(cli.next_turn))
             expect(text).not_to(contain("Next Turn.action:"))
-            extra = turn_prompt(
+            extra = cli.turn_prompt(
                 hanging, ["handoff.handoff:Handoff", "write a one-line status"]
             )
             expect(extra).to(contain("Guidance: Handoff"))
@@ -218,17 +215,18 @@ with description("IdeCli"):
                     "context": {"fidelity": "model", "format": "markdown"},
                 },
             ]
-            aligned = align_tools(
+            cli = IdeCli()
+            aligned = cli.align_tools(
                 [
                     "context_tools.stories.stories:Stories",
                     "context_tools.clean_engineering.clean_engineering:CleanEngineering",
                 ],
                 generate,
             )
-            expect(tool_lens(aligned[0])["fidelity"]).to(equal("scenarios"))
-            expect(tool_lens(aligned[1])["fidelity"]).to(equal("model"))
-            expect(tool_lens(aligned[0])["format"]).to(equal("markdown"))
-            expect(lens_label(aligned[1])).to(contain("fidelity=model"))
+            expect(cli.tool_lens(aligned[0])["fidelity"]).to(equal("scenarios"))
+            expect(cli.tool_lens(aligned[1])["fidelity"]).to(equal("model"))
+            expect(cli.tool_lens(aligned[0])["format"]).to(equal("markdown"))
+            expect(cli.lens_label(aligned[1])).to(contain("fidelity=model"))
 
         with it("should tell the judge to validate at those same lenses"):
             cli = IdeCli(
@@ -254,13 +252,14 @@ with description("IdeCli"):
             expect(text).to(contain("fidelity=scenarios"))
             expect(text).to(contain("fidelity=model"))
             expect(text).to(contain("format=markdown"))
-            expect(text).to(contain(VALIDATE_SAME_LENS))
-            expect(text).to(contain(JUDGE_SOURCE_SCOPE))
+            expect(text).to(contain(cli.validate_same_lens))
+            expect(text).to(contain(cli.source_scope))
             expect(text).to(contain("Turn.action: Validate"))
 
         with it("should give the judge the original job as source scope"):
-            hanging = bind_turn(
-                blank_turn(),
+            cli = IdeCli(judge=True)
+            hanging = cli.bind_turn(
+                cli.blank_turn(),
                 [
                     {
                         "toolset": "context_tools.stories.stories:Stories",
@@ -270,11 +269,11 @@ with description("IdeCli"):
                 "generate.generate:Generate",
             )
             hanging.prompt = "scenarios for the story map"
-            worker = turn_prompt(hanging)
-            text = IdeCli(judge=True).judge_task_prompt(
+            worker = cli.turn_prompt(hanging)
+            text = cli.judge_task_prompt(
                 worker, generate_tools=hanging.tool_keys, turn=hanging
             )
-            expect(text).to(contain(JUDGE_SOURCE_SCOPE))
+            expect(text).to(contain(cli.source_scope))
             expect(text).to(contain("--- JOB / SOURCE SCOPE ---"))
             expect(text).to(contain("scenarios for the story map"))
 

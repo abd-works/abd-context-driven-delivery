@@ -142,6 +142,19 @@ class Turn:
         self.correction: Correction | None = None
         self.artifact_path = ""
 
+    @classmethod
+    def hanging(cls) -> Turn:
+        """Turn fields only — do not open a WorkSession."""
+        hanging = object.__new__(cls)
+        hanging.work_session = None
+        hanging.tool_keys = []
+        hanging.tool_calls = []
+        hanging.action = ""
+        hanging.fidelity = ""
+        hanging.format = ""
+        hanging.prompt = ""
+        return hanging
+
     @staticmethod
     def _work_session_from_context(workspace: str, session: str) -> WorkSession | None:
         root = (workspace or "").strip()
