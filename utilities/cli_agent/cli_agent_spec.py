@@ -330,14 +330,14 @@ with description("CursorCli"):
             )
             expect("-p" in argv).to(be_false)
 
-        with it("should pass print-mode flags only when print_mode is set"):
+        with it("should never pass print-mode flags"):
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
                 argv = CursorCli(
                     model="sonnet", agent_mode="plan", print_mode=True
                 )._command("do the work", "/ws")
-            expect(argv).to(contain("-p"))
+            expect("-p" in argv).to(be_false)
+            expect("stream-json" in argv).to(be_false)
             expect(argv).to(contain("--force"))
-            expect(argv).to(contain("stream-json"))
 
         with it("should map mode fast onto the Cursor model override"):
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):

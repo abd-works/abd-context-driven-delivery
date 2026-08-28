@@ -419,15 +419,10 @@ class _SessionArgv:
         return args
 
     def _cursor_trust(self, host: IdeCli, args: list[str]) -> None:
-        if host.print_mode:
-            args.extend(["-p", "--force", "--trust"])
-            return
         args.extend(["--force", "--trust"])
 
     def _cursor_stream(self, host: IdeCli, args: list[str]) -> None:
-        if not host.print_mode:
-            return
-        args.extend(["--output-format", "stream-json", "--stream-partial-output"])
+        return
 
     def _vscode_mode(self, agent_mode: str) -> str:
         if agent_mode == "ask":
@@ -688,8 +683,14 @@ class IdeCli:
         return (
             "After you finish the Turn, you contact the judge. "
             "Do not ask the parent to run the judge. The parent is not in this loop. "
-            f"Send .context/cli-agent-judge.txt to cursor-agent --resume {resume} "
-            f"--workspace {workspace} -p --force --trust and wait for the verdict. "
+            "Open the judge in its own console window so the operator can watch. "
+            "Never use print mode. "
+            "On Windows: Start-Process cursor-agent -ArgumentList "
+            f"'--force','--trust','--resume','{resume}','--workspace','{workspace}',"
+            "'Read .context/cli-agent-judge.txt and follow it exactly.' "
+            f"-WorkingDirectory '{workspace}' -WindowStyle Normal. "
+            "Wait for PASS or FAIL from the judge transcript or finish_turn, "
+            "not by reading this console. "
             "On PASS, stop. On FAIL, fix, finish the Turn, and send again "
             "(attempt n of 3). After three FAILs, stop and wait."
         )
