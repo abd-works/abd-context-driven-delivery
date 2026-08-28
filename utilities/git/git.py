@@ -545,10 +545,16 @@ class Repo:
         owner, repo = name.split("/", 1)
         return owner, repo
 
-    def is_dirty(self, path: str | Path | None = None) -> bool:
+    def is_dirty(
+        self, path: str | Path | None = None, *, untracked: bool = True
+    ) -> bool:
         if self._memory:
             return self._dirty
-        args = ["status", "--porcelain", "--untracked-files=normal"]
+        args = [
+            "status",
+            "--porcelain",
+            "--untracked-files=normal" if untracked else "--untracked-files=no",
+        ]
         if path is not None:
             args.extend(["--", self._rel(path)])
         return any(

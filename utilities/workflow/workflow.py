@@ -201,7 +201,10 @@ class Workflow:
         session_name = self.require_open_session(workspace=workspace)
         ws = self._workspace(workspace)
         session = ws.current_work_session
-        if session is not None:
+        if session is not None and (
+            session.open_turn is not None
+            or session.git.is_dirty(untracked=False)
+        ):
             session.turn.finish(
                 prompt=outcome,
                 result="finish",
@@ -380,7 +383,7 @@ class Workflow:
         session = ws.current_work_session
         if session is None:
             raise RuntimeError("no open work session")
-        if session.dirty:
+        if session.git.is_dirty(untracked=False):
             raise RuntimeError("working tree is dirty")
         config = self._load_workflow_config(self._repo_root(workspace))
         source = session.session_branch
