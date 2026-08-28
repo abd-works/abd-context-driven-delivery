@@ -5,8 +5,8 @@ scope: solution — plan + swarm utilities and git ticket-flow enhancement (tick
 flow:
   status: stable
   recommend: generate
-  next: scenarios + plan/swarm code class files
-  note: INCREMENT_4_STABLE. Grill ticks 1–12 locked. Stories+CE sketch finished for Increments 1–4.
+  next: scenarios refresh for reordered thin slices
+  note: Thin-slice reorder — Increment 1 is execute preconfigured Plan as Workflow (themed defects, root cause, /bdd+CE under hood, ticket Backlog→In Progress→Done). Compose and Swarm are later increments.
   open: []
   done:
     - pass #scaffold
@@ -19,6 +19,7 @@ flow:
     - pass #inc4-subagent-launch
     - pass #turn-multi-tool
     - pass #sketch-finish
+    - pass #thin-slice-execute-first
 
 =========
 theme: Compose Plan  (epic)

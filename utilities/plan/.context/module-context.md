@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Owns a Plan associated with a Workspace: an ordered sequence of Turns. Each Turn already has action, fidelity, context, and toolCalls. Turn.state is TicketState (Backlog / In Progress / Done). Optional JudgeCheckpoint and/or HILCheck hang on a Turn. Start Plan opens a WorkSession; the first Backlog Turn becomes In Progress. Execute Turn runs that In Progress Turn. Advance Turn finishes it (Done) and the next Backlog Turn becomes In Progress. Fix and Rerun uses Turn.recordMistake, recordCorrection, and WorkSession.repairs.
+Owns a Plan associated with a Workspace: an ordered sequence of Turns. Each Turn already has action, fidelity, context, and toolCalls. Turn.state is TicketState (Backlog / In Progress / Done). Optional JudgeCheckpoint and/or HILCheck hang on a Turn. Start Plan opens a WorkSession; the first Backlog Turn becomes In Progress. Execute Turn runs that In Progress Turn. Advance Turn finishes it (Done) and the next Backlog Turn becomes In Progress. Fix and Rerun uses Turn.recordMistake, recordCorrection, and WorkSession.repairs. When a Turn lists Bdd (`context_tools.bdd.bdd:Bdd`), Plan always adds CleanEngineering on the same Turn so `/bdd` runs CE under the hood.
 
 ## Primary use case
 

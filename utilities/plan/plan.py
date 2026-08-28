@@ -53,6 +53,9 @@ class Plan:
         plans.append(plan)
         return plan
 
+    _BDD_KEY = "context_tools.bdd.bdd:Bdd"
+    _CE_KEY = "context_tools.clean_engineering.clean_engineering:CleanEngineering"
+
     def add_turn(self, turn: Turn | None = None, **fields: Any) -> Turn:
         if turn is None:
             turn = Turn(work_session=None)
@@ -64,8 +67,31 @@ class Plan:
             turn.judge_checkpoint = None  # type: ignore[attr-defined]
         if not hasattr(turn, "hil_check"):
             turn.hil_check = None  # type: ignore[attr-defined]
+        self._ensure_bdd_includes_ce(turn)
         self.turns.append(turn)
         return turn
+
+    def _ensure_bdd_includes_ce(self, turn: Turn) -> None:
+        """/bdd must run Clean Engineering under the hood — companion on the same Turn."""
+        keys = list(getattr(turn, "tool_keys", None) or [])
+        if self._BDD_KEY in keys and self._CE_KEY not in keys:
+            keys.append(self._CE_KEY)
+            turn.tool_keys = keys
+        calls = list(getattr(turn, "tool_calls", None) or [])
+        has_bdd = any(getattr(c, "toolset", "") == self._BDD_KEY for c in calls)
+        has_ce = any(getattr(c, "toolset", "") == self._CE_KEY for c in calls)
+        if has_bdd and not has_ce:
+            from workspace.workspace import ToolCall
+
+            action = getattr(turn, "action", "") or "Generate"
+            calls.append(
+                ToolCall(
+                    toolset=self._CE_KEY,
+                    name=action,
+                    summary="CleanEngineering companion under /bdd",
+                )
+            )
+            turn.tool_calls = calls
 
     def edit_turn(self, turn: Turn, **fields: Any) -> Turn:
         for key, value in fields.items():

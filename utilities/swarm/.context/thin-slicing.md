@@ -6,51 +6,23 @@ format: md
 
 # Thin slicing — Plan And Swarm Utilities
 
-**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/swarm/.context/story-map.md`; `utilities/swarm/.context/grill-answers.md`
+**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/swarm/.context/story-map.md`; `utilities/swarm/.context/grill-answers.md`; `utilities/workflow/.context/module-context.md`; `context_tools/bdd/bdd.md`
 
 ## Product / context
 
-**Product:** Plan and Swarm utilities — ordered Turns on a Plan, ticket flow on git, Execute Plan, then Swarm with Supervisor + Agents.
+**Product:** Plan and Swarm utilities — execute planned work on GitHub tickets, then compose Plans and Swarm.
 
-**Slicing intent:** Compose first, then ticket flow on the existing git API, then Execute Plan on workspace.Turn, then Swarm Plan. Each increment leaves a usable spine before the next.
+**Slicing intent:** Ship value first by **running an already configured Plan** as a **project Workflow** operators assign tickets to. Theme the backlog around defects and small changes, do root cause, run `/bdd` (Clean Engineering under the hood), fix one issue at a time, and move each ticket Backlog → In Progress → Done with existing Workflow `/backlog` / `/start-ticket` / `/finish-ticket`. Compose/configure the Plan and Swarm wait until that spine works.
 
 ## Increments
 
-### Increment 1: Compose Plan
+### Increment 1: Execute themed tickets on a configured Plan Workflow
 
-**Outcome:** A Practitioner creates a Plan and manages Turns, HIL Checks, and Judge Checkpoints (add, edit, delete).
+**Outcome:** Operators assign GitHub tickets under one theme (defects and small changes) to a Plan that is already set and configured in the project repo. For each ticket they do root cause, run `/bdd` (which **must** run Clean Engineering under the hood via the Bdd → CleanEngineering companion), fix that one issue, and move the ticket Backlog → In Progress → Done using existing Workflow `backlog` / `start` / `finish`.
 
-**Slicing notes:** Compose only. Execute is the next slice.
+**Slicing notes:** Plan is preconfigured — no Compose in this slice. One theme, one ticket at a time. `/bdd` always includes CleanEngineering (`Bdd.ce()` / companion tool run) — not BDD alone. Ticket columns are only the existing Workflow/git states. Swarm and Plan composition wait.
 
-**Decision prompt:** Ready to manage ticket flow on the existing git API after this slice?
-
-**Stories:**
-- Create Plan
-- Manage Turns
-- Manage HIL Checks
-- Manage Judge Checkpoints
-
-### Increment 2: Manage ticket flow on git
-
-**Outcome:** Research tags, flow notes, and project TicketState (Backlog / In Progress / Done) live on the current git Ticket / Project / notes API keyed by GitHub issue `#`.
-
-**Slicing notes:** Enhance `Repo`, `Ticket`, `TicketState`, `note` / `read_notes`. Status examples are the existing columns only.
-
-**Decision prompt:** Ready to execute a plan after this slice?
-
-**Stories:**
-- Record Research Tags
-- Record Flow Notes
-- Update Ticket Status
-- Resolve Ticket Number
-
-### Increment 3: Execute Plan
-
-**Outcome:** Start Plan opens a WorkSession and moves the first Backlog Turn to In Progress. Execute Turn runs that Turn. Results go to a human (HILCheck) and a Judge; progress is reviewed; TicketState advances; Fix and Rerun records Mistake and Correction on the Turn and associates the existing Repair.
-
-**Slicing notes:** Existing Turn and WorkSession.repairs. Swarm waits until this slice is sketched.
-
-**Decision prompt:** Ready to swarm after this slice?
+**Decision prompt:** Ready to compose and configure Plans (Turns, HIL, Judge) after this slice?
 
 **Stories:**
 - Start Plan
@@ -60,6 +32,37 @@ format: md
 - Review Progress
 - Advance Turn
 - Fix and Rerun
+- Record Flow Notes
+- Update Ticket Status
+- Resolve Ticket Number
+
+### Increment 2: Compose and configure Plan
+
+**Outcome:** A Practitioner creates a Plan and manages Turns, HIL Checks, and Judge Checkpoints (add, edit, delete) so later themes can reuse a configured Plan Workflow.
+
+**Slicing notes:** Compose only. Execution spine already proven in Increment 1.
+
+**Decision prompt:** Ready to deepen ticket research tags after this slice?
+
+**Stories:**
+- Create Plan
+- Manage Turns
+- Manage HIL Checks
+- Manage Judge Checkpoints
+
+### Increment 3: Manage ticket research on git
+
+**Outcome:** Research tags and richer flow notes live on the current git Ticket / Project / notes API keyed by GitHub issue `#`, beyond the Workflow status moves already used in Increment 1.
+
+**Slicing notes:** Enhance `Repo`, `Ticket`, `TicketState`, `note` / `read_notes`. Status examples remain Backlog / In Progress / Done.
+
+**Decision prompt:** Ready to swarm after this slice?
+
+**Stories:**
+- Record Research Tags
+- Record Flow Notes
+- Update Ticket Status
+- Resolve Ticket Number
 
 ### Increment 4: Swarm Plan
 
