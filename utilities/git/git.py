@@ -605,7 +605,7 @@ class Repo:
             self._dirty = False
             return self._commit
         rels = [self._rel(path) for path in paths]
-        self._git( "add", "--", *rels)
+        self._git("add", "-u", "--", *rels)
         staged = self._git( "diff", "--cached", "--name-only", "--", *rels)
         if not staged:
             return self.current_commit
@@ -752,7 +752,7 @@ class Repo:
         return ""
 
     def merge_branch(self, source: str, into: str = "main", message: str = "") -> str:
-        if self.is_dirty():
+        if self.is_dirty(untracked=False):
             raise DirtyBranchSwitchError(self.current_branch, into)
         if self._memory:
             if source not in self._branch_names:

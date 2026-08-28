@@ -289,7 +289,10 @@ class Turn:
             if session is not None:
                 session.turns.append(self)
         if session is not None:
-            git.push()
+            try:
+                git.push()
+            except GitConnectError:
+                pass
             session.open_turn = None
         else:
             try:
