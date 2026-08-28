@@ -37,10 +37,12 @@ One cohesive file: `cli_agent.py`.
 
 - `CliAgent` — `@agentic_toolset` (`cli_agent.cli_agent:CliAgent`); extends
   `SubAgent`; `/cli-agent` is `@prompt(name="cli-agent")` on `run(tools, actions)`.
-  Property: `ide` — reuse across runs.
+  Properties: `ide`, `job`, `source_scope`, `prompt` — reuse across runs.
 - `IdeCli` — construct with `model`, `mode`, `agent_mode`, `judge`, `resume`.
-  `detect`, `launcher`, `command`, `judge_command`, `commands`, `spawn`,
-  `run`, `run_all`.
+  Same `job`, `source_scope`, and `prompt` as encapsulated properties.
+  Turn binding (`blank_turn`, `bind_turn`, `tool_lens`, `align_tools`) and
+  `turn_prompt` / `later_step` are methods. `detect`, `launcher`, `command`,
+  `judge_command`, `commands`, `spawn`, `run`, `run_all`.
 - `CursorCli` / `VscodeCli` — vendor argv **and** `Popen` via `spawn`
 
 ## Dependencies
