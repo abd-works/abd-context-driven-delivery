@@ -1,0 +1,502 @@
+ok: true
+toolset: context_tools.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven
+action: generate
+result: Ran clean_engineering then stories for this slice. Run validate.
+instructions: "1. Follow session_guidance (handled by the inherited body below). Fill\n\
+  templates/ for the domain module(s) this slice touches (shared/server/\nclient)\
+  \ and the composition roots (app-server, app-client) if not already\npresent.\n\
+  2. Call self._clean_engineering().generate() - production TypeScript code,\napplying\
+  \ the naming/layering rules below on top of CE's own OOAD rules.\n3. Call self._stories().generate()\
+  \ - *_spec.{tier} for tier in\n(server, client, e2e), applying the testing-architecture\
+  \ rules below. Its\nown ce() call wires or updates the same production code from\
+  \ step 2.\n4. Cite the ux screen/navigation artifact for this slice under Sources\
+  \ /\ncontext on the touched view files - this tool does not call ux itself.\n5.\
+  \ Run validate. If it fails, fix and validate again until it passes.\n\n# Generate\n\
+  \n1. Follow **`session_guidance`** and the session tools (`read_context_index`,\
+  \ `record_context_root`, `create_session` when needed). Resolve workspace + tool\
+  \ root, then use the **`active`** resource for `active.path` / `active.folder`.\n\
+  2. **MUST — prove-read before asking.** Before any grill/iterate question (and before\
+  \ inventing options or story/module names):\n   - Identify **every relevant context\
+  \ file referenced or implied** by the decision — not one favorite type. Typical\
+  \ set: `{workspace}/.context/context-index.md`, owning `*-segment.md`, `module-context.md`,\
+  \ session grill-answers / sketches / handoff, peer story-context, build-order, and\
+  \ any path the plan or prior answers cite. Include index/overlay only for structure\
+  \ hints; **never** treat mid-epic stub columns as inventory.\n   - **Read each of\
+  \ those files with the Read tool** (chunk through large ones). Grep, title lists,\
+  \ memory, or primer-only skims **do not count**.\n   - **Prove it in the question\
+  \ turn:** name the path(s) read and ground options in concrete terms from them.\
+  \ If you cannot cite specifics from the relevant files, you have not read them —\
+  \ go read before asking.\n   - Asking from a skim is a **defect**, same class as\
+  \ dumping a whole artifact in one iterate tick.\n3. **`sources-scoped-to-generated-context`**\
+  \ — Hang `**Sources / context:**` on the node they ground: epic / sub-epic / feature\
+  \ / module, or a lower item (scenario, class, screen, component, …). Root or parent-level\
+  \ Sources are fine when those files apply to the **entire** artifact or subtree.\n\
+  4. Apply all guidance and named rules in each **context** — each bullet is a requirement.\n\
+  5. Match **examples** for shape, depth, and tone.\n6. Fill the **template** scaffold\
+  \ and save the artifact under the session layout from `session_guidance`.\n7. Follow\
+  \ any extra build steps included in your instructions when present.\n8. Run **validate**.\
+  \ If it fails, fix the artifact and **validate** again until it passes.\n\n---\n\
+  \nOpen the workspace session in one step: set path (durable root), ensure the sprint\
+  \ exists (create if missing), load context index if present, record this tool's\
+  \ root when keyed. Follow session_guidance. Scope durable work to path and sprint\
+  \ docs to folder.\n\n# Session Guidance\n\n`Session` tracks three things:\n\n| Name\
+  \ | Meaning | Example |\n|------|---------|---------|\n| **path** | Durable tool\
+  \ root (`active.path`) | `…/sandbox` |\n| **folder** | Sprint folder (`active.folder`)\
+  \ | `…/sandbox/.context/sessions/{name}/` |\n| **context_index** | `{workspace_root}/.context/context-index.md`\
+  \ when present | tool → root map |\n\n## Constructor / run context\n\n- `workspace`\
+  \ — workspace root where `context-index.md` lives (default `\".\"`)\n- `path` —\
+  \ durable tool root\n- `session` — sprint slug under `{path}/.context/sessions/{name}/`\n\
+  \n## One call to open\n\n**`open`** — single action before generate / grill / sketch\
+  \ / iterate / validate:\n\n1. Resolve durable root (`path`)\n2. Ensure sprint exists\
+  \ (load or create)\n3. Load context index if present\n4. Record this tool's root\
+  \ when `context_index_key` is set\n\n```yaml\naction: open   # via self.workspace.open()\
+  \ from BaseContextTool\n```\n\nDo **not** separately chain bind + read_context_index\
+  \ + record_context_root from lifecycle bodies — `open` already does that.\n\n##\
+  \ Layout\n\n- **path** — docs → `{path}/.context/`; code/modules → `{path}/`\n-\
+  \ **folder** — `session.md`, grill-answers, engagement sketches, handoff, `to-fix.log`\n\
+  - **context-index** — `{workspace_root}/.context/context-index.md`\n\n## Root when\
+  \ `path` omitted\n\n1. context-index entry for `context_index_key`\n2. else `{workspace_root}/{default_workspace_folder}`\n\
+  \nResource `active` = Session(path='packages', name=None).\n\nOffer and write Context\
+  \ Decision Records (CDRs) sparingly as decisions crystallise during the wrapped\
+  \ action - never batch; never invent decisions.\n\nStep 1 - Read the format once\
+  \ via read_cdr_format. Internalise the three-criteria gate and the minimal template.\n\
+  \nStep 2 - Optionally call list_cdrs(root) so you do not re-record an already-captured\
+  \ decision.\n\nStep 3 - During the session (grill, sketch, or generate), watch for\
+  \ decisions that meet ALL three: hard to reverse, surprising without context, and\
+  \ a real trade-off. If any criterion is missing, skip the CDR.\n\nStep 4 - When\
+  \ a qualifying decision crystallises, offer a CDR briefly (title + one-line gist).\
+  \ If the user accepts, call write_cdr immediately with a kebab slug and content\
+  \ matching CDR-FORMAT.md. Do not batch; do not wait until the end.\n\nStep 5 - Keep\
+  \ CDRs short. Prefer a single paragraph. Add Status / Considered Options / Consequences\
+  \ only when they add genuine value.\n\n# Contexts\n\nImplementation fidelity for\
+  \ a **domain-module-organized MERN stack** (MongoDB /\nExpress / React / Node, TypeScript\
+  \ everywhere) on an already-designed vertical\nslice — story map, module boundaries,\
+  \ and screens all exist before this tool\nruns. `generate` calls `self._clean_engineering()`\
+  \ (production TypeScript) and\n`self._stories()` (acceptance tests) directly — the\
+  \ rules below are additive\non top of what those two already enforce, not a restatement\
+  \ of them.\n\n**No fidelity progression of its own.** Every run is pinned: `clean_engineering`\n\
+  at `code`, `stories` at `acceptance_tests`, both `format=\"typescript\"`.\n\n---\n\
+  \n## Domain module organization\n\n- **`organize-by-domain-module`** — `packages/<domain>/{shared,client,server}`\
+  \ present, each with the required tier files; composition roots (`app-server/`,\
+  \ `app-client/`) present.\n- **`share-domain-logic`** — entities, value objects,\
+  \ Zod schemas, and business rules defined once in `shared/`; every tier extends\
+  \ from there, never re-derives.\n- **`maintain-layer-purity`** — `shared/` is framework-free\
+  \ (no Express, no React, no Mongo driver); `client/` and `server/` never cross-import\
+  \ each other.\n\n## Naming / layering\n\nEvery artifact instantiates from the domain\
+  \ — file, class, and method names\nderive from domain classes/operations. `shared/`\
+  \ keeps plain domain names\n(`Recipient`, `Recipients`); every extension in `client/`\
+  \ or `server/` adds a\nlayer qualifier (`RecipientClient`, `RecipientsServer`, `RecipientApi`,\n\
+  `RecipientRouter`, `RecipientRepositoryServer`). `Domain` is never part of a\nclass\
+  \ name.\n\n| Layer | Qualifier | Example |\n|---|---|---|\n| `shared/` | *(none)*\
+  \ | `Recipient`, `Recipients`, `RecipientRepository` |\n| `client/` | `Client`,\
+  \ `Api` | `RecipientClient`, `RecipientsClient`, `RecipientApi` |\n| `server/` |\
+  \ `Server`, `Router`, `RepositoryServer` | `RecipientsServer`, `RecipientRouter`,\
+  \ `RecipientRepositoryServer` |\n\n- **`use-ubiquitous-language`** — names come\
+  \ from the domain model; no `Manager`, `Handler`, `Helper`, or `Domain*` prefixes/suffixes.\n\
+  - **`cross-layer-method-naming`** — the same `{verbNoun}` method stem flows through\
+  \ every tier where an operation appears (shared → client → server → route → API).\n\
+  - **`preserve-arg-names-across-layers`** — argument names stay identical across\
+  \ layer boundaries; only types narrow.\n- **`property-casing-transform`** — `camelCase`\
+  \ in TypeScript; `snake_case` in JSON and MongoDB documents.\n- **`consistent-view-naming`**\
+  \ — React components end in `View` or `CardView`; never `Page`.\n\n## App server\
+  \ / routes\n\n- **`delegate-routes-to-domain-server`** — route handlers are thin:\
+  \ parse the request, delegate to a server-side domain class in `<domain>-server`;\
+  \ never call the repository or apply shared-domain logic inline.\n- **`ensure-type-safe-routes`**\
+  \ — route handlers compile without implicit `any`; `req.user` and other request\
+  \ extensions are typed.\n- **`standard-mutation-response`** — every mutation on\
+  \ the same aggregate returns the same response shape.\n\n## Types & entities\n\n\
+  - **`implement-domain-entities-correctly`** — business rules live on domain classes;\
+  \ the Zod schema validates at the repository boundary, not inline in routes or views.\n\
+  - **`implement-full-interfaces`** — every `implements` clause covers all interface\
+  \ members; no stub no-ops standing in for real behavior.\n\n## Packaging\n\n- **`use-valid-package-names`**\
+  \ — `package.json` names are valid npm-scoped names (`@scope/domain-tier`) derived\
+  \ from the domain and tier; no placeholder scopes (`@project`, `@acme`, `@app`,\
+  \ …); no phantom imports.\n- **`include-all-external-dependencies`** — every import\
+  \ has a declared dependency; the project compiles after a clean install.\n\n## Testing\
+  \ architecture\n\nCompanion to `stories`'s `acceptance_tests` fidelity — this tool\
+  \ pins the\ngeneric `*_spec.{tier}` to `tier ∈ {server, client, e2e}` and the stub\
+  \ policy\nper tier. Domain unit tests (always present, live beside the class, not\
+  \ under\nthis tool) are a separate always-on layer.\n\n| Tier | Real | Stubbed |\
+  \ Entry point |\n|---|---|---|---|\n| domain unit | shared domain classes | nothing\
+  \ | class method call |\n| server | domain + repository + test DB | nothing | Supertest\
+  \ → Express route |\n| client | React tree + hooks + client domain | `<Entity>Api`\
+  \ via `vi.mock` | Testing Library render |\n| e2e | full stack | nothing | Playwright\
+  \ `page.goto` |\n\nA base helper (`<sub-epic>.base.ts`) carries Given/When/Then\
+  \ vocabulary in\nbusiness terms; each tier helper extends it with the same names,\
+  \ different\nmechanism underneath. Prefer building tier helpers from `stories`'\n\
+  `{Type}ExampleFactory` (`Isolated` mode = ctor-injected mocks for the server\ntier's\
+  \ collaborators, `Production` mode = real collaborators) over hand-rolled\nfixtures.\n\
+  \n- **`test-story-driven`** — tests mirror the story hierarchy (epic → folder, sub-epic\
+  \ → file, story → `describe`, scenario → `it`); Given/When/Then helpers present\
+  \ at all three tiers.\n- **`scaffold-test-scripts`** — `scripts/test.sh`, `test.ps1`,\
+  \ `test-e2e.sh`, `test-e2e.ps1` present at the workspace root; unit/component and\
+  \ E2E runners stay separate (Vitest vs Playwright), and `vitest.config.ts` / `playwright.config.ts`\
+  \ don't pick up each other's spec files.\n- **`use-thorough-e2e-tests`** — E2E tests\
+  \ are independent (no blanket deletes between tests); `app-client` must exist and\
+  \ serve the real frontend before E2E tests can pass.\n\n## UX hand-off\n\nScreens\
+  \ and navigation for this slice were designed upstream by `ux` before\nthis tool\
+  \ runs. `generate` cites that artifact under **Sources / context** on\nthe touched\
+  \ view files (`app-client/<Feature>View.tsx`,\n`<domain>/client/<Entity>ListView.tsx`,\
+  \ …) — it does not call `ux` itself.\n\n## examples.md\n\n# Examples\n\nOne worked\
+  \ vertical slice - **recipients**, from the wire-payment feature -\ncarried over\
+  \ from the old-world spec's walkthrough. Shows every rule in\n`mern_domain_driven.md`\
+  \ applied together: domain module organization, layer\nqualifiers, layer purity,\
+  \ Zod at both boundaries, route delegation, and\nconsistent view naming. For the\
+  \ matching acceptance-test shape (`*_spec.\n{server,client,e2e}`, Given/When/Then\
+  \ helpers), see `stories`' own\n`acceptance_tests`-fidelity examples - this tool\
+  \ only adds the tier pinning\nand stub policy documented under **Testing architecture**\
+  \ above.\n\n## shared/ - domain classes, no framework imports\n\n```typescript\n\
+  // packages/recipients/shared/recipient.schema.ts\nexport const RecipientSchema\
+  \ = z.object({\n  id: z.string().uuid(),\n  name: z.string().min(1, 'Beneficiary\
+  \ name is required').max(140),\n  status: z.enum(['Active', 'Pending', 'Inactive']),\n\
+  \  beneficiaryBank: BeneficiaryBankSchema,\n  createdAt: z.coerce.date(),\n});\n\
+  ```\n\n```typescript\n// packages/recipients/shared/Recipient.ts\nexport class Recipient\
+  \ {\n  constructor(private readonly dto: RecipientDto) {}\n\n  get id(): string\
+  \ { return this.dto.id; }\n  get name(): string { return this.dto.name; }\n  get\
+  \ bankName(): string { return this.dto.beneficiaryBank.name; }\n\n  static fromDto(dto:\
+  \ RecipientDto): Recipient {\n    return new Recipient(dto);\n  }\n}\n```\n\n```typescript\n\
+  // packages/recipients/shared/Recipients.ts - collection class, domain query methods\n\
+  export class Recipients {\n  constructor(protected readonly items: Recipient[])\
+  \ {}\n\n  filterByStatus(status: string): Recipients {\n    return new Recipients(this.items.filter(r\
+  \ => r.dto.status === status));\n  }\n\n  toArray(): Recipient[] { return this.items;\
+  \ }\n}\n```\n\n```typescript\n// packages/recipients/shared/RecipientRepository.ts\
+  \ - interface, implemented server-side\nexport interface RecipientRepository {\n\
+  \  findByEnterprise(enterpriseId: string): Promise<Recipient[]>;\n}\n```\n\nNote\
+  \ the naming: bare `Recipient` / `Recipients` in `shared/` (no `Domain`\nprefix),\
+  \ the interface named after the concept (`RecipientRepository`), not\n`RecipientRepositoryInterface`.\n\
+  \n## server/ - route delegates, server domain owns the operation, repository validates\
+  \ at the boundary\n\n```typescript\n// packages/recipients/server/recipients.routes.ts\n\
+  router.get('/', async (req, res) => {\n  const enterpriseId = (req as any).user.enterpriseId;\n\
+  \  const activeOnly = req.query.activeOnly === 'true';\n  const recipients = await\
+  \ RecipientsServer.loadByEnterprise(enterpriseId, repo, { activeOnly });\n  res.json({\
+  \ recipients, total: recipients.length });\n});\n```\n\n```typescript\n// packages/recipients/server/RecipientsServer.ts\
+  \ - extends shared, owns the operation\nexport class RecipientsServer extends Recipients\
+  \ {\n  static async loadByEnterprise(\n    enterpriseId: string,\n    repo: RecipientRepository,\n\
+  \    opts?: { activeOnly?: boolean },\n  ): Promise<Recipient[]> {\n    const all\
+  \ = await repo.findByEnterprise(enterpriseId);\n    let collection: Recipients =\
+  \ new Recipients(all);\n    if (opts?.activeOnly) {\n      collection = collection.filterByStatus('Active');\n\
+  \    }\n    return collection.toArray();\n  }\n}\n```\n\n```typescript\n// packages/recipients/server/recipients.repository.ts\
+  \ - implements RecipientRepository, validates via Zod\nexport class RecipientRepositoryServer\
+  \ implements RecipientRepository {\n  async findByEnterprise(enterpriseId: string):\
+  \ Promise<Recipient[]> {\n    const docs = await this.collection.find({ enterpriseId\
+  \ }).toArray();\n    return docs.map(doc => Recipient.fromDto(RecipientSchema.parse(doc)));\n\
+  \  }\n}\n```\n\nThe route never calls `repo.*` or shared-domain logic itself - it\
+  \ delegates\nstraight to `RecipientsServer.loadByEnterprise()` (`delegate-routes-to-domain-\n\
+  server`). The repository is the only place `RecipientSchema.parse()` runs on\nraw\
+  \ docs (`share-domain-logic`), and it's the only file importing `mongodb`\n(`implement-domain-entities-correctly`).\n\
+  \n## client/ - hydrate JSON into domain instances, views delegate to hooks and domain\
+  \ JS\n\n```typescript\n// packages/recipients/client/Recipient.api.ts\nexport class\
+  \ RecipientApi {\n  static async loadByEnterprise(opts?: { activeOnly?: boolean\
+  \ }): Promise<RecipientClient[]> {\n    const params = new URLSearchParams();\n\
+  \    if (opts?.activeOnly) params.set('activeOnly', 'true');\n    const response\
+  \ = await fetch(`/api/recipients?${params}`);\n    const data = await response.json();\n\
+  \    return hydrateRecipients(data.recipients);  // never returns raw JSON as typed\n\
+  \  }\n}\n```\n\n```typescript\n// packages/recipients/client/RecipientsClient.ts\n\
+  export class RecipientsClient extends Recipients {\n  static async load(opts?: {\
+  \ activeOnly?: boolean }): Promise<RecipientsClient> {\n    const items = await\
+  \ RecipientApi.loadByEnterprise(opts);\n    return new RecipientsClient(items);\n\
+  \  }\n}\n```\n\n```typescript\n// packages/recipients/client/RecipientClient.ts\
+  \ - DOM behaviour lives on client domain JS, not the view\nexport class RecipientClient\
+  \ extends Recipient {\n  cardCssClass(isSelected: boolean): string {\n    return\
+  \ `recipient-card${isSelected ? ' selected' : ''}`;\n  }\n}\n```\n\n```typescript\n\
+  // packages/recipients/client/useRecipients.ts\nexport function useRecipients()\
+  \ {\n  const [collection, setCollection] = useState<RecipientsClient | null>(null);\n\
+  \  const [loading, setLoading] = useState(false);\n\n  useEffect(() => {\n    setLoading(true);\n\
+  \    RecipientsClient.load({ activeOnly: true })\n      .then(setCollection)\n \
+  \     .finally(() => setLoading(false));\n  }, []);\n\n  return {\n    recipients:\
+  \ collection?.toPresentation() ?? [],\n    loading,\n    toggleRecipient: (id: string)\
+  \ =>\n      setCollection(prev => (prev ? prev.toggleSelection(id) : null)),\n \
+  \   isSelected: (id: string) => collection?.isSelected(id) ?? false,\n    selectedCount:\
+  \ collection?.selectedCount() ?? 0,\n  };\n}\n```\n\n```typescript\n// packages/recipients/client/RecipientListView.tsx\
+  \ - View delegates; domain JS owns behaviour\nexport function RecipientListView()\
+  \ {\n  const { recipients, selectedCount, loading, toggleRecipient, isSelected }\
+  \ = useRecipients();\n\n  return (\n    <div className=\"recipient-list-view\">\n\
+  \      <h1>Select Recipient for Wire Payment</h1>\n      {loading && <p>Loading\
+  \ recipients...</p>}\n      <div className=\"recipient-cards\" data-testid=\"recipient-list\"\
+  >\n        {recipients.map(r => (\n          <RecipientCardView\n            key={r.id}\n\
+  \            recipient={r}\n            isSelected={isSelected(r.id)}\n        \
+  \    onToggle={() => toggleRecipient(r.id)}\n          />\n        ))}\n      </div>\n\
+  \      <footer><p>{selectedCount} recipient(s) selected</p></footer>\n    </div>\n\
+  \  );\n}\n```\n\n```typescript\n// packages/recipients/client/RecipientCardView.tsx\n\
+  export function RecipientCardView({ recipient, isSelected, onToggle }: RecipientCardViewProps)\
+  \ {\n  return (\n    <div className={recipient.cardCssClass(isSelected)} onClick={onToggle}>\n\
+  \      <h3>{recipient.name}</h3>\n      <p className=\"bank\">{recipient.bankName}</p>\n\
+  \    </div>\n  );\n}\n```\n\n```typescript\n// packages/app-client/WirePaymentView.tsx\
+  \ - top-level feature view composes domain views only\nexport function WirePaymentView()\
+  \ {\n  return (\n    <main className=\"wire-payment-page\">\n      <RecipientListView\
+  \ />\n    </main>\n  );\n}\n```\n\nEvery component ends in `View` (`consistent-view-naming`);\
+  \ `RecipientCardView`\ncalls `recipient.cardCssClass(isSelected)` rather than computing\
+  \ the class\nname inline - DOM-adjacent behaviour still lives on client domain JS,\
+  \ not the\nJSX.\n\n## Known gap in the ported templates\n\n`templates/{domainName}/server/{domainName}.routes.ts`\
+  \ (carried over verbatim\nfrom the old-world spec's generic scaffold) calls `repo.findAll()`\
+  \ /\n`repo.findById()` / `repo.save()` directly - it predates the `recipients`\n\
+  walkthrough above and violates `delegate-routes-to-domain-server` (confirmed\nby\
+  \ running `scan()` against this tool's own `templates/` tree). Fix the\nscaffold\
+  \ to delegate through a `<Domain>sServer` class, matching this example,\nbefore\
+  \ relying on it to seed new domains.\n\n\n## app-client/App.tsx\n\nimport React\
+  \ from 'react';\nimport { Route, Routes } from 'react-router-dom';\nimport { HomeView\
+  \ } from './HomeView';\nimport { {{EpicName}}View } from './{{EpicName}}View';\n\
+  \nexport default function App() {\n  return (\n    <Routes>\n      <Route path=\"\
+  /\" element={<HomeView />} />\n      <Route path=\"/{{epicSlug}}\" element={<{{EpicName}}View\
+  \ />} />\n    </Routes>\n  );\n}\n\n\n## app-client/HomeView.tsx\n\nimport React\
+  \ from 'react';\nimport { Link } from 'react-router-dom';\n\nexport function HomeView()\
+  \ {\n  return (\n    <main className=\"home-view\">\n      <h1>{{appName}}</h1>\n\
+  \      <nav>\n        <Link to=\"/{{epicSlug}}\">{{EpicName}}</Link>\n      </nav>\n\
+  \    </main>\n  );\n}\n\n\n## app-client/index.html\n\n<!DOCTYPE html>\n<html lang=\"\
+  en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"\
+  width=device-width, initial-scale=1.0\" />\n    <title>{{appName}}</title>\n  </head>\n\
+  \  <body>\n    <div id=\"root\"></div>\n    <script type=\"module\" src=\"/main.tsx\"\
+  ></script>\n  </body>\n</html>\n\n\n## app-client/main.tsx\n\nimport React from\
+  \ 'react';\nimport { createRoot } from 'react-dom/client';\nimport { BrowserRouter\
+  \ } from 'react-router-dom';\nimport App from './App';\n\ncreateRoot(document.getElementById('root')!).render(\n\
+  \  <BrowserRouter>\n    <App />\n  </BrowserRouter>,\n);\n\n\n## app-client/package.json\n\
+  \n{\n  \"name\": \"@{{appName}}/app-client\",\n  \"private\": true,\n  \"dependencies\"\
+  : {\n    \"@{{appName}}/{{domainNames}}-client\": \"file:../{{domainNames}}/client\"\
+  ,\n    \"react\": \"^19.0.0\",\n    \"react-dom\": \"^19.0.0\",\n    \"react-router-dom\"\
+  : \"^7.0.0\"\n  },\n  \"devDependencies\": {\n    \"@types/react\": \"^19.0.0\"\
+  ,\n    \"@types/react-dom\": \"^19.0.0\",\n    \"@vitejs/plugin-react\": \"^4.3.0\"\
+  ,\n    \"vite\": \"^6.0.0\"\n  }\n}\n\n\n## app-client/vite.config.ts\n\nimport\
+  \ { defineConfig } from 'vite';\nimport react from '@vitejs/plugin-react';\n\nexport\
+  \ default defineConfig({\n  plugins: [react()],\n  server: { port: 3000 },\n});\n\
+  \n\n## app-client/{EpicName}View.tsx\n\nimport React from 'react';\nimport { {{DomainName}}ListView\
+  \ } from '@{{appName}}/{{domainNames}}-client';\n\n// Top-level view — composition\
+  \ of domain views.\n// A top-level view can compose views from multiple domains.\n\
+  // It owns layout and navigation between steps,\n// but contains no domain logic\
+  \ of its own.\nexport function {{EpicName}}View() {\n  return (\n    <main className=\"\
+  {{epicSlug}}-page\">\n      <{{DomainName}}ListView />\n    </main>\n  );\n}\n\n\
+  \n## app-server/app.ts\n\nimport express from 'express';\nimport cors from 'cors';\n\
+  import { {{DomainName}}sRepository, create{{DomainName}}sRouter } from '@{{appName}}/{{domainNames}}-server';\n\
+  \nexport function createApp(): express.Application {\n  const app = express();\n\
+  \  app.use(cors());\n  app.use(express.json());\n\n  const repo = new {{DomainName}}sRepository(/*\
+  \ db */);\n  app.use('/api/{{domainNames}}', create{{DomainName}}sRouter(repo));\n\
+  \n  return app;\n}\n\n\n## app-server/package.json\n\n{\n  \"name\": \"@{{appName}}/app-server\"\
+  ,\n  \"version\": \"0.0.0\",\n  \"private\": true,\n  \"main\": \"app.ts\",\n  \"\
+  dependencies\": {\n    \"@{{appName}}/{{domainNames}}-server\": \"*\",\n    \"express\"\
+  : \"^4.18.0\",\n    \"cors\": \"^2.8.0\"\n  }\n}\n\n\n## package.json\n\n{\n  \"\
+  name\": \"@{{appName}}/example\",\n  \"private\": true,\n  \"scripts\": {\n    \"\
+  test\": \"vitest run\",\n    \"test:e2e\": \"playwright test\"\n  },\n  \"devDependencies\"\
+  : {\n    \"@playwright/test\": \"^1.49.0\",\n    \"@testing-library/jest-dom\":\
+  \ \"^6.6.0\",\n    \"@testing-library/react\": \"^16.0.0\",\n    \"@types/express\"\
+  : \"^5.0.0\",\n    \"@types/react\": \"^19.0.0\",\n    \"@types/react-dom\": \"\
+  ^19.0.0\",\n    \"jsdom\": \"^25.0.0\",\n    \"typescript\": \"^5.7.0\",\n    \"\
+  vitest\": \"^3.0.0\"\n  }\n}\n\n\n## README.md\n\n# MERN Specification Templates\n\
+  \nParameterized scaffold for the MERN architecture specification. Peer to `../template/`\
+  \ — the template slice is a filled instance of these templates.\n\n## Structure\n\
+  \n```\ntemplates/\n├── domain-module/         ← copy as packages/<domainNames>/\n\
+  │   ├── shared/            ← entity, collection, schema, repository interface\n\
+  │   ├── server/            ← repository impl, routes, composition\n│   └── client/\
+  \            ← API client, hook, views\n├── app-server/            ← composition\
+  \ root — mounts domain routers\n├── app-client/            ← composition root —\
+  \ React app, routes\n└── tests/                 ← test scaffold — epic/sub-epic\
+  \ structure\n```\n\n## Placeholders\n\n| Placeholder | Casing | Example |\n|-------------|--------|---------|\n\
+  | `{{appName}}` | camelCase | channelone |\n| `{{DomainName}}` | PascalCase | Recipient\
+  \ |\n| `{{domainName}}` | camelCase | recipient |\n| `{{domainNames}}` | camelCase\
+  \ plural | recipients |\n| `{{EpicName}}` | Title | Create Wire Payment |\n| `{{epicSlug}}`\
+  \ | kebab-case | create-wire-payment |\n| `{{SubEpicName}}` | Title | Select Recipient\
+  \ |\n| `{{subEpicSlug}}` | kebab-case | select-recipient |\n\n## Usage\n\n1. Copy\
+  \ `domain-module/` as `packages/{{domainNames}}/`.\n2. Copy `app-server/` and `app-client/`\
+  \ as `packages/app-server/` and `packages/app-client/`.\n3. Copy `tests/` as `tests/`.\n\
+  4. Replace all `{{placeholders}}` with concrete domain values.\n5. Fill domain-specific\
+  \ logic — entity fields, value objects, business rules, test data.\n6. Ensure all\
+  \ tests pass.\n\n\n## tests/{epicSlug}/helpers/{subEpicSlug}.base.ts\n\n/**\n *\
+  \ {{subEpicSlug}}.base.ts — Scenario vocabulary and test data constants.\n *\n *\
+  \ Abstract base: tier helpers (server, client, e2e) extend this class\n * and implement\
+  \ the abstract seed/cleanup methods for their tier.\n */\n\nexport abstract class\
+  \ {{SubEpicName}}BaseHelper {\n  protected abstract seed(): Promise<void>;\n  abstract\
+  \ cleanup(): Promise<void>;\n\n  // Given steps — shared across all tiers\n  //\
+  \ When steps — shared across all tiers\n  // Then steps — shared across all tiers\n\
+  }\n\n\n## tests/{epicSlug}/helpers/{subEpicSlug}.client.ts\n\n/**\n * {{subEpicSlug}}.client.ts\
+  \ — Client tier helper.\n *\n * vi.mock at API boundary; Testing Library for React\
+  \ assertions.\n */\nimport { {{SubEpicName}}BaseHelper } from './{{subEpicSlug}}.base';\n\
+  \nexport class {{SubEpicName}}ClientHelper extends {{SubEpicName}}BaseHelper {\n\
+  \  protected async seed(): Promise<void> {\n    // Mock API responses\n  }\n\n \
+  \ async cleanup(): Promise<void> {\n    // Clear mocks\n  }\n}\n\n\n## tests/{epicSlug}/helpers/{subEpicSlug}.server.ts\n\
+  \n/**\n * {{subEpicSlug}}.server.ts — Server tier helper.\n *\n * Seeds DB, uses\
+  \ Supertest for HTTP assertions.\n */\nimport { {{SubEpicName}}BaseHelper } from\
+  \ './{{subEpicSlug}}.base';\n\nexport class {{SubEpicName}}ServerHelper extends\
+  \ {{SubEpicName}}BaseHelper {\n  protected async seed(): Promise<void> {\n    //\
+  \ Insert test data into MongoDB\n  }\n\n  async cleanup(): Promise<void> {\n   \
+  \ // Clear test data\n  }\n}\n\n\n## tests/{epicSlug}/{subEpicSlug}_server.test.ts\n\
+  \nimport { describe, it, beforeEach, afterEach } from 'vitest';\nimport { {{SubEpicName}}ServerHelper\
+  \ } from './helpers/{{subEpicSlug}}.server';\n\n// Epic: {{EpicName}} | Sub-Epic:\
+  \ {{SubEpicName}}\n\ndescribe('{{SubEpicName}}', () => {\n  const helper = new {{SubEpicName}}ServerHelper();\n\
+  \n  beforeEach(async () => { await helper.cleanup(); });\n  afterEach(async () =>\
+  \ { await helper.cleanup(); });\n\n  it('happy path — fill from spec-by-example\
+  \ scenario', async () => {\n    // Given\n    // When\n    // Then\n  });\n\n  it('failure\
+  \ path — fill from spec-by-example scenario', async () => {\n    // Given\n    //\
+  \ When\n    // Then\n  });\n});\n\n\n## vitest.config.ts\n\nimport { defineConfig\
+  \ } from 'vitest/config';\n\nexport default defineConfig({\n  test: {\n    include:\
+  \ ['tests/**/*_server.test.ts', 'tests/**/*_client.test.tsx'],\n    globals: true,\n\
+  \    environment: 'jsdom',\n    setupFiles: ['./tests/setup.ts'],\n  },\n});\n\n\
+  \n## {domainName}/client/index.ts\n\nexport { {{DomainName}}ListView } from './{{DomainName}}ListView';\n\
+  export { {{DomainName}}CardView } from './{{DomainName}}CardView';\nexport { use{{DomainName}}s\
+  \ } from './use{{DomainName}}s';\n\n\n## {domainName}/client/package.json\n\n{\n\
+  \  \"name\": \"@{{appName}}/{{domainNames}}-client\",\n  \"version\": \"0.0.0\"\
+  ,\n  \"private\": true,\n  \"main\": \"index.ts\",\n  \"types\": \"index.ts\",\n\
+  \  \"dependencies\": {\n    \"@{{appName}}/{{domainNames}}-shared\": \"*\",\n  \
+  \  \"react\": \"^18.2.0\",\n    \"react-dom\": \"^18.2.0\"\n  },\n  \"devDependencies\"\
+  : {\n    \"@types/react\": \"^18.2.0\",\n    \"@types/react-dom\": \"^18.2.0\"\n\
+  \  }\n}\n\n\n## {domainName}/client/use{DomainNames}.ts\n\n/**\n * use{{DomainName}}s.ts\
+  \ — React hook for domain entity state management.\n *\n * Loads domain entities\
+  \ from the API and exposes search/filter using\n * the SHARED {{DomainName}}s collection\
+  \ class — same logic as server-side.\n */\nimport { useState, useEffect, useCallback\
+  \ } from 'react';\nimport { {{DomainName}}, {{DomainName}}s } from '@{{appName}}/{{domainNames}}-shared';\n\
+  import { list{{DomainName}}s } from './{{domainName}}.api';\n\nexport function use{{DomainName}}s()\
+  \ {\n  const [items, setItems] = useState<{{DomainName}}[]>([]);\n  const [loading,\
+  \ setLoading] = useState(false);\n\n  useEffect(() => {\n    setLoading(true);\n\
+  \    list{{DomainName}}s({ activeOnly: true })\n      .then(setItems)\n      .finally(()\
+  \ => setLoading(false));\n  }, []);\n\n  const filterBySearch = useCallback((query:\
+  \ string) => {\n    const collection = new {{DomainName}}s(items);\n    return collection.search(query).toArray();\n\
+  \  }, [items]);\n\n  return { items, loading, filterBySearch };\n}\n\n\n## {domainName}/client/{domainName}.api.ts\n\
+  \n/**\n * {{domainName}}.api.ts — API client (fetch wrapper).\n *\n * Function names\
+  \ match the domain verb exactly.\n * Every function corresponds to a route in {{domainName}}.routes.ts.\n\
+  \ */\nimport { {{DomainName}} } from '@{{appName}}/{{domainNames}}-shared';\n\n\
+  const API_BASE = '/api/{{domainNames}}';\n\nexport async function list{{DomainName}}s(\n\
+  \  filters?: { activeOnly?: boolean }\n): Promise<{{DomainName}}[]> {\n  const params\
+  \ = new URLSearchParams();\n  if (filters?.activeOnly) params.set('active_only',\
+  \ 'true');\n  const response = await fetch(`${API_BASE}?${params}`);\n  return response.json();\n\
+  }\n\nexport async function get{{DomainName}}(id: string): Promise<{{DomainName}}>\
+  \ {\n  const response = await fetch(`${API_BASE}/${id}`);\n  return response.json();\n\
+  }\n\nexport async function create{{DomainName}}(\n  input: Record<string, unknown>\n\
+  ): Promise<{{DomainName}}> {\n  const response = await fetch(API_BASE, {\n    method:\
+  \ 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify(input),\n\
+  \  });\n  return response.json();\n}\n\n\n## {domainName}/client/{DomainName}CardView.tsx\n\
+  \n/**\n * {{DomainName}}CardView.tsx — Presentational component for a single domain\
+  \ entity.\n */\nimport { {{DomainName}} } from '@{{appName}}/{{domainNames}}-shared';\n\
+  \ninterface {{DomainName}}CardViewProps {\n  item: {{DomainName}};\n  onSelect?:\
+  \ (item: {{DomainName}}) => void;\n}\n\nexport function {{DomainName}}CardView({\
+  \ item, onSelect }: {{DomainName}}CardViewProps) {\n  return (\n    <div\n     \
+  \ className=\"{{domainName}}-card\"\n      onClick={() => onSelect?.(item)}\n  \
+  \    role={onSelect ? 'button' : undefined}\n    >\n      <h3>{item.name}</h3>\n\
+  \      <span className=\"status\">{item.status.status}</span>\n    </div>\n  );\n\
+  }\n\n\n## {domainName}/client/{DomainName}ListView.tsx\n\n/**\n * {{DomainName}}ListView.tsx\
+  \ — Container component with search and list rendering.\n */\nimport { useState\
+  \ } from 'react';\nimport { {{DomainName}} } from '@{{appName}}/{{domainNames}}-shared';\n\
+  import { use{{DomainName}}s } from './use{{DomainName}}s';\nimport { {{DomainName}}CardView\
+  \ } from './{{DomainName}}CardView';\n\ninterface {{DomainName}}ListViewProps {\n\
+  \  onSelectItem?: (item: {{DomainName}}) => void;\n}\n\nexport function {{DomainName}}ListView({\
+  \ onSelectItem }: {{DomainName}}ListViewProps) {\n  const { items, loading, filterBySearch\
+  \ } = use{{DomainName}}s();\n  const [searchQuery, setSearchQuery] = useState('');\n\
+  \n  const displayed = searchQuery ? filterBySearch(searchQuery) : items;\n\n  if\
+  \ (loading) return <p>Loading...</p>;\n\n  return (\n    <div className=\"{{domainName}}-list\"\
+  >\n      <input\n        type=\"search\"\n        placeholder=\"Search...\"\n  \
+  \      value={searchQuery}\n        onChange={(e: any) => setSearchQuery(e.target.value)}\n\
+  \      />\n      {displayed.map(item => (\n        <{{DomainName}}CardView key={item.id}\
+  \ item={item} onSelect={onSelectItem} />\n      ))}\n    </div>\n  );\n}\n\n\n##\
+  \ {domainName}/server/index.ts\n\nexport { {{DomainName}}sRepository } from './{{domainName}}.repository';\n\
+  export { create{{DomainName}}sRouter } from './{{domainName}}.routes';\n\n\n## {domainName}/server/package.json\n\
+  \n{\n  \"name\": \"@{{appName}}/{{domainNames}}-server\",\n  \"version\": \"0.0.0\"\
+  ,\n  \"private\": true,\n  \"main\": \"index.ts\",\n  \"types\": \"index.ts\",\n\
+  \  \"dependencies\": {\n    \"@{{appName}}/{{domainNames}}-shared\": \"*\",\n  \
+  \  \"express\": \"^4.18.0\",\n    \"mongodb\": \"^6.0.0\"\n  },\n  \"devDependencies\"\
+  : {\n    \"@types/express\": \"^4.17.0\"\n  }\n}\n\n\n## {domainName}/server/{domainName}.repository.ts\n\
+  \n/**\n * {{domainName}}.repository.ts — MongoDB data access for the domain entity.\n\
+  \ *\n * Validates raw documents with the shared Zod schema at the repository\n *\
+  \ boundary, ensuring only typed domain entities propagate through the system.\n\
+  \ */\nimport { Collection, Db } from 'mongodb';\nimport { {{DomainName}}, {{DomainName}}Status,\
+  \ {{DomainName}}Schema, {{DomainName}}DTO, Create{{DomainName}}Input } from '@{{appName}}/{{domainNames}}-shared';\n\
+  \nfunction toDomainEntity(dto: {{DomainName}}DTO): {{DomainName}} {\n  return {\n\
+  \    id: dto.id,\n    name: dto.name,\n    status: new {{DomainName}}Status(dto.status,\
+  \ dto.createdAt),\n    createdAt: dto.createdAt,\n  };\n}\n\nexport class {{DomainName}}sRepository\
+  \ {\n  private collection: Collection;\n\n  constructor(db: Db) {\n    this.collection\
+  \ = db.collection('{{domainNames}}');\n  }\n\n  async findAll(): Promise<{{DomainName}}[]>\
+  \ {\n    const docs = await this.collection.find().toArray();\n    return docs.map(doc\
+  \ => toDomainEntity({{DomainName}}Schema.parse(doc)));\n  }\n\n  async findById(id:\
+  \ string): Promise<{{DomainName}} | null> {\n    const doc = await this.collection.findOne({\
+  \ id });\n    if (!doc) return null;\n    return toDomainEntity({{DomainName}}Schema.parse(doc));\n\
+  \  }\n\n  async save(input: Create{{DomainName}}Input): Promise<{{DomainName}}>\
+  \ {\n    const doc = {\n      id: crypto.randomUUID(),\n      name: input.name,\n\
+  \      status: 'Pending',\n      createdAt: new Date(),\n    };\n    await this.collection.insertOne(doc);\n\
+  \    return toDomainEntity({{DomainName}}Schema.parse(doc));\n  }\n}\n\n\n## {domainName}/server/{domainName}.routes.ts\n\
+  \n/**\n * {{domainName}}.routes.ts — Express router factory.\n *\n * Route paths\
+  \ use kebab-case of the domain verb.\n * Every route must have a corresponding API\
+  \ function in the client's {{domainName}}.api.ts.\n */\nimport { Router } from 'express';\n\
+  import { {{DomainName}}sRepository } from './{{domainName}}.repository';\nimport\
+  \ { {{DomainName}}s, Create{{DomainName}}InputSchema } from '@{{appName}}/{{domainNames}}-shared';\n\
+  \nexport function create{{DomainName}}sRouter(repo: {{DomainName}}sRepository):\
+  \ Router {\n  const router = Router();\n\n  router.get('/', async (req, res) =>\
+  \ {\n    const all = await repo.findAll();\n    const activeOnly = req.query.active_only\
+  \ === 'true';\n    let collection = new {{DomainName}}s(all);\n    if (activeOnly)\
+  \ {\n      collection = collection.filterByStatus('Active');\n    }\n    res.json(collection.toArray());\n\
+  \  });\n\n  router.get('/:id', async (req, res) => {\n    const item = await repo.findById(req.params.id);\n\
+  \    if (!item) {\n      res.status(404).json({ error: 'Not found' });\n      return;\n\
+  \    }\n    res.json(item);\n  });\n\n  router.post('/', async (req, res) => {\n\
+  \    const validation = Create{{DomainName}}InputSchema.safeParse(req.body);\n \
+  \   if (!validation.success) {\n      res.status(400).json({ error: validation.error.issues[0].message\
+  \ });\n      return;\n    }\n    const created = await repo.save(validation.data);\n\
+  \    res.status(201).json(created);\n  });\n\n  return router;\n}\n\n\n## {domainName}/shared/index.ts\n\
+  \nexport * from './{{DomainName}}';\nexport * from './{{domainName}}.schema';\n\
+  export * from './{{DomainName}}s';\nexport * from './{{DomainName}}Repository';\n\
+  \n\n## {domainName}/shared/package.json\n\n{\n  \"name\": \"@{{appName}}/{{domainNames}}-shared\"\
+  ,\n  \"version\": \"0.0.0\",\n  \"private\": true,\n  \"main\": \"index.ts\",\n\
+  \  \"types\": \"index.ts\",\n  \"dependencies\": {\n    \"zod\": \"^3.22.0\"\n \
+  \ }\n}\n\n\n## {domainName}/shared/{DomainNames}.ts\n\n/**\n * {{DomainName}}s.ts\
+  \ — Collection class with domain-oriented query methods.\n *\n * Wraps a {{DomainName}}[]\
+  \ array with fluent, chainable methods.\n * Used identically on client and server\
+  \ — same logic, zero duplication.\n */\nimport { {{DomainName}}, {{DomainName}}StatusType\
+  \ } from './{{DomainName}}';\n\nexport class {{DomainName}}s {\n  constructor(private\
+  \ readonly items: {{DomainName}}[]) {}\n\n  filterByStatus(status: {{DomainName}}StatusType):\
+  \ {{DomainName}}s {\n    return new {{DomainName}}s(this.items.filter(r => r.status.status\
+  \ === status));\n  }\n\n  search(query: string): {{DomainName}}s {\n    const lower\
+  \ = query.toLowerCase();\n    return new {{DomainName}}s(\n      this.items.filter(r\
+  \ => r.name.toLowerCase().includes(lower))\n    );\n  }\n\n  toArray(): {{DomainName}}[]\
+  \ {\n    return [...this.items];\n  }\n\n  get length(): number {\n    return this.items.length;\n\
+  \  }\n}\n\n\n## {domainName}/shared/{domainName}.schema.ts\n\n/**\n * {{domainName}}.schema.ts\
+  \ — Zod validation schema for the domain entity.\n *\n * Used at repository boundary\
+  \ (.parse()) and API/form boundary (.safeParse()).\n * Both client/ and server/\
+  \ import this — single source of truth.\n */\nimport { z } from 'zod';\n\nexport\
+  \ const {{DomainName}}Schema = z.object({\n  id: z.string().uuid(),\n  name: z.string().min(1,\
+  \ '{{DomainName}} name is required').max(140),\n  status: z.enum(['Active', 'Pending',\
+  \ 'Inactive']),\n  createdAt: z.coerce.date(),\n});\n\nexport const Create{{DomainName}}InputSchema\
+  \ = z.object({\n  name: z.string().min(1, 'Name is required').max(140),\n});\n\n\
+  export type Create{{DomainName}}Input = {\n  name: string;\n};\n\nexport type {{DomainName}}DTO\
+  \ = {\n  id: string;\n  name: string;\n  status: 'Active' | 'Pending' | 'Inactive';\n\
+  \  createdAt: Date;\n};\n\n\n## {domainName}/shared/{DomainName}.ts\n\n/**\n * {{DomainName}}.ts\
+  \ — Entity and Value Objects for the {{domainName}} module.\n *\n * Replace '{{DomainName}}'\
+  \ with your entity (PascalCase).\n * This file lives in packages/{{domainNames}}/shared/\
+  \ and has ZERO framework imports.\n */\n\nexport type {{DomainName}}StatusType =\
+  \ 'Active' | 'Pending' | 'Inactive';\n\nexport class {{DomainName}}Status {\n  constructor(\n\
+  \    public readonly status: {{DomainName}}StatusType,\n    public readonly createdAt:\
+  \ Date\n  ) {}\n\n  isActive(): boolean {\n    return this.status === 'Active';\n\
+  \  }\n\n  isPending(): boolean {\n    return this.status === 'Pending';\n  }\n}\n\
+  \nexport interface {{DomainName}} {\n  id: string;\n  name: string;\n  status: {{DomainName}}Status;\n\
+  \  createdAt: Date;\n}\n\n\n## {domainName}/shared/{DomainName}Repository.ts\n\n\
+  /**\n * {{DomainName}}Repository.ts — Repository interface (shared, framework-free).\n\
+  \ *\n * Server provides the concrete implementation.\n */\nimport { {{DomainName}}\
+  \ } from './{{DomainName}}';\nimport { Create{{DomainName}}Input } from './{{domainName}}.schema';\n\
+  \nexport interface {{DomainName}}Repository {\n  findAll(): Promise<{{DomainName}}[]>;\n\
+  \  findById(id: string): Promise<{{DomainName}} | null>;\n  save(input: Create{{DomainName}}Input):\
+  \ Promise<{{DomainName}}>;\n}\n\n\nPrepend the following block verbatim as the very\
+  \ first lines of the file you are writing - before any imports, before any code.\n\
+  \nEvery tool call uses this shape - set `tool` and `arguments`, pipe to CLI:\n\n\
+  ```yaml\ntoolset: context_tools.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven\n\
+  context:\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m tools\
+  \ run -\n\nSuggested flow (repeat and reorder as the story needs):\n\n1. tool: ensure_session\n\
+  \   arguments:\n     name: <value>\n     goal: <value>\n     fidelities: <value>\n\
+  \     contexts: <value>\n     path: <value>\n\n2. tool: read_context_index\n\n3.\
+  \ tool: record_context_root\n   arguments:\n     root: <value>\n     note: <value>\n\
+  \n4. tool: read_cdr_format\n\n5. tool: list_cdrs\n\n6. tool: write_cdr\n\n7. tool:\
+  \ generate\n\n8. tool: generate\n\nRead `resources` from each response before choosing\
+  \ the next tool."
+tools:
+- ensure_session
+- read_context_index
+- record_context_root
+- read_cdr_format
+- list_cdrs
+- write_cdr
+- generate
+arguments: {}
+resources:
+  active:
+    path: packages
+    name: null
+    folder: null
+    goal: null
+    fidelities: null
+    contexts: null
+    started: '2026-08-03'
+    ended: null
+    outcome: null
+    handoff: null
+  mode: action
