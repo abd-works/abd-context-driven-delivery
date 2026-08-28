@@ -47,9 +47,9 @@
 
 ### Increment 4: Swarm Plan
 
-**Outcome:** A Supervisor is created with an Outcome; Agents are added with a Hypothesis; Compare Swarm Results reuses Execute Plan judgment; Comparative Association applies the Supervisor rubric across Agent results.
+**Outcome:** A Supervisor is created with an Outcome and a shared `Swarm.turns` slice selected once; Agents are added with a Hypothesis (register only); each Agent’s `SubAgent.run` launches at `Plan.start` on its own WorkSession and runs that shared slice; Compare Swarm Results streams after each Judge or HIL evaluation; Comparative Association updates automatically under the Supervisor rubric toward Outcome.
 
-**Slicing notes:** Create Supervisor before Add Agent. Comparative Association is the extra swarm mechanic on top of singular judgment.
+**Slicing notes:** Create Supervisor before Add Agent. Shared turn slice before any Agent runs. Mid-run Add Agent registers then launches when that Agent starts the Plan. Comparative Association is automatic after each streamed compare (not a second wait).
 
 **Decision prompt:** Ready to specify remaining scenarios after this slice?
 

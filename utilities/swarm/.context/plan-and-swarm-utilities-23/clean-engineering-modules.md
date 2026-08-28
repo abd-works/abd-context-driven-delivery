@@ -4,7 +4,7 @@
 
 *Plan* is associated with a *Workspace*. It holds ordered *Turn*s. Each *Turn* has action, fidelity, context, and toolCalls. *Turn.state* is *TicketState* (Backlog / In Progress / Done). A *JudgeCheckpoint* and/or *HILCheck* may hang on a *Turn*. *Start Plan* opens a *WorkSession*; the first Backlog Turn becomes In Progress. *Execute Turn* runs that Turn. *Advance Turn* finishes it (Done) and the next Backlog Turn becomes In Progress.
 
-*Swarm* comes after Execute Plan. *Create Supervisor* owns *Outcome*. *Add Agent* owns *Hypothesis*. Each Agent runs Execute Plan on its own *WorkSession*. *Compare Swarm Results* is that same judgment. *Comparative Association* applies the Supervisor rubric across Agent results.
+*Swarm* comes after Execute Plan. *Create Supervisor* owns *Outcome*. A shared *Swarm.turns* slice is selected once before any Agent runs. *Add Agent* owns *Hypothesis* and registers the Agent. *SubAgent.run* launches at *Plan.start* on that Agent’s own *WorkSession*; each Agent runs the shared slice. *Compare Swarm Results* streams after each Judge or HIL evaluation. *Comparative Association* updates automatically under the Supervisor rubric toward *Outcome*.
 
 *ResearchTag* is ticket metadata on the existing *Ticket* / *Project* graph in **git**, keyed by GitHub issue `#`. Notes stay git notes (and trailers for flow). *TicketState* remains Backlog / In Progress / Done.
 

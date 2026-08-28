@@ -1,4 +1,4 @@
 This is an interactive session.
 Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
-Actions: sketch.sketch:Sketch
+Actions: generate.generate:Generate
 Run the listed actions with the listed context tools.

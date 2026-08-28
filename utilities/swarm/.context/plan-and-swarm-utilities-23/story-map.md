@@ -53,7 +53,7 @@ section: body
 
 ## Scope boundary
 
-**In scope:** A Plan associated with a Workspace, holding ordered Turns (existing `workspace.Turn`). Manage Turns / HIL Checks / Judge Checkpoints is add, edit, and delete. Execute Plan runs a Turn, presents results to a human (HILCheck), has a Judge evaluate, reviews progress, advances TicketState to the next Turn, and Fix and Rerun uses existing Turn `record_mistake` / `record_correction` plus WorkSession `Repair`. Swarm comes after: Create Supervisor (Outcome) then Add Agent (Hypothesis). Compare Swarm Results is the same judgment as Execute Plan. Comparative Association is that judgment plus the Supervisor rubric associating Agent results. Git `Repo` / `Ticket` / `Project` / `TicketState` manage research tags, notes, and flow. Related seams: `@sub_agent`, `ai_judge`, workflow ticket + project status.
+**In scope:** A Plan associated with a Workspace, holding ordered Turns (existing `workspace.Turn`). Manage Turns / HIL Checks / Judge Checkpoints is add, edit, and delete. Execute Plan runs a Turn, presents results to a human (HILCheck), has a Judge evaluate, reviews progress, advances TicketState to the next Turn, and Fix and Rerun uses existing Turn `record_mistake` / `record_correction` plus WorkSession `Repair`. Swarm comes after: Create Supervisor (Outcome) then Add Agent (Hypothesis). One shared turn slice (`Swarm.turns`) is selected once before any Agent runs; each Agent runs that same slice on its own WorkSession. Add Agent registers the Agent; `SubAgent.run` launches at `Plan.start` on that WorkSession. Compare Swarm Results is the same judgment as Execute Plan and streams after each Judge or HIL evaluation. Comparative Association runs automatically after each streamed compare under the Supervisor rubric toward Outcome. Git `Repo` / `Ticket` / `Project` / `TicketState` manage research tags, notes, and flow. Related seams: `@sub_agent`, `ai_judge`, workflow ticket + project status.
 
 **Out of scope:** New slash-command product UX beyond existing kits (`/backlog`, `/start-ticket`, `/finish-ticket`, `/sub-agent`). Invented kanban columns or status badges. A second ticket identity besides GitHub issue `#`. A parallel yaml/store beside `utilities/git`. Production Python in this pass.
 
@@ -108,9 +108,9 @@ section: body
 
 ### Increment 4: Swarm Plan
 
-**Outcome:** A Supervisor is created with an Outcome; Agents are added with a Hypothesis; Compare Swarm Results reuses Execute Plan judgment; Comparative Association applies the Supervisor rubric across Agent results.
+**Outcome:** A Supervisor is created with an Outcome and a shared `Swarm.turns` slice selected once; Agents are added with a Hypothesis (register only); each Agent’s `SubAgent.run` launches at `Plan.start` on its own WorkSession and runs that shared slice; Compare Swarm Results streams after each Judge or HIL evaluation; Comparative Association updates automatically under the Supervisor rubric toward Outcome.
 
-**Slicing notes:** Create Supervisor before Add Agent. Comparative Association is the extra swarm mechanic on top of singular judgment.
+**Slicing notes:** Create Supervisor before Add Agent. Shared turn slice before any Agent runs. Mid-run Add Agent registers then launches when that Agent starts the Plan. Comparative Association is automatic after each streamed compare (not a second wait).
 
 **Decision prompt:** Ready to specify remaining scenarios after this slice?
 

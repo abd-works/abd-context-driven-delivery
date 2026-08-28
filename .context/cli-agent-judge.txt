@@ -2,3 +2,4 @@ This is an interactive session.
 Context tools: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
 Actions: validate.validate:Validate
 Run the listed actions with the listed context tools.
+Stories at scenarios. Clean Engineering at model.
