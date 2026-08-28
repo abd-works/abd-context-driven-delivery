@@ -21,7 +21,7 @@ format: md
 
 ## Behaviors
 
-### Scenario: Compare streams after a JudgeCheckpoint and associates
+### Scenario: Compare streams after a JudgeCheckpoint
 
 *Given* an **Agent** that owns **Hypothesis** *Stories generate story_map*  
   *And* that **Agent** **WorkSession** **Turn** just finished a **JudgeCheckpoint**  
@@ -32,7 +32,7 @@ format: md
   *And* **Supervisor.associate** updates under the **Supervisor** rubric toward **Outcome** *Plan-started*  
   *And* the other **Agent** is still running
 
-### Scenario: Compare streams after a HILCheck and associates
+### Scenario: Compare streams after a HILCheck
 
 *Given* an **Agent** **WorkSession** **Turn** just finished a **HILCheck**  
   *And* another **Agent** is still running  
@@ -41,9 +41,26 @@ format: md
   *And* **Supervisor.compare** shows progress for every **Agent**  
   *And* **Supervisor.associate** updates under the **Supervisor** rubric toward **Outcome** *Plan-started*
 
+### Scenario: Compare does not wait for all Agents
+
+*Given* two **Agent**s still running Execute Plan  
+  *And* the *Stories* **Agent** **Turn** just finished a **JudgeCheckpoint**  
+*When* the **Supervisor** compares swarm results  
+*Then* **Supervisor.compare** includes that **JudgeCheckpoint** evaluation  
+  *And* the *CleanEngineering* **Agent** is still running
+
+### Scenario: Compare can use a Plan JudgeCheckpoint rubric
+
+*Given* a **Plan** **Turn** with **JudgeCheckpoint** rubric *stories-scenarios*  
+  *And* an **Agent** **WorkSession** **Turn** just finished that **JudgeCheckpoint**  
+*When* the **Supervisor** compares swarm results  
+*Then* **Supervisor.compare** includes that **JudgeCheckpoint** rubric evaluation
+
 ### Evidence
 
 | Scenario | Source | Location |
 | --- | --- | --- |
-| Compare streams after a JudgeCheckpoint and associates | grill-answers.md | ticks 6, 11 |
-| Compare streams after a HILCheck and associates | grill-answers.md | ticks 6, 11 |
+| Compare streams after a JudgeCheckpoint | grill-answers.md | ticks 6, 11 |
+| Compare streams after a HILCheck | grill-answers.md | ticks 6, 11 |
+| Compare does not wait for all Agents | plan-and-swarm-sketch.md | Swarm Plan / Compare Swarm Results |
+| Compare can use a Plan JudgeCheckpoint rubric | plan-and-swarm-sketch.md | Swarm Plan / Compare Swarm Results |

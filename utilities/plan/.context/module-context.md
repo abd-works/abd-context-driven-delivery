@@ -18,9 +18,9 @@ Plan, JudgeCheckpoint, HILCheck, TicketState
 
 ## Public API
 
-- `Plan` — `workspace`, `turns`; `create(workspace)`, `start()` → WorkSession, `executeTurn()`, `advanceTurn()`
-- `JudgeCheckpoint` — `rubric`, `judgeResult` (same rubric argument as `ai_judge`)
-- `HILCheck` — human-in-the-loop check hanging on a Turn
+- `Plan` — `workspace`, `turns`; `create(workspace)`, `add_turn` / `edit_turn` / `delete_turn`, `add_hil_check` / `edit_hil_check` / `delete_hil_check`, `add_judge_checkpoint` / `edit_judge_checkpoint` / `delete_judge_checkpoint`, `start()` → WorkSession, `execute_turn()`, `validate_with_human()`, `evaluate_results()`, `review_progress()`, `advance_turn()`, `fix_and_rerun()`
+- `JudgeCheckpoint` — `rubric`, `judge_result` (same rubric argument as `ai_judge`)
+- `HILCheck` — `validation` hanging on a Turn
 
 ## Dependencies
 

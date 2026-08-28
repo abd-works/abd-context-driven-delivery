@@ -234,10 +234,14 @@ class _JudgePrompt:
 
     def extras(self, host: IdeCli) -> list[str]:
         task = host.judge
-        extra = [host._validate_same_lens, host.source_scope]
+        extra = [
+            host._judge_reply_to_doer,
+            host._validate_same_lens,
+            host.source_scope,
+        ]
         prior = self._task_prior(task)
         if prior:
-            extra.insert(0, prior)
+            extra.insert(1, prior)
         return extra
 
     def _task_tools(self, task: dict, tools):
@@ -322,9 +326,22 @@ class _CliSpawner:
         log.write(self._log_lines(argv))
         log.close()
 
-    def start(self, argv: list[str], workspace: str) -> IdeCliResult:
+    def start(
+        self, argv: list[str], workspace: str, existing_pid: int = 0
+    ) -> IdeCliResult:
+        from git.git import CliAgentBinding
+
         role = self.spawn_role(argv)
         self.append_log(workspace, argv, role)
+        if existing_pid and CliAgentBinding.pid_is_alive(existing_pid):
+            return IdeCliResult(
+                exit_code=0,
+                text=f"pid: {existing_pid}",
+                stderr="",
+                argv=list(argv),
+                elapsed_seconds=0.0,
+                pid=int(existing_pid),
+            )
         proc = subprocess.Popen(argv, **self.popen_kwargs(workspace))
         return IdeCliResult(
             exit_code=0,
@@ -438,6 +455,9 @@ class _WorkAttach:
         work = agent._ensure_work_session()
         work.load_cli_sessions()
         vendor = agent.ide._detect()
+        if work.agent_open:
+            agent._ide = vendor._copy_policy(vendor._resumed(work.cli_doer, work.cli_judge))
+            return work
         if not work.cli_doer:
             work.associate_cli("doer", vendor._create_chat(agent._workspace_root()))
         if vendor.judge and not work.cli_judge:
@@ -483,12 +503,18 @@ class IdeCli:
         "Judge the artifacts produced at that fidelity and format. "
         "When format is markdown, validate the markdown; do not look for source code."
     )
+    _judge_reply_to_doer = (
+        "The doer invoked you after it finished the Turn. Validate now. "
+        "Reply PASS or FAIL to the doer and finish this Turn. "
+        "Do not wait for the parent. The parent is not in this loop."
+    )
     _launch = "Read {path} and follow it exactly."
     _cmdline_safe = 4096
     _parent_checkin = (
-        "The parent does not block on the CLI. Every once in a while, check "
-        "the CLI (logs, transcript tail, hanging Turn, artifacts) and report "
-        "back how it is doing. Do not drive the work with -p."
+        "The parent talks to the doer only. Every once in a while, check "
+        "the doer (logs, transcript tail, hanging Turn, artifacts). "
+        "Do not prompt, launch, or score the judge. The doer runs the "
+        "judge and waits. Do not drive the work with -p."
     )
 
     def __init__(
@@ -655,6 +681,19 @@ class IdeCli:
     def _turn_prompt(self, turn, later_actions: list | None = None) -> str:
         return _TurnPrompt().render(self, turn, later_actions)
 
+    def _doer_ask_judge(self, judge_resume: str, workspace: str) -> str:
+        resume = (judge_resume or "").strip()
+        if not resume:
+            return ""
+        return (
+            "After you finish the Turn, you contact the judge. "
+            "Do not ask the parent to run the judge. The parent is not in this loop. "
+            f"Send .context/cli-agent-judge.txt to cursor-agent --resume {resume} "
+            f"--workspace {workspace} -p --force --trust and wait for the verdict. "
+            "On PASS, stop. On FAIL, fix, finish the Turn, and send again "
+            "(attempt n of 3). After three FAILs, stop and wait."
+        )
+
     def _create_chat(self, workspace: str, *, timeout_seconds: int | None = None) -> str:
         return _ChatMint().mint()
 
@@ -726,10 +765,7 @@ class IdeCli:
         if not chosen.judge:
             return argv
         judge_text = judge_prompt or chosen._judge_task_prompt(prompt)
-        judge_launch = chosen._launch_prompt(
-            judge_text, workspace, name="cli-agent-judge.txt"
-        )
-        argv.append(chosen._judge_command(judge_launch, workspace))
+        chosen._write_task_file(judge_text, workspace, "cli-agent-judge.txt")
         return argv
 
     def _spawn(
@@ -738,9 +774,10 @@ class IdeCli:
         workspace: str,
         *,
         timeout_seconds: int | None = None,
+        existing_pid: int = 0,
     ) -> IdeCliResult:
         started = time.perf_counter()
-        result = _CliSpawner().start(argv, workspace)
+        result = _CliSpawner().start(argv, workspace, existing_pid=existing_pid)
         return _CliSpawner().with_elapsed(result, started)
 
     def _launch_cli(
@@ -764,12 +801,21 @@ class IdeCli:
         judge_prompt: str = "",
         *,
         timeout_seconds: int | None = None,
+        doer_pid: int = 0,
+        judge_pid: int = 0,
     ) -> list[IdeCliResult]:
         chosen = self if type(self) is not IdeCli else self._detect()
         spawned = []
-        for argv in chosen._commands(prompt, workspace, judge_prompt):
+        pids = (doer_pid, judge_pid)
+        for index, argv in enumerate(chosen._commands(prompt, workspace, judge_prompt)):
+            existing = pids[index] if index < len(pids) else 0
             spawned.append(
-                chosen._spawn(argv, workspace, timeout_seconds=timeout_seconds)
+                chosen._spawn(
+                    argv,
+                    workspace,
+                    timeout_seconds=timeout_seconds,
+                    existing_pid=existing,
+                )
             )
         return spawned
 
@@ -841,11 +887,14 @@ those per run.
 The parent must not call start_work_session, open, or ensure_started.
 Pass workspace (and session when known) on this kit. This run opens or
 resumes the WorkSession, switches to that path, binds doer and judge,
-then starts an interactive session. If ide.judge is set, a second
-process is the judge. The judge uses the same tools, fidelity, and
-format, and compares written artifacts to the source scope of the
-original job (whole artifact or a stated slice). Missing source
-nodes are a fail. Markdown generate is judged as markdown.
+then starts the doer interactive session. If ide.judge is set, bind a
+judge chat id and write cli-agent-judge.txt. The parent does not
+launch or prompt the judge. The doer, after finish_turn, sends that
+file to the judge CLI, waits for PASS or FAIL, and they go back and
+forth (three FAILs then stop). The judge uses the same tools,
+fidelity, and format, and compares written artifacts to the source
+scope of the original job (whole artifact or a stated slice). Missing
+source nodes are a fail. Markdown generate is judged as markdown.
 
 When this is launched from a chat, always include a process reference
 so a person can get at the CLI: pid when known, and each cursor-agent
@@ -853,9 +902,10 @@ so a person can get at the CLI: pid when known, and each cursor-agent
 them as chat links.
 
 The parent sees kind: sub_agent / launch: non_blocking and does not wait.
-The parent does not block on the CLI. Every once in a while, check
-the CLI (logs, transcript tail, hanging Turn, artifacts) and report
-back how it is doing. Do not drive the work with -p.
+The parent talks to the doer only. Every once in a while, check the
+doer (logs, transcript tail, hanging Turn, artifacts) and report
+back how it is doing. Do not prompt, launch, or score the judge.
+Do not drive the work with -p.
 ide.detect().run_all starts the interactive session(s) and returns.
 
 -> IdeCli.detect
@@ -1001,15 +1051,33 @@ class CliAgent(SubAgent):
             judge_prompt = self.ide._judge_task_prompt(
                 self.job, generate_tools=tools, turn=hanging
             )
+        binding = (
+            self.work_session.cli_agent_binding if self.work_session is not None else None
+        )
         results = self.ide._detect()._launch_all(
-            self.job, self._workspace_root(), judge_prompt
+            self.job,
+            self._workspace_root(),
+            judge_prompt,
+            doer_pid=0 if binding is None else binding.doer_pid,
+            judge_pid=0 if binding is None else binding.judge_pid,
         )
         failed = self._first_failure(results)
         if failed is not None:
             raise RuntimeError(
                 failed.stderr.strip() or failed.text.strip() or "IDE CLI exited non-zero"
             )
+        self._record_cli_binding(results)
         return results
+
+    def _record_cli_binding(self, results: list[IdeCliResult]) -> None:
+        work = self.work_session
+        if work is None:
+            return
+        if results:
+            work.cli_doer_pid = results[0].pid
+        if len(results) > 1:
+            work.cli_judge_pid = results[1].pid
+        work.save_cli_sessions()
 
     def _session_report(self, work, results) -> str:
         parts = [spawned.text for spawned in results if spawned.text]
@@ -1034,6 +1102,10 @@ class CliAgent(SubAgent):
         work = self._attach_cli_sessions()
         hanging, later = self._described_turn(tools, actions)
         self.job = self.ide._turn_prompt(hanging, later)
+        if self.ide.judge and work.cli_judge:
+            self.job += "\n" + self.ide._doer_ask_judge(
+                work.cli_judge, self._workspace_root()
+            )
         results = self._spawn_worker(tools, hanging)
         return self._session_report(work, results)
 

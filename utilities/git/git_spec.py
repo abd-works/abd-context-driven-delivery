@@ -18,7 +18,16 @@ from expects import be_a, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from git import TicketNotFoundError
-from git.git import Branch, Commit, Project, Repo, Ticket, TicketState, resolve_github_status_option
+from git.git import (
+    Branch,
+    CliAgentBinding,
+    Commit,
+    Project,
+    Repo,
+    Ticket,
+    TicketState,
+    resolve_github_status_option,
+)
 
 
 with description("a Ticket"):
@@ -57,6 +66,22 @@ with description("a Repo"):
             expect(commit).to(be_a(Commit))
             expect(commit.message).to(equal("demo turn"))
             expect(self.repo.current_branch).to(equal("session/demo"))
+
+        with it("should persist a cli-agent binding on the branch tag"):
+            import os
+
+            binding = CliAgentBinding(
+                status="open",
+                doer="doer-chat",
+                doer_pid=os.getpid(),
+                judge="judge-chat",
+                judge_pid=0,
+            )
+            self.repo.branch_named("session/demo").assign_cli_agent(binding)
+            loaded = self.repo.branch_named("session/demo").cli_agent()
+            expect(loaded.doer).to(equal("doer-chat"))
+            expect(loaded.judge).to(equal("judge-chat"))
+            expect(loaded.open).to(be_true)
 
         with it("should store commit trailer data on the commit object"):
             message = self.repo.workflow_commit_message(

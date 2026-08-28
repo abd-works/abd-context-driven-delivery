@@ -2,6 +2,7 @@
 
 from git.git import (
     Branch,
+    CliAgentBinding,
     Commit,
     DirtyBranchSwitchError,
     GhConnectError,
@@ -21,6 +22,7 @@ NullGitRepo = Repo.memory
 
 __all__ = [
     "Branch",
+    "CliAgentBinding",
     "Commit",
     "DirtyBranchSwitchError",
     "GhConnectError",

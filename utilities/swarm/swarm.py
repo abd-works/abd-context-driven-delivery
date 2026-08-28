@@ -3,7 +3,7 @@
 """Swarm — Supervisor + Agents on a shared Plan turn slice."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from plan.plan import Plan
@@ -30,6 +30,7 @@ class Agent(SubAgent):
     """SubAgent running the Plan under one Hypothesis.
 
     Registered at Add Agent; SubAgent.run launches at Plan.start on its WorkSession.
+    Each Agent runs the shared Swarm.turns slice on its own WorkSession (Execute Plan).
     """
 
     def __init__(
@@ -44,7 +45,17 @@ class Agent(SubAgent):
         self.work_session = work_session
         self._launched = False
 
-    def start_plan(self, workspace: Workspace, swarm_turns: list[Turn]) -> WorkSession:
+    @property
+    def launched(self) -> bool:
+        return self._launched
+
+    def start_plan(
+        self,
+        workspace: Workspace,
+        swarm_turns: list[Turn],
+        *,
+        plan_work_session: WorkSession | None = None,
+    ) -> WorkSession:
         """Launch SubAgent.run at Plan.start on this Agent's own WorkSession."""
         if self.plan is None:
             raise RuntimeError("Agent.start_plan requires a Plan")
@@ -52,6 +63,8 @@ class Agent(SubAgent):
             name=f"agent-{self.hypothesis.name}",
             path=getattr(workspace, "path", ".") or ".",
         )
+        if plan_work_session is not None and session is plan_work_session:
+            raise RuntimeError("Agent WorkSession must not be the Plan Start Plan WorkSession")
         self.work_session = session
         self._launched = True
         if swarm_turns:
@@ -59,6 +72,17 @@ class Agent(SubAgent):
             session.open_turn = first
         self.run(tools=[], actions=[])
         return session
+
+    def execute_turn(self) -> Turn | None:
+        """Run Execute Plan on this Agent WorkSession (same stories as Plan.execute_turn)."""
+        if self.plan is None:
+            raise RuntimeError("Agent.execute_turn requires a Plan")
+        previous = self.plan.work_session
+        self.plan.work_session = self.work_session
+        try:
+            return self.plan.execute_turn()
+        finally:
+            self.plan.work_session = previous
 
 
 @agentic_toolset
@@ -72,6 +96,10 @@ class Supervisor:
         self.compare_events: list[dict[str, Any]] = []
         self.associations: list[Agent] = []
 
+    def set_rubric(self, rubric: str) -> str:
+        self.rubric = rubric
+        return self.rubric
+
     def add_agent(self, hypothesis: Hypothesis, plan: Plan | None = None) -> Agent:
         """Register the Agent; SubAgent.run has not launched yet."""
         agent = Agent(hypothesis=hypothesis, plan=plan)
@@ -79,10 +107,30 @@ class Supervisor:
         return agent
 
     def compare(self, event: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-        """Stream after each Judge or HIL evaluation; does not wait for all agents."""
+        """Stream after each Judge or HIL evaluation; does not wait for all agents.
+
+        Automatic associate follows each streamed compare under the Supervisor rubric
+        toward Outcome. May include Plan Turn JudgeCheckpoint rubric evaluations.
+        """
         if event is not None:
-            self.compare_events.append(event)
-            self.associate(event)
+            payload = dict(event)
+            payload.setdefault("outcome", self.outcome.name)
+            payload.setdefault("rubric", self.rubric)
+            payload.setdefault(
+                "agent_progress",
+                [
+                    {
+                        "hypothesis": a.hypothesis.name,
+                        "launched": a.launched,
+                        "open_turn": getattr(
+                            getattr(a.work_session, "open_turn", None), "action", None
+                        ),
+                    }
+                    for a in self.agents
+                ],
+            )
+            self.compare_events.append(payload)
+            self.associate(payload)
         return list(self.compare_events)
 
     def associate(self, event: dict[str, Any] | None = None) -> list[Agent]:
@@ -95,7 +143,11 @@ class Supervisor:
 
 @agentic_toolset
 class Swarm:
-    """Plan plus shared turns slice, Supervisor, and Agents."""
+    """Plan plus shared turns slice, Supervisor, and Agents.
+
+    Shared Swarm.turns is selected once before any Agent runs. Each Agent runs
+    that same slice on its own WorkSession. SubAgent.run launches at Plan.start.
+    """
 
     def __init__(self, plan: Plan | None = None) -> None:
         self.plan = plan

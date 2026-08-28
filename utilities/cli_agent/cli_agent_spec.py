@@ -265,9 +265,13 @@ with description("IdeCli"):
             expect(text).to(contain("fidelity=scenarios"))
             expect(text).to(contain("fidelity=model"))
             expect(text).to(contain("format=markdown"))
+            expect(text).to(contain(cli._judge_reply_to_doer))
             expect(text).to(contain(cli._validate_same_lens))
             expect(text).to(contain(cli.source_scope))
             expect(text).to(contain("Turn.action: Validate"))
+            expect(text.index(cli._judge_reply_to_doer)).to(
+                be_below(text.index(cli._validate_same_lens))
+            )
 
         with it("should give the judge the original job as source scope"):
             cli = IdeCli(judge=True)
@@ -286,6 +290,7 @@ with description("IdeCli"):
             text = cli._judge_task_prompt(
                 worker, generate_tools=hanging.tool_keys, turn=hanging
             )
+            expect(text).to(contain(cli._judge_reply_to_doer))
             expect(text).to(contain(cli.source_scope))
             expect(text).to(contain("--- JOB / SOURCE SCOPE ---"))
             expect(text).to(contain("scenarios for the story map"))
@@ -378,17 +383,15 @@ with description("CursorCli"):
             expect(argv).to(contain("plan"))
             expect(argv[-1]).to(equal("grade it"))
 
-        with it("should return worker then judge argv from commands"):
+        with it("should write the judge file and return only the worker argv"):
             tmp = tempfile.mkdtemp(prefix="cli_cmd_")
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
                 argv = CursorCli(judge=True, agent_mode="plan")._commands(
                     "do work", tmp, judge_prompt="grade it"
                 )
-            expect(len(argv)).to(equal(2))
+            expect(len(argv)).to(equal(1))
             expect(argv[0][-1]).to(contain("cli-agent-task.txt"))
             expect(argv[0]).to(contain("plan"))
-            expect(argv[1][-1]).to(contain("cli-agent-judge.txt"))
-            expect(argv[1]).to(contain("plan"))
             expect(
                 (Path(tmp) / ".context" / "cli-agent-task.txt").read_text(
                     encoding="utf-8"
@@ -502,16 +505,14 @@ with description("VscodeCli"):
             expect(argv).to(contain("agent"))
             expect(argv[-1]).to(equal("grade it"))
 
-        with it("should return worker then judge argv from commands"):
+        with it("should write the judge file and return only the worker argv"):
             tmp = tempfile.mkdtemp(prefix="cli_vscmd_")
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_code_only):
                 argv = VscodeCli(judge=True)._commands(
                     "do work", tmp, judge_prompt="grade it"
                 )
-            expect(len(argv)).to(equal(2))
+            expect(len(argv)).to(equal(1))
             expect(argv[0][-1]).to(contain("cli-agent-task.txt"))
-            expect(argv[1][-1]).to(contain("cli-agent-judge.txt"))
-            expect(argv[1]).to(contain("agent"))
             expect(
                 (Path(tmp) / ".context" / "cli-agent-task.txt").read_text(
                     encoding="utf-8"
@@ -581,6 +582,8 @@ with description("CliAgent"):
             expect("check" in text).to(be_true)
             expect("report" in text).to(be_true)
             expect("-p" in text).to(be_true)
+            expect("doer only" in text).to(be_true)
+            expect("Do not prompt, launch, or score the judge" in text).to(be_true)
 
         with it("should Popen cursor-agent from run"):
             tmp = tempfile.mkdtemp(prefix="cli_run_")
@@ -623,7 +626,7 @@ with description("a CLI agent run"):
             expect(_read_cli(tmp, "sprint-a")["doer"]).to(equal("doer-1"))
 
         with context("that also has a judge task"):
-            with it("should run a second CLI session for the judge"):
+            with it("should tell the doer to contact the bound judge"):
                 tmp = Path(tempfile.mkdtemp(prefix="cli_judge_"))
                 with patch(
                     "cli_agent.cli_agent.CursorCli._create_chat",
@@ -636,6 +639,16 @@ with description("a CLI agent run"):
                     )
                 expect(agent.work_session.cli_judge).to(equal("judge-1"))
                 expect(agent.ide.judge_resume).to(equal("judge-1"))
+                task = (tmp / ".context" / "cli-agent-task.txt").read_text(
+                    encoding="utf-8"
+                )
+                expect(task).to(contain("--resume judge-1"))
+                expect(task).to(contain("parent is not in this loop"))
+                expect(
+                    (tmp / ".context" / "cli-agent-judge.txt").read_text(
+                        encoding="utf-8"
+                    )
+                ).to(contain("you must validate X"))
 
             with it("should associate the judge session with the same workspace session"):
                 tmp = Path(tempfile.mkdtemp(prefix="cli_same_"))

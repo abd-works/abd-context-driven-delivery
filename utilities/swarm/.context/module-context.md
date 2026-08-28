@@ -18,9 +18,9 @@ Swarm, Supervisor, Agent, Hypothesis, Outcome
 
 ## Public API
 
-- `Swarm` — `plan`, `turns` (shared slice), `supervisor`, `agents`
-- `Supervisor` — `outcome`, `rubric`, `agents`; `addAgent(hypothesis)`, `compare()`, `associate()`
-- `Agent` — `plan`, `hypothesis`, `workSession` (SubAgent; register at add; run at Plan.start)
+- `Swarm` — `plan`, `turns` (shared slice), `supervisor`, `agents`; `create_supervisor`, `select_turns`, `add_agent`
+- `Supervisor` — `outcome`, `rubric`, `agents`, `compare_events`, `associations`; `set_rubric`, `add_agent(hypothesis)`, `compare(event)`, `associate(event)`
+- `Agent` — `plan`, `hypothesis`, `work_session`, `launched` (SubAgent; register at add; `start_plan` launches `SubAgent.run`; `execute_turn` runs Execute Plan on that WorkSession)
 - `Hypothesis` — unique first-order approach toward Outcome
 - `Outcome` — overarching result owned by Supervisor
 

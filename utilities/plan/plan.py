@@ -28,7 +28,14 @@ class HILCheck:
 
 @agentic_toolset
 class Plan:
-    """Plan associated with a Workspace; holds ordered Turns."""
+    """Plan associated with a Workspace; holds ordered Turns.
+
+    Start opens a WorkSession and moves the first Backlog Turn to In Progress.
+    Execute Turn runs that Turn (performTurn). Advance finishes it (Done) and
+    the next Backlog Turn becomes In Progress. HILCheck / JudgeCheckpoint hang
+    on Turns; Fix and Rerun uses Turn.recordMistake / recordCorrection plus
+    WorkSession.repairs.
+    """
 
     def __init__(self, name: str = "", workspace: Workspace | None = None) -> None:
         self.name = name
@@ -59,6 +66,15 @@ class Plan:
             turn.hil_check = None  # type: ignore[attr-defined]
         self.turns.append(turn)
         return turn
+
+    def edit_turn(self, turn: Turn, **fields: Any) -> Turn:
+        for key, value in fields.items():
+            setattr(turn, key, value)
+        return turn
+
+    def delete_turn(self, turn: Turn) -> None:
+        if turn in self.turns:
+            self.turns.remove(turn)
 
     def add_hil_check(self, turn: Turn, hil: HILCheck | None = None) -> HILCheck:
         check = hil or HILCheck()
@@ -93,6 +109,7 @@ class Plan:
         turn.judge_checkpoint = None  # type: ignore[attr-defined]
 
     def start(self) -> WorkSession:
+        """Open WorkSession; first Backlog Turn becomes In Progress."""
         if self.workspace is None:
             raise RuntimeError("Plan.start requires a Workspace")
         session = self.workspace.open_work_session(
@@ -107,15 +124,54 @@ class Plan:
         return session
 
     def execute_turn(self) -> Turn | None:
+        """Run the In Progress Turn (performTurn); TicketState stays In Progress."""
         session = self.work_session
         if session is None or session.open_turn is None:
             return None
         turn = session.open_turn
+        if hasattr(turn, "perform_turn"):
+            turn.perform_turn()
         if not getattr(turn, "result", ""):
             turn.result = turn.action or "executed"
         return turn
 
+    def validate_with_human(self, validation: str) -> HILCheck | None:
+        """Present Turn result to human; HILCheck holds the validation."""
+        turn = self.work_session.open_turn if self.work_session else None
+        if turn is None:
+            return None
+        check = getattr(turn, "hil_check", None) or HILCheck()
+        check.validation = validation
+        turn.hil_check = check  # type: ignore[attr-defined]
+        return check
+
+    def evaluate_results(self, judge_result: str) -> JudgeCheckpoint | None:
+        """ai_judge against JudgeCheckpoint.rubric; holds JudgeResult."""
+        turn = self.work_session.open_turn if self.work_session else None
+        if turn is None:
+            return None
+        check = getattr(turn, "judge_checkpoint", None)
+        if check is None:
+            return None
+        check.judge_result = judge_result
+        return check
+
+    def review_progress(self) -> dict[str, Any]:
+        """Progress and results on the Plan for the open Turn."""
+        turn = self.work_session.open_turn if self.work_session else None
+        if turn is None:
+            return {}
+        hil = getattr(turn, "hil_check", None)
+        judge = getattr(turn, "judge_checkpoint", None)
+        return {
+            "state": getattr(turn, "state", None),
+            "result": getattr(turn, "result", None),
+            "hil_validation": getattr(hil, "validation", None) if hil else None,
+            "judge_result": getattr(judge, "judge_result", None) if judge else None,
+        }
+
     def advance_turn(self) -> Turn | None:
+        """Finish current Turn (Done); next Backlog becomes In Progress."""
         session = self.work_session
         if session is None or session.open_turn is None:
             return None
@@ -134,3 +190,15 @@ class Plan:
         else:
             session.open_turn = None
         return nxt
+
+    def fix_and_rerun(self, mistake: str, correction: str) -> Turn | None:
+        """recordMistake / recordCorrection; Repair on WorkSession; execute again."""
+        session = self.work_session
+        if session is None or session.open_turn is None:
+            return None
+        turn = session.open_turn
+        if hasattr(turn, "record_mistake"):
+            turn.record_mistake(mistake)
+        if hasattr(turn, "record_correction"):
+            turn.record_correction(correction)
+        return self.execute_turn()

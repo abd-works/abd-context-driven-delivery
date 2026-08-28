@@ -29,6 +29,13 @@ format: md
   *And* that **Supervisor** is on that **Plan**  
   *And* that **Supervisor** holds no **Agent**s yet
 
+### Scenario: Supervisor rubric hangs on the Supervisor
+
+*Given* a **Supervisor** with **Outcome** *Plan-started*  
+*When* the operator sets that **Supervisor** rubric to *plan-started*  
+*Then* that **Supervisor** rubric is *plan-started*  
+  *And* that **Supervisor** still owns **Outcome** *Plan-started*
+
 ### Scenario: Shared turn slice is selected once
 
 *Given* a **Plan** with a *Stories* **Turn** and a later *CleanEngineering* **Turn**  
@@ -42,4 +49,5 @@ format: md
 | Scenario | Source | Location |
 | --- | --- | --- |
 | Supervisor holds the Outcome | grill-answers.md | tick 3 |
+| Supervisor rubric hangs on the Supervisor | plan-and-swarm-sketch.md | Swarm Plan / Create Supervisor |
 | Shared turn slice is selected once | grill-answers.md | tick 10 |

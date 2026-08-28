@@ -641,6 +641,8 @@ class WorkSession:
         self.body = body
         self.cli_doer = ""
         self.cli_judge = ""
+        self.cli_doer_pid = 0
+        self.cli_judge_pid = 0
 
     def _default_git(self) -> GitRepo:
         root = Repo.find_root(self.workspace.path)
@@ -697,6 +699,13 @@ class WorkSession:
         return self.folder / "cli-agent.json"
 
     def load_cli_sessions(self) -> None:
+        binding = self.cli_agent_binding
+        if binding.doer or binding.judge:
+            self.cli_doer = binding.doer
+            self.cli_judge = binding.judge
+            self.cli_doer_pid = binding.doer_pid
+            self.cli_judge_pid = binding.judge_pid
+            return
         path = self.cli_agent_file
         if not path.is_file():
             return
@@ -706,16 +715,24 @@ class WorkSession:
             return
         self.cli_doer = str(data.get("doer") or "").strip()
         self.cli_judge = str(data.get("judge") or "").strip()
+        self.cli_doer_pid = int(data.get("doer_pid") or 0)
+        self.cli_judge_pid = int(data.get("judge_pid") or 0)
 
     def save_cli_sessions(self) -> None:
         self.folder.mkdir(parents=True, exist_ok=True)
         self.cli_agent_file.write_text(
             json.dumps(
-                {"doer": self.cli_doer, "judge": self.cli_judge},
+                {
+                    "doer": self.cli_doer,
+                    "judge": self.cli_judge,
+                    "doer_pid": self.cli_doer_pid,
+                    "judge_pid": self.cli_judge_pid,
+                },
                 indent=2,
             ),
             encoding="utf-8",
         )
+        self._write_cli_agent_tag()
 
     def associate_cli(self, role: str, chat_id: str) -> None:
         chat_id = (chat_id or "").strip()
@@ -728,8 +745,49 @@ class WorkSession:
     def close_cli_sessions(self) -> None:
         self.cli_doer = ""
         self.cli_judge = ""
+        self.cli_doer_pid = 0
+        self.cli_judge_pid = 0
         if self.cli_agent_file.is_file():
             self.cli_agent_file.unlink()
+        self._write_cli_agent_tag(status="closed")
+
+    @property
+    def agent_open(self) -> bool:
+        return self.cli_agent_binding.open
+
+    @property
+    def cli_agent_binding(self):
+        from git.git import CliAgentBinding
+
+        git = self.git
+        reader = getattr(git, "read_cli_agent_tag", None)
+        if reader is None:
+            return CliAgentBinding()
+        try:
+            return reader(self.session_branch)
+        except Exception:
+            return CliAgentBinding()
+
+    def _write_cli_agent_tag(self, status: str = "open") -> None:
+        from git.git import CliAgentBinding
+
+        git = self.git
+        writer = getattr(git, "write_cli_agent_tag", None)
+        if writer is None:
+            return
+        binding = CliAgentBinding(
+            status=status if (self.cli_doer or self.cli_judge) else "closed",
+            doer=self.cli_doer,
+            doer_pid=self.cli_doer_pid,
+            judge=self.cli_judge,
+            judge_pid=self.cli_judge_pid,
+        )
+        if status == "closed":
+            binding.status = "closed"
+        try:
+            writer(self.session_branch, binding)
+        except Exception:
+            return
 
     @property
     def context_index(self) -> str:

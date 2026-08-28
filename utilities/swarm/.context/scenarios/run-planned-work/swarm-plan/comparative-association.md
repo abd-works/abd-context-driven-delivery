@@ -28,11 +28,26 @@ format: md
 *Then* **Supervisor.associate** updates under that rubric toward **Outcome** *Plan-started*  
   *And* each **Agent** still owns its **Hypothesis**
 
-### Scenario: Association includes a second Agent as it arrives
+### Scenario: Association follows streamed HIL compare
+
+*Given* **Supervisor.compare** just streamed a **HILCheck** validation  
+  *And* a **Supervisor** rubric for **Outcome** *Plan-started*  
+*When* that compare event completes  
+*Then* **Supervisor.associate** updates under that rubric toward **Outcome** *Plan-started*
+
+### Scenario: Association can include a second Agent as it arrives
 
 *Given* **Supervisor.associate** already holds the *Stories* **Agent** under the **Supervisor** rubric  
   *And* the *CleanEngineering* **Agent** **JudgeCheckpoint** has just finished  
 *When* **Supervisor.compare** streams that **JudgeCheckpoint** evaluation  
+*Then* **Supervisor.associate** includes both **Agent**s under the **Supervisor** rubric toward **Outcome** *Plan-started*
+
+### Scenario: Association updates when a mid-run Agent arrives
+
+*Given* **Supervisor.associate** already holds the *Stories* **Agent**  
+  *And* the **Supervisor** just added an **Agent** with **Hypothesis** *CleanEngineering generate modules*  
+*When* the *CleanEngineering* **Agent** **JudgeCheckpoint** finishes  
+  *And* **Supervisor.compare** streams that evaluation  
 *Then* **Supervisor.associate** includes both **Agent**s under the **Supervisor** rubric toward **Outcome** *Plan-started*
 
 ### Evidence
@@ -40,4 +55,6 @@ format: md
 | Scenario | Source | Location |
 | --- | --- | --- |
 | Association follows streamed Judge compare | grill-answers.md | tick 11 |
-| Association includes a second Agent as it arrives | grill-answers.md | tick 11 |
+| Association follows streamed HIL compare | plan-and-swarm-sketch.md | Swarm Plan / Comparative Association |
+| Association can include a second Agent as it arrives | plan-and-swarm-sketch.md | Swarm Plan / Comparative Association |
+| Association updates when a mid-run Agent arrives | plan-and-swarm-sketch.md | Swarm Plan / Comparative Association |

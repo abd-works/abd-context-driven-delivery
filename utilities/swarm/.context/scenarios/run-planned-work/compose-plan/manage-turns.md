@@ -24,14 +24,25 @@ format: md
 
 ## Behaviors
 
+### Scenario: Add a Turn in Backlog
+
+*Given* a **Plan** *compose-judged-plan* associated with a **Workspace**  
+*When* the operator adds a **Turn**  
+  *And* that **Turn** has action *generate* fidelity *story_map* context *plan-and-swarm-utilities-23*  
+  *And* a **ToolCall** toolset *Stories* name *generate*  
+*Then* that **Plan** shows the **Turn** in sequence  
+  *And* that **Turn** **TicketState** is *Backlog*  
+  *And* that **Turn** holds action *generate* fidelity *story_map* context *plan-and-swarm-utilities-23*  
+  *And* that **Turn** holds that **ToolCall**
+
 ### Scenario: Turn holds multiple tools and one action
 
 *Given* a **Plan** *compose-judged-plan* associated with a **Workspace**  
 *When* the operator adds a **Turn**  
-    with action *Sketch*  
-    and **tool_keys** *Stories* and *CleanEngineering*  
-    and a **ToolCall** toolset *Stories* name *Sketch*  
-    and a **ToolCall** toolset *CleanEngineering* name *Sketch*  
+  *And* that **Turn** has action *Sketch*  
+  *And* **tool_keys** *Stories* and *CleanEngineering*  
+  *And* a **ToolCall** toolset *Stories* name *Sketch*  
+  *And* a **ToolCall** toolset *CleanEngineering* name *Sketch*  
 *Then* that **Turn** action is *Sketch*  
   *And* that **Turn** holds both **ToolCall**s  
   *And* that **Turn** **TicketState** is *Backlog*
@@ -58,10 +69,36 @@ format: md
   *And* that **Turn** still uses **TicketState**  
   *And* that **Turn** may still hold **HILCheck** and **JudgeCheckpoint**
 
+### Scenario: Later Turn follows the earlier Turn
+
+*Given* a **Plan** that already has a **Turn** *Stories* *generate* *story_map*  
+*When* the operator adds a **Turn** *CleanEngineering* *generate* *modules*  
+*Then* that **Plan** shows the *Stories* **Turn** before the *CleanEngineering* **Turn**  
+  *And* both **Turn**s **TicketState** is *Backlog*
+
+### Scenario: Edit a Turn
+
+*Given* a **Plan** with a **Turn** *Stories* *generate* *story_map*  
+*When* the operator edits that **Turn** fidelity to *scenarios*  
+*Then* that **Turn** fidelity is *scenarios*  
+  *And* that **Turn** **TicketState** is still *Backlog*  
+  *And* that **Turn** still holds **ToolCall** toolset *Stories* name *generate*
+
+### Scenario: Delete a Turn
+
+*Given* a **Plan** with a *Stories* **Turn** and a *CleanEngineering* **Turn**  
+*When* the operator deletes the *CleanEngineering* **Turn**  
+*Then* that **Plan** holds the *Stories* **Turn**  
+  *And* that *Stories* **Turn** **TicketState** is still *Backlog*
+
 ### Evidence
 
 | Scenario | Source | Location |
 | --- | --- | --- |
+| Add a Turn in Backlog | plan-and-swarm-sketch.md | Compose Plan / Manage Turns |
 | Turn holds multiple tools and one action | grill-answers.md | tick 13 |
 | CliAgent describes the Turn shape without opening it | grill-answers.md | tick 13 |
 | CLI opens and finishes the hanging Turn | grill-answers.md | tick 13 |
+| Later Turn follows the earlier Turn | plan-and-swarm-sketch.md | Compose Plan / Manage Turns |
+| Edit a Turn | plan-and-swarm-sketch.md | Compose Plan / Manage Turns |
+| Delete a Turn | plan-and-swarm-sketch.md | Compose Plan / Manage Turns |

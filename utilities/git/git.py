@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -242,6 +243,68 @@ class Ticket:
         return f"{owner}/{repo}#{number}"
 
 
+@dataclass
+class CliAgentBinding:
+    """Doer/judge CLI on a session branch — status and pids live on a git tag."""
+
+    status: str = "closed"
+    doer: str = ""
+    doer_pid: int = 0
+    judge: str = ""
+    judge_pid: int = 0
+
+    @property
+    def open(self) -> bool:
+        return self.status == "open" and self.pid_is_alive(self.doer_pid)
+
+    def message(self) -> str:
+        return Commit.note_text(
+            {
+                "status": self.status,
+                "doer": self.doer,
+                "doer_pid": str(self.doer_pid or ""),
+                "judge": self.judge,
+                "judge_pid": str(self.judge_pid or ""),
+            }
+        )
+
+    @classmethod
+    def from_message(cls, text: str) -> CliAgentBinding:
+        data = Commit.note_payload(text)
+        return cls(
+            status=(data.get("status") or "closed").strip() or "closed",
+            doer=(data.get("doer") or "").strip(),
+            doer_pid=_as_pid(data.get("doer_pid")),
+            judge=(data.get("judge") or "").strip(),
+            judge_pid=_as_pid(data.get("judge_pid")),
+        )
+
+    @staticmethod
+    def pid_is_alive(pid: int) -> bool:
+        if pid <= 0:
+            return False
+        if os.name == "nt":
+            import ctypes
+
+            handle = ctypes.windll.kernel32.OpenProcess(0x1000, 0, int(pid))
+            if handle:
+                ctypes.windll.kernel32.CloseHandle(handle)
+                return True
+            return False
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return False
+        return True
+
+
+def _as_pid(raw: str | None) -> int:
+    text = (raw or "").strip()
+    if not text.isdigit():
+        return 0
+    return int(text)
+
+
 class Branch:
     """Named branch on a repo — checkout, commit, merge."""
 
@@ -254,6 +317,13 @@ class Branch:
     def checkout(self) -> Branch:
         self._repo.checkout_or_create(self.name)
         return self
+
+    def cli_agent(self) -> CliAgentBinding:
+        return self._repo.read_cli_agent_tag(self.name)
+
+    def assign_cli_agent(self, binding: CliAgentBinding) -> CliAgentBinding:
+        self._repo.write_cli_agent_tag(self.name, binding)
+        return binding
 
     @property
     def head(self) -> Commit:
@@ -484,6 +554,7 @@ class Repo:
         self._fetches: list[str] = []
         self._pulls: list[str] = []
         self._stash = False
+        self._cli_agent_tags: dict[str, str] = {}
 
     @property
     def project(self) -> Project | None:
@@ -500,6 +571,28 @@ class Repo:
 
     def branch_named(self, name: str) -> Branch:
         return Branch(self, name)
+
+    def cli_agent_tag_name(self, branch: str) -> str:
+        slug = (branch or "").strip() or "HEAD"
+        return f"cli-agent/{slug}"
+
+    def read_cli_agent_tag(self, branch: str) -> CliAgentBinding:
+        name = self.cli_agent_tag_name(branch)
+        if self._memory:
+            return CliAgentBinding.from_message(self._cli_agent_tags.get(name, ""))
+        try:
+            raw = self._git("tag", "-l", "--format=%(contents)", name)
+        except GitConnectError:
+            return CliAgentBinding()
+        return CliAgentBinding.from_message(raw)
+
+    def write_cli_agent_tag(self, branch: str, binding: CliAgentBinding) -> None:
+        name = self.cli_agent_tag_name(branch)
+        message = binding.message()
+        if self._memory:
+            self._cli_agent_tags[name] = message
+            return
+        self._git("tag", "-f", "-a", name, "-m", message, branch)
 
     @property
     def branch(self) -> str:
