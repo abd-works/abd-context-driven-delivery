@@ -3,16 +3,22 @@ scope: solution — plan + swarm utilities and git ticket-flow enhancement (tick
 # Lenses: Stories + CE. Story map is Compose / Manage Ticket / Execute / Swarm.
 
 flow:
-  status: in-progress
-  recommend: more-same-stage
-  next: Increment 4 Swarm Plan
-  note: Increment 3 Execute Plan deepened. Next working slice is Create Supervisor / Add Agent.
+  status: stable
+  recommend: generate
+  next: scenarios + plan/swarm code class files
+  note: INCREMENT_4_STABLE. Grill ticks 1–12 locked. Stories+CE sketch finished for Increments 1–4.
   open: []
   done:
     - pass #scaffold
     - pass #turn-ticket-state
     - pass #map-execute-swarm
     - pass #execute-session
+    - pass #inc1-bdd
+    - pass #inc2-deepen
+    - pass #inc3-deepen
+    - pass #inc4-subagent-launch
+    - pass #turn-multi-tool
+    - pass #sketch-finish
 
 =========
 theme: Compose Plan  (epic)
@@ -572,3 +578,4 @@ ce:
 - exploration / Swarm Plan / pass #inc4-slice-lock — Swarm.turns shared slice once before agents; associate automatic after streamed compare
 - exploration / Swarm Plan / pass #inc4-subagent-launch — register at Add Agent; SubAgent.run at Plan.start on Agent WorkSession
 - exploration / Compose Plan / pass #turn-multi-tool — Turn has one action and multiple tool_keys/toolCalls; CliAgent describes shape; CLI opens and finishes hanging Turn (no Plan, no PlannedTurn)
+- exploration / solution / pass #sketch-finish — INCREMENT_4_STABLE; flow status stable; generate scenarios + plan/swarm code class files

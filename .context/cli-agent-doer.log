@@ -196,3 +196,9 @@ C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --res
 
 --- spawn 2026-08-28 13:36:31 ---
 C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 060afa63-01e1-4cc6-a89f-7f9c1ff2ce6c --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-judge.txt and follow it exactly.
+
+--- spawn 2026-08-28 17:33:11 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 1f49a6be-fd3a-417c-a8d7-969fb324cae6 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 17:33:11 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 060afa63-01e1-4cc6-a89f-7f9c1ff2ce6c --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-judge.txt and follow it exactly.
