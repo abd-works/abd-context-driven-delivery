@@ -313,26 +313,29 @@ class _CliSpawner:
         kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE
         return kwargs
 
-    def _log_path(self, workspace: str, role: str) -> Path:
+    def _log_path(self, workspace: str, role: str, session: str = "") -> Path:
         root = Path(workspace) if workspace else Path.cwd()
+        if session:
+            return root / ".context" / "sessions" / session / f"cli-agent-{role}.log"
         return root / ".context" / f"cli-agent-{role}.log"
 
     def _log_lines(self, argv: list[str]) -> str:
         stamp = time.strftime("%Y-%m-%d %H:%M:%S")
         return f"\n--- spawn {stamp} ---\n" + " ".join(argv) + "\n"
 
-    def append_log(self, workspace: str, argv: list[str], role: str) -> None:
-        log_path = self._log_path(workspace, role)
+    def append_log(self, workspace: str, argv: list[str], role: str, session: str = "") -> None:
+        log_path = self._log_path(workspace, role, session)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         log = log_path.open("a", encoding="utf-8")
         log.write(self._log_lines(argv))
         log.close()
 
     def start(
-        self, argv: list[str], workspace: str, existing_pid: int = 0
+        self, argv: list[str], workspace: str, existing_pid: int = 0, _skip_log: bool = False
     ) -> IdeCliResult:
         role = self.spawn_role(argv)
-        self.append_log(workspace, argv, role)
+        if not _skip_log:
+            self.append_log(workspace, argv, role)
         proc = subprocess.Popen(argv, **self.popen_kwargs(workspace))
         return IdeCliResult(
             exit_code=0,
@@ -693,6 +696,7 @@ class IdeCli:
         self._job = ""
         self._prompt = ""
         self._source_scope = type(self)._default_source_scope
+        self._session = ""
 
     @property
     def job(self) -> str:
@@ -881,6 +885,9 @@ class IdeCli:
             "no IDE agent CLI on PATH (cursor-agent, agent, or code)"
         )
 
+    def append_log(self, workspace: str, argv: list[str], role: str, session: str = "") -> None:
+        _CliSpawner().append_log(workspace, argv, role, session=session or self._session)
+
     def launcher(self) -> str | None:
         """Public launcher path (agent_bdd / session mint)."""
         return self._launcher()
@@ -980,8 +987,11 @@ class IdeCli:
         existing_pid: int = 0,
     ) -> IdeCliResult:
         started = time.perf_counter()
-        result = _CliSpawner().start(argv, workspace, existing_pid=existing_pid)
-        return _CliSpawner().with_elapsed(result, started)
+        spawner = _CliSpawner()
+        role = spawner.spawn_role(argv)
+        spawner.append_log(workspace, argv, role, session=self._session)
+        result = spawner.start(argv, workspace, existing_pid=existing_pid, _skip_log=True)
+        return spawner.with_elapsed(result, started)
 
     def _launch_cli(
         self,
@@ -1234,6 +1244,7 @@ class CliAgent(SubAgent):
                 self.job, generate_tools=tools, turn=hanging
             )
         work = self.work_session
+        self.ide._session = work.name if work else ""
         pickup = _Pickup()
         resume = "" if work is None else (work.cli_doer or "")
         before = pickup.user_count(
@@ -1265,6 +1276,7 @@ class CliAgent(SubAgent):
         work.save_cli_sessions()
 
     def _session_report(self, work, results) -> str:
+        ws = self._workspace_root()
         parts = [spawned.text for spawned in results if spawned.text]
         parts.append("CLI processes (not IDE chats):")
         for spawned in results:
@@ -1276,10 +1288,20 @@ class CliAgent(SubAgent):
         if work.cli_judge:
             parts.append(f"[CliAgent judge transcript]({work.cli_judge})")
             parts.append(f"cursor-agent --resume {work.cli_judge}")
-        parts.append(f"workspace: {self._workspace_root()}")
+        parts.append(f"workspace: {ws}")
         parts.append(f"session: {work.name}")
         parts.append("taken up: yes")
         parts.append(f"job_queue: {len(self.job_queue)}")
+        pickup = _Pickup()
+        parts.append("## Monitor with these files (read directly — do not recurse)")
+        parts.append(f"doer log: {self.ide._log_path(ws, 'doer', work.name)}")
+        parts.append(f"judge log: {self.ide._log_path(ws, 'judge', work.name)}")
+        parts.append(f"events log: {ws}/.context/sessions/{work.name}/logs/events.log")
+        parts.append(f"job queue: {ws}/.context/sessions/{work.name}/cli-agent-job-queue.json")
+        if work.cli_doer:
+            parts.append(f"doer jsonl: {pickup.cursor_transcript(ws, work.cli_doer)}")
+        if work.cli_judge:
+            parts.append(f"judge jsonl: {pickup.cursor_transcript(ws, work.cli_judge)}")
         return "\n".join(parts)
 
     @property
@@ -1345,7 +1367,7 @@ class CliAgent(SubAgent):
         ## Steps
 
         1. **Launch.** Pass workspace (and session when known). Do not touch workspace or session utilities — let CliAgent handle all of that. If launch reports NOT TAKEN UP, stop immediately.
-        2. **Monitor.** Watch with a 30s /loop (Cursor) or poll periodically otherwise. Check the doer transcript, logs, and artifacts occasionally and report back to the user.
+        2. **Monitor.** The session report includes exact file paths — read them directly (do not recurse). Key files: `doer log`, `judge log`, `events log`, `job queue`, `doer jsonl`, `judge jsonl`. Watch with a 30s /loop (Cursor) or poll periodically otherwise. Report back to the user.
         3. **Unblock on three judge FAILs.** If the doer has stopped waiting, act — do not just report the status. See details below.
 
         ## What to always include in the prompt you pass to the doer
