@@ -78,3 +78,19 @@ Even with a perfect job-1 prompt ("run start-ticket first"), CliAgent has alread
 
 ### Diagnose tool
 Not used — cause is unambiguous from the call chain and reproducible naming rules; no ambiguous runtime signal remaining.
+
+## Triage (2026-08-29)
+
+- **Decision:** IS a defect
+- **Board item:** #41 (implied match for isolation backlog text)
+- **start-ticket:** completed — session `defect-fix-job-1-creates-work-session-as-default-before-start-ticket-wrong-branch-worktree-41` on branch `session/defect-fix-job-1-creates-work-session-as-default-before-start-ticket-wrong-branch-worktree-41`
+- **Rebind:** workspace root → `C:\dev\abd-cdd-41`; CliAgent session → `defect-fix-job-1-creates-work-session-as-default-before-start-ticket-wrong-branch-worktree-41`
+- **Stop:** triage job done; analysis is next
+
+## Triage (2026-08-29)
+
+- **Decision:** IS a defect
+- **Board item:** #41 (implied match for isolation backlog text)
+- **start-ticket:** completed — session `defect-fix-job-1-creates-work-session-as-default-before-start-ticket-wrong-branch-worktree-41`
+- **Rebind:** workspace root to `C:\dev\abd-cdd-41`; CliAgent session to `defect-fix-job-1-creates-work-session-as-default-before-start-ticket-wrong-branch-worktree-41`
+- **Stop:** triage job done; analysis is next
