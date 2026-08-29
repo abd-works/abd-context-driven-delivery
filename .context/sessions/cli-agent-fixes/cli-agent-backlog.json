@@ -7,9 +7,14 @@
       "status": "done"
     },
     {
-      "ref": 43,
+      "ref": 46,
       "kind": "ticket",
       "status": "in_progress"
+    },
+    {
+      "ref": 43,
+      "kind": "ticket",
+      "status": "pending"
     },
     {
       "ref": "CliAgent /loop job-finished notifications not firing; poll ~30s for doer then judge completion and report.",
@@ -28,16 +33,6 @@
     },
     {
       "ref": "Duplicate doer spawned when NOT TAKEN UP fires: launch_next has no guard to detect an already-running doer for the same session before opening a second window. Fix: check for a live doer process matching the session resume ID before spawning, and surface a clear status rather than a second window.",
-      "kind": "text",
-      "status": "pending"
-    },
-    {
-      "ref": "finish-ticket not called when defect-fix completes: backlog item marked done but GitHub Project Status stays In Progress and issue not closed/merged. Example #41 issue CLOSED but board still In Progress. Parent/doer must run finish-ticket (merge session, set Done, close issue) at end of defect-fix job 5 or next_backlog_item advance.",
-      "kind": "text",
-      "status": "pending"
-    },
-    {
-      "ref": "CliAgent backlog uses free-text duplicates instead of existing ticket refs; themes wrong (theme:tools, theme:cliagent vs theme:cli-agent). capture_backlog/start-ticket must set theme:cli-agent for cli-agent work and backlog items must use kind ticket (#N) when issue already exists — no duplicate #42/#43/#44.",
       "kind": "text",
       "status": "pending"
     },
