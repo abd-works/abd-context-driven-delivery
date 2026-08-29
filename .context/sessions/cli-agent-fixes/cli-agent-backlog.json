@@ -2,13 +2,13 @@
   "template": "defect-fix",
   "items": [
     {
-      "ref": "FIRST / BLOCKING: Starting a work session must put work on its own branch (and worktree) for isolation. work session == branch == own tree. Fix at the work-session / start-ticket layer so every new work session binds to session/<name> with its own worktree before any job runs. After start-ticket, rebind workspace root to that worktree.",
-      "kind": "text",
+      "ref": 41,
+      "kind": "ticket",
       "status": "done"
     },
     {
-      "ref": "CliAgent session log incomplete vs design: response summaries, links to content/chat/job queue, fold cli-agent.json IDs into session log header.",
-      "kind": "text",
+      "ref": 43,
+      "kind": "ticket",
       "status": "in_progress"
     },
     {
@@ -17,8 +17,8 @@
       "status": "pending"
     },
     {
-      "ref": "Finding CliAgent logs is painful; introspect paths and put them in parent prompt / launch report.",
-      "kind": "text",
+      "ref": 44,
+      "kind": "ticket",
       "status": "pending"
     },
     {
@@ -34,6 +34,16 @@
     {
       "ref": 23,
       "kind": "ticket",
+      "status": "pending"
+    },
+    {
+      "ref": "finish-ticket not called when defect-fix completes: backlog item marked done but GitHub Project Status stays In Progress and issue not closed/merged. Example #41 issue CLOSED but board still In Progress. Parent/doer must run finish-ticket (merge session, set Done, close issue) at end of defect-fix job 5 or next_backlog_item advance.",
+      "kind": "text",
+      "status": "pending"
+    },
+    {
+      "ref": "CliAgent backlog uses free-text duplicates instead of existing ticket refs; themes wrong (theme:tools, theme:cliagent vs theme:cli-agent). capture_backlog/start-ticket must set theme:cli-agent for cli-agent work and backlog items must use kind ticket (#N) when issue already exists — no duplicate #42/#43/#44.",
+      "kind": "text",
       "status": "pending"
     }
   ]
