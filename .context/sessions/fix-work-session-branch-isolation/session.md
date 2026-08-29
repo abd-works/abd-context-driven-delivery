@@ -16,3 +16,7 @@ Full analysis written to ticket notes:
 `.context/sessions/defect-fix-job-1-creates-work-session-as-default-before-start-ticket-wrong-branch-worktree-41/issue-body.md` under ## Analysis.
 
 Summary: partial #41 fix skipped `default` sole-session fallback but premature bind + missing post-start-ticket workspace rebind remain; must hold for CliAgent, SubAgent, and no-agent at work-session/start-ticket layer.
+
+## Diagnosis
+
+*(2026-08-29)* Category **BOTH**. Premature `_ensure_work_session` before start-ticket + missing post-start workspace rebind; prompt/template cannot undo attach order. Full write-up in ticket `issue-body.md` under ## Diagnosis.

@@ -178,3 +178,39 @@ Every new work session binds to `session/<name>` with its own worktree **before 
 3. SubAgent / no-agent not covered by CliAgent-only prompt+`_ensure_work_session` tweak.
 4. Prompt says "rebind" but there is no durable tool/API the doer can call that retargets CliAgent workspace root for subsequent jobs.
 
+
+## Diagnosis
+
+*(Added 2026-08-29 — session `fix-work-session-branch-isolation`. Separated from Analysis above. Supersedes the narrower pre-partial-fix Diagnosis for residual scope.)*
+
+### Category
+
+**BOTH** — production-code failure plus prompt/instruction gap.
+
+### Root cause hypothesis
+
+1. **Code (primary):** `CliAgent.launch_sessions` / `launch_next` always call `_attach_cli_sessions()` → `_ensure_work_session()` **before** the doer runs `/start-ticket`. On `main`, `_session_name_from_git()` returns empty. After the #41 partial fix, sole-session fallback skips leftover `default`, but naming still falls through to **folder slug** (or any non-`default` sole session). That opens a durable WorkSession in the **parent** checkout. `WorkSession._ensure_session_worktree` only isolates when the session branch is non-default — a premature session opened while HEAD is `main` does not move the doer onto `session/<ticket>` / `abd-cdd-<n>`.
+
+2. **Code (missing rebind):** After `Workflow.start` / `open_ticket_session` correctly creates `session/<ticket>` + sibling worktree, **nothing retargets** CliAgent’s `_workspace` / bound session / subsequent job cwd to that worktree. Prompt text says “rebind”; there is no durable tool that performs it for the orchestrator.
+
+3. **Prompt/template (secondary):** `defect-fix.json` job 1 and module-context tell the doer not to rely on leftover `default` and to rebind after start-ticket, but cannot undo in-process attach order, and do not define a mechanical rebind step shared by **CliAgent, SubAgent, and no-agent**.
+
+4. **Cross-flow:** SubAgent and no-agent inherit isolation only via Workspace/Workflow. Without a work-session/start-ticket layer contract (bind `session/<name>` + worktree before jobs; rebind root after start-ticket), those flows can also remain on parent/main.
+
+### Why not prompt-only
+
+Even a perfect job-1 prompt cannot prevent `_ensure_work_session` from running before the doer process exists. The attach order is in production code.
+
+### Why not code-only
+
+Docs/templates already partially describe the desired policy; without explicit deferred-bind / rebind instructions (and tests for SubAgent/no-agent), agents will keep treating “session already open on main” as success.
+
+### `/diagnose` tool
+
+Not used — root cause is unambiguous from the call chain, `_ensure_work_session` naming rules, missing rebind path, and the residual behavior after the #41 partial fix.
+
+### Exact seam to change (for later fix jobs)
+
+- **Code:** Defer durable CliAgent session bind until after start-ticket (or bind only ephemerally); after start-ticket, rebind workspace root to the ticket worktree. Prefer implementing at work-session / start-ticket so SubAgent and no-agent share the contract.
+- **Prompt:** Keep/extend defect-fix + module-context deferred/rebind language once the code seam exists; cover non-CliAgent entry points.
+
