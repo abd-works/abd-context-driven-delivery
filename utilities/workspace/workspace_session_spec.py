@@ -627,6 +627,55 @@ with description("a WorkSession tool"):
             content = Path(result).read_text(encoding="utf-8")
             expect("done" in content).to(be_true)
 
+        with it("should expose cli_agent only after a CLI agent ran"):
+            from workspace.git_repo import NullGitRepo
+            from workspace.workspace import Workspace
+
+            git = NullGitRepo(self.tmp)
+            session = Workspace(str(self.tmp)).open_work_session(
+                "cli-prop", git=git
+            )
+            session.ensure_started()
+            expect(session.cli_agent).to(be_none)
+            session.associate_cli("doer", "doer-1")
+            expect(session.cli_agent).not_to(be_none)
+            expect(hasattr(session.cli_agent, "cleanup")).to(be_true)
+
+        with it("should wipe its own logs and leave CliAgent temps when none was bound"):
+            from workspace.git_repo import NullGitRepo
+            from workspace.workspace import Workspace
+
+            git = NullGitRepo(self.tmp)
+            session = Workspace(str(self.tmp)).open_work_session(
+                "close-scratch", git=git
+            )
+            session.ensure_started()
+            leftover = session.folder / "wait_judge3.py"
+            leftover.write_text("pass\n", encoding="utf-8")
+            logs = session.folder / "logs"
+            logs.mkdir()
+            (logs / "events.log").write_text("noise\n", encoding="utf-8")
+            session.close_session(outcome="done")
+            expect((session.folder / "session.md").is_file()).to(be_true)
+            expect(logs.exists()).to(be_false)
+            expect(leftover.is_file()).to(be_true)
+
+        with it("should call cleanup on cli_agent when that property is set"):
+            from workspace.git_repo import NullGitRepo
+            from workspace.workspace import Workspace
+
+            git = NullGitRepo(self.tmp)
+            session = Workspace(str(self.tmp)).open_work_session(
+                "close-cli", git=git
+            )
+            session.ensure_started()
+            session.associate_cli("doer", "doer-1")
+            (session.folder / "wait_judge3.py").write_text("pass\n", encoding="utf-8")
+            (session.folder / "cli-agent-job-queue.json").write_text("[]\n", encoding="utf-8")
+            session.close_session(outcome="done")
+            expect((session.folder / "wait_judge3.py").exists()).to(be_false)
+            expect((session.folder / "cli-agent-job-queue.json").exists()).to(be_false)
+
     with context("read_context_index"):
         with it("should return a missing message when no context-index.md exists"):
             # Arrange: session with workspace pointing at an empty tmp dir

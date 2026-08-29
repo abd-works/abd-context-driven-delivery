@@ -72,7 +72,7 @@ Sibling path: `{abbrev}-{work-session-name}` beside `primary_root()`. `{work-ses
 
 # Close Session
 
-Write the End section on `{folder}/session.md`. If a turn is still open, finish (commit) that turn first. Push the session branch. Merge with main so the work lands on main — do **not** checkout `main` in a worktree you are about to delete. If the worktree is clean (no dirty files, no stash), `git worktree remove` it. If dirty or stash remains, leave the worktree.
+Write the End section on `{folder}/session.md`. If a turn is still open, finish (commit) that turn first. Call `cleanup`: this session removes its own logs. Use `cli_agent` — if that property is set, the agent ran; call `cleanup` on it. Do not import CliAgent or read `cli-agent.json` here. Do not delete durable generate under `{path}/.context/` or product files. Push the session branch. Merge with main so the work lands on main — do **not** checkout `main` in a worktree you are about to delete. If the worktree is clean (no dirty files, no stash), `git worktree remove` it. If dirty or stash remains, leave the worktree.
 
 ```yaml
 tool: close_session

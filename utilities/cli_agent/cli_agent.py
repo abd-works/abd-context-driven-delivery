@@ -347,6 +347,70 @@ class _CliSpawner:
         return result
 
 
+class _CliScratch:
+    """Temps CliAgent writes. WorkSession must not know these names."""
+
+    _context_names = frozenset(
+        {
+            "cli-agent-task.txt",
+            "cli-agent-judge.txt",
+            "cli-agent-put-back.txt",
+            "cli-agent-doer.log",
+            "cli-agent-judge.log",
+            "_judge_check.py",
+        }
+    )
+    _session_prefixes = (
+        "wait_judge",
+        "judge-verdict",
+        "judge-attempt",
+        "judge-before",
+        "_scan",
+    )
+
+    def wipe(self, work) -> None:
+        self._wipe_context(Path(getattr(work, "path", "") or ".") / ".context", work)
+        folder = getattr(work, "folder", None)
+        if folder is not None:
+            self._wipe_session(Path(folder))
+
+    def _wipe_context(self, ctx: Path, work) -> None:
+        if not ctx.is_dir():
+            return
+        for name in self._context_names:
+            path = ctx / name
+            if path.is_file() and not self._tracked(work, path):
+                path.unlink(missing_ok=True)
+
+    def _wipe_session(self, folder: Path) -> None:
+        if not folder.is_dir():
+            return
+        for path in list(folder.iterdir()):
+            if path.is_file() and self._session_owned(path.name):
+                path.unlink(missing_ok=True)
+
+    def _session_owned(self, name: str) -> bool:
+        if name == JobQueue.filename:
+            return True
+        if name.endswith("-response.yaml"):
+            return True
+        return name.startswith(self._session_prefixes)
+
+    def _tracked(self, work, path: Path) -> bool:
+        git = getattr(work, "git", None)
+        root = getattr(git, "root", None)
+        if git is None or not root:
+            return False
+        try:
+            rel = path.resolve().relative_to(Path(root).resolve()).as_posix()
+        except ValueError:
+            return False
+        try:
+            return bool(str(git._git("ls-files", "--", rel)).strip())
+        except Exception:
+            return False
+
+
 class JobQueue:
     """FIFO jobs on the WorkSession — assign or append; launch_next sends one."""
 
@@ -1244,6 +1308,17 @@ class CliAgent(SubAgent):
     def job_queue(self, items: list) -> None:
         work = self._attach_cli_sessions()
         JobQueue().save(work, list(items or []))
+
+    @classmethod
+    def cleanup_session(cls, work) -> None:
+        """Remove temps this kit wrote on that WorkSession."""
+        _CliScratch().wipe(work)
+
+    def cleanup(self) -> None:
+        work = self.work_session
+        if work is None:
+            return
+        type(self).cleanup_session(work)
 
     def launch_next(self) -> str:
         """Send the oldest job_queue item. One send. Do not stack resumes."""

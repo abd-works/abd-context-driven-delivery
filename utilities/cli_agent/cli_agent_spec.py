@@ -1026,3 +1026,29 @@ with description("a CLI agent job_queue"):
                         agent.launch_next()
 
                     expect(_fail).to(raise_error(RuntimeError))
+
+
+with description("CliAgent cleanup"):
+    with it("should remove temps it wrote and leave session.md and sketches"):
+        from workspace.git_repo import NullGitRepo
+
+        tmp = Path(tempfile.mkdtemp(prefix="cli_cleanup_"))
+        session = Workspace(str(tmp)).open_work_session(
+            "sprint-a", git=NullGitRepo(tmp)
+        )
+        session.ensure_started()
+        (session.folder / "wait_judge3.py").write_text("pass\n", encoding="utf-8")
+        (session.folder / "judge-verdict-1.txt").write_text("PASS\n", encoding="utf-8")
+        (session.folder / "cli-agent-job-queue.json").write_text("[]\n", encoding="utf-8")
+        ctx = Path(session.path) / ".context"
+        (ctx / "_judge_check.py").write_text("print(1)\n", encoding="utf-8")
+        (ctx / "cli-agent-put-back.txt").write_text("x\n", encoding="utf-8")
+        (ctx / "story-map.md").write_text("# keep\n", encoding="utf-8")
+        CliAgent.cleanup_session(session)
+        expect((session.folder / "session.md").is_file()).to(be_true)
+        expect((session.folder / "wait_judge3.py").exists()).to(be_false)
+        expect((session.folder / "judge-verdict-1.txt").exists()).to(be_false)
+        expect((session.folder / "cli-agent-job-queue.json").exists()).to(be_false)
+        expect((ctx / "_judge_check.py").exists()).to(be_false)
+        expect((ctx / "cli-agent-put-back.txt").exists()).to(be_false)
+        expect((ctx / "story-map.md").is_file()).to(be_true)

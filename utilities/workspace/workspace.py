@@ -756,6 +756,20 @@ class WorkSession:
         return self.cli_agent_binding.open
 
     @property
+    def cli_agent(self):
+        """Bound CliAgent for this session, or None if none ran."""
+        self.load_cli_sessions()
+        binding = self.cli_agent_binding
+        if not (self.cli_doer or self.cli_judge or binding.doer or binding.judge):
+            return None
+        from cli_agent.cli_agent import CliAgent, IdeCli
+
+        self.workspace.current_work_session = self
+        agent = CliAgent(ide=IdeCli(), workspace=str(self.path), session=self.name)
+        agent._work = self.workspace
+        return agent
+
+    @property
     def cli_agent_binding(self):
         from git.git import CliAgentBinding
 
@@ -1146,6 +1160,7 @@ class WorkSession:
 
     def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
         self.turn.finish(result=outcome or "session close")
+        self.cleanup()
         self.close_cli_sessions()
         if not self.session_md.is_file():
             self.ensure_started()
@@ -1242,6 +1257,19 @@ class WorkSession:
         if not self.name:
             return "no work session to close"
         return self.close_session(outcome=outcome, handoff=handoff)
+
+    def cleanup(self) -> None:
+        """Remove temps this session created. CliAgent temps go through CliAgent."""
+        self._wipe_session_logs()
+        agent = self.cli_agent
+        if agent is not None:
+            agent.cleanup()
+
+    def _wipe_session_logs(self) -> None:
+        log_dir = self.log
+        if not log_dir.is_dir():
+            return
+        shutil.rmtree(log_dir, ignore_errors=True)
 
     def _session_artifact_paths(self) -> list[str]:
         return [str(self.session_md)]

@@ -20,4 +20,4 @@ CliAgent, IdeCli, CursorCli, VscodeCli, JobQueue
 
 ## Constraint
 
-Callers inject `IdeCli` into `CliAgent(ide=...)`. CliAgent does not open the hanging Turn; the CLI does. Never drive the worker with print mode. Judge only when the launch lists a context tool, action, or utility.
+Callers inject `IdeCli` into `CliAgent(ide=...)`. CliAgent does not open the hanging Turn; the CLI does. Never drive the worker with print mode. Judge only when the launch lists a context tool, action, or utility. `cleanup` / `cleanup_session` remove temps this kit wrote; WorkSession does not list those files.
