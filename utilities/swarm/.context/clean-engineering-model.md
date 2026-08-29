@@ -14,7 +14,7 @@ format: md
 
 *Git* is the store. *Plan*, *Swarm*, and *Workflow* are front-ends to *Repo* / *Project* / *Ticket*. *Workspace* is the working folder; *Repo* is the backend — not the same. Never treat git root as workspace.
 
-*Plan* holds ordered *Turn*s. *Turn.state* is *TicketState* mapped to Project/Workflow columns (Backlog / In Progress / Done) — not a parallel store. *JudgeCheckpoint* and/or *HILCheck* hang on a *Turn*. *CliAgent* is the worker; it describes hanging *Turn* shape and does not open the *Turn*. When a *Turn* needs a judge, *CliAgent* doer-judge fills *JudgeCheckpoint.judgeResult*. *Plan* does not depend on *Bdd* or *CleanEngineering*.
+*Plan* is based on a reusable *Workflow* or a new *Workflow* named on `/plan`. `/plan /small-work {context}` loads the prebaked *small-work* *Workflow* into a *Plan* without executing against issues. *Plan* holds ordered *Turn*s. *Turn.state* is *TicketState* mapped to Project/Workflow columns — not a parallel store. *JudgeCheckpoint* and/or *HILCheck* hang on a *Turn*. *CliAgent* is the worker; when a *Turn* needs a judge, *CliAgent* doer-judge fills *JudgeCheckpoint.judgeResult*. *Plan* does not depend on *Bdd* or *CleanEngineering* (BDD owns CE companions).
 
 *Start Plan* opens a *WorkSession*; the first Backlog Turn becomes In Progress. *Execute Turn* runs that Turn. *Advance Turn* finishes it (Done) and the next Backlog Turn becomes In Progress.
 
@@ -22,8 +22,14 @@ format: md
 
 ### plan
 
-- Front-end to git; associated with a *Workspace*; holds ordered *Turn*s
+- Front-end to git; based on a reusable or named *Workflow*
+- `/plan` / `/plan /small-work {context}` load Workflow into Plan
 - *start* opens a *WorkSession*
+
+### workflow
+
+- Front-end to git Project columns; reusable by name (*small-work* is prebaked)
+- *Plan* is based on *Workflow*
 
 ### turn
 
@@ -239,24 +245,38 @@ Repair()
 
 # utilities/plan
 
-- **Purpose:** Front-end to git. Ordered Turns; Turn.state maps to Project/Workflow columns. JudgeCheckpoint hangs on Turn (CliAgent doer-judge). No Bdd/CleanEngineering dependency.
-- **Seam (terms):** Plan, JudgeCheckpoint, HILCheck
-- **Dependencies (one-way):** `workspace`, `git`
+- **Purpose:** Front-end to git. Plan is based on a reusable or named Workflow. `/plan /small-work` loads prebaked small-work Workflow. Turn.state maps to Project/Workflow columns. JudgeCheckpoint hangs on Turn (CliAgent doer-judge). No Bdd/CleanEngineering dependency.
+- **Seam (terms):** Plan, PlanExecution, TurnAttachments, TurnTemplate, JudgeCheckpoint, HILCheck, ProgressView
+- **Dependencies (one-way):** `workspace`, `git`, `workflow`
 
 ## Plan
 
-Plan is a front-end to git associated with a Workspace; holds ordered Turns.
+Plan is based on a Workflow; associated with a Workspace; holds ordered Turns.
 
 Plan()
 ------
 << association >> workspace: Workspace
+<< association >> workflow: Workflow
+workflowName: str
 << composition >> turns: list[Turn]
 ----
 create(workspace: Workspace): Plan
-start(): WorkSession
-executeTurn(): None
-evaluateResults(judgeResult: str): JudgeCheckpoint
-advanceTurn(): None
+from_workflow(workspace: Workspace, workflow: Workflow, workflowName: str): Plan
+plan(workflow: str, context: str, workspace: str): dict
+small_work(context: str, workspace: str): dict
+
+## TurnTemplate
+
+TurnTemplate is one prebaked Turn shape on a named Workflow.
+
+TurnTemplate()
+------
+action: str
+fidelity: str
+format: str
+context: str
+tool_keys: list[str]
+----
 
 ## JudgeCheckpoint
 

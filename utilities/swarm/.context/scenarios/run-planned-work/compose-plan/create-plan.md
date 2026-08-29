@@ -10,26 +10,27 @@ format: md
 
 **Actor:** Practitioner
 
-**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/plan/.context/module-context.md`
+**Sources / context:** `utilities/swarm/.context/story-map.md`; `utilities/plan/.context/module-context.md`; `utilities/workflow/.context/module-context.md`
 
 ### Domain terms
 
-- *Plan* — associated with a **Workspace**; holds ordered **Turn**s
-- *Workspace* — parent of `.context/`; owns **WorkSession**s
+- *Plan* — front-end to git; based on a **Workflow**; associated with a **Workspace**
+- *Workflow* — reusable or newly named; Plan loads prebaked **Turn**s from it
+- *Workspace* — working folder; not the **Repo**
 
 ## Behaviors
 
-### Scenario: Plan is on the Workspace
+### Scenario: Plan is on the Workspace based on a Workflow
 
-*Given* a **Workspace**  
-*When* the operator creates a **Plan** *compose-judged-plan*  
+*Given* a **Workspace** and a **Workflow** *compose-judged-plan*  
+*When* the operator creates a **Plan** from that **Workflow**  
 *Then* that **Plan** is associated with that **Workspace**  
-  *And* that **Plan** holds no **Turn**s yet
+  *And* that **Plan** is based on **Workflow** *compose-judged-plan*
 
 ### Scenario: Second Plan is its own Plan
 
 *Given* a **Workspace** that already has a **Plan** *compose-judged-plan*  
-*When* the operator creates a **Plan** *ticket-flow-plan*  
+*When* the operator creates a **Plan** *ticket-flow-plan* based on a **Workflow**  
 *Then* that **Workspace** has both **Plan**s  
   *And* each **Plan** holds its own **Turn**s
 
@@ -37,5 +38,5 @@ format: md
 
 | Scenario | Source | Location |
 | --- | --- | --- |
-| Plan is on the Workspace | plan-and-swarm-sketch.md | Compose Plan / Create Plan |
+| Plan is on the Workspace based on a Workflow | story-map.md | Compose Plan / Create Plan |
 | Second Plan is its own Plan | plan-and-swarm-sketch.md | Compose Plan / Create Plan |

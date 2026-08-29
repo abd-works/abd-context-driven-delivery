@@ -1,16 +1,43 @@
 This is an interactive session.
 Turn.action: Validate (guidance — the CLI decides the Turn)
-Turn.tool_keys: (none)
-Turn.toolCalls: (none)
+Turn.tool_keys: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Turn.toolCalls: context_tools.stories.stories:Stories name=run context_tools.stories.stories:Stories fidelity=story_map format=markdown, context_tools.clean_engineering.clean_engineering:CleanEngineering name=run context_tools.clean_engineering.clean_engineering:CleanEngineering fidelity=modules format=markdown
+Turn.fidelity: code
+Turn.format: python
+Turn.prompt: Job 1 — plan, apply the model changes, finish the code. Skip sketch.
+
+Come up with the Plan for /plan /small-work {context}. Apply the model changes we already aligned so the model and code match:
+
+- A Plan is based on a reusable Workflow or a new Workflow named on the plan command.
+- /plan /small-work {context} loads that prebaked Workflow.
+- Plan, Workflow, and Swarm are front-ends to git (Repo / Projects / issues).
+- Judge hangs on the Turn; CliAgent runs the existing judge.
+- Workspace is the working folder, not the repo.
+- Agents use CliAgent. BDD owns CE companions; Plan does not inject CE.
+
+Generate story_map, scenarios, modules, model, and code to that model. Do not execute the small-work run against issues in this job.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
 The doer invoked you after it finished the Turn. Validate now. Reply PASS or FAIL to the doer and finish this Turn. Do not wait for the parent. The parent is not in this loop.
-validate using the scanners
 Validate at the same fidelity and format as that Turn. Judge the artifacts produced at that fidelity and format. When format is markdown, validate the markdown; do not look for source code.
 Compare what was written to the source scope of the original job. The job is the worker prompt and its sources (story map, sketch, model, or named subset). Scope may be the whole artifact or a stated slice — use that scope, not only the files that happen to exist. Missing nodes, epics, or files that the source scope called for are a fail. Do not treat a leftover or partial tree as complete.
 --- JOB / SOURCE SCOPE ---
 This is an interactive session.
 Turn.action: (none) (guidance — the CLI decides the Turn)
-Turn.tool_keys: (none)
-Turn.toolCalls: (none)
+Turn.tool_keys: context_tools.stories.stories:Stories, context_tools.clean_engineering.clean_engineering:CleanEngineering
+Turn.toolCalls: context_tools.stories.stories:Stories name=run context_tools.stories.stories:Stories fidelity=story_map format=markdown, context_tools.clean_engineering.clean_engineering:CleanEngineering name=run context_tools.clean_engineering.clean_engineering:CleanEngineering fidelity=modules format=markdown
+Turn.fidelity: code
+Turn.format: python
+Turn.prompt: Job 1 — plan, apply the model changes, finish the code. Skip sketch.
+
+Come up with the Plan for /plan /small-work {context}. Apply the model changes we already aligned so the model and code match:
+
+- A Plan is based on a reusable Workflow or a new Workflow named on the plan command.
+- /plan /small-work {context} loads that prebaked Workflow.
+- Plan, Workflow, and Swarm are front-ends to git (Repo / Projects / issues).
+- Judge hangs on the Turn; CliAgent runs the existing judge.
+- Workspace is the working folder, not the repo.
+- Agents use CliAgent. BDD owns CE companions; Plan does not inject CE.
+
+Generate story_map, scenarios, modules, model, and code to that model. Do not execute the small-work run against issues in this job.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
-After you finish the Turn, you contact the judge. Do not ask the parent to run the judge. The parent is not in this loop. Open the judge in its own console window so the operator can watch. Never use print mode. On Windows: Start-Process cursor-agent -ArgumentList '--force','--trust','--resume','judge-folder','--workspace','C:\dev\abd-cdd-plan-and-swarm-utilities-23','Read .context/cli-agent-judge.txt and follow it exactly.' -WorkingDirectory 'C:\dev\abd-cdd-plan-and-swarm-utilities-23' -WindowStyle Normal. Wait for PASS or FAIL from the judge transcript or finish_turn, not by reading this console. On PASS, stop. On FAIL, fix, finish the Turn, and send again (attempt n of 3). After three FAILs, stop and wait.
+After you finish the Turn, you contact the judge. Do not ask the parent to run the judge. The parent is not in this loop. Open the judge in its own console window so the operator can watch. Never use print mode. On Windows: Start-Process cursor-agent -ArgumentList '--force','--trust','--resume','13c48f6f-15f0-4cab-81b8-10f9efeb893f','--workspace','C:\dev\abd-cdd-plan-and-swarm-utilities-23','Read .context/cli-agent-judge.txt and follow it exactly.' -WorkingDirectory 'C:\dev\abd-cdd-plan-and-swarm-utilities-23' -WindowStyle Normal. Wait for PASS or FAIL from the judge transcript or finish_turn, not by reading this console. On PASS, stop. On FAIL, fix, finish the Turn, and send again (attempt n of 3). After three FAILs, stop and wait.

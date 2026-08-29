@@ -289,3 +289,6 @@ C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --res
 
 --- spawn 2026-08-28 18:37:08 ---
 /bin/cursor-agent --force --trust --resume doer-folder --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.
+
+--- spawn 2026-08-28 21:06:00 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 16a29473-000a-4915-8a2a-7fc8df3ac22d --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read .context/cli-agent-task.txt and follow it exactly.

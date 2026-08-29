@@ -42,6 +42,7 @@ section: body
         (S) Agent --> Resolve Ticket Number
     (E) Compose Plan
         (S) Practitioner --> Create Plan
+        (S) Practitioner --> Load Small-Work Plan
         (S) Practitioner --> Manage Turns
         (S) Practitioner --> Manage HIL Checks
         (S) Practitioner --> Manage Judge Checkpoints
@@ -55,9 +56,9 @@ section: body
 
 ## Scope boundary
 
-**In scope:** Git is the store (`Repo`, GitHub Projects, issues, Backlog / In Progress / Done). Plan, Swarm, and Workflow are front-ends to git — not a parallel ticket machine. Workspace is the working folder (its root is that folder); Repo is the git backend — never treat git root as workspace. Plan holds ordered `workspace.Turn`s; `Turn.state` is TicketState mapped to Project/Workflow columns. CliAgent is the worker for Plan and Swarm Agents (`CliAgent.launch_sessions` at Plan.start). JudgeCheckpoint hangs on the Turn; when a Turn needs a judge, use CliAgent doer-judge (own console, never print mode, 3-fail). Supervisor.compare reads that result and does not judge — no judge-as-agent policy on Swarm Agent. CliAgent describes hanging Turn shape and does not open the Turn; the CLI opens and finishes it. No Plan on CliAgent. No PlannedTurn. Plan does not depend on Bdd or CleanEngineering (BDD owns its companion tools). Compose/configure Plan and Swarm follow the thin-slice order.
+**In scope:** Git is the store (`Repo`, GitHub Projects, issues, Backlog / In Progress / Done). Plan, Swarm, and Workflow are front-ends to git — not a parallel ticket machine. A Plan is based on a reusable Workflow or a new Workflow named on `/plan`. `/plan /small-work {context}` loads that prebaked Workflow into a Plan without executing against issues. Workspace is the working folder (its root is that folder); Repo is the git backend — never treat git root as workspace. Plan holds ordered `workspace.Turn`s; `Turn.state` is TicketState mapped to Project/Workflow columns. CliAgent is the worker for Plan and Swarm Agents (`CliAgent.launch_sessions` at Plan.start). JudgeCheckpoint hangs on the Turn; when a Turn needs a judge, use CliAgent doer-judge (own console, never print mode, 3-fail). Supervisor.compare reads that result and does not judge. CliAgent describes hanging Turn shape and does not open the Turn; the CLI opens and finishes it. No Plan on CliAgent. No PlannedTurn. Plan does not depend on Bdd or CleanEngineering (BDD owns its companion tools).
 
-**Out of scope:** New slash-command product UX beyond existing kits. Invented kanban columns or status badges. A second ticket identity besides GitHub issue `#`. A parallel yaml/store beside `utilities/git`. Plan owning BDD/CE companion rules.
+**Out of scope:** Executing small-work against live GitHub issues in this generate job. Invented kanban columns. A second ticket identity besides GitHub issue `#`. A parallel yaml/store beside `utilities/git`. Plan owning BDD/CE companion rules.
 
 ---
 
@@ -67,7 +68,7 @@ section: body
 
 **Outcome:** Operators assign GitHub tickets under one theme (defects and small changes) to a Plan that is already set and configured in the project repo. For each ticket they do root cause, run `/bdd` (Clean Engineering under the hood), fix that one issue, and move the ticket Backlog → In Progress → Done using existing Workflow `backlog` / `start` / `finish`.
 
-**Slicing notes:** Plan is preconfigured — no Compose in this slice. One theme, one ticket at a time. `/bdd` always includes CleanEngineering companion — not BDD alone. Ticket columns are only the existing Workflow/git states.
+**Slicing notes:** Plan is preconfigured — no Compose in this slice. One theme, one ticket at a time. `/bdd` runs with CE companions owned by BDD (Plan does not inject CE). Ticket columns are only the existing Workflow/git states.
 
 **Decision prompt:** Ready to compose and configure Plans (Turns, HIL, Judge) after this slice?
 
@@ -85,14 +86,15 @@ section: body
 
 ### Increment 2: Compose and configure Plan
 
-**Outcome:** A Practitioner creates a Plan and manages Turns, HIL Checks, and Judge Checkpoints (add, edit, delete) so later themes can reuse a configured Plan Workflow.
+**Outcome:** A Practitioner creates a Plan based on a reusable Workflow or a new Workflow named on `/plan`. `/plan /small-work {context}` loads the prebaked small-work Workflow. Practitioner manages Turns, HIL Checks, and Judge Checkpoints (add, edit, delete).
 
-**Slicing notes:** Compose only. Execution spine already proven in Increment 1.
+**Slicing notes:** Plan is based on Workflow. small-work is prebaked; does not run against issues in generate. Execution spine uses CliAgent judge on Turn.
 
 **Decision prompt:** Ready to deepen ticket research tags after this slice?
 
 **Stories:**
 - Create Plan
+- Load Small-Work Plan
 - Manage Turns
 - Manage HIL Checks
 - Manage Judge Checkpoints

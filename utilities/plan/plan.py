@@ -1,14 +1,17 @@
 # @toolset-manifest python -m tools manifest plan.plan:Plan
 # Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-"""Plan — ordered workspace.Turns with optional JudgeCheckpoint / HILCheck."""
+"""Plan — front-end to git; based on a reusable or named Workflow."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from git.git import TicketState
+from harness.harness_tool import prompt
 from primitives.actions.action import agentic_toolset
+from tools.tool import agent_tool
 from workspace.workspace import Turn, WorkSession, Workspace
+from workflow.workflow import Workflow
 
 
 @dataclass
@@ -34,6 +37,39 @@ class ProgressView:
     result: Any
     hil_validation: str | None
     judge_result: str | None
+
+
+@dataclass
+class TurnTemplate:
+    """One prebaked Turn shape loaded from a named Workflow."""
+
+    action: str
+    fidelity: str = ""
+    format: str = ""
+    context: str = ""
+    tool_keys: list[str] = field(default_factory=list)
+
+
+# Prebaked Workflow recipes — /plan /small-work loads this; does not run against issues.
+# BDD owns CE companions; Plan does not inject CleanEngineering onto Turns.
+_PREBAKED_WORKFLOWS: dict[str, list[TurnTemplate]] = {
+    "small-work": [
+        TurnTemplate(
+            action="Generate",
+            fidelity="story_map",
+            format="markdown",
+            context="",
+            tool_keys=["context_tools.stories.stories:Stories"],
+        ),
+        TurnTemplate(
+            action="Generate",
+            fidelity="behavior",
+            format="markdown",
+            context="",
+            tool_keys=["context_tools.bdd.bdd:Bdd"],
+        ),
+    ],
+}
 
 
 class TurnAttachments:
@@ -74,17 +110,21 @@ class TurnAttachments:
 
 @agentic_toolset
 class Plan:
-    """Plan front-end to git: ordered Turns; TicketState maps to Project columns."""
+    """Plan front-end to git, based on a reusable or newly named Workflow."""
 
     def __init__(
         self,
-        attachments: TurnAttachments,
+        attachments: TurnAttachments | None = None,
         name: str = "",
         workspace: Workspace | None = None,
+        workflow: Workflow | None = None,
+        workflow_name: str = "",
     ) -> None:
-        self._attachments = attachments
+        self._attachments = attachments if attachments is not None else TurnAttachments()
         self._name = name
         self._workspace = workspace
+        self._workflow = workflow
+        self._workflow_name = workflow_name
         self._turns: list[Turn] = []
         self._work_session: WorkSession | None = None
 
@@ -95,6 +135,14 @@ class Plan:
     @property
     def workspace(self) -> Workspace | None:
         return self._workspace
+
+    @property
+    def workflow(self) -> Workflow | None:
+        return self._workflow
+
+    @property
+    def workflow_name(self) -> str:
+        return self._workflow_name
 
     @property
     def turns(self) -> list[Turn]:
@@ -116,15 +164,43 @@ class Plan:
     def create(
         cls,
         workspace: Workspace,
-        attachments: TurnAttachments,
+        attachments: TurnAttachments | None = None,
         name: str = "",
+        workflow: Workflow | None = None,
+        workflow_name: str = "",
     ) -> Plan:
-        plan = cls(attachments=attachments, name=name, workspace=workspace)
+        plan = cls(
+            attachments=attachments,
+            name=name,
+            workspace=workspace,
+            workflow=workflow,
+            workflow_name=workflow_name,
+        )
         plans = getattr(workspace, "plans", None)
         if plans is None:
             workspace.plans = []  # type: ignore[attr-defined]
             plans = workspace.plans
         plans.append(plan)
+        return plan
+
+    @classmethod
+    def from_workflow(
+        cls,
+        workspace: Workspace,
+        attachments: TurnAttachments,
+        workflow: Workflow,
+        workflow_name: str,
+        name: str = "",
+    ) -> Plan:
+        """Build a Plan on a reusable Workflow; load prebaked Turns when named."""
+        plan = cls.create(
+            workspace=workspace,
+            attachments=attachments,
+            name=name or workflow_name,
+            workflow=workflow,
+            workflow_name=workflow_name,
+        )
+        plan._load_prebaked_turns(workflow_name)
         return plan
 
     def add_turn(self, turn: Turn | None = None, **fields: Any) -> Turn:
@@ -149,6 +225,75 @@ class Plan:
     def delete_turn(self, turn: Turn) -> None:
         if turn in self._turns:
             self._turns.remove(turn)
+
+    def _load_prebaked_turns(self, workflow_name: str) -> None:
+        for template in _PREBAKED_WORKFLOWS.get(workflow_name, []):
+            self.add_turn(
+                action=template.action,
+                fidelity=template.fidelity,
+                format=template.format,
+                context=template.context,
+                tool_keys=list(template.tool_keys),
+            )
+
+    @prompt(name="plan")
+    @agent_tool
+    def plan(
+        self,
+        workflow: str = "",
+        context: str = "",
+        workspace: str = "",
+    ) -> dict[str, str | int]:
+        """Create a Plan based on a reusable Workflow name, or a new Workflow named here."""
+        workflow_name = (workflow or "").strip() or "plan"
+        return self._open_named_workflow(
+            workflow_name=workflow_name,
+            context=context,
+            workspace_path=workspace,
+        )
+
+    @prompt(name="small-work")
+    @agent_tool
+    def small_work(self, context: str = "", workspace: str = "") -> dict[str, str | int]:
+        """/plan /small-work {context} — load the prebaked small-work Workflow into a Plan.
+
+        Does not execute against GitHub issues — only opens the Plan on that Workflow.
+        """
+        return self._open_named_workflow(
+            workflow_name="small-work",
+            context=context,
+            workspace_path=workspace,
+        )
+
+    def _open_named_workflow(
+        self,
+        workflow_name: str,
+        context: str,
+        workspace_path: str,
+    ) -> dict[str, str | int]:
+        folder = (workspace_path or "").strip() or "."
+        ws = Workspace(folder)
+        ws.load()
+        flow = Workflow(workspace=folder)
+        attachments = TurnAttachments()
+        built = Plan.from_workflow(
+            workspace=ws,
+            attachments=attachments,
+            workflow=flow,
+            workflow_name=workflow_name,
+            name=workflow_name,
+        )
+        if context.strip():
+            for turn in built.turns:
+                existing = getattr(turn, "context", "") or ""
+                turn.context = f"{existing} {context}".strip() if existing else context
+        return {
+            "plan": built.name,
+            "workflow": workflow_name,
+            "turns": len(built.turns),
+            "workspace": folder,
+            "context": context,
+        }
 
 
 class PlanExecution:

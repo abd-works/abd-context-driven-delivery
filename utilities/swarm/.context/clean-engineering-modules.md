@@ -10,14 +10,17 @@ format: md
 
 *Git* is the store. *Plan*, *Swarm*, and *Workflow* are front-ends to *Repo* / *Project* / *Ticket* / *TicketState*. *Workspace* is the working folder; *Repo* is the backend — not the same.
 
-*Plan* holds ordered *Turn*s. *Turn.state* maps to Project/Workflow columns (Backlog / In Progress / Done). *JudgeCheckpoint* and/or *HILCheck* hang on a *Turn*. *CliAgent* is the worker; it describes hanging *Turn* shape and does not open the *Turn*. When a *Turn* needs a judge, *CliAgent* doer-judge fills *JudgeCheckpoint.judgeResult*.
-
-*Swarm* *Agent* is a *CliAgent* under one *Hypothesis*. *CliAgent.launch_sessions* starts at *Plan.start*. *Supervisor.compare* reads *Turn* judge/HIL results and does not judge. *Plan* does not depend on *Bdd* or *CleanEngineering*.
+*Plan* is based on a reusable *Workflow* or a new *Workflow* named on `/plan`. `/plan /small-work {context}` loads the prebaked *small-work* *Workflow* into a *Plan* (does not execute against issues). *Turn.state* maps to Project/Workflow columns. *JudgeCheckpoint* hangs on a *Turn*; *CliAgent* doer-judge fills *judgeResult*. *Plan* does not inject Clean Engineering — BDD owns CE companions.
 
 ### plan
 
-- Front-end to git; associated with a *Workspace*; holds ordered *Turn*s
+- Based on a reusable or named *Workflow*
+- `/plan` / `/small-work` load Workflow into Plan
 - *start* opens a *WorkSession*
+
+### workflow
+
+- Front-end to git; reusable by name; *small-work* is prebaked for Plan
 
 ### turn
 
@@ -67,7 +70,7 @@ format: md
 
 ## Modules
 
-Build order: `git` | `workspace` | `cli_agent` → `plan` → `swarm` | `workflow`
+Build order: `git` | `workspace` | `cli_agent` → `workflow` → `plan` → `swarm`
 
 ---
 
@@ -91,9 +94,9 @@ Build order: `git` | `workspace` | `cli_agent` → `plan` → `swarm` | `workflo
 
 # utilities/plan
 
-- **Purpose:** Front-end to git — ordered Turns; TicketState maps to Project columns.
-- **Seam (terms):** Plan, JudgeCheckpoint, HILCheck
-- **Dependencies (one-way):** `workspace`, `git`
+- **Purpose:** Front-end to git — Plan based on reusable/named Workflow; `/plan /small-work` loads prebaked Workflow.
+- **Seam (terms):** Plan, PlanExecution, TurnAttachments, TurnTemplate, JudgeCheckpoint, HILCheck
+- **Dependencies (one-way):** `workspace`, `git`, `workflow`
 
 # utilities/swarm
 
