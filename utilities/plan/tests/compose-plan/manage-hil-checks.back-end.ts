@@ -4,7 +4,7 @@
  */
 
 import { story, scenario, expect } from "../../story-test";
-import { HILCheck } from "../../../domain/plan/plan";
+import { HILCheck } from "../../domain/plan/plan";
 import {
   aPlanWithGenerateTurn,
   aWorkspaceWithWorkflow,

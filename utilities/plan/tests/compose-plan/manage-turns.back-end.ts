@@ -4,7 +4,7 @@
  */
 
 import { story, scenario, expect } from "../../story-test";
-import { Plan, ToolCall, Turn } from "../../../domain/plan/plan";
+import { Plan, ToolCall, Turn } from "../../domain/plan/plan";
 import {
   aPlanWithGenerateTurn,
   aWorkspaceWithWorkflow,

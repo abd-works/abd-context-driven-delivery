@@ -10,7 +10,7 @@ import {
   Workspace,
   Workflow,
   ToolCall,
-} from "../../../domain/plan/plan";
+} from "../../domain/plan/plan";
 
 export type ComposeWorld = {
   workspace: Workspace;

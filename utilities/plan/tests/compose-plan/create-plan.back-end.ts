@@ -4,7 +4,7 @@
  */
 
 import { story, scenario, expect } from "../../story-test";
-import { Plan, Workflow, Workspace } from "../../../domain/plan/plan";
+import { Plan, Workflow, Workspace } from "../../domain/plan/plan";
 import { freshWorld, ComposeWorld } from "./givens";
 
 const world: ComposeWorld = freshWorld();
