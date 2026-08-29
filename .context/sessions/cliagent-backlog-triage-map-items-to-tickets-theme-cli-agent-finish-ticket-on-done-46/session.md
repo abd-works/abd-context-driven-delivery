@@ -117,3 +117,45 @@ Backlog was added as “assign refs or text → run template per item.” Up-fro
 - Branch: `session/cliagent-backlog-triage-map-items-to-tickets-theme-cli-agent-finish-ticket-on-done-46`
 - Worktree: `C:\dev\abd-cdd-46`
 - Packages: `utilities/cli_agent`, `utilities/workflow` (+ theme helpers in `work_ticket` / `git`)
+
+## Diagnosis
+
+### Hypothesis (concrete)
+
+The defect is **not** a single broken line — it is three missing contracts in the CliAgent backlog spine that were never implemented when `CliBacklog` shipped (`2f4ec700` / `b164af24`). Each maps to a different symptom in #46:
+
+1. **Up-front triage / map-to-ticket**  
+   `CliBacklogItem.from_ref` only regex-classifies `#?\d+` vs free-text. `set_backlog` persists that classification and stops. There is **no** resolver that searches existing GitHub issues, calls `capture_backlog` for true new text, or registers the full set on the project board before defect-fix runs. Free-text therefore survives into jobs; agents create tickets ad hoc → duplicates (#42/#43).
+
+2. **Theme `cli-agent`**  
+   Theme application is delegated to `WorkTicket.infer_theme` (keyword match against `THEMES`). There is **no** backlog-level policy that forces `theme:cli-agent` for every item in a cli-agent session backlog. Wording that mentions “tools” (or omits “cli-agent”) can land as `theme:tools` / other labels; `theme:cliagent` is a slug drift outside the canonical `cli-agent` theme.
+
+3. **finish-ticket before `next_backlog_item`**  
+   Exact underlying issue: `next_backlog_item` only advances backlog status and reloads the job template. It never calls `Workflow.finish` / `/finish-ticket`. The defect-fix template’s last job is “fix the defect…” with **no** finish step. Parent `launch_sessions` backlog docs say to call `next_backlog_item()` when jobs are done and **omit** finish-ticket. So even when `/finish-ticket` exists and works, the backlog automation path never invokes it — board stays In Progress after closed work (#41).
+
+### Why not elsewhere
+
+- Workflow `finish` / `capture_backlog` / theme helpers work when called; the bug is **non-invocation + missing resolve** on the backlog path, not a broken Done column API.
+- Session isolation (#41 code fix) is orthogonal; hygiene failures persist after that fix.
+- Duplicate #42/#43 are consequences of (1), not a separate root cause.
+
+### Confidence
+
+**High.** Cause is unambiguous from code + template + parent docs; `/diagnose` not required.
+
+### Category
+
+**BOTH**
+
+| Layer | Failure | Fix kind |
+|-------|---------|----------|
+| **CODE CHANGE** | No up-front resolve/create/board registration in `set_backlog` (or dedicated triage API); `next_backlog_item` does not finish the ticket; no forced `theme:cli-agent` on backlog capture/start | Production edits in `cli_agent.py` (+ Workflow calls / theme override) |
+| **PROMPT/AI CHANGE** | `defect-fix.json` has no finish-ticket job; `launch_sessions` backlog instructions tell the parent to advance without finishing; module-context does not state the finish-then-advance or triage-up-front contracts | Prompt / docstring / template / module-context updates |
+
+Agents cannot reliably invent the missing finish/triage steps when the queue API and template never require them; code cannot finish what prompts never schedule without a seam that actually calls finish. Both layers must change.
+
+### Tests implied (for next job)
+
+- **Mechanical BDD:** `set_backlog`/triage resolves text→existing `#N` without duplicate create; backlog items carry/enforce `theme:cli-agent`; completing an item invokes finish (or equivalent) before advance — assert project Done / no advance without finish hook.
+- **Agentic BDD:** parent/doer following defect-fix + backlog docs must call finish-ticket before `next_backlog_item` (and must not skip up-front triage when given free-text + existing `#N`).
+
