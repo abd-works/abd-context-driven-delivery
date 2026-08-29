@@ -1,5 +1,6 @@
 ok: true
-toolset: utilities.grill_context.grill_context:GrillContext
+toolset: grill_context.grill_context:GrillContext
 tool: write_grill_answer
-result: C:\Users\thoma\AppData\Local\Temp\tmpkogsm7vz\.context\grill-answers.md
-resources: {}
+result: C:\Users\jeffa\AppData\Local\Temp\tmpe_dmgzsr\.context\grill-answers.md
+resources:
+  mode: action

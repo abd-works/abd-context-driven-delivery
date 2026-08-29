@@ -1,9 +1,9 @@
 Using shell, run exactly: python -m tools run -
 Pipe this YAML on stdin:
-toolset: utilities.grill_context.grill_context:GrillContext
+toolset: grill_context.grill_context:GrillContext
 tool: write_grill_answer
 arguments:
-  root: 'C:\Users\thoma\AppData\Local\Temp\tmpkogsm7vz'
+  root: 'C:\Users\jeffa\AppData\Local\Temp\tmpe_dmgzsr'
   heading: 'How explore_context_files discovers files'
   body: 'It scans recursively for files whose name contains context or that live inside a .context/ subfolder, skipping __pycache__ and private underscore-prefixed paths.'
 Return the complete fenced YAML stdout from the CLI.
