@@ -1,18 +1,32 @@
-﻿This is an interactive session.
+This is an interactive session.
 Turn.action: Validate (guidance — the CLI decides the Turn)
-Turn.tool_keys: context_tools.clean_engineering.clean_engineering:CleanEngineering
-Turn.toolCalls: context_tools.clean_engineering.clean_engineering:CleanEngineering name=run context_tools.clean_engineering.clean_engineering:CleanEngineering
-Turn.prompt: Backlog item: FIRST / BLOCKING: Starting a work session must put work on its own branch (and worktree) for isolation. work session == branch == own tree. This must hold for CliAgent, SubAgent, and no-agent flows ? not only CLI spawn. Today open/start of a work session can leave you on main/parent (e.g. C:\dev\abd-works-repo) so agents read/write the wrong tree. Fix at the work-session / start-ticket layer so every new work session binds to session/<name> with its own worktree before any job runs. After start-ticket, rebind workspace root to that worktree. Do this fix on the current branch first; later backlog items depend on it. (text).
+Turn.tool_keys: workflow.workflow:Workflow
+Turn.toolCalls: workflow.workflow:Workflow name=run workflow.workflow:Workflow
+Turn.prompt: Backlog item: CliAgent session log incomplete vs design: response summaries, links to content/chat/job queue, fold cli-agent.json IDs into session log header. (text).
 
-Fix the defect using /clean_engineering.code in small iterations. Work one small piece at a time ? fix just enough to make one or a few tests pass, then move to the next piece. Repeat until all BDD and agentic BDD tests are green. Run vanilla BDD first when you have both.
-Before writing any code: - Explore all impacted codebases and the code they depend on. - Read module-context.md for every module you touch. - Study the existing idioms, patterns, and usage in detail. Do not invent new patterns or paradigms ? follow what is already there. A defect fix should not require new patterns.
+The ticket is confirmed as a defect and start-ticket has already been run. Now analyze:
+- Read all context files (.context/, module-context.md, grill-answers).
+- Analyze repo history for the area in question.
+- Search for similar past incidents and related issues.
+- Be thorough — do not stop at the surface.
+
+Add your full analysis to the ticket notes under ## Analysis (separated from existing content).
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
 The doer invoked you after it finished the Turn. Validate now. Reply PASS or FAIL to the doer and finish this Turn. Do not wait for the parent. The parent is not in this loop.
-Validate at the same fidelity and format as that Turn. Judge the artifacts produced at that fidelity and format.
-PASS only when: (1) all BDD tests pass; (2) all agentic BDD tests pass; (3) the fix follows existing patterns, paradigms, and usage ? no new patterns invented without strong justification; (4) validated against the tools as normal.
-Note: pre-existing unrelated failures in cli_agent_spec.py (report-back text; judge-should-not) are out of scope for this isolation fix. Isolation examples (folder-slug defer; rebind_to_worktree; prompt/docs for CliAgent SubAgent no-agent) must be green.
+Validate at the same fidelity and format as that Turn. Judge the artifacts produced at that fidelity and format. When format is markdown, validate the markdown; do not look for source code.
+Compare what was written to the source scope of the original job. The job is the worker prompt and its sources (story map, sketch, model, or named subset). Scope may be the whole artifact or a stated slice — use that scope, not only the files that happen to exist. Missing nodes, epics, or files that the source scope called for are a fail. Do not treat a leftover or partial tree as complete.
 --- JOB / SOURCE SCOPE ---
-Turn.prompt: Backlog item: FIRST / BLOCKING: Starting a work session must put work on its own branch (and worktree) for isolation. work session == branch == own tree. This must hold for CliAgent, SubAgent, and no-agent flows ? not only CLI spawn. Today open/start of a work session can leave you on main/parent (e.g. C:\dev\abd-works-repo) so agents read/write the wrong tree. Fix at the work-session / start-ticket layer so every new work session binds to session/<name> with its own worktree before any job runs. After start-ticket, rebind workspace root to that worktree. Do this fix on the current branch first; later backlog items depend on it. (text).
+This is an interactive session.
+Turn.action: (none) (guidance — the CLI decides the Turn)
+Turn.tool_keys: workflow.workflow:Workflow
+Turn.toolCalls: workflow.workflow:Workflow name=run workflow.workflow:Workflow
+Turn.prompt: Backlog item: CliAgent session log incomplete vs design: response summaries, links to content/chat/job queue, fold cli-agent.json IDs into session log header. (text).
 
-Fix the defect using /clean_engineering.code in small iterations. Work one small piece at a time ? fix just enough to make one or a few tests pass, then move to the next piece. Repeat until all BDD and agentic BDD tests are green. Run vanilla BDD first when you have both.
-Before writing any code: - Explore all impacted codebases and the code they depend on. - Read module-context.md for every module you touch. - Study the existing idioms, patterns, and usage in detail. Do not invent new patterns or paradigms ? follow what is already there. A defect fix should not require new patterns.
+The ticket is confirmed as a defect and start-ticket has already been run. Now analyze:
+- Read all context files (.context/, module-context.md, grill-answers).
+- Analyze repo history for the area in question.
+- Search for similar past incidents and related issues.
+- Be thorough — do not stop at the surface.
+
+Add your full analysis to the ticket notes under ## Analysis (separated from existing content).
+The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
