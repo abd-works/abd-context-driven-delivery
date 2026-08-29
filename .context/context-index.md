@@ -5,8 +5,8 @@ Workspace-relative roots for each context tool. Prefer these over defaults when 
 ## Current
 
 - bdd = ./primitives/harness/*
-- clean_engineering = ./*
-- stories = ./*
+- clean_engineering = ./utilities/swarm/*
+- stories = ./utilities/swarm/*
 
 ## Log
 
@@ -27,3 +27,5 @@ Workspace-relative roots for each context tool. Prefer these over defaults when 
 - 2026-08-27: clean_engineering = ./utilities/workspace/* (was ./primitives/harness/*)
 - 2026-08-28: stories = ./* (was ./../story-ui/*)
 - 2026-08-28: clean_engineering = ./* (was ./primitives/harness/*)
+- 2026-08-29: stories = ./utilities/swarm/* (was ./*)
+- 2026-08-29: clean_engineering = ./utilities/swarm/* (was ./*)

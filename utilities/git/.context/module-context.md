@@ -4,10 +4,11 @@
 
 **Git** utility (`utilities/git/`): object-oriented domain for a local git clone plus
 GitHub workflow surfaces. Models **Repo → Branch → Commit** for version control and
-**Repo → Project → Ticket → TicketState** for kanban/issue workflow. Tickets also
-carry **research tags**, **notes**, and **flow** on that same graph (git notes and
-commit trailers) — not a parallel yaml ticket index. Callers use domain objects, not
-a subprocess helper module.
+**Repo → Project → Ticket → TicketState** for kanban/issue workflow. Project 1 is the
+**global inbox**; each **Workflow** has its **own Project** whose Status columns are
+that flow’s states. Tickets also carry **research tags**, **notes**, and **flow** on
+that same graph (git notes and commit trailers) — not a parallel yaml ticket index or
+a mirrored board. Callers use domain objects, not a subprocess helper module.
 
 ## Primary use case
 
