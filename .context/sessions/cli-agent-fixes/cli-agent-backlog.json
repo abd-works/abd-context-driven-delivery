@@ -9,7 +9,7 @@
     {
       "ref": "CliAgent session log incomplete vs design: response summaries, links to content/chat/job queue, fold cli-agent.json IDs into session log header.",
       "kind": "text",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "ref": "CliAgent /loop job-finished notifications not firing; poll ~30s for doer then judge completion and report.",
@@ -17,9 +17,9 @@
       "status": "pending"
     },
     {
-      "ref": "Finding CliAgent logs and invoking tools is painful — parent/doer churn instead of manifest path. Slash commands and skills already define the contract: pipe the yaml fence to stdin (`python -m tools run -`), get instructions from manifest, call code. Do NOT grep/search for PYTHONPATH, tool module paths, or remanifest from Python source. Fix: launch report + command/skill docs give parent all paths and the single invocation pattern; doer defect-fix turns use Workflow via tools run fence only.",
+      "ref": "Finding CliAgent logs is painful; introspect paths and put them in parent prompt / launch report.",
       "kind": "text",
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "ref": "launch_sessions NOT TAKEN UP pickup flake when spawn already succeeded.",
