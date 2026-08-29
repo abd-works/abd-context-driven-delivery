@@ -1022,6 +1022,48 @@ with description("a CliAgent tool surface"):
             expect(agent.task_prompt).to(equal("do the thing"))
 
 
+with description("CliAgent work session bind before start-ticket"):
+    with context("when HEAD is main and a leftover default session already exists"):
+        with context("and no session name was given"):
+            with it(
+                "should not bind CliAgent to default — session comes from start-ticket"
+            ):
+                from workspace.git_repo import NullGitRepo
+
+                tmp = Path(tempfile.mkdtemp(prefix="cli_pre_start_"))
+                Workspace(str(tmp)).open_work_session(
+                    "default", git=NullGitRepo(tmp)
+                )
+                agent = CliAgent(workspace=str(tmp), session="")
+                with patch.object(
+                    CliAgent,
+                    "_session_name_from_git",
+                    lambda self: "",
+                ):
+                    with patch(
+                        "workspace.workspace.WorkSession._default_git",
+                        lambda self: NullGitRepo(Path(self.workspace.path)),
+                    ):
+                        work = agent._ensure_work_session()
+                expect(work.name).not_to(equal("default"))
+
+    with context("defect-fix job 1 prompt"):
+        with it(
+            "should tell the doer not to rely on a durable CliAgent session on main before start-ticket"
+        ):
+            template = (
+                Path(__file__).resolve().parent / "job-templates" / "defect-fix.json"
+            )
+            jobs = json.loads(template.read_text(encoding="utf-8"))["jobs"]
+            prompt = jobs[0]["prompt"].lower()
+            expect(
+                "durable" in prompt
+                or "rebind" in prompt
+                or "do not bind" in prompt
+                or "before start-ticket" in prompt
+            ).to(be_true)
+
+
 with description("a CLI agent job_queue"):
     with context("when the parent assigns two jobs"):
         with it("should store them on the WorkSession without spawning"):
