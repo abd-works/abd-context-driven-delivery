@@ -1,5 +1,40 @@
-Same WorkSession. Do not start a new CLI session.
+This is an interactive session.
+Turn.action: (none) (guidance — the CLI decides the Turn)
+Turn.tool_keys: workflow.workflow:Workflow
+Turn.toolCalls: workflow.workflow:Workflow name=run workflow.workflow:Workflow
+Turn.prompt: Backlog task — 'Fix clean_engineering model + generate manifest confusion'
 
-The Plan acceptance tests were moved from utilities/swarm/tests/.../compose-plan to utilities/plan/tests/compose-plan (and story-test plus the Plan domain wrap with them). That move is staged and not committed because this chat moved the files after the last Turn already finished.
+Transcript: C:\Users\jeffa\.cursor\projects\c-dev-abd-context-driven-delivery\agent-transcripts\a8b46eb2-f131-492e-9be7-a3cfbeaba5a4\a8b46eb2-f131-492e-9be7-a3cfbeaba5a4.jsonl
 
-Open the hanging workspace.Turn if needed, then finish_turn so it commits that move. Always finish the Turn (commit everything) even when the action did not work. Do not leave a dirty tree because something failed. Contact the judge after finish_turn.
+Read the transcript and identify which chat turn first noticed this issue.
+Determine whether the change that caused it is in the current commit
+(shown in the Turn Context below) or an earlier one, and note the branch
+and commit SHA. Update the Turn Context section in the body accordingly.
+
+Then call capture_backlog with:
+  focus: 'Fix clean_engineering model + generate manifest confusion'
+  body: (the body below, updated with transcript findings)
+  workspace: 'C:\\dev\\abd-context-driven-delivery'
+  theme: ''
+  category: 'Defect'
+  infer_from: 'Fix clean_engineering model + generate manifest confusion\nAgent got completely confused running /.cursor/clean_engineering.model and /.cursor/generate. Tried generate_output instead of following manifest instructions. Defaulted to draw.io diagram even with format=markdown. Confused action names (generate vs generate_output). Should have read the manifest, taken the instructions, and passed them to the action ? instead spent many turns trying wrong things. This used to work before actions and context_tools were separated. Need to identify root cause and fix either the cursor commands, the manifest instructions, or the agent guidance so this works reliably.\n'
+
+--- body ---
+# Handoff â€” abd-context-driven-delivery (2026-08-29)
+
+## Resume
+
+- **Stage:** (unset)
+- **Last work:** (see session progress below)
+- **Next action:** Fix clean_engineering model + generate manifest confusion
+- **Next focus:** Fix clean_engineering model + generate manifest confusion
+
+## Artifacts to read
+
+- `C:\dev\abd-context-driven-delivery\.context\context-index.md`
+
+## Request
+
+**Focus:** Fix clean_engineering model + generate manifest confusion
+Agent got completely confused running /.cursor/clean_engineering.model and /.cursor/generate. Tried generate_output instead of following manifest instructions. Defaulted to draw.io diagram even with format=markdown. Confused action names (generate vs generate_output). Should have read the manifest, taken the instructions, and passed them to the action ? instead spent many turns trying wrong things. This used to work before actions and context_tools were separated. Need to identify root cause and fix either the cursor commands, the manifest instructions, or the agent guidance so this works reliably.
+The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
