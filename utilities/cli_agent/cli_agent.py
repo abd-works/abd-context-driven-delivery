@@ -535,7 +535,7 @@ class _WorkAttach:
             return work
         if not work.cli_doer:
             work.associate_cli("doer", vendor._create_chat(agent._workspace_root()))
-        if vendor.judge and not work.cli_judge:
+        if agent._judge_job and vendor.judge and not work.cli_judge:
             work.associate_cli("judge", vendor._create_chat(agent._workspace_root()))
         agent._ide = vendor._copy_policy(vendor._resumed(work.cli_doer, work.cli_judge))
         return work
@@ -868,14 +868,20 @@ class IdeCli:
         return task
 
     def _commands(
-        self, prompt: str, workspace: str, judge_prompt: str = ""
+        self,
+        prompt: str,
+        workspace: str,
+        judge_prompt: str = "",
+        *,
+        use_judge: bool | None = None,
     ) -> list[list[str]]:
         chosen = self if type(self) is not IdeCli else self._detect()
         worker_prompt = chosen._launch_prompt(
             prompt, workspace, name="cli-agent-task.txt"
         )
         argv = [chosen._command(worker_prompt, workspace)]
-        if not chosen.judge:
+        judging = bool(judge_prompt) if use_judge is None else use_judge
+        if not judging or not chosen.judge:
             return argv
         judge_text = judge_prompt or chosen._judge_task_prompt(prompt)
         chosen._write_task_file(judge_text, workspace, "cli-agent-judge.txt")
@@ -916,11 +922,14 @@ class IdeCli:
         timeout_seconds: int | None = None,
         doer_pid: int = 0,
         judge_pid: int = 0,
+        use_judge: bool | None = None,
     ) -> list[IdeCliResult]:
         chosen = self if type(self) is not IdeCli else self._detect()
         spawned = []
         pids = (doer_pid, judge_pid)
-        for index, argv in enumerate(chosen._commands(prompt, workspace, judge_prompt)):
+        for index, argv in enumerate(
+            chosen._commands(prompt, workspace, judge_prompt, use_judge=use_judge)
+        ):
             existing = pids[index] if index < len(pids) else 0
             spawned.append(
                 chosen._spawn(
@@ -999,15 +1008,17 @@ those per run.
 
 The parent must not call start_work_session, open, or ensure_started.
 Pass workspace (and session when known) on this kit. This run opens or
-resumes the WorkSession, switches to that path, binds doer and judge,
-then starts the doer interactive session. If ide.judge is set, bind a
-judge chat id and write cli-agent-judge.txt. The parent does not
-launch or prompt the judge. The doer, after finish_turn, sends that
-file to the judge CLI, waits for PASS or FAIL, and they go back and
-forth (three FAILs then stop). The judge uses the same tools,
-fidelity, and format, and compares written artifacts to the source
-scope of the original job (whole artifact or a stated slice). Missing
-source nodes are a fail. Markdown generate is judged as markdown.
+resumes the WorkSession, switches to that path, binds the doer, then
+starts the doer interactive session. Bind a judge and write
+cli-agent-judge.txt only when this launch lists a context tool, action,
+or utility. Bare finish_turn / no tools / no actions: no judge. The
+parent does not launch or prompt the judge. When there is a judge, the
+doer, after finish_turn, sends that file to the judge CLI, waits for
+PASS or FAIL, and they go back and forth (three FAILs then stop). The
+judge uses the same tools, fidelity, and format, and compares written
+artifacts to the source scope of the original job (whole artifact or a
+stated slice). Missing source nodes are a fail. Markdown generate is
+judged as markdown.
 
 When this is launched from a chat, always include a process reference
 so a person can get at the CLI: pid when known, and each cursor-agent
@@ -1051,6 +1062,7 @@ class CliAgent(SubAgent):
         self._session = (session or "").strip()
         self._work = None
         self._ide = ide
+        self._judge_job = False
 
     @property
     def ide(self) -> IdeCli:
@@ -1166,9 +1178,13 @@ class CliAgent(SubAgent):
             return
         raise RuntimeError(pickup.not_taken_up)
 
-    def _spawn_worker(self, tools, hanging):
+    def _should_judge(self, tools, actions) -> bool:
+        """Judge when this launch lists a context tool, action, or utility."""
+        return bool(self.ide._listed(tools) or self.ide._listed(actions))
+
+    def _spawn_worker(self, tools, hanging, actions=None):
         judge_prompt = ""
-        if self.ide.judge:
+        if self._should_judge(tools, actions):
             judge_prompt = self.ide._judge_task_prompt(
                 self.job, generate_tools=tools, turn=hanging
             )
@@ -1182,6 +1198,7 @@ class CliAgent(SubAgent):
             self.job,
             self._workspace_root(),
             judge_prompt,
+            use_judge=bool(judge_prompt),
         )
         failed = self._first_failure(results)
         if failed is not None:
@@ -1247,14 +1264,15 @@ class CliAgent(SubAgent):
     def launch_sessions(self, tools: list[object], actions: list[object] | None = None) -> str:
         """cli-agent"""
         self._bring_in_kits(tools, actions)
+        self._judge_job = self._should_judge(tools, actions)
         work = self._attach_cli_sessions()
         hanging, later = self._described_turn(tools, actions)
         self.job = self.ide._turn_prompt(hanging, later)
-        if self.ide.judge and work.cli_judge:
+        if self._judge_job and work.cli_judge:
             self.job += "\n" + self.ide._doer_ask_judge(
                 work.cli_judge, self._workspace_root()
             )
-        results = self._spawn_worker(tools, hanging)
+        results = self._spawn_worker(tools, hanging, actions)
         return self._session_report(work, results)
 
 

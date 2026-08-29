@@ -103,6 +103,11 @@ def _run_agent(**kwargs) -> CliAgent:
     workspace = kwargs.pop("workspace", "")
     session = kwargs.pop("session", "")
     prompt = kwargs.pop("prompt", "")
+    missing = object()
+    tools = kwargs.pop("tools", missing)
+    actions = kwargs.pop("actions", None)
+    if tools is missing:
+        tools = ["Stories"] if kwargs.get("judge") else []
     ide = IdeCli(**kwargs)
     if prompt:
         ide._prompt = prompt
@@ -110,7 +115,7 @@ def _run_agent(**kwargs) -> CliAgent:
         with patch("cli_agent.cli_agent.subprocess.Popen", return_value=_popen()):
             with patch.object(CliAgent, "_await_pickup", lambda *a, **k: None):
                 agent = CliAgent(ide=ide, workspace=workspace, session=session)
-                agent.launch_sessions(tools=[], actions=None)
+                agent.launch_sessions(tools=tools, actions=actions)
                 return agent
 
 
@@ -638,6 +643,30 @@ with description("a CLI agent run"):
             expect(work.name).to(equal("sprint-a"))
             expect(work.cli_doer).to(equal("doer-1"))
             expect(_read_cli(tmp, "sprint-a")["doer"]).to(equal("doer-1"))
+
+        with context("when the launch has no tools and no actions"):
+            with it("should not bind a judge or tell the doer to contact one"):
+                tmp = Path(tempfile.mkdtemp(prefix="cli_no_judge_"))
+                with patch(
+                    "cli_agent.cli_agent.CursorCli._create_chat",
+                    _create_chat_ids("doer-1", "judge-should-not"),
+                ):
+                    agent = _run_agent(
+                        workspace=str(tmp),
+                        session="sprint-a",
+                        judge=True,
+                        tools=[],
+                        actions=None,
+                    )
+                expect(agent.work_session.cli_doer).to(equal("doer-1"))
+                expect(agent.work_session.cli_judge).to(equal(""))
+                task = (tmp / ".context" / "cli-agent-task.txt").read_text(
+                    encoding="utf-8"
+                )
+                expect("contact the judge" in task).to(be_false)
+                expect(
+                    (tmp / ".context" / "cli-agent-judge.txt").exists()
+                ).to(be_false)
 
         with context("that also has a judge task"):
             with it("should tell the doer to contact the bound judge"):
