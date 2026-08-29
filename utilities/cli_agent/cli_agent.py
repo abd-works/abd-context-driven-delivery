@@ -1609,6 +1609,46 @@ class CliAgent(SubAgent):
         _CliAgentLog().job_finished(work, index=index, prompt=str((item or {}).get("prompt") or ""))
         return result
 
+    @prompt(name="kick-cli-agent")
+    @agent_tool
+    def kick(self) -> str:
+        """Nudge a stalled doer to advance to the next job.
+
+        ## When to use
+
+        Call when the doer has clearly finished its current job (notes written, ticket updated,
+        etc.) but the queue has not advanced and no new console opened.
+
+        ## What kick does
+
+        Sends the active doer a short prompt via the CLI asking it to call
+        ``complete_job()`` then ``launch_next()`` if the job is done, or to do nothing
+        if it is still waiting for the judge.
+        """
+        work = self._attach_cli_sessions()
+        resume = work.cli_doer
+        if not resume:
+            raise RuntimeError("no active doer resume — run launch_next first")
+        workspace = str(self._workspace_root())
+        exe = shutil.which("cursor-agent") or shutil.which("agent")
+        if not exe:
+            raise RuntimeError("cursor-agent not found on PATH")
+        msg = (
+            "Check the current job status. "
+            "If your current job is complete, call complete_job() then launch_next() "
+            "to advance to the next step. "
+            "If you are still waiting for the judge, do nothing."
+        )
+        subprocess.run(
+            [exe, "--resume", resume, "--workspace", workspace, "--print", msg],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        return f"kicked doer {resume}"
+
     @agent_tool
     def record_verdict(self, result: str, notes: str = "") -> str:
         """Record a judge verdict (PASS or FAIL) to the session log. Call this after validating a Turn."""

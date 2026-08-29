@@ -31,7 +31,7 @@
         "context_tools.bdd.bdd:Bdd"
       ],
       "judge": true,
-      "judge_criteria": "PASS only when: (1) at least one failing test exists that captures the defect; (2) for code changes: a mechanical BDD test is present; (3) for prompt/AI changes: an agentic BDD test is present; (4) mechanical BDD runs first when both are present; (5) tests were validated against the tools as normal.\n"
+      "judge_criteria": "PASS only when: (1) at least one failing test exists that captures the defect; (2) for code changes: a mechanical BDD test is present; (3) for prompt/AI changes: an agentic BDD test is present; (4) mechanical BDD runs first when both are present; (5) tests were validated against the tools as normal. Pre-existing, unrelated test failures are out of scope — do not fail the job because of failures that existed before this defect was introduced.\n"
     },
     {
       "prompt": "Fix the defect using /clean_engineering.code in small iterations. Work one small piece at a time ? fix just enough to make one or a few tests pass, then move to the next piece. Repeat until all BDD and agentic BDD tests are green. Run vanilla BDD first when you have both.\nBefore writing any code: - Explore all impacted codebases and the code they depend on. - Read module-context.md for every module you touch. - Study the existing idioms, patterns, and usage in detail. Do not invent new patterns or paradigms ? follow what is already there. A defect fix should not require new patterns.\n",
@@ -39,7 +39,7 @@
         "context_tools.clean_engineering.clean_engineering:CleanEngineering"
       ],
       "judge": true,
-      "judge_criteria": "PASS only when: (1) all BDD tests pass; (2) all agentic BDD tests pass; (3) the fix follows existing patterns, paradigms, and usage ? no new patterns invented without strong justification; (4) validated against the tools as normal.\n"
+      "judge_criteria": "PASS only when: (1) all tests written for this defect pass; (2) all agentic BDD tests written for this defect pass; (3) the fix follows existing patterns, paradigms, and usage — no new patterns invented without strong justification; (4) validated against the tools as normal. Pre-existing, unrelated test failures are out of scope — judge only the tests introduced or changed for this defect, not the full suite baseline.\n"
     }
   ]
 }
