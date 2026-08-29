@@ -4,12 +4,12 @@
     {
       "ref": "FIRST / BLOCKING: Starting a work session must put work on its own branch (and worktree) for isolation. work session == branch == own tree. Fix at the work-session / start-ticket layer so every new work session binds to session/<name> with its own worktree before any job runs. After start-ticket, rebind workspace root to that worktree.",
       "kind": "text",
-      "status": "pending"
+      "status": "done"
     },
     {
       "ref": "CliAgent session log incomplete vs design: response summaries, links to content/chat/job queue, fold cli-agent.json IDs into session log header.",
       "kind": "text",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "ref": "CliAgent /loop job-finished notifications not firing; poll ~30s for doer then judge completion and report.",
@@ -27,7 +27,7 @@
       "status": "pending"
     },
     {
-      "ref": "Duplicate doer spawned when NOT TAKEN UP fires: launch_next has no guard to detect an already-running doer for the same session before opening a second console. Fix: check for a live doer process matching the session resume ID before spawning, and surface a clear status rather than a second window.",
+      "ref": "Duplicate doer spawned when NOT TAKEN UP fires: launch_next has no guard to detect an already-running doer for the same session before opening a second window. Fix: check for a live doer process matching the session resume ID before spawning, and surface a clear status rather than a second window.",
       "kind": "text",
       "status": "pending"
     }

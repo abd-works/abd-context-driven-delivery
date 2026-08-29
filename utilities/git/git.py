@@ -814,6 +814,15 @@ class Repo:
             return
         self._git( "push", "-u", "origin", self.current_branch)
 
+    def has_unpushed_commits(self) -> bool:
+        if self._memory:
+            return False
+        try:
+            count = self._git("rev-list", "@{upstream}..HEAD", "--count").strip()
+            return int(count or "0") > 0
+        except GitConnectError:
+            return False
+
     def list_worktrees(self) -> list[Worktree]:
         if self._memory:
             return list(self._worktrees)
