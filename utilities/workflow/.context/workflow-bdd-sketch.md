@@ -33,16 +33,28 @@ a context tool
     with session artifacts in the working folder
       it should carry sketches grill progress and module context from the current work
     that is asked to backlog the current work
+      it should commit the current turn before staging the backlog item
+      it should collect the current branch and HEAD commit for turn attribution
+      it should locate the most recent agent transcript for this workspace
       it should run handoff to capture the backlog ticket information
       the created handoff
         it should hold forward-requirements from the current fidelity format and action as needed
         it should hold enough context for a fresh agent to resume the work
-      it should create a github issue
+        it should include a Turn Context section with branch, commit, and transcript path
+      it should write a staging file with the enriched body and metadata to .context/
+      it should launch a non-blocking CliAgent sub-agent to create the github issue
+      the launched sub-agent
+        it should read the staging metadata and body
+        it should analyze the transcript to identify which turn introduced the issue
+        it should determine whether the change is in the current turn or a previous one
+        it should call capture_backlog with the enriched body
       the created issue
         it should carry the handoff in the body of the issue
+        it should carry the Turn Context section identifying branch and commit
       the repository project
         it should list the issue with status Backlog
       it should not open a work session
+      it should return immediately without waiting for the sub-agent
       with a github issue from that backlog step
         that is asked to start that item
           the forward requirements

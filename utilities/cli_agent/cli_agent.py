@@ -1295,8 +1295,20 @@ class CliAgent(SubAgent):
             return
         type(self).cleanup_session(work)
 
+    @agent_tool
+    def enqueue_jobs(self, jobs: list[dict]) -> str:
+        """Add jobs to the queue. Each job is a dict with keys: prompt, tools (optional), actions (optional).
+
+        Replaces the current queue with the provided list. Call before launch_sessions to pre-load work.
+        Returns the number of jobs now on the queue.
+        """
+        work = self._attach_cli_sessions()
+        JobQueue().save(work, list(jobs or []))
+        return f"job_queue: {len(jobs)}"
+
+    @agent_tool
     def launch_next(self) -> str:
-        """Send the head job. Leave it on the queue until the judge PASSes."""
+        """Send the head job from the queue to the doer. Leave it on the queue until the judge PASSes."""
         work = self._attach_cli_sessions()
         item = JobQueue().peek(work)
         if item is None:
@@ -1308,15 +1320,16 @@ class CliAgent(SubAgent):
             item.get("actions") or None,
         )
 
+    @agent_tool
     def complete_job(self) -> dict | None:
-        """Judge PASS: drop the finished head. Caller may launch_next if more remain."""
+        """Judge PASS: drop the finished head job. Call launch_next next if more jobs remain."""
         work = self._attach_cli_sessions()
         return JobQueue().pop(work)
 
     @prompt(name="cli-agent")
     @sub_agent
     @agent_tool
-    def launch_sessions(self, tools: list[object], actions: list[object] | None = None) -> str:
+    def launch_sessions(self, tools: list[object], actions: list[object] | None = None, prompt: str | None = None) -> str:
         """Run the listed context tools and actions through the IDE CLI as a non-blocking sub-agent.
 
         CliAgent handles all session and workspace setup internally — do not manage those yourself. The parent's role is to launch, then monitor and unblock. The CLI decides each Turn; model, mode, and agent_mode are fixed on this ide instance and must not be passed per call.
@@ -1327,11 +1340,21 @@ class CliAgent(SubAgent):
         2. **Monitor.** Watch with a 30s /loop (Cursor) or poll periodically otherwise. Check the doer transcript, logs, and artifacts occasionally and report back to the user.
         3. **Unblock on three judge FAILs.** If the doer has stopped waiting, act — do not just report the status. See details below.
 
+        ## What to always include in the prompt you pass to the doer
+
+        The prompt must tell the doer:
+        - The task in plain language.
+        - The toolset reference so it can call tools: `toolset: cli_agent.cli_agent:CliAgent` with the same workspace and session.
+        - Which queue tools to use and when:
+            - `enqueue_jobs(jobs)` — set up all jobs upfront. Each job: `{prompt, tools, actions}`.
+            - `launch_next()` — run the head job. Call once per judge PASS to advance the queue.
+            - `complete_job()` — pop the finished head before calling launch_next.
+
         ## Judge
 
-        A judge runs when tools or actions are listed, or when the user explicitly requests one and specifies what it should evaluate. The parent never launches, prompts, or scores the judge — the doer handles that loop. Three FAILs: the doer stops and waits for the parent to intervene.
+        CliAgent spawns both the doer and the judge automatically — the parent (you) never launches, prompts, or scores the judge. CliAgent generates the judge's instructions internally from the job and tools. A judge is spawned when tools or actions are listed, or when the user explicitly requests one.
 
-        The judge validates written artifacts against the source scope of the original job. Missing nodes or incomplete output is a fail. Markdown generate is judged as markdown.
+        After the doer calls finish_turn, the doer sends the judge file and waits for PASS or FAIL. That exchange is entirely between the doer and judge CLIs. Three FAILs: the doer stops and waits for the parent to intervene (see below).
 
         ## If the doer stopped after three judge FAILs
 
@@ -1339,6 +1362,8 @@ class CliAgent(SubAgent):
         2. Revise the job prompt and cli-agent-task.txt to target those exact gaps.
         3. Send one continue resume to the doer. Do not stack prompts. Do not drive with -p.
         """
+        if prompt:
+            self.task_prompt = prompt
         self._bring_in_kits(tools, actions)
         self._judge_job = self._should_judge(tools, actions)
         work = self._attach_cli_sessions()

@@ -14,3 +14,4 @@ Workflow
 - `WorkTicket` — same Repo as Workflow
 - `workspace` — working folder / WorkSession (one-way)
 - `handoff` (one-way)
+- `cli_agent` — CliAgent for non-blocking sub-agent launch from `/backlog` (one-way)

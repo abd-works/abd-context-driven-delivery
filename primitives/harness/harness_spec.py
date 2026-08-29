@@ -25,6 +25,7 @@ from harness.agent_guidance import AgentGuidance
 from harness.bodies import ActionBody, ContextToolBody, FormatBody, UtilityBody
 from harness.command import Command
 from harness.harness import Harness
+from harness.harness_tool import required_init_params
 from harness.hook import Hook
 from harness.instruction import Instruction
 from harness.prompt import Prompt
@@ -260,6 +261,11 @@ with description("a harness"):
                     equal(("suggested_deploy_path", "write_deploy"))
                 )
 
+        with context("with no IDE type set in context"):
+            with it("should tell the agent to set context.type before running"):
+                prose = _recipe(Harness("Cursor"))
+                expect(prose).to(contain("Set context.type"))
+
         with context("with no source"):
             with it("should walk the workspace and deploy without a confirm list"):
                 root = _sandbox()
@@ -394,6 +400,28 @@ with description("a harness"):
                 text = (root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")
                 expect(text).not_to(contain("disable-model-invocation"))
                 expect(text).to(contain("python -m tools run"))
+
+        with context("with a toolset that has required constructor params"):
+            with it("should include those params in the context block of the generated body"):
+                root = _sandbox()
+                required_tool = root / "utilities" / "requiredtool" / "requiredtool.py"
+                required_tool.parent.mkdir(parents=True, exist_ok=True)
+                required_tool.write_text(
+                    "# @toolset-manifest python -m tools manifest requiredtool.requiredtool:RequiredTool\n"
+                    '"""RequiredTool."""\n'
+                    "class RequiredTool:\n"
+                    "    def __init__(self, target: str):\n"
+                    "        self.target = target\n"
+                    "    @agent_instructions\n"
+                    "    def run(self):\n"
+                    '        """Run on the target."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(source="requiredtool")
+                body = (root / ".cursor" / "commands" / "requiredtool.md").read_text(encoding="utf-8")
+                expect(body).to(contain("context:"))
+                expect(body).to(contain("target:"))
 
         with context("with LifecycleAction"):
             with it("should not write a skill or command"):
@@ -1162,3 +1190,40 @@ with description("clean"):
                 harness.clean()
                 expect((root / ".cursor" / "skills").exists()).to(equal(False))
                 expect(github.read_text(encoding="utf-8")).to(equal("keep"))
+
+
+with description("required_init_params"):
+    with context("for a class with required params"):
+        with it("should return the names of all required params excluding self"):
+            tmp = Path(tempfile.mkdtemp())
+            src = tmp / "mymodule.py"
+            src.write_text(
+                "class MyClass:\n"
+                "    def __init__(self, target: str, count: int, optional: str = 'x'):\n"
+                "        pass\n",
+                encoding="utf-8",
+            )
+            expect(required_init_params(src, "MyClass")).to(equal(["target", "count"]))
+
+    with context("for a class with no required params"):
+        with it("should return an empty list"):
+            tmp = Path(tempfile.mkdtemp())
+            src = tmp / "mymodule.py"
+            src.write_text(
+                "class AllDefaults:\n"
+                "    def __init__(self, a: str = 'x', b: int = 0):\n"
+                "        pass\n",
+                encoding="utf-8",
+            )
+            expect(required_init_params(src, "AllDefaults")).to(equal([]))
+
+    with context("for a class that does not exist in the file"):
+        with it("should return an empty list"):
+            tmp = Path(tempfile.mkdtemp())
+            src = tmp / "mymodule.py"
+            src.write_text("class Other:\n    pass\n", encoding="utf-8")
+            expect(required_init_params(src, "Missing")).to(equal([]))
+
+    with context("for a file that does not exist"):
+        with it("should return an empty list"):
+            expect(required_init_params(Path("/no/such/file.py"), "Any")).to(equal([]))

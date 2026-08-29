@@ -114,7 +114,8 @@ def _run_agent(**kwargs) -> CliAgent:
     with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
         with patch("cli_agent.cli_agent.subprocess.Popen", return_value=_popen()):
             with patch.object(CliAgent, "_await_pickup", lambda *a, **k: None):
-                agent = CliAgent(ide=ide, workspace=workspace, session=session)
+                agent = CliAgent(workspace=workspace, session=session)
+                agent._ide = ide
                 agent.launch_sessions(tools=tools, actions=actions)
                 return agent
 
@@ -548,29 +549,42 @@ with description("VscodeCli"):
 
 
 with description("CliAgent"):
-    with context("that is constructed with IdeCli flags"):
-        with it("should hold them on ide for later runs"):
-            agent = CliAgent(
-                ide=IdeCli(model="gpt", mode="medium", agent_mode="plan", judge=True)
-            )
+    with context("that has its ide set directly"):
+        with it("should hold those flags on ide for later runs"):
+            agent = CliAgent()
+            agent._ide = IdeCli(model="gpt", mode="medium", agent_mode="plan", judge=True)
             expect(agent.ide.model).to(equal("gpt"))
             expect(agent.ide.mode).to(equal("medium"))
             expect(agent.ide.agent_mode).to(equal("plan"))
             expect(agent.ide.judge).to(be_true)
+
+    with context("that has no ide set"):
+        with it("should detect the IDE lazily on first access"):
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                agent = CliAgent()
+                ide = agent.ide
+            expect(ide).to(be_a(CursorCli))
+
+    with context("that has a task prompt set"):
+        with it("should expose and update it via task_prompt"):
+            agent = CliAgent()
+            agent._ide = IdeCli()
+            agent.task_prompt = "do the thing"
+            expect(agent.task_prompt).to(equal("do the thing"))
 
     with context("launch_sessions"):
         with it("should mark launch_sessions as a sub_agent"):
             expect(getattr(CliAgent.launch_sessions, "_is_sub_agent", False)).to(be_true)
 
         with it("should publish kind sub_agent and launch non_blocking"):
-            entry = discover_sub_agent_tools(CliAgent(ide=IdeCli()))[
+            entry = discover_sub_agent_tools(CliAgent())[
                 "launch_sessions"
             ].signature_entry
             expect(entry["kind"]).to(equal("sub_agent"))
             expect(entry["launch"]).to(equal("non_blocking"))
 
         with it("should take tools and optional actions only"):
-            params = discover_sub_agent_tools(CliAgent(ide=IdeCli()))[
+            params = discover_sub_agent_tools(CliAgent())[
                 "launch_sessions"
             ].signature_entry["parameters"]
             expect("tools" in params).to(be_true)
@@ -578,7 +592,7 @@ with description("CliAgent"):
             expect("model" in params).to(be_false)
 
         with it("should tell the parent to spawn the IDE CLI"):
-            text = discover_sub_agent_tools(CliAgent(ide=IdeCli()))[
+            text = discover_sub_agent_tools(CliAgent())[
                 "launch_sessions"
             ].instructions
             expect("run_all" in text).to(be_true)
@@ -611,7 +625,7 @@ with description("CliAgent"):
                     ) as spawned:
                         with patch.object(CliAgent, "_await_pickup", lambda *a, **k: None):
                             text = CliAgent(
-                                ide=IdeCli(), workspace=tmp, session="run-spec"
+                                workspace=tmp, session="run-spec"
                             ).launch_sessions(tools=[], actions=None)
             expect(spawned.called).to(be_true)
             expect(spawned.call_args[0][0][0]).to(equal("/bin/cursor-agent"))
@@ -630,7 +644,7 @@ with description("CliAgent"):
             expect("NOT TAKEN UP" in text).to(be_false)
 
         with it("should tell the parent to stop when the doer does not take the job"):
-            text = discover_sub_agent_tools(CliAgent(ide=IdeCli()))[
+            text = discover_sub_agent_tools(CliAgent())[
                 "launch_sessions"
             ].instructions
             expect("NOT TAKEN UP" in text).to(be_true)
@@ -961,7 +975,8 @@ with description("a doer that does not take the new job"):
             expect(pickup.accepted(missing, 0, seconds=0.0)).to(be_false)
 
             def _fail():
-                agent = CliAgent(ide=IdeCli(pickup_seconds=0.0), workspace=".")
+                agent = CliAgent(workspace=".")
+                agent._ide = IdeCli(pickup_seconds=0.0)
                 agent._await_pickup("no-such-resume", 0)
 
             expect(_fail).to(raise_error(RuntimeError))
@@ -980,9 +995,7 @@ with description("a CLI agent job_queue"):
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
                 with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-q"):
                     with patch("cli_agent.cli_agent.subprocess.Popen", return_value=_popen()):
-                        agent = CliAgent(
-                            ide=IdeCli(), workspace=str(tmp), session="queue"
-                        )
+                        agent = CliAgent(workspace=str(tmp), session="queue")
                         agent.job_queue = [
                             {
                                 "tools": ["context_tools.stories.stories:Stories"],
@@ -1007,9 +1020,7 @@ with description("a CLI agent job_queue"):
                 with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-q"):
                     with patch("cli_agent.cli_agent.subprocess.Popen", return_value=_popen()):
                         with patch.object(CliAgent, "_await_pickup", lambda *a, **k: None):
-                            agent = CliAgent(
-                                ide=IdeCli(), workspace=str(tmp), session="queue"
-                            )
+                            agent = CliAgent(workspace=str(tmp), session="queue")
                             agent.job_queue = [
                                 {"tools": [], "actions": ["generate"], "prompt": "job one"},
                                 {"tools": [], "actions": ["generate"], "prompt": "job two"},
@@ -1024,9 +1035,7 @@ with description("a CLI agent job_queue"):
             tmp = Path(tempfile.mkdtemp(prefix="cli_q3_"))
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
                 with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-q"):
-                    agent = CliAgent(
-                        ide=IdeCli(), workspace=str(tmp), session="queue"
-                    )
+                    agent = CliAgent(workspace=str(tmp), session="queue")
                     agent.job_queue = [
                         {"tools": [], "actions": ["generate"], "prompt": "job one"},
                         {"tools": [], "actions": ["generate"], "prompt": "job two"},
@@ -1041,9 +1050,7 @@ with description("a CLI agent job_queue"):
             tmp = Path(tempfile.mkdtemp(prefix="cli_q0_"))
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
                 with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-q"):
-                    agent = CliAgent(
-                        ide=IdeCli(), workspace=str(tmp), session="queue"
-                    )
+                    agent = CliAgent(workspace=str(tmp), session="queue")
 
                     def _fail():
                         agent.launch_next()

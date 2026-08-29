@@ -1,3 +1,7 @@
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """BDD spec for tools-behavior.md - Discoverable Toolsets (lines 9-28)."""
 
 import subprocess
@@ -157,6 +161,30 @@ with description("a class"):
                     expect(car.resources["year"]).to(equal(2024))
                     expect(car.resources["personality"]).to(equal("cheerful companion named Sunny"))
                     expect(car.resources["running"]).to(equal(False))
+
+
+with description("a class with required constructor params"):
+    with context("that is invoked without providing those params"):
+        with it("should refuse with a missing-required-context error and an AskQuestion hint"):
+            request = yaml.safe_dump(
+                {
+                    "toolset": "tools.examples.car:Car",
+                    "tool": "start",
+                }
+            )
+            completed = subprocess.run(
+                [sys.executable, "-m", "tools", "run", "-"],
+                input=request,
+                capture_output=True,
+                text=True,
+                cwd=_REPO_ROOT,
+                check=False,
+            )
+            response = load_fenced(completed.stdout)
+            expect(response["ok"]).to(equal(False))
+            expect(response["error"]).to(equal("missing required context"))
+            expect("make" in response["missing"]).to(be_true)
+            expect("AskQuestion" in response["detail"]).to(be_true)
 
 
 with description("a toolset file"):

@@ -218,10 +218,11 @@ with description("SubAgent.run"):
             expect(entry["kind"]).to(equal("sub_agent"))
             expect(entry["launch"]).to(equal("non_blocking"))
 
-        with it("should take context tools and optional other actions"):
+        with it("should take context tools, optional other actions, and an optional task prompt"):
             params = discover_sub_agent_tools(SubAgent())["run"].signature_entry["parameters"]
             expect("tools" in params).to(be_true)
             expect("actions" in params).to(be_true)
+            expect("prompt" in params).to(be_true)
 
         with it("should not expose lifecycle begin or end"):
             sig = SubAgent.manifest.signature
