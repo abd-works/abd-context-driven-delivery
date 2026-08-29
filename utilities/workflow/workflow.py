@@ -264,7 +264,7 @@ class Workflow:
         metadata: dict,
     ) -> Path:
         """Write the enriched backlog body and metadata to .context/ staging files."""
-        root = self._repo_root(workspace)
+        root = Path(workspace) if workspace.strip() else self._repo_root()
         staging_dir = root / ".context"
         staging_dir.mkdir(parents=True, exist_ok=True)
         ts = int(time.time())
