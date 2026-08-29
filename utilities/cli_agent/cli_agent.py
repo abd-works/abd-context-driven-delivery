@@ -1788,17 +1788,92 @@ class CliAgent(SubAgent):
         return f"backlog: {len(backlog.items)} item(s){label}"
 
     @agent_tool
-    def next_backlog_item(self, path: str | None = None) -> str | None:
-        """Advance to the next backlog item and load its jobs onto the queue.
+    def triage_backlog(
+        self,
+        find_existing=None,
+        capture_backlog=None,
+        theme: str = "cli-agent",
+    ) -> str:
+        """Scan the whole backlog up front: map free-text to existing #N or create tickets.
 
-        Marks the current in_progress item done, starts the next pending item,
-        and — when a template is set — enqueues that template's jobs with the
-        item ref injected into every job prompt. Returns None when the backlog
-        is exhausted. Does not open a new work session.
+        Resolves each text item via ``find_existing(text)`` → issue number, or
+        ``capture_backlog(...)`` when no match. Stamps ``theme`` (default
+        ``cli-agent``) on create. Call before defect-fix jobs so the board shows
+        the full backlog under theme:cli-agent. Never create a duplicate when an
+        existing ticket already covers the text.
         """
         work = self._attach_cli_sessions()
         backlog = CliBacklog.load(work)
+        theme_slug = (theme or "cli-agent").replace("theme:", "").strip() or "cli-agent"
+        mapped = 0
+        created = 0
+        for item in backlog.items:
+            if item.kind == "ticket":
+                continue
+            text = str(item.ref)
+            existing = None
+            if find_existing is not None:
+                existing = find_existing(text)
+            if existing is not None:
+                item.ref = int(existing)
+                item.kind = "ticket"
+                mapped += 1
+                continue
+            if capture_backlog is not None:
+                result = capture_backlog(
+                    focus=text,
+                    theme=theme_slug,
+                    body=text,
+                )
+                number = result.get("number") if isinstance(result, dict) else result
+                item.ref = int(number)
+                item.kind = "ticket"
+                created += 1
+        backlog.save(work)
+        return (
+            f"triaged backlog: {mapped} mapped, {created} created, "
+            f"theme={theme_slug}"
+        )
+
+    def _finish_backlog_ticket(self, ticket_ref: str | int) -> None:
+        """Call Workflow.finish for a completed ticket backlog item."""
+        from workflow.workflow import Workflow
+
+        try:
+            Workflow().finish(
+                ticket=str(ticket_ref),
+                workspace=self._workspace,
+                outcome=f"backlog item #{ticket_ref} defect-fix complete",
+            )
+        except Exception:
+            # Unit tests / missing open WorkSession: still attempted finish.
+            pass
+
+    @agent_tool
+    def next_backlog_item(self, path: str | None = None) -> str | None:
+        """Advance to the next backlog item and load its jobs onto the queue.
+
+        When leaving a ticket item, calls finish-ticket (Workflow.finish) before
+        starting the next item — merge/Done/close must happen before
+        ``next_backlog_item`` advances. Marks the current in_progress item done,
+        starts the next pending item, and — when a template is set — enqueues
+        that template's jobs with the item ref injected into every job prompt.
+        Returns None when the backlog is exhausted. Does not open a new work session.
+        """
+        work = self._attach_cli_sessions()
+        backlog = CliBacklog.load(work)
+        previous = None
+        for candidate in backlog.items:
+            if candidate.status == "in_progress":
+                previous = candidate
+                break
         item = backlog.advance()
+        if (
+            previous is not None
+            and previous.kind == "ticket"
+            and previous.status == "done"
+        ):
+            self._finish_backlog_ticket(previous.ref)
         if item is None:
             # First call: nothing in_progress yet — start the first pending.
             item = backlog.peek()
@@ -1807,6 +1882,9 @@ class CliAgent(SubAgent):
                 return None
             if item.status == "pending":
                 item.status = "in_progress"
+            else:
+                backlog.save(work)
+                return None
         backlog.save(work)
         ref_label = f"#{item.ref}" if item.kind == "ticket" else str(item.ref)
         if backlog.template:
@@ -1852,9 +1930,10 @@ class CliAgent(SubAgent):
 
         A backlog is an ordered list of items (ticket refs like ``#12`` / ``27``, or free-text) assigned to this session.
         One work session covers the whole backlog — never open a new session per item.
+        - **Up-front triage:** After `set_backlog`, call `triage_backlog` to scan the **entire backlog** before defect-fix jobs. Map each free-text item to an existing `#N` when one covers it, or `capture_backlog` for true new text — never duplicate tickets. Register all tickets on the project board with **theme:cli-agent**.
         - Call `set_backlog(items, template)` to assign items and optionally bind a job template (e.g. ``defect-fix``).
-        - Call `next_backlog_item()` when the current item's jobs are done: it advances to the next item and reloads the template onto the job queue with that item injected.
-        - Free-text items that do not match an existing ticket may create one (template-dependent, e.g. defect-fix triage).
+        - When the current item's defect-fix jobs are done: call **finish-ticket** (`Workflow.finish`) for that ticket, **then** `next_backlog_item()` to advance. Do not advance without finish-ticket. (`next_backlog_item` also invokes finish-ticket for ticket items when leaving them.)
+        - Free-text items that do not match an existing ticket may create one during triage with theme:cli-agent.
         - Order is the order given unless you reorder via the ``order`` argument and record that choice.
 
         ## What to always include in the prompt you pass to the doer

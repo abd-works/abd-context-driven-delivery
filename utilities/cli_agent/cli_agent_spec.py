@@ -1397,6 +1397,82 @@ with description("CliAgent backlog tools"):
                         expect(queue[0]["prompt"]).to(contain("thin slice login"))
 
 
+with description("CliAgent backlog hygiene (#46)"):
+    """Red tests for up-front triage, theme:cli-agent, and finish-ticket before advance."""
+
+    with context("a backlog that still has free-text covering an existing ticket"):
+        with it("should map that free-text to the existing ticket number during up-front triage"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_bl_triage_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch(
+                    "cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-triage"
+                ):
+                    agent = CliAgent(workspace=str(tmp), session="hygiene-triage")
+                    agent.set_backlog(
+                        [
+                            "CliAgent session log is incomplete vs design",
+                            46,
+                        ],
+                        template="defect-fix",
+                    )
+                    # Intended seam: resolve text → existing #N (no duplicate create).
+                    expect(hasattr(agent, "triage_backlog")).to(be_true)
+                    agent.triage_backlog(
+                        find_existing=lambda text: 43
+                        if "session log" in text.lower()
+                        else None,
+                        theme="cli-agent",
+                    )
+                    loaded = CliBacklog.load(agent._attach_cli_sessions())
+                    text_or_mapped = loaded.items[0]
+                    expect(text_or_mapped.kind).to(equal("ticket"))
+                    expect(text_or_mapped.ref).to(equal(43))
+
+    with context("when advancing past a ticket backlog item"):
+        with it("should call finish-ticket before starting the next backlog item"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_bl_finish_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch(
+                    "cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-fin"
+                ):
+                    agent = CliAgent(workspace=str(tmp), session="hygiene-finish")
+                    agent.set_backlog([41, 46], template=None)
+                    agent.next_backlog_item()
+                    with patch(
+                        "workflow.workflow.Workflow.finish",
+                        return_value={"commit": "deadbeef", "session_name": "x"},
+                    ) as finish:
+                        agent.next_backlog_item()
+                        expect(finish.called).to(be_true)
+
+    with context("when triaging free-text that needs a new ticket"):
+        with it("should create the ticket with theme cli-agent"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_bl_theme_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch(
+                    "cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-theme"
+                ):
+                    agent = CliAgent(workspace=str(tmp), session="hygiene-theme")
+                    agent.set_backlog(
+                        ["launch_sessions NOT TAKEN UP pickup flake"],
+                        template="defect-fix",
+                    )
+                    expect(hasattr(agent, "triage_backlog")).to(be_true)
+                    created = {}
+
+                    def _capture(**kwargs):
+                        created.update(kwargs)
+                        return {"number": 99, "url": "https://example/99", "theme": kwargs.get("theme", "")}
+
+                    agent.triage_backlog(
+                        find_existing=lambda _text: None,
+                        capture_backlog=_capture,
+                        theme="cli-agent",
+                    )
+                    theme_val = str(created.get("theme", "")).replace("theme:", "")
+                    expect(theme_val).to(equal("cli-agent"))
+
+
 with description("CliAgent cleanup"):
     with it("should remove temps it wrote and leave session.md and sketches"):
         from workspace.git_repo import NullGitRepo
