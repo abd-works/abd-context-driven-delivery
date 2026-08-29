@@ -50,28 +50,6 @@ class TurnTemplate:
     tool_keys: list[str] = field(default_factory=list)
 
 
-# Prebaked Workflow recipes — /plan /small-work loads this; does not run against issues.
-# BDD owns CE companions; Plan does not inject CleanEngineering onto Turns.
-_PREBAKED_WORKFLOWS: dict[str, list[TurnTemplate]] = {
-    "small-work": [
-        TurnTemplate(
-            action="Generate",
-            fidelity="story_map",
-            format="markdown",
-            context="",
-            tool_keys=["context_tools.stories.stories:Stories"],
-        ),
-        TurnTemplate(
-            action="Generate",
-            fidelity="behavior",
-            format="markdown",
-            context="",
-            tool_keys=["context_tools.bdd.bdd:Bdd"],
-        ),
-    ],
-}
-
-
 class TurnAttachments:
     """HILCheck and JudgeCheckpoint hanging on Turns."""
 
@@ -108,23 +86,46 @@ class TurnAttachments:
         turn.judge_checkpoint = None  # type: ignore[attr-defined]
 
 
-@agentic_toolset
+@dataclass
+class PlanSeed:
+    """Construction seed for Plan.create / from_workflow."""
+
+    workspace: Workspace
+    attachments: TurnAttachments
+    name: str = ""
+    workflow: Workflow | None = None
+    workflow_name: str = ""
+
+
+_PREBAKED_WORKFLOWS: dict[str, list[TurnTemplate]] = {
+    "small-work": [
+        TurnTemplate(
+            action="Generate",
+            fidelity="behavior",
+            format="markdown",
+            context="root-cause",
+            tool_keys=["context_tools.bdd.bdd:Bdd"],
+        ),
+        TurnTemplate(
+            action="Generate",
+            fidelity="scenarios",
+            format="markdown",
+            context="fix-one-issue",
+            tool_keys=["context_tools.bdd.bdd:Bdd"],
+        ),
+    ],
+}
+
+
 class Plan:
     """Plan front-end to git, based on a reusable or newly named Workflow."""
 
-    def __init__(
-        self,
-        attachments: TurnAttachments | None = None,
-        name: str = "",
-        workspace: Workspace | None = None,
-        workflow: Workflow | None = None,
-        workflow_name: str = "",
-    ) -> None:
-        self._attachments = attachments if attachments is not None else TurnAttachments()
-        self._name = name
-        self._workspace = workspace
-        self._workflow = workflow
-        self._workflow_name = workflow_name
+    def __init__(self, seed: PlanSeed) -> None:
+        self._attachments = seed.attachments
+        self._name = seed.name
+        self._workspace = seed.workspace
+        self._workflow = seed.workflow
+        self._workflow_name = seed.workflow_name
         self._turns: list[Turn] = []
         self._work_session: WorkSession | None = None
 
@@ -135,10 +136,6 @@ class Plan:
     @property
     def workspace(self) -> Workspace | None:
         return self._workspace
-
-    @property
-    def workflow(self) -> Workflow | None:
-        return self._workflow
 
     @property
     def workflow_name(self) -> str:
@@ -161,47 +158,36 @@ class Plan:
         return self._attachments
 
     @classmethod
-    def create(
-        cls,
-        workspace: Workspace,
-        attachments: TurnAttachments | None = None,
-        name: str = "",
-        workflow: Workflow | None = None,
-        workflow_name: str = "",
-    ) -> Plan:
-        plan = cls(
-            attachments=attachments,
-            name=name,
-            workspace=workspace,
-            workflow=workflow,
-            workflow_name=workflow_name,
-        )
+    def create(cls, seed: PlanSeed) -> Plan:
+        plan = cls(seed)
+        cls._register_on_workspace(plan)
+        return plan
+
+    @classmethod
+    def from_workflow(cls, seed: PlanSeed) -> Plan:
+        """Build a Plan on a reusable Workflow; load prebaked Turns when named."""
+        if not seed.name:
+            seed = PlanSeed(
+                workspace=seed.workspace,
+                attachments=seed.attachments,
+                name=seed.workflow_name,
+                workflow=seed.workflow,
+                workflow_name=seed.workflow_name,
+            )
+        plan = cls.create(seed)
+        plan._load_prebaked_turns(seed.workflow_name)
+        return plan
+
+    @staticmethod
+    def _register_on_workspace(plan: Plan) -> None:
+        workspace = plan.workspace
+        if workspace is None:
+            return
         plans = getattr(workspace, "plans", None)
         if plans is None:
             workspace.plans = []  # type: ignore[attr-defined]
             plans = workspace.plans
         plans.append(plan)
-        return plan
-
-    @classmethod
-    def from_workflow(
-        cls,
-        workspace: Workspace,
-        attachments: TurnAttachments,
-        workflow: Workflow,
-        workflow_name: str,
-        name: str = "",
-    ) -> Plan:
-        """Build a Plan on a reusable Workflow; load prebaked Turns when named."""
-        plan = cls.create(
-            workspace=workspace,
-            attachments=attachments,
-            name=name or workflow_name,
-            workflow=workflow,
-            workflow_name=workflow_name,
-        )
-        plan._load_prebaked_turns(workflow_name)
-        return plan
 
     def add_turn(self, turn: Turn | None = None, **fields: Any) -> Turn:
         if turn is None:
@@ -217,15 +203,6 @@ class Plan:
         self._turns.append(turn)
         return turn
 
-    def edit_turn(self, turn: Turn, **fields: Any) -> Turn:
-        for field_name, field_value in fields.items():
-            setattr(turn, field_name, field_value)
-        return turn
-
-    def delete_turn(self, turn: Turn) -> None:
-        if turn in self._turns:
-            self._turns.remove(turn)
-
     def _load_prebaked_turns(self, workflow_name: str) -> None:
         for template in _PREBAKED_WORKFLOWS.get(workflow_name, []):
             self.add_turn(
@@ -235,6 +212,28 @@ class Plan:
                 context=template.context,
                 tool_keys=list(template.tool_keys),
             )
+
+
+class PlanTurns:
+    """Edit and delete Turns on a Plan."""
+
+    def __init__(self, plan: Plan) -> None:
+        self._plan = plan
+
+    def edit(self, turn: Turn, **fields: Any) -> Turn:
+        for field_name, field_value in fields.items():
+            setattr(turn, field_name, field_value)
+        return turn
+
+    def delete(self, turn: Turn) -> None:
+        turns = self._plan._turns
+        if turn in turns:
+            turns.remove(turn)
+
+
+@agentic_toolset
+class PlanCommands:
+    """Slash `/plan` and `/plan /small-work {context}` — load Workflow into a Plan."""
 
     @prompt(name="plan")
     @agent_tool
@@ -246,11 +245,7 @@ class Plan:
     ) -> dict[str, str | int]:
         """Create a Plan based on a reusable Workflow name, or a new Workflow named here."""
         workflow_name = (workflow or "").strip() or "plan"
-        return self._open_named_workflow(
-            workflow_name=workflow_name,
-            context=context,
-            workspace_path=workspace,
-        )
+        return self._open_named_workflow(workflow_name, context, workspace)
 
     @prompt(name="small-work")
     @agent_tool
@@ -259,11 +254,7 @@ class Plan:
 
         Does not execute against GitHub issues — only opens the Plan on that Workflow.
         """
-        return self._open_named_workflow(
-            workflow_name="small-work",
-            context=context,
-            workspace_path=workspace,
-        )
+        return self._open_named_workflow("small-work", context, workspace)
 
     def _open_named_workflow(
         self,
@@ -271,29 +262,35 @@ class Plan:
         context: str,
         workspace_path: str,
     ) -> dict[str, str | int]:
-        folder = (workspace_path or "").strip() or "."
-        ws = Workspace(folder)
-        ws.load()
-        flow = Workflow(workspace=folder)
-        attachments = TurnAttachments()
-        built = Plan.from_workflow(
-            workspace=ws,
-            attachments=attachments,
-            workflow=flow,
-            workflow_name=workflow_name,
-            name=workflow_name,
-        )
-        if context.strip():
-            for turn in built.turns:
-                existing = getattr(turn, "context", "") or ""
-                turn.context = f"{existing} {context}".strip() if existing else context
+        seed = self._seed_for(workflow_name, workspace_path)
+        built = Plan.from_workflow(seed)
+        self._apply_context(built, context)
         return {
             "plan": built.name,
             "workflow": workflow_name,
             "turns": len(built.turns),
-            "workspace": folder,
+            "workspace": seed.workspace.path if hasattr(seed.workspace, "path") else workspace_path or ".",
             "context": context,
         }
+
+    def _seed_for(self, workflow_name: str, workspace_path: str) -> PlanSeed:
+        folder = (workspace_path or "").strip() or "."
+        working_folder = Workspace(folder)
+        working_folder.load()
+        return PlanSeed(
+            workspace=working_folder,
+            attachments=TurnAttachments(),
+            name=workflow_name,
+            workflow=Workflow(workspace=folder),
+            workflow_name=workflow_name,
+        )
+
+    def _apply_context(self, built: Plan, context: str) -> None:
+        if not context.strip():
+            return
+        for turn in built.turns:
+            existing = getattr(turn, "context", "") or ""
+            turn.context = f"{existing} {context}".strip() if existing else context
 
 
 class PlanExecution:

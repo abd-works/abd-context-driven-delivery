@@ -4,7 +4,9 @@ from plan.plan import (
     HILCheck,
     JudgeCheckpoint,
     Plan,
+    PlanCommands,
     PlanExecution,
+    PlanSeed,
     ProgressView,
     TurnAttachments,
     TurnTemplate,
@@ -12,7 +14,9 @@ from plan.plan import (
 
 __all__ = [
     "Plan",
+    "PlanCommands",
     "PlanExecution",
+    "PlanSeed",
     "TurnAttachments",
     "TurnTemplate",
     "JudgeCheckpoint",
