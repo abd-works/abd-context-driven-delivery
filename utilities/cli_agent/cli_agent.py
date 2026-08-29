@@ -1404,15 +1404,62 @@ class CliAgent(SubAgent):
             only = space.work_sessions[0].name
             # Never reuse leftover ``default`` while still on main — that session is
             # for pre-ticket scratch. Ticket work binds after start-ticket on
-            # ``session/<ticket>`` (own worktree). Use the folder slug instead.
+            # ``session/<ticket>`` (own worktree).
             if only != "default":
                 name = only
         if not name:
-            name = self._session_slug_from_folder()
+            # Defer durable bind: do not invent a folder-slug session (or session/
+            # branch + worktree) on main before start-ticket. Keep an orchestration
+            # handle for job-queue / CLI ids only; ``_session`` stays unbound until
+            # rebind_to_worktree after start-ticket.
+            return self._pending_work_session(space)
         space.open_work_session(name)
         self._work = space
         self._session = space.current_work_session.name
         return space.current_work_session
+
+    def _pending_work_session(self, space):
+        from workspace.workspace import WorkSession
+
+        pending_name = "cli-agent-pending"
+        existing = next(
+            (s for s in space.work_sessions if s.name == pending_name), None
+        )
+        if existing is None:
+            pending = WorkSession(space, name=pending_name, path=str(space.path))
+            pending.folder.mkdir(parents=True, exist_ok=True)
+            space.work_sessions.append(pending)
+        else:
+            pending = existing
+            pending.folder.mkdir(parents=True, exist_ok=True)
+        space.current_work_session = pending
+        self._work = space
+        self._session = ""
+        return pending
+
+    def rebind_to_worktree(self, path: str, session: str = "") -> str:
+        """Retarget CliAgent onto the ticket worktree after start-ticket.
+
+        Sets workspace root to ``path``, opens ``session`` (or the name from the
+        ``session/`` git branch), and binds subsequent jobs there. Required for
+        CliAgent; SubAgent and no-agent flows must rebind the same way after
+        start-ticket so work never stays on parent/main.
+        """
+        root = str(Path(path).resolve())
+        self._workspace = root
+        from workspace.workspace import Workspace
+
+        space = Workspace(root)
+        space.load()
+        name = (session or "").strip() or self._session_name_from_git()
+        if not name:
+            raise ValueError(
+                "rebind_to_worktree requires session= or a session/<ticket> branch"
+            )
+        space.open_work_session(name)
+        self._work = space
+        self._session = space.current_work_session.name
+        return self._workspace_root()
 
     def _attach_cli_sessions(self):
         return _WorkAttach().attach(self)
