@@ -21,6 +21,7 @@ from mamba import before, context, description, it
 
 from git import TicketNotFoundError
 from git.git import Commit, Repo, Ticket
+from workflow.work_ticket import WorkTicket
 from workflow.workflow import Workflow
 
 
@@ -199,6 +200,111 @@ with description("a Workflow backlog path"):
             ws = self.workflow.workspace_tool(path=str(self.tmp))
             expect(ws.current_work_session is None).to(be_true)
             expect((self.tmp / ".context" / "handoff-latest.md").exists()).to(equal(False))
+
+        with it("should put a theme label on the issue when theme is given"):
+            created = self.workflow.backlog(
+                focus="Queue for CLI agent",
+                context="same agent or another",
+                workspace=str(self.tmp),
+                theme="cli-agent",
+            )
+            ticket = self.repo._tickets[1]
+            expect(created["theme"]).to(equal("theme:cli-agent"))
+            expect(ticket.labels).to(equal(["theme:cli-agent"]))
+
+        with it("should set issue type when category is given"):
+            created = self.workflow.backlog(
+                focus="Sketch grill skips a turn",
+                workspace=str(self.tmp),
+                category="defect",
+            )
+            ticket = self.repo._tickets[1]
+            expect(created["category"]).to(equal("Defect"))
+            expect(created["type"]).to(equal("Defect"))
+            expect(ticket.issue_type).to(equal("Defect"))
+
+        with it("should infer type and theme when the user does not override"):
+            created = self.workflow.backlog(
+                focus="Sketch is stuffing prior grill answers",
+                context="mistakes after the sketch refactor",
+                workspace=str(self.tmp),
+            )
+            expect(created["type"]).to(equal("Defect"))
+            expect(created["theme"]).to(equal("theme:sketch"))
+            expect([item["name"] for item in self.repo.list_issue_types()]).to(
+                equal(["Defect", "Small change", "Refactor", "Feature"])
+            )
+
+        with it("should keep user type and theme instead of inferred ones"):
+            created = self.workflow.backlog(
+                focus="Sketch is stuffing prior grill answers",
+                workspace=str(self.tmp),
+                theme="workflow",
+                category="feature",
+            )
+            expect(created["type"]).to(equal("Feature"))
+            expect(created["theme"]).to(equal("theme:workflow"))
+
+
+with description("a WorkTicket"):
+    with before.each:
+        self.tmp, self.repo = _workflow_fixture("wf-ticket-")
+        self.workflow = Workflow(workspace=str(self.tmp), repo=self.repo)
+        self.workflow._ensure_project(self.repo, self.tmp)
+
+    with it("should be constructed with the workflow repo"):
+        work = WorkTicket(self.repo, self.workflow)
+        expect(work.repo).to(equal(self.repo))
+        expect(work.workflow).to(equal(self.workflow))
+
+    with it("should expose type theme and a getter-only state"):
+        work = WorkTicket(self.repo, self.workflow).create(
+            "Sketch grill skips a turn",
+            "mistakes",
+            type="defect",
+            theme="sketch",
+        )
+        expect(work.type).to(equal("Defect"))
+        expect(work.theme).to(equal("sketch"))
+        expect(work.state).to(equal("Backlog"))
+        expect(lambda: setattr(work, "state", "Done")).to(raise_error(AttributeError))
+
+    with it("should put missing types on the organization the repo is attached to"):
+        expect(self.repo.list_issue_types()).to(equal([]))
+        added = WorkTicket(self.repo, self.workflow).ensure_types()
+        expect(added).to(equal(["Defect", "Small change", "Refactor", "Feature"]))
+        expect([item["name"] for item in self.repo.list_issue_types()]).to(
+            equal(["Defect", "Small change", "Refactor", "Feature"])
+        )
+        expect(WorkTicket(self.repo, self.workflow).ensure_types()).to(equal([]))
+
+    with it("should map defect small change and feature to org types"):
+        expect(WorkTicket.resolve_type("defect")).to(equal("Defect"))
+        expect(WorkTicket.resolve_type("small change")).to(equal("Small change"))
+        expect(WorkTicket.resolve_type("Feature")).to(equal("Feature"))
+        expect(WorkTicket.resolve_type("refactor")).to(equal("Refactor"))
+        expect(lambda: WorkTicket.resolve_type("epic")).to(raise_error(ValueError))
+
+    with it("should infer type and theme from the request"):
+        expect(WorkTicket.infer_type("list the mistakes")).to(equal("Defect"))
+        expect(WorkTicket.infer_type("Rename Context Tool")).to(equal("Refactor"))
+        expect(
+            WorkTicket.infer_type("move transform to live on the base")
+        ).to(equal("Refactor"))
+        expect(WorkTicket.infer_type("Add ability to queue")).to(equal("Small change"))
+        expect(
+            WorkTicket.infer_type("small change to an existing feature")
+        ).to(equal("Small change"))
+        expect(
+            WorkTicket.infer_type("creating the CLI agent as a new module")
+        ).to(equal("Feature"))
+        expect(WorkTicket.TYPE_DEFINITIONS["Small change"]).to(
+            contain("existing feature")
+        )
+        expect(WorkTicket.TYPE_DEFINITIONS["Feature"]).to(contain("very large"))
+        expect(WorkTicket.TYPE_GUIDE).to(contain("CLI agent"))
+        expect(WorkTicket.infer_theme("Queue for CLI agent")).to(equal("cli-agent"))
+        expect(WorkTicket.infer_theme("sketch is really rough")).to(equal("sketch"))
 
 
 with description("a Workflow start path"):

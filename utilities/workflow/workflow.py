@@ -14,6 +14,7 @@ from git.git import Repo
 from handoff.handoff import Handoff
 from harness.harness_tool import prompt
 from tools.tool import agent_tool, toolset
+from workflow.work_ticket import WorkTicket
 from workspace import Workspace
 from workspace.git_repo import NullGitRepo
 
@@ -106,15 +107,37 @@ class Workflow:
 
     @prompt(name="backlog")
     @agent_tool
-    def backlog(self, focus: str, context: str = "", workspace: str = "") -> dict[str, str | int]:
-        """Capture an idea on the backlog — GitHub issue + Project Backlog."""
+    def backlog(
+        self,
+        focus: str,
+        context: str = "",
+        workspace: str = "",
+        theme: str = "",
+        category: str = "",
+    ) -> dict[str, str | int]:
+        """Capture an idea on the backlog — GitHub issue + Project Backlog.
+
+        Infer `category` and `theme` unless the user sets them. Types:
+
+        - Defect: unexpected or wrong current behavior (the kit should already do this).
+        - Small change: a change to an existing feature, utility, or tool. Those are all Small changes unless the addition is very large.
+        - Refactor: changing code and where things are without changing functionality.
+        - Feature: standing up a new module (a new folder). Example: creating the CLI agent. A small change to an existing feature is not a Feature.
+        """
         destination = str(self._repo_root(workspace))
         handoff = self._handoff()
         handoff_md = handoff._render_handoff_markdown(
             handoff._collect_state(destination), next_focus=focus
         )
         body = self._backlog_issue_body(handoff_md, focus=focus, context=context)
-        return self.capture_backlog(focus=focus, body=body, workspace=workspace)
+        return self.capture_backlog(
+            focus=focus,
+            body=body,
+            workspace=workspace,
+            theme=theme,
+            category=category,
+            infer_from=f"{focus}\n{context}",
+        )
 
     def _backlog_issue_body(self, handoff_md: str, focus: str, context: str) -> str:
         parts = [(handoff_md or "").strip()]
@@ -129,7 +152,13 @@ class Workflow:
 
     @agent_tool
     def capture_backlog(
-        self, focus: str, body: str, workspace: str = ""
+        self,
+        focus: str,
+        body: str,
+        workspace: str = "",
+        theme: str = "",
+        category: str = "",
+        infer_from: str = "",
     ) -> dict[str, str | int]:
         """Create a GitHub issue whose body is the handoff text, Project Backlog."""
         issue_body = self._handoff_issue_body(body)
@@ -138,6 +167,9 @@ class Workflow:
             body=issue_body,
             workspace=workspace,
             project_status="Backlog",
+            theme=theme,
+            category=category,
+            infer_from=infer_from or f"{focus}\n{body}",
         )
 
     def _handoff_issue_body(self, body: str) -> str:
@@ -275,21 +307,24 @@ class Workflow:
         body: str,
         workspace: str = "",
         project_status: str = "Backlog",
+        theme: str = "",
+        category: str = "",
+        infer_from: str = "",
     ) -> dict[str, str | int]:
         if project_status not in _PROJECT_STATUSES:
             raise ValueError(f"project_status must be one of {_PROJECT_STATUSES}")
         repo_root = self._repo_root(workspace)
         repo = self._repo(workspace)
         self._ensure_project(repo, repo_root)
-        ticket = repo.create_ticket(title, body)
-        ticket.set_status(project_status)
-        return {
-            "number": ticket.number,
-            "title": ticket.title,
-            "body": ticket.body,
-            "url": ticket.url,
-            "project_status": project_status,
-        }
+        work = WorkTicket(repo, self).create(
+            title,
+            body,
+            type=category,
+            theme=theme,
+            status=project_status,
+            infer_from=infer_from or f"{title}\n{body}",
+        )
+        return work.as_dict(project_status=project_status)
 
     def set_ticket_project_status(
         self,

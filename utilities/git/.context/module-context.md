@@ -41,7 +41,10 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 - `Project.link_repository()` — `gh project link` so the board appears on the repo Projects tab
 - `Project.state_named(name)` — column on the board
 - `Ticket.set_status(state)` / `Ticket.parse_number(ref)` / `Ticket.github_ref(...)` / `Ticket.close()`
-- `Ticket` — `number`, `title`, `body`, `url`, `state`, open `data` map
+- `Ticket.add_label(name)` / `Ticket.add_theme(theme)` / `issue_theme_label(theme)` — issue-sidebar `theme:<slug>` (filter/group; not a Status column)
+- `Ticket.set_type(name)` — apply an org issue Type name (WorkTicket owns defect / small change / feature mapping)
+- `Repo.list_issue_types()` / `Repo.ensure_issue_type(name, description=, color=)` — org issue types for the repo owner
+- `Ticket` — `number`, `title`, `body`, `url`, `state`, `issue_type`, `labels`, open `data` map
 - `TicketState` — column name (`Backlog`, `In Progress`, `Done`)
 - `resolve_github_status_option(name, options)` — exact GitHub Status match first, then aliases (`Backlog` ↔ `Todo`)
 - `Repo.ticket(ref)` / `Repo.create_ticket(title, body)`

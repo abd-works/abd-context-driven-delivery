@@ -11,5 +11,6 @@ Workflow
 ## Dependencies
 
 - `git` — Repo, Project, Ticket, TicketState (one-way)
+- `WorkTicket` — same Repo as Workflow
 - `workspace` — working folder / WorkSession (one-way)
 - `handoff` (one-way)
