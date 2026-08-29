@@ -1401,7 +1401,12 @@ class CliAgent(SubAgent):
         space.load()
         name = self._session or self._session_name_from_git()
         if not name and len(space.work_sessions) == 1:
-            name = space.work_sessions[0].name
+            only = space.work_sessions[0].name
+            # Never reuse leftover ``default`` while still on main — that session is
+            # for pre-ticket scratch. Ticket work binds after start-ticket on
+            # ``session/<ticket>`` (own worktree). Use the folder slug instead.
+            if only != "default":
+                name = only
         if not name:
             name = self._session_slug_from_folder()
         space.open_work_session(name)
@@ -1586,9 +1591,11 @@ class CliAgent(SubAgent):
             self.task_prompt = str(item["prompt"])
         index = len([j for j in JobQueue().load(work) if j != item])
         _CliAgentLog().job_started(work, index=index, prompt=str(item.get("prompt") or ""))
+        judge = item.get("judge")
         return self.launch_sessions(
             item.get("tools") or [],
             item.get("actions") or None,
+            judge=judge if judge is not None else None,
         )
 
     @agent_tool
@@ -1787,10 +1794,15 @@ class CliAgent(SubAgent):
         """
         if prompt:
             self.task_prompt = prompt
-        if judge is not None:
+        if judge is False:
+            self.judge = False
+            self._judge_job = False
+        elif judge is not None:
             self.judge = judge
+            self._judge_job = self._should_judge(tools, actions)
+        else:
+            self._judge_job = self._should_judge(tools, actions)
         self._bring_in_kits(tools, actions)
-        self._judge_job = self._should_judge(tools, actions)
         work = self._attach_cli_sessions()
         hanging, later = self._described_turn(tools, actions)
         self.job = self.ide._turn_prompt(hanging, later)
