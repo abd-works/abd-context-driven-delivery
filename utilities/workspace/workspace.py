@@ -762,10 +762,10 @@ class WorkSession:
         binding = self.cli_agent_binding
         if not (self.cli_doer or self.cli_judge or binding.doer or binding.judge):
             return None
-        from cli_agent.cli_agent import CliAgent, IdeCli
+        from cli_agent.cli_agent import CliAgent
 
         self.workspace.current_work_session = self
-        agent = CliAgent(ide=IdeCli(), workspace=str(self.path), session=self.name)
+        agent = CliAgent(workspace=str(self.path), session=self.name)
         agent._work = self.workspace
         return agent
 

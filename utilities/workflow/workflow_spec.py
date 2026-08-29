@@ -3,9 +3,11 @@
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """BDD spec for context_tools/actions/workflow/workflow.py."""
 
+import json
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
@@ -136,25 +138,76 @@ with description("a Workflow"):
                 ).to(raise_error(RuntimeError, "no open work session"))
 
 
+def _noop_launch(workflow, workspace, meta_path, focus):
+    return {"launched": "yes", "staging": meta_path, "report": ""}
+
+
 with description("a Workflow backlog path"):
     with context("with a memory Repo"):
         with before.each:
             self.tmp, self.repo = _workflow_fixture("wf-backlog-")
             self.workflow = Workflow(workspace=str(self.tmp), repo=self.repo)
 
-        with it("should create a github issue from backlog"):
-            created = self.workflow.backlog(
-                focus="Workflow package",
-                context="theme by package",
-                workspace=str(self.tmp),
-            )
-            expect(created["number"]).to(equal(1))
-            expect(created["title"]).to(equal("Workflow package"))
-            expect(created["body"]).to(contain("**Focus:** Workflow package"))
-            expect(created["body"]).to(contain("theme by package"))
-            expect(self.repo._ticket_project_state[1]).to(equal("Backlog"))
+        with it("should launch a sub-agent and return launched status"):
+            with patch.object(Workflow, "_launch_backlog_agent", _noop_launch):
+                result = self.workflow.backlog(
+                    focus="Workflow package",
+                    context="theme by package",
+                    workspace=str(self.tmp),
+                )
+            expect(result["launched"]).to(equal("yes"))
+            expect("staging" in result).to(be_true)
 
-        with it("should create a github issue with the handoff body"):
+        with it("should write a staging metadata file with focus and workspace"):
+            with patch.object(Workflow, "_launch_backlog_agent", _noop_launch):
+                self.workflow.backlog(
+                    focus="Workflow package",
+                    context="need Todo mapping",
+                    workspace=str(self.tmp),
+                )
+            staging_files = list((self.tmp / ".context").glob("backlog-*.json"))
+            expect(len(staging_files)).to(equal(1))
+            meta = json.loads(staging_files[0].read_text(encoding="utf-8"))
+            expect(meta["focus"]).to(equal("Workflow package"))
+            expect("workspace" in meta).to(be_true)
+
+        with it("should write the handoff body and Turn Context into the staging body file"):
+            with patch.object(Workflow, "_launch_backlog_agent", _noop_launch):
+                self.workflow.backlog(
+                    focus="Workflow package",
+                    context="need Todo mapping",
+                    workspace=str(self.tmp),
+                )
+            body_files = list((self.tmp / ".context").glob("backlog-*.md"))
+            expect(len(body_files)).to(equal(1))
+            body = body_files[0].read_text(encoding="utf-8")
+            expect(body).to(contain("**Focus:** Workflow package"))
+            expect(body).to(contain("## Turn Context"))
+
+        with it("should include theme in staging metadata when given"):
+            with patch.object(Workflow, "_launch_backlog_agent", _noop_launch):
+                self.workflow.backlog(
+                    focus="Queue for CLI agent",
+                    context="same agent or another",
+                    workspace=str(self.tmp),
+                    theme="cli-agent",
+                )
+            staging_files = list((self.tmp / ".context").glob("backlog-*.json"))
+            meta = json.loads(staging_files[0].read_text(encoding="utf-8"))
+            expect(meta["theme"]).to(equal("cli-agent"))
+
+        with it("should include category in staging metadata when given"):
+            with patch.object(Workflow, "_launch_backlog_agent", _noop_launch):
+                self.workflow.backlog(
+                    focus="Sketch grill skips a turn",
+                    workspace=str(self.tmp),
+                    category="defect",
+                )
+            staging_files = list((self.tmp / ".context").glob("backlog-*.json"))
+            meta = json.loads(staging_files[0].read_text(encoding="utf-8"))
+            expect(meta["category"]).to(equal("defect"))
+
+        with it("should create a github issue with the handoff body via capture_backlog"):
             created = self.workflow.capture_backlog(
                 focus="Workflow package",
                 body="forward requirements",
@@ -185,49 +238,12 @@ with description("a Workflow backlog path"):
             ws = self.workflow.workspace_tool(path=str(self.tmp))
             expect(ws.current_work_session is None).to(be_true)
 
-        with it("should create the issue in-process from backlog with handoff and request"):
-            created = self.workflow.backlog(
-                focus="Workflow package",
-                context="need Todo mapping",
-                workspace=str(self.tmp),
-            )
-            expect(created["number"]).to(equal(1))
-            expect(created["project_status"]).to(equal("Backlog"))
-            expect(created["body"]).to(contain("## Resume"))
-            expect(created["body"]).to(contain("**Focus:** Workflow package"))
-            expect(created["body"]).to(contain("need Todo mapping"))
-            expect(self.repo._ticket_project_state[1]).to(equal("Backlog"))
-            ws = self.workflow.workspace_tool(path=str(self.tmp))
-            expect(ws.current_work_session is None).to(be_true)
-            expect((self.tmp / ".context" / "handoff-latest.md").exists()).to(equal(False))
-
-        with it("should put a theme label on the issue when theme is given"):
-            created = self.workflow.backlog(
-                focus="Queue for CLI agent",
-                context="same agent or another",
-                workspace=str(self.tmp),
-                theme="cli-agent",
-            )
-            ticket = self.repo._tickets[1]
-            expect(created["theme"]).to(equal("theme:cli-agent"))
-            expect(ticket.labels).to(equal(["theme:cli-agent"]))
-
-        with it("should set issue type when category is given"):
-            created = self.workflow.backlog(
-                focus="Sketch grill skips a turn",
-                workspace=str(self.tmp),
-                category="defect",
-            )
-            ticket = self.repo._tickets[1]
-            expect(created["category"]).to(equal("Defect"))
-            expect(created["type"]).to(equal("Defect"))
-            expect(ticket.issue_type).to(equal("Defect"))
-
-        with it("should infer type and theme when the user does not override"):
-            created = self.workflow.backlog(
+        with it("should infer type and theme for capture_backlog when the user does not override"):
+            created = self.workflow.capture_backlog(
                 focus="Sketch is stuffing prior grill answers",
-                context="mistakes after the sketch refactor",
+                body="context: mistakes after the sketch refactor",
                 workspace=str(self.tmp),
+                infer_from="Sketch is stuffing prior grill answers\nmistakes after the sketch refactor",
             )
             expect(created["type"]).to(equal("Defect"))
             expect(created["theme"]).to(equal("theme:sketch"))
@@ -235,15 +251,68 @@ with description("a Workflow backlog path"):
                 equal(["Defect", "Small change", "Refactor", "Feature"])
             )
 
-        with it("should keep user type and theme instead of inferred ones"):
-            created = self.workflow.backlog(
+        with it("should keep user type and theme for capture_backlog instead of inferred ones"):
+            created = self.workflow.capture_backlog(
                 focus="Sketch is stuffing prior grill answers",
+                body="details",
                 workspace=str(self.tmp),
                 theme="workflow",
                 category="feature",
             )
             expect(created["type"]).to(equal("Feature"))
             expect(created["theme"]).to(equal("theme:workflow"))
+
+
+with description("a Workflow backlog helper"):
+    with context("_format_turn_context"):
+        with it("should render a Turn Context section with branch and commit"):
+            w = Workflow()
+            result = w._format_turn_context(
+                {"branch": "main", "head_sha": "abc123def456", "log": "abc123 finish"},
+                transcript_path="",
+            )
+            expect(result).to(contain("## Turn Context"))
+            expect(result).to(contain("main"))
+            expect(result).to(contain("abc123def456"))
+
+        with it("should include transcript path when given"):
+            w = Workflow()
+            result = w._format_turn_context(
+                {"branch": "main", "head_sha": "abc", "log": ""},
+                transcript_path="/path/to/t.jsonl",
+            )
+            expect(result).to(contain("/path/to/t.jsonl"))
+
+        with it("should omit empty fields"):
+            w = Workflow()
+            result = w._format_turn_context({"branch": "", "head_sha": "", "log": ""}, "")
+            expect(result).to(contain("## Turn Context"))
+            expect("Branch:" in result).to(equal(False))
+
+    with context("_backlog_agent_task"):
+        with it("should build a task prompt that names the metadata file and focus"):
+            w = Workflow()
+            task = w._backlog_agent_task("/path/meta.json", "Fix the scanner bug")
+            expect(task).to(contain("/path/meta.json"))
+            expect(task).to(contain("Fix the scanner bug"))
+            expect(task).to(contain("capture_backlog"))
+
+    with context("_write_backlog_staging"):
+        with it("should write body and metadata files under .context/"):
+            tmp = Path(tempfile.mkdtemp(prefix="wf-stage-"))
+            w = Workflow()
+            meta_path = w._write_backlog_staging(
+                workspace=str(tmp),
+                focus="Fix the scanner",
+                body="## Body\n\nDetails.\n",
+                metadata={"focus": "Fix the scanner", "workspace": str(tmp)},
+            )
+            expect(meta_path.is_file()).to(be_true)
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            expect(meta["focus"]).to(equal("Fix the scanner"))
+            body_path = Path(meta["body_path"])
+            expect(body_path.is_file()).to(be_true)
+            expect(body_path.read_text(encoding="utf-8")).to(contain("## Body"))
 
 
 with description("a WorkTicket"):

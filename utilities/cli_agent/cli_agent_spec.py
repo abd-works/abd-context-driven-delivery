@@ -19,7 +19,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_a, be_false, be_true, contain, equal, expect, raise_error
+from expects import be_a, be_below, be_false, be_true, contain, equal, expect, raise_error
 from mamba import context, description, it
 
 from cli_agent.cli_agent import (
@@ -591,26 +591,23 @@ with description("CliAgent"):
             expect("actions" in params).to(be_true)
             expect("model" in params).to(be_false)
 
-        with it("should tell the parent to spawn the IDE CLI"):
+        with it("should tell the parent to launch, monitor, and unblock the CLI"):
             text = discover_sub_agent_tools(CliAgent())[
                 "launch_sessions"
             ].instructions
-            expect("run_all" in text).to(be_true)
-            expect("IdeCli.spawn" in text).to(be_true)
-            expect("start_work_session" in text).to(be_true)
-            expect("must not call" in text).to(be_true)
-            expect("process reference" in text).to(be_true)
-            expect("--resume" in text).to(be_true)
-            expect("not IDE chats" in text).to(be_true)
-            expect("[CliAgent doer](resume-id)" in text).to(be_true)
-            expect("IDE Terminal" in text).to(be_true)
-            expect("CREATE_NEW_CONSOLE" in text).to(be_true)
-            expect("cursor.exe" in text).to(be_true)
-            expect("check" in text).to(be_true)
-            expect("report" in text).to(be_true)
+            expect("non-blocking sub-agent" in text).to(be_true)
+            expect("CliAgent handles all session and workspace setup internally" in text).to(be_true)
+            expect("launch, then monitor and unblock" in text).to(be_true)
+            expect("NOT TAKEN UP" in text).to(be_true)
+            expect("Monitor" in text).to(be_true)
+            expect("report back to the user" in text).to(be_true)
+            expect("enqueue_jobs" in text).to(be_true)
+            expect("launch_next" in text).to(be_true)
+            expect("complete_job" in text).to(be_true)
+            expect("never launches, prompts, or scores the judge" in text).to(be_true)
             expect("-p" in text).to(be_true)
-            expect("doer only" in text).to(be_true)
-            expect("Do not prompt, launch, or score the judge" in text).to(be_true)
+            expect("finish_turn" in text).to(be_true)
+            expect("cli-agent-task.txt" in text).to(be_true)
 
         with it("should Popen cursor-agent from run"):
             tmp = tempfile.mkdtemp(prefix="cli_run_")
@@ -648,7 +645,7 @@ with description("CliAgent"):
                 "launch_sessions"
             ].instructions
             expect("NOT TAKEN UP" in text).to(be_true)
-            expect("idle console" in text).to(be_true)
+            expect("stop immediately" in text).to(be_true)
 
 
 with description("a CLI agent run"):
@@ -706,7 +703,7 @@ with description("a CLI agent run"):
                 task = (tmp / ".context" / "cli-agent-task.txt").read_text(
                     encoding="utf-8"
                 )
-                expect(task).to(contain("--resume judge-1"))
+                expect(task).to(contain("judge-1"))
                 expect(task).to(contain("parent is not in this loop"))
                 expect(
                     (tmp / ".context" / "cli-agent-judge.txt").read_text(
@@ -986,6 +983,43 @@ with description("a doer that does not take the new job"):
             tmp = Path(tempfile.mkdtemp(prefix="cli_got_")) / "t.jsonl"
             tmp.write_text('{"role":"user","message":{}}\n', encoding="utf-8")
             expect(_Pickup().accepted(tmp, 0, seconds=0.0)).to(be_true)
+
+
+with description("a CliAgent tool surface"):
+    with context("enqueue_jobs"):
+        with it("should store a job list on the WorkSession and return the count"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_enq_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-enq"):
+                    agent = CliAgent(workspace=str(tmp), session="enqueue")
+                    result = agent.enqueue_jobs([
+                        {"tools": [], "prompt": "job one"},
+                        {"tools": [], "prompt": "job two"},
+                    ])
+            expect("job_queue: 2" in result).to(be_true)
+            expect(len(agent.job_queue)).to(equal(2))
+
+        with it("should be marked as an agent_tool"):
+            expect(getattr(CliAgent.enqueue_jobs, "_is_agent_tool", False)).to(be_true)
+
+    with context("launch_next"):
+        with it("should be marked as an agent_tool"):
+            expect(getattr(CliAgent.launch_next, "_is_agent_tool", False)).to(be_true)
+
+    with context("complete_job"):
+        with it("should be marked as an agent_tool"):
+            expect(getattr(CliAgent.complete_job, "_is_agent_tool", False)).to(be_true)
+
+    with context("launch_sessions with a prompt"):
+        with it("should set task_prompt before launching"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_lsp_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-lsp"):
+                    with patch("cli_agent.cli_agent.subprocess.Popen", return_value=_popen()):
+                        with patch.object(CliAgent, "_await_pickup", lambda *a, **k: None):
+                            agent = CliAgent(workspace=str(tmp), session="lsp")
+                            agent.launch_sessions(tools=[], prompt="do the thing")
+            expect(agent.task_prompt).to(equal("do the thing"))
 
 
 with description("a CLI agent job_queue"):
