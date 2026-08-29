@@ -2,7 +2,9 @@ This is an interactive session.
 Turn.action: (none) (guidance — the CLI decides the Turn)
 Turn.tool_keys: workflow.workflow:Workflow
 Turn.toolCalls: workflow.workflow:Workflow name=run workflow.workflow:Workflow
-Turn.prompt: Backlog item: CliAgent session log incomplete vs design: response summaries, links to content/chat/job queue, fold cli-agent.json IDs into session log header. (text).
+Turn.prompt: Backlog item: #46 (ticket).
+
+CliAgent backlog hygiene: (1) scan entire backlog up front — map each item to existing #N or create ticket for free-text, register on project board by theme so full backlog is visible; (2) set theme:cli-agent on all cli-agent items; (3) call finish-ticket when defect-fix completes before next_backlog_item. See issue #46.
 
 The ticket is confirmed as a defect and start-ticket has already been run. Now analyze:
 - Read all context files (.context/, module-context.md, grill-answers).
