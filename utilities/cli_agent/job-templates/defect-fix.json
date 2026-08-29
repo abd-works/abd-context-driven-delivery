@@ -18,20 +18,20 @@
       "judge_criteria": "PASS only when: (1) context was read in full; (2) repo history and similar incidents were explored; (3) analysis was added to the ticket notes under ## Analysis.\n"
     },
     {
-      "prompt": "Diagnose the root cause of the defect. Go beyond symptoms — identify the exact underlying issue. If the root cause is unclear or ambiguous, use the /diagnose tool.\n\nAdd your diagnosis hypothesis to the ticket notes under ## Diagnosis (separated from the analysis above).\n",
+      "prompt": "Diagnose the root cause of the defect. Go beyond symptoms — identify the exact underlying issue. If the root cause is unclear or ambiguous, use the /diagnose tool.\n\nCritical distinction — make this explicit in your diagnosis:\n- PROMPT/AI CHANGE: the defect is caused by incorrect, missing, or poorly structured instructions, prompts, or agent behaviour. The fix will be a change to a prompt, docstring, rule, or agent instruction — not production code.\n- CODE CHANGE: the defect is caused by a bug in production code. The fix will be a code edit.\n- BOTH: some defects have both a code failure and an AI/prompt failure layered on top.\n\nState clearly which category applies. This determines what kind of tests are written next.\n\nAdd your diagnosis hypothesis and category to the ticket notes under ## Diagnosis (separated from the analysis above).\n",
       "tools": [
         "workflow.workflow:Workflow"
       ],
       "judge": true,
-      "judge_criteria": "PASS only when: (1) a concrete root cause hypothesis is stated; (2) the /diagnose tool was used if the cause was not obvious; (3) the hypothesis is in the ticket notes under ## Diagnosis.\n"
+      "judge_criteria": "PASS only when: (1) a concrete root cause hypothesis is stated; (2) the /diagnose tool was used if the cause was not obvious; (3) the category (prompt/AI change vs code change vs both) is explicitly stated; (4) the hypothesis and category are in the ticket notes under ## Diagnosis.\n"
     },
     {
-      "prompt": "Write failing tests before writing any fix. You must produce: - A mechanical (vanilla BDD) test using /bdd.development if this is a code failure. - An agentic BDD test using /agent-bdd.development if there is an AI/agent failure\n  or if the mechanical failure was causing severe AI problems.\nDo not skip the agentic test when it applies ? err on the side of including it.\nThe failing test is a hard requirement ? write it first, run it, confirm it fails. You may alter existing tests or add new ones, but an explicit red test capturing the defect must exist before any fix is written.\n",
+      "prompt": "Write failing tests before writing any fix. Read the ## Diagnosis in the ticket to determine which tests are required:\n\n- PROMPT/AI CHANGE: write an agentic BDD test using /agent-bdd.development. This is the primary test type for prompt or instruction defects. A mechanical BDD test is rarely needed here — but not never; include one if the prompt change also has a verifiable mechanical side-effect.\n- CODE CHANGE: write a mechanical (vanilla) BDD test using /bdd.development. Also write an agentic BDD test if the code defect was causing AI/agent misbehaviour.\n- BOTH: write both. Mechanical BDD first.\n\nThe failing test is a hard requirement — write it first, run it, confirm it fails. You may alter existing tests or add new ones, but an explicit red test capturing the defect must exist before any fix is written.\n",
       "actions": [
         "context_tools.bdd.bdd:Bdd"
       ],
       "judge": true,
-      "judge_criteria": "PASS only when: (1) at least one failing test exists that captures the defect; (2) a mechanical BDD test is present for code failures; (3) an agentic BDD test is present when an AI/agent failure is involved; (4) tests were validated against the tools as normal.\n"
+      "judge_criteria": "PASS only when: (1) at least one failing test exists that captures the defect; (2) for code changes: a mechanical BDD test is present; (3) for prompt/AI changes: an agentic BDD test is present; (4) mechanical BDD runs first when both are present; (5) tests were validated against the tools as normal.\n"
     },
     {
       "prompt": "Fix the defect using /clean_engineering.code in small iterations. Work one small piece at a time ? fix just enough to make one or a few tests pass, then move to the next piece. Repeat until all BDD and agentic BDD tests are green. Run vanilla BDD first when you have both.\nBefore writing any code: - Explore all impacted codebases and the code they depend on. - Read module-context.md for every module you touch. - Study the existing idioms, patterns, and usage in detail. Do not invent new patterns or paradigms ? follow what is already there. A defect fix should not require new patterns.\n",
