@@ -24,6 +24,8 @@ from mamba import context, description, it
 
 from cli_agent.cli_agent import (
     CliAgent,
+    CliBacklog,
+    CliBacklogItem,
     CursorCli,
     IdeCli,
     VscodeCli,
@@ -1152,6 +1154,132 @@ with description("CliAgent job template tools"):
         with context("when the template does not exist"):
             with it("should raise so the caller can recover"):
                 pass  # BDD: SIGNATURE
+
+
+with description("a backlog item"):
+    with context("that is a ticket reference"):
+        with it("should classify #27 and 27 as ticket kind"):
+            expect(CliBacklogItem.from_ref("#27").kind).to(equal("ticket"))
+            expect(CliBacklogItem.from_ref("#27").ref).to(equal(27))
+            expect(CliBacklogItem.from_ref(15).kind).to(equal("ticket"))
+
+    with context("that is free text"):
+        with it("should classify qualitative text as text kind"):
+            item = CliBacklogItem.from_ref("session lands on default instead of defect name")
+            expect(item.kind).to(equal("text"))
+            expect(item.status).to(equal("pending"))
+
+
+with description("a backlog"):
+    with context("that is saved on the work session"):
+        with it("should round-trip items and template"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_bl_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-bl"):
+                    agent = CliAgent(workspace=str(tmp), session="backlog-round")
+                    work = agent._attach_cli_sessions()
+                    backlog = CliBacklog(
+                        items=[
+                            CliBacklogItem.from_ref(12),
+                            CliBacklogItem.from_ref("thin slice auth"),
+                        ],
+                        template="defect-fix",
+                    )
+                    backlog.save(work)
+                    loaded = CliBacklog.load(work)
+                    expect(loaded.template).to(equal("defect-fix"))
+                    expect(len(loaded.items)).to(equal(2))
+                    expect(loaded.items[0].kind).to(equal("ticket"))
+                    expect(loaded.items[1].kind).to(equal("text"))
+
+    with context("that advances through items"):
+        with it("should mark the current item done and start the next"):
+            backlog = CliBacklog(
+                items=[
+                    CliBacklogItem.from_ref(1),
+                    CliBacklogItem.from_ref(2),
+                ]
+            )
+            first = backlog.advance()
+            expect(first.ref).to(equal(1))
+            expect(first.status).to(equal("in_progress"))
+            second = backlog.advance()
+            expect(second.ref).to(equal(2))
+            expect(backlog.items[0].status).to(equal("done"))
+            expect(backlog.advance()).to(equal(None))
+
+    with context("when one work session covers the whole backlog"):
+        with it("should keep the same session while advancing items"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_bl_sess_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-bl2"):
+                    agent = CliAgent(workspace=str(tmp), session="one-session")
+                    agent.set_backlog([12, 15], template=None)
+                    work = agent._attach_cli_sessions()
+                    expect(work.name).to(equal("one-session"))
+                    agent.next_backlog_item()
+                    expect(agent._attach_cli_sessions().name).to(equal("one-session"))
+
+
+with description("CliAgent backlog tools"):
+    with context("set_backlog"):
+        with it("should persist items in the given order"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_bl_set_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-set"):
+                    agent = CliAgent(workspace=str(tmp), session="set-bl")
+                    result = agent.set_backlog([12, "#15", "qualitative defect"], template="defect-fix")
+                    expect(result).to(contain("3 item"))
+                    expect(result).to(contain("defect-fix"))
+                    loaded = CliBacklog.load(agent._attach_cli_sessions())
+                    expect(loaded.items[0].ref).to(equal(12))
+                    expect(loaded.items[1].ref).to(equal(15))
+                    expect(loaded.items[2].kind).to(equal("text"))
+
+        with context("with an order override"):
+            with it("should reorder items by the given indexes"):
+                tmp = Path(tempfile.mkdtemp(prefix="cli_bl_ord_"))
+                with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                    with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-ord"):
+                        agent = CliAgent(workspace=str(tmp), session="ord-bl")
+                        agent.set_backlog([10, 20, 30], order=[2, 0, 1])
+                        loaded = CliBacklog.load(agent._attach_cli_sessions())
+                        expect([i.ref for i in loaded.items]).to(equal([30, 10, 20]))
+
+    with context("next_backlog_item"):
+        with it("should advance and return None when exhausted"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_bl_next_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-next"):
+                    agent = CliAgent(workspace=str(tmp), session="next-bl")
+                    agent.set_backlog([1])
+                    expect(agent.next_backlog_item()).to(contain("#1"))
+                    expect(agent.next_backlog_item()).to(equal(None))
+
+        with context("when a template is bound"):
+            with it("should enqueue template jobs with the item injected into prompts"):
+                tmp = Path(tempfile.mkdtemp(prefix="cli_bl_tmpl_"))
+                with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                    with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-tmpl"):
+                        agent = CliAgent(workspace=str(tmp), session="tmpl-bl")
+                        agent.add_template(
+                            "slice-stories",
+                            jobs=[{"prompt": "Generate story map for slice"}],
+                            description="story map per thin slice",
+                            path=str(tmp / "templates"),
+                        )
+                        agent.set_backlog(
+                            ["thin slice login", "thin slice checkout"],
+                            template="slice-stories",
+                            path=str(tmp / "templates"),
+                        )
+                        # set_backlog does not take path for template store on backlog —
+                        # next_backlog_item uses path for template load
+                        msg = agent.next_backlog_item(path=str(tmp / "templates"))
+                        expect(msg).to(contain("slice-stories"))
+                        queue = agent.job_queue
+                        expect(len(queue)).to(equal(1))
+                        expect(queue[0]["prompt"]).to(contain("thin slice login"))
 
 
 with description("CliAgent cleanup"):

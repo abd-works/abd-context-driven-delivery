@@ -1212,6 +1212,104 @@ class CliJobTemplateStore:
         return results
 
 
+@dataclass
+class CliBacklogItem:
+    """One unit on a CliAgent backlog: ticket ref or free-text."""
+
+    ref: str | int
+    kind: str = "text"
+    status: str = "pending"
+
+    @classmethod
+    def from_ref(cls, ref: str | int) -> CliBacklogItem:
+        raw = str(ref).strip()
+        if re.fullmatch(r"#?\d+", raw):
+            return cls(ref=int(raw.lstrip("#")), kind="ticket", status="pending")
+        return cls(ref=raw, kind="text", status="pending")
+
+    def to_dict(self) -> dict:
+        return {"ref": self.ref, "kind": self.kind, "status": self.status}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> CliBacklogItem:
+        return cls(
+            ref=data.get("ref", ""),
+            kind=data.get("kind", "text"),
+            status=data.get("status", "pending"),
+        )
+
+
+class CliBacklog:
+    """Ordered backlog items for one CliAgent session.
+
+    One work session covers the whole backlog. Each item is processed by
+    running it through the active job queue or a named job template.
+    """
+
+    filename = "cli-agent-backlog.json"
+
+    def __init__(
+        self,
+        items: list[CliBacklogItem] | None = None,
+        template: str | None = None,
+    ) -> None:
+        self.items = list(items or [])
+        self.template = template
+
+    def path_for(self, work) -> Path:
+        folder = getattr(work, "folder", None)
+        if folder:
+            return Path(folder) / self.filename
+        name = getattr(work, "name", "") or "work"
+        root = getattr(work, "path", None) or "."
+        return Path(root) / ".context" / "sessions" / name / self.filename
+
+    @classmethod
+    def load(cls, work) -> CliBacklog:
+        path = cls().path_for(work)
+        if not path.is_file():
+            return cls()
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        items = [CliBacklogItem.from_dict(i) for i in raw.get("items", [])]
+        return cls(items=items, template=raw.get("template"))
+
+    def save(self, work) -> None:
+        path = self.path_for(work)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "template": self.template,
+            "items": [i.to_dict() for i in self.items],
+        }
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    def push(self, item: CliBacklogItem) -> None:
+        self.items.append(item)
+
+    def peek(self) -> CliBacklogItem | None:
+        for item in self.items:
+            if item.status == "in_progress":
+                return item
+        for item in self.items:
+            if item.status == "pending":
+                return item
+        return None
+
+    def advance(self) -> CliBacklogItem | None:
+        """Mark the current in_progress item done; start the next pending item."""
+        for item in self.items:
+            if item.status == "in_progress":
+                item.status = "done"
+                break
+        for item in self.items:
+            if item.status == "pending":
+                item.status = "in_progress"
+                return item
+        return None
+
+    def remaining(self) -> list[CliBacklogItem]:
+        return [i for i in self.items if i.status != "done"]
+
+
 class CliAgent(SubAgent):
     """Slash ``/cli-agent`` runs listed context tools and actions through the IDE CLI.
 
@@ -1565,6 +1663,75 @@ class CliAgent(SubAgent):
             jobs = [{**job, **overrides} for job in jobs]
         return self.enqueue_jobs(jobs)
 
+    @agent_tool
+    def set_backlog(
+        self,
+        items: list[str | int],
+        template: str | None = None,
+        order: list[int] | None = None,
+        path: str | None = None,
+    ) -> str:
+        """Assign a backlog of items to this CliAgent session.
+
+        One work session covers the whole backlog — do not open a new session per item.
+        Each item is a ticket ref (``12``, ``#27``) or free-text describing work.
+        Free-text items may create a ticket when no match exists (e.g. via the defect-fix template).
+
+        ``template`` is the job template to run for each item (e.g. ``defect-fix``).
+        ``order`` optionally reorders by zero-based indexes into ``items``.
+        Returns a confirmation with item count and template name.
+        """
+        work = self._attach_cli_sessions()
+        refs = list(items or [])
+        if order:
+            refs = [refs[i] for i in order if 0 <= i < len(refs)]
+        backlog = CliBacklog(
+            items=[CliBacklogItem.from_ref(r) for r in refs],
+            template=template,
+        )
+        backlog.save(work)
+        label = f" template '{template}'" if template else ""
+        return f"backlog: {len(backlog.items)} item(s){label}"
+
+    @agent_tool
+    def next_backlog_item(self, path: str | None = None) -> str | None:
+        """Advance to the next backlog item and load its jobs onto the queue.
+
+        Marks the current in_progress item done, starts the next pending item,
+        and — when a template is set — enqueues that template's jobs with the
+        item ref injected into every job prompt. Returns None when the backlog
+        is exhausted. Does not open a new work session.
+        """
+        work = self._attach_cli_sessions()
+        backlog = CliBacklog.load(work)
+        item = backlog.advance()
+        if item is None:
+            # First call: nothing in_progress yet — start the first pending.
+            item = backlog.peek()
+            if item is None:
+                backlog.save(work)
+                return None
+            if item.status == "pending":
+                item.status = "in_progress"
+        backlog.save(work)
+        ref_label = f"#{item.ref}" if item.kind == "ticket" else str(item.ref)
+        if backlog.template:
+            store = self._template_store(path)
+            template = store.load(backlog.template)
+            if template is None:
+                raise RuntimeError(
+                    f"backlog template '{backlog.template}' not found in {store._root}"
+                )
+            prefix = f"Backlog item: {ref_label} ({item.kind}).\n\n"
+            jobs = []
+            for job in template.jobs:
+                job = dict(job)
+                job["prompt"] = prefix + str(job.get("prompt") or "")
+                jobs.append(job)
+            self.enqueue_jobs(jobs)
+            return f"backlog item {ref_label}: loaded template '{backlog.template}' ({len(jobs)} job(s))"
+        return f"backlog item {ref_label}: ready (no template — enqueue jobs manually)"
+
     @prompt(name="cli-agent")
     @sub_agent
     @agent_tool
@@ -1586,6 +1753,15 @@ class CliAgent(SubAgent):
         - If one matches, offer it via AskQuestion. If the user confirms, call `use_template(name)` to enqueue its jobs automatically.
         - Skip this if the user described something clearly not matching any template.
         - Call `use_template(name, overrides)` to merge fields (e.g. swap the prompt or toggle judge) into the template jobs before enqueueing.
+
+        ## Backlog
+
+        A backlog is an ordered list of items (ticket refs like ``#12`` / ``27``, or free-text) assigned to this session.
+        One work session covers the whole backlog — never open a new session per item.
+        - Call `set_backlog(items, template)` to assign items and optionally bind a job template (e.g. ``defect-fix``).
+        - Call `next_backlog_item()` when the current item's jobs are done: it advances to the next item and reloads the template onto the job queue with that item injected.
+        - Free-text items that do not match an existing ticket may create one (template-dependent, e.g. defect-fix triage).
+        - Order is the order given unless you reorder via the ``order`` argument and record that choice.
 
         ## What to always include in the prompt you pass to the doer
 
