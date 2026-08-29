@@ -656,11 +656,18 @@ class IdeCli:
     _launch = "Read {path} and follow it exactly."
     _cmdline_safe = 4096
     _parent_checkin = (
-        "The parent talks to the doer only. Every once in a while, check "
-        "the doer (logs, transcript tail, hanging Turn, artifacts). "
+        "The parent talks to the doer only. After jobs are on the queue, "
+        "if this is Cursor, watch with a 30s /loop; otherwise check the "
+        "doer the usual way without notify_on_output. Every once in a while, "
+        "check the doer (logs, transcript tail, hanging Turn, artifacts). "
         "If the doer did not take the job (NOT TAKEN UP), stop — do not wait. "
-        "Do not prompt, launch, or score the judge. The doer runs the "
-        "judge and waits. Do not drive the work with -p."
+        "If the doer stopped after three judge FAILs, do not mindlessly loop: "
+        "read the judge FAIL (transcript / finish_turn result), investigate the "
+        "named leftovers in the workspace, revise the job prompt (update "
+        ".context/cli-agent-task.txt and the job_queue head) so the next attempt "
+        "targets those exact fails, then send one continue resume to the doer. "
+        "Do not stack --resume prompts. Do not prompt, launch, or score the "
+        "judge. The doer runs the judge and waits. Do not drive the work with -p."
     )
 
     def __init__(
@@ -856,7 +863,7 @@ class IdeCli:
             "contact the judge again after that Turn. Do not wait for the "
             "parent. If the queue is empty, stop. "
             "On FAIL, fix, finish the Turn, and send again "
-            "(attempt n of 3). After three FAILs, stop and wait."
+            "(attempt n of 3). After three FAILs, stop and wait for the parent."
         )
 
     def _create_chat(self, workspace: str, *, timeout_seconds: int | None = None) -> str:
@@ -1090,7 +1097,7 @@ cli-agent-judge.txt only when this launch lists a context tool, action,
 or utility. Bare finish_turn / no tools / no actions: no judge. The
 parent does not launch or prompt the judge. When there is a judge, the
 doer, after finish_turn, sends that file to the judge CLI, waits for
-PASS or FAIL, and they go back and forth (three FAILs then stop). The
+PASS or FAIL, and they go back and forth (three FAILs then the doer stops and waits for the parent). The
 judge uses the same tools, fidelity, and format, and compares written
 artifacts to the source scope of the original job (whole artifact or a
 stated slice). Missing source nodes are a fail. Markdown generate is
@@ -1108,9 +1115,15 @@ Later jobs live on the job_queue property. The head stays until the
 judge PASSes that job. The doer then pops it and runs the next job
 on this same CLI. The parent does not launch_next after each Turn.
 Do not stack --resume prompts.
-The parent talks to the doer only. Every once in a while, check the
+The parent talks to the doer only. After jobs are on the queue,
+if this is Cursor, watch with a 30s /loop; otherwise check the
+doer the usual way without notify_on_output. Every once in a while, check the
 doer (logs, transcript tail, hanging Turn, artifacts) and report
-back how it is doing. Do not prompt, launch, or score the judge.
+back how it is doing. If the doer stopped after three judge FAILs,
+investigate the FAIL (judge transcript / named leftovers), revise the
+job prompt and queue-head / cli-agent-task.txt to target those exact
+gaps, then send one continue resume to the doer — do not only report
+that it is waiting. Do not prompt, launch, or score the judge.
 Do not drive the work with -p.
 ide.detect().run_all starts the interactive session(s) and returns.
 

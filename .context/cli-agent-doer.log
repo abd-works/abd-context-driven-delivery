@@ -301,3 +301,11 @@ C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --res
 
 --- spawn 2026-08-29 02:37:02 ---
 C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume dda574f7-2a14-4a35-8b42-14bbe23b51f2 --workspace C:\dev\abd-cdd-plan-and-swarm-flow-boar Read .context/cli-agent-task.txt and follow it exactly.
+
+--- parent-continue 2026-08-29 12:33:17 ---
+Start-Process resume dda574f7-2a14-4a35-8b42-14bbe23b51f2 (after 3x FAIL stop-and-wait)
+
+
+--- parent-continue 2026-08-29 12:37:39 ---
+foreground resume ok pid=138156
+

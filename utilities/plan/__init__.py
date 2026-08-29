@@ -11,7 +11,6 @@ from plan.plan import (
     SmallWorkRunner,
     ThemedIssue,
     TurnAttachments,
-    TurnTemplate,
 )
 
 __all__ = [
@@ -20,7 +19,6 @@ __all__ = [
     "PlanExecution",
     "PlanSeed",
     "TurnAttachments",
-    "TurnTemplate",
     "JudgeCheckpoint",
     "HILCheck",
     "ProgressView",

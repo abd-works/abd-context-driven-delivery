@@ -4,7 +4,7 @@
 """Workflow — backlog, start, finish linking GitHub Issues, handoff, and WorkSession."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
@@ -27,6 +27,49 @@ class WorkflowConfig:
     project_owner: str
     project_number: int
     default_branch: str = "main"
+
+
+@dataclass
+class FlowFile:
+    """Per-state behavior for a Workflow — ``workflow/flows/{name}.yaml``.
+
+    Columns stay on the GitHub Project; this file holds tools, one action,
+    utilities, prose, optional hil/judge, and owner + project_number.
+    """
+
+    name: str
+    owner: str | None = None
+    project_number: int | None = None
+    throwaway: bool = False
+    states: dict[str, dict] = field(default_factory=dict)
+
+    @classmethod
+    def load(cls, path: Path) -> "FlowFile":
+        payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        return cls(
+            name=str(payload.get("name") or path.stem),
+            owner=(str(payload["owner"]).strip() if payload.get("owner") else None),
+            project_number=(
+                int(payload["project_number"])
+                if payload.get("project_number") is not None
+                else None
+            ),
+            throwaway=bool(payload.get("throwaway", False)),
+            states=dict(payload.get("states") or {}),
+        )
+
+    def write(self, path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload: dict[str, object] = {
+            "name": self.name,
+            "throwaway": self.throwaway,
+            "states": self.states or {},
+        }
+        if self.owner:
+            payload["owner"] = self.owner
+        if self.project_number is not None:
+            payload["project_number"] = self.project_number
+        path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 
 
 @toolset
@@ -423,19 +466,6 @@ class Workflow:
             issue.set_status(status)
         return status
 
-    def compose_throwaway(self, name: str, workspace: str = "") -> "Workflow":
-        """One-off Workflow: temp flow yaml (and Project) deleted on /finish-plan."""
-        self.name = name.strip()
-        self.throwaway = True
-        root = Path(workspace.strip() or self._workspace_path or ".")
-        path = root / "workflow" / "flows" / f"{self.name}.yaml"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            f"name: {self.name}\nthrowaway: true\nstates: {{}}\n",
-            encoding="utf-8",
-        )
-        self.flow_file_path = path
-        return self
 
     def copy_issue_body_to_session(
         self,

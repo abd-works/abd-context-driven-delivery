@@ -1,20 +1,22 @@
-﻿{
-    "prompt":  "Source: utilities/swarm/.context/grill-answers.md ticks 14-33 (later ticks correct 14). Existing files under utilities/swarm/.context/ (story-map.md, plan-and-swarm-sketch.md, thin-slicing.md, scenarios/, module-context.md) plus plan/workflow/git module-context. DELTAS ONLY — update those files; do not invent a parallel tree or planned-turn list. Locked model: Workflow = states on its own GitHub Project; Plan = that flow + tickets; no planned turns; FIFO default and agent may batch; move off project 1 inbox onto the flow board creates a real Turn; per-state behavior in workflow/flows/{name}.yaml (tools, one action, utilities, prose, optional hil/judge, owner+number); columns stay on GitHub; /start-ticket /small-work 14 starts #14 on that board; unnamed start stays inbox In Progress; harness must put Projects in prompts; flow-done cards stay on the flow board until operator /finish-plan (close issues, session); throwaway yaml+temp Project deleted on /finish-plan; saved Project stays. Kit + board only. Judge the markdown (and later code) against that grill scope; missing nodes from the lock are a fail. Job 3 of 3: generate Stories acceptance_tests and CleanEngineering code. Deltas only on existing tests and code.",
-    "tools":  [
-                  {
-                      "toolset":  "context_tools.stories.stories:Stories",
-                      "context":  {
-                                      "fidelity":  "acceptance_tests"
-                                  }
-                  },
-                  {
-                      "toolset":  "context_tools.clean_engineering.clean_engineering:CleanEngineering",
-                      "context":  {
-                                      "fidelity":  "code"
-                                  }
-                  }
-              ],
-    "actions":  [
-                    "generate.generate:Generate"
-                ]
-}
+﻿[
+    {
+        "prompt": "Source: utilities/swarm/.context/grill-answers.md ticks 14-33 (later ticks correct 14). Existing files under utilities/swarm/.context/ (story-map.md, plan-and-swarm-sketch.md, thin-slicing.md, scenarios/, module-context.md) plus plan/workflow/git module-context. DELTAS ONLY \u2014 update those files; do not invent a parallel tree or planned-turn list. Locked model: Workflow = states on its own GitHub Project; Plan = that flow + tickets; no planned turns; FIFO default and agent may batch; move off project 1 inbox onto the flow board creates a real Turn; per-state behavior in workflow/flows/{name}.yaml (tools, one action, utilities, prose, optional hil/judge, owner+number); columns stay on GitHub; /start-ticket /small-work 14 starts #14 on that board; unnamed start stays inbox In Progress; harness must put Projects in prompts; flow-done cards stay on the flow board until operator /finish-plan (close issues, session); throwaway yaml+temp Project deleted on /finish-plan; saved Project stays. Kit + board only. Judge the markdown (and later code) against that grill scope; missing nodes from the lock are a fail.\n\nParent retry after three judge FAILs on Job 3. Last FAIL leftovers to clear before re-judge:\n1) utilities/plan/plan.py \u2014 remove _PREBAKED_WORKFLOWS, _load_prebaked_turns, PlanTurns, and TurnTemplate if only used by those; remove exports/callers. No planned-turn list APIs.\n2) Keep /start-ticket /finish-plan / throwaway acceptance coverage; composeThrowaway must be correct camelCase.\n3) Keep workflow.py FlowFile / workflow/flows/{name}.yaml / finish_plan / throwaway from prior Job 3 work.\n\nJob 3 of 3: generate Stories acceptance_tests and CleanEngineering code. Deltas only on existing tests and code. Fix those FAIL items, finish_turn, then contact the judge (attempts reset by this parent continue).",
+        "tools": [
+            {
+                "toolset": "context_tools.stories.stories:Stories",
+                "context": {
+                    "fidelity": "acceptance_tests"
+                }
+            },
+            {
+                "toolset": "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                "context": {
+                    "fidelity": "code"
+                }
+            }
+        ],
+        "actions": [
+            "generate.generate:Generate"
+        ]
+    }
+]

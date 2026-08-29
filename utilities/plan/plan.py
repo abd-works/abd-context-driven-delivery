@@ -42,16 +42,6 @@ class ProgressView:
     judge_result: str | None
 
 
-@dataclass
-class TurnTemplate:
-    """One prebaked Turn shape loaded from a named Workflow."""
-
-    action: str
-    fidelity: str = ""
-    format: str = ""
-    context: str = ""
-    tool_keys: list[str] = field(default_factory=list)
-
 
 class TurnAttachments:
     """HILCheck and JudgeCheckpoint hanging on Turns."""
@@ -99,25 +89,6 @@ class PlanSeed:
     workflow: Workflow | None = None
     workflow_name: str = ""
 
-
-_PREBAKED_WORKFLOWS: dict[str, list[TurnTemplate]] = {
-    "small-work": [
-        TurnTemplate(
-            action="Generate",
-            fidelity="behavior",
-            format="markdown",
-            context="root-cause",
-            tool_keys=["context_tools.bdd.bdd:Bdd"],
-        ),
-        TurnTemplate(
-            action="Generate",
-            fidelity="scenarios",
-            format="markdown",
-            context="fix-one-issue",
-            tool_keys=["context_tools.bdd.bdd:Bdd"],
-        ),
-    ],
-}
 
 
 class Plan:
@@ -241,32 +212,10 @@ class Plan:
         self._turns.append(turn)
         return turn
 
-    def _load_prebaked_turns(self, workflow_name: str) -> None:
-        for template in _PREBAKED_WORKFLOWS.get(workflow_name, []):
-            self.add_turn(
-                action=template.action,
-                fidelity=template.fidelity,
-                format=template.format,
-                context=template.context,
-                tool_keys=list(template.tool_keys),
-            )
 
 
-class PlanTurns:
-    """Edit and delete Turns on a Plan."""
 
-    def __init__(self, plan: Plan) -> None:
-        self._plan = plan
 
-    def edit(self, turn: Turn, **fields: Any) -> Turn:
-        for field_name, field_value in fields.items():
-            setattr(turn, field_name, field_value)
-        return turn
-
-    def delete(self, turn: Turn) -> None:
-        turns = self._plan._turns
-        if turn in turns:
-            turns.remove(turn)
 
 
 _ENOUGH_MARKERS = (
