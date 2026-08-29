@@ -1,39 +1,28 @@
 ﻿This is an interactive session.
 Turn.action: Validate (guidance — the CLI decides the Turn)
-Turn.tool_keys: workflow.workflow:Workflow
-Turn.toolCalls: workflow.workflow:Workflow name=run workflow.workflow:Workflow
+Turn.tool_keys: context_tools.bdd.bdd:Bdd
+Turn.toolCalls: context_tools.bdd.bdd:Bdd name=run context_tools.bdd.bdd:Bdd
 Turn.prompt: Backlog item: FIRST / BLOCKING: Starting a work session must put work on its own branch (and worktree) for isolation. work session == branch == own tree. This must hold for CliAgent, SubAgent, and no-agent flows ? not only CLI spawn. Today open/start of a work session can leave you on main/parent (e.g. C:\dev\abd-works-repo) so agents read/write the wrong tree. Fix at the work-session / start-ticket layer so every new work session binds to session/<name> with its own worktree before any job runs. After start-ticket, rebind workspace root to that worktree. Do this fix on the current branch first; later backlog items depend on it. (text).
 
-Diagnose the root cause of the defect. Go beyond symptoms — identify the exact underlying issue. If the root cause is unclear or ambiguous, use the /diagnose tool.
+Write failing tests before writing any fix. Read the ## Diagnosis in the ticket to determine which tests are required:
 
-Critical distinction — make this explicit in your diagnosis:
-- PROMPT/AI CHANGE: the defect is caused by incorrect, missing, or poorly structured instructions, prompts, or agent behaviour. The fix will be a change to a prompt, docstring, rule, or agent instruction — not production code.
-- CODE CHANGE: the defect is caused by a bug in production code. The fix will be a code edit.
-- BOTH: some defects have both a code failure and an AI/prompt failure layered on top.
+- PROMPT/AI CHANGE: write an agentic BDD test using /agent-bdd.development. This is the primary test type for prompt or instruction defects. A mechanical BDD test is rarely needed here — but not never; include one if the prompt change also has a verifiable mechanical side-effect.
+- CODE CHANGE: write a mechanical (vanilla) BDD test using /bdd.development. Also write an agentic BDD test if the code defect was causing AI/agent misbehaviour.
+- BOTH: write both. Mechanical BDD first.
 
-State clearly which category applies. This determines what kind of tests are written next.
-
-Add your diagnosis hypothesis and category to the ticket notes under ## Diagnosis (separated from the analysis above).
+The failing test is a hard requirement — write it first, run it, confirm it fails. You may alter existing tests or add new ones, but an explicit red test capturing the defect must exist before any fix is written.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
 The doer invoked you after it finished the Turn. Validate now. Reply PASS or FAIL to the doer and finish this Turn. Do not wait for the parent. The parent is not in this loop.
 Validate at the same fidelity and format as that Turn. Judge the artifacts produced at that fidelity and format. When format is markdown, validate the markdown; do not look for source code.
-Compare what was written to the source scope of the original job. The job is the worker prompt and its sources (story map, sketch, model, or named subset). Scope may be the whole artifact or a stated slice — use that scope, not only the files that happen to exist. Missing nodes, epics, or files that the source scope called for are a fail. Do not treat a leftover or partial tree as complete.
-PASS only when: (1) a concrete root cause hypothesis is stated; (2) the /diagnose tool was used if the cause was not obvious; (3) the category (prompt/AI change vs code change vs both) is explicitly stated; (4) the hypothesis and category are in the ticket notes under ## Diagnosis.
+Compare what was written to the source scope of the original job. The job is the worker prompt and its sources. Scope may be the whole artifact or a stated slice — use that scope, not only the files that happen to exist.
+PASS only when: (1) at least one failing test exists that captures the defect; (2) for code changes: a mechanical BDD test is present; (3) for prompt/AI changes: an agentic BDD test is present; (4) mechanical BDD runs first when both are present; (5) tests were validated against the tools as normal.
 --- JOB / SOURCE SCOPE ---
-This is an interactive session.
-Turn.action: (none) (guidance — the CLI decides the Turn)
-Turn.tool_keys: workflow.workflow:Workflow
-Turn.toolCalls: workflow.workflow:Workflow name=run workflow.workflow:Workflow
 Turn.prompt: Backlog item: FIRST / BLOCKING: Starting a work session must put work on its own branch (and worktree) for isolation. work session == branch == own tree. This must hold for CliAgent, SubAgent, and no-agent flows ? not only CLI spawn. Today open/start of a work session can leave you on main/parent (e.g. C:\dev\abd-works-repo) so agents read/write the wrong tree. Fix at the work-session / start-ticket layer so every new work session binds to session/<name> with its own worktree before any job runs. After start-ticket, rebind workspace root to that worktree. Do this fix on the current branch first; later backlog items depend on it. (text).
 
-Diagnose the root cause of the defect. Go beyond symptoms — identify the exact underlying issue. If the root cause is unclear or ambiguous, use the /diagnose tool.
+Write failing tests before writing any fix. Read the ## Diagnosis in the ticket to determine which tests are required:
 
-Critical distinction — make this explicit in your diagnosis:
-- PROMPT/AI CHANGE: the defect is caused by incorrect, missing, or poorly structured instructions, prompts, or agent behaviour. The fix will be a change to a prompt, docstring, rule, or agent instruction — not production code.
-- CODE CHANGE: the defect is caused by a bug in production code. The fix will be a code edit.
-- BOTH: some defects have both a code failure and an AI/prompt failure layered on top.
+- PROMPT/AI CHANGE: write an agentic BDD test using /agent-bdd.development. This is the primary test type for prompt or instruction defects. A mechanical BDD test is rarely needed here — but not never; include one if the prompt change also has a verifiable mechanical side-effect.
+- CODE CHANGE: write a mechanical (vanilla) BDD test using /bdd.development. Also write an agentic BDD test if the code defect was causing AI/agent misbehaviour.
+- BOTH: write both. Mechanical BDD first.
 
-State clearly which category applies. This determines what kind of tests are written next.
-
-Add your diagnosis hypothesis and category to the ticket notes under ## Diagnosis (separated from the analysis above).
-The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
+The failing test is a hard requirement — write it first, run it, confirm it fails. You may alter existing tests or add new ones, but an explicit red test capturing the defect must exist before any fix is written.
