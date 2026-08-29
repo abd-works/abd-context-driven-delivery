@@ -23,7 +23,7 @@ CliAgent, CliParticipant, CliDoer, CliJudge, IdeCli, CursorCli, VscodeCli, JobQu
 - `CliJobTemplate` - named, reusable list of jobs. Shape is identical to a job queue.
 - `CliJobTemplateStore` - persists and retrieves templates. Default root: `utilities/cli_agent/job-templates/`; overridable per project.
 
-`launch_next` sends the head job to the doer. One send at a time - do not stack resumes. `set_backlog` assigns items; `next_backlog_item` advances to the next item and reloads the template/queue for it.
+`launch_next` sends the head job to the doer. One send at a time - do not stack resumes. `set_backlog` assigns items; **`triage_backlog` scans the entire backlog up front** (map free-text to existing `#N` or `capture_backlog`, register on the board with **theme:cli-agent**); `next_backlog_item` advances to the next item and reloads the template/queue for it. When leaving a ticket item, **finish-ticket runs before `next_backlog_item` advances** (merge, Project Done, close).
 
 ## Dependencies
 
