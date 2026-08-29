@@ -20,3 +20,14 @@ Summary: partial #41 fix skipped `default` sole-session fallback but premature b
 ## Diagnosis
 
 *(2026-08-29)* Category **BOTH**. Premature `_ensure_work_session` before start-ticket + missing post-start workspace rebind; prompt/template cannot undo attach order. Full write-up in ticket `issue-body.md` under ## Diagnosis.
+
+## Failing tests (2026-08-29)
+
+Category BOTH → mechanical BDD first, then agentic.
+
+### Mechanical (cli_agent_spec.py) — confirmed red
+1. `should not bind a durable folder-slug session while HEAD is still main` — fails: binds `cli-pre-start-slug-*`.
+2. `should rebind workspace root to the ticket worktree for later jobs` — fails: no `rebind_to_worktree`.
+
+### Agentic (cli_agent_session_isolation_agent_spec.py)
+Requires defect-fix + module contexts to mandate session/worktree isolation + rebind for CliAgent, SubAgent, **and no-agent**. `no-agent` not yet in those docs → red until prompt/docs updated with the code fix.

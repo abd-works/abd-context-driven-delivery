@@ -1049,6 +1049,53 @@ with description("CliAgent work session bind before start-ticket"):
                         work = agent._ensure_work_session()
                 expect(work.name).not_to(equal("default"))
 
+            with it(
+                "should not bind a durable folder-slug session while HEAD is still main"
+            ):
+                """Residual isolation defect: after skipping leftover default, attach
+                still opens a folder-slug WorkSession on main before start-ticket.
+                Durable bind must wait for session/<ticket> (+ worktree)."""
+                from workspace.git_repo import NullGitRepo
+
+                tmp = Path(tempfile.mkdtemp(prefix="cli_pre_start_slug_"))
+                Workspace(str(tmp)).open_work_session(
+                    "default", git=NullGitRepo(tmp)
+                )
+                agent = CliAgent(workspace=str(tmp), session="")
+                slug = agent._session_slug_from_folder()
+                with patch.object(
+                    CliAgent,
+                    "_session_name_from_git",
+                    lambda self: "",
+                ):
+                    with patch(
+                        "workspace.workspace.WorkSession._default_git",
+                        lambda self: NullGitRepo(Path(self.workspace.path)),
+                    ):
+                        work = agent._ensure_work_session()
+                expect(work.name).not_to(equal(slug))
+                expect(agent._session in ("", None) or agent._session != slug).to(
+                    be_true
+                )
+
+    with context("after start-ticket creates the ticket worktree"):
+        with it(
+            "should rebind workspace root to the ticket worktree for later jobs"
+        ):
+            """CliAgent must retarget _workspace (and session) off the parent
+            checkout onto the ticket sibling worktree once start-ticket returns."""
+            parent = Path(tempfile.mkdtemp(prefix="cli_parent_"))
+            ticket_tree = Path(tempfile.mkdtemp(prefix="abd-cdd-99-"))
+            agent = CliAgent(workspace=str(parent), session="premature-bind")
+            expect(hasattr(agent, "rebind_to_worktree")).to(be_true)
+            agent.rebind_to_worktree(
+                str(ticket_tree), session="ticket-session-99"
+            )
+            expect(Path(agent._workspace_root()).resolve()).to(
+                equal(ticket_tree.resolve())
+            )
+            expect(agent._session).to(equal("ticket-session-99"))
+
     with context("defect-fix job 1 prompt"):
         with it(
             "should tell the doer not to rely on a durable CliAgent session on main before start-ticket"
@@ -1063,6 +1110,32 @@ with description("CliAgent work session bind before start-ticket"):
                 or "rebind" in prompt
                 or "do not bind" in prompt
                 or "before start-ticket" in prompt
+            ).to(be_true)
+
+        with it(
+            "should require rebind of workspace root after start-ticket for CliAgent SubAgent and no-agent"
+        ):
+            template = (
+                Path(__file__).resolve().parent / "job-templates" / "defect-fix.json"
+            )
+            module_ctx = (
+                Path(__file__).resolve().parent / ".context" / "module-context.md"
+            )
+            text = (
+                template.read_text(encoding="utf-8").lower()
+                + "\n"
+                + module_ctx.read_text(encoding="utf-8").lower()
+            )
+            expect("rebind" in text or "rebind" in text).to(be_true)
+            expect(
+                "worktree" in text
+                and (
+                    "cliagent" in text.replace("-", "")
+                    or "cli agent" in text
+                    or "subagent" in text.replace("-", "")
+                    or "no-agent" in text
+                    or "no agent" in text
+                )
             ).to(be_true)
 
 

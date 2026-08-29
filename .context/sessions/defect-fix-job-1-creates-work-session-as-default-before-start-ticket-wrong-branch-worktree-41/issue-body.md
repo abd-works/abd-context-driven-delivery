@@ -214,3 +214,16 @@ Not used — root cause is unambiguous from the call chain, `_ensure_work_sessio
 - **Code:** Defer durable CliAgent session bind until after start-ticket (or bind only ephemerally); after start-ticket, rebind workspace root to the ticket worktree. Prefer implementing at work-session / start-ticket so SubAgent and no-agent share the contract.
 - **Prompt:** Keep/extend defect-fix + module-context deferred/rebind language once the code seam exists; cover non-CliAgent entry points.
 
+
+## Failing tests
+
+*(2026-08-29 — separated from Diagnosis)*
+
+**Category:** BOTH → mechanical BDD first, then agentic.
+
+**Mechanical** (`utilities/cli_agent/cli_agent_spec.py`), run with mamba — **red**:
+1. Durable folder-slug bind while HEAD is main (still opens slug session after skipping `default`).
+2. `rebind_to_worktree` after start-ticket (attribute missing; workspace root stays on parent).
+
+**Agentic** (`utilities/cli_agent/cli_agent_session_isolation_agent_spec.py`):
+Requires CliAgent/SubAgent/**no-agent** isolation + rebind language in defect-fix + module contexts; `no-agent` absent today → red with the code gaps above.
