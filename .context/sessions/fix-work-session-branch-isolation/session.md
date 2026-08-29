@@ -31,3 +31,10 @@ Category BOTH → mechanical BDD first, then agentic.
 
 ### Agentic (cli_agent_session_isolation_agent_spec.py)
 Requires defect-fix + module contexts to mandate session/worktree isolation + rebind for CliAgent, SubAgent, **and no-agent**. `no-agent` not yet in those docs → red until prompt/docs updated with the code fix.
+
+## Fix (2026-08-29)
+
+- Deferred durable CliAgent bind on main: `_pending_work_session` (`cli-agent-pending`) instead of folder-slug; `_session` stays unbound until rebind.
+- Added `rebind_to_worktree(path, session=)` for post-start-ticket retarget.
+- Updated defect-fix job 1 + cli_agent/workspace module-context for CliAgent, SubAgent, and no-agent isolation/rebind.
+- Isolation mechanical specs green; judge PASS on fix job.

@@ -1,10 +1,1 @@
-[
-  {
-    "prompt": "Backlog item: FIRST / BLOCKING: Starting a work session must put work on its own branch (and worktree) for isolation. work session == branch == own tree. This must hold for CliAgent, SubAgent, and no-agent flows ? not only CLI spawn. Today open/start of a work session can leave you on main/parent (e.g. C:\\dev\\abd-works-repo) so agents read/write the wrong tree. Fix at the work-session / start-ticket layer so every new work session binds to session/<name> with its own worktree before any job runs. After start-ticket, rebind workspace root to that worktree. Do this fix on the current branch first; later backlog items depend on it. (text).\n\nFix the defect using /clean_engineering.code in small iterations. Work one small piece at a time ? fix just enough to make one or a few tests pass, then move to the next piece. Repeat until all BDD and agentic BDD tests are green. Run vanilla BDD first when you have both.\nBefore writing any code: - Explore all impacted codebases and the code they depend on. - Read module-context.md for every module you touch. - Study the existing idioms, patterns, and usage in detail. Do not invent new patterns or paradigms ? follow what is already there. A defect fix should not require new patterns.\n",
-    "actions": [
-      "context_tools.clean_engineering.clean_engineering:CleanEngineering"
-    ],
-    "judge": true,
-    "judge_criteria": "PASS only when: (1) all BDD tests pass; (2) all agentic BDD tests pass; (3) the fix follows existing patterns, paradigms, and usage ? no new patterns invented without strong justification; (4) validated against the tools as normal.\n"
-  }
-]
+[]
