@@ -10,20 +10,20 @@ format: md
 
 **Actor:** Supervisor
 
-**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/swarm/.context/grill-answers.md` ticks 3, 10; `utilities/swarm/.context/module-context.md`
+**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/swarm/.context/grill-answers.md` ticks 3, 10, 14–16; `utilities/swarm/.context/module-context.md`
 
 ### Domain terms
 
 - *Supervisor* — owns **Outcome** and **rubric**; on a **Plan**
 - *Outcome* — overarching result owned by **Supervisor**
-- *Swarm* — holds shared **turns** selected once before any **Agent** runs
-- *Turn* — existing `workspace.Turn` on the **Plan**
+- *Swarm* — holds a shared **flow/ticket** slice selected once before any **Agent** runs (not a planned-turn list)
+- *Plan* — **Workflow** + tickets; Agents run that same flow/ticket slice on their own **WorkSession**s
 
 ## Behaviors
 
 ### Scenario: Supervisor holds the Outcome
 
-*Given* a **Plan** *compose-judged-plan* with **Turn**s  
+*Given* a **Plan** *compose-judged-plan* based on **Workflow** *small-work* with tickets *#14* and *#15*  
 *When* the operator creates a **Supervisor** with **Outcome** *Plan-started*  
 *Then* that **Supervisor** owns **Outcome** *Plan-started*  
   *And* that **Supervisor** is on that **Plan**  
@@ -36,13 +36,14 @@ format: md
 *Then* that **Supervisor** rubric is *plan-started*  
   *And* that **Supervisor** still owns **Outcome** *Plan-started*
 
-### Scenario: Shared turn slice is selected once
+### Scenario: Shared flow/ticket slice is selected once
 
-*Given* a **Plan** with a *Stories* **Turn** and a later *CleanEngineering* **Turn**  
+*Given* a **Plan** on **Workflow** *small-work* with tickets *#14* and *#15*  
   *And* a **Supervisor** with **Outcome** *Plan-started*  
   *And* no **Agent** has run yet  
-*When* the operator selects **Turn**s the *Stories* **Turn** only for the **Swarm**  
-*Then* **Swarm** turns are the *Stories* **Turn** only
+*When* the operator selects tickets *#14* only for the **Swarm** flow slice  
+*Then* **Swarm** tickets are *#14* only  
+  *And* that **Swarm** holds no planned-turn list
 
 ### Evidence
 
@@ -50,4 +51,4 @@ format: md
 | --- | --- | --- |
 | Supervisor holds the Outcome | grill-answers.md | tick 3 |
 | Supervisor rubric hangs on the Supervisor | plan-and-swarm-sketch.md | Swarm Plan / Create Supervisor |
-| Shared turn slice is selected once | grill-answers.md | tick 10 |
+| Shared flow/ticket slice is selected once | grill-answers.md | ticks 10, 14–16 |
