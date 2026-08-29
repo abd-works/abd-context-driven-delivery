@@ -1,3 +1,3 @@
 PASS
 
-The entry has a ### heading and a concrete body describing recursive discovery, .context/ paths, and skipping __pycache__ and underscore-prefixed paths.
+The entry has a ### heading and a concrete body describing recursive discovery, .context/ paths, and skipping __pycache__/underscore-prefixed paths.

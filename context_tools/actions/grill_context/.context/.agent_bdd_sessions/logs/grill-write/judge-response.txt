@@ -1,1 +1,1 @@
-{"verdict": "PASS", "reason": "Output is a JSON array with multiple entries each containing path and kind (context-named or context-folder)."}
+{"verdict": "PASS", "reason": "OUTPUT is a JSON array with multiple entries each containing path and kind (context-named or context-folder)."}

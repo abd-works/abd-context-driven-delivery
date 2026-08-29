@@ -8,53 +8,83 @@ result: "[\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\act
   \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
   \\grill-answer-write.json\",\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"\
   path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\
-  \\.context\\\\.agent_bdd_sessions\\\\grill-no-stuff-answers.json\",\n    \"kind\"\
-  : \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\
-  \\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\grill-owns-tools.json\"\
-  ,\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
+  \\.context\\\\.agent_bdd_sessions\\\\grill-no-stuff-answers-judge.json\",\n    \"\
+  kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
   \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
-  \\grill-write-judge.json\",\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"\
-  path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\
-  \\.context\\\\.agent_bdd_sessions\\\\grill-write.json\",\n    \"kind\": \"context-folder\"\
-  \n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\
-  \\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\
-  \\instruct-001-run-ai-response.yaml\",\n    \"kind\": \"context-folder\"\n  },\n\
-  \  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\
-  \\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\\instruct-001-run-cli-output.yaml\"\
-  ,\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
-  \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
-  \\logs\\\\grill-answer-write\\\\instruct-001-run-prompt.txt\",\n    \"kind\": \"\
-  context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\
-  \\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\
-  \\instruct-001-run-response.txt\",\n    \"kind\": \"context-folder\"\n  },\n  {\n\
+  \\grill-no-stuff-answers.json\",\n    \"kind\": \"context-folder\"\n  },\n  {\n\
   \    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\
-  \\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\\instruct-001-run-shell-01-cmd.txt\"\
+  \\.context\\\\.agent_bdd_sessions\\\\grill-owns-tools.json\",\n    \"kind\": \"\
+  context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\
+  \\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\grill-write-judge.json\"\
   ,\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
   \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
-  \\logs\\\\grill-answer-write\\\\instruct-001-run-shell-01-out.txt\",\n    \"kind\"\
+  \\grill-write.json\",\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\"\
+  : \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\\.context\\\
+  \\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\\instruct-001-run-ai-response.yaml\"\
+  ,\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
+  \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
+  \\logs\\\\grill-answer-write\\\\instruct-001-run-cli-output.yaml\",\n    \"kind\"\
   : \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\
   \\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\
-  \\judge-launch.txt\",\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\"\
-  : \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\\.context\\\
-  \\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\\judge-output.txt\",\n   \
-  \ \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
-  \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
-  \\logs\\\\grill-answer-write\\\\judge-prompt.txt\",\n    \"kind\": \"context-folder\"\
-  \n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\
-  \\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\
-  \\judge-response.txt\",\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\"\
-  : \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\\.context\\\
-  \\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\\judge-rubric.txt\",\n   \
-  \ \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
-  \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
-  \\logs\\\\grill-answer-write\\\\judge-verdict.txt\",\n    \"kind\": \"context-folder\"\
-  \n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\
-  \\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-write\\\\instruct-001-run-ai-response.yaml\"\
+  \\instruct-001-run-prompt.txt\",\n    \"kind\": \"context-folder\"\n  },\n  {\n\
+  \    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\
+  \\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\\instruct-001-run-response.txt\"\
   ,\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
   \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
-  \\logs\\\\grill-write\\\\instruct-001-run-cli-output.yaml\",\n    \"kind\": \"context-folder\"\
+  \\logs\\\\grill-answer-write\\\\instruct-001-run-shell-01-cmd.txt\",\n    \"kind\"\
+  : \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\
+  \\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\
+  \\instruct-001-run-shell-01-out.txt\",\n    \"kind\": \"context-folder\"\n  },\n\
+  \  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\
+  \\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\\judge-launch.txt\"\
+  ,\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
+  \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
+  \\logs\\\\grill-answer-write\\\\judge-output.txt\",\n    \"kind\": \"context-folder\"\
   \n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\
-  \\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-write\\\\instruct-001-run-prompt.txt\"\
+  \\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\
+  \\judge-prompt.txt\",\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\"\
+  : \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\\.context\\\
+  \\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\\judge-response.txt\",\n \
+  \   \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
+  \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
+  \\logs\\\\grill-answer-write\\\\judge-rubric.txt\",\n    \"kind\": \"context-folder\"\
+  \n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\
+  \\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-answer-write\\\
+  \\judge-verdict.txt\",\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\"\
+  : \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\\.context\\\
+  \\.agent_bdd_sessions\\\\logs\\\\grill-no-stuff-answers\\\\instruct-001-run-prompt.txt\"\
+  ,\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
+  \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
+  \\logs\\\\grill-no-stuff-answers\\\\instruct-001-run-response.txt\",\n    \"kind\"\
+  : \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\
+  \\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-no-stuff-answers\\\
+  \\instruct-001-setup-prompt.txt\",\n    \"kind\": \"context-folder\"\n  },\n  {\n\
+  \    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\
+  \\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-no-stuff-answers\\\\instruct-001-setup-response.txt\"\
+  ,\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
+  \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
+  \\logs\\\\grill-no-stuff-answers\\\\judge-launch.txt\",\n    \"kind\": \"context-folder\"\
+  \n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\
+  \\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-no-stuff-answers\\\
+  \\judge-output.txt\",\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\"\
+  : \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\\.context\\\
+  \\.agent_bdd_sessions\\\\logs\\\\grill-no-stuff-answers\\\\judge-prompt.txt\",\n\
+  \    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
+  \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
+  \\logs\\\\grill-no-stuff-answers\\\\judge-response.txt\",\n    \"kind\": \"context-folder\"\
+  \n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\
+  \\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-no-stuff-answers\\\
+  \\judge-rubric.txt\",\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\"\
+  : \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\\.context\\\
+  \\.agent_bdd_sessions\\\\logs\\\\grill-no-stuff-answers\\\\judge-verdict.txt\",\n\
+  \    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
+  \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
+  \\logs\\\\grill-write\\\\instruct-001-run-ai-response.yaml\",\n    \"kind\": \"\
+  context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\
+  \\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-write\\\
+  \\instruct-001-run-cli-output.yaml\",\n    \"kind\": \"context-folder\"\n  },\n\
+  \  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\\context_tools\\\\actions\\\\grill_context\\\
+  \\.context\\\\.agent_bdd_sessions\\\\logs\\\\grill-write\\\\instruct-001-run-prompt.txt\"\
   ,\n    \"kind\": \"context-folder\"\n  },\n  {\n    \"path\": \"C:\\\\dev\\\\abd-cdd-26\\\
   \\context_tools\\\\actions\\\\grill_context\\\\.context\\\\.agent_bdd_sessions\\\
   \\logs\\\\grill-write\\\\instruct-001-run-response.txt\",\n    \"kind\": \"context-folder\"\

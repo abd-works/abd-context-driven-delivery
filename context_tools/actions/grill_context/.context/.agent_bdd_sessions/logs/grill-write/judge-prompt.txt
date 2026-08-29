@@ -17,6 +17,10 @@ The result must look like a JSON array where each element has a 'path' and a 'ki
     "kind": "context-folder"
   },
   {
+    "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\grill-no-stuff-answers-judge.json",
+    "kind": "context-folder"
+  },
+  {
     "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\grill-no-stuff-answers.json",
     "kind": "context-folder"
   },
@@ -78,6 +82,46 @@ The result must look like a JSON array where each element has a 'path' and a 'ki
   },
   {
     "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-answer-write\\judge-verdict.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-no-stuff-answers\\instruct-001-run-prompt.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-no-stuff-answers\\instruct-001-run-response.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-no-stuff-answers\\instruct-001-setup-prompt.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-no-stuff-answers\\instruct-001-setup-response.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-no-stuff-answers\\judge-launch.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-no-stuff-answers\\judge-output.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-no-stuff-answers\\judge-prompt.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-no-stuff-answers\\judge-response.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-no-stuff-answers\\judge-rubric.txt",
+    "kind": "context-folder"
+  },
+  {
+    "path": "C:\\dev\\abd-cdd-26\\context_tools\\actions\\grill_context\\.context\\.agent_bdd_sessions\\logs\\grill-no-stuff-answers\\judge-verdict.txt",
     "kind": "context-folder"
   },
   {
