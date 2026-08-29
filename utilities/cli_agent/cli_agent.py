@@ -1122,6 +1122,14 @@ class CliAgent(SubAgent):
         self.ide._job = (job or "").strip()
 
     @property
+    def judge(self) -> bool | str | dict:
+        return self.ide.judge
+
+    @judge.setter
+    def judge(self, judge: bool | str | dict) -> None:
+        self.ide._judge = False if judge in (None, "") else judge
+
+    @property
     def source_scope(self) -> str:
         return self.ide.source_scope
 
@@ -1216,8 +1224,8 @@ class CliAgent(SubAgent):
         raise RuntimeError(pickup.not_taken_up)
 
     def _should_judge(self, tools, actions) -> bool:
-        """Judge when this launch lists a context tool, action, or utility."""
-        return bool(self.ide._listed(tools) or self.ide._listed(actions))
+        """Judge when tools/actions are listed, or when judge is explicitly set."""
+        return bool(self.ide._listed(tools) or self.ide._listed(actions) or self.ide.judge)
 
     def _spawn_worker(self, tools, hanging, actions=None):
         judge_prompt = ""
@@ -1329,7 +1337,7 @@ class CliAgent(SubAgent):
     @prompt(name="cli-agent")
     @sub_agent
     @agent_tool
-    def launch_sessions(self, tools: list[object], actions: list[object] | None = None, prompt: str | None = None) -> str:
+    def launch_sessions(self, tools: list[object], actions: list[object] | None = None, prompt: str | None = None, judge: bool | str | dict | None = None) -> str:
         """Run the listed context tools and actions through the IDE CLI as a non-blocking sub-agent.
 
         CliAgent handles all session and workspace setup internally — do not manage those yourself. The parent's role is to launch, then monitor and unblock. The CLI decides each Turn; model, mode, and agent_mode are fixed on this ide instance and must not be passed per call.
@@ -1364,6 +1372,8 @@ class CliAgent(SubAgent):
         """
         if prompt:
             self.task_prompt = prompt
+        if judge is not None:
+            self.judge = judge
         self._bring_in_kits(tools, actions)
         self._judge_job = self._should_judge(tools, actions)
         work = self._attach_cli_sessions()
