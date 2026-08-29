@@ -1092,6 +1092,68 @@ with description("a CLI agent job_queue"):
                     expect(_fail).to(raise_error(RuntimeError))
 
 
+with description("a job template"):
+    with context("that is saved to the default location"):
+        with it("should persist under utilities/cli_agent/job-templates/"):
+            pass  # BDD: SIGNATURE
+
+        with it("should round-trip: load returns the saved jobs unchanged"):
+            pass  # BDD: SIGNATURE
+
+    with context("that is saved to a project-specific path"):
+        with it("should persist under the provided path"):
+            pass  # BDD: SIGNATURE
+
+    with context("when no template exists at the requested name"):
+        with it("should return None"):
+            pass  # BDD: SIGNATURE
+
+
+with description("a job template store"):
+    with context("that lists all templates"):
+        with it("should return names of every saved template"):
+            pass  # BDD: SIGNATURE
+
+        with context("when the template folder is empty"):
+            with it("should return an empty list"):
+                pass  # BDD: SIGNATURE
+
+    with context("that finds matching templates"):
+        with context("when the prompt matches a template name"):
+            with it("should include that template in the results"):
+                pass  # BDD: SIGNATURE
+
+        with context("when the prompt does not match any template"):
+            with it("should return an empty list"):
+                pass  # BDD: SIGNATURE
+
+
+with description("CliAgent job template tools"):
+    with context("add_template"):
+        with it("should save the jobs as a named template"):
+            pass  # BDD: SIGNATURE
+
+        with context("with a path override"):
+            with it("should save under the specified path"):
+                pass  # BDD: SIGNATURE
+
+    with context("list_templates"):
+        with it("should return names of available templates"):
+            pass  # BDD: SIGNATURE
+
+    with context("use_template"):
+        with it("should enqueue jobs from the named template"):
+            pass  # BDD: SIGNATURE
+
+        with context("with overrides provided"):
+            with it("should merge overrides into the template jobs before enqueueing"):
+                pass  # BDD: SIGNATURE
+
+        with context("when the template does not exist"):
+            with it("should raise so the caller can recover"):
+                pass  # BDD: SIGNATURE
+
+
 with description("CliAgent cleanup"):
     with it("should remove temps it wrote and leave session.md and sketches"):
         from workspace.git_repo import NullGitRepo
