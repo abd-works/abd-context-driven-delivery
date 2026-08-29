@@ -1,10 +1,10 @@
 ﻿/**
- * Acceptance: Start Ticket On Flow / Finish Plan / throwaway Workflow (back-end).
- * Sources: grill-answers.md ticks 21, 24, 29â€“33
+ * Acceptance: Start Ticket On Flow / Finish Plan / Throwaway Workflow (back-end).
+ * Sources: grill-answers.md ticks 21, 24, 29–33
  */
 
 import { story, scenario, expect } from "../../story-test";
-import { PlanCommands, Workflow, Workspace } from "../../domain/plan/plan";
+import { PlanCommands, Workflow } from "../../domain/plan/plan";
 import { freshWorld, ComposeWorld } from "./givens";
 
 const world: ComposeWorld = freshWorld();
@@ -65,12 +65,12 @@ story("Finish Plan", () => {
   });
 });
 
-story("Compose throwaway Workflow", () => {
-  scenario("throwaway workflow is marked and cleared on finish", ({ given, when, then }) => {
+story("Compose Throwaway Workflow", () => {
+  scenario("Throwaway workflow is marked for cleanup on finish", ({ given, when, then }) => {
     given("a throwaway Workflow tmp-theme on a Plan", () => {
       Object.assign(world, freshWorld());
       const workflow = new Workflow("tmp-theme");
-      workflow.composethrowaway();
+      workflow.composeThrowaway();
       world.plan = world.commands.plan(world.workspace, "tmp-theme", [14]);
       world.plan.workflow = workflow;
     });
@@ -99,4 +99,3 @@ story("Compose throwaway Workflow", () => {
     });
   });
 });
-
