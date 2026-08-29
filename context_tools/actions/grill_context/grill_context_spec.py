@@ -208,6 +208,53 @@ with description("a grill action"):
             expect(joined).to(contain("AskQuestion"))
 
 
+with description("grill_with_context framing guidance (#26)"):
+    """Red coverage: Step 3a must forbid stuffing prior grill answers into AskQuestion.
+
+    Defect: agents recap the whole interview in every next question because Step 3a
+    says \"state what is already agreed\" while Step 2 prove-reads grill-answers.md.
+    """
+
+    with before.each:
+        self.body = _ActionExpander.instance().parse_body(
+            GrillContext.grill_with_context, GrillContext()
+        )
+        self.joined = "\n".join(self.body.prose_parts)
+        self.step_3a = next(
+            (part for part in self.body.prose_parts if "Step 3a" in part),
+            "",
+        )
+
+    with it("should keep Step 3a framing for the design-tree branch"):
+        expect(self.step_3a).to(contain("Step 3a"))
+        expect(self.step_3a.lower()).to(contain("branch"))
+
+    with it("should forbid pasting prior grill-answer bodies into AskQuestion"):
+        # RED until Step 3a explicitly forbids restating / pasting prior answers.
+        lowered = self.step_3a.lower()
+        forbids_paste = (
+            "do not paste" in lowered
+            or "do not restate prior" in lowered
+            or "do not accumulate" in lowered
+            or "do not dump" in lowered
+            or (
+                "grill-answers.md" in lowered
+                and ("point" in lowered or "cite" in lowered or "path" in lowered)
+                and ("not paste" in lowered or "do not" in lowered)
+            )
+        )
+        expect(forbids_paste).to(be_true)
+
+    with it("should not mandate restating the full interview as already agreed"):
+        # RED while Step 3a still says bare \"state what is already agreed\" without
+        # narrowing it to branch/concepts (not prior answer bodies).
+        bare_recap_mandate = (
+            "state what is already agreed" in self.step_3a.lower()
+            and "do not" not in self.step_3a.lower()
+        )
+        expect(bare_recap_mandate).to(equal(False))
+
+
 with description("BaseContextTool host face for grill"):
     with it("should not expose grill on the host composer"):
         from context_tools.base.base_context_tool import BaseContextTool
