@@ -31,17 +31,27 @@ class WorkflowConfig:
 
 @toolset
 class Workflow:
-    """Slash /backlog, /start-ticket, /finish-ticket — GitHub issue + session lifecycle."""
+    """Slash /backlog, /start-ticket, /finish-ticket, /finish-plan — kit + board (no Actions)."""
 
     def __init__(
         self,
         workspace: str = "",
         *,
         repo: Repo | None = None,
+        name: str = "",
+        throwaway: bool = False,
+        flow_project_number: int | None = None,
     ) -> None:
         self._workspace_path = workspace.strip()
         self._repo_override = repo
         self._workspaces: dict[str, Workspace] = {}
+        self.name = name.strip()
+        self.throwaway = throwaway
+        self.flow_project_number = flow_project_number
+        self.flow_file_path: Path | None = None
+        if self.name:
+            root = Path(self._workspace_path or ".")
+            self.flow_file_path = root / "workflow" / "flows" / f"{self.name}.yaml"
 
     def _repo_root(self, workspace: str = "") -> Path:
         start = workspace.strip() or self._workspace_path or "."
@@ -188,10 +198,23 @@ class Workflow:
         workspace: str = "",
         copy_body: bool = False,
         workflow_state: str = "specification",
+        flow: str = "",
     ) -> dict[str, str | int]:
-        """Start work from a GitHub issue — In Progress, WorkSession, session branch."""
+        """Start work from a GitHub issue.
+
+        With ``flow`` set (e.g. ``/start-ticket /small-work 14``): move the issue
+        off inbox Project 1 onto that flow's Project first state (creates a Turn).
+        Without ``flow``: keep today's inbox behavior — In Progress on Project 1.
+        Kit + board only — no GitHub Actions.
+        """
         viewed = self.view_ticket(ticket, workspace=workspace)
-        self.set_ticket_project_status(ticket, "In Progress", workspace=workspace)
+        if flow.strip():
+            self.name = flow.strip()
+            self.set_ticket_project_status(
+                ticket, "In Progress", workspace=workspace, project=flow.strip()
+            )
+        else:
+            self.set_ticket_project_status(ticket, "In Progress", workspace=workspace)
         opened = self.open_ticket_session(
             ticket,
             instructions=instructions,
@@ -218,7 +241,53 @@ class Workflow:
             )
         if session is not None:
             session.git.checkout_or_create(session.session_branch)
-        return {**viewed, **opened}
+        return {**viewed, **opened, "flow": flow.strip()}
+
+    @prompt(name="finish-plan")
+    @agent_tool
+    def finish_plan(
+        self,
+        workspace: str = "",
+        tickets: str = "",
+    ) -> dict[str, str | bool]:
+        """Operator gate after flow-done: inbox Done, close issues, drop throwaway Project/yaml.
+
+        Flow-done cards stay on the flow board until this runs. Saved Workflows keep
+        their Project and ``workflow/flows/{name}.yaml``; throwaway ones are deleted.
+        """
+        closed: list[str] = []
+        for raw in (tickets or "").replace(",", " ").split():
+            ref = raw.strip()
+            if not ref:
+                continue
+            self.set_ticket_project_status(ref, "Done", workspace=workspace)
+            self.close_ticket(ref, workspace=workspace)
+            closed.append(ref)
+        deleted_throwaway = False
+        if self.throwaway:
+            if self.flow_file_path is not None and self.flow_file_path.is_file():
+                self.flow_file_path.unlink()
+                deleted_throwaway = True
+            self.flow_project_number = None
+        return {
+            "closed": ",".join(closed),
+            "throwaway_deleted": deleted_throwaway,
+            "workflow": self.name,
+        }
+
+    def compose_throwaway(self, name: str, workspace: str = "") -> "Workflow":
+        """Compose a one-off Workflow (temp Project + yaml deleted on /finish-plan)."""
+        self.name = name.strip()
+        self.throwaway = True
+        root = Path(workspace.strip() or self._workspace_path or ".")
+        path = root / "workflow" / "flows" / f"{self.name}.yaml"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            f"name: {self.name}\nthrowaway: true\nstates: {{}}\n",
+            encoding="utf-8",
+        )
+        self.flow_file_path = path
+        return self
 
     @prompt(name="finish-ticket")
     @agent_tool
@@ -331,17 +400,42 @@ class Workflow:
         ticket: str,
         status: str,
         workspace: str = "",
+        project: str = "",
     ) -> str:
-        if status not in _PROJECT_STATUSES:
+        """Move ticket Status on inbox (default) or on a named flow Project."""
+        if status not in _PROJECT_STATUSES and not project.strip():
             raise ValueError(f"status must be one of {_PROJECT_STATUSES}")
         repo_root = self._repo_root(workspace)
         repo = self._repo(workspace)
         issue = repo.ticket(ticket)
         if issue is None:
             raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
-        self._ensure_project(repo, repo_root)
-        issue.set_status(status)
+        if project.strip():
+            # Flow board: kit writes Status on that Workflow's Project (columns from GitHub).
+            self.name = project.strip()
+            board = repo.attach_project_named(project.strip()) if hasattr(repo, "attach_project_named") else self._ensure_project(repo, repo_root)
+            if board is not None and hasattr(issue, "set_status_on"):
+                issue.set_status_on(board, status)
+            else:
+                issue.set_status(status)
+        else:
+            self._ensure_project(repo, repo_root)
+            issue.set_status(status)
         return status
+
+    def compose_throwaway(self, name: str, workspace: str = "") -> "Workflow":
+        """One-off Workflow: temp flow yaml (and Project) deleted on /finish-plan."""
+        self.name = name.strip()
+        self.throwaway = True
+        root = Path(workspace.strip() or self._workspace_path or ".")
+        path = root / "workflow" / "flows" / f"{self.name}.yaml"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            f"name: {self.name}\nthrowaway: true\nstates: {{}}\n",
+            encoding="utf-8",
+        )
+        self.flow_file_path = path
+        return self
 
     def copy_issue_body_to_session(
         self,
