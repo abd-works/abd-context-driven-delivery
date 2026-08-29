@@ -72,3 +72,31 @@ When `defect-fix` job 1 (triage + start-ticket) is launched via CliAgent, the wo
 
 ### Expected
 CliAgent work session for a defect-fix run should be created **on the ticket session branch**, named after the defect/ticket, with its own worktree — i.e. after (or as part of) start-ticket, not before while still on main.
+
+## Diagnosis
+
+### Category
+**BOTH** — code failure plus prompt/template gap.
+
+### Root cause hypothesis
+`CliAgent.launch_sessions` always runs `_attach_cli_sessions()` → `_ensure_work_session()` **before** the doer process executes defect-fix job 1. Naming is:
+
+1. explicit `session=` constructor arg
+2. else `_session_name_from_git()` — only if branch starts with `session/`
+3. else the sole existing work session name
+4. else `_session_slug_from_folder()`
+
+On `main` at job-1 launch, (2) is empty, so (3) reuses a leftover `default` (as seen in this run) or (4) invents a folder slug. The job queue, doer/judge PIDs, and logs bind there. `/start-ticket` then correctly creates `session/<ticket-slug>` + sibling worktree (`abd-cdd-<n>`), but CliAgent does **not** rebind to that session.
+
+### Why this is not "just" a prompt bug
+Even with a perfect job-1 prompt ("run start-ticket first"), CliAgent has already opened a WorkSession in-process before the doer can call Workflow.start. Prompt/template text cannot undo that attach order.
+
+### Why this is also a prompt/template gap
+`defect-fix.json` job 1 assumes start-ticket defines the session identity for later jobs, but does not state that CliAgent must defer session bind (or re-open on the new worktree) after start-ticket. `launch_next` also does not pass the job's `judge: false` into `launch_sessions`, so judge boilerplate is still appended when tools are listed.
+
+### Exact seam to change
+- Code: `CliAgent._ensure_work_session` / `_attach_cli_sessions` / `launch_sessions` ordering relative to start-ticket; possibly re-attach when git becomes `session/*` or when Workflow.start returns a new session path.
+- Prompt: defect-fix job 1 (and CliAgent docs) should make deferred/rebind session semantics explicit for triage.
+
+### Diagnose tool
+Not used — cause is unambiguous from the call chain and reproducible naming rules; no ambiguous runtime signal remaining.
