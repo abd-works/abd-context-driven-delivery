@@ -1,13 +1,8 @@
 This is an interactive session.
 Turn.action: Validate (guidance — the CLI decides the Turn)
-Turn.tool_keys: agent_bdd.agent_bdd:AgentBdd
-Turn.toolCalls: agent_bdd.agent_bdd:AgentBdd name=run agent_bdd.agent_bdd:AgentBdd format=python
-Turn.format: python
-Turn.prompt: Job 2 — execute tests with /agent_bdd. Do not start until Job 1 code is finished.
-
-In this workspace, create item issues (defects and small changes) under one dummy theme. Put enough context on some issues. Put not enough context on others.
-
-Run /plan /small-work against that theme. Expect Grill + HIL Grill when context is thin. The judge (not the parent) is responsible for replying to that HIL. Write and run Agent BDD specs that prove: themed source, mixed context, HIL interrupt, judge replies, then next issue, report when Done.
+Turn.tool_keys: utilities.plan.plan:PlanCommands
+Turn.toolCalls: utilities.plan.plan:PlanCommands name=run utilities.plan.plan:PlanCommands
+Turn.prompt: Error problem 1 — defect with enough context. Same dummy theme as the other error problem. Create or use one defect issue that already has enough context. Run /plan /small-work for that issue only (one Turn). Do not start a new CLI session. Do not run /agent_bdd.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
 The doer invoked you after it finished the Turn. Validate now. Reply PASS or FAIL to the doer and finish this Turn. Do not wait for the parent. The parent is not in this loop.
 Validate at the same fidelity and format as that Turn. Judge the artifacts produced at that fidelity and format. When format is markdown, validate the markdown; do not look for source code.
@@ -15,15 +10,8 @@ Compare what was written to the source scope of the original job. The job is the
 --- JOB / SOURCE SCOPE ---
 This is an interactive session.
 Turn.action: (none) (guidance — the CLI decides the Turn)
-Turn.tool_keys: agent_bdd.agent_bdd:AgentBdd
-Turn.toolCalls: agent_bdd.agent_bdd:AgentBdd name=run agent_bdd.agent_bdd:AgentBdd format=python
-Turn.format: python
-Turn.prompt: Job 2 — execute tests with /agent_bdd. Do not start until Job 1 code is finished.
-
-In this workspace, create item issues (defects and small changes) under one dummy theme. Put enough context on some issues. Put not enough context on others.
-
-Run /plan /small-work against that theme. Expect Grill + HIL Grill when context is thin. The judge (not the parent) is responsible for replying to that HIL. Write and run Agent BDD specs that prove: themed source, mixed context, HIL interrupt, judge replies, then next issue, report when Done.
+Turn.tool_keys: utilities.plan.plan:PlanCommands
+Turn.toolCalls: utilities.plan.plan:PlanCommands name=run utilities.plan.plan:PlanCommands
+Turn.prompt: Error problem 1 — defect with enough context. Same dummy theme as the other error problem. Create or use one defect issue that already has enough context. Run /plan /small-work for that issue only (one Turn). Do not start a new CLI session. Do not run /agent_bdd.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
-Guidance: validate
-Listed actions are guidance, not a locked sequence. The CLI has the final say on what the next Turn is — same as a chat agent. After finish, decide the next Turn from that guidance and the work in front of you. Do not wait for the operator.
 After you finish the Turn, you contact the judge. Do not ask the parent to run the judge. The parent is not in this loop. Open the judge in its own console window so the operator can watch. Never use print mode. On Windows: Start-Process cursor-agent -ArgumentList '--force','--trust','--resume','13c48f6f-15f0-4cab-81b8-10f9efeb893f','--workspace','C:\dev\abd-cdd-plan-and-swarm-utilities-23','Read .context/cli-agent-judge.txt and follow it exactly.' -WorkingDirectory 'C:\dev\abd-cdd-plan-and-swarm-utilities-23' -WindowStyle Normal. Wait for PASS or FAIL from the judge transcript or finish_turn, not by reading this console. On PASS, stop. On FAIL, fix, finish the Turn, and send again (attempt n of 3). After three FAILs, stop and wait.

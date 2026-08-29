@@ -395,6 +395,7 @@ class SmallWorkRunner:
         theme: str,
         *,
         hil_reply: str = "",
+        issue: str | int = "",
         plan_meta: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         theme_name = theme.removeprefix("theme:")
@@ -411,9 +412,17 @@ class SmallWorkRunner:
             return self._interrupt_payload(state, plan_meta=plan_meta)
 
         issues = self.list_themed_issues(theme_name)
+        wanted = str(issue or "").strip()
+        if wanted:
+            number = int("".join(ch for ch in wanted if ch.isdigit()) or "0")
+            issues = [item for item in issues if item.number == number]
+            if not issues:
+                raise RuntimeError(
+                    f"no themed issue #{number} under theme:{theme_name}"
+                )
         state = SmallWorkState(
             theme=theme_name,
-            issues=[asdict(issue) for issue in issues],
+            issues=[asdict(item) for item in issues],
             index=0,
             report=[],
             pending_hil=None,
@@ -586,18 +595,19 @@ class PlanCommands:
         context: str = "",
         workspace: str = "",
         hil_reply: str = "",
+        issue: str = "",
         issues: list | None = None,
     ) -> dict[str, Any]:
         """/plan /small-work {context} — load small-work Workflow; run themed tickets when theme is set.
 
-        With ``theme:…`` in context, processes that theme's issues. Thin context triggers
-        Grill + HIL Grill; the judge (not the parent) replies via ``hil_reply``.
-        Fixture ``issues`` may be passed for Agent BDD (list of {number,title,body,labels}).
-        Without a theme, only opens the Plan on the prebaked Workflow.
+        With ``theme:…`` in context, processes that theme's issues. Pass ``issue`` to run
+        one ticket only (one Turn). Thin context triggers Grill + HIL Grill; the judge
+        (not the parent) replies via ``hil_reply``. Fixture ``issues`` may be passed for
+        Agent BDD. Without a theme, only opens the Plan on the prebaked Workflow.
         """
         opened = self._open_named_workflow("small-work", context, workspace)
         theme = SmallWorkRunner.parse_theme(context)
-        if not theme and not hil_reply.strip() and issues is None:
+        if not theme and not hil_reply.strip() and issues is None and not str(issue or "").strip():
             return opened
 
         fixture: list[ThemedIssue] | None = None
@@ -617,7 +627,12 @@ class PlanCommands:
             theme = state.theme if state else ""
         if not theme:
             return opened
-        return runner.run(theme, hil_reply=hil_reply, plan_meta=dict(opened))
+        return runner.run(
+            theme,
+            hil_reply=hil_reply,
+            issue=issue,
+            plan_meta=dict(opened),
+        )
 
     def _open_named_workflow(
         self,
