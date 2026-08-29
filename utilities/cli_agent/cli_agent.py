@@ -445,6 +445,12 @@ class JobQueue:
         self.save(work, items)
         return len(items)
 
+    def peek(self, work) -> dict | None:
+        items = self.load(work)
+        if not items:
+            return None
+        return items[0]
+
     def pop(self, work) -> dict | None:
         items = self.load(work)
         if not items:
@@ -843,7 +849,13 @@ class IdeCli:
             f"-WorkingDirectory '{workspace}' -WindowStyle Normal. "
             "Wait for PASS or FAIL from the judge transcript or finish_turn, "
             "not by reading this console. "
-            "On PASS, stop. On FAIL, fix, finish the Turn, and send again "
+            "On PASS this job is done. Pop the first object from "
+            ".context/sessions/<session>/cli-agent-job-queue.json "
+            "(the job you just finished). If another job remains, that is "
+            "your next Turn — follow its prompt, tools, and actions, then "
+            "contact the judge again after that Turn. Do not wait for the "
+            "parent. If the queue is empty, stop. "
+            "On FAIL, fix, finish the Turn, and send again "
             "(attempt n of 3). After three FAILs, stop and wait."
         )
 
@@ -1092,8 +1104,9 @@ them as chat links.
 The parent sees kind: sub_agent / launch: non_blocking and does not wait.
 If launch reports NOT TAKEN UP, stop immediately. Do not wait on an
 idle console. A live pid is not proof the doer accepted the job.
-Later jobs live on the job_queue property. Append there; send only
-the next one with launch_next after the current job is taken up.
+Later jobs live on the job_queue property. The head stays until the
+judge PASSes that job. The doer then pops it and runs the next job
+on this same CLI. The parent does not launch_next after each Turn.
 Do not stack --resume prompts.
 The parent talks to the doer only. Every once in a while, check the
 doer (logs, transcript tail, hanging Turn, artifacts) and report
@@ -1321,9 +1334,9 @@ class CliAgent(SubAgent):
         type(self).cleanup_session(work)
 
     def launch_next(self) -> str:
-        """Send the oldest job_queue item. One send. Do not stack resumes."""
+        """Send the head job. Leave it on the queue until the judge PASSes."""
         work = self._attach_cli_sessions()
-        item = JobQueue().pop(work)
+        item = JobQueue().peek(work)
         if item is None:
             raise RuntimeError(JobQueue.empty)
         if item.get("prompt"):
@@ -1332,6 +1345,11 @@ class CliAgent(SubAgent):
             item.get("tools") or [],
             item.get("actions") or None,
         )
+
+    def complete_job(self) -> dict | None:
+        """Judge PASS: drop the finished head. Caller may launch_next if more remain."""
+        work = self._attach_cli_sessions()
+        return JobQueue().pop(work)
 
     @prompt_name(name="cli-agent")
     @sub_agent

@@ -994,7 +994,7 @@ with description("a CLI agent job_queue"):
             expect(agent.job_queue[0]["prompt"]).to(equal("job one"))
             expect(JobQueue().path_for(agent.work_session).is_file()).to(be_true)
 
-        with it("should send the oldest job on launch_next and leave the rest"):
+        with it("should send the oldest job on launch_next and keep it until PASS"):
             tmp = Path(tempfile.mkdtemp(prefix="cli_q2_"))
             with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
                 with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-q"):
@@ -1009,7 +1009,23 @@ with description("a CLI agent job_queue"):
                             ]
                             text = agent.launch_next()
             expect("taken up: yes" in text).to(be_true)
-            expect("job_queue: 1" in text).to(be_true)
+            expect("job_queue: 2" in text).to(be_true)
+            expect(len(agent.job_queue)).to(equal(2))
+            expect(agent.job_queue[0]["prompt"]).to(equal("job one"))
+
+        with it("should drop the head only after complete_job"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_q3_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch("cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-q"):
+                    agent = CliAgent(
+                        ide=IdeCli(), workspace=str(tmp), session="queue"
+                    )
+                    agent.job_queue = [
+                        {"tools": [], "actions": ["generate"], "prompt": "job one"},
+                        {"tools": [], "actions": ["generate"], "prompt": "job two"},
+                    ]
+                    done = agent.complete_job()
+            expect(done["prompt"]).to(equal("job one"))
             expect(len(agent.job_queue)).to(equal(1))
             expect(agent.job_queue[0]["prompt"]).to(equal("job two"))
 
