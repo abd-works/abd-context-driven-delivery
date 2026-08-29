@@ -1145,6 +1145,73 @@ class VscodeCli(IdeCli):
 
 
 @agentic_toolset
+@dataclass
+class CliJobTemplate:
+    """A named, reusable list of jobs. Shape is identical to a job queue entry."""
+
+    name: str
+    jobs: list = field(default_factory=list)
+    description: str = ""
+
+
+class CliJobTemplateStore:
+    """Persist and retrieve job templates.
+
+    Default root is the ``job-templates/`` folder next to this module.
+    Pass ``root`` to override with a project-specific path.
+    """
+
+    _default_root = Path(__file__).parent / "job-templates"
+
+    def __init__(self, root: str | None = None) -> None:
+        self._root = Path(root) if root else self._default_root
+
+    def _path_for(self, name: str) -> Path:
+        return self._root / f"{name}.json"
+
+    def add(self, template: CliJobTemplate) -> None:
+        """Save a template to disk, creating the directory if needed."""
+        self._root.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "name": template.name,
+            "description": template.description,
+            "jobs": template.jobs,
+        }
+        self._path_for(template.name).write_text(
+            json.dumps(payload, indent=2), encoding="utf-8"
+        )
+
+    def load(self, name: str) -> CliJobTemplate | None:
+        """Return the named template, or None if it does not exist."""
+        path = self._path_for(name)
+        if not path.is_file():
+            return None
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return CliJobTemplate(
+            name=raw.get("name", name),
+            jobs=raw.get("jobs", []),
+            description=raw.get("description", ""),
+        )
+
+    def list_all(self) -> list[str]:
+        """Return the names of every saved template in this store."""
+        if not self._root.is_dir():
+            return []
+        return sorted(p.stem for p in self._root.glob("*.json"))
+
+    def find_matching(self, prompt: str) -> list[CliJobTemplate]:
+        """Return templates whose name overlaps with words in *prompt*."""
+        words = set(re.sub(r"[^a-z0-9 ]+", " ", prompt.lower()).split())
+        results = []
+        for name in self.list_all():
+            name_words = set(re.sub(r"[^a-z0-9 ]+", " ", name.lower()).split())
+            if words & name_words:
+                t = self.load(name)
+                if t is not None:
+                    results.append(t)
+        return results
+
+
 class CliAgent(SubAgent):
     """Slash ``/cli-agent`` runs listed context tools and actions through the IDE CLI.
 
@@ -1444,6 +1511,49 @@ class CliAgent(SubAgent):
         _CliAgentLog().verdict(work, result=result.strip().upper(), notes=notes)
         return result.strip().upper()
 
+    def _template_store(self, path: str | None = None) -> CliJobTemplateStore:
+        return CliJobTemplateStore(root=path or None)
+
+    @agent_tool
+    def add_template(self, name: str, jobs: list[dict], description: str = "", path: str | None = None) -> str:
+        """Save a reusable job template by name.
+
+        ``jobs`` has the same shape as a job queue: each entry is a dict with
+        ``prompt``, ``tools`` (optional), ``actions`` (optional), and ``judge``
+        (optional). ``path`` overrides the default store location — omit to use
+        the shared ``job-templates/`` folder next to this module.
+        Returns a confirmation string.
+        """
+        template = CliJobTemplate(name=name, jobs=list(jobs or []), description=description or "")
+        self._template_store(path).add(template)
+        return f"saved template '{name}' with {len(template.jobs)} job(s)"
+
+    @agent_tool
+    def list_templates(self, path: str | None = None) -> list[str]:
+        """Return the names of all saved job templates.
+
+        ``path`` overrides the default store location — omit to list templates
+        from the shared ``job-templates/`` folder.
+        """
+        return self._template_store(path).list_all()
+
+    @agent_tool
+    def use_template(self, name: str, overrides: dict | None = None, path: str | None = None) -> str:
+        """Load a named template and enqueue its jobs, applying any per-job overrides.
+
+        ``overrides`` is a dict of field names to values merged into every job
+        (e.g. ``{"judge": true}``). Raises RuntimeError when the template is not found.
+        Returns the same confirmation as enqueue_jobs.
+        """
+        store = self._template_store(path)
+        template = store.load(name)
+        if template is None:
+            raise RuntimeError(f"template '{name}' not found in {store._root}")
+        jobs = list(template.jobs)
+        if overrides:
+            jobs = [{**job, **overrides} for job in jobs]
+        return self.enqueue_jobs(jobs)
+
     @prompt(name="cli-agent")
     @sub_agent
     @agent_tool
@@ -1457,6 +1567,14 @@ class CliAgent(SubAgent):
         1. **Launch.** Pass workspace (and session when known). Do not touch workspace or session utilities — let CliAgent handle all of that. If launch reports NOT TAKEN UP, stop immediately.
         2. **Monitor.** The session report includes exact file paths — read them directly (do not recurse). Key files: `doer log`, `judge log`, `events log`, `job queue`, `doer jsonl`, `judge jsonl`. Watch with a 30s /loop (Cursor) or poll periodically otherwise. Report back to the user.
         3. **Unblock on three judge FAILs.** If the doer has stopped waiting, act — do not just report the status. See details below.
+
+        ## Job templates
+
+        Before building the job queue from scratch, check for a matching template:
+        - Call `list_templates()` and compare names against the user's request.
+        - If one matches, offer it via AskQuestion. If the user confirms, call `use_template(name)` to enqueue its jobs automatically.
+        - Skip this if the user described something clearly not matching any template.
+        - Call `use_template(name, overrides)` to merge fields (e.g. swap the prompt or toggle judge) into the template jobs before enqueueing.
 
         ## What to always include in the prompt you pass to the doer
 
