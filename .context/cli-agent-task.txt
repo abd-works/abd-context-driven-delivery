@@ -17,7 +17,7 @@ Then call capture_backlog with:
   workspace: 'C:\\dev\\abd-context-driven-delivery'
   theme: ''
   category: 'Defect'
-  infer_from: 'Fix clean_engineering model + generate manifest confusion\nAgent got completely confused running /.cursor/clean_engineering.model and /.cursor/generate. Tried generate_output instead of following manifest instructions. Defaulted to draw.io diagram even with format=markdown. Confused action names (generate vs generate_output). Should have read the manifest, taken the instructions, and passed them to the action ? instead spent many turns trying wrong things. This used to work before actions and context_tools were separated. Need to identify root cause and fix either the cursor commands, the manifest instructions, or the agent guidance so this works reliably.\n'
+  infer_from: 'Fix clean_engineering model + generate manifest confusion\nAgent got completely confused running /.cursor/clean_engineering.model and /.cursor/generate. Tried generate_output instead of following manifest instructions. Defaulted to draw.io diagram even with format=markdown. Confused action names (generate vs generate_output). Should have read the manifest, taken the instructions, and passed them to the action. This used to work before actions and context_tools were separated. Need to identify root cause and fix either the cursor commands, the manifest instructions, or the agent guidance so this works reliably.\n'
 
 --- body ---
 # Handoff â€” abd-context-driven-delivery (2026-08-29)
@@ -36,5 +36,5 @@ Then call capture_backlog with:
 ## Request
 
 **Focus:** Fix clean_engineering model + generate manifest confusion
-Agent got completely confused running /.cursor/clean_engineering.model and /.cursor/generate. Tried generate_output instead of following manifest instructions. Defaulted to draw.io diagram even with format=markdown. Confused action names (generate vs generate_output). Should have read the manifest, taken the instructions, and passed them to the action ? instead spent many turns trying wrong things. This used to work before actions and context_tools were separated. Need to identify root cause and fix either the cursor commands, the manifest instructions, or the agent guidance so this works reliably.
+Agent got completely confused running /.cursor/clean_engineering.model and /.cursor/generate. Tried generate_output instead of following manifest instructions. Defaulted to draw.io diagram even with format=markdown. Confused action names (generate vs generate_output). Should have read the manifest, taken the instructions, and passed them to the action. This used to work before actions and context_tools were separated. Need to identify root cause and fix either the cursor commands, the manifest instructions, or the agent guidance so this works reliably.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
