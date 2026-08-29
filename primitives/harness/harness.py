@@ -20,7 +20,7 @@ from tools.toolset_header import manifest_commands
 from harness.agent import Agent
 from harness.agent_guidance import AgentGuidance
 from harness.command import Command
-from harness.harness_tool import operation_writes
+from harness.harness_tool import operation_writes, required_init_params
 from harness.hook import Hook
 from harness.instruction import Instruction
 from harness.prompt import Prompt, prompt
@@ -185,6 +185,11 @@ class Harness:
         if deploy_path.strip():
             return [Path(deploy_path.strip())]
         return [self._suggested_deploy_path()]
+
+    def _constructor_context(self, path: Path, class_name: str) -> dict[str, str]:
+        """Return {param: ''} for each required __init__ param of the class at path."""
+        params = required_init_params(path, class_name)
+        return {p: "" for p in params}
 
     def _classify_path(self, file_path: str) -> str:
         try:
@@ -491,15 +496,19 @@ class Harness:
                 )
             return payload
 
+        cc = self._constructor_context(path, class_name)
         writes = operation_writes(path, class_name, repo_root=self.repo_root)
         if writes:
             for vehicle, deploy_name, operation, doc, invoke in writes:
                 name = deploy_name or slug
                 if not self._wanted(wanted, name, slug, "source"):
                     continue
+                payload = source_for(name, doc or meta["guidance"], operation=operation, invoke=invoke)
+                if cc:
+                    payload["constructor_context"] = cc
                 written = self._emit(
                     vehicle,
-                    source_for(name, doc or meta["guidance"], operation=operation, invoke=invoke),
+                    payload,
                     roots,
                     seen,
                 )
@@ -534,6 +543,7 @@ class Harness:
     def _write_harness_files(self, roots: list[Path], seen: set[tuple[str, str]]) -> list[str]:
         names: list[str] = []
         path = Path(__file__)
+        harness_cc = self._constructor_context(path, "Harness")
         for vehicle, deploy_name, operation, doc, invoke in operation_writes(
             path, "Harness", repo_root=self.repo_root
         ):
@@ -556,12 +566,15 @@ class Harness:
                 "operation": cli_operation,
                 "invoke": cli_invoke,
             }
+            if harness_cc:
+                payload["constructor_context"] = harness_cc
             if operation == "generate":
                 payload["guidance"] = (
                     "With no IDE given, AskQuestion: Which IDE? Cursor | VS Code. "
                     "With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring. "
                     "With no deploy path given, call suggested_deploy_path, then AskQuestion: "
-                    "deploy to that suggested path (recommended) / enter another path."
+                    "deploy to that suggested path (recommended) / enter another path. "
+                    "Set context.type to the chosen IDE before running."
                 )
             emitted = self._emit(vehicle, payload, roots, seen)
             if emitted:

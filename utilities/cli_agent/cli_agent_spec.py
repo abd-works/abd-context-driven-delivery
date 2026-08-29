@@ -588,6 +588,10 @@ with description("CliAgent"):
             expect("process reference" in text).to(be_true)
             expect("--resume" in text).to(be_true)
             expect("not IDE chats" in text).to(be_true)
+            expect("[CliAgent doer](resume-id)" in text).to(be_true)
+            expect("IDE Terminal" in text).to(be_true)
+            expect("CREATE_NEW_CONSOLE" in text).to(be_true)
+            expect("cursor.exe" in text).to(be_true)
             expect("check" in text).to(be_true)
             expect("report" in text).to(be_true)
             expect("-p" in text).to(be_true)
@@ -616,6 +620,9 @@ with description("CliAgent"):
             expect("pid: 4242" in text).to(be_true)
             expect(
                 "cursor-agent --resume 11111111-1111-1111-1111-111111111111" in text
+            ).to(be_true)
+            expect(
+                "[CliAgent doer transcript](11111111-1111-1111-1111-111111111111)" in text
             ).to(be_true)
             expect("CLI processes (not IDE chats):" in text).to(be_true)
             expect("session: run-spec" in text).to(be_true)

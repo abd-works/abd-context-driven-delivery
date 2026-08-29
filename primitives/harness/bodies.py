@@ -30,12 +30,17 @@ def _invoke_block(
     action: str | None = None,
     tool: str | None = None,
     fidelity: str | None = None,
+    constructor_context: dict[str, str] | None = None,
 ) -> str:
     """Filled invoke fence plus one ``run -`` (1b, 1c, 4c, 5a)."""
     lines = ["```yaml", f"toolset: {toolset}"]
+    ctx: dict[str, str] = dict(constructor_context or {})
     if fidelity:
+        ctx["fidelity"] = fidelity
+    if ctx:
         lines.append("context:")
-        lines.append(f"  fidelity: {fidelity}")
+        for k, v in ctx.items():
+            lines.append(f"  {k}: {v}")
     if tool:
         lines.append(f"tool: {tool}")
     elif action:
@@ -54,28 +59,30 @@ def resolve_text(
     actions: list[str] | tuple[str, ...] = (),
     context_tools: list[str] | tuple[str, ...] = (),
     invoke: str = "action",
+    constructor_context: dict[str, str] | None = None,
 ) -> str:
     """Resolve rules plus the CLI. Action and guidance bodies get opposite confirm lines."""
     toolset = toolset.strip() or "the in-scope context tool"
+    cc = constructor_context or {}
     if kind == "fidelity":
-        return _CATALOG_LINE + _invoke_block(toolset, action="generate", fidelity=source)
+        return _CATALOG_LINE + _invoke_block(toolset, action="generate", fidelity=source, constructor_context=cc)
     if kind in {"utility", "format"}:
         if kind == "format":
-            return "through the tools cli\n\n" + _CATALOG_LINE + _invoke_block(toolset)
+            return "through the tools cli\n\n" + _CATALOG_LINE + _invoke_block(toolset, constructor_context=cc)
         member = source.strip()
         if invoke == "tool" and member:
             return (
                 "through the tools cli\n\n"
                 + _CATALOG_LINE
-                + _invoke_block(toolset, tool=member)
+                + _invoke_block(toolset, tool=member, constructor_context=cc)
             )
         if invoke == "action" and member:
             return (
                 "through the tools cli\n\n"
                 + _CATALOG_LINE
-                + _invoke_block(toolset, action=member)
+                + _invoke_block(toolset, action=member, constructor_context=cc)
             )
-        return "through the tools cli\n\n" + _CATALOG_LINE + _invoke_block(toolset)
+        return "through the tools cli\n\n" + _CATALOG_LINE + _invoke_block(toolset, constructor_context=cc)
     if kind == "guidance":
         if actions:
             action_ask = (
@@ -110,7 +117,7 @@ def resolve_text(
             + fidelity_ask
             + "Then run:\n"
             + _CATALOG_LINE
-            + _invoke_block(toolset, tool=source)
+            + _invoke_block(toolset, tool=source, constructor_context=cc)
         )
     action = source if kind == "action" else None
     return (
@@ -118,7 +125,7 @@ def resolve_text(
         + fidelity_ask
         + "Then run:\n"
         + _CATALOG_LINE
-        + _invoke_block(toolset, action=action)
+        + _invoke_block(toolset, action=action, constructor_context=cc)
     )
 
 
@@ -164,12 +171,13 @@ class ActionBody:
         context_tools: list[str] | tuple[str, ...] = (),
         invoke: str = "action",
         operation: str = "",
+        constructor_context: dict[str, str] | None = None,
     ) -> "ActionBody":
         if kind == "fidelity":
             tool_name = _context_tool_name(toolset)
             text = (
                 f"Run the action on {tool_name} at {name} fidelity through the tools cli\n\n"
-                f"{resolve_text(name, toolset, kind=kind, fidelities=fidelities)}"
+                f"{resolve_text(name, toolset, kind=kind, fidelities=fidelities, constructor_context=constructor_context)}"
             )
             return cls(text)
         member = (operation or name).strip()
@@ -178,7 +186,7 @@ class ActionBody:
             "Run this action for any provided context tools, or on the context in general.\n\n"
             f"{class_string}\n\n"
             f"{operation_instructions}\n\n"
-            f"{resolve_text(member, toolset, kind=kind, fidelities=fidelities, context_tools=context_tools, invoke=invoke)}"
+            f"{resolve_text(member, toolset, kind=kind, fidelities=fidelities, context_tools=context_tools, invoke=invoke, constructor_context=constructor_context)}"
         )
         return cls(text)
 
@@ -200,13 +208,21 @@ class UtilityBody:
         toolset: str,
         invoke: str = "tool",
         operation: str = "",
+        constructor_context: dict[str, str] | None = None,
     ) -> "UtilityBody":
         parts = [part for part in (class_string.strip(), operation_instructions.strip()) if part]
+        if constructor_context:
+            missing = [k for k, v in constructor_context.items() if not v]
+            if missing:
+                parts.append(
+                    f"Required context params with no value: {', '.join(missing)}. "
+                    "AskQuestion to collect each missing value before running."
+                )
         member = (operation or "").strip()
         text = (
             "\n\n".join(parts)
             + "\n\n"
-            + resolve_text(member, toolset, kind="utility", invoke=invoke)
+            + resolve_text(member, toolset, kind="utility", invoke=invoke, constructor_context=constructor_context)
         )
         return cls(text)
 

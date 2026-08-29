@@ -430,11 +430,25 @@ class _ToolsetRunner:
         return field_value
 
     def _build_instance(self, toolset_cls: type, context: dict[str, Any]) -> Toolset:
+        reader = _SignatureReader.instance()
+        schema = reader.input_schema(toolset_cls.__init__)
+        missing = [name for name in schema.get("required", []) if name not in context]
+        if missing:
+            joined = ", ".join(missing)
+            raise RunError(
+                f"{toolset_cls.__name__} missing required context params: {joined} — use AskQuestion to get the value from the user",
+                response={
+                    "ok": False,
+                    "error": "missing required context",
+                    "missing": missing,
+                    "detail": f"Use AskQuestion to collect: {joined}",
+                },
+            )
         try:
             return toolset_cls(**context)
         except TypeError as exc:
             raise RunError(
-                f"invalid context for {toolset_cls.manifest_path}: {exc}",
+                f"invalid context for {toolset_cls.__name__}: {exc}",
                 response={"ok": False, "error": "invalid context", "detail": str(exc)},
             ) from exc
 
@@ -464,13 +478,15 @@ class _ToolsetRunner:
         schema = reader.input_schema(tool.callable)
         missing = [name for name in schema.get("required", []) if name not in arguments]
         if missing:
+            joined = ", ".join(missing)
             raise RunError(
-                f"{tool.name} missing required arguments: {', '.join(missing)}",
+                f"{tool.name} missing required arguments: {joined} — use AskQuestion to get the value from the user",
                 response={
                     "ok": False,
                     "tool": tool.name,
                     "error": "missing required arguments",
                     "missing": missing,
+                    "detail": f"Use AskQuestion to collect: {joined}",
                 },
             )
 

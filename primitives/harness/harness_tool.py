@@ -84,6 +84,21 @@ def _invoke_kind(item: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
     return "none"
 
 
+def _required_init_params(node: ast.ClassDef) -> list[str]:
+    """Return names of required (no-default) __init__ parameters, excluding self."""
+    for item in node.body:
+        if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if item.name != "__init__":
+            continue
+        args = item.args
+        positional = args.args
+        defaults_count = len(args.defaults)
+        required_count = len(positional) - defaults_count
+        return [arg.arg for arg in positional[1:required_count]]
+    return []
+
+
 def _local_writes(
     node: ast.ClassDef,
 ) -> tuple[list[tuple[str, str | None, str, str, str]], dict[str, str], set[str]]:
@@ -196,6 +211,21 @@ def operation_writes(
                 kind, deploy_name, operation, doc, invoke = write
                 found.append((kind, deploy_name, operation, docs.get(operation) or doc, invoke))
     return found
+
+
+def required_init_params(source_path: Path, class_name: str = "") -> list[str]:
+    """Return required (no-default) __init__ param names for a class in source_path."""
+    try:
+        tree = ast.parse(source_path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return []
+    for node in tree.body:
+        if not isinstance(node, ast.ClassDef):
+            continue
+        if class_name and node.name != class_name:
+            continue
+        return _required_init_params(node)
+    return []
 
 
 def _frontmatter(name: str, description: str) -> str:

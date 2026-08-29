@@ -103,11 +103,12 @@ class SubAgent:
     @prompt(name="sub-agent")
     @sub_agent
     @agent_instructions
-    def run(self, tools: list, actions: list | None = None) -> str:
-        """Run this prompt, the listed context tools, and any listed actions as one non-blocking sub-agent.
+    def run(self, tools: list, actions: list | None = None, prompt: str | None = None) -> str:
+        """Run the listed context tools and actions as one non-blocking sub-agent.
 
         tools — context tools (same arguments.tools as iterate / repair / generate).
         actions — optional other action kits (iterate, generate, grill, …) to run with those context tools.
+        prompt — the task for the sub-agent. Uses the current chat context when omitted.
 
         The parent sees kind: sub_agent / launch: non_blocking and does not wait.
         Inside this sub-agent: follow this prompt. Do not inline any of that on the parent.

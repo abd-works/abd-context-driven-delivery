@@ -14,9 +14,10 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from harness.harness_tool import prompt as prompt_name
-from primitives.actions.action import agent_instructions, agentic_toolset
+from harness.harness_tool import prompt
+from primitives.actions.action import agentic_toolset
 from sub_agent.sub_agent import SubAgent, sub_agent
+from tools.tool import agent_tool
 
 
 @dataclass
@@ -656,11 +657,18 @@ class IdeCli:
     _launch = "Read {path} and follow it exactly."
     _cmdline_safe = 4096
     _parent_checkin = (
-        "The parent talks to the doer only. Every once in a while, check "
-        "the doer (logs, transcript tail, hanging Turn, artifacts). "
+        "The parent talks to the doer only. When you launch CliAgent from Cursor, open the IDE Terminal panel as part of that run (Shell tool — print the process reference). Leave the OS CREATE_NEW_CONSOLE alone. Never call cursor.exe / --open-url / --command to open a terminal. After jobs are on the queue, "
+        "if this is Cursor, watch with a 30s /loop; otherwise check the "
+        "doer the usual way without notify_on_output. Every once in a while, "
+        "check the doer (logs, transcript tail, hanging Turn, artifacts). "
         "If the doer did not take the job (NOT TAKEN UP), stop — do not wait. "
-        "Do not prompt, launch, or score the judge. The doer runs the "
-        "judge and waits. Do not drive the work with -p."
+        "If the doer stopped after three judge FAILs, do not mindlessly loop: "
+        "read the judge FAIL (transcript / finish_turn result), investigate the "
+        "named leftovers in the workspace, revise the job prompt (update "
+        ".context/cli-agent-task.txt and the job_queue head) so the next attempt "
+        "targets those exact fails, then send one continue resume to the doer. "
+        "Do not stack --resume prompts. Do not prompt, launch, or score the "
+        "judge. The doer runs the judge and waits. Do not drive the work with -p."
     )
 
     def __init__(
@@ -856,7 +864,7 @@ class IdeCli:
             "contact the judge again after that Turn. Do not wait for the "
             "parent. If the queue is empty, stop. "
             "On FAIL, fix, finish the Turn, and send again "
-            "(attempt n of 3). After three FAILs, stop and wait."
+            "(attempt n of 3). After three FAILs, stop and wait for the parent."
         )
 
     def _create_chat(self, workspace: str, *, timeout_seconds: int | None = None) -> str:
@@ -1072,56 +1080,6 @@ class VscodeCli(IdeCli):
         return _SessionArgv()._vscode_args(self, prompt, workspace)
 
 
-_LAUNCH_INSTRUCTIONS = """\
-Run this prompt, the listed context tools, and any listed actions via the IDE CLI.
-
-tools — context tools (same arguments.tools as iterate / repair / generate).
-actions — optional guidance (kits, utilities, or prompts). The CLI
-decides each Turn.
-
-Reuse this instance's ide (model, mode, agent_mode, judge). Do not pass
-those per run.
-
-The parent must not call start_work_session, open, or ensure_started.
-Pass workspace (and session when known) on this kit. This run opens or
-resumes the WorkSession, switches to that path, binds the doer, then
-starts the doer interactive session. Bind a judge and write
-cli-agent-judge.txt only when this launch lists a context tool, action,
-or utility. Bare finish_turn / no tools / no actions: no judge. The
-parent does not launch or prompt the judge. When there is a judge, the
-doer, after finish_turn, sends that file to the judge CLI, waits for
-PASS or FAIL, and they go back and forth (three FAILs then stop). The
-judge uses the same tools, fidelity, and format, and compares written
-artifacts to the source scope of the original job (whole artifact or a
-stated slice). Missing source nodes are a fail. Markdown generate is
-judged as markdown.
-
-When this is launched from a chat, always include a process reference
-so a person can get at the CLI: pid when known, and each cursor-agent
---resume id. Those ids are CLI sessions, not IDE chats — do not wrap
-them as chat links.
-
-The parent sees kind: sub_agent / launch: non_blocking and does not wait.
-If launch reports NOT TAKEN UP, stop immediately. Do not wait on an
-idle console. A live pid is not proof the doer accepted the job.
-Later jobs live on the job_queue property. The head stays until the
-judge PASSes that job. The doer then pops it and runs the next job
-on this same CLI. The parent does not launch_next after each Turn.
-Do not stack --resume prompts.
-The parent talks to the doer only. Every once in a while, check the
-doer (logs, transcript tail, hanging Turn, artifacts) and report
-back how it is doing. Do not prompt, launch, or score the judge.
-Do not drive the work with -p.
-ide.detect().run_all starts the interactive session(s) and returns.
-
--> IdeCli.detect
--> IdeCli.run_all
--> IdeCli.spawn
-
-Give the CLI the tools, a suggested first Turn, and any later items as
-guidance. The CLI decides each Turn. Do not wait for the operator.
-"""
-
 
 @agentic_toolset
 class CliAgent(SubAgent):
@@ -1134,23 +1092,25 @@ class CliAgent(SubAgent):
     Flags live on ide after IdeCli is constructed; every launch_sessions() reuses them.
     """
 
-    def __init__(self, ide: IdeCli, workspace: str = "", session: str = "") -> None:
+    def __init__(self, workspace: str = "", session: str = "") -> None:
         self._workspace = (workspace or os.getcwd()).strip()
         self._session = (session or "").strip()
         self._work = None
-        self._ide = ide
+        self._ide: IdeCli | None = None
         self._judge_job = False
 
     @property
     def ide(self) -> IdeCli:
+        if self._ide is None:
+            self._ide = IdeCli()._detect()
         return self._ide
 
     @property
-    def prompt(self) -> str:
+    def task_prompt(self) -> str:
         return self.ide.prompt
 
-    @prompt.setter
-    def prompt(self, prompt: str) -> None:
+    @task_prompt.setter
+    def task_prompt(self, prompt: str) -> None:
         self.ide._prompt = (prompt or "").strip()
 
     @property
@@ -1221,8 +1181,8 @@ class CliAgent(SubAgent):
         hanging = self.ide._bind_turn(
             self.ide._blank_turn(), tools, acts[0] if acts else None
         )
-        if self.prompt:
-            hanging.prompt = self.prompt
+        if self.task_prompt:
+            hanging.prompt = self.task_prompt
         return hanging, acts[1:]
 
     def _toolset_refs(self, tools) -> list:
@@ -1303,8 +1263,10 @@ class CliAgent(SubAgent):
             if spawned.pid:
                 parts.append(f"pid: {spawned.pid}")
         if work.cli_doer:
+            parts.append(f"[CliAgent doer transcript]({work.cli_doer})")
             parts.append(f"cursor-agent --resume {work.cli_doer}")
         if work.cli_judge:
+            parts.append(f"[CliAgent judge transcript]({work.cli_judge})")
             parts.append(f"cursor-agent --resume {work.cli_judge}")
         parts.append(f"workspace: {self._workspace_root()}")
         parts.append(f"session: {work.name}")
@@ -1340,7 +1302,7 @@ class CliAgent(SubAgent):
         if item is None:
             raise RuntimeError(JobQueue.empty)
         if item.get("prompt"):
-            self.prompt = str(item["prompt"])
+            self.task_prompt = str(item["prompt"])
         return self.launch_sessions(
             item.get("tools") or [],
             item.get("actions") or None,
@@ -1351,11 +1313,32 @@ class CliAgent(SubAgent):
         work = self._attach_cli_sessions()
         return JobQueue().pop(work)
 
-    @prompt_name(name="cli-agent")
+    @prompt(name="cli-agent")
     @sub_agent
-    @agent_instructions
+    @agent_tool
     def launch_sessions(self, tools: list[object], actions: list[object] | None = None) -> str:
-        """cli-agent"""
+        """Run the listed context tools and actions through the IDE CLI as a non-blocking sub-agent.
+
+        CliAgent handles all session and workspace setup internally — do not manage those yourself. The parent's role is to launch, then monitor and unblock. The CLI decides each Turn; model, mode, and agent_mode are fixed on this ide instance and must not be passed per call.
+
+        ## Steps
+
+        1. **Launch.** Pass workspace (and session when known). Do not touch workspace or session utilities — let CliAgent handle all of that. If launch reports NOT TAKEN UP, stop immediately.
+        2. **Monitor.** Watch with a 30s /loop (Cursor) or poll periodically otherwise. Check the doer transcript, logs, and artifacts occasionally and report back to the user.
+        3. **Unblock on three judge FAILs.** If the doer has stopped waiting, act — do not just report the status. See details below.
+
+        ## Judge
+
+        A judge runs when tools or actions are listed, or when the user explicitly requests one and specifies what it should evaluate. The parent never launches, prompts, or scores the judge — the doer handles that loop. Three FAILs: the doer stops and waits for the parent to intervene.
+
+        The judge validates written artifacts against the source scope of the original job. Missing nodes or incomplete output is a fail. Markdown generate is judged as markdown.
+
+        ## If the doer stopped after three judge FAILs
+
+        1. Read the judge FAIL — check the transcript and named leftovers in the workspace.
+        2. Revise the job prompt and cli-agent-task.txt to target those exact gaps.
+        3. Send one continue resume to the doer. Do not stack prompts. Do not drive with -p.
+        """
         self._bring_in_kits(tools, actions)
         self._judge_job = self._should_judge(tools, actions)
         work = self._attach_cli_sessions()
@@ -1369,4 +1352,3 @@ class CliAgent(SubAgent):
         return self._session_report(work, results)
 
 
-CliAgent.launch_sessions.__doc__ = _LAUNCH_INSTRUCTIONS

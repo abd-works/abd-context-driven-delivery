@@ -41,6 +41,7 @@ class Prompt(HarnessTool):
                     toolset=source.get("toolset", ""),
                     kind="fidelity",
                     fidelities=source.get("fidelities") or (),
+                    constructor_context=source.get("constructor_context") or None,
                 )
             elif source.get("action") or source.get("source_kind") == "action":
                 self.body = ActionBody.from_source(
@@ -53,6 +54,7 @@ class Prompt(HarnessTool):
                     context_tools=source.get("context_tools") or (),
                     invoke=source.get("invoke") or "action",
                     operation=source.get("operation") or "",
+                    constructor_context=source.get("constructor_context") or None,
                 )
             else:
                 self.body = UtilityBody.from_source(
@@ -62,6 +64,7 @@ class Prompt(HarnessTool):
                     toolset=source.get("toolset", ""),
                     invoke=source.get("invoke") or "tool",
                     operation=source.get("operation") or "",
+                    constructor_context=source.get("constructor_context") or None,
                 )
             if source.get("overview"):
                 self.description = source["overview"]
