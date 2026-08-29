@@ -464,6 +464,59 @@ class JobQueue:
         return head
 
 
+class _CliSession:
+    """Append-only structured log for a cli-agent session: cli-agent-session.jsonl."""
+
+    filename = "cli-agent-session.jsonl"
+
+    def path_for(self, work) -> Path:
+        folder = getattr(work, "folder", None)
+        if folder:
+            return Path(folder) / self.filename
+        name = getattr(work, "name", "") or "work"
+        root = getattr(work, "path", None) or "."
+        return Path(root) / ".context" / "sessions" / name / self.filename
+
+    def _append(self, work, record: dict) -> None:
+        path = self.path_for(work)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        record["ts"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record) + "\n")
+
+    def session_start(self, work, doer: str, judge: str, doer_pid: int, judge_pid: int, doer_transcript: str, judge_transcript: str) -> None:
+        self._append(work, {
+            "kind": "session_start",
+            "doer": doer,
+            "doer_pid": doer_pid,
+            "doer_transcript": doer_transcript,
+            "judge": judge,
+            "judge_pid": judge_pid,
+            "judge_transcript": judge_transcript,
+        })
+
+    def spawn(self, work, role: str, resume: str, prompt: str, argv: str) -> None:
+        self._append(work, {
+            "kind": "spawn",
+            "role": role,
+            "resume": resume,
+            "prompt": prompt,
+            "argv": argv,
+        })
+
+    def jobs_enqueued(self, work, jobs: list) -> None:
+        self._append(work, {"kind": "jobs_enqueued", "jobs": jobs})
+
+    def job_start(self, work, prompt: str) -> None:
+        self._append(work, {"kind": "job_start", "prompt": prompt})
+
+    def job_complete(self, work, prompt: str) -> None:
+        self._append(work, {"kind": "job_complete", "prompt": prompt})
+
+    def verdict(self, work, result: str, notes: str = "") -> None:
+        self._append(work, {"kind": "verdict", "result": result, "notes": notes})
+
+
 class _Pickup:
     """Fail launch if the doer transcript does not take the new job."""
 
@@ -1274,6 +1327,27 @@ class CliAgent(SubAgent):
         if len(results) > 1:
             work.cli_judge_pid = results[1].pid
         work.save_cli_sessions()
+        pickup = _Pickup()
+        ws = self._workspace_root()
+        _CliSession().session_start(
+            work,
+            doer=work.cli_doer,
+            judge=work.cli_judge,
+            doer_pid=work.cli_doer_pid,
+            judge_pid=work.cli_judge_pid,
+            doer_transcript=str(pickup.cursor_transcript(ws, work.cli_doer)),
+            judge_transcript=str(pickup.cursor_transcript(ws, work.cli_judge)),
+        )
+        for spawned in results:
+            role = _CliSpawner().spawn_role(spawned.argv)
+            resume = work.cli_doer if role == "doer" else work.cli_judge
+            _CliSession().spawn(
+                work,
+                role=role,
+                resume=resume,
+                prompt=self.job,
+                argv=" ".join(spawned.argv),
+            )
 
     def _session_report(self, work, results) -> str:
         ws = self._workspace_root()
@@ -1293,15 +1367,14 @@ class CliAgent(SubAgent):
         parts.append("taken up: yes")
         parts.append(f"job_queue: {len(self.job_queue)}")
         pickup = _Pickup()
+        session_log = _CliSession().path_for(work)
         parts.append("## Monitor with these files (read directly — do not recurse)")
-        parts.append(f"doer log: {self.ide._log_path(ws, 'doer', work.name)}")
-        parts.append(f"judge log: {self.ide._log_path(ws, 'judge', work.name)}")
-        parts.append(f"events log: {ws}/.context/sessions/{work.name}/logs/events.log")
+        parts.append(f"session log: {session_log}")
         parts.append(f"job queue: {ws}/.context/sessions/{work.name}/cli-agent-job-queue.json")
         if work.cli_doer:
-            parts.append(f"doer jsonl: {pickup.cursor_transcript(ws, work.cli_doer)}")
+            parts.append(f"doer transcript: {pickup.cursor_transcript(ws, work.cli_doer)}")
         if work.cli_judge:
-            parts.append(f"judge jsonl: {pickup.cursor_transcript(ws, work.cli_judge)}")
+            parts.append(f"judge transcript: {pickup.cursor_transcript(ws, work.cli_judge)}")
         return "\n".join(parts)
 
     @property
@@ -1334,6 +1407,7 @@ class CliAgent(SubAgent):
         """
         work = self._attach_cli_sessions()
         JobQueue().save(work, list(jobs or []))
+        _CliSession().jobs_enqueued(work, list(jobs or []))
         return f"job_queue: {len(jobs)}"
 
     @agent_tool
@@ -1345,6 +1419,7 @@ class CliAgent(SubAgent):
             raise RuntimeError(JobQueue.empty)
         if item.get("prompt"):
             self.task_prompt = str(item["prompt"])
+        _CliSession().job_start(work, prompt=str(item.get("prompt") or ""))
         return self.launch_sessions(
             item.get("tools") or [],
             item.get("actions") or None,
@@ -1354,7 +1429,17 @@ class CliAgent(SubAgent):
     def complete_job(self) -> dict | None:
         """Judge PASS: drop the finished head job. Call launch_next next if more jobs remain."""
         work = self._attach_cli_sessions()
-        return JobQueue().pop(work)
+        item = JobQueue().peek(work)
+        result = JobQueue().pop(work)
+        _CliSession().job_complete(work, prompt=str((item or {}).get("prompt") or ""))
+        return result
+
+    @agent_tool
+    def record_verdict(self, result: str, notes: str = "") -> str:
+        """Record a judge verdict (PASS or FAIL) to the session log. Call this after validating a Turn."""
+        work = self._attach_cli_sessions()
+        _CliSession().verdict(work, result=result.strip().upper(), notes=notes)
+        return result.strip().upper()
 
     @prompt(name="cli-agent")
     @sub_agent
