@@ -1514,15 +1514,32 @@ class CliAgent(SubAgent):
     def _template_store(self, path: str | None = None) -> CliJobTemplateStore:
         return CliJobTemplateStore(root=path or None)
 
+    @prompt(name="cli-agent-template")
     @agent_tool
     def add_template(self, name: str, jobs: list[dict], description: str = "", path: str | None = None) -> str:
-        """Save a reusable job template by name.
+        """Create, list, and apply reusable job templates for /cli-agent.
 
-        ``jobs`` has the same shape as a job queue: each entry is a dict with
-        ``prompt``, ``tools`` (optional), ``actions`` (optional), and ``judge``
-        (optional). ``path`` overrides the default store location — omit to use
-        the shared ``job-templates/`` folder next to this module.
-        Returns a confirmation string.
+        A template is a named list of jobs — same shape as a job queue entry:
+        ``prompt``, ``tools`` (optional), ``actions`` (optional), ``judge`` (optional).
+        Templates live in ``job-templates/`` by default; pass ``path`` for a project-specific location.
+
+        ## Create a template
+
+        Call this tool with ``name``, ``jobs``, and an optional ``description``.
+
+        ## List templates
+
+        Call `list_templates()` to see all saved names. Pass ``path`` for a project folder.
+
+        ## Apply a template
+
+        Call `use_template(name)` to enqueue its jobs on the active session, then run `/cli-agent`.
+        Pass ``overrides`` (dict) to merge changes into every job first — e.g. swap a prompt or enable a judge.
+
+        ## Match to a request
+
+        If the user's request sounds like an existing template, call `list_templates()` and offer
+        the closest match via AskQuestion before building a queue from scratch.
         """
         template = CliJobTemplate(name=name, jobs=list(jobs or []), description=description or "")
         self._template_store(path).add(template)
@@ -1530,20 +1547,14 @@ class CliAgent(SubAgent):
 
     @agent_tool
     def list_templates(self, path: str | None = None) -> list[str]:
-        """Return the names of all saved job templates.
-
-        ``path`` overrides the default store location — omit to list templates
-        from the shared ``job-templates/`` folder.
-        """
+        """Return the names of all saved job templates."""
         return self._template_store(path).list_all()
 
     @agent_tool
     def use_template(self, name: str, overrides: dict | None = None, path: str | None = None) -> str:
-        """Load a named template and enqueue its jobs, applying any per-job overrides.
+        """Load a named template and enqueue its jobs. Pass ``overrides`` to merge fields into every job.
 
-        ``overrides`` is a dict of field names to values merged into every job
-        (e.g. ``{"judge": true}``). Raises RuntimeError when the template is not found.
-        Returns the same confirmation as enqueue_jobs.
+        Raises RuntimeError when the template is not found.
         """
         store = self._template_store(path)
         template = store.load(name)
