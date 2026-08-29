@@ -247,12 +247,17 @@ with description("grill_with_context framing guidance (#26)"):
 
     with it("should not mandate restating the full interview as already agreed"):
         # RED while Step 3a still says bare \"state what is already agreed\" without
-        # narrowing it to branch/concepts (not prior answer bodies).
-        bare_recap_mandate = (
-            "state what is already agreed" in self.step_3a.lower()
-            and "do not" not in self.step_3a.lower()
+        # an explicit anti-recap for prior grill-answer bodies.
+        lowered = self.step_3a.lower()
+        has_bare_agreed = "state what is already agreed" in lowered
+        has_anti_recap = (
+            "do not paste" in lowered
+            or "do not restate prior" in lowered
+            or "do not accumulate" in lowered
+            or "not paste prior" in lowered
+            or "without pasting" in lowered
         )
-        expect(bare_recap_mandate).to(equal(False))
+        expect(has_bare_agreed and not has_anti_recap).to(equal(False))
 
 
 with description("BaseContextTool host face for grill"):

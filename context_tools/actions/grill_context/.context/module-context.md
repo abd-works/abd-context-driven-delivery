@@ -15,4 +15,4 @@
 - `grill(tools)` — host grill body once per passed context tool
 
 ## Mechanism
-Prove-read gate — every question turn must name the context file(s) read and ground options in concrete terms from them before asking; skimming titles or relying on memory is treated as a defect.
+Prove-read gate — every question turn must name the context file(s) read and ground options in concrete terms from them before asking; skimming titles or relying on memory is treated as a defect. Framing must not paste prior `grill-answers.md` bodies into AskQuestion — cite path/heading only.

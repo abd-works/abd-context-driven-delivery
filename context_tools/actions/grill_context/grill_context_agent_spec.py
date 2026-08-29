@@ -29,6 +29,7 @@ _SESSIONS = Path(__file__).resolve().parent / ".context" / ".agent_bdd_sessions"
 _TOOLSET = "grill_context.grill_context:GrillContext"
 # This module's own .context/ folder is a stable source of context files to explore.
 _GRILL_CONTEXT_DIR = str(Path(__file__).resolve().parent)
+_PRIOR_MARKER_26 = "UNIQUE_GRILL_PRIOR_26"
 
 
 with description("a GrillContext toolset"):
@@ -131,8 +132,6 @@ with description("grill_with_context next-question framing (#26)"):
     frame may cite grill-answers.md by path/heading but must not include that marker.
     """
 
-    _PRIOR_MARKER = "UNIQUE_GRILL_PRIOR_26"
-
     with before.all:
         self._ag3 = agent(_REPO_ROOT, _SESSIONS / "grill-no-stuff-answers.json")
         self.session3 = self._ag3.__enter__()
@@ -141,8 +140,8 @@ with description("grill_with_context next-question framing (#26)"):
         answers.mkdir(parents=True)
         (answers / "grill-answers.md").write_text(
             "# Grill Answers\n\n"
-            f"### Locked tick about discovery\n\n"
-            f"We agreed {_PRIOR_MARKER} that explore skips __pycache__.\n\n",
+            "### Locked tick about discovery\n\n"
+            f"We agreed {_PRIOR_MARKER_26} that explore skips __pycache__.\n\n",
             encoding="utf-8",
         )
         self.frame_response = self.session3.instruct(
@@ -161,20 +160,22 @@ with description("grill_with_context next-question framing (#26)"):
         self._ag3.__exit__(None, None, None)
 
     with it("should return a non-empty framed question from the agent"):
-        text = str(getattr(self.frame_response, "text", None) or self.frame_response or "")
+        text = str(self.frame_response.text or "")
         expect(len(text.strip()) > 20).to(be_true)
 
     with it("should not paste the prior grill-answer unique marker into the question"):
         # RED while Step 3a \"state what is already agreed\" causes answer stuffing.
-        text = str(getattr(self.frame_response, "text", None) or self.frame_response or "")
-        expect(_PRIOR_MARKER in text).to(equal(False))
+        from expects import equal
+
+        text = str(self.frame_response.text or "")
+        expect(_PRIOR_MARKER_26 in text).to(equal(False))
 
     with it("should judge the question avoids dumping prior answer bodies"):
-        text = str(getattr(self.frame_response, "text", None) or self.frame_response or "")
+        text = str(self.frame_response.text or "")
         verdict = self.session3.ai_judge(
             text,
             "PASS only if the question frame does NOT restate or paste prior grill "
-            f"answers (must not contain {_PRIOR_MARKER} or a full recap of locked "
+            f"answers (must not contain {_PRIOR_MARKER_26} or a full recap of locked "
             "ticks). Citing grill-answers.md by path is fine. FAIL if prior answers "
             "are dumped into the question text.",
         )

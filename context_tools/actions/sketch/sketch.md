@@ -47,7 +47,7 @@ Bare option lists are not allowed. The user must be able to decide from the conc
 
 For every question:
 
-1. **Frame** — name the sketch branch, restate what is already agreed in the sketch, and ground the decision in the active practice concepts (e.g. for clean_engineering modules: high-cohesion, low-coupling, named-seam-and-constraint, deep-module, complexity-absorption; for OOAD: class vs property vs operation, composition/aggregation/association, single responsibility). Pull those concepts from the wrapped agent's material / fidelity docs, not from generic advice.
+1. **Frame** — name the sketch branch and ground the decision in the active practice concepts (e.g. for clean_engineering modules: high-cohesion, low-coupling, named-seam-and-constraint, deep-module, complexity-absorption; for OOAD: class vs property vs operation, composition/aggregation/association, single responsibility). Pull those concepts from the wrapped agent's material / fidelity docs, not from generic advice. Do not paste or restate prior grill-answer bodies into the AskQuestion text — cite `grill-answers.md` by path or heading if needed; the sketch file already holds what was agreed.
 2. **Options with rationale** — 3–5 choices; recommended first; each option gets one short concept-tied rationale (what it does to the seam, ownership, or coupling). End with "Other / I'll specify."
 3. **One question** — wait for the answer, then regenerate the sketch showing exactly what changed.
 

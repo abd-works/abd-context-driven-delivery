@@ -1,9 +1,9 @@
 Using shell, run exactly: python -m tools run -
 Pipe this YAML on stdin:
-toolset: utilities.grill_context.grill_context:GrillContext
+toolset: grill_context.grill_context:GrillContext
 tool: explore_context_files
 arguments:
-  root: 'C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\utilities\grill_context'
+  root: 'C:\dev\abd-cdd-26\context_tools\actions\grill_context'
 Return the complete fenced YAML stdout from the CLI.
 
 IMPORTANT: Invoke python -m tools run via shell. Return the complete fenced YAML stdout from the CLI. Do not summarize.
