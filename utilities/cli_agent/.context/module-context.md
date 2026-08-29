@@ -31,3 +31,5 @@ CliAgent, CliParticipant, CliDoer, CliJudge, IdeCli, CursorCli, VscodeCli, JobQu
 ## Constraint
 
 `IdeCli` carries only CLI invocation config (model, mode, timeouts, resume ID). Job and session state (`current_job`, `turn_task`, session name) live on `CliAgent` and `CliParticipant`, not on `IdeCli`. CliAgent does not open the hanging Turn; the CLI does. Never drive the worker with print mode. Judge only when the launch lists a context tool, action, or the user explicitly requests one. `cleanup` / `cleanup_session` remove temps this kit wrote; WorkSession does not list those files.
+
+Do not bind a durable CliAgent work session to leftover ``default`` while HEAD is still on main before `/start-ticket`. Ticket work must land on ``session/<ticket>`` with its own worktree; after start-ticket, rebind to that session. `_ensure_work_session` skips sole-session fallback when that session is named ``default``.
