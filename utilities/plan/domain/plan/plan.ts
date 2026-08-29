@@ -1,6 +1,6 @@
 /**
  * Domain wraps for Plan / Workflow / Turn — Clean Engineering companions
- * for Compose Plan acceptance tests (/plan /small-work).
+ * for Compose Plan acceptance tests (flow + tickets; no planned-turn list).
  */
 
 export type TicketStateName = "Backlog" | "In Progress" | "Done";
@@ -13,7 +13,7 @@ export class ToolCall {
 }
 
 export class HILCheck {
-  constructor(public validation: string | null = null) {}
+  constructor(public prompt: string | null = null, public validation: string | null = null) {}
 }
 
 export class JudgeCheckpoint {
@@ -21,6 +21,36 @@ export class JudgeCheckpoint {
     public rubric: string,
     public judgeResult: string | null = null,
   ) {}
+}
+
+/** Behavior for one Workflow Status column — lives in workflow/flows/{name}.yaml. */
+export class FlowState {
+  tools: string[] = [];
+  action: string | null = null;
+  utilities: string[] = [];
+  prose: string | null = null;
+  hil = false;
+  judgeRubric: string | null = null;
+
+  constructor(public name: string) {}
+}
+
+export class FlowFile {
+  owner: string | null = null;
+  projectNumber: number | null = null;
+  states: FlowState[] = [];
+
+  constructor(public name: string) {}
+
+  configureState(name: string, fields: Partial<FlowState> = {}): FlowState {
+    let state = this.states.find((s) => s.name === name);
+    if (!state) {
+      state = new FlowState(name);
+      this.states.push(state);
+    }
+    Object.assign(state, fields);
+    return state;
+  }
 }
 
 export class Turn {
@@ -31,13 +61,35 @@ export class Turn {
   toolKeys: string[] = [];
   toolCalls: ToolCall[] = [];
   state: TicketStateName = "Backlog";
+  ticketNumber: number | null = null;
+  flowState: string | null = null;
   result: string | null = null;
   hilCheck: HILCheck | null = null;
   judgeCheckpoint: JudgeCheckpoint | null = null;
 }
 
 export class Workflow {
-  constructor(public name: string) {}
+  projectNumber: number | null = null;
+  throwaway = false;
+  flowFile: FlowFile;
+
+  constructor(public name: string) {
+    this.flowFile = new FlowFile(name);
+  }
+
+  save(owner: string, projectNumber: number): FlowFile {
+    this.throwaway = false;
+    this.projectNumber = projectNumber;
+    this.flowFile.owner = owner;
+    this.flowFile.projectNumber = projectNumber;
+    return this.flowFile;
+  }
+
+  composeThrowaway(): FlowFile {
+    this.throwaway = true;
+    this.projectNumber = null;
+    return this.flowFile;
+  }
 }
 
 export class Workspace {
@@ -53,8 +105,12 @@ export class Workspace {
 
 export class Plan {
   workspace: Workspace | null = null;
+  /** Tickets on this Plan — not a planned-turn list. */
+  tickets: number[] = [];
+  /** Turns created when tickets enter flow states (runtime). */
   turns: Turn[] = [];
   workflowName = "";
+  finished = false;
 
   constructor(
     public name: string,
@@ -65,65 +121,97 @@ export class Plan {
     }
   }
 
-  addTurn(fields: Partial<Turn> & { toolCalls?: ToolCall[] } = {}): Turn {
+  setTickets(numbers: number[]): void {
+    this.tickets = [...numbers];
+  }
+
+  /** Entering a flow state creates a real Turn (not a planned-turn add). */
+  enterState(ticketNumber: number, stateName: string): Turn {
     const turn = new Turn();
-    Object.assign(turn, fields);
-    if (fields.toolCalls) {
-      turn.toolCalls = [...fields.toolCalls];
+    turn.ticketNumber = ticketNumber;
+    turn.flowState = stateName;
+    turn.state = "In Progress";
+    const behavior = this.workflow?.flowFile.states.find((s) => s.name === stateName);
+    if (behavior) {
+      turn.action = behavior.action ?? "";
+      turn.toolKeys = [...behavior.tools];
+      if (behavior.hil) {
+        turn.hilCheck = new HILCheck(behavior.prose);
+      }
+      if (behavior.judgeRubric) {
+        turn.judgeCheckpoint = new JudgeCheckpoint(behavior.judgeRubric);
+      }
     }
-    turn.state = "Backlog";
     this.turns.push(turn);
     return turn;
   }
 
-  editTurn(turn: Turn, fields: Partial<Turn>): Turn {
-    Object.assign(turn, fields);
-    return turn;
-  }
-
-  deleteTurn(turn: Turn): void {
-    this.turns = this.turns.filter((t) => t !== turn);
+  finishPlan(): void {
+    this.finished = true;
+    this.tickets = [];
   }
 }
 
-/** Prebaked small-work Workflow Turns (Bdd only — Plan does not inject CE). */
-const SMALL_WORK_TURNS: Array<Partial<Turn>> = [
+/** Prebaked small-work Workflow states (Bdd only — Plan does not inject CE). */
+const SMALL_WORK_STATES: Array<Partial<FlowState> & { name: string }> = [
   {
+    name: "Root Cause",
     action: "Generate",
-    fidelity: "behavior",
-    format: "markdown",
-    context: "root-cause",
-    toolKeys: ["context_tools.bdd.bdd:Bdd"],
+    tools: ["context_tools.bdd.bdd:Bdd"],
+    prose: "root-cause",
   },
   {
+    name: "Fix",
     action: "Generate",
-    fidelity: "scenarios",
-    format: "markdown",
-    context: "fix-one-issue",
-    toolKeys: ["context_tools.bdd.bdd:Bdd"],
+    tools: ["context_tools.bdd.bdd:Bdd"],
+    prose: "fix-one-issue",
   },
 ];
 
 export class PlanCommands {
-  smallWork(workspace: Workspace, context: string): Plan {
+  smallWork(workspace: Workspace, context: string, tickets: number[] = []): Plan {
     const workflow = new Workflow("small-work");
-    const plan = new Plan("small-work", workflow);
-    workspace.associate(plan);
-    for (const template of SMALL_WORK_TURNS) {
-      const turn = plan.addTurn(template);
-      turn.context = [template.context, context].filter(Boolean).join(" ").trim();
+    for (const template of SMALL_WORK_STATES) {
+      const { name, ...fields } = template;
+      workflow.flowFile.configureState(name, {
+        ...fields,
+        prose: [fields.prose, context].filter(Boolean).join(" ").trim(),
+      });
     }
+    const plan = new Plan("small-work", workflow);
+    plan.setTickets(tickets);
+    workspace.associate(plan);
     return plan;
   }
 
-  plan(workspace: Workspace, workflowName: string, context = ""): Plan {
+  plan(
+    workspace: Workspace,
+    workflowName: string,
+    tickets: number[] = [],
+  ): Plan {
     const workflow = new Workflow(workflowName);
     const plan = new Plan(workflowName, workflow);
+    plan.setTickets(tickets);
     workspace.associate(plan);
-    if (context) {
-      plan.addTurn({ action: "Generate", context });
-    }
     return plan;
+  }
+
+  startTicket(plan: Plan, flow: string, number: number): Turn {
+    if (!plan.tickets.includes(number)) {
+      plan.tickets.push(number);
+    }
+    plan.workflowName = flow || plan.workflowName;
+    const first =
+      plan.workflow?.flowFile.states[0]?.name ?? "In Progress";
+    if (!flow) {
+      const turn = new Turn();
+      turn.ticketNumber = number;
+      turn.flowState = null;
+      turn.state = "In Progress";
+      plan.turns.push(turn);
+      return turn;
+    }
+    return plan.enterState(number, first);
   }
 }
 

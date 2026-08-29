@@ -1,42 +1,20 @@
-﻿[
-    {
-        "prompt":  "Source: utilities/swarm/.context/grill-answers.md ticks 14-33 (later ticks correct 14). Existing files under utilities/swarm/.context/ (story-map.md, plan-and-swarm-sketch.md, thin-slicing.md, scenarios/, module-context.md) plus plan/workflow/git module-context. DELTAS ONLY — update those files; do not invent a parallel tree or planned-turn list. Locked model: Workflow = states on its own GitHub Project; Plan = that flow + tickets; no planned turns; FIFO default and agent may batch; move off project 1 inbox onto the flow board creates a real Turn; per-state behavior in workflow/flows/{name}.yaml (tools, one action, utilities, prose, optional hil/judge, owner+number); columns stay on GitHub; /start-ticket /small-work 14 starts #14 on that board; unnamed start stays inbox In Progress; harness must put Projects in prompts; flow-done cards stay on the flow board until operator /finish-plan (close issues, session); throwaway yaml+temp Project deleted on /finish-plan; saved Project stays. Kit + board only. Judge the markdown (and later code) against that grill scope; missing nodes from the lock are a fail. Job 2 of 3: generate Stories scenarios and CleanEngineering model. Deltas only on existing scenario files and the CE model.",
-        "tools":  [
-                      {
-                          "toolset":  "context_tools.stories.stories:Stories",
-                          "context":  {
-                                          "fidelity":  "scenarios"
-                                      }
-                      },
-                      {
-                          "toolset":  "context_tools.clean_engineering.clean_engineering:CleanEngineering",
-                          "context":  {
-                                          "fidelity":  "model"
-                                      }
-                      }
-                  ],
-        "actions":  [
-                        "generate.generate:Generate"
-                    ]
-    },
-    {
-        "prompt":  "Source: utilities/swarm/.context/grill-answers.md ticks 14-33 (later ticks correct 14). Existing files under utilities/swarm/.context/ (story-map.md, plan-and-swarm-sketch.md, thin-slicing.md, scenarios/, module-context.md) plus plan/workflow/git module-context. DELTAS ONLY — update those files; do not invent a parallel tree or planned-turn list. Locked model: Workflow = states on its own GitHub Project; Plan = that flow + tickets; no planned turns; FIFO default and agent may batch; move off project 1 inbox onto the flow board creates a real Turn; per-state behavior in workflow/flows/{name}.yaml (tools, one action, utilities, prose, optional hil/judge, owner+number); columns stay on GitHub; /start-ticket /small-work 14 starts #14 on that board; unnamed start stays inbox In Progress; harness must put Projects in prompts; flow-done cards stay on the flow board until operator /finish-plan (close issues, session); throwaway yaml+temp Project deleted on /finish-plan; saved Project stays. Kit + board only. Judge the markdown (and later code) against that grill scope; missing nodes from the lock are a fail. Job 3 of 3: generate Stories acceptance_tests and CleanEngineering code. Deltas only on existing tests and code.",
-        "tools":  [
-                      {
-                          "toolset":  "context_tools.stories.stories:Stories",
-                          "context":  {
-                                          "fidelity":  "acceptance_tests"
-                                      }
-                      },
-                      {
-                          "toolset":  "context_tools.clean_engineering.clean_engineering:CleanEngineering",
-                          "context":  {
-                                          "fidelity":  "code"
-                                      }
-                      }
-                  ],
-        "actions":  [
-                        "generate.generate:Generate"
-                    ]
-    }
-]
+﻿{
+    "prompt":  "Source: utilities/swarm/.context/grill-answers.md ticks 14-33 (later ticks correct 14). Existing files under utilities/swarm/.context/ (story-map.md, plan-and-swarm-sketch.md, thin-slicing.md, scenarios/, module-context.md) plus plan/workflow/git module-context. DELTAS ONLY — update those files; do not invent a parallel tree or planned-turn list. Locked model: Workflow = states on its own GitHub Project; Plan = that flow + tickets; no planned turns; FIFO default and agent may batch; move off project 1 inbox onto the flow board creates a real Turn; per-state behavior in workflow/flows/{name}.yaml (tools, one action, utilities, prose, optional hil/judge, owner+number); columns stay on GitHub; /start-ticket /small-work 14 starts #14 on that board; unnamed start stays inbox In Progress; harness must put Projects in prompts; flow-done cards stay on the flow board until operator /finish-plan (close issues, session); throwaway yaml+temp Project deleted on /finish-plan; saved Project stays. Kit + board only. Judge the markdown (and later code) against that grill scope; missing nodes from the lock are a fail. Job 3 of 3: generate Stories acceptance_tests and CleanEngineering code. Deltas only on existing tests and code.",
+    "tools":  [
+                  {
+                      "toolset":  "context_tools.stories.stories:Stories",
+                      "context":  {
+                                      "fidelity":  "acceptance_tests"
+                                  }
+                  },
+                  {
+                      "toolset":  "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+                      "context":  {
+                                      "fidelity":  "code"
+                                  }
+                  }
+              ],
+    "actions":  [
+                    "generate.generate:Generate"
+                ]
+}

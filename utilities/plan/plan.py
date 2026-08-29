@@ -121,7 +121,7 @@ _PREBAKED_WORKFLOWS: dict[str, list[TurnTemplate]] = {
 
 
 class Plan:
-    """Plan front-end to git, based on a reusable or newly named Workflow."""
+    """Plan front-end to git: Workflow + tickets (no planned-turn list)."""
 
     def __init__(self, seed: PlanSeed) -> None:
         self._attachments = seed.attachments
@@ -129,8 +129,10 @@ class Plan:
         self._workspace = seed.workspace
         self._workflow = seed.workflow
         self._workflow_name = seed.workflow_name
-        self._turns: list[Turn] = []
+        self._tickets: list[int] = []
+        self._turns: list[Turn] = []  # runtime only — created when a ticket enters a state
         self._work_session: WorkSession | None = None
+        self._finished = False
 
     @property
     def name(self) -> str:
@@ -145,8 +147,21 @@ class Plan:
         return self._workflow_name
 
     @property
+    def tickets(self) -> list[int]:
+        return list(self._tickets)
+
+    @tickets.setter
+    def tickets(self, numbers: list[int]) -> None:
+        self._tickets = list(numbers)
+
+    @property
     def turns(self) -> list[Turn]:
+        """Runtime turns created by flow moves — not a planned-turn list."""
         return list(self._turns)
+
+    @property
+    def finished(self) -> bool:
+        return self._finished
 
     @property
     def work_session(self) -> WorkSession | None:
@@ -168,7 +183,7 @@ class Plan:
 
     @classmethod
     def from_workflow(cls, seed: PlanSeed) -> Plan:
-        """Build a Plan on a reusable Workflow; load prebaked Turns when named."""
+        """Build a Plan on a reusable Workflow (tickets set by caller; no planned-turn list)."""
         if not seed.name:
             seed = PlanSeed(
                 workspace=seed.workspace,
@@ -177,9 +192,7 @@ class Plan:
                 workflow=seed.workflow,
                 workflow_name=seed.workflow_name,
             )
-        plan = cls.create(seed)
-        plan._load_prebaked_turns(seed.workflow_name)
-        return plan
+        return cls.create(seed)
 
     @staticmethod
     def _register_on_workspace(plan: Plan) -> None:
@@ -192,7 +205,29 @@ class Plan:
             plans = workspace.plans
         plans.append(plan)
 
+    def start_ticket(self, flow: str, number: int) -> Turn:
+        """Move ticket onto named flow (or inbox In Progress if flow is empty). Creates a Turn."""
+        if number not in self._tickets:
+            self._tickets.append(number)
+        if flow:
+            self._workflow_name = flow
+        turn = Turn(work_session=self._work_session)
+        turn.action = "start_ticket"
+        setattr(turn, "ticket_number", number)
+        setattr(turn, "flow_state", "In Progress" if not flow else "first")
+        turn.state = TicketState.IN_PROGRESS  # type: ignore[attr-defined]
+        self._turns.append(turn)
+        if self._work_session is not None:
+            self._work_session.open_turn = turn
+        return turn
+
+    def finish_plan(self) -> None:
+        """Operator gate: tickets return to inbox; throwaway workflow cleanup is Workflow's job."""
+        self._finished = True
+        self._tickets = []
+
     def add_turn(self, turn: Turn | None = None, **fields: Any) -> Turn:
+        """Deprecated for composition — prefer start_ticket / state entry. Kept for runtime append."""
         if turn is None:
             turn = Turn(work_session=None)
         for field_name, field_value in fields.items():

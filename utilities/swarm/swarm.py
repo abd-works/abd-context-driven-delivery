@@ -1,6 +1,6 @@
 # @toolset-manifest python -m tools manifest swarm.swarm:Swarm
 # Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-"""Swarm — Supervisor + Agents on a shared Plan turn slice; CliAgent is the worker."""
+"""Swarm — Supervisor + Agents on a shared flow/ticket slice; CliAgent is the worker."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -72,14 +72,21 @@ class Agent(CliAgent):
     def start_plan(
         self,
         workspace: Workspace,
-        swarm_turns: list[Turn],
+        swarm_tickets: list[int] | None = None,
         *,
         plan_work_session: WorkSession | None = None,
         tools: list[object] | None = None,
         actions: list[object] | None = None,
+        swarm_turns: list[Turn] | None = None,
     ) -> WorkSession:
+        """Run the shared flow/ticket slice on this Agent WorkSession (no planned-turn list)."""
         session = self._open_agent_session(workspace, plan_work_session)
-        self._bind_first_turn(session, swarm_turns)
+        tickets = list(swarm_tickets or [])
+        if not tickets and swarm_turns:
+            # legacy test shim — prefer swarm_tickets
+            self._bind_first_turn(session, swarm_turns)
+        elif self._plan is not None and tickets:
+            self._plan.tickets = list(tickets)  # type: ignore[attr-defined]
         self.launch_sessions(tools=tools or [], actions=actions)
         return session
 
@@ -228,11 +235,12 @@ class Supervisor:
 
 @agentic_toolset
 class Swarm:
-    """Plan plus shared turns slice, Supervisor, and Agents. Front-end to git."""
+    """Plan plus shared flow/ticket slice, Supervisor, and Agents. Front-end to git."""
 
     def __init__(self, plan: Plan | None = None) -> None:
         self._plan = plan
-        self._turns: list[Turn] = []
+        self._tickets: list[int] = []
+        self._turns: list[Turn] = []  # runtime Turns created by state entry — not planned
         self._supervisor: Supervisor | None = None
         self._agents: list[Agent] = []
 
@@ -241,7 +249,12 @@ class Swarm:
         return self._plan
 
     @property
+    def tickets(self) -> list[int]:
+        return list(self._tickets)
+
+    @property
     def turns(self) -> list[Turn]:
+        """Runtime turns only; prefer tickets for the shared slice."""
         return self._turns
 
     @property
@@ -257,7 +270,15 @@ class Swarm:
         self._supervisor = supervisor
         return supervisor
 
+    def select_tickets(self, tickets: list[int]) -> list[int]:
+        """Select the shared flow/ticket slice once (no planned-turn list)."""
+        self._tickets = list(tickets)
+        if self._plan is not None:
+            self._plan.tickets = list(tickets)  # type: ignore[attr-defined]
+        return list(self._tickets)
+
     def select_turns(self, turns: list[Turn]) -> list[Turn]:
+        """Deprecated — use select_tickets. Kept as empty runtime list setter for old callers."""
         self._turns = list(turns)
         return list(self._turns)
 

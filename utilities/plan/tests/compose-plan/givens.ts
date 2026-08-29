@@ -1,5 +1,5 @@
 /**
- * Shared givens for Compose Plan acceptance tests (/plan /small-work).
+ * Shared givens for Compose Plan acceptance tests (flow + tickets).
  */
 
 import {
@@ -40,15 +40,14 @@ export function aWorkspaceWithWorkflow(
   world.workspace.associate(world.plan);
 }
 
-export function aPlanWithGenerateTurn(world: ComposeWorld): void {
+export function aPlanWithTicketOnFix(world: ComposeWorld): void {
   if (!world.plan) {
-    world.plan = world.commands.plan(world.workspace, "compose-judged-plan");
+    world.plan = world.commands.plan(world.workspace, "compose-judged-plan", [14]);
   }
-  world.turn = world.plan.addTurn({
+  world.plan.workflow!.flowFile.configureState("Fix", {
     action: "generate",
-    fidelity: "story_map",
-    context: "plan-and-swarm-utilities-23",
-    toolKeys: ["Stories"],
-    toolCalls: [new ToolCall("Stories", "generate")],
+    tools: ["Stories"],
   });
+  world.turn = world.plan.enterState(14, "Fix");
+  world.turn.toolCalls = [new ToolCall("Stories", "generate")];
 }

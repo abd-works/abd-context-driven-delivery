@@ -1,12 +1,10 @@
 /**
- * Acceptance: Manage Judge Checkpoints (back-end).
- * Sources: plan-and-swarm-sketch.md; manage-judge-checkpoints.md
+ * Acceptance: Manage Judge Checkpoints (back-end) — judge rubric on flow states.
+ * Sources: grill-answers.md tick 28
  */
 
 import { story, scenario, expect } from "../../story-test";
-import { HILCheck, ToolCall } from "../../domain/plan/plan";
 import {
-  aPlanWithGenerateTurn,
   aWorkspaceWithWorkflow,
   freshWorld,
   ComposeWorld,
@@ -15,94 +13,35 @@ import {
 const world: ComposeWorld = freshWorld();
 
 story("Manage Judge Checkpoints", () => {
-  scenario("Add a Judge Checkpoint", ({ given, when, then }) => {
-    given("a Plan with a Turn Stories generate story_map", () => {
+  scenario("State rubric attaches JudgeCheckpoint on enter", ({ given, when, then }) => {
+    given("flow file state Fix includes judge rubric small-work-fix", () => {
       Object.assign(world, freshWorld());
-      aWorkspaceWithWorkflow(world, "compose-judged-plan");
-      aPlanWithGenerateTurn(world);
-    });
-    when("the operator adds a JudgeCheckpoint against rubric stories-scenarios", () => {
-      world.attachments.addJudge(world.turn!, "stories-scenarios");
-    });
-    then("that Turn has the JudgeCheckpoint", () => {
-      expect(world.turn?.judgeCheckpoint).not.toBeNull();
-    })
-      .and("that JudgeCheckpoint rubric is stories-scenarios", () => {
-        expect(world.turn?.judgeCheckpoint?.rubric).toBe("stories-scenarios");
-      })
-      .and("the Plan still has that one Turn", () => {
-        expect(world.plan?.turns.length).toBe(1);
-      });
-  });
-
-  scenario("Later Turn can have its own Judge Checkpoint", ({ given, when, then }) => {
-    given("a Turn that already has JudgeCheckpoint stories-scenarios and a later Turn", () => {
-      Object.assign(world, freshWorld());
-      aWorkspaceWithWorkflow(world, "compose-judged-plan");
-      aPlanWithGenerateTurn(world);
-      world.attachments.addJudge(world.turn!, "stories-scenarios");
-      world.plan!.addTurn({
-        action: "generate",
-        fidelity: "modules",
-        toolKeys: ["CleanEngineering"],
-        toolCalls: [new ToolCall("CleanEngineering", "generate")],
+      aWorkspaceWithWorkflow(world, "small-work");
+      world.plan!.workflow!.flowFile.configureState("Fix", {
+        judgeRubric: "small-work-fix",
       });
     });
-    when("the operator adds a JudgeCheckpoint to the later Turn against rubric plan-modules", () => {
-      const later = world.plan!.turns[1];
-      world.attachments.addJudge(later, "plan-modules");
+    when("ticket 14 enters Fix", () => {
+      world.turn = world.plan!.enterState(14, "Fix");
     });
-    then("the first Turn still has stories-scenarios", () => {
-      expect(world.plan?.turns[0].judgeCheckpoint?.rubric).toBe("stories-scenarios");
-    }).and("the later Turn has plan-modules", () => {
-      expect(world.plan?.turns[1].judgeCheckpoint?.rubric).toBe("plan-modules");
+    then("the created Turn has a JudgeCheckpoint against small-work-fix", () => {
+      expect(world.turn?.judgeCheckpoint?.rubric).toBe("small-work-fix");
     });
   });
 
-  scenario("Edit a Judge Checkpoint", ({ given, when, then }) => {
-    given("a Turn with JudgeCheckpoint stories-scenarios", () => {
+  scenario("No rubric means no judge on that state", ({ given, when, then }) => {
+    given("state Root Cause has no judge rubric", () => {
       Object.assign(world, freshWorld());
-      aWorkspaceWithWorkflow(world, "compose-judged-plan");
-      aPlanWithGenerateTurn(world);
-      world.attachments.addJudge(world.turn!, "stories-scenarios");
+      aWorkspaceWithWorkflow(world, "small-work");
+      world.plan!.workflow!.flowFile.configureState("Root Cause", {
+        action: "Generate",
+      });
     });
-    when("the operator edits that JudgeCheckpoint rubric to stories-validate", () => {
-      world.attachments.editJudge(world.turn!, "stories-validate");
+    when("ticket 14 enters Root Cause", () => {
+      world.turn = world.plan!.enterState(14, "Root Cause");
     });
-    then("that Turn JudgeCheckpoint rubric is stories-validate", () => {
-      expect(world.turn?.judgeCheckpoint?.rubric).toBe("stories-validate");
-    });
-  });
-
-  scenario("Delete a Judge Checkpoint", ({ given, when, then }) => {
-    given("a Turn with a JudgeCheckpoint", () => {
-      Object.assign(world, freshWorld());
-      aWorkspaceWithWorkflow(world, "compose-judged-plan");
-      aPlanWithGenerateTurn(world);
-      world.attachments.addJudge(world.turn!, "stories-scenarios");
-    });
-    when("the operator deletes that JudgeCheckpoint", () => {
-      world.attachments.deleteJudge(world.turn!);
-    });
-    then("that Turn has no JudgeCheckpoint", () => {
+    then("the created Turn has no JudgeCheckpoint", () => {
       expect(world.turn?.judgeCheckpoint).toBeNull();
-    });
-  });
-
-  scenario("Judge Checkpoint stays when a HIL Check is added", ({ given, when, then }) => {
-    given("a Turn that already has a JudgeCheckpoint", () => {
-      Object.assign(world, freshWorld());
-      aWorkspaceWithWorkflow(world, "compose-judged-plan");
-      aPlanWithGenerateTurn(world);
-      world.attachments.addJudge(world.turn!, "stories-scenarios");
-    });
-    when("the operator adds a HILCheck to that Turn", () => {
-      world.attachments.addHil(world.turn!, new HILCheck("human ok"));
-    });
-    then("that Turn has the JudgeCheckpoint", () => {
-      expect(world.turn?.judgeCheckpoint?.rubric).toBe("stories-scenarios");
-    }).and("that Turn has the HILCheck", () => {
-      expect(world.turn?.hilCheck?.validation).toBe("human ok");
     });
   });
 });
