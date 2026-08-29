@@ -15,17 +15,33 @@ from context_tools.stories.story_model.story_map import StoryMap
 from context_tools.stories.code.step_body import case_body_is_stub, unimplemented_steps_typescript
 from context_tools.stories.story_model.test_file import Language, Test, TestCase, TestSuite, Tier, extract_bug_id
 
-_DESCRIBE = re.compile(r"\bdescribe\s*\(\s*[\"'`](?P<title>[^\"'`]+)[\"'`]")
-_IT = re.compile(r"\b(it|test)\s*\(\s*[\"'`](?P<title>[^\"'`]+)[\"'`]")
+_DESCRIBE = re.compile(
+    r"\b(?:describe|story)\s*\(\s*[\"'`](?P<title>[^\"'`]+)[\"'`]"
+)
+_IT = re.compile(
+    r"\b(?:it|test|then|\.and)\s*\(\s*[\"'`](?P<title>[^\"'`]+)[\"'`]"
+)
 _EXPECT = re.compile(r"\bexpect\s*\(")
-_TIER = re.compile(r"-(?P<tier>[a-z][a-z0-9]{0,20})\.(?:test|spec)\.(?:ts|tsx)$")
+_SCENARIO = re.compile(r"\bscenario\s*\(\s*[\"'`](?P<title>[^\"'`]+)[\"'`]")
+_TIER_TEST = re.compile(r"-(?P<tier>[a-z][a-z0-9-]{0,20})\.(?:test|spec)\.(?:ts|tsx)$")
+_TIER_SEAM = re.compile(r"\.(?P<tier>[a-z][a-z0-9-]{0,20})\.(?:ts|tsx)$")
 _GLOBS = (
     "**/tests/**/*.test.ts",
     "**/tests/**/*.test.tsx",
     "**/tests/**/*.spec.ts",
+    "**/tests/**/*.front-end.ts",
+    "**/tests/**/*.back-end.ts",
+    "**/tests/**/*.domain.ts",
+    "**/tests/**/*.server.ts",
+    "**/tests/**/*.client.ts",
     "tests/**/*.test.ts",
     "tests/**/*.test.tsx",
     "tests/**/*.spec.ts",
+    "tests/**/*.front-end.ts",
+    "tests/**/*.back-end.ts",
+    "tests/**/*.domain.ts",
+    "tests/**/*.server.ts",
+    "tests/**/*.client.ts",
     "*.test.ts",
 )
 
@@ -78,12 +94,26 @@ class TypeScriptStoryMap(StoryMap):
         rel = str(path.relative_to(root)).replace("\\", "/")
         tier = cls._tier(path.name)
         describe = m.group("title").strip() if (m := _DESCRIBE.search(text)) else ""
+        scenario_spans: list[tuple[int, str]] = [
+            (m.start(), m.group("title").strip()) for m in _SCENARIO.finditer(text)
+        ]
+
+        def _scenario_at(offset: int) -> str:
+            name = ""
+            for start, title in scenario_spans:
+                if start <= offset:
+                    name = title
+                else:
+                    break
+            return name
+
         cases: List[TestCase] = []
         for it in _IT.finditer(text):
             offset = it.start()
             body = text[offset: offset + 800]
             title = it.group("title").strip()
             assertions = len(_EXPECT.findall(body))
+            covered = _scenario_at(offset) or title
             cases.append(TestCase(
                 tier=tier, name=title,
                 tests=[Test()], assertions_count=assertions,
@@ -91,7 +121,7 @@ class TypeScriptStoryMap(StoryMap):
                 has_unimplemented_body=case_body_is_stub(body),
                 references_bug_id=extract_bug_id(body),
                 story_source=SourceLocation(rel, text.count("\n", 0, offset) + 1),
-                covers_scenario=title,
+                covers_scenario=covered,
             ))
         return TestSuite(
             tier=tier, language=Language("ts"),
@@ -103,8 +133,16 @@ class TypeScriptStoryMap(StoryMap):
 
     @staticmethod
     def _tier(name: str) -> Tier:
-        m = _TIER.search(name)
-        return Tier(m.group("tier")) if m else Tier("")
+        m = _TIER_TEST.search(name)
+        if m:
+            return Tier(m.group("tier"))
+        # Acceptance layout: `{story}.{tier}.ts` (no .test / .spec infix).
+        if name in {"story-test.ts", "givens.ts"} or name.startswith("story-test."):
+            return Tier("")
+        m = _TIER_SEAM.search(name)
+        if m and m.group("tier") not in {"ts", "tsx"}:
+            return Tier(m.group("tier"))
+        return Tier("")
 
     @staticmethod
     def _imports_real(text: str) -> bool:

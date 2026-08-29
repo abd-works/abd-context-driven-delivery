@@ -1,0 +1,54 @@
+/**
+ * Shared givens for Compose Plan acceptance tests (/plan /small-work).
+ */
+
+import {
+  Plan,
+  PlanCommands,
+  Turn,
+  TurnAttachments,
+  Workspace,
+  Workflow,
+  ToolCall,
+} from "../../../domain/plan/plan";
+
+export type ComposeWorld = {
+  workspace: Workspace;
+  commands: PlanCommands;
+  attachments: TurnAttachments;
+  plan: Plan | null;
+  turn: Turn | null;
+  secondPlan: Plan | null;
+};
+
+export function freshWorld(): ComposeWorld {
+  return {
+    workspace: new Workspace(),
+    commands: new PlanCommands(),
+    attachments: new TurnAttachments(),
+    plan: null,
+    turn: null,
+    secondPlan: null,
+  };
+}
+
+export function aWorkspaceWithWorkflow(
+  world: ComposeWorld,
+  workflowName: string,
+): void {
+  world.plan = new Plan(workflowName, new Workflow(workflowName));
+  world.workspace.associate(world.plan);
+}
+
+export function aPlanWithGenerateTurn(world: ComposeWorld): void {
+  if (!world.plan) {
+    world.plan = world.commands.plan(world.workspace, "compose-judged-plan");
+  }
+  world.turn = world.plan.addTurn({
+    action: "generate",
+    fidelity: "story_map",
+    context: "plan-and-swarm-utilities-23",
+    toolKeys: ["Stories"],
+    toolCalls: [new ToolCall("Stories", "generate")],
+  });
+}
