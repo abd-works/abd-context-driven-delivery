@@ -27,7 +27,7 @@
       "status": "pending"
     },
     {
-      "ref": "Duplicate doer spawned when NOT TAKEN UP fires: launch_next has no guard to detect an already-running doer for the same session before opening a second console. Fix: check for a live doer process matching the session resume ID before spawning, and surface a clear status rather than a second window.",
+      "ref": "Duplicate doer spawned when NOT TAKEN UP fires: launch_next has no guard to detect an already-running doer for the same session before opening a second window. Fix: check for a live doer process matching the session resume ID before spawning, and surface a clear status rather than a second window.",
       "kind": "text",
       "status": "pending"
     }
