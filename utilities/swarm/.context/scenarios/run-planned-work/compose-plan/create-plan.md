@@ -10,33 +10,35 @@ format: md
 
 **Actor:** Practitioner
 
-**Sources / context:** `utilities/swarm/.context/story-map.md`; `utilities/plan/.context/module-context.md`; `utilities/workflow/.context/module-context.md`
+**Sources / context:** `utilities/swarm/.context/story-map.md`; `utilities/swarm/.context/grill-answers.md` ticks 14–16; `utilities/plan/.context/module-context.md`; `utilities/workflow/.context/module-context.md`
 
 ### Domain terms
 
-- *Plan* — front-end to git; based on a **Workflow**; associated with a **Workspace**
-- *Workflow* — reusable or newly named; Plan loads prebaked **Turn**s from it
+- *Plan* — a **Workflow** plus the ticket set (serial or parallel per Plan); no planned-turn list
+- *Workflow* — states on its own GitHub **Project**
 - *Workspace* — working folder; not the **Repo**
 
 ## Behaviors
 
-### Scenario: Plan is on the Workspace based on a Workflow
+### Scenario: Plan is Workflow plus tickets on the Workspace
 
-*Given* a **Workspace** and a **Workflow** *compose-judged-plan*  
-*When* the operator creates a **Plan** from that **Workflow**  
+*Given* a **Workspace** and saved **Workflow** *small-work*  
+*When* the operator creates a **Plan** from that **Workflow** with tickets *#14* and *#15*  
 *Then* that **Plan** is associated with that **Workspace**  
-  *And* that **Plan** is based on **Workflow** *compose-judged-plan*
+  *And* that **Plan** is based on **Workflow** *small-work*  
+  *And* that **Plan** names tickets *#14* and *#15*  
+  *And* that **Plan** holds no planned ticket×state turn list
 
 ### Scenario: Second Plan is its own Plan
 
-*Given* a **Workspace** that already has a **Plan** *compose-judged-plan*  
-*When* the operator creates a **Plan** *ticket-flow-plan* based on a **Workflow**  
+*Given* a **Workspace** that already has a **Plan** *small-work-theme*  
+*When* the operator creates a **Plan** *hotfix-batch* based on a **Workflow** with its own tickets  
 *Then* that **Workspace** has both **Plan**s  
-  *And* each **Plan** holds its own **Turn**s
+  *And* each **Plan** names its own **Workflow** and tickets
 
 ### Evidence
 
 | Scenario | Source | Location |
 | --- | --- | --- |
-| Plan is on the Workspace based on a Workflow | story-map.md | Compose Plan / Create Plan |
-| Second Plan is its own Plan | plan-and-swarm-sketch.md | Compose Plan / Create Plan |
+| Plan is Workflow plus tickets on the Workspace | grill-answers.md | ticks 14–16 |
+| Second Plan is its own Plan | story-map.md | Compose Plan / Create Plan |

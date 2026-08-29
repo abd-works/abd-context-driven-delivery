@@ -10,36 +10,34 @@ format: md
 
 **Actor:** Practitioner
 
-**Sources / context:** `utilities/swarm/.context/plan-and-swarm-sketch.md`; `utilities/plan/.context/module-context.md`
+**Sources / context:** `utilities/swarm/.context/story-map.md`; `utilities/swarm/.context/grill-answers.md` ticks 15–16, 22; `utilities/workspace/.context/module-context.md`
 
 ### Domain terms
 
-- *Plan.executeTurn* — runs the In Progress **Turn** via **Turn.performTurn**
-- *Turn* — holds **action**, **fidelity**, **result**, **toolCalls**
+- *Turn* — one ticket going through one flow state; created when the ticket enters that state; work + commit
+- *State behavior* — tools / one action / utilities / prose from `workflow/flows/{name}.yaml` for that state
 
 ## Behaviors
 
-### Scenario: Execute runs the In Progress Turn
+### Scenario: Entering a state runs that state’s behavior on the Turn
 
-*Given* a **Plan** with a **WorkSession** already open  
-  *And* the *Stories* **Turn** **TicketState** is *In Progress*  
-*When* the operator executes that **Turn**  
-*Then* that **WorkSession** openTurn is that **Turn**  
-  *And* that **Turn** runs **performTurn**  
-  *And* that **Turn** action is *generate*  
-  *And* that **Turn** fidelity is *story_map*  
-  *And* that **Turn** holds **result**  
-  *And* that **Turn** holds **toolCalls**
+*Given* **Ticket** *#14* just entered state *Fix* on **Project** *small-work-board*  
+  *And* that state yaml lists action *generate* and tool *Bdd*  
+*When* the CLI opens the hanging **Turn** and runs that action  
+*Then* that **Turn** runs *Bdd* with action *generate*  
+  *And* finishing the **Turn** commits the work for **Ticket** *#14* in state *Fix*
 
-### Scenario: Execute leaves TicketState In Progress
+### Scenario: CliAgent does not open the Turn
 
-*Given* that **Turn** already holds **result**  
-*When* the operator reviews that **Turn** **TicketState**  
-*Then* that **Turn** **TicketState** is *In Progress*
+*Given* a hanging **Turn** for **Ticket** *#14* in state *Fix*  
+*When* **CliAgent** describes that **Turn**  
+*Then* **CliAgent** shows the action and tool_keys from the state yaml  
+  *And* **CliAgent** does not open that **Turn**  
+  *And* the CLI opens and finishes it
 
 ### Evidence
 
 | Scenario | Source | Location |
 | --- | --- | --- |
-| Execute runs the In Progress Turn | plan-and-swarm-sketch.md | Execute Plan / Execute Turn |
-| Execute leaves TicketState In Progress | plan-and-swarm-sketch.md | Execute Plan / Execute Turn |
+| Entering a state runs that state’s behavior on the Turn | grill-answers.md | ticks 15–16, 22 |
+| CliAgent does not open the Turn | grill-answers.md | tick 13 |

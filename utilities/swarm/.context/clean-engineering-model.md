@@ -14,28 +14,30 @@ format: md
 
 *Git* is the store. *Plan*, *Swarm*, and *Workflow* are front-ends to *Repo* / *Project* / *Ticket*. *Workspace* is the working folder; *Repo* is the backend — not the same. Never treat git root as workspace.
 
-*Plan* is based on a reusable *Workflow* or a new *Workflow* named on `/plan`. `/plan /small-work {context}` loads the prebaked *small-work* *Workflow* into a *Plan*. When `context` names a `theme:…`, *SmallWorkRunner* executes that theme's issues one at a time (thin context → Grill + HIL Grill; judge replies via `hil_reply`; then next issue; report when Done). *Plan* holds ordered *Turn*s. *Turn.state* is *TicketState* mapped to Project/Workflow columns — not a parallel store. *JudgeCheckpoint* and/or *HILCheck* hang on a *Turn*. *CliAgent* is the worker; when a *Turn* needs a judge, *CliAgent* doer-judge fills *JudgeCheckpoint.judgeResult*. *Plan* does not depend on *Bdd* or *CleanEngineering* (BDD owns CE companions).
+A *Workflow* is **states** on **its own GitHub Project** (one Project per Workflow). Project 1 is the **global inbox**. A *Plan* is that Workflow **plus** the ticket set — **no planned-turn list**. FIFO is the default; the agent may batch related tickets. Moving a ticket off the inbox onto a flow board / into a state **creates a real *Turn***. Per-state behavior lives in `workflow/flows/{name}.yaml` (tools, one action, utilities, prose, optional hil/judge, owner + project_number); columns stay on GitHub. `/start-ticket /small-work 14` starts #14 on that board; unnamed start stays inbox In Progress. Harness puts Projects into prompts. Flow-done cards stay on the flow board until `/finish-plan`. Throwaway yaml + temp Project deleted on `/finish-plan`; saved Project/yaml stay. Kit + board only — no GitHub Actions.
 
-*Start Plan* opens a *WorkSession*; the first Backlog Turn becomes In Progress. *Execute Turn* runs that Turn. *Advance Turn* finishes it (Done) and the next Backlog Turn becomes In Progress.
+*JudgeCheckpoint* and/or *HILCheck* hang on a *Turn* when the entered state marks them. *CliAgent* is the worker; doer-judge fills *judgeResult*. *Plan* does not depend on *Bdd* or *CleanEngineering* (BDD owns CE companions).
 
 *Swarm* *Agent* is a *CliAgent* under one *Hypothesis*. *Add Agent* registers; *CliAgent.launch_sessions* starts at *Plan.start* on that Agent’s *WorkSession*. *Supervisor.compare* reads *Turn* judge/HIL results and does not judge. *Comparative Association* updates automatically toward *Outcome*.
 
 ### plan
 
-- Front-end to git; based on a reusable or named *Workflow*
+- *Workflow* + ticket set (serial or parallel per Plan); no planned-turn list
 - `/plan` / `/plan /small-work {context}` load Workflow into Plan
+- `/start-ticket /{flow} N` / `/finish-plan`
 - *start* opens a *WorkSession*
 
 ### workflow
 
-- Front-end to git Project columns; reusable by name (*small-work* is prebaked)
-- *Plan* is based on *Workflow*
+- One GitHub *Project* per Workflow; Status columns are states
+- Behavior in `workflow/flows/{name}.yaml`; saved vs throwaway
+- *small-work* is a prebaked named Workflow
+- Kit reads/writes Status — no GitHub Actions
 
 ### turn
 
-- Existing *workspace.Turn*: one *action*; *tool_keys*; *toolCalls*; *fidelity*; *format*; *context*
-- *state* is *TicketState*: Project/Workflow Backlog / In Progress / Done
-- Optional *JudgeCheckpoint* and/or *HILCheck*
+- Existing *workspace.Turn*; created when a ticket enters a flow state
+- One *action*; *tool_keys*; *toolCalls*; optional *JudgeCheckpoint* and/or *HILCheck* from state yaml
 
 ### cliagent
 
@@ -53,7 +55,7 @@ format: md
 
 ### swarm
 
-- Front-end to git and *Plan*; *Supervisor* plus *Agent*s; shared *turns* once
+- Front-end to git and *Plan*; *Supervisor* plus *Agent*s; shared flow/ticket slice once
 
 ### supervisor
 
@@ -80,7 +82,7 @@ format: md
 
 ## Modules
 
-Build order: `git` | `workspace` | `cli_agent` → `plan` → `swarm` | `workflow`
+Build order: `git` | `workspace` | `cli_agent` → `workflow` → `plan` → `swarm`
 
 ---
 
@@ -135,18 +137,22 @@ name: str
 
 ## Project
 
-Project exposes named TicketState columns on the board.
+Project exposes named TicketState columns on the board. Project 1 is the global inbox; each Workflow has its own Project whose Status columns are that flow’s states.
 
 Project()
 ------
+owner: str
+number: int
 ----
 stateNamed(name: str): TicketState
+addTicket(ticket: Ticket): None
+removeTicket(ticket: Ticket): None
 
 ---
 
 # utilities/workspace
 
-- **Purpose:** Working folder aggregate (root is that folder). Owns WorkSessions and Turns. Not the git Repo.
+- **Purpose:** Working folder aggregate (root is that folder). Owns WorkSessions and Turns (created when a ticket enters a flow state). Not the git Repo.
 - **Seam (terms):** Workspace, WorkSession, Turn, ToolCall, Mistake, Correction, Repair, TicketState
 - **Dependencies (one-way):** `git`; consumed by `plan`, context tools
 
@@ -245,42 +251,31 @@ Repair()
 
 # utilities/plan
 
-- **Purpose:** Front-end to git. Plan is based on a reusable or named Workflow. `/plan /small-work` loads prebaked small-work Workflow. Turn.state maps to Project/Workflow columns. JudgeCheckpoint hangs on Turn (CliAgent doer-judge). No Bdd/CleanEngineering dependency.
-- **Seam (terms):** Plan, PlanExecution, TurnAttachments, TurnTemplate, JudgeCheckpoint, HILCheck, ProgressView
+- **Purpose:** Front-end to git. Plan = Workflow + tickets (no planned-turn list). `/start-ticket /{flow} N`; `/finish-plan`. FIFO default; agent may batch. JudgeCheckpoint/HILCheck hang on Turn when state yaml marks them (CliAgent doer-judge). No Bdd/CleanEngineering dependency.
+- **Seam (terms):** Plan, PlanExecution, TurnAttachments, JudgeCheckpoint, HILCheck, ProgressView
 - **Dependencies (one-way):** `workspace`, `git`, `workflow`
 
 ## Plan
 
-Plan is based on a Workflow; associated with a Workspace; holds ordered Turns.
+Plan is a Workflow plus a ticket set; associated with a Workspace. Turns are created by flow moves, not pre-listed.
 
 Plan()
 ------
 << association >> workspace: Workspace
 << association >> workflow: Workflow
 workflowName: str
-<< composition >> turns: list[Turn]
+tickets: list[Ticket]
 ----
 create(workspace: Workspace): Plan
-from_workflow(workspace: Workspace, workflow: Workflow, workflowName: str): Plan
+from_workflow(workspace: Workspace, workflow: Workflow, workflowName: str, tickets: list[Ticket]): Plan
 plan(workflow: str, context: str, workspace: str): dict
 small_work(context: str, workspace: str): dict
-
-## TurnTemplate
-
-TurnTemplate is one prebaked Turn shape on a named Workflow.
-
-TurnTemplate()
-------
-action: str
-fidelity: str
-format: str
-context: str
-tool_keys: list[str]
-----
+start_ticket(flow: str, number: int): Turn
+finish_plan(): None
 
 ## JudgeCheckpoint
 
-JudgeCheckpoint hangs on a Turn; CliAgent doer-judge fills judgeResult.
+JudgeCheckpoint hangs on a Turn when the entered state yaml includes a rubric; CliAgent doer-judge fills judgeResult.
 
 JudgeCheckpoint()
 ------
@@ -290,10 +285,11 @@ judgeResult: str | None
 
 ## HILCheck
 
-HILCheck is a human-in-the-loop check on a Turn.
+HILCheck hangs on a Turn when the entered state yaml marks hil.
 
 HILCheck()
 ------
+prompt: str | None
 validation: str | None
 ----
 
@@ -301,7 +297,7 @@ validation: str | None
 
 # utilities/cli_agent
 
-- **Purpose:** Interactive CLI worker and doer-judge for Plan and Swarm Agents.
+- **Purpose:** Interactive CLI worker and doer-judge for Plan and Swarm Agents. Keeps context across calls; may batch related tickets.
 - **Seam (terms):** CliAgent, IdeCli, CursorCli, VscodeCli
 - **Dependencies (one-way):** `sub_agent`, `workspace`
 
@@ -319,18 +315,18 @@ launch_sessions(tools: list, actions: list): str
 
 # utilities/swarm
 
-- **Purpose:** Front-end to git and Plan. Supervisor + CliAgent Agents on shared Swarm.turns. Compare reads Turn JudgeCheckpoint results; does not judge.
+- **Purpose:** Front-end to git and Plan. Supervisor + CliAgent Agents on a shared flow/ticket slice (not a planned-turn list). Compare reads Turn JudgeCheckpoint results; does not judge.
 - **Seam (terms):** Swarm, Supervisor, Agent, Hypothesis, Outcome
 - **Dependencies (one-way):** `plan`, `cli_agent`, `workspace`, `git`
 
 ## Swarm
 
-Swarm holds the Plan, the shared turns slice, Supervisor, and Agents.
+Swarm holds the Plan, the shared flow/ticket slice, Supervisor, and Agents.
 
 Swarm()
 ------
 << association >> plan: Plan
-<< association >> turns: list[Turn]
+tickets: list[Ticket]
 << composition >> supervisor: Supervisor | None
 << composition >> agents: list[Agent]
 ----
@@ -360,7 +356,7 @@ Agent()
 << association >> agentWorkSession: WorkSession | None
 << association >> ide: IdeCli
 ----
-start_plan(workspace: Workspace, swarm_turns: list[Turn]): WorkSession
+start_plan(workspace: Workspace): WorkSession
 launch_sessions(tools: list, actions: list): str
 
 ## Hypothesis
@@ -385,15 +381,52 @@ name: str
 
 # utilities/workflow
 
-- **Purpose:** Front-end to git Project columns (backlog / start / finish).
-- **Seam (terms):** Workflow
+- **Purpose:** Front-end to git — one Project per Workflow; per-state behavior in `workflow/flows/*.yaml`; kit reads/writes Status (no Actions).
+- **Seam (terms):** Workflow, FlowState, FlowFile
 - **Dependencies (one-way):** `git`, `workspace`
 
 ## Workflow
 
+Workflow owns one GitHub Project (states = Status columns) and a flow file for per-state behavior. Saved or throwaway.
+
 Workflow()
 ------
+name: str
+<< association >> project: Project | None
+throwaway: bool
 ----
-backlog(focus: str, context: str): dict
-start(ticket: str, instructions: str, workspace: str): dict
-finish(outcome: str, workspace: str): dict
+load(name: str): Workflow
+save(): FlowFile
+compose_throwaway(name: str): Workflow
+start_ticket(number: int): Turn
+advance(ticket: Ticket, state: str): Turn
+finish_plan(): None
+
+## FlowState
+
+FlowState is one Status column on the Workflow’s Project plus optional behavior from the flow file.
+
+FlowState()
+------
+name: str
+tools: list[str]
+action: str | None
+utilities: list[str]
+prose: str | None
+hil: bool
+judge_rubric: str | None
+----
+
+## FlowFile
+
+FlowFile is `workflow/flows/{name}.yaml`: name, optional owner + project_number, per-state behavior. Columns stay on GitHub.
+
+FlowFile()
+------
+name: str
+owner: str | None
+project_number: int | None
+<< composition >> states: list[FlowState]
+----
+write(): None
+delete(): None
