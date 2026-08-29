@@ -1,0 +1,41 @@
+[
+  {
+    "prompt": "GitHub issue #26 (abd-works/abd-context-driven-delivery). Board item is already provided \u2014 do not create a new backlog item.\n\nTriage the work. Two entry paths:\n\n1. A GitHub board item was provided or is implied: pull it from the project's default board.\n2. The user gave qualitative text describing a defect: first run /backlog to create the item on the board, then treat the newly created item as the ticket.\n\nImmediately decide: is this a defect? Do not do any further work before making this call.\n\n- NOT a defect (feature, improvement, or unclear): tell the parent you cannot continue and stop. Do not run start-ticket. Do not analyze.\n- IS a defect: run /start-ticket immediately to create the branch and session before doing anything else. Once start-ticket completes, stop this job \u2014 analysis is next.\n",
+    "tools": [
+      "workflow.workflow:Workflow"
+    ],
+    "judge": false
+  },
+  {
+    "prompt": "The ticket is confirmed as a defect and start-ticket has already been run. Now analyze:\n- Read all context files (.context/, module-context.md, grill-answers).\n- Analyze repo history for the area in question.\n- Search for similar past incidents and related issues.\n- Be thorough \u2014 do not stop at the surface.\n\nAdd your full analysis to the ticket notes under ## Analysis (separated from existing content).\n",
+    "tools": [
+      "workflow.workflow:Workflow"
+    ],
+    "judge": true,
+    "judge_criteria": "PASS only when: (1) context was read in full; (2) repo history and similar incidents were explored; (3) analysis was added to the ticket notes under ## Analysis.\n"
+  },
+  {
+    "prompt": "Diagnose the root cause of the defect. Go beyond symptoms \u2014 identify the exact underlying issue. If the root cause is unclear or ambiguous, use the /diagnose tool.\n\nAdd your diagnosis hypothesis to the ticket notes under ## Diagnosis (separated from the analysis above).\n",
+    "tools": [
+      "workflow.workflow:Workflow"
+    ],
+    "judge": true,
+    "judge_criteria": "PASS only when: (1) a concrete root cause hypothesis is stated; (2) the /diagnose tool was used if the cause was not obvious; (3) the hypothesis is in the ticket notes under ## Diagnosis.\n"
+  },
+  {
+    "prompt": "Write failing tests before writing any fix. You must produce: - A mechanical (vanilla BDD) test using /bdd.development if this is a code failure. - An agentic BDD test using /agent-bdd.development if there is an AI/agent failure\n  or if the mechanical failure was causing severe AI problems.\nDo not skip the agentic test when it applies ? err on the side of including it.\nThe failing test is a hard requirement ? write it first, run it, confirm it fails. You may alter existing tests or add new ones, but an explicit red test capturing the defect must exist before any fix is written.\n",
+    "actions": [
+      "context_tools.bdd.bdd:Bdd"
+    ],
+    "judge": true,
+    "judge_criteria": "PASS only when: (1) at least one failing test exists that captures the defect; (2) a mechanical BDD test is present for code failures; (3) an agentic BDD test is present when an AI/agent failure is involved; (4) tests were validated against the tools as normal.\n"
+  },
+  {
+    "prompt": "Fix the defect using /clean_engineering.code in small iterations. Work one small piece at a time ? fix just enough to make one or a few tests pass, then move to the next piece. Repeat until all BDD and agentic BDD tests are green. Run vanilla BDD first when you have both.\nBefore writing any code: - Explore all impacted codebases and the code they depend on. - Read module-context.md for every module you touch. - Study the existing idioms, patterns, and usage in detail. Do not invent new patterns or paradigms ? follow what is already there. A defect fix should not require new patterns.\n",
+    "actions": [
+      "context_tools.clean_engineering.clean_engineering:CleanEngineering"
+    ],
+    "judge": true,
+    "judge_criteria": "PASS only when: (1) all BDD tests pass; (2) all agentic BDD tests pass; (3) the fix follows existing patterns, paradigms, and usage ? no new patterns invented without strong justification; (4) validated against the tools as normal.\n"
+  }
+]
