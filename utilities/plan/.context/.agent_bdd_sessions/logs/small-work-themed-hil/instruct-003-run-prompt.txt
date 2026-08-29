@@ -1,0 +1,43 @@
+Using shell, run exactly: python -m tools run -
+Pipe this YAML on stdin:
+toolset: plan.plan:PlanCommands
+tool: small_work
+arguments:
+  context: theme:dummy-job2-agent
+  workspace: C:\dev\abd-cdd-plan-and-swarm-utilities-23\utilities\plan
+  issues:
+  - number: 101
+    title: 'Defect: rich enough'
+    body: '## Context
+
+      Crash on empty save.
+
+
+      ## Root cause
+
+      Null list.
+
+
+      ## Acceptance
+
+      Empty saves OK.
+
+      '
+    labels:
+    - theme:dummy-job2-agent
+    - bug
+  - number: 102
+    title: 'Defect: thin context'
+    body: fix it
+    labels:
+    - theme:dummy-job2-agent
+    - bug
+  - number: 103
+    title: 'Small change: thin tweak'
+    body: make greener
+    labels:
+    - theme:dummy-job2-agent
+    - enhancement
+Return the complete fenced YAML stdout from the CLI.
+
+IMPORTANT: Invoke python -m tools run via shell. Return the complete fenced YAML stdout from the CLI. Do not summarize.

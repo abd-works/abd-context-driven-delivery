@@ -14,7 +14,7 @@ format: md
 
 *Git* is the store. *Plan*, *Swarm*, and *Workflow* are front-ends to *Repo* / *Project* / *Ticket*. *Workspace* is the working folder; *Repo* is the backend — not the same. Never treat git root as workspace.
 
-*Plan* is based on a reusable *Workflow* or a new *Workflow* named on `/plan`. `/plan /small-work {context}` loads the prebaked *small-work* *Workflow* into a *Plan* without executing against issues. *Plan* holds ordered *Turn*s. *Turn.state* is *TicketState* mapped to Project/Workflow columns — not a parallel store. *JudgeCheckpoint* and/or *HILCheck* hang on a *Turn*. *CliAgent* is the worker; when a *Turn* needs a judge, *CliAgent* doer-judge fills *JudgeCheckpoint.judgeResult*. *Plan* does not depend on *Bdd* or *CleanEngineering* (BDD owns CE companions).
+*Plan* is based on a reusable *Workflow* or a new *Workflow* named on `/plan`. `/plan /small-work {context}` loads the prebaked *small-work* *Workflow* into a *Plan*. When `context` names a `theme:…`, *SmallWorkRunner* executes that theme's issues one at a time (thin context → Grill + HIL Grill; judge replies via `hil_reply`; then next issue; report when Done). *Plan* holds ordered *Turn*s. *Turn.state* is *TicketState* mapped to Project/Workflow columns — not a parallel store. *JudgeCheckpoint* and/or *HILCheck* hang on a *Turn*. *CliAgent* is the worker; when a *Turn* needs a judge, *CliAgent* doer-judge fills *JudgeCheckpoint.judgeResult*. *Plan* does not depend on *Bdd* or *CleanEngineering* (BDD owns CE companions).
 
 *Start Plan* opens a *WorkSession*; the first Backlog Turn becomes In Progress. *Execute Turn* runs that Turn. *Advance Turn* finishes it (Done) and the next Backlog Turn becomes In Progress.
 

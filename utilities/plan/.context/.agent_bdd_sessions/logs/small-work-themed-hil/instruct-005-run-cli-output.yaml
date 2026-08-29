@@ -1,0 +1,54 @@
+```yaml
+ok: true
+toolset: plan.plan:PlanCommands
+tool: small_work
+result:
+  status: done
+  theme: dummy-job2-agent
+  themed_source: theme:dummy-job2-agent
+  mixed_context: true
+  report:
+  - number: 101
+    title: 'Defect: rich enough'
+    outcome: done
+    context_enough: true
+    ticket_flow:
+    - Backlog
+    - In Progress
+    - Done
+  - number: 102
+    title: 'Defect: thin context'
+    outcome: hil_filled
+    context_enough: false
+    hil_reply_by: judge
+  - number: 102
+    title: 'Defect: thin context'
+    outcome: done
+    context_enough: true
+    ticket_flow:
+    - Backlog
+    - In Progress
+    - Done
+  - number: 103
+    title: 'Small change: thin tweak'
+    outcome: hil_filled
+    context_enough: false
+    hil_reply_by: judge
+  - number: 103
+    title: 'Small change: thin tweak'
+    outcome: done
+    context_enough: true
+    ticket_flow:
+    - Backlog
+    - In Progress
+    - Done
+  issues_done: 3
+  hil_interrupts: 2
+  plan: small-work
+  workflow: small-work
+  turns: 2
+  workspace: C:\dev\abd-cdd-plan-and-swarm-utilities-23\utilities\plan
+  context: theme:dummy-job2-agent
+resources:
+  mode: action
+```

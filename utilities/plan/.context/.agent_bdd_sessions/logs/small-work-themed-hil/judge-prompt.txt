@@ -1,0 +1,11 @@
+You are an AI judge.
+Evaluate OUTPUT against RUBRIC.
+Reply with ONLY one JSON object on one line - no markdown, no code fences, no commentary.
+The JSON must have keys verdict (PASS or FAIL) and reason (one sentence).
+
+--- RUBRIC ---
+PASS if the summary covers themed source, HIL or judge reply, next issue (or continuing after reply), and Done. FAIL only if one of those four ideas is clearly missing.
+
+--- OUTPUT ---
+The themed source was `theme:dummy-job2-agent` with mixed context across three issues: #101 had enough context and went Backlog→In Progress→Done; #102 and #103 each hit a HIL Grill interrupt where the judge (not the parent) replied via `hil_reply`, then the run continued to the next issue; the Done report shows `issues_done: 3` and `hil_interrupts: 2`.
+

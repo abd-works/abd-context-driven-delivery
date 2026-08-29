@@ -1,0 +1,1 @@
+Read `utilities/plan/.context/module-context.md` — Plan git front-end; `/plan /small-work` + `theme:…` → themed issues (enough → ticket flow; thin → Grill + judge HIL); seam types; deps: `workspace`, `git`, `workflow`.

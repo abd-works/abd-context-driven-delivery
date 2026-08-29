@@ -8,6 +8,8 @@ from plan.plan import (
     PlanExecution,
     PlanSeed,
     ProgressView,
+    SmallWorkRunner,
+    ThemedIssue,
     TurnAttachments,
     TurnTemplate,
 )
@@ -22,4 +24,6 @@ __all__ = [
     "JudgeCheckpoint",
     "HILCheck",
     "ProgressView",
+    "SmallWorkRunner",
+    "ThemedIssue",
 ]

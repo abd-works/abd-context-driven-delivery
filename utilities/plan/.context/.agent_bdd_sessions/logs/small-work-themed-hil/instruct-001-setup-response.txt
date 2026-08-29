@@ -1,0 +1,1 @@
+Read `utilities/plan/plan.py` (760 lines) — Plan, TurnAttachments, prebaked `small-work`, `SmallWorkRunner`, `PlanCommands`, and `PlanExecution`; pipe fences to `python -m tools run -`, do not remanifest from this source.

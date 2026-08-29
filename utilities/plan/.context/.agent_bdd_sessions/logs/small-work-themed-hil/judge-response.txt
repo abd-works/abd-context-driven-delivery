@@ -1,0 +1,1 @@
+{"verdict": "PASS", "reason": "Summary covers themed source (theme:dummy-job2-agent), HIL/judge hil_reply, continuing to the next issue after reply, and Done (issues_done: 3)."}

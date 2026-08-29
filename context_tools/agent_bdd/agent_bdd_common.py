@@ -212,24 +212,39 @@ class AgentSession:
             "cursor_channel",
             f"agent run starting (session={self.chat_id[:8]}..., timeout={timeout_seconds}s)",
         )
-        spawned = CursorCli(resume=self.chat_id).run(
-            prompt,
-            str(workspace.resolve()),
-            timeout_seconds=timeout_seconds,
-        )
-        if spawned.stderr:
-            sys.__stderr__.write(spawned.stderr)
+        args = CursorCli(resume=self.chat_id).command(prompt, str(workspace.resolve()))
+        started = time.perf_counter()
+        try:
+            completed = subprocess.run(
+                args,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=timeout_seconds,
+                check=False,
+                cwd=str(workspace.resolve()),
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise AgentHarnessError(
+                f"cursor-agent timed out after {timeout_seconds}s",
+                stdout=str(exc.stdout or ""),
+                stderr=str(exc.stderr or ""),
+            ) from exc
+        elapsed = time.perf_counter() - started
+        if completed.stderr:
+            sys.__stderr__.write(completed.stderr)
             sys.__stderr__.flush()
-        narrative = _narrative_from_cli_stdout(spawned.text)
-        text = narrative or spawned.text
+        narrative = _narrative_from_cli_stdout(completed.stdout or "")
+        text = narrative or (completed.stdout or "")
         if text:
             sys.__stdout__.write(text if text.endswith("\n") else text + "\n")
             sys.__stdout__.flush()
         return AgentResult(
-            exit_code=spawned.exit_code,
+            exit_code=completed.returncode,
             text=text,
-            stderr=spawned.stderr,
-            elapsed_seconds=spawned.elapsed_seconds,
+            stderr=completed.stderr or "",
+            elapsed_seconds=elapsed,
         )
 
 

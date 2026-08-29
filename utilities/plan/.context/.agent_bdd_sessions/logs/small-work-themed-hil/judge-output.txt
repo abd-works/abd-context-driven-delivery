@@ -1,0 +1,1 @@
+The themed source was `theme:dummy-job2-agent` with mixed context across three issues: #101 had enough context and went Backlog→In Progress→Done; #102 and #103 each hit a HIL Grill interrupt where the judge (not the parent) replied via `hil_reply`, then the run continued to the next issue; the Done report shows `issues_done: 3` and `hil_interrupts: 2`.

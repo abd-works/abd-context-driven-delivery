@@ -3,10 +3,13 @@
 """Plan — front-end to git; based on a reusable or named Workflow."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import json
+import re
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any
 
-from git.git import TicketState
+from git.git import Repo, TicketState
 from harness.harness_tool import prompt
 from primitives.actions.action import agentic_toolset
 from tools.tool import agent_tool
@@ -231,6 +234,335 @@ class PlanTurns:
             turns.remove(turn)
 
 
+_ENOUGH_MARKERS = (
+    "## root cause",
+    "## acceptance",
+    "## context",
+    "reproduction:",
+    "expected:",
+)
+_MIN_ENOUGH_CHARS = 160
+_THEME_RE = re.compile(
+    r"(?:^|\s)(?:theme:|theme\s*=\s*)(?P<theme>[\w./-]+)",
+    re.IGNORECASE,
+)
+
+
+@dataclass
+class ThemedIssue:
+    """One GitHub (or fixture) issue under a theme label."""
+
+    number: int
+    title: str
+    body: str
+    labels: list[str] = field(default_factory=list)
+
+    @property
+    def context_enough(self) -> bool:
+        return SmallWorkRunner.enough_context(self.body)
+
+
+@dataclass
+class SmallWorkState:
+    """Persisted small-work run across HIL Grill interrupts."""
+
+    theme: str
+    issues: list[dict[str, Any]]
+    index: int = 0
+    report: list[dict[str, Any]] = field(default_factory=list)
+    pending_hil: dict[str, Any] | None = None
+    grill_questions: list[str] = field(default_factory=list)
+    status: str = "running"
+
+
+class SmallWorkRunner:
+    """Execute prebaked small-work Plan against themed issues one at a time.
+
+    Thin context → Grill + HIL Grill interrupt (judge replies via hil_reply).
+    Enough context → process issue, advance to next. Report when Done.
+    """
+
+    def __init__(
+        self,
+        workspace: str = ".",
+        *,
+        issues: list[ThemedIssue] | None = None,
+        state_path: Path | None = None,
+    ) -> None:
+        self._workspace = (workspace or ".").strip() or "."
+        self._fixture_issues = issues
+        self._state_path = state_path or (
+            Path(self._workspace) / ".context" / "small-work-run.json"
+        )
+
+    @staticmethod
+    def parse_theme(context: str) -> str:
+        text = (context or "").strip()
+        if not text:
+            return ""
+        match = _THEME_RE.search(text)
+        if match:
+            return match.group("theme").strip()
+        if text.startswith("theme:"):
+            return text.split(":", 1)[1].strip()
+        return text
+
+    @staticmethod
+    def enough_context(body: str) -> bool:
+        text = (body or "").strip()
+        if not text:
+            return False
+        lowered = text.lower()
+        if any(marker in lowered for marker in _ENOUGH_MARKERS):
+            return True
+        return len(text) >= _MIN_ENOUGH_CHARS
+
+    @staticmethod
+    def grill_questions_for(issue: ThemedIssue) -> list[str]:
+        return [
+            f"What is the root cause for #{issue.number} ({issue.title})?",
+            "What acceptance criteria prove the fix?",
+            "Which module owns the change?",
+        ]
+
+    def state_path(self) -> Path:
+        return self._state_path
+
+    def load_state(self) -> SmallWorkState | None:
+        path = self._state_path
+        if not path.is_file():
+            return None
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return SmallWorkState(**raw)
+
+    def save_state(self, state: SmallWorkState) -> None:
+        path = self._state_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(asdict(state), indent=2), encoding="utf-8")
+
+    def clear_state(self) -> None:
+        path = self._state_path
+        if path.is_file():
+            path.unlink()
+
+    def list_themed_issues(self, theme: str) -> list[ThemedIssue]:
+        if self._fixture_issues is not None:
+            label = theme if theme.startswith("theme:") else f"theme:{theme}"
+            bare = theme.removeprefix("theme:")
+            return [
+                issue
+                for issue in self._fixture_issues
+                if label in issue.labels
+                or bare in issue.labels
+                or f"theme:{bare}" in issue.labels
+            ]
+        return self._list_from_gh(theme)
+
+    def _list_from_gh(self, theme: str) -> list[ThemedIssue]:
+        label = theme if theme.startswith("theme:") else f"theme:{theme}"
+        raw = Repo.gh(
+            "issue",
+            "list",
+            "--label",
+            label,
+            "--state",
+            "open",
+            "--json",
+            "number,title,body,labels",
+            "--limit",
+            "50",
+            cwd=self._workspace,
+        )
+        rows = json.loads(raw or "[]")
+        issues: list[ThemedIssue] = []
+        for row in rows:
+            labels = [
+                str(item.get("name") or item)
+                for item in (row.get("labels") or [])
+            ]
+            issues.append(
+                ThemedIssue(
+                    number=int(row["number"]),
+                    title=str(row.get("title") or ""),
+                    body=str(row.get("body") or ""),
+                    labels=labels,
+                )
+            )
+        return sorted(issues, key=lambda item: item.number)
+
+    def run(
+        self,
+        theme: str,
+        *,
+        hil_reply: str = "",
+        plan_meta: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        theme_name = theme.removeprefix("theme:")
+        state = self.load_state()
+        if hil_reply.strip():
+            if state is None or state.pending_hil is None:
+                raise RuntimeError(
+                    "hil_reply requires a pending HIL Grill interrupt "
+                    "(judge replies; parent does not)"
+                )
+            return self._continue_with_hil(state, hil_reply, plan_meta=plan_meta)
+
+        if state is not None and state.status == "hil_interrupt" and not hil_reply:
+            return self._interrupt_payload(state, plan_meta=plan_meta)
+
+        issues = self.list_themed_issues(theme_name)
+        state = SmallWorkState(
+            theme=theme_name,
+            issues=[asdict(issue) for issue in issues],
+            index=0,
+            report=[],
+            pending_hil=None,
+            grill_questions=[],
+            status="running",
+        )
+        self.save_state(state)
+        return self._advance(state, plan_meta=plan_meta)
+
+    def _continue_with_hil(
+        self,
+        state: SmallWorkState,
+        hil_reply: str,
+        *,
+        plan_meta: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        pending = state.pending_hil or {}
+        number = int(pending["number"])
+        issue_row = state.issues[state.index]
+        enriched = (
+            f"{issue_row.get('body') or ''}\n\n"
+            f"## Grill answers (judge HIL reply)\n\n{hil_reply.strip()}\n"
+        )
+        issue_row["body"] = enriched
+        state.issues[state.index] = issue_row
+        state.report.append(
+            {
+                "number": number,
+                "title": issue_row.get("title") or "",
+                "outcome": "hil_filled",
+                "context_enough": False,
+                "hil_reply_by": "judge",
+            }
+        )
+        state.pending_hil = None
+        state.grill_questions = []
+        # Process this issue now that context is filled, then advance.
+        self._complete_issue(state, ThemedIssue(**issue_row))
+        state.index += 1
+        state.status = "running"
+        self.save_state(state)
+        return self._advance(state, plan_meta=plan_meta)
+
+    def _advance(
+        self,
+        state: SmallWorkState,
+        *,
+        plan_meta: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        while state.index < len(state.issues):
+            row = state.issues[state.index]
+            issue = ThemedIssue(**row)
+            if not issue.context_enough:
+                questions = self.grill_questions_for(issue)
+                hil = HILCheck(
+                    validation=(
+                        "HIL Grill — judge must reply with enough context "
+                        f"for #{issue.number} before work continues"
+                    )
+                )
+                state.pending_hil = {
+                    "number": issue.number,
+                    "title": issue.title,
+                    "validation": hil.validation,
+                    "replier": "judge",
+                }
+                state.grill_questions = questions
+                state.status = "hil_interrupt"
+                self.save_state(state)
+                return self._interrupt_payload(state, plan_meta=plan_meta)
+
+            self._complete_issue(state, issue)
+            state.index += 1
+            self.save_state(state)
+
+        state.status = "done"
+        self.save_state(state)
+        return self._done_payload(state, plan_meta=plan_meta)
+
+    def _complete_issue(self, state: SmallWorkState, issue: ThemedIssue) -> None:
+        # Logical Workflow spine: Backlog → In Progress → Done (no live branch).
+        state.report.append(
+            {
+                "number": issue.number,
+                "title": issue.title,
+                "outcome": "done",
+                "context_enough": issue.context_enough,
+                "ticket_flow": ["Backlog", "In Progress", "Done"],
+            }
+        )
+
+    def _interrupt_payload(
+        self,
+        state: SmallWorkState,
+        *,
+        plan_meta: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        pending = state.pending_hil or {}
+        payload: dict[str, Any] = {
+            "status": "hil_interrupt",
+            "theme": state.theme,
+            "themed_source": f"theme:{state.theme}",
+            "current_issue": pending.get("number"),
+            "grill": True,
+            "hil_grill": True,
+            "hil_replier": "judge",
+            "grill_questions": list(state.grill_questions),
+            "hil_validation": pending.get("validation"),
+            "mixed_context": True,
+            "report": list(state.report),
+            "remaining": len(state.issues) - state.index,
+        }
+        if plan_meta:
+            payload.update(plan_meta)
+        return payload
+
+    def _done_payload(
+        self,
+        state: SmallWorkState,
+        *,
+        plan_meta: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "status": "done",
+            "theme": state.theme,
+            "themed_source": f"theme:{state.theme}",
+            "mixed_context": any(
+                not item.get("context_enough", True)
+                or item.get("outcome") == "hil_filled"
+                for item in state.report
+            )
+            or any(
+                not SmallWorkRunner.enough_context(str(row.get("body") or ""))
+                for row in state.issues
+            ),
+            "report": list(state.report),
+            "issues_done": sum(
+                1 for item in state.report if item.get("outcome") == "done"
+            ),
+            "hil_interrupts": sum(
+                1 for item in state.report if item.get("outcome") == "hil_filled"
+            ),
+        }
+        if plan_meta:
+            payload.update(plan_meta)
+        self.clear_state()
+        return payload
+
+
 @agentic_toolset
 class PlanCommands:
     """Slash `/plan` and `/plan /small-work {context}` — load Workflow into a Plan."""
@@ -249,12 +581,43 @@ class PlanCommands:
 
     @prompt(name="small-work")
     @agent_tool
-    def small_work(self, context: str = "", workspace: str = "") -> dict[str, str | int]:
-        """/plan /small-work {context} — load the prebaked small-work Workflow into a Plan.
+    def small_work(
+        self,
+        context: str = "",
+        workspace: str = "",
+        hil_reply: str = "",
+        issues: list | None = None,
+    ) -> dict[str, Any]:
+        """/plan /small-work {context} — load small-work Workflow; run themed tickets when theme is set.
 
-        Does not execute against GitHub issues — only opens the Plan on that Workflow.
+        With ``theme:…`` in context, processes that theme's issues. Thin context triggers
+        Grill + HIL Grill; the judge (not the parent) replies via ``hil_reply``.
+        Fixture ``issues`` may be passed for Agent BDD (list of {number,title,body,labels}).
+        Without a theme, only opens the Plan on the prebaked Workflow.
         """
-        return self._open_named_workflow("small-work", context, workspace)
+        opened = self._open_named_workflow("small-work", context, workspace)
+        theme = SmallWorkRunner.parse_theme(context)
+        if not theme and not hil_reply.strip() and issues is None:
+            return opened
+
+        fixture: list[ThemedIssue] | None = None
+        if issues is not None:
+            fixture = [
+                ThemedIssue(
+                    number=int(row["number"]),
+                    title=str(row.get("title") or ""),
+                    body=str(row.get("body") or ""),
+                    labels=list(row.get("labels") or []),
+                )
+                for row in issues
+            ]
+        runner = SmallWorkRunner(workspace=workspace or ".", issues=fixture)
+        if not theme and hil_reply.strip():
+            state = runner.load_state()
+            theme = state.theme if state else ""
+        if not theme:
+            return opened
+        return runner.run(theme, hil_reply=hil_reply, plan_meta=dict(opened))
 
     def _open_named_workflow(
         self,

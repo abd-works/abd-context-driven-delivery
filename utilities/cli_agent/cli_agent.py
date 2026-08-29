@@ -797,6 +797,30 @@ class IdeCli:
             "no IDE agent CLI on PATH (cursor-agent, agent, or code)"
         )
 
+    def launcher(self) -> str | None:
+        """Public launcher path (agent_bdd / session mint)."""
+        return self._launcher()
+
+    def create_chat(
+        self, workspace: str, *, timeout_seconds: int | None = None
+    ) -> str:
+        """Public create-chat (agent_bdd AgentSession)."""
+        return self._create_chat(workspace, timeout_seconds=timeout_seconds)
+
+    def command(self, prompt: str, workspace: str) -> list[str]:
+        """Public argv builder (agent_bdd harness)."""
+        return self._command(prompt, workspace)
+
+    def run(
+        self,
+        prompt: str,
+        workspace: str,
+        *,
+        timeout_seconds: int | None = None,
+    ) -> IdeCliResult:
+        """Public prompt run (agent_bdd AgentSession)."""
+        return self._launch_cli(prompt, workspace, timeout_seconds=timeout_seconds)
+
     def _launcher(self) -> str | None:
         return None
 

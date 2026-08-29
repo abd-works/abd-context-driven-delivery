@@ -1,0 +1,1 @@
+PASS if the summary covers themed source, HIL or judge reply, next issue (or continuing after reply), and Done. FAIL only if one of those four ideas is clearly missing.
