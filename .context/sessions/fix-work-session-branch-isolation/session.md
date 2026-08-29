@@ -11,5 +11,5 @@
 ## End
 
 - **ended:** 2026-08-29
-- **outcome:** Isolation backlog item done ? work session binds session/<name> + worktree before jobs; rebind_to_worktree after start-ticket; CliAgent/SubAgent/no-agent covered. Job queue empty; judges PASS.
-- **handoff:** Fixed premature durable CliAgent bind on main (defer via cli-agent-pending) and added rebind_to_worktree. Ticket
+- **outcome:** Work session isolation fix merged to main. _pending_work_session and rebind_to_worktree shipped with BDD coverage.
+- **handoff:** handoff.md
