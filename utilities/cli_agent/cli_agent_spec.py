@@ -962,15 +962,40 @@ with description("a folder that has no workspace sessions"):
 
 with description("a CLI spawn when a doer pid is already alive"):
     with context("that is asked to launch a new job"):
-        with it("should still Popen so the new job is injected"):
+        with it("should not open a second console when the existing doer is live (#48)"):
+            # Desired: consult existing_pid; if live, reuse — do not Popen another window.
+            live_pid = 158184
+
+            def _kill(pid, _sig):
+                if pid == live_pid:
+                    return None
+                raise ProcessLookupError(pid)
+
             with patch(
                 "cli_agent.cli_agent.subprocess.Popen", return_value=_popen(88)
             ) as spawned:
-                result = _CliSpawner().start(
-                    ["/bin/cursor-agent", "--resume", "abc"],
-                    tempfile.mkdtemp(prefix="cli_inject_"),
-                    existing_pid=158184,
-                )
+                with patch("cli_agent.cli_agent.os.kill", side_effect=_kill):
+                    result = _CliSpawner().start(
+                        ["/bin/cursor-agent", "--resume", "abc"],
+                        tempfile.mkdtemp(prefix="cli_inject_"),
+                        existing_pid=live_pid,
+                    )
+            expect(spawned.called).to(be_false)
+            expect(result.pid).to(equal(live_pid))
+
+        with it("should Popen when existing_pid is not live"):
+            def _kill(_pid, _sig):
+                raise ProcessLookupError(_pid)
+
+            with patch(
+                "cli_agent.cli_agent.subprocess.Popen", return_value=_popen(88)
+            ) as spawned:
+                with patch("cli_agent.cli_agent.os.kill", side_effect=_kill):
+                    result = _CliSpawner().start(
+                        ["/bin/cursor-agent", "--resume", "abc"],
+                        tempfile.mkdtemp(prefix="cli_dead_"),
+                        existing_pid=158184,
+                    )
             expect(spawned.called).to(be_true)
             expect(result.pid).to(equal(88))
 
@@ -988,6 +1013,37 @@ with description("a doer that does not take the new job"):
                 agent._await_pickup("no-such-resume", 0)
 
             expect(_fail).to(raise_error(RuntimeError))
+
+        with it(
+            "should not raise NOT TAKEN UP when spawn succeeded and the doer pid is live (#48)"
+        ):
+            # Spawn returns a live pid; transcript stays silent (pickup false-negative).
+            # Desired: treat live doer as success — do not raise NOT TAKEN UP.
+            tmp = Path(tempfile.mkdtemp(prefix="cli_live_pickup_"))
+            live_pid = 424242
+
+            def _kill(pid, _sig):
+                if int(pid) == live_pid:
+                    return None
+                raise ProcessLookupError(pid)
+
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch(
+                    "cli_agent.cli_agent.CursorCli._create_chat",
+                    return_value="doer-live-pickup",
+                ):
+                    with patch(
+                        "cli_agent.cli_agent.subprocess.Popen",
+                        return_value=_popen(live_pid),
+                    ):
+                        with patch("cli_agent.cli_agent.os.kill", side_effect=_kill):
+                            agent = CliAgent(
+                                workspace=str(tmp),
+                                session="live-pickup",
+                            )
+                            agent._ide = IdeCli(pickup_seconds=0.0)
+                            # Real _await_pickup — not patched. Must not raise.
+                            agent.launch_sessions(tools=[], actions=None)
 
     with context("when the transcript gains a user turn"):
         with it("should accept the pickup"):
