@@ -7,6 +7,7 @@
 import json
 import sys
 import tempfile
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -29,6 +30,7 @@ from cli_agent.cli_agent import (
     CursorCli,
     IdeCli,
     VscodeCli,
+    _CliAgentLog,
     _CliSpawner,
     JobQueue,
     _Pickup,
@@ -47,6 +49,17 @@ def _which_agent_only(name: str) -> str | None:
     if name == "agent":
         return "/bin/agent"
     return None
+
+
+def _cli_agent_log_records(work):
+    path = _CliAgentLog().path_for(work)
+    if not path.is_file():
+        return []
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
 
 
 def _which_code_only(name: str) -> str | None:
@@ -1471,6 +1484,205 @@ with description("CliAgent backlog hygiene (#46)"):
                     )
                     theme_val = str(created.get("theme", "")).replace("theme:", "")
                     expect(theme_val).to(equal("cli-agent"))
+
+
+with description("CliAgent session log completeness (#42)"):
+    """Red tests: header with doer/judge, chat + job-queue refs, job_finished summary/refs."""
+
+    with context("when a session starts"):
+        with it("should write a header carrying doer/judge ids so cli-agent.json is not required"):
+            from workspace.git_repo import NullGitRepo
+
+            tmp = Path(tempfile.mkdtemp(prefix="cli_log_hdr_"))
+            work = Workspace(str(tmp)).open_work_session(
+                "log-header", git=NullGitRepo(tmp)
+            )
+            work.ensure_started()
+            work.cli_doer = "doer-id-aaa"
+            work.cli_judge = "judge-id-bbb"
+            work.cli_doer_pid = 11
+            work.cli_judge_pid = 22
+            work.save_cli_sessions()
+            log = _CliAgentLog()
+            # Intended seam: one-time header (not only repeating session_start).
+            if hasattr(log, "header"):
+                log.header(
+                    work,
+                    doer=work.cli_doer,
+                    judge=work.cli_judge,
+                    doer_pid=work.cli_doer_pid,
+                    judge_pid=work.cli_judge_pid,
+                    chat=str(tmp / "chat.jsonl"),
+                    job_queue=str(log.path_for(work).parent / JobQueue.filename),
+                )
+            else:
+                log.session_start(
+                    work,
+                    doer=work.cli_doer,
+                    judge=work.cli_judge,
+                    doer_pid=work.cli_doer_pid,
+                    judge_pid=work.cli_judge_pid,
+                    doer_transcript=str(tmp / "doer.jsonl"),
+                    judge_transcript=str(tmp / "judge.jsonl"),
+                )
+            records = _cli_agent_log_records(work)
+            header = next((r for r in records if r.get("kind") == "header"), None)
+            expect(header).not_to(equal(None))
+            expect(header.get("doer")).to(equal("doer-id-aaa"))
+            expect(header.get("judge")).to(equal("judge-id-bbb"))
+            expect("chat" in header or "chat_link" in header).to(be_true)
+            expect(
+                "job_queue" in header or "job_queue_path" in header
+            ).to(be_true)
+
+        with it("should record chat and job-queue as first-class fields on the session log"):
+            from workspace.git_repo import NullGitRepo
+
+            tmp = Path(tempfile.mkdtemp(prefix="cli_log_links_"))
+            work = Workspace(str(tmp)).open_work_session(
+                "log-links", git=NullGitRepo(tmp)
+            )
+            work.ensure_started()
+            queue_path = work.folder / JobQueue.filename
+            queue_path.write_text("[]\n", encoding="utf-8")
+            chat_path = str(tmp / "agent-transcripts" / "doer.jsonl")
+            log = _CliAgentLog()
+            log.session_start(
+                work,
+                doer="d1",
+                judge="j1",
+                doer_pid=1,
+                judge_pid=2,
+                doer_transcript=chat_path,
+                judge_transcript="",
+            )
+            records = _cli_agent_log_records(work)
+            # Designed: durable chat + job_queue on header or session_start — not report-only.
+            found = False
+            for r in records:
+                chat = r.get("chat") or r.get("chat_link") or ""
+                queue = r.get("job_queue") or r.get("job_queue_path") or ""
+                if chat and queue:
+                    found = True
+                    expect(str(chat)).to(contain("doer.jsonl"))
+                    expect(str(queue)).to(contain(JobQueue.filename))
+                    break
+            expect(found).to(be_true)
+
+    with context("when a job finishes"):
+        with it("should append a response summary and content refs on job_finished"):
+            from workspace.git_repo import NullGitRepo
+
+            tmp = Path(tempfile.mkdtemp(prefix="cli_log_sum_"))
+            work = Workspace(str(tmp)).open_work_session(
+                "log-summary", git=NullGitRepo(tmp)
+            )
+            work.ensure_started()
+            log = _CliAgentLog()
+            try:
+                log.job_finished(
+                    work,
+                    index=0,
+                    prompt="fix the log",
+                    summary="Wrote failing tests for session log header.",
+                    refs=["utilities/cli_agent/cli_agent_spec.py"],
+                )
+            except TypeError:
+                log.job_finished(work, index=0, prompt="fix the log")
+            records = _cli_agent_log_records(work)
+            finished = [r for r in records if r.get("kind") == "job_finished"]
+            expect(len(finished)).to(equal(1))
+            row = finished[0]
+            summary = row.get("summary") or row.get("response_summary") or ""
+            refs = row.get("refs") or row.get("content_refs") or []
+            expect(str(summary)).not_to(equal(""))
+            expect(len(list(refs)) > 0).to(be_true)
+
+
+with description("CliAgent session log observability"):
+    """Tools/actions on job records, ts_ms, duration_s, since_last_s."""
+
+    with it("should record tools and actions on job_started and job_finished"):
+        from workspace.git_repo import NullGitRepo
+
+        tmp = Path(tempfile.mkdtemp(prefix="cli_log_obs_"))
+        work = Workspace(str(tmp)).open_work_session(
+            "log-obs", git=NullGitRepo(tmp)
+        )
+        work.ensure_started()
+        log = _CliAgentLog()
+        log.job_started(
+            work,
+            index=1,
+            prompt="Write tests",
+            tools=["workflow.workflow:Workflow"],
+            actions=["context_tools.bdd.bdd:Bdd"],
+            judge=True,
+        )
+        log.job_finished(
+            work,
+            index=1,
+            prompt="Write tests",
+            tools=["workflow.workflow:Workflow"],
+            actions=["context_tools.bdd.bdd:Bdd"],
+            judge=True,
+            summary="Added red tests.",
+            refs=["utilities/cli_agent/cli_agent_spec.py"],
+        )
+        records = _cli_agent_log_records(work)
+        started = next(r for r in records if r.get("kind") == "job_started")
+        finished = next(r for r in records if r.get("kind") == "job_finished")
+        expect(started.get("tools")).to(equal(["workflow.workflow:Workflow"]))
+        expect(started.get("actions")).to(equal(["context_tools.bdd.bdd:Bdd"]))
+        expect(started.get("judge")).to(be_true)
+        expect(finished.get("tools")).to(equal(["workflow.workflow:Workflow"]))
+        expect(finished.get("duration_s")).not_to(equal(None))
+        expect(finished.get("ts_ms")).not_to(equal(None))
+
+    with it("should stamp ts_ms and since_last_s on every record"):
+        from workspace.git_repo import NullGitRepo
+
+        tmp = Path(tempfile.mkdtemp(prefix="cli_log_ts_"))
+        work = Workspace(str(tmp)).open_work_session(
+            "log-ts", git=NullGitRepo(tmp)
+        )
+        work.ensure_started()
+        log = _CliAgentLog()
+        log.job_started(work, index=0, prompt="one")
+        time.sleep(0.05)
+        log.job_finished(work, index=0, prompt="one")
+        records = _cli_agent_log_records(work)
+        expect(records[0].get("ts_ms")).not_to(equal(None))
+        expect(records[1].get("since_last_s")).not_to(equal(None))
+        expect(records[1].get("since_last_s") > 0).to(be_true)
+
+    with it("should record structured tools on spawn"):
+        from workspace.git_repo import NullGitRepo
+
+        tmp = Path(tempfile.mkdtemp(prefix="cli_log_spawn_"))
+        work = Workspace(str(tmp)).open_work_session(
+            "log-spawn", git=NullGitRepo(tmp)
+        )
+        work.ensure_started()
+        log = _CliAgentLog()
+        log.spawn(
+            work,
+            role="doer",
+            resume="doer-1",
+            prompt="job",
+            argv="agent --resume doer-1",
+            tools=["workflow.workflow:Workflow"],
+            actions=["context_tools.bdd.bdd:Bdd"],
+            tool_calls=["workflow.workflow:Workflow name=run"],
+            job_index=2,
+        )
+        row = _cli_agent_log_records(work)[0]
+        expect(row.get("tools")).to(equal(["workflow.workflow:Workflow"]))
+        expect(row.get("actions")).to(equal(["context_tools.bdd.bdd:Bdd"]))
+        expect(row.get("tool_calls")).to(
+            equal(["workflow.workflow:Workflow name=run"])
+        )
+        expect(row.get("job_index")).to(equal(2))
 
 
 with description("CliAgent cleanup"):
