@@ -1302,6 +1302,38 @@ class _ActionExpander:
         lines += ["tool: <tool name>", "arguments:", "  <if needed>", "```", ""]
         return lines
 
+    def _tool_purpose(self, tool_func: Callable[..., Any] | None) -> str:
+        """Return a one-line purpose from the tool docstring/instructions, or empty."""
+        if tool_func is None:
+            return ""
+        text = (self._reader.member_instructions(tool_func) or "").strip()
+        if not text:
+            return ""
+        return text.splitlines()[0].strip()
+
+    def _build_available_tools_display_lines(
+        self, body: _ActionBody, tool_callables: dict[str, Callable[..., Any]]
+    ) -> list[str]:
+        """Tell the agent to surface tools, and list each name with its purpose."""
+        unique = list(dict.fromkeys(body.tool_steps))
+        if not unique:
+            return []
+        lines = [
+            "Before following the suggested flow, display the tools made available to this chat "
+            "in your user-visible reply — each tool name and what it is for. "
+            "Do not only follow them silently or rediscover them by remanifesting.",
+            "",
+            "Tools made available:",
+        ]
+        for tool_name in unique:
+            purpose = self._tool_purpose(tool_callables.get(tool_name))
+            if purpose:
+                lines.append(f"- {tool_name} — {purpose}")
+            else:
+                lines.append(f"- {tool_name}")
+        lines.append("")
+        return lines
+
     def _build_tool_hint_lines(
         self, body: _ActionBody, tool_callables: dict[str, Callable[..., Any]]
     ) -> list[str]:
@@ -1328,6 +1360,9 @@ class _ActionExpander:
         lines.extend(self._build_yaml_block(build_request.toolset_path, build_request.context))
         lines.append("Run: python -m tools run -")
         lines.append("")
+        lines.extend(
+            self._build_available_tools_display_lines(body, build_request.tool_callables)
+        )
         lines.extend(self._build_tool_hint_lines(body, build_request.tool_callables))
         lines.append("Read `resources` from each response before choosing the next tool.")
         return "\n".join(lines).strip()

@@ -207,6 +207,36 @@ with description("a class"):
                 )
                 expect(response["arguments"]["destination"]).to(equal("Hazzard County courthouse"))
 
+        with context("when expand makes tools available to the chat"):
+            with it("should tell the AI to display those tools by name and purpose in the user-visible reply"):
+                request = yaml.safe_dump(
+                    {
+                        "toolset": "tools.examples.logged_probe:LoggedProbe",
+                        "action": "narrate",
+                        "arguments": {"message": "hello"},
+                    }
+                )
+                completed = subprocess.run(
+                    [sys.executable, "-m", "tools", "run", "-"],
+                    input=request,
+                    capture_output=True,
+                    text=True,
+                    cwd=_REPO_ROOT,
+                    check=False,
+                )
+                expect(completed.returncode).to(equal(0))
+                response = load_fenced(completed.stdout)
+                expect(response["ok"]).to(be_true)
+                instructions = response["instructions"]
+                expect(
+                    "display the tools made available to this chat in your user-visible reply"
+                    in instructions
+                ).to(be_true)
+                expect("Do not only follow them silently" in instructions).to(be_true)
+                expect("Tools made available:" in instructions).to(be_true)
+                expect("- ping — Echo a message." in instructions).to(be_true)
+                expect(response["tools"]).to(equal(["ping"]))
+
 
 with description("an action"):
     with context("that has instructions with templating"):

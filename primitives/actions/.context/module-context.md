@@ -21,6 +21,8 @@ Legacy `@action` / `@tool` author annotations are removed (no aliases). Manifest
 
 The seam is the path from a decorated `@agent_instructions` method to an expanded run payload: discover recipes on a toolset, validate the body, expand docstring/instruction slots and tool steps, then return instructions plus the tool list for the AI to interpret.
 
+When expansion makes tools available, agenda instructions must tell the AI to **display** those tools (each name and what it is for) in the user-visible reply before following the suggested flow — not only follow them silently or rediscover them by remanifesting.
+
 ### Never executed — `@agent_instructions` bodies are read, not run
 
 **`@agent_instructions` method bodies never execute as Python.** They are parsed via `ast` and walked statically. **By contrast, `@agent_tool` method bodies always execute as real Python** when the agent invokes that tool by name.
