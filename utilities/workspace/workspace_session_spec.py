@@ -485,6 +485,7 @@ with description("a WorkSession that is closed"):
         git = NullGitRepo(tmp)
         session = Workspace(str(tmp)).open_work_session("close-chat", git=git)
         session.ensure_started()
+        session._conversation_id = ""
         session.associate_cli("doer", "11111111-1111-1111-1111-111111111111")
         chat = str(session.cursor_chat_file("11111111-1111-1111-1111-111111111111"))
         session.close(outcome="done", handoff="")
@@ -495,6 +496,60 @@ with description("a WorkSession that is closed"):
             if ref == "refs/notes/chats"
         ]
         expect(noted).to(contain(chat))
+
+    with it("should save this Cursor chat when no CliAgent chats are bound"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_close_this_chat_"))
+        git = NullGitRepo(tmp)
+        session = Workspace(str(tmp)).open_work_session("close-this-chat", git=git)
+        session.ensure_started()
+        session._conversation_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        chat = str(session.current_cursor_chat_file())
+        session.close(outcome="done", handoff="")
+        expect(session.chats()).to(equal([chat]))
+        expect("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" in chat).to(be_true)
+
+    with it("should commit scope paths on close, not only session.md"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_close_full_commit_"))
+        git = NullGitRepo(tmp)
+        session = Workspace(str(tmp)).open_work_session("close-full", git=git)
+        session.ensure_started()
+        session._conversation_id = ""
+        changed = tmp / "utilities" / "feature.py"
+        changed.parent.mkdir(parents=True)
+        changed.write_text("x = 1\n", encoding="utf-8")
+        session.scope_paths = [str(changed), str(session.session_md)]
+        recorded: list[tuple[list[str], str]] = []
+        real_commit = git.commit
+
+        def capture_commit(paths, message):
+            recorded.append((list(paths), message))
+            sha = real_commit(paths, message)
+            if message != "close":
+                git.set_dirty(True)
+            return sha
+
+        git.commit = capture_commit  # type: ignore[method-assign]
+        git.set_dirty(True)
+        session.close(outcome="done", handoff="")
+        close_commits = [entry for entry in recorded if entry[1] == "close"]
+        expect(close_commits).not_to(equal([]))
+        paths, message = close_commits[-1]
+        expect(message).to(equal("close"))
+        expect(any(str(changed) in path or path.endswith("feature.py") for path in paths)).to(
+            be_true
+        )
+        expect(
+            any(
+                str(session.session_md) in path or path.endswith("session.md")
+                for path in paths
+            )
+        ).to(be_true)
 
     with it("should write an End section with outcome into session.md"):
         import tempfile

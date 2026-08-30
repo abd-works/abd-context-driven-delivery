@@ -1241,16 +1241,46 @@ class WorkSession:
             / f"{chat_id}.jsonl"
         )
 
+    def current_cursor_chat_file(self) -> Path | None:
+        """This chat's transcript — ``CURSOR_CONVERSATION_ID`` (per agent process, not mtime).
+
+        Tests may set ``_conversation_id`` to a uuid, or to ``\"\"`` to ignore the process env.
+        """
+        if getattr(self, "_conversation_id", None) is not None:
+            chat_id = (self._conversation_id or "").strip()
+        else:
+            chat_id = (os.environ.get("CURSOR_CONVERSATION_ID") or "").strip()
+        if not chat_id:
+            return None
+        transcripts = (os.environ.get("AGENT_TRANSCRIPTS") or "").strip()
+        if transcripts and getattr(self, "_conversation_id", None) is None:
+            root = Path(transcripts)
+            nested = root / chat_id / f"{chat_id}.jsonl"
+            flat = root / f"{chat_id}.jsonl"
+            if nested.is_file():
+                return nested
+            if flat.is_file():
+                return flat
+            return nested
+        return self.cursor_chat_file(chat_id)
+
     def _running_chat_paths(self) -> list[str]:
+        """CliAgent doer/judge chats when bound, plus this Cursor chat when present."""
         paths: list[str] = []
         seen: set[str] = set()
+
+        def _add(path: str) -> None:
+            if path and path not in seen:
+                seen.add(path)
+                paths.append(path)
+
+        current = self.current_cursor_chat_file()
+        if current is not None:
+            _add(str(current))
         for chat_id in (self.cli_doer, self.cli_judge):
             if not chat_id:
                 continue
-            path = str(self.cursor_chat_file(chat_id))
-            if path not in seen:
-                seen.add(path)
-                paths.append(path)
+            _add(str(self.cursor_chat_file(chat_id)))
         return paths
 
     def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
@@ -1270,7 +1300,7 @@ class WorkSession:
         self.session_md.write_text(self._render(), encoding="utf-8")
         if self.git.is_dirty():
             try:
-                self.git.commit(self._session_artifact_paths(), "close")
+                self.git.commit(self._commit_paths(), "close")
             except (GitConnectError, ValueError):
                 pass
         for path in running_chats:
@@ -1355,7 +1385,7 @@ class WorkSession:
         anything you cannot attribute to disposable temps. Never ask the user whether
         to delete the worktree.
 
-        Then: commits session artifacts, pushes, merges onto main, and removes the
+        Then: commits change-related paths (scope + session artifacts), pushes, merges onto main, and removes the
         sibling worktree when the tree is clean and pushed. If untracked or dirty files
         remain after you removed known temps, leave the worktree and report what blocked
         removal.
