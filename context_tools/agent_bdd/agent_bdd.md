@@ -25,13 +25,21 @@ The **`bdd`** generator supplies the underlying test discipline (RED-GREEN, AAA,
 
 ## Assertions
 
-- **`assert-on-response-fields`** — Structural checks target `response.ok`, `response.action`, `response.tools`, `response.arguments`, and substrings in `response.instructions`. These are cheap and deterministic.
-- **`judge-qualitative-outcomes`** — Free-form outputs (generated markdown, natural-language artifacts) go through `ai_judge(output, rubric)` inside the `with agent(...)` block. `ai_judge` raises `AssertionError(reason)` on FAIL — it is self-contained like `expect`. No return value to store or check. For a **pass fixture** (mistake / generate regression), call `generate_and_judge(pass_path)` — it generates something similar to that file, judges it, and returns the artifact to hold for human review.
+- **`assert-on-response-fields`** — Structural checks target `response.ok`, `response.action`, `response.tools`, `response.arguments`, and substrings in `response.instructions`. These are cheap and deterministic. Use them to check the **tools run** (correct action/owner/args). They do **not** prove the agent finished the work.
+- **`assert-on-run-artifacts`** — When the scenario is that the agent **produces work** (sketch, generate, repair, chronicle, answers file, …), assert the **run outcome**: file exists at the expected path, non-empty, and content matches the domain. Prefer a fixed output path in the prompt so the example can `expect(path.is_file())` and `read_text` before judging. Do **not** PASS because a skill was deployed, a prompt file was read, or the agent *said* it wrote something.
+- **`judge-qualitative-outcomes`** — Free-form outputs go through `ai_judge(output, rubric)` inside the `with agent(...)` block. Pass the **artifact text** (file contents / `response.result`), not a chat summary of what the agent claims it did. `ai_judge` raises `AssertionError(reason)` on FAIL — it is self-contained like `expect`. For a **pass fixture** (mistake / generate regression), call `generate_and_judge(pass_path)` — it generates something similar to that file, judges it, and returns the artifact to hold for human review.
+- **`instruction-expansion-ok-to-judge-prose`** — Specs that only check *how* instructions expand (owner toolset, review gate wording) may judge agent prose about those instructions. Behavioral regressions (did sketch/generate/repair actually happen correctly?) must use **`assert-on-run-artifacts`**.
 - **`no-mocking-the-harness`** — Agent specs test the real agent end-to-end. Never mock `agent()`, the block, the harness helpers, or the agent's output.
 
 ## Timeouts
 
 - **`timeout-per-instruct`** — Default 300s. Long generate/repair actions may need 300–600s. On timeout, `instruct_use_tool` falls back to a local YAML replay so a slow agent does not kill the assertion.
+
+## Failures
+
+- **`triage-prompt-vs-code`** — When an agent BDD run fails, decide whether the miss is **prompt/instructions** (agent ignored guidance, wrong tool choice, bad prose) or **code** (toolset, action, domain, or harness logic wrong under a correct agent path). Do not treat every red agent example as a prompt tweak.
+- **`code-failure-needs-vanilla-bdd`** — If the failure is **code-related**, fix the production code **and** add or extend the **vanilla** mamba BDD (ordinary `bdd` specs — no live agent) that would have caught that gap without the agent harness. Name the missing unit of behavior; cover it with `it should` examples against the real API. Agent BDD alone is not enough for a code bug.
+- **`prompt-failure-stays-on-agent-bdd`** — If the failure is **prompt-related**, fix the prompt/skill/instructions (and tighten the agent BDD rubric or steps if needed). Do not invent a vanilla BDD that only re-encodes “the agent must read the prompt.”
 
 ---
 # Generate
@@ -41,8 +49,9 @@ The **`bdd`** generator supplies the underlying test discipline (RED-GREEN, AAA,
 3. Scaffold from `templates/agent_bdd-templates.py`:
    - `with description(...)` → `with context(...)` → `with it(...)` → `with agent(...):`.
    - Assert immediately after each step — `expect(response.ok).to(be_true)` right after `instruct_use_tool`, `ai_judge(...)` right after the final `instruct`. No `self.*`, no `before.all`.
-4. Assert `response.action`, `response.tools`, and required substrings in `response.instructions`. Use `ai_judge` for prose outputs.
+4. Assert `response.action`, `response.tools`, and required substrings in `response.instructions` for the tools run. For work-producing scenarios, also assert the **artifact on disk** (exists, non-empty, domain markers), then `ai_judge` that file’s contents — not chat claims.
 5. Point every session at `.agent_bdd_sessions/<scenario>.json` beside the spec.
 6. Run **validate**.
+7. On a **red** agent BDD: triage prompt vs code (§ Failures). Code gaps → fix code + add the vanilla BDD that covers the miss; prompt gaps → fix guidance/agent BDD only.
 
-**Do not:** use a `session.` prefix (`session.instruct`, `session.ai_judge`, etc.) — import and call the free functions; mock the harness or the agent; assert on raw `stdout` when `RunResponse` has a parsed field for the same value; share one session across contexts; or catch `AgentHarnessError` in the spec — let it surface with the log-directory path in the message.
+**Do not:** use a `session.` prefix (`session.instruct`, `session.ai_judge`, etc.) — import and call the free functions; mock the harness or the agent; assert on raw `stdout` when `RunResponse` has a parsed field for the same value; share one session across contexts; catch `AgentHarnessError` in the spec — let it surface with the log-directory path in the message; fix a **code** failure with prompt-only changes and no vanilla BDD for the gap; or treat “prompt/skill exists” / “agent said it worked” as a PASS for a behavioral run.
