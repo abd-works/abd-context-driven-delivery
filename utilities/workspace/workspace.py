@@ -1218,6 +1218,42 @@ class WorkSession:
         ]
 
     @staticmethod
+    def _session_slug(name: str) -> str:
+        slug = (name or "").strip()
+        if slug.startswith("session/"):
+            return slug[len("session/") :]
+        return slug
+
+    @prompt(name="worksession-chat")
+    @agent_tool
+    def worksession_chat(
+        self,
+        tools: list[Any] | None = None,
+        name: str = "",
+    ) -> list[str]:
+        """worksession-chat — list chat transcript paths attached to a work session.
+
+        Reads the append-only annotated tag ``chat/session/{name}``. Omit ``name`` to
+        use the current work session (or this session). Pass the kebab session name or
+        ``session/...`` branch when looking up a closed session from another chat.
+        """
+        slug = self._session_slug(name)
+        if tools:
+            for item in tools:
+                workspace = getattr(item, "workspace", None)
+                if workspace is None:
+                    continue
+                current = getattr(workspace, "current_work_session", None)
+                if not slug and current is not None:
+                    return current.chats()
+                if slug:
+                    git = current.git if current is not None else None
+                    return WorkSession(workspace, slug, git=git).chats()
+        if not slug or slug == self.name:
+            return self.chats()
+        return WorkSession(self.workspace, slug, git=self.git).chats()
+
+    @staticmethod
     def cursor_project_slug(workspace: str) -> str:
         raw = str(Path(workspace).resolve())
         return (

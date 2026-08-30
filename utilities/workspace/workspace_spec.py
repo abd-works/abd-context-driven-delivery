@@ -621,6 +621,7 @@ with description("WorkSession"):
             expect(getattr(loaded, "_is_toolset", False)).to(equal(True))
             expect("finish_work_session" in kit.tools).to(equal(True))
             expect("start_work_session" in kit.tools).to(equal(True))
+            expect("worksession_chat" in kit.tools).to(equal(True))
 
         with it("should finish from workspace and session context"):
             from workspace.workspace import WorkSession

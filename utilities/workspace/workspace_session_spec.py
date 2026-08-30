@@ -474,6 +474,11 @@ with description("a work session that has saved more than one chat message"):
         session.save_chat("one.jsonl")
         session.save_chat("two.jsonl")
         expect(session.chats()).to(equal(["one.jsonl", "two.jsonl"]))
+        expect(session.worksession_chat()).to(equal(["one.jsonl", "two.jsonl"]))
+        other = Workspace(str(tmp)).open_work_session("other", git=git)
+        expect(
+            other.worksession_chat(name="session/chat-list")
+        ).to(equal(["one.jsonl", "two.jsonl"]))
 
 
 with description("a WorkSession that is closed"):

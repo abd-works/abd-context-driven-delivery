@@ -74,7 +74,13 @@ Sibling path: `{abbrev}-{work-session-name}` beside `primary_root()`. `{work-ses
 
 Write the End section on `{folder}/session.md`. If a turn is still open, finish (commit) that turn first. Call `cleanup`: this session removes its own logs. Use `cli_agent` — if that property is set, the agent ran; call `cleanup` on it. Do not import CliAgent or read `cli-agent.json` here. Do not delete durable generate under `{path}/.context/` or product files.
 
-Save chat file path(s) with `save_chat` before CLI bindings are cleared: a note on the close commit (`refs/notes/chats`) and an append on the annotated tag `chat/session/{name}`. Always attach **this** Cursor chat via `CURSOR_CONVERSATION_ID` (per agent process — safe with several chats open; never “newest transcript by mtime”). Also attach CliAgent doer/judge chats when those ids are bound. `chats()` later reads the tag. Close commits `_commit_paths()` (scope + session artifacts), not session.md alone.
+Save chat file path(s) with `save_chat` before CLI bindings are cleared: a note on the close commit (`refs/notes/chats`) and an append on the annotated tag `chat/session/{name}`. Always attach **this** Cursor chat via `CURSOR_CONVERSATION_ID` (per agent process — safe with several chats open; never “newest transcript by mtime”). Also attach CliAgent doer/judge chats when those ids are bound. Look up later with `/worksession-chat` (`worksession_chat` / `chats()`). Close commits `_commit_paths()` (scope + session artifacts), not session.md alone.
+
+```yaml
+tool: worksession_chat
+arguments:
+  name: <optional kebab-slug or session/... branch>
+```
 
 **Before close:** run `git status` in the worktree. Delete only temps you can attribute to this session and know are disposable (examples: `Harness.write_deploy` output under `.cursor/commands` / `.cursor/skills`, agent BDD logs under `.context/.agent_bdd_sessions/` from spec runs, `_req*.yaml` scratch). Use judgment from the session — code cannot guess what is real. Never ask the user whether to delete the worktree.
 
