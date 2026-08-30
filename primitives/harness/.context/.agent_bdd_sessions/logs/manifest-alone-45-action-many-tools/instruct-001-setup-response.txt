@@ -1,0 +1,1 @@
+The PowerShell command itself is missing from your message — it ends right after the colon. Paste the full command and I’ll run it from the repo root as one shot (no remanifest, no `.py` reads, no request file).

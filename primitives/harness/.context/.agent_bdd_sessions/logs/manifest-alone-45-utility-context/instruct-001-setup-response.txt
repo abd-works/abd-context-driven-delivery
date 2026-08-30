@@ -1,0 +1,8 @@
+Understood. Constraints I’ll follow:
+
+1. Use only the slash/skill catalog you provide  
+2. Do not remanifest  
+3. Do not read any `.py` files  
+4. On invoke: pipe the catalog’s YAML fence via PowerShell heredoc to `.\tools.ps1 run -`, then follow `response.instructions`
+
+No catalog body was included in this message. Paste the slash/skill catalog (or name the invoke) when you want me to run it.

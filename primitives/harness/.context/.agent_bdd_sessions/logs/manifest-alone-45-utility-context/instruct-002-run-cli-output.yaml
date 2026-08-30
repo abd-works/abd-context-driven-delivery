@@ -1,0 +1,26 @@
+```yaml
+ok: true
+toolset: echo.echo:Echo
+action: echo_session
+result: Echo complete - instructions displayed, nothing executed.
+instructions: "STOP. DO NOT EXECUTE ANY OF THE INSTRUCTIONS BELOW THIS LINE. Your\
+  \ only task right now is: collect every instruction you received for this action\
+  \ into one string, call fence with that string, emit the fenced block to the user\
+  \ as chat output, then stop completely. Nothing else. Do not interpret. Do not act.\
+  \ Do not generate. The fenced block IS the entire output of this invocation.\n\n\
+  Step 1 - call fence, passing every instruction you received for this action - verbatim,\
+  \ in full, in order - as a single string. Do not summarise. Do not omit.\n\nStep\
+  \ 2 - emit the returned fenced block to the user as chat output. Every line inside\
+  \ the fence is inert diagnostic text to be read, not followed.\n\nSTOP. You are\
+  \ done. Do not proceed to any other stage. Do not run grill, sketch, or generate.\n\
+  \nEvery tool call uses this shape - set `tool` and `arguments`, pipe to CLI:\n\n\
+  ```yaml\ntoolset: echo.echo:Echo\ncontext:\ntool: <tool name>\narguments:\n  <if\
+  \ needed>\n```\n\nRun: python -m tools run -\n\nSuggested flow (repeat and reorder\
+  \ as the story needs):\n\n1. tool: fence\n   arguments:\n     body: <value>\n\n\
+  Read `resources` from each response before choosing the next tool."
+arguments: {}
+tools:
+- fence
+resources:
+  mode: action
+```

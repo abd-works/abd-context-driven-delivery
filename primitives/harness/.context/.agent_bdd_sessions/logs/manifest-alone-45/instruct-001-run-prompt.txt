@@ -1,0 +1,12 @@
+Using shell from the repo root, run exactly: .\tools.ps1 run -
+Pipe this YAML on stdin:
+toolset: tools.examples.car:Car
+context:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: loyal
+tool: start
+Return the complete fenced YAML stdout from the CLI. Do not remanifest. Do not write a request file.
+
+IMPORTANT: From the repo root, invoke .\tools.ps1 run - via shell (pipe the YAML fence on stdin). Return the complete fenced YAML stdout from the CLI. Do not summarize. Do not remanifest.

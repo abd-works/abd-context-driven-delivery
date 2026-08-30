@@ -1,0 +1,18 @@
+Using shell from the repo root, run this PowerShell exactly as one command (do not remanifest; do not read any .py; do not write a request file):
+
+$env:PYTHONIOENCODING="utf-8"
+$yaml = @"
+toolset: primitives.actions.examples.car:Car
+context:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: loyal
+action: travelTo
+arguments:
+  destination: courthouse
+  conditions: muddy
+"@
+$yaml | .\tools.ps1 run -
+
+Return the complete fenced YAML stdout from the CLI only. Do not summarize.
