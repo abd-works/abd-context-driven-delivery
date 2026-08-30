@@ -1798,8 +1798,8 @@ class CliAgent(SubAgent):
         raise RuntimeError(pickup.not_taken_up)
 
     def _should_judge(self, tools, actions) -> bool:
-        """Judge when tools/actions are listed, or when judge is explicitly set."""
-        return bool(self.ide._listed(tools) or self.ide._listed(actions) or self.ide.judge)
+        """Judge when this launch lists tools/actions. IdeCli.judge is capability only."""
+        return bool(self.ide._listed(tools) or self.ide._listed(actions))
 
     def _spawn_worker(self, tools, hanging, actions=None):
         judge_prompt = ""
@@ -2431,15 +2431,30 @@ class CliAgent(SubAgent):
     @sub_agent
     @agent_tool
     def launch_sessions(self, tools: list[object], actions: list[object] | None = None, prompt: str | None = None, judge: bool | str | dict | None = None) -> str:
-        """Run the listed context tools and actions through the IDE CLI as a non-blocking sub-agent.
+        """Run listed tools/actions via the IDE CLI, or prefer ``run_backlog`` for queue work.
 
-        CliAgent handles all session and workspace setup internally — do not manage those yourself. The parent's role is to launch, then monitor and unblock. The CLI decides each Turn; model, mode, and agent_mode are fixed on this ide instance and must not be passed per call.
+        CliAgent owns session/workspace setup and (via ``run_backlog``) the doer→judge→advance
+        loop. Parent contract is minimal: launch once, read the session log, unblock only after
+        CliAgent recovery stops. Model, mode, and agent_mode are fixed on this ide instance.
 
-        ## Steps
+        ## Preferred Steps (orchestrated)
 
-        1. **Launch.** Pass workspace (and session when known). Do not touch workspace or session utilities — let CliAgent handle all of that. If launch reports NOT TAKEN UP, stop immediately.
-        2. **Monitor.** The session report includes exact file paths — read them directly (do not recurse). Key files: `doer log`, `judge log`, `events log`, `job queue`, `doer jsonl`, `judge jsonl`. Watch with a 30s /loop (Cursor) or poll periodically otherwise. Report back to the user.
-        3. **Unblock on three judge FAILs.** If the doer has stopped waiting, act — do not just report the status. See details below.
+        1. **Enqueue** jobs / backlog (`enqueue_jobs`, `set_backlog`, templates).
+        2. **Launch ``run_backlog`` once.** CliAgent code spawns the doer, waits for Turn end,
+           writes the judge prompt, spawns/resumes the judge, reads PASS/FAIL, then calls
+           ``complete_job`` / ``launch_next`` internally. Do not ask the doer to contact the
+           judge or advance the queue.
+        3. **Monitor the session log** (exact paths in the launch report — read, do not recurse).
+           Key files: session jsonl, job queue, doer/judge transcripts. Notify the user on
+           ``orchestrator_stopped``, ``error``, or hard stall after CliAgent recovery fails.
+        4. **Unblock only on hard failure** (e.g. FAIL×3 after orchestrator stops). Revise the
+           job prompt, then one continue resume — do not stack prompts or drive with -p.
+
+        ## Legacy Steps (single launch_sessions without run_backlog)
+
+        1. **Launch.** Pass workspace (and session when known). If NOT TAKEN UP, stop immediately.
+        2. **Monitor** doer/judge logs and job queue; report back to the user.
+        3. **Unblock on three judge FAILs** if the doer stopped waiting.
 
         ## Job templates
 
@@ -2459,27 +2474,19 @@ class CliAgent(SubAgent):
         - Free-text items that do not match an existing ticket may create one during triage with theme:cli-agent.
         - Order is the order given unless you reorder via the ``order`` argument and record that choice.
 
-        ## What to always include in the prompt you pass to the doer
+        ## Doer prompt (thin when using run_backlog)
 
-        The prompt must tell the doer:
-        - The task in plain language.
-        - The toolset reference so it can call tools: `toolset: cli_agent.cli_agent:CliAgent` with the same workspace and session.
-        - Which queue tools to use and when:
-            - `enqueue_jobs(jobs)` — set up all jobs upfront. Each job: `{prompt, tools, actions}`.
-            - `launch_next()` — run the head job. Call once per judge PASS to advance the queue.
-            - `complete_job()` — pop the finished head before calling launch_next.
+        Tell the doer the task and toolset only. Do **not** instruct it to contact the judge,
+        call ``complete_job`` / ``launch_next``, or edit the job queue — ``run_backlog`` owns that.
+
+        For a one-off ``launch_sessions`` without orchestrator, you may still include queue tool
+        hints (`enqueue_jobs`, `launch_next`, `complete_job`) for doer-driven advance.
 
         ## Judge
 
-        CliAgent spawns both the doer and the judge automatically — the parent (you) never launches, prompts, or scores the judge. CliAgent generates the judge's instructions internally from the job and tools. A judge is spawned when tools or actions are listed, or when the user explicitly requests one.
-
-        After the doer calls finish_turn, the doer sends the judge file and waits for PASS or FAIL. That exchange is entirely between the doer and judge CLIs. Three FAILs: the doer stops and waits for the parent to intervene (see below).
-
-        ## If the doer stopped after three judge FAILs
-
-        1. Read the judge FAIL — check the transcript and named leftovers in the workspace.
-        2. Revise the job prompt and cli-agent-task.txt to target those exact gaps.
-        3. Send one continue resume to the doer. Do not stack prompts. Do not drive with -p.
+        Under ``run_backlog``, CliAgent code spawns/resumes the judge and records the verdict —
+        the parent never launches, prompts, or scores the judge; the doer never contacts it.
+        A judge runs when the job lists tools/actions, or when ``judge=`` is set on the launch/job.
         """
         if prompt:
             self.task_prompt = prompt
@@ -2488,7 +2495,8 @@ class CliAgent(SubAgent):
             self._judge_job = False
         elif judge is not None:
             self.judge = judge
-            self._judge_job = self._should_judge(tools, actions)
+            # Explicit judge= on launch forces a judge; IdeCli.judge alone does not.
+            self._judge_job = True if judge else self._should_judge(tools, actions)
         else:
             self._judge_job = self._should_judge(tools, actions)
         self._bring_in_kits(tools, actions)
