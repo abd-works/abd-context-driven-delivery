@@ -429,3 +429,45 @@
 2026-08-07T19:54:37Z [pre ] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
 2026-08-07T19:54:38Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
 2026-08-07T19:54:38Z [post] skip  c:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery\sandbox\courier\.context\sessions\courier-ops\cdd-sketch.md
+2026-08-30T08:40:30Z [post] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpbzamlc5v.py  - 2 line(s)
+2026-08-30T08:40:31Z [post] skip  C:\Users\jeffa\AppData\Local\Temp\tmpy7pgb1ye.py
+2026-08-30T08:40:31Z [post] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmplh0hx2k7.py  - 2 line(s)
+2026-08-30T08:40:32Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpuelr4i25.py  - 2 line(s)
+2026-08-30T08:40:33Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpt3dy2iok.py  - 2 line(s)
+2026-08-30T08:40:34Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpt3dy2iok.py  - 2 line(s)
+2026-08-30T08:40:35Z [pre ] skip  C:\Users\jeffa\AppData\Local\Temp\tmp8b0j4yhv.py
+2026-08-30T08:41:43Z [post] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpaoszg8bh.py  - 2 line(s)
+2026-08-30T08:41:44Z [post] skip  C:\Users\jeffa\AppData\Local\Temp\tmp2lh5wlxp.py
+2026-08-30T08:41:44Z [post] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmphn5qvgg1.py  - 2 line(s)
+2026-08-30T08:41:45Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpaepa6h4_.py  - 2 line(s)
+2026-08-30T08:41:46Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpvnw78e9p.py  - 2 line(s)
+2026-08-30T08:41:47Z [post] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpgkk5cnob.py  - 2 line(s)
+2026-08-30T08:41:47Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpvnw78e9p.py  - 2 line(s)
+2026-08-30T08:41:48Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpny559giy.py  - 2 line(s)
+2026-08-30T08:41:48Z [post] skip  C:\Users\jeffa\AppData\Local\Temp\tmpamowdd5t.py
+2026-08-30T08:41:48Z [post] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmp770al62e.py  - 2 line(s)
+2026-08-30T08:41:49Z [pre ] skip  C:\Users\jeffa\AppData\Local\Temp\tmpny559giy.py  - reuse guidance already in context
+2026-08-30T08:41:49Z [post] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpfbnewzko.py  - 2 line(s)
+2026-08-30T08:41:49Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpjxrj7sg4.py  - 2 line(s)
+2026-08-30T08:41:50Z [post] skip  C:\Users\jeffa\AppData\Local\Temp\tmpfbnewzko.py  - reuse guidance already in context
+2026-08-30T08:41:50Z [pre ] skip  C:\Users\jeffa\AppData\Local\Temp\tmp6hduapry.py
+2026-08-30T08:41:50Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmp94kperpi.py  - 2 line(s)
+2026-08-30T08:41:51Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmp94kperpi.py  - 2 line(s)
+2026-08-30T08:41:52Z [pre ] skip  C:\Users\jeffa\AppData\Local\Temp\tmpaky7ck1n.py  - reuse guidance already in context
+2026-08-30T08:41:52Z [pre ] skip  C:\Users\jeffa\AppData\Local\Temp\tmpaky7ck1n.py  - reuse guidance already in context
+2026-08-30T08:41:52Z [post] skip  C:\Users\jeffa\AppData\Local\Temp\tmpqm8s4axo.py  - reuse guidance already in context
+2026-08-30T08:41:52Z [post] skip  C:\Users\jeffa\AppData\Local\Temp\tmpqm8s4axo.py  - reuse guidance already in context
+2026-08-30T08:41:52Z [pre ] skip  C:\Users\jeffa\AppData\Local\Temp\tmpnhrkigfy.py
+2026-08-30T08:42:06Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpbw6bwdfg.py  - 2 line(s)
+2026-08-30T08:42:07Z [pre ] skip  C:\Users\jeffa\AppData\Local\Temp\tmpbw6bwdfg.py  - reuse guidance already in context
+2026-08-30T08:42:17Z [post] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpc8iwzdw9.py  - 2 line(s)
+2026-08-30T08:42:18Z [post] skip  C:\Users\jeffa\AppData\Local\Temp\tmpce5e_fo8.py
+2026-08-30T08:42:18Z [post] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpz6421exu.py  - 2 line(s)
+2026-08-30T08:42:19Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmpi4h_zjm4.py  - 2 line(s)
+2026-08-30T08:42:20Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmprmluetdx.py  - 2 line(s)
+2026-08-30T08:42:21Z [pre ] FIRED  C:\Users\jeffa\AppData\Local\Temp\tmprmluetdx.py  - 2 line(s)
+2026-08-30T08:42:22Z [pre ] skip  C:\Users\jeffa\AppData\Local\Temp\tmpyq2stxby.py  - reuse guidance already in context
+2026-08-30T08:42:22Z [pre ] skip  C:\Users\jeffa\AppData\Local\Temp\tmpyq2stxby.py  - reuse guidance already in context
+2026-08-30T08:42:22Z [post] skip  C:\Users\jeffa\AppData\Local\Temp\tmpvg6_0ef3.py  - reuse guidance already in context
+2026-08-30T08:42:22Z [post] skip  C:\Users\jeffa\AppData\Local\Temp\tmpvg6_0ef3.py  - reuse guidance already in context
+2026-08-30T08:42:22Z [pre ] skip  C:\Users\jeffa\AppData\Local\Temp\tmpuic554sy.py

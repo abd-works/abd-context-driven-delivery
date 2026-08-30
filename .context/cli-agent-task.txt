@@ -2,17 +2,41 @@ This is an interactive session.
 Turn.action: (none) (guidance — the CLI decides the Turn)
 Turn.tool_keys: workflow.workflow:Workflow
 Turn.toolCalls: workflow.workflow:Workflow name=run workflow.workflow:Workflow
-Turn.prompt: Backlog item: #42 (ticket).
+Turn.prompt: Done-state regression with BDD evidence (requirements + tests + run logs).
 
-Diagnose the root cause of the defect. Go beyond symptoms — identify the exact underlying issue. If the root cause is unclear or ambiguous, use the /diagnose tool.
+Existing evidence pack (reuse, refresh if needed):
+- .context/sessions/cli-agent-pending/done-state-regression-evidence.md
+- .context/sessions/cli-agent-pending/done-state-regression-evidence.json
 
-Critical distinction — make this explicit in your diagnosis:
-- PROMPT/AI CHANGE: the defect is caused by incorrect, missing, or poorly structured instructions, prompts, or agent behaviour. The fix will be a change to a prompt, docstring, rule, or agent instruction — not production code.
-- CODE CHANGE: the defect is caused by a bug in production code. The fix will be a code edit.
-- BOTH: some defects have both a code failure and an AI/prompt failure layered on top.
+For EACH Done board ticket, do this (no AgentBdd *execution* unless needed to locate artifacts — prefer reading history/logs):
 
-State clearly which category applies. This determines what kind of tests are written next.
+1) Ticket + session
+   - Read the issue requirements.
+   - Find the matching work session under .context/sessions/ (slug ending in -{N}) and note the session branch / worktree if recorded.
 
-Add your diagnosis hypothesis and category to the ticket notes under ## Diagnosis (separated from the analysis above).
+2) BDD / agentic BDD surface from git history
+   - On that session branch (or commits that mention #{N} / the session), list commits and which *spec* files changed: mechanical BDD (*_spec.py, *-bdd*, behavior specs) and agentic BDD (*_agent_spec.py, agent_bdd sessions).
+   - Skim those specs to understand what behavior they claim for this ticket's feature.
+
+3) Session / event logs as runtime evidence
+   - From the ticket session folder and related CliAgent/agent-bdd run logs, find what actually ran (session.md, cli-agent-session.jsonl, agent_bdd session dumps, harness logs, created artifacts).
+   - Compare that runtime trail to what the BDD/agent-BDD specs exercise.
+
+4) Score each ticket in a scorecard row with:
+   - requirements: met | gap | n/a
+   - bdd_surface: list of relevant spec files from commits (or none)
+   - runtime_evidence: "as evidenced by …" listing concrete log/file paths that show the same functionality, OR "not applicable" when this ticket's runs would not touch that function / no aligned run exists
+   - one-line overall judgment
+
+Save:
+- .context/sessions/cli-agent-pending/done-state-regression-scorecard.md
+- .context/sessions/cli-agent-pending/done-state-regression-scorecard.json
+
+Do NOT close the workspace session. Prefer reading over re-running full agent harnesses.
+
+Judge:
+- Independently check each ticket using the evidence pack + scorecard + cited logs/specs.
+- Require "as evidenced by" citations (paths) for met claims; allow "not applicable" when functions were not in play.
+- Body: per-ticket lines using met/gap/n/a — never write PASS/FAIL except the final line alone as **PASS** or **FAIL**.
+- Overall **PASS** only if every ticket is met or intentionally n/a/exception-documented; otherwise **FAIL**.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
-After you finish the Turn, you contact the judge. Do not ask the parent to run the judge. The parent is not in this loop. Open the judge in its own console window so the operator can watch. Never use print mode. On Windows: Start-Process cursor-agent -ArgumentList '--force','--trust','--resume','384c1152-3ccc-4933-b9a1-8e7473d44ae7','--workspace','C:\dev\abd-cdd-cli-agent-fixes','Read .context/cli-agent-judge.txt and follow it exactly.' -WorkingDirectory 'C:\dev\abd-cdd-cli-agent-fixes' -WindowStyle Normal. Wait for PASS or FAIL from the judge transcript or finish_turn, not by reading this console. On PASS this job is done. Pop the first object from .context/sessions/<session>/cli-agent-job-queue.json (the job you just finished). If another job remains, that is your next Turn — follow its prompt, tools, and actions, then contact the judge again after that Turn. Do not wait for the parent. If the queue is empty, stop. On FAIL, fix, finish the Turn, and send again (attempt n of 3). After three FAILs, stop and wait for the parent.

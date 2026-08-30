@@ -120,15 +120,18 @@ class AgentHelper:
     def when_agent_touches_the_asset_again(self) -> None:
         first = instruct(
             f"Using the edit tool, append a one-line comment `# probe-1` to the end "
-            f"of {_FIXTURE_PY}. Then state literally `RESULT: EDIT SUCCEEDED` or "
+            f"of {_FIXTURE_PY}. Quote any MANIFEST GATE / agent_message text you saw "
+            f"verbatim. Then state literally `RESULT: EDIT SUCCEEDED` or "
             f"`RESULT: EDIT BLOCKED` depending on what actually happened.",
             timeout_seconds=240,
         )
         second = instruct(
             f"Using the edit tool, append a further one-line comment `# probe-2` to "
             f"the end of {_FIXTURE_PY} - the same file you just edited a moment ago "
-            f"in this same chat. Then state literally `RESULT: EDIT SUCCEEDED` or "
-            f"`RESULT: EDIT BLOCKED` depending on what actually happened.",
+            f"in this same chat. Report whether a fresh full MANIFEST GATE dump was "
+            f"re-injected on this second edit (say `REMANIFEST: YES` or "
+            f"`REMANIFEST: NO`). Then state literally `RESULT: EDIT SUCCEEDED` or "
+            f"`RESULT: EDIT BLOCKED`.",
             timeout_seconds=240,
         )
         self._result_text = first.text
@@ -139,6 +142,9 @@ class AgentHelper:
             expect(self._result_text).to(contain("RESULT: EDIT SUCCEEDED"))
             expect(self._second_result_text).to(contain("RESULT: EDIT SUCCEEDED"))
             expect(self._second_result_text).not_to(contain("EDIT BLOCKED"))
+            # #17 — second touch reuses guidance already in context; no remanifest.
+            expect(self._second_result_text).to(contain("REMANIFEST: NO"))
+            expect(self._second_result_text).not_to(contain("REMANIFEST: YES"))
         finally:
             self._close_session()
             self._restore_fixture()

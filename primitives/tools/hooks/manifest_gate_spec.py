@@ -17,7 +17,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
 from expects import be_empty, be_true, contain, equal, expect, have_key
 from mamba import context, description, it
 
-import tools.hooks.manifest_gate as gate
+import utilities.manifest_hook.manifest_gate as gate
 
 
 _MANIFEST_FILE = """\
@@ -129,6 +129,49 @@ with description("handle_pre_tool_use (Write hook)"):
                 second = gate.handle_pre_tool_use(data)
             expect(first["permission"]).to(equal("allow"))
             expect(second["permission"]).to(equal("allow"))
+
+    with context("given guidance already delivered earlier in this conversation"):
+        with it("does not remanifest or re-inject on a later mutating touch"):
+            # #17 — reuse guidance already in context; stay in fidelity-tool format
+            # without re-calling manifest. First touch delivers; second must not.
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+                f.write(_MANIFEST_FILE)
+                path = f.name
+            data = {
+                "conversation_id": "conv-reuse-pre-001",
+                "tool_name": "Write",
+                "tool_input": {"path": path, "contents": "x"},
+            }
+            with patch.object(
+                gate, "run_manifests", return_value=(_FAKE_MANIFEST_OUTPUT, [])
+            ) as mocked:
+                first = gate.handle_pre_tool_use(data)
+                second = gate.handle_pre_tool_use(data)
+            expect(first["permission"]).to(equal("allow"))
+            expect(first["agent_message"]).to(contain("MANIFEST GATE"))
+            expect(second["permission"]).to(equal("allow"))
+            expect("agent_message" not in second).to(be_true)
+            expect(mocked.call_count).to(equal(1))
+
+    with context("given the same asset post-touched twice in one conversation"):
+        with it("runs the manifest once and skips re-inject on the second post"):
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+                f.write(_MANIFEST_FILE)
+                path = f.name
+            data = {
+                "conversation_id": "conv-reuse-post-001",
+                "tool_name": "Read",
+                "tool_input": {"path": path},
+            }
+            with patch.object(
+                gate, "run_manifests", return_value=(_FAKE_MANIFEST_OUTPUT, [])
+            ) as mocked:
+                first = gate.handle_post_tool_use(data)
+                second = gate.handle_post_tool_use(data)
+            expect(first).to(have_key("additional_context"))
+            expect(first["additional_context"]).to(contain("MANIFEST GATE"))
+            expect(second).to(equal({}))
+            expect(mocked.call_count).to(equal(1))
 
     with context("given a file that does not exist (new file creation)"):
         with it("returns permission allow with no agent_message"):
