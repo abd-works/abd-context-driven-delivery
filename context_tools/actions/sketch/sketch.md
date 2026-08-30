@@ -24,10 +24,10 @@ Rough, informal artifacts produced through an interactive grill loop, kept along
 
 1. **Locate a template** — tiered discovery (see below).
 2. **Draft** — rough shape inspired by the template.
-3. **Present and persist** — show the sketch in chat with a short explanation, then **immediately** `save_sketch` to `{destination}/.context/{slug}-sketch.md`. A sketch that exists only in chat is a defect; the file is the working record.
-4. **Extend the next branch** — pick the next unresolved branch of the design tree, sketch your recommended shape for it into the artifact, and explain why in one or two lines. One branch at a time. Wait for feedback.
-5. **Refine and overwrite** — regenerate the sketch showing what changed, then **immediately** `save_sketch` again (same path). Do not batch saves; do not wait until the session ends.
-6. **Repeat** 4–5 until either the user says done, or every branch of the design tree has been sketched and reasoned out. Ask a question only when a branch genuinely cannot be resolved by sketching a recommendation.
+3. **Present, persist, and pause for review** — show the sketch in chat with a short explanation, then **immediately** `save_sketch` to `{destination}/.context/{slug}-sketch.md`, then **immediately** `review_sketch`: pause so the person can look at it; AskQuestion whether it is correct; if not, AskQuestion what mistakes it made, correct them, `save_sketch` again, and re-enter review. Do **not** ask the next grill question until the person confirms the sketch is correct. A sketch that exists only in chat is a defect; skipping review is a defect.
+4. **Extend the next branch** — only after confirmed-correct review, pick the next unresolved branch (or batched peers), sketch your recommended shape, and explain why. One branch (or one batched frame) at a time.
+5. **Refine and overwrite** — regenerate the sketch showing what changed **and** incorporating every mistake named in prior `review_sketch` rounds, then **immediately** `save_sketch` again (same path), then **immediately** `review_sketch` again. Do not batch saves; do not wait until the session ends; do not regenerate as if named mistakes never happened.
+6. **Repeat** 4–5 until either the user says done, or every branch of the design tree has been sketched and reasoned out. Ask a question only when a branch genuinely cannot be resolved by sketching a recommendation. Batch very similar questions so the loop does not run forever. Use grilling to validate what the sketch claimed — sketch and grill must not run disconnected.
 
 ### Sketch cadence — question budget before first sketch
 
@@ -82,7 +82,8 @@ If none of the above yield a template, the sketcher invents a shape for the doma
   - Generated code for that module → `{session}/{module}/` (not under `.context/`)
 - Sketches live at `{destination}/.context/{slug}-sketch.md`.
 - `.context/` is created inside the destination if it does not already exist.
-- **Hard rule:** call `save_sketch` as soon as the first interim draft exists; overwrite on every regeneration. Never defer persistence to the end of the grill.
+- **Hard rule:** call `save_sketch` as soon as the first interim draft exists; overwrite on every regeneration; call `review_sketch` after every `save_sketch` and do not ask the next grill question until the person confirms the sketch is correct. Never defer persistence or review to the end of the grill.
+- **Carry-forward mistakes:** mistakes named in review — bad assumptions, poor performance, poor hygiene, or anything else — must shape the next sketch. Correct the model; do not regenerate as if those mistakes never happened.
 - They persist until a formal artifact absorbs their content.
 - Retirement is manual for now — remove the sketch when the formal artifact fully captures its intent.
 

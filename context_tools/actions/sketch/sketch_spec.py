@@ -38,6 +38,7 @@ with description("Sketch toolset"):
             expect(entry["kind"]).to(equal("action"))
             expect("find_template" in entry["tools"]).to(be_true)
             expect("save_sketch" in entry["tools"]).to(be_true)
+            expect("review_sketch" in entry["tools"]).to(be_true)
             expect(entry.get("chain")).to(equal(None))
 
     with context("sketch_template property"):
@@ -196,9 +197,48 @@ with description("Sketch toolset"):
             expect("find_template" in self.body.tool_steps).to(be_true)
             expect("save_sketch" in self.body.tool_steps).to(be_true)
 
+        with it("wires review_sketch after save_sketch as a hard review gate"):
+            steps = list(self.body.tool_steps)
+            expect("review_sketch" in steps).to(be_true)
+            expect("save_sketch" in steps).to(be_true)
+            save_i = steps.index("save_sketch")
+            expect("review_sketch" in steps[save_i:]).to(be_true)
+
         with it("expands prose that instructs the sketcher to persist drafts via save_sketch"):
             joined = "\n".join(self.body.prose_parts)
             expect(joined).to(contain("save_sketch"))
+
+        with it("instructs pause, confirm correctness, and correct mistakes before the next question"):
+            joined = "\n".join(self.body.prose_parts)
+            expect(joined).to(contain("review_sketch"))
+            expect(joined).to(contain("confirm"))
+            expect(joined).to(contain("mistakes"))
+            expect(joined).to(
+                contain("Asking another grill question before review_sketch confirms correct is a defect")
+            )
+            expect(joined).to(
+                contain("Never defer persistence or review to the end of the grill")
+            )
+
+        with it("instructs carrying named review mistakes into the next sketch"):
+            joined = "\n".join(self.body.prose_parts)
+            expect(joined).to(contain("carried forward"))
+            expect(joined).to(
+                contain("do not regenerate as if those mistakes never happened")
+            )
+            expect(joined).to(
+                contain("Regenerating as if named mistakes never happened is a defect")
+            )
+
+        with it("instructs grilling to validate the sketch rather than run disconnected"):
+            joined = "\n".join(self.body.prose_parts)
+            expect(joined).to(contain("validates what the sketch claimed"))
+            expect(joined).to(contain("must not run disconnected"))
+
+        with it("instructs batching similar questions so the loop does not run forever"):
+            joined = "\n".join(self.body.prose_parts)
+            expect(joined).to(contain("Batch very similar questions"))
+            expect(joined).to(contain("does not run forever"))
 
         with it("includes the grill_with_context body in sketch"):
             joined = "\n".join(self.body.prose_parts)
@@ -214,6 +254,13 @@ with description("a sketch action"):
             joined = "\n".join(body.prose_parts)
             expect(joined).to(contain("Grill the sketch plan"))
             expect(joined).to(contain("save_sketch"))
+
+    with context("that pauses for sketch review"):
+        with it("should return the sketch-review marker from review_sketch"):
+            expect(Sketch().review_sketch()).to(equal("sketch-review"))
+
+        with it("should expose review_sketch as a tool"):
+            expect("review_sketch" in Sketch().tools).to(be_true)
 
 
 with description("BaseContextTool host face for sketch"):

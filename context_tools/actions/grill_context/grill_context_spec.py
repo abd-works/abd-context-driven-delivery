@@ -46,8 +46,11 @@ with description("GrillContext toolset"):
         with it("should include the grill_with_context body in grill"):
             entry = GrillContext.manifest.signature["grill"]
             expect(entry["kind"]).to(equal("action"))
-            expect("explore_context_files" in entry["tools"]).to(be_true)
-            expect("read_context_file" in entry["tools"]).to(be_true)
+            expect("grill_with_context" in entry["tools"]).to(be_true)
+            gwc = GrillContext.manifest.signature["grill_with_context"]
+            expect("explore_context_files" in gwc["tools"]).to(be_true)
+            expect("read_context_file" in gwc["tools"]).to(be_true)
+            expect("write_grill_answer" in gwc["tools"]).to(be_true)
 
     with context("explore_context_files tool"):
         with before.each:
@@ -198,6 +201,22 @@ with description("GrillContext toolset"):
             expect(joined).to(contain("grill"))
             expect("explore_context_files" in self.body.tool_steps).to(be_true)
             expect("read_context_file" in self.body.tool_steps).to(be_true)
+
+        with it("should prefer thinking questions over syntax trivia"):
+            joined = "\n".join(self.body.prose_parts)
+            expect(joined).to(contain("Prefer thinking/context questions"))
+            expect(joined).to(contain("over syntax"))
+
+        with it("should require grilling to validate the sketch when one is in play"):
+            joined = "\n".join(self.body.prose_parts)
+            expect(joined).to(contain("Sketch-validation gate"))
+            expect(joined).to(contain("must not run disconnected"))
+            expect(joined).to(contain("as if those mistakes never happened"))
+
+        with it("should batch similar questions so the loop does not run forever"):
+            joined = "\n".join(self.body.prose_parts)
+            expect(joined).to(contain("Batch similar questions"))
+            expect(joined).to(contain("does not run forever"))
 
 
 with description("a grill action"):
