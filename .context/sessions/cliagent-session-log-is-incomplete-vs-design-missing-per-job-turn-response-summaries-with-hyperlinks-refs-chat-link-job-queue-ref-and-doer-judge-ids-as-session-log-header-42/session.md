@@ -149,3 +149,30 @@ Module-context documents the thin event set (`session_start`, `spawn`, `jobs_def
 | Prompt / module-context | May be updated *after* the code contract exists so BDD/docs match; not the root cause of missing fields | Follow-on doc sync, not the primary fix |
 
 Agents cannot invent structured log fields the writer never emits. Tests implied next: **mechanical BDD** on log shape (header, enriched `job_finished` / summary kind, chat + job-queue fields). Agentic BDD only if launch-report / prompt text is also part of the required contract drift.
+
+## Resolution
+
+**Status:** done on `main`. GitHub #42 closed.
+
+### Phase 1 — Log completeness (`919cc997`, merge `54f0b674`)
+
+- `header` kind: one-time doer/judge IDs, `chat`, `job_queue`
+- `session_start`: `chat`, `job_queue`
+- `job_finished`: optional `summary`, `refs`
+- `_record_cli_binding`: writes header on first bind
+- BDD: `"CliAgent session log completeness (#42)"` in `cli_agent_spec.py`
+
+### Phase 2 — Observability (`046dfabf`)
+
+- All records: `ts_ms`, `since_last_s`
+- `job_started` / `job_finished`: `tools`, `actions`, `judge`; `duration_s` on finish
+- `spawn`: structured `tools`, `actions`, `tool_calls`, `job_index`
+- New `judge_started`; `verdict` gets `job_index`, `duration_s`
+- Logs utilities + context_tools at toolset level (not primitives)
+- BDD: `"CliAgent session log observability"` in `cli_agent_spec.py`
+
+### Remaining (out of #42 scope)
+
+- Auto-populate `summary`/`refs` in `complete_job()` from doer transcript
+- `cli-defect` template regression job (`cda830c4`) — separate backlog/process item
+
