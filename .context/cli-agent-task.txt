@@ -2,41 +2,26 @@ This is an interactive session.
 Turn.action: (none) (guidance — the CLI decides the Turn)
 Turn.tool_keys: workflow.workflow:Workflow
 Turn.toolCalls: workflow.workflow:Workflow name=run workflow.workflow:Workflow
-Turn.prompt: Done-state regression with BDD evidence (requirements + tests + run logs).
+Turn.prompt: Backlog item: #53 (ticket).
+Worktree: C:/dev/abd-cdd-53 — rebind here before edits.
+Feature: CliAgent human check property (like judge, simpler): pause, notify parent, looks-good vs needs-fixing; redo with feedback; then move on.
+Triage/start-ticket already done. Continue from analysis.
+Judge: never write PASS/FAIL except final line alone **PASS** or **FAIL**.
 
-Existing evidence pack (reuse, refresh if needed):
-- .context/sessions/cli-agent-pending/done-state-regression-evidence.md
-- .context/sessions/cli-agent-pending/done-state-regression-evidence.json
+The ticket is confirmed as a small change and start-ticket has already been run. Now analyze the change - do not hunt for defects or problems.
 
-For EACH Done board ticket, do this (no AgentBdd *execution* unless needed to locate artifacts — prefer reading history/logs):
+- Read all context files (.context/, module-context.md, grill-answers).
+- Analyze repo history for the area of the change.
+- Search for similar past changes and related tickets.
+- Map the current behavior and the intended delta. Be thorough about the change surface - do not stop at the first file that looks related.
 
-1) Ticket + session
-   - Read the issue requirements.
-   - Find the matching work session under .context/sessions/ (slug ending in -{N}) and note the session branch / worktree if recorded.
+Add your full analysis to the ticket notes under ## Analysis (separated from existing content).
 
-2) BDD / agentic BDD surface from git history
-   - On that session branch (or commits that mention #{N} / the session), list commits and which *spec* files changed: mechanical BDD (*_spec.py, *-bdd*, behavior specs) and agentic BDD (*_agent_spec.py, agent_bdd sessions).
-   - Skim those specs to understand what behavior they claim for this ticket's feature.
 
-3) Session / event logs as runtime evidence
-   - From the ticket session folder and related CliAgent/agent-bdd run logs, find what actually ran (session.md, cli-agent-session.jsonl, agent_bdd session dumps, harness logs, created artifacts).
-   - Compare that runtime trail to what the BDD/agent-BDD specs exercise.
+PRIOR FAIL: ## Analysis must be on the GitHub ticket #53 itself (issue body or comment), not only session.md.
+Rebind to this worktree. Read context + cli_agent judge path history. Write a full ## Analysis for human-check (pause, notify parent, looks-good vs needs-fixing, redo with feedback) onto ticket #53 via Workflow ticket notes / gh.
+Judge: never write PASS/FAIL except final line alone **PASS** or **FAIL**.
 
-4) Score each ticket in a scorecard row with:
-   - requirements: met | gap | n/a
-   - bdd_surface: list of relevant spec files from commits (or none)
-   - runtime_evidence: "as evidenced by …" listing concrete log/file paths that show the same functionality, OR "not applicable" when this ticket's runs would not touch that function / no aligned run exists
-   - one-line overall judgment
 
-Save:
-- .context/sessions/cli-agent-pending/done-state-regression-scorecard.md
-- .context/sessions/cli-agent-pending/done-state-regression-scorecard.json
-
-Do NOT close the workspace session. Prefer reading over re-running full agent harnesses.
-
-Judge:
-- Independently check each ticket using the evidence pack + scorecard + cited logs/specs.
-- Require "as evidenced by" citations (paths) for met claims; allow "not applicable" when functions were not in play.
-- Body: per-ticket lines using met/gap/n/a — never write PASS/FAIL except the final line alone as **PASS** or **FAIL**.
-- Overall **PASS** only if every ticket is met or intentionally n/a/exception-documented; otherwise **FAIL**.
+UNBLOCK: ## Analysis is ALREADY on GitHub issue #53 body. Confirm it, do not rewrite from scratch unless thin. Judge must score that ticket body. Final line only **PASS** or **FAIL**.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.

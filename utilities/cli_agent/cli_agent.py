@@ -621,6 +621,8 @@ class _CliAgentLog:
             out["actions"] = actions
         if "judge" in item:
             out["judge"] = item.get("judge")
+        if "human" in item or "human_check" in item:
+            out["human"] = bool(item.get("human") or item.get("human_check"))
         return out
 
     @classmethod
@@ -746,6 +748,7 @@ class _CliAgentLog:
         tools: list[str] | None = None,
         actions: list[str] | None = None,
         judge=None,
+        human=None,
     ) -> None:
         record: dict = {"kind": "job_started", "index": index, "prompt": prompt}
         if tools:
@@ -754,6 +757,8 @@ class _CliAgentLog:
             record["actions"] = list(actions)
         if judge is not None:
             record["judge"] = judge
+        if human is not None:
+            record["human"] = human
         self.append(work, record)
         key = self._work_key(work)
         self._job_started_ms.setdefault(key, {})[index] = record["ts_ms"]
@@ -769,6 +774,7 @@ class _CliAgentLog:
         tools: list[str] | None = None,
         actions: list[str] | None = None,
         judge=None,
+        human=None,
     ) -> None:
         record: dict = {"kind": "job_finished", "index": index, "prompt": prompt}
         if summary:
@@ -781,11 +787,54 @@ class _CliAgentLog:
             record["actions"] = list(actions)
         if judge is not None:
             record["judge"] = judge
+        if human is not None:
+            record["human"] = human
         key = self._work_key(work)
         started = self._job_started_ms.get(key, {}).pop(index, None)
         now_ms = int(time.time() * 1000)
         if started is not None:
             record["duration_s"] = round((now_ms - started) / 1000, 3)
+        self.append(work, record)
+
+    def human_check_needed(self, work, *, job_index: int) -> None:
+        self.append(work, {"kind": "human_check_needed", "job_index": job_index})
+
+    def human_notified(
+        self,
+        work,
+        *,
+        job_index: int,
+        title: str,
+        body: str,
+        channel: str = "os",
+    ) -> None:
+        """Record that a human-visible notification was attempted for a check."""
+        self.append(
+            work,
+            {
+                "kind": "human_notified",
+                "job_index": job_index,
+                "title": title,
+                "body": body,
+                "channel": channel,
+            },
+        )
+
+    def human_check_resolved(
+        self,
+        work,
+        *,
+        job_index: int,
+        result: str,
+        feedback: str = "",
+    ) -> None:
+        record: dict = {
+            "kind": "human_check_resolved",
+            "job_index": job_index,
+            "result": result,
+        }
+        if feedback:
+            record["feedback"] = feedback
         self.append(work, record)
 
     def judge_started(self, work, *, job_index: int, judge: str) -> None:
@@ -1127,6 +1176,12 @@ class IdeCli:
         "doer the usual way without notify_on_output. Every once in a while, "
         "check the doer (logs, transcript tail, hanging Turn, artifacts). "
         "If the doer did not take the job (NOT TAKEN UP), stop — do not wait. "
+        "When the session log shows human_check_needed (and human_notified), you ARE the check: "
+        "an IDE/OS notification was already fired for the operator. Call "
+        "resolve_human_check(result='looks_good') or "
+        "resolve_human_check(result='needs_fixing', feedback='...') "
+        "(or write the matching human-check-{index}.json in the session folder). "
+        "Do not invent a judge loop for human jobs. "
         "If the doer stopped after three judge FAILs, do not mindlessly loop: "
         "read the judge FAIL (transcript / finish_turn result), investigate the "
         "named leftovers in the workspace, revise the job prompt (update "
@@ -2214,8 +2269,13 @@ class CliAgent(SubAgent):
             tools=kit.get("tools"),
             actions=kit.get("actions"),
             judge=kit.get("judge"),
+            human=kit.get("human"),
         )
-        judge = item.get("judge")
+        if self._job_needs_human(item):
+            # Human replaces judge for this job — doer-only launch.
+            judge = False
+        else:
+            judge = item.get("judge")
         return self.launch_sessions(
             item.get("tools") or [],
             item.get("actions") or None,
@@ -2224,7 +2284,7 @@ class CliAgent(SubAgent):
 
     @agent_tool
     def complete_job(self) -> dict | None:
-        """Judge PASS: drop the finished head job. Call launch_next next if more jobs remain."""
+        """Judge PASS / human looks_good: drop the finished head job. Call launch_next next if more jobs remain."""
         work = self._attach_cli_sessions()
         item = JobQueue().peek(work)
         result = JobQueue().pop(work)
@@ -2237,17 +2297,175 @@ class CliAgent(SubAgent):
             tools=kit.get("tools"),
             actions=kit.get("actions"),
             judge=kit.get("judge"),
+            human=kit.get("human"),
         )
         return result
 
+    def _job_needs_human(self, item: dict | None) -> bool:
+        if not item:
+            return False
+        return bool(item.get("human") or item.get("human_check"))
+
     def _job_needs_judge(self, item: dict | None) -> bool:
         if not item:
+            return False
+        if self._job_needs_human(item):
+            # Human check replaces judge for this job.
             return False
         if "judge" in item:
             return bool(item.get("judge"))
         tools = item.get("tools") or []
         actions = item.get("actions") or []
         return bool(tools or actions)
+
+    @staticmethod
+    def _normalize_human_result(raw: str) -> str:
+        text = str(raw or "").strip().lower().replace("-", "_").replace(" ", "_")
+        if text in ("looks_good", "looksgood", "good", "ok", "pass"):
+            return "looks_good"
+        if text in (
+            "needs_fixing",
+            "needsfixing",
+            "needs_fix",
+            "fix",
+            "fail",
+            "redo",
+        ):
+            return "needs_fixing"
+        raise ValueError(
+            f"human check result must be looks_good or needs_fixing, got {raw!r}"
+        )
+
+    def _human_check_response_path(self, work, job_index: int) -> Path:
+        folder = getattr(work, "folder", None)
+        if folder:
+            return Path(folder) / f"human-check-{int(job_index)}.json"
+        name = getattr(work, "name", "") or "work"
+        root = getattr(work, "path", None) or "."
+        return Path(root) / ".context" / "sessions" / name / f"human-check-{int(job_index)}.json"
+
+    def _apply_human_feedback_to_head(self, work, feedback: str) -> None:
+        jobs = JobQueue().load(work)
+        if not jobs:
+            return
+        head = dict(jobs[0])
+        original = head.get("_human_original_prompt")
+        if original is None:
+            original = str(head.get("prompt") or "")
+            head["_human_original_prompt"] = original
+        fb = (feedback or "").strip() or "(no details)"
+        head["prompt"] = (
+            f"{original}\n\n"
+            f"HUMAN FEEDBACK (needs fixing):\n{fb}\n"
+            "Address the feedback, then finish the Turn.\n"
+        )
+        jobs[0] = head
+        JobQueue().save(work, jobs)
+
+    def _wait_for_human_check(self, work, *, job_index: int, stall_s: float) -> dict:
+        """Block until human-check-{index}.json appears (parent/operator resolution)."""
+        path = self._human_check_response_path(work, job_index)
+        if path.is_file():
+            path.unlink()
+        deadline = time.time() + max(0.0, stall_s)
+        while time.time() < deadline:
+            if path.is_file():
+                try:
+                    raw = json.loads(path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    time.sleep(0.25)
+                    continue
+                if not isinstance(raw, dict):
+                    raw = {"result": str(raw)}
+                result = self._normalize_human_result(str(raw.get("result") or ""))
+                feedback = str(raw.get("feedback") or "")
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+                return {"result": result, "feedback": feedback}
+            time.sleep(0.25)
+        _CliAgentLog().error(
+            work,
+            detail=f"stall: no human check within {stall_s}s",
+            job_index=job_index,
+        )
+        raise RuntimeError(f"stall: no human check within {stall_s}s")
+
+    def _human_check_notify_text(self, work, item: dict, *, job_index: int) -> tuple[str, str]:
+        session = getattr(work, "name", "") or "session"
+        prompt_head = str(item.get("prompt") or "").strip().splitlines()
+        head = (prompt_head[0] if prompt_head else "(no prompt)")[:160]
+        title = f"CliAgent human check — job {job_index}"
+        body = (
+            f"Session {session} needs your review (looks_good / needs_fixing).\n"
+            f"Job: {head}\n"
+            f"Resolve: resolve_human_check(...) or {session}/human-check-{job_index}.json"
+        )
+        return title, body
+
+    def _notify_human_check(
+        self,
+        work,
+        item: dict,
+        *,
+        job_index: int,
+        notify_human=None,
+    ) -> None:
+        """Fire a human-visible notification, then record human_notified in the session log.
+
+        Default channel is the IDE/OS notifier (same bridge as manifest gate). Tests inject
+        ``notify_human`` to spy without requiring the Cursor extension.
+        """
+        title, body = self._human_check_notify_text(work, item, job_index=job_index)
+        channel = "os"
+        if notify_human is not None:
+            channel = str(notify_human(work, item, title, body) or "test")
+        else:
+            try:
+                from utilities.manifest_hook.manifest_gate_conf import (
+                    show_os_notification,
+                )
+
+                show_os_notification(title, body)
+            except Exception:
+                # Never block the backlog loop on notifier failure — log still records intent.
+                channel = "os_failed"
+        _CliAgentLog().human_notified(
+            work,
+            job_index=job_index,
+            title=title,
+            body=body,
+            channel=channel,
+        )
+
+    @agent_tool
+    def resolve_human_check(self, result: str, feedback: str = "") -> str:
+        """Record human review for a job waiting on ``human`` / ``human_check``.
+
+        ``result``: ``looks_good`` or ``needs_fixing``.
+        ``feedback``: included when redoing the same job after needs_fixing.
+        Writes ``human-check-{index}.json`` in the session folder for ``run_backlog``.
+        """
+        work = self._attach_cli_sessions()
+        item = JobQueue().peek(work)
+        if item is None:
+            raise RuntimeError(JobQueue.empty)
+        if "index" in item:
+            index = int(item["index"])
+        else:
+            index = self._current_job_index
+        normalized = self._normalize_human_result(result)
+        if normalized == "needs_fixing" and not str(feedback or "").strip():
+            # Allow empty feedback but keep a clear marker for the redo prompt.
+            feedback = ""
+        path = self._human_check_response_path(work, index)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps({"result": normalized, "feedback": feedback or ""}),
+            encoding="utf-8",
+        )
+        return f"human check recorded: {normalized} (job_index={index})"
 
     def _write_judge_prompt(self, work, item: dict) -> Path:
         ws = Path(self._workspace_root())
@@ -2272,15 +2490,19 @@ class CliAgent(SubAgent):
         max_fail: int = 3,
         wait_doer=None,
         wait_verdict=None,
+        wait_human=None,
+        notify_human=None,
         spawn_judge=None,
         launch_job=None,
     ) -> str:
-        """Own the backlog/job control loop in-process (judge-in-code, auto-advance).
+        """Own the backlog/job control loop in-process (human check / judge / auto-advance).
 
         Parent launches ``run_backlog`` once and monitors the session log. The doer
         only executes the job Turn — it must not contact the judge or call
         ``complete_job`` / ``launch_next``. Hooks (``wait_doer``, ``wait_verdict``,
-        ``spawn_judge``, ``launch_job``) are for tests and alternate transports.
+        ``wait_human``, ``notify_human``, ``spawn_judge``, ``launch_job``) are for
+        tests and alternate transports. Jobs with ``human: true`` notify the human
+        (IDE/OS by default), pause for resolution, instead of spawning a judge.
         """
         work = self._attach_cli_sessions()
         log = _CliAgentLog()
@@ -2320,6 +2542,46 @@ class CliAgent(SubAgent):
                     else:
                         self._wait_until_doer_turn_ends(work, stall_s=stall_s)
                     log.doer_finished(work, job_index=index)
+
+                    if self._job_needs_human(item):
+                        log.human_check_needed(work, job_index=index)
+                        # Notify before waiting — human must be able to hear the gate.
+                        self._notify_human_check(
+                            work,
+                            item,
+                            job_index=index,
+                            notify_human=notify_human,
+                        )
+                        if wait_human is not None:
+                            resolution = wait_human(work, item) or {}
+                        else:
+                            resolution = self._wait_for_human_check(
+                                work, job_index=index, stall_s=stall_s
+                            )
+                        if isinstance(resolution, str):
+                            resolution = {"result": resolution, "feedback": ""}
+                        result = self._normalize_human_result(
+                            str(resolution.get("result") or "")
+                        )
+                        feedback = str(resolution.get("feedback") or "")
+                        log.human_check_resolved(
+                            work,
+                            job_index=index,
+                            result=result,
+                            feedback=feedback,
+                        )
+                        if result == "looks_good":
+                            self.complete_job()
+                            finished += 1
+                            break
+                        self._apply_human_feedback_to_head(work, feedback)
+                        log.recovery(
+                            work,
+                            job_index=index,
+                            detail="human needs_fixing",
+                        )
+                        item = JobQueue().peek(work) or item
+                        continue
 
                     if not self._job_needs_judge(item):
                         self.complete_job()
@@ -2680,21 +2942,26 @@ class CliAgent(SubAgent):
     def launch_sessions(self, tools: list[object], actions: list[object] | None = None, prompt: str | None = None, judge: bool | str | dict | None = None) -> str:
         """Run listed tools/actions via the IDE CLI, or prefer ``run_backlog`` for queue work.
 
-        CliAgent owns session/workspace setup and (via ``run_backlog``) the doer→judge→advance
-        loop. Parent contract is minimal: launch once, read the session log, unblock only after
-        CliAgent recovery stops. Model, mode, and agent_mode are fixed on this ide instance.
+        CliAgent owns session/workspace setup and (via ``run_backlog``) the doer→human/judge→advance
+        loop. Parent contract is minimal for judged jobs: launch once, read the session log, unblock only after
+        CliAgent recovery stops. For jobs with ``human: true``, the parent IS the check — resolve
+        ``human_check_needed`` via ``resolve_human_check``. Model, mode, and agent_mode are fixed on this ide instance.
 
         ## Preferred Steps (orchestrated)
 
         1. **Enqueue** jobs / backlog (`enqueue_jobs`, `set_backlog`, templates).
         2. **Launch ``run_backlog`` once.** CliAgent code spawns the doer, waits for Turn end,
-           writes the judge prompt, spawns/resumes the judge, reads PASS/FAIL, then calls
+           then either pauses for human check, or writes the judge prompt / reads PASS/FAIL, then calls
            ``complete_job`` / ``launch_next`` internally. Do not ask the doer to contact the
            judge or advance the queue.
         3. **Monitor the session log** (exact paths in the launch report — read, do not recurse).
-           Key files: session jsonl, job queue, doer/judge transcripts. Notify the user on
-           ``orchestrator_stopped``, ``error``, or hard stall after CliAgent recovery fails.
-        4. **Unblock only on hard failure** (e.g. FAIL×3 after orchestrator stops). Revise the
+           Key files: session jsonl, job queue, doer/judge transcripts. CliAgent also fires an
+           IDE/OS notification on ``human_check_needed`` (logged as ``human_notified``).
+           Notify / act on ``orchestrator_stopped``, ``error``, ``human_check_needed``, or hard stall.
+        4. **On ``human_check_needed`` / ``human_notified``:** call ``resolve_human_check(result='looks_good')`` or
+           ``resolve_human_check(result='needs_fixing', feedback='...')`` (session file
+           ``human-check-{index}.json`` is also accepted). Needs-fixing redoes the same job with feedback.
+        5. **Unblock only on hard failure** (e.g. FAIL×3 after orchestrator stops). Revise the
            job prompt, then one continue resume — do not stack prompts or drive with -p.
 
         ## Legacy Steps (single launch_sessions without run_backlog)
@@ -2734,6 +3001,8 @@ class CliAgent(SubAgent):
         Under ``run_backlog``, CliAgent code spawns/resumes the judge and records the verdict —
         the parent never launches, prompts, or scores the judge; the doer never contacts it.
         A judge runs when the job lists tools/actions, or when ``judge=`` is set on the launch/job.
+        Jobs with ``human: true`` (or ``human_check``) skip the AI judge: parent resolves looks_good /
+        needs_fixing instead.
         """
         if prompt:
             self.task_prompt = prompt
