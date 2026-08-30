@@ -109,3 +109,26 @@ Residual work, if any, is **out of scope for this ticket’s original defect fra
 - `IdeCli._parent_checkin` — stale 30s `/loop` instructions vs Preferred Steps
 - Launch report “Monitor with these files” — the actual parent observation surface
 - No CliAgent API today that “fires” an IDE notification on job_finished
+
+## Diagnosis
+
+### Category
+**BOTH** — a shipped code redesign (#44) plus leftover prompt/AI guidance that still steers parents into the superseded contract.
+
+### Root cause hypothesis
+The framed symptom (“job-finished notifications not firing” under a parent **30s `/loop`**) was never a broken `_CliAgentLog.job_finished` writer. That writer works when `complete_job()` runs (#42 coverage). The failure mode was **wrong completion observation surface**:
+
+1. **Code / design (addressed by #44, not by a parent notify API):** There is no CliAgent path that pushes a Cursor toast/notify on job completion. Preferred completion signals are session-log kinds (`job_finished`, `doer_finished`, `verdict`, `orchestrator_*`) produced by `run_backlog` → `complete_job`. Under the old doer-driven path, if `complete_job` never ran, no `job_finished` row appeared — so a parent poll saw silence. After #44, the in-process orchestrator owns that chain; the parent contract is launch once and **read the log**, not poll for notify_on_output.
+
+2. **Prompt / AI (still present):** `IdeCli._parent_checkin` still tells Cursor parents to “watch with a **30s `/loop`**” and contrasts that with “without `notify_on_output`” for non-Cursor — while `launch_sessions` Preferred Steps and module-context require monitoring the **session log**. That leftover instruction is the remaining defect on this ticket: it mis-steers parent agents to wait for a notification channel that CliAgent does not emit, so “notifications not firing” persists as an operator experience even when `job_finished` rows are written correctly.
+
+### What is not the root cause
+- `_CliAgentLog.job_finished` implementation bugs (writer is fine when invoked).
+- Need to reintroduce a production-grade parent notification `/loop` as CliAgent control-loop correctness (ticket disposition: superseded by #44; optional Cursor UX toast is a separate ticket).
+
+### Diagnose tool
+Not used — cause is unambiguous from the analysis call chain, disposition comments, and the contradiction between `_parent_checkin` and Preferred Steps / `run_backlog`.
+
+### Fix emphasis for later suites
+- **Prompt/AI emphasis:** update or relegate `_parent_checkin` (and any matching parent docs) so `run_backlog` parents are told to read session-log kinds — not a 30s notify `/loop`.
+- **Code emphasis (already largely shipped):** do not re-litigate `job_finished` writer; mechanical/agentic tests should lock the parent-guidance contract and that completion is observed via log kinds under `run_backlog`.
