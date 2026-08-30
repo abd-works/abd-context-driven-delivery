@@ -1,4 +1,4 @@
----
+﻿---
 type: bdd
 capabilities:
 - tool
@@ -8,13 +8,13 @@ signature:
     \ ce() and transform to avoid circular imports at\n    module load time)."
   read_manifest:
     kind: meta
-    instructions: Get the latest manifest (this document).
+    instructions: Author/hook only. Agents must not remanifest — use the slash/skill catalog and pipe the fence to tools.ps1 run -.
     cmd: python -m tools manifest context_tools.bdd.bdd:Bdd
     returns: manifest
   invoke:
     kind: meta
-    instructions: Run one tool or action on a toolset instance.
-    cmd: python -m tools run <request.yaml|->
+    instructions: Pipe the YAML fence to stdin from the repo root. Do not write a request file. Follow response.instructions only.
+    cmd: .\tools.ps1 run -
   new:
     kind: constructor
     instructions: Create a toolset instance.
@@ -111,7 +111,7 @@ signature:
       Take **failed** (what went wrong on the asset) and **wanted** (what should have
       happened). Using **contexts**, **examples**, and **template**, evaluate a new
       named rule and a matching scanner that can detect that failure deterministically
-      — only when the failure is mechanical and that existing surface cannot carry
+      â€” only when the failure is mechanical and that existing surface cannot carry
       it.
 
 
@@ -133,7 +133,7 @@ signature:
     instructions: '# Document
 
 
-      Take the persona of a **neutral observer** — describe what exists, do not prescribe
+      Take the persona of a **neutral observer** â€” describe what exists, do not prescribe
       what should exist.
 
 
@@ -141,13 +141,13 @@ signature:
 
       2. Read the **contexts** to understand the vocabulary and structure of the domain.
 
-      3. Fill the **template** scaffold with observed content — describe current state
+      3. Fill the **template** scaffold with observed content â€” describe current state
       only.
 
       4. Do not apply, suggest, or imply rules or best practices in the generated
       output.
 
-      5. Call **`scan`** and append all violations to the document as-is — flag them,
+      5. Call **`scan`** and append all violations to the document as-is â€” flag them,
       do not correct them.
 
       6. Save the artifact under the session layout from `session_guidance`.
@@ -165,13 +165,13 @@ signature:
   generate:
     kind: action
     tools: []
-    instructions: "At modules fidelity: delegate entirely to ce().generate() — no\
+    instructions: "At modules fidelity: delegate entirely to ce().generate() â€” no\
       \ BDD spec file is written at this stage. Use this to bootstrap CE class structure\
       \ before writing tests.\n        At behavior fidelity: write all BDD test signatures\
       \ (SIGNATURE markers).\n        At development fidelity: write full test bodies\
       \ and production code.\n        When the target module already exists, scan\
       \ the production source for every public method and property and verify each\
-      \ has test coverage — add missing signatures for any gap before writing new\
+      \ has test coverage â€” add missing signatures for any gap before writing new\
       \ ones.\n        BDD tests must conform to CE class structure: describe/it hierarchies\
       \ must map onto public CE interfaces and operations.\n        When BDD artifacts\
       \ are complete, call ce().generate() to produce the matching class skeletons."
@@ -197,9 +197,9 @@ signature:
     tools: []
     instructions: "Iterate one BDD cycle: write one test, confirm it is RED, then\
       \ invoke CleanEngineering via /iterate to build the minimum production code\
-      \ until GREEN. Repeat — one test, one production change, one GREEN — until all\
+      \ until GREEN. Repeat â€” one test, one production change, one GREEN â€” until all\
       \ tests pass.\n        If the same test is still RED after 2 consecutive fix\
-      \ attempts — stop guessing. Call diagnostic().diagnose() before a third fix\
+      \ attempts â€” stop guessing. Call diagnostic().diagnose() before a third fix\
       \ (wrong exception, wrong line, shifting failure mode, or a re-read of the code\
       \ that does not explain the failure)."
     returns: str

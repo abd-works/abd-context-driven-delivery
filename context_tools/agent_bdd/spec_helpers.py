@@ -5,6 +5,7 @@ Import from ``agent_bdd.spec_helpers`` (or re-exports on ``agent_bdd``).
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -57,13 +58,105 @@ def dump_run_yaml(
 
 
 def tools_run_prompt(run_yaml: str) -> str:
-    """Standard instruct_use_tool prompt that pipes YAML to ``python -m tools run -``."""
+    """Standard instruct_use_tool prompt: pipe YAML to ``.\\tools.ps1 run -``."""
     body = run_yaml.rstrip()
     return (
-        "Using shell, run exactly: python -m tools run -\n"
+        "Using shell from the repo root, run exactly: .\\tools.ps1 run -\n"
         "Pipe this YAML on stdin:\n"
         f"{body}\n"
-        "Return the complete fenced YAML stdout from the CLI."
+        "Return the complete fenced YAML stdout from the CLI. "
+        "Do not remanifest. Do not write a request file."
+    )
+
+
+_COMMAND_FENCE_RE = re.compile(r"```yaml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
+
+
+def command_path(repo_root: Path, command: str | Path) -> Path:
+    """Resolve a workspace-relative ``.cursor/commands/*.md`` path."""
+    path = Path(command)
+    if path.is_file():
+        return path.resolve()
+    resolved = (repo_root / path).resolve()
+    if not resolved.is_file():
+        raise FileNotFoundError(f"Deployed command not found: {resolved}")
+    return resolved
+
+
+def command_fence_yaml(command: str | Path, *, repo_root: Path) -> str:
+    """Return the exact ```yaml fence body from a deployed slash/skill command."""
+    path = command_path(repo_root, command)
+    match = _COMMAND_FENCE_RE.search(path.read_text(encoding="utf-8"))
+    if not match:
+        raise ValueError(f"No ```yaml fence in {path}")
+    return match.group(1).rstrip() + "\n"
+
+
+def parse_command_fence(command: str | Path, *, repo_root: Path) -> dict[str, Any]:
+    """Parse the invoke fence from a deployed ``.cursor/commands/*.md`` skill."""
+    payload = yaml.safe_load(command_fence_yaml(command, repo_root=repo_root))
+    if not isinstance(payload, dict):
+        raise ValueError(f"Command fence must be a mapping: {command}")
+    return payload
+
+
+def run_yaml_from_command(
+    command: str | Path,
+    *,
+    repo_root: Path,
+    context: Mapping[str, Any] | None = None,
+    arguments: Mapping[str, Any] | None = None,
+) -> str:
+    """Build stdin YAML from a skill fence, optionally merging context/arguments."""
+    payload = dict(parse_command_fence(command, repo_root=repo_root))
+    if context:
+        merged = dict(payload.get("context") or {})
+        merged.update(dict(context))
+        payload["context"] = merged
+    if arguments:
+        payload["arguments"] = dict(arguments)
+    return yaml.safe_dump(payload, sort_keys=False).rstrip() + "\n"
+
+
+def tools_run_prompt_from_command(
+    command: str | Path,
+    *,
+    repo_root: Path,
+    context: Mapping[str, Any] | None = None,
+    arguments: Mapping[str, Any] | None = None,
+) -> str:
+    """Build a tools-run prompt from the exact invoke fence in a deployed command."""
+    run_yaml = run_yaml_from_command(
+        command,
+        repo_root=repo_root,
+        context=context,
+        arguments=arguments,
+    )
+    return tools_run_prompt(run_yaml)
+
+
+def run_skill(
+    command: str | Path,
+    *,
+    repo_root: Path,
+    context: Mapping[str, Any] | None = None,
+    arguments: Mapping[str, Any] | None = None,
+    timeout_seconds: int = 180,
+    require_agent_shell: bool = False,
+) -> RunResponse:
+    """Invoke using YAML from a deployed skill fence (call ``read_workspace`` first)."""
+    from agent_bdd import instruct_use_tool
+
+    prompt = tools_run_prompt_from_command(
+        command,
+        repo_root=repo_root,
+        context=context,
+        arguments=arguments,
+    )
+    return instruct_use_tool(
+        prompt,
+        timeout_seconds=timeout_seconds,
+        require_agent_shell=require_agent_shell,
     )
 
 
@@ -75,6 +168,7 @@ def run_toolset(
     context: Mapping[str, Any] | None = None,
     arguments: Mapping[str, Any] | None = None,
     timeout_seconds: int = 180,
+    require_agent_shell: bool = False,
 ) -> RunResponse:
     """Build YAML, drive ``instruct_use_tool``, return the parsed ``RunResponse``."""
     run_yaml = dump_run_yaml(
@@ -86,7 +180,23 @@ def run_toolset(
     )
     from agent_bdd import instruct_use_tool
 
-    return instruct_use_tool(tools_run_prompt(run_yaml), timeout_seconds=timeout_seconds)
+    return instruct_use_tool(
+        tools_run_prompt(run_yaml),
+        timeout_seconds=timeout_seconds,
+        require_agent_shell=require_agent_shell,
+    )
+
+
+def expect_agent_invoked_shell(block: Any, *, agent_text: str = "") -> None:
+    """Assert the agent ran shell tools.ps1/tools run — not harness replay or deferral."""
+    from agent_bdd.agent_bdd_common import reject_agent_deferral
+
+    reject_agent_deferral(agent_text)
+    captures = tools_run_captures(block)
+    expect(len(captures) >= 1).to(be_true)
+    combined = combined_capture_text(captures).lower()
+    expect("tools.ps1 run" in combined or "tools run" in combined).to(be_true)
+    expect("tools manifest" not in combined).to(be_true)
 
 
 def read_workspace(path: str, *, timeout_seconds: int = 120) -> Any:
@@ -221,6 +331,7 @@ def tools_run_captures(block: Any) -> list[Any]:
         capture
         for capture in captures
         if "tools run" in capture.command.lower()
+        or "tools.ps1 run" in capture.command.lower()
         or looks_like_tools_run_output(capture.output)
     ]
 

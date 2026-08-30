@@ -1,0 +1,32 @@
+ok: true
+toolset: primitives.actions.examples.car:Car
+action: travelTo
+result: Instructions for traveling to courthouse
+instructions: "Tell an interesting story about how the Dodge Charger gets to courthouse.\n\
+  \nConditions: muddy. Start the engine, then decide what to do according to personality.\n\
+  \nOptions include accelerate, decelerate, or stop - invoke as the story needs.\n\
+  \nSpeak at intervals that make the story more interesting.\n\nEvery tool call uses\
+  \ this shape - set `tool` and `arguments`, pipe to CLI:\n\n```yaml\ntoolset: primitives.actions.examples.car:Car\n\
+  context:\n  make: Dodge\n  model: Charger\n  year: 1969\n  personality: loyal\n\
+  tool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m tools run -\n\
+  \nSuggested flow (repeat and reorder as the story needs):\n\n1. tool: start\n\n\
+  2. tool: accelerate\n   arguments:\n     amount: <value>\n\n3. tool: decelerate\n\
+  \   arguments:\n     amount: <value>\n\n4. tool: stop\n\n5. tool: speak\n   arguments:\n\
+  \     line: <value>\n\nRead `resources` from each response before choosing the next\
+  \ tool."
+tools:
+- start
+- accelerate
+- decelerate
+- stop
+- speak
+arguments:
+  destination: courthouse
+  conditions: muddy
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: loyal
+  running: false
+  mode: action

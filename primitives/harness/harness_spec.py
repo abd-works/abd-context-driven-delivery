@@ -22,7 +22,7 @@ from mamba import context, description, it
 
 from harness.agent import Agent
 from harness.agent_guidance import AgentGuidance
-from harness.bodies import ActionBody, ContextToolBody, FormatBody, UtilityBody
+from harness.bodies import ActionBody, ContextToolBody, FormatBody, UtilityBody, resolve_text
 from harness.command import Command
 from harness.harness import Harness
 from harness.harness_tool import required_init_params
@@ -409,7 +409,7 @@ with description("a harness"):
                 expect(skill.body).to(equal(expected))
                 text = (root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")
                 expect(text).not_to(contain("disable-model-invocation"))
-                expect(text).to(contain("python -m tools run"))
+                expect(text).to(contain("tools.ps1 run -"))
 
         with context("with a toolset that has required constructor params"):
             with it("should include those params in the context block of the generated body"):
@@ -658,7 +658,7 @@ with description("a harness"):
                 expect(skill.body.text).not_to(contain("Guidance:"))
                 expect(skill.body.text).not_to(contain("Run this action for any provided context tools"))
                 expect(skill.body.text).not_to(contain("If you took"))
-                expect(skill.body.text).to(contain("python -m tools run"))
+                expect(skill.body.text).to(contain("tools.ps1 run -"))
                 expect(skill.body.text).not_to(contain("action:"))
 
         with context("with a utility prompt"):
@@ -940,7 +940,7 @@ with description("a harness"):
                 expect(body).not_to(contain("If you cannot get guidance and cannot get the action"))
                 expect(body).not_to(contain("If the fidelity does not belong"))
                 expect(body).not_to(contain("AskQuestion constrained to the other fidelities"))
-                expect(body).to(contain("python -m tools run"))
+                expect(body).to(contain("tools.ps1 run -"))
 
         with context("with CleanEngineering model"):
             with it("should write a model prompt"):
@@ -1058,10 +1058,12 @@ with description("a generated harness tool"):
                 text = str(skill.body)
                 expect(text).to(contain("Stories."))
                 expect(text).to(contain("If you took an action from the context versus being given an explicit one"))
-                expect(text).to(contain("AskQuestion constrained to the actions in context_tools/actions:"))
+                expect(text).to(contain("AskQuestion constrained to these actions:"))
+                expect(text).not_to(contain("context_tools/actions"))
                 expect(text).not_to(contain("cannot get guidance and cannot get the action"))
                 expect(text).not_to(contain("constrained to this source: stories"))
-                expect(text).to(contain("python -m tools run -"))
+                expect(text).to(contain("tools.ps1 run -"))
+                expect(text).to(contain("Follow response.instructions"))
                 expect(text).not_to(contain("_req.yaml"))
                 expect(text).not_to(contain("python -m tools manifest "))
                 expect(text).to(contain("or has not been provided"))
@@ -1237,3 +1239,44 @@ with description("required_init_params"):
     with context("for a file that does not exist"):
         with it("should return an empty list"):
             expect(required_init_params(Path("/no/such/file.py"), "Any")).to(equal([]))
+
+
+with description("harness bodies for manifest-alone invoke (#45)"):
+    with context("when resolving a fidelity body"):
+        with it("should name tools.ps1 and follow response.instructions without remanifest"):
+            text = resolve_text(
+                "behavior",
+                "context_tools.bdd.bdd:Bdd",
+                kind="fidelity",
+            )
+            expect(text).to(contain("tools.ps1 run -"))
+            expect(text).to(contain("Follow response.instructions"))
+            expect(text).to(contain("Do not remanifest"))
+            expect(text).not_to(contain("_req.yaml"))
+            expect(text).not_to(contain("python -m tools manifest "))
+
+    with context("when resolving a guidance body"):
+        with it("should not point AskQuestion at a source tree path"):
+            text = resolve_text(
+                "stories",
+                "context_tools.stories.stories:Stories",
+                kind="guidance",
+                fidelities=["story_map"],
+                actions=["sketch", "generate"],
+            )
+            expect(text).to(contain("AskQuestion constrained to these actions:"))
+            expect(text).not_to(contain("context_tools/actions"))
+            expect(text).to(contain("tools.ps1 run -"))
+            expect(text).to(contain("Follow response.instructions"))
+
+    with context("when resolving a utility body"):
+        with it("should use tools.ps1 as the only stdin invoke"):
+            text = resolve_text(
+                "start",
+                "workflow.workflow:Workflow",
+                kind="utility",
+                invoke="tool",
+            )
+            expect(text).to(contain("tools.ps1 run -"))
+            expect(text).to(contain("Follow response.instructions"))
+            expect(text).not_to(contain("<request.yaml|->"))

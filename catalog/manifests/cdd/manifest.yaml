@@ -1,4 +1,4 @@
----
+﻿---
 type: cdd
 capabilities:
 - tool
@@ -7,13 +7,13 @@ signature:
   instructions: '# Instructions'
   read_manifest:
     kind: meta
-    instructions: Get the latest manifest (this document).
+    instructions: Author/hook only. Agents must not remanifest — use the slash/skill catalog and pipe the fence to tools.ps1 run -.
     cmd: python -m tools manifest context_tools.cdd.cdd:Cdd
     returns: manifest
   invoke:
     kind: meta
-    instructions: Run one tool or action on a toolset instance.
-    cmd: python -m tools run <request.yaml|->
+    instructions: Pipe the YAML fence to stdin from the repo root. Do not write a request file. Follow response.instructions only.
+    cmd: .\tools.ps1 run -
   new:
     kind: constructor
     instructions: Create a toolset instance.
@@ -63,10 +63,10 @@ signature:
   render:
     kind: tool
     instructions: "Render already-generated output into ``format``.\n\n        ``format``\
-      \ must be one this tool supports (markdown, json, drawio, …).\n        ``content``\
+      \ must be one this tool supports (markdown, json, drawio, â€¦).\n        ``content``\
       \ is the already-generated artifact in the current format\n        (``self.format``).\
       \ Subclasses with channel/transform code override\n        this method and convert\
-      \ in-process — do not use a generic rewrite."
+      \ in-process â€” do not use a generic rewrite."
     parameters:
       format: str
       content: str
@@ -103,7 +103,7 @@ signature:
       Take **failed** (what went wrong on the asset) and **wanted** (what should have
       happened). Using **contexts**, **examples**, and **template**, evaluate a new
       named rule and a matching scanner that can detect that failure deterministically
-      — only when the failure is mechanical and that existing surface cannot carry
+      â€” only when the failure is mechanical and that existing surface cannot carry
       it.
 
 
@@ -132,10 +132,10 @@ signature:
     instructions: "# Generate\n\n1. Call **`open`**. Confirm sprint slug with the\
       \ user when run context has no `session=`; pass `name` / `goal` / `fidelities`\
       \ on first create if needed. Follow **`session_guidance`**; use the **`active`**\
-      \ resource for `active.path` / `active.folder`.\n2. **MUST — prove-read before\
+      \ resource for `active.path` / `active.folder`.\n2. **MUST â€” prove-read before\
       \ asking.** Before any grill/iterate question (and before inventing options\
       \ or story/module names):\n   - Identify **every relevant context file referenced\
-      \ or implied** by the decision — not one favorite type. Typical set: `{workspace}/.context/context-index.md`,\
+      \ or implied** by the decision â€” not one favorite type. Typical set: `{workspace}/.context/context-index.md`,\
       \ owning `*-segment.md`, `module-context.md`, session grill-answers / sketches\
       \ / handoff, peer story-context, build-order, and any path the plan or prior\
       \ answers cite. Include index/overlay only for structure hints; **never** treat\
@@ -143,25 +143,25 @@ signature:
       \ the Read tool** (chunk through large ones). Grep, title lists, memory, or\
       \ primer-only skims **do not count**.\n   - **Prove it in the question turn:**\
       \ name the path(s) read and ground options in concrete terms from them. If you\
-      \ cannot cite specifics from the relevant files, you have not read them — go\
+      \ cannot cite specifics from the relevant files, you have not read them â€” go\
       \ read before asking.\n   - Asking from a skim is a **defect**, same class as\
       \ dumping a whole artifact in one iterate tick.\n2b. **`do-not-invent-requirements`**\
-      \ — Do not invent requirements, status/maintenance signals, or competing command\
+      \ â€” Do not invent requirements, status/maintenance signals, or competing command\
       \ surfaces absent from source / the ask. Prefer the existing gap/fallback (or\
       \ the already-specified invoke surface) over minting a new state or a second\
       \ co-equal how-to-call block.\n3. **`sources-scoped-to-generated-context`**\
-      \ — Hang `**Sources / context:**` on the node they ground: epic / sub-epic /\
-      \ feature / module, or a lower item (scenario, class, screen, component, …).\
+      \ â€” Hang `**Sources / context:**` on the node they ground: epic / sub-epic /\
+      \ feature / module, or a lower item (scenario, class, screen, component, â€¦).\
       \ Root or parent-level Sources are fine when those files apply to the **entire**\
       \ artifact or subtree.\n4. Apply all guidance and named rules in each **context**\
-      \ — each bullet is a requirement.\n5. Match **examples** for shape, depth, and\
+      \ â€” each bullet is a requirement.\n5. Match **examples** for shape, depth, and\
       \ tone.\n6. Fill the **template** scaffold and save the artifact under the session\
-      \ layout from `session_guidance`.\n6b. **Large job — several turns.** Decide\
+      \ layout from `session_guidance`.\n6b. **Large job â€” several turns.** Decide\
       \ the source from the **ask** and what this session already produced (a sketch,\
-      \ a model, a format to transform — not a locked default). If that source is\
+      \ a model, a format to transform â€” not a locked default). If that source is\
       \ a whole model, sketch, or similarly large artifact, implement **one slice**\
       \ in this invoke, then stop. `finish_turn` closes this turn. Continue in later\
-      \ generate or iterate turns — even if the user asked for everything once. Filling\
+      \ generate or iterate turns â€” even if the user asked for everything once. Filling\
       \ the whole artifact in one generate is a defect (same class as dumping a map\
       \ in one iterate tick). A small implied source may finish in one turn. Do not\
       \ treat a red full-tree **validate** as permission to finish the rest in this\

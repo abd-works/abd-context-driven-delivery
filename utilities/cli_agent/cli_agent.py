@@ -1019,7 +1019,8 @@ class _SessionArgv:
         args.extend(["--force", "--trust"])
 
     def _cursor_stream(self, host: IdeCli, args: list[str]) -> None:
-        return
+        if host.print_mode:
+            args.extend(["--print", "--output-format", "stream-json"])
 
     def _vscode_mode(self, agent_mode: str) -> str:
         if agent_mode == "ask":

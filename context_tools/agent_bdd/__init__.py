@@ -25,6 +25,7 @@ _SPEC_HELPER_EXPORTS = frozenset(
     {
         "combined_capture_text",
         "dump_run_yaml",
+        "expect_agent_invoked_shell",
         "expect_capture_mentions",
         "expect_instructions_contain",
         "expect_instructions_contain_any",
@@ -37,13 +38,18 @@ _SPEC_HELPER_EXPORTS = frozenset(
         "generate_similar_prompt",
         "generate_similar_rubric",
         "manifest_command_from_header",
+        "command_fence_yaml",
+        "parse_command_fence",
         "read_workspace",
         "repo_root_from",
         "run_manifest_from_header",
+        "run_skill",
         "run_toolset",
+        "run_yaml_from_command",
         "sessions_dir",
         "tools_run_captures",
         "tools_run_prompt",
+        "tools_run_prompt_from_command",
     }
 )
 
@@ -112,9 +118,18 @@ def instruct(prompt: str, *, timeout_seconds: int = 300) -> AgentResult:
     return _current().instruct(prompt, timeout_seconds=timeout_seconds)
 
 
-def instruct_use_tool(prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
-    """Drive the agent to pipe YAML to `python -m tools run -`; returns parsed RunResponse."""
-    return _current().instruct_use_tool(prompt, timeout_seconds=timeout_seconds)
+def instruct_use_tool(
+    prompt: str,
+    *,
+    timeout_seconds: int = 300,
+    require_agent_shell: bool = False,
+) -> RunResponse:
+    """Drive the agent to pipe YAML to ``.\\tools.ps1 run -``; returns parsed RunResponse."""
+    return _current().instruct_use_tool(
+        prompt,
+        timeout_seconds=timeout_seconds,
+        require_agent_shell=require_agent_shell,
+    )
 
 
 def ai_judge(output: str, rubric: str, *, timeout_seconds: int = 180) -> None:

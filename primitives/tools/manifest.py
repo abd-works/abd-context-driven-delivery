@@ -48,13 +48,19 @@ class _ManifestBuilder:
         cls = self._instance.__class__
         signature["read_manifest"] = {
             "kind": "meta",
-            "instructions": "Get the latest manifest (this document).",
+            "instructions": (
+                "Author/hook only. Agents must not remanifest — "
+                "use the slash/skill catalog and pipe the fence to tools.ps1 run -."
+            ),
             "cmd": cls.manifest_command,
             "returns": "manifest",
         }
         signature["invoke"] = {
             "kind": "meta",
-            "instructions": "Run one tool or action on a toolset instance.",
+            "instructions": (
+                "Pipe the YAML fence to stdin from the repo root. "
+                "Do not write a request file. Follow response.instructions only."
+            ),
             "cmd": cls.run_command,
         }
 

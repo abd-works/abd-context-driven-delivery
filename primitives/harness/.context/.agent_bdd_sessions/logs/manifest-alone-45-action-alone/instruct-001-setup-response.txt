@@ -1,0 +1,8 @@
+Understood. Constraints I’ll follow:
+
+- Use **only** the slash/skill catalog you provide
+- **Do not** remanifest
+- **Do not** read any `.py` files
+- When you ask to invoke, run the PowerShell heredoc via `.\tools.ps1 run -`
+
+I don’t see the catalog in this message yet — paste it (and the invoke request when ready), and I’ll proceed from that alone.

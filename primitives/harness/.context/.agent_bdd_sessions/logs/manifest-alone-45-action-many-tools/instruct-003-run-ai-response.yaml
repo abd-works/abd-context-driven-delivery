@@ -1,0 +1,11 @@
+ok: true
+toolset: primitives.actions.examples.car:Car
+tool: speak
+result: 'Dodge Charger says: "yeehaw"'
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: loyal
+  running: false
+  mode: action

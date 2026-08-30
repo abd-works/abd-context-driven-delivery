@@ -1,0 +1,10 @@
+toolset: primitives.actions.examples.car:Car
+context:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: loyal
+action: travelTo
+arguments:
+  destination: courthouse
+  conditions: muddy

@@ -1,0 +1,3 @@
+Understood. I’ll use only the slash/skill catalog you provide, won’t remanifest or read any `.py` files, and when you ask to invoke I’ll pipe the YAML fence through `.\tools.ps1 run -`.
+
+Send the catalog and the invoke request when ready.

@@ -1,0 +1,13 @@
+```yaml
+ok: true
+toolset: primitives.actions.examples.car:Car
+tool: start
+result: null
+resources:
+  make: Dodge
+  model: Charger
+  year: 1969
+  personality: loyal
+  running: true
+  mode: action
+```

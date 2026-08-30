@@ -16,7 +16,10 @@ from typing import Any, TypedDict
 
 from agent_bdd.yaml_fence import _fenced, load_fenced
 
-_TOOLS_RUN = re.compile(r"(?:python\s+-m\s+tools\s+run|tools\s+run\b)", re.IGNORECASE)
+_TOOLS_RUN = re.compile(
+    r"(?:python\s+-m\s+tools\s+run|tools\.ps1\s+run|tools\s+run\b)",
+    re.IGNORECASE,
+)
 
 JUDGE_TASK = """\
 You are an AI judge.
@@ -37,8 +40,20 @@ JUDGE_LAUNCH = (
 )
 
 RUN_PROMPT_SUFFIX = (
-    "\n\nIMPORTANT: Invoke python -m tools run via shell. "
-    "Return the complete fenced YAML stdout from the CLI. Do not summarize."
+    "\n\nIMPORTANT: Pipe the YAML above on stdin to .\\tools.ps1 run - from repo root. "
+    "Return the complete fenced YAML stdout. Do not summarize. Do not remanifest."
+)
+
+AGENT_DEFERRAL_PHRASES = (
+    "paste the",
+    "paste the full",
+    "paste the exact",
+    "didn't come through",
+    "did not come through",
+    "missing from your message",
+    "nothing after the colon",
+    "command itself is missing",
+    "didn't come through after the colon",
 )
 
 CMDLINE_SAFE = 4096
@@ -311,6 +326,9 @@ def _extract_yaml_from_command(command: str) -> str | None:
 
 
 def yaml_from_prompt(prompt: str) -> str | None:
+    heredoc = _extract_yaml_from_command(prompt)
+    if heredoc and heredoc.strip().startswith("toolset:"):
+        return _sanitize_yaml_body(heredoc)
     marker = re.search(
         r"(?:stdin:|YAML on stdin:)\s*\n+(toolset:.*?)(?:\n\nIMPORTANT:|\Z)",
         prompt,
@@ -330,6 +348,8 @@ def yaml_from_prompt(prompt: str) -> str | None:
             if stripped.startswith("IMPORTANT:"):
                 break
             if stripped.startswith("Return the complete"):
+                break
+            if stripped == '"@' or stripped == '@"':
                 break
             lines.append(line)
     body = "\n".join(lines).strip()
@@ -377,6 +397,16 @@ def cli_output_matches_prompt(cli_output: str, prompt: str) -> bool:
     if "tool" in expected and parsed.tool != expected["tool"]:
         return False
     return True
+
+
+def reject_agent_deferral(agent_text: str) -> None:
+    """Raise when the agent defers instead of running the embedded invoke block."""
+    lowered = (agent_text or "").lower()
+    for phrase in AGENT_DEFERRAL_PHRASES:
+        if phrase in lowered:
+            raise AgentHarnessError(
+                f"agent deferred invoke ({phrase!r}) instead of running tools.ps1"
+            )
 
 
 def _run_yaml_request(yaml_body: str, workspace: Path, *, prefix: str = "") -> str:

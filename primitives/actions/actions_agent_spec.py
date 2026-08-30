@@ -2,7 +2,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
 # session: primitives/actions/.context/.agent_bdd_sessions/travel-to.json
-"""BDD agent spec for action.py — travelTo via shared helpers."""
+"""BDD agent spec — travelTo via deployed car skill and travel-to prompt."""
 
 from expects import be_true, expect
 from mamba import context, description, it
@@ -17,33 +17,35 @@ from agent_bdd import (
     follow_instructions,
     read_workspace,
     repo_root_from,
-    run_toolset,
+    run_skill,
     sessions_dir,
     tools_run_captures,
+)
+from harness.harness_invoke_fixtures import (
+    CAR_SKILL,
+    TRAVEL_TO,
+    car_tool_argument,
+    stage_invoke_commands,
 )
 
 _REPO_ROOT = repo_root_from(__file__, parents=2)
 _SESSIONS = sessions_dir(__file__)
-_CAR_TOOLSET = "primitives.actions.examples.car:Car"
-_LEE = {
-    "make": "Dodge",
-    "model": "Charger",
-    "year": 1969,
-    "personality": "General Lee",
-}
+
 
 with description("a class"):
     with context("with a toolset that declares @agent_instructions recipes"):
         with context("with agent and travelTo action"):
-            with it("drives travelTo, follows tools, judges the story"):
+            with it("drives travelTo from deployed prompts, follows tools, judges the story"):
+                stage_invoke_commands(_REPO_ROOT)
                 with agent(_REPO_ROOT, _SESSIONS / "travel-to.json") as block:
-                    read_workspace("primitives/actions/examples/car.py")
+                    read_workspace(CAR_SKILL)
+                    read_workspace(TRAVEL_TO)
 
-                    travel = run_toolset(
-                        toolset=_CAR_TOOLSET,
-                        action="travelTo",
-                        context=_LEE,
+                    travel = run_skill(
+                        TRAVEL_TO,
+                        repo_root=_REPO_ROOT,
                         arguments={
+                            "tools": [car_tool_argument()],
                             "destination": "Hazzard County courthouse",
                             "conditions": "muddy back roads, Sheriff Rosco in pursuit",
                         },

@@ -1,4 +1,4 @@
----
+﻿---
 type: cleanengineering
 capabilities:
 - tool
@@ -7,13 +7,13 @@ signature:
   instructions: '# Instructions'
   read_manifest:
     kind: meta
-    instructions: Get the latest manifest (this document).
+    instructions: Author/hook only. Agents must not remanifest — use the slash/skill catalog and pipe the fence to tools.ps1 run -.
     cmd: python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
     returns: manifest
   invoke:
     kind: meta
-    instructions: Run one tool or action on a toolset instance.
-    cmd: python -m tools run <request.yaml|->
+    instructions: Pipe the YAML fence to stdin from the repo root. Do not write a request file. Follow response.instructions only.
+    cmd: .\tools.ps1 run -
   new:
     kind: constructor
     instructions: Create a toolset instance.
@@ -122,7 +122,7 @@ signature:
       Take **failed** (what went wrong on the asset) and **wanted** (what should have
       happened). Using **contexts**, **examples**, and **template**, evaluate a new
       named rule and a matching scanner that can detect that failure deterministically
-      — only when the failure is mechanical and that existing surface cannot carry
+      â€” only when the failure is mechanical and that existing surface cannot carry
       it.
 
 
@@ -144,7 +144,7 @@ signature:
     instructions: '# Document
 
 
-      Take the persona of a **neutral observer** — describe what exists, do not prescribe
+      Take the persona of a **neutral observer** â€” describe what exists, do not prescribe
       what should exist.
 
 
@@ -152,13 +152,13 @@ signature:
 
       2. Read the **contexts** to understand the vocabulary and structure of the domain.
 
-      3. Fill the **template** scaffold with observed content — describe current state
+      3. Fill the **template** scaffold with observed content â€” describe current state
       only.
 
       4. Do not apply, suggest, or imply rules or best practices in the generated
       output.
 
-      5. Call **`scan`** and append all violations to the document as-is — flag them,
+      5. Call **`scan`** and append all violations to the document as-is â€” flag them,
       do not correct them.
 
       6. Save the artifact under the session layout from `session_guidance`.
@@ -181,10 +181,10 @@ signature:
     instructions: "# Generate\n\n1. Call **`open`**. Confirm sprint slug with the\
       \ user when run context has no `session=`; pass `name` / `goal` / `fidelities`\
       \ on first create if needed. Follow **`session_guidance`**; use the **`active`**\
-      \ resource for `active.path` / `active.folder`.\n2. **MUST — prove-read before\
+      \ resource for `active.path` / `active.folder`.\n2. **MUST â€” prove-read before\
       \ asking.** Before any grill/iterate question (and before inventing options\
       \ or story/module names):\n   - Identify **every relevant context file referenced\
-      \ or implied** by the decision — not one favorite type. Typical set: `{workspace}/.context/context-index.md`,\
+      \ or implied** by the decision â€” not one favorite type. Typical set: `{workspace}/.context/context-index.md`,\
       \ owning `*-segment.md`, `module-context.md`, session grill-answers / sketches\
       \ / handoff, peer story-context, build-order, and any path the plan or prior\
       \ answers cite. Include index/overlay only for structure hints; **never** treat\
@@ -192,25 +192,25 @@ signature:
       \ the Read tool** (chunk through large ones). Grep, title lists, memory, or\
       \ primer-only skims **do not count**.\n   - **Prove it in the question turn:**\
       \ name the path(s) read and ground options in concrete terms from them. If you\
-      \ cannot cite specifics from the relevant files, you have not read them — go\
+      \ cannot cite specifics from the relevant files, you have not read them â€” go\
       \ read before asking.\n   - Asking from a skim is a **defect**, same class as\
       \ dumping a whole artifact in one iterate tick.\n2b. **`do-not-invent-requirements`**\
-      \ — Do not invent requirements, status/maintenance signals, or competing command\
+      \ â€” Do not invent requirements, status/maintenance signals, or competing command\
       \ surfaces absent from source / the ask. Prefer the existing gap/fallback (or\
       \ the already-specified invoke surface) over minting a new state or a second\
       \ co-equal how-to-call block.\n3. **`sources-scoped-to-generated-context`**\
-      \ — Hang `**Sources / context:**` on the node they ground: epic / sub-epic /\
-      \ feature / module, or a lower item (scenario, class, screen, component, …).\
+      \ â€” Hang `**Sources / context:**` on the node they ground: epic / sub-epic /\
+      \ feature / module, or a lower item (scenario, class, screen, component, â€¦).\
       \ Root or parent-level Sources are fine when those files apply to the **entire**\
       \ artifact or subtree.\n4. Apply all guidance and named rules in each **context**\
-      \ — each bullet is a requirement.\n5. Match **examples** for shape, depth, and\
+      \ â€” each bullet is a requirement.\n5. Match **examples** for shape, depth, and\
       \ tone.\n6. Fill the **template** scaffold and save the artifact under the session\
-      \ layout from `session_guidance`.\n6b. **Large job — several turns.** Decide\
+      \ layout from `session_guidance`.\n6b. **Large job â€” several turns.** Decide\
       \ the source from the **ask** and what this session already produced (a sketch,\
-      \ a model, a format to transform — not a locked default). If that source is\
+      \ a model, a format to transform â€” not a locked default). If that source is\
       \ a whole model, sketch, or similarly large artifact, implement **one slice**\
       \ in this invoke, then stop. `finish_turn` closes this turn. Continue in later\
-      \ generate or iterate turns — even if the user asked for everything once. Filling\
+      \ generate or iterate turns â€” even if the user asked for everything once. Filling\
       \ the whole artifact in one generate is a defect (same class as dumping a map\
       \ in one iterate tick). A small implied source may finish in one turn. Do not\
       \ treat a red full-tree **validate** as permission to finish the rest in this\
@@ -230,10 +230,10 @@ signature:
     kind: action
     tools: []
     instructions: "Write the fidelity artifact under the session.\n\n        When\
-      \ ``format`` is ``drawio``, call ``drawio.render`` (create diagram →\n     \
-      \   scan layout rules in drawio contexts → repair sub-agent on definitive\n\
+      \ ``format`` is ``drawio``, call ``drawio.render`` (create diagram â†’\n     \
+      \   scan layout rules in drawio contexts â†’ repair sub-agent on definitive\n\
       \        layout failures). Otherwise produce the active channel output\n   \
-      \     (markdown / python / …) from contexts, examples, and templates — do\n\
+      \     (markdown / python / â€¦) from contexts, examples, and templates â€” do\n\
       \        not invoke drawio.render."
     returns: str
   satisfy:
@@ -245,20 +245,20 @@ signature:
 
 
       Satisfy runs in **tool mode**: it does not inline a recipe. It hands you two
-      tool calls to make yourself, in order — first find the problems, then fix them.
+      tool calls to make yourself, in order â€” first find the problems, then fix them.
 
 
-      1. **`validate`** — run this first. Judge the artifact under the generator **`active`**
+      1. **`validate`** â€” run this first. Judge the artifact under the generator **`active`**
       root against the **contexts** and every named rule, and call **`scan`** on the
       session-rooted paths. Produce the full list of violations and coverage gaps.
       Do not fix anything in this step.
 
-      2. **`generate_fixes_from_validate`** — run this second, once you hold the validate
+      2. **`generate_fixes_from_validate`** â€” run this second, once you hold the validate
       report. Follow **`session_guidance`** and edit only under that layout. Generate
       any missing artifacts (a missing `.context/module-context.md` IS a violation
-      — create it at the current fidelity: thin at modules with Purpose, Seam, Dependencies;
+      â€” create it at the current fidelity: thin at modules with Purpose, Seam, Dependencies;
       full at model with + Primary use case, Rationale, Public API), then fix every
-      reported violation in the same paths — do not invent a divergent folder.
+      reported violation in the same paths â€” do not invent a divergent folder.
 
 
       When done, run **`validate`** again and repeat the two-call loop until it passes.
@@ -272,13 +272,13 @@ signature:
     instructions: '# Validate
 
 
-      Take the persona of a **critical judge** — do not edit the artifact.
+      Take the persona of a **critical judge** â€” do not edit the artifact.
 
 
       1. Follow **`session_guidance`**. Scope judgment to artifacts under `session.path`
       / the session layout.
 
-      2. Use **contexts** as the rubric — report pass/fail per named context and named
+      2. Use **contexts** as the rubric â€” report pass/fail per named context and named
       rule with brief evidence.
 
       3. Call **`scan`** on the session-rooted paths under review.

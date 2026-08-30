@@ -1,0 +1,3 @@
+You are given ONLY this slash/skill catalog. Do not remanifest. Do not read any .py files. When asked to invoke, pipe the YAML fence via .\tools.ps1 run -.
+
+Run travelTo on the Car toolset via catalog fence only (tools.ps1 run -). Do not read car.py.
