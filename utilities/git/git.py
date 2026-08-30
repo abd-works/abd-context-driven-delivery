@@ -65,8 +65,16 @@ GITHUB_STATUS_ALIASES: dict[str, tuple[str, ...]] = {
 _ISSUE_NUMBER = re.compile(r"^\d+$")
 
 
+def theme_slug(theme: str) -> str:
+    """Normalized theme slug shared by issue labels and project Theme field."""
+    label = issue_theme_label(theme)
+    if not label.startswith("theme:"):
+        return ""
+    return label.split(":", 1)[1]
+
+
 def issue_theme_label(theme: str) -> str:
-    """GitHub issue label for a theme — visible on the issue, not a Status column."""
+    """GitHub issue label for a theme (`theme:<slug>`)."""
     text = (theme or "").strip()
     if text.lower().startswith("theme:"):
         text = text.split(":", 1)[1].strip()
@@ -75,6 +83,23 @@ def issue_theme_label(theme: str) -> str:
         slug = slug.replace("--", "-")
     slug = slug.strip("-")
     return f"theme:{slug}" if slug else ""
+
+
+def resolve_github_theme_option(
+    theme: str, options: list[str] | tuple[str, ...] | None = None
+) -> str:
+    """Pick a project Theme option matching the slug (case-insensitive)."""
+    wanted = theme_slug(theme)
+    if not wanted:
+        return ""
+    names = [str(item).strip() for item in (options or ()) if str(item).strip()]
+    if wanted in names:
+        return wanted
+    lower = wanted.lower()
+    for name in names:
+        if name.lower() == lower:
+            return name
+    return wanted
 
 
 def resolve_github_status_option(
@@ -202,8 +227,48 @@ class Ticket:
         return self
 
     def add_theme(self, theme: str) -> Ticket:
-        """Theme is an issue label `theme:<slug>` — filter/group on GitHub, not a board column."""
-        return self.add_label(issue_theme_label(theme))
+        """Apply theme on the issue label and the project board Theme field."""
+        self.add_label(issue_theme_label(theme))
+        return self.set_project_theme(theme)
+
+    def set_project_theme(self, theme: str) -> Ticket:
+        """Set the GitHub project board Theme single-select field for this issue."""
+        slug = theme_slug(theme)
+        if not slug:
+            return self
+        repo = self._repo
+        if repo is None:
+            raise RuntimeError("Ticket.set_project_theme requires a repo")
+        project = repo.project
+        if project is None:
+            return self
+        if repo._memory:
+            repo._ticket_project_theme[self.number] = slug
+            return self
+        repo._gh(
+            "project",
+            "item-add",
+            str(project.number),
+            "--owner",
+            project.owner,
+            "--url",
+            self.url,
+        )
+        gh_value = resolve_github_theme_option(slug, project.theme_option_names())
+        repo._gh(
+            "project",
+            "item-edit",
+            str(project.number),
+            "--owner",
+            project.owner,
+            "--url",
+            self.url,
+            "--field",
+            "Theme",
+            "--value",
+            gh_value,
+        )
+        return self
 
     def set_type(self, name: str) -> Ticket:
         """Apply a GitHub issue Type name (org type). Mapping lives on WorkTicket."""
@@ -442,6 +507,42 @@ class Project:
                     names.append(label)
         return names
 
+    def theme_option_names(self) -> list[str]:
+        """Live GitHub Theme field option names, or empty when listing fails."""
+        repo = self._repo
+        if repo._memory:
+            return ["cli-agent", "workspace", "workflow", "tools"]
+        try:
+            raw = repo._gh(
+                "project",
+                "field-list",
+                str(self.number),
+                "--owner",
+                self.owner,
+                "--format",
+                "json",
+            )
+        except GhConnectError:
+            return []
+        payload = json.loads(raw or "{}")
+        fields = payload
+        if isinstance(payload, dict):
+            fields = payload.get("fields") or payload.get("items") or []
+        names: list[str] = []
+        for field in fields or []:
+            if not isinstance(field, dict):
+                continue
+            if str(field.get("name") or "") != "Theme":
+                continue
+            for option in field.get("options") or []:
+                if isinstance(option, dict):
+                    label = str(option.get("name") or "").strip()
+                else:
+                    label = str(option).strip()
+                if label:
+                    names.append(label)
+        return names
+
     def link_repository(self) -> None:
         """Attach this org project to the current GitHub repository."""
         repo = self._repo
@@ -481,6 +582,7 @@ class Repo:
         self._project: Project | None = None
         self._tickets: dict[int, Ticket] = {}
         self._ticket_project_state: dict[int, str] = {}
+        self._ticket_project_theme: dict[int, str] = {}
         self._closed_tickets: set[int] = set()
         if memory:
             self._init_memory_state()
@@ -813,6 +915,15 @@ class Repo:
             self._pushes.append(self.current_branch)
             return
         self._git( "push", "-u", "origin", self.current_branch)
+
+    def has_unpushed_commits(self) -> bool:
+        if self._memory:
+            return False
+        try:
+            count = self._git("rev-list", "@{upstream}..HEAD", "--count").strip()
+            return int(count or "0") > 0
+        except GitConnectError:
+            return False
 
     def list_worktrees(self) -> list[Worktree]:
         if self._memory:

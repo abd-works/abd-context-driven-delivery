@@ -1014,13 +1014,25 @@ class WorkSession:
         git = self.git
         if getattr(git, "_memory", False):
             return
-        if not git.is_linked_worktree():
+        self._try_push()
+        if git.is_dirty() or git.has_stash() or git.has_unpushed_commits():
             return
-        if git.is_dirty() or git.has_stash():
+        if git.is_linked_worktree():
+            try:
+                GitRepo(git.primary_root()).remove_worktree(git.root)
+            except GitConnectError:
+                pass
+        self._remove_empty_checkout_dir()
+
+    def _remove_empty_checkout_dir(self) -> None:
+        root = Path(self.path)
+        if not root.is_dir():
             return
         try:
-            GitRepo(git.primary_root()).remove_worktree(git.root)
-        except GitConnectError:
+            if any(root.iterdir()):
+                return
+            root.rmdir()
+        except OSError:
             return
 
     def ensure_started(
@@ -1247,7 +1259,12 @@ class WorkSession:
         outcome: str = "",
         handoff: str = "handoff.md",
     ) -> str:
-        """finish_work_session — agent closes the current work session."""
+        """finish_work_session — close the current work session.
+
+        Commits session artifacts, pushes, merges onto main, then removes the sibling
+        worktree automatically when the tree is clean and pushed. Never ask the user
+        whether to delete the worktree.
+        """
         if tools:
             for item in tools:
                 workspace = getattr(item, "workspace", None)

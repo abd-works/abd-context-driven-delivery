@@ -183,7 +183,11 @@ class Harness:
 
     def _write_root_paths(self, deploy_path: str = "") -> list[Path]:
         if deploy_path.strip():
-            return [Path(deploy_path.strip())]
+            root = Path(deploy_path.strip())
+            ide = self._ide_folder()
+            if root.name != ide:
+                root = root / ide
+            return [root]
         return [self._suggested_deploy_path()]
 
     def _constructor_context(self, path: Path, class_name: str) -> dict[str, str]:

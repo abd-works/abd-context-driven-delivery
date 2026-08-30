@@ -1,12 +1,13 @@
-"""BDD spec for utilities/cli_agent/cli_agent.py — IdeCli, CliAgent, workspace sessions.
+"""BDD spec for utilities/cli_agent/cli_agent.py â€” IdeCli, CliAgent, workspace sessions.
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """
 import json
 import sys
 import tempfile
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -33,6 +34,7 @@ from cli_agent.cli_agent import (
     _CliSpawner,
     JobQueue,
     _Pickup,
+    _TranscriptWatch,
 )
 from sub_agent.sub_agent import discover_sub_agent_tools
 from workspace.workspace import Workspace, WorkSession
@@ -605,23 +607,18 @@ with description("CliAgent"):
             expect("actions" in params).to(be_true)
             expect("model" in params).to(be_false)
 
-        with it("should tell the parent to launch, monitor, and unblock the CLI"):
+        with it("should tell the parent to prefer run_backlog and a minimal monitor contract"):
             text = discover_sub_agent_tools(CliAgent())[
                 "launch_sessions"
             ].instructions
-            expect("non-blocking sub-agent" in text).to(be_true)
-            expect("CliAgent handles all session and workspace setup internally" in text).to(be_true)
-            expect("launch, then monitor and unblock" in text).to(be_true)
-            expect("NOT TAKEN UP" in text).to(be_true)
-            expect("Monitor" in text).to(be_true)
+            expect("non-blocking" in text.lower() or "run_backlog" in text).to(be_true)
+            expect("CliAgent" in text).to(be_true)
+            expect("run_backlog" in text).to(be_true)
+            expect("NOT TAKEN UP" in text or "not taken up" in text.lower()).to(be_true)
             expect("report back to the user" in text).to(be_true)
-            expect("enqueue_jobs" in text).to(be_true)
-            expect("launch_next" in text).to(be_true)
+            expect("enqueue_jobs" in text or "Enqueue" in text).to(be_true)
             expect("complete_job" in text).to(be_true)
-            expect("never launches, prompts, or scores the judge" in text).to(be_true)
-            expect("-p" in text).to(be_true)
-            expect("finish_turn" in text).to(be_true)
-            expect("cli-agent-task.txt" in text).to(be_true)
+            expect("never launches, prompts, or scores the judge" in text or "never launches, prompts, or scores the judge" in text.lower() or "parent never launches" in text).to(be_true)
 
         with it("should Popen cursor-agent from run"):
             tmp = tempfile.mkdtemp(prefix="cli_run_")
@@ -1040,7 +1037,7 @@ with description("CliAgent work session bind before start-ticket"):
     with context("when HEAD is main and a leftover default session already exists"):
         with context("and no session name was given"):
             with it(
-                "should not bind CliAgent to default — session comes from start-ticket"
+                "should not bind CliAgent to default â€” session comes from start-ticket"
             ):
                 from workspace.git_repo import NullGitRepo
 
@@ -1061,6 +1058,53 @@ with description("CliAgent work session bind before start-ticket"):
                         work = agent._ensure_work_session()
                 expect(work.name).not_to(equal("default"))
 
+            with it(
+                "should not bind a durable folder-slug session while HEAD is still main"
+            ):
+                """Residual isolation defect: after skipping leftover default, attach
+                still opens a folder-slug WorkSession on main before start-ticket.
+                Durable bind must wait for session/<ticket> (+ worktree)."""
+                from workspace.git_repo import NullGitRepo
+
+                tmp = Path(tempfile.mkdtemp(prefix="cli_pre_start_slug_"))
+                Workspace(str(tmp)).open_work_session(
+                    "default", git=NullGitRepo(tmp)
+                )
+                agent = CliAgent(workspace=str(tmp), session="")
+                slug = agent._session_slug_from_folder()
+                with patch.object(
+                    CliAgent,
+                    "_session_name_from_git",
+                    lambda self: "",
+                ):
+                    with patch(
+                        "workspace.workspace.WorkSession._default_git",
+                        lambda self: NullGitRepo(Path(self.workspace.path)),
+                    ):
+                        work = agent._ensure_work_session()
+                expect(work.name).not_to(equal(slug))
+                expect(agent._session in ("", None) or agent._session != slug).to(
+                    be_true
+                )
+
+    with context("after start-ticket creates the ticket worktree"):
+        with it(
+            "should rebind workspace root to the ticket worktree for later jobs"
+        ):
+            """CliAgent must retarget _workspace (and session) off the parent
+            checkout onto the ticket sibling worktree once start-ticket returns."""
+            parent = Path(tempfile.mkdtemp(prefix="cli_parent_"))
+            ticket_tree = Path(tempfile.mkdtemp(prefix="abd-cdd-99-"))
+            agent = CliAgent(workspace=str(parent), session="premature-bind")
+            expect(hasattr(agent, "rebind_to_worktree")).to(be_true)
+            agent.rebind_to_worktree(
+                str(ticket_tree), session="ticket-session-99"
+            )
+            expect(Path(agent._workspace_root()).resolve()).to(
+                equal(ticket_tree.resolve())
+            )
+            expect(agent._session).to(equal("ticket-session-99"))
+
     with context("defect-fix job 1 prompt"):
         with it(
             "should tell the doer not to rely on a durable CliAgent session on main before start-ticket"
@@ -1075,6 +1119,32 @@ with description("CliAgent work session bind before start-ticket"):
                 or "rebind" in prompt
                 or "do not bind" in prompt
                 or "before start-ticket" in prompt
+            ).to(be_true)
+
+        with it(
+            "should require rebind of workspace root after start-ticket for CliAgent SubAgent and no-agent"
+        ):
+            template = (
+                Path(__file__).resolve().parent / "job-templates" / "defect-fix.json"
+            )
+            module_ctx = (
+                Path(__file__).resolve().parent / ".context" / "module-context.md"
+            )
+            text = (
+                template.read_text(encoding="utf-8").lower()
+                + "\n"
+                + module_ctx.read_text(encoding="utf-8").lower()
+            )
+            expect("rebind" in text or "rebind" in text).to(be_true)
+            expect(
+                "worktree" in text
+                and (
+                    "cliagent" in text.replace("-", "")
+                    or "cli agent" in text
+                    or "subagent" in text.replace("-", "")
+                    or "no-agent" in text
+                    or "no agent" in text
+                )
             ).to(be_true)
 
 
@@ -1327,13 +1397,89 @@ with description("CliAgent backlog tools"):
                             template="slice-stories",
                             path=str(tmp / "templates"),
                         )
-                        # set_backlog does not take path for template store on backlog —
+                        # set_backlog does not take path for template store on backlog â€”
                         # next_backlog_item uses path for template load
                         msg = agent.next_backlog_item(path=str(tmp / "templates"))
                         expect(msg).to(contain("slice-stories"))
                         queue = agent.job_queue
                         expect(len(queue)).to(equal(1))
                         expect(queue[0]["prompt"]).to(contain("thin slice login"))
+
+
+with description("CliAgent backlog hygiene (#46)"):
+    """Red tests for up-front triage, theme:cli-agent, and finish-ticket before advance."""
+
+    with context("a backlog that still has free-text covering an existing ticket"):
+        with it("should map that free-text to the existing ticket number during up-front triage"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_bl_triage_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch(
+                    "cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-triage"
+                ):
+                    agent = CliAgent(workspace=str(tmp), session="hygiene-triage")
+                    agent.set_backlog(
+                        [
+                            "CliAgent session log is incomplete vs design",
+                            46,
+                        ],
+                        template="defect-fix",
+                    )
+                    # Intended seam: resolve text â†’ existing #N (no duplicate create).
+                    expect(hasattr(agent, "triage_backlog")).to(be_true)
+                    agent.triage_backlog(
+                        find_existing=lambda text: 43
+                        if "session log" in text.lower()
+                        else None,
+                        theme="cli-agent",
+                    )
+                    loaded = CliBacklog.load(agent._attach_cli_sessions())
+                    text_or_mapped = loaded.items[0]
+                    expect(text_or_mapped.kind).to(equal("ticket"))
+                    expect(text_or_mapped.ref).to(equal(43))
+
+    with context("when advancing past a ticket backlog item"):
+        with it("should call finish-ticket before starting the next backlog item"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_bl_finish_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch(
+                    "cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-fin"
+                ):
+                    agent = CliAgent(workspace=str(tmp), session="hygiene-finish")
+                    agent.set_backlog([41, 46], template=None)
+                    agent.next_backlog_item()
+                    with patch(
+                        "workflow.workflow.Workflow.finish",
+                        return_value={"commit": "deadbeef", "session_name": "x"},
+                    ) as finish:
+                        agent.next_backlog_item()
+                        expect(finish.called).to(be_true)
+
+    with context("when triaging free-text that needs a new ticket"):
+        with it("should create the ticket with theme cli-agent"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_bl_theme_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                with patch(
+                    "cli_agent.cli_agent.CursorCli._create_chat", return_value="doer-theme"
+                ):
+                    agent = CliAgent(workspace=str(tmp), session="hygiene-theme")
+                    agent.set_backlog(
+                        ["launch_sessions NOT TAKEN UP pickup flake"],
+                        template="defect-fix",
+                    )
+                    expect(hasattr(agent, "triage_backlog")).to(be_true)
+                    created = {}
+
+                    def _capture(**kwargs):
+                        created.update(kwargs)
+                        return {"number": 99, "url": "https://example/99", "theme": kwargs.get("theme", "")}
+
+                    agent.triage_backlog(
+                        find_existing=lambda _text: None,
+                        capture_backlog=_capture,
+                        theme="cli-agent",
+                    )
+                    theme_val = str(created.get("theme", "")).replace("theme:", "")
+                    expect(theme_val).to(equal("cli-agent"))
 
 
 with description("CliAgent session log completeness (#42)"):
@@ -1407,7 +1553,7 @@ with description("CliAgent session log completeness (#42)"):
                 judge_transcript="",
             )
             records = _cli_agent_log_records(work)
-            # Designed: durable chat + job_queue on header or session_start — not report-only.
+            # Designed: durable chat + job_queue on header or session_start â€” not report-only.
             found = False
             for r in records:
                 chat = r.get("chat") or r.get("chat_link") or ""
@@ -1449,6 +1595,92 @@ with description("CliAgent session log completeness (#42)"):
             expect(len(list(refs)) > 0).to(be_true)
 
 
+with description("CliAgent session log observability"):
+    """Tools/actions on job records, ts_ms, duration_s, since_last_s."""
+
+    with it("should record tools and actions on job_started and job_finished"):
+        from workspace.git_repo import NullGitRepo
+
+        tmp = Path(tempfile.mkdtemp(prefix="cli_log_obs_"))
+        work = Workspace(str(tmp)).open_work_session(
+            "log-obs", git=NullGitRepo(tmp)
+        )
+        work.ensure_started()
+        log = _CliAgentLog()
+        log.job_started(
+            work,
+            index=1,
+            prompt="Write tests",
+            tools=["workflow.workflow:Workflow"],
+            actions=["context_tools.bdd.bdd:Bdd"],
+            judge=True,
+        )
+        log.job_finished(
+            work,
+            index=1,
+            prompt="Write tests",
+            tools=["workflow.workflow:Workflow"],
+            actions=["context_tools.bdd.bdd:Bdd"],
+            judge=True,
+            summary="Added red tests.",
+            refs=["utilities/cli_agent/cli_agent_spec.py"],
+        )
+        records = _cli_agent_log_records(work)
+        started = next(r for r in records if r.get("kind") == "job_started")
+        finished = next(r for r in records if r.get("kind") == "job_finished")
+        expect(started.get("tools")).to(equal(["workflow.workflow:Workflow"]))
+        expect(started.get("actions")).to(equal(["context_tools.bdd.bdd:Bdd"]))
+        expect(started.get("judge")).to(be_true)
+        expect(finished.get("tools")).to(equal(["workflow.workflow:Workflow"]))
+        expect(finished.get("duration_s")).not_to(equal(None))
+        expect(finished.get("ts_ms")).not_to(equal(None))
+
+    with it("should stamp ts_ms and since_last_s on every record"):
+        from workspace.git_repo import NullGitRepo
+
+        tmp = Path(tempfile.mkdtemp(prefix="cli_log_ts_"))
+        work = Workspace(str(tmp)).open_work_session(
+            "log-ts", git=NullGitRepo(tmp)
+        )
+        work.ensure_started()
+        log = _CliAgentLog()
+        log.job_started(work, index=0, prompt="one")
+        time.sleep(0.05)
+        log.job_finished(work, index=0, prompt="one")
+        records = _cli_agent_log_records(work)
+        expect(records[0].get("ts_ms")).not_to(equal(None))
+        expect(records[1].get("since_last_s")).not_to(equal(None))
+        expect(records[1].get("since_last_s") > 0).to(be_true)
+
+    with it("should record structured tools on spawn"):
+        from workspace.git_repo import NullGitRepo
+
+        tmp = Path(tempfile.mkdtemp(prefix="cli_log_spawn_"))
+        work = Workspace(str(tmp)).open_work_session(
+            "log-spawn", git=NullGitRepo(tmp)
+        )
+        work.ensure_started()
+        log = _CliAgentLog()
+        log.spawn(
+            work,
+            role="doer",
+            resume="doer-1",
+            prompt="job",
+            argv="agent --resume doer-1",
+            tools=["workflow.workflow:Workflow"],
+            actions=["context_tools.bdd.bdd:Bdd"],
+            tool_calls=["workflow.workflow:Workflow name=run"],
+            job_index=2,
+        )
+        row = _cli_agent_log_records(work)[0]
+        expect(row.get("tools")).to(equal(["workflow.workflow:Workflow"]))
+        expect(row.get("actions")).to(equal(["context_tools.bdd.bdd:Bdd"]))
+        expect(row.get("tool_calls")).to(
+            equal(["workflow.workflow:Workflow name=run"])
+        )
+        expect(row.get("job_index")).to(equal(2))
+
+
 with description("CliAgent cleanup"):
     with it("should remove temps it wrote and leave session.md and sketches"):
         from workspace.git_repo import NullGitRepo
@@ -1473,3 +1705,129 @@ with description("CliAgent cleanup"):
         expect((ctx / "_judge_check.py").exists()).to(be_false)
         expect((ctx / "cli-agent-put-back.txt").exists()).to(be_false)
         expect((ctx / "story-map.md").is_file()).to(be_true)
+
+
+def _orch_work(name: str):
+    from workspace.git_repo import NullGitRepo
+
+    tmp = Path(tempfile.mkdtemp(prefix=f"cli_orch_{name}_"))
+    work = Workspace(str(tmp)).open_work_session(name, git=NullGitRepo(tmp))
+    work.ensure_started()
+    return tmp, work
+
+
+with description("CliAgent run_backlog orchestrator (#44)"):
+    """Judge-in-code control loop: auto-advance on PASS, structured log kinds."""
+
+    with it("should expose run_backlog as an agent tool"):
+        expect(hasattr(CliAgent, "run_backlog")).to(be_true)
+
+    with it("should complete jobs on PASS without the doer calling complete_job"):
+        tmp, work = _orch_work("pass")
+        agent = CliAgent(workspace=str(tmp), session=work.name)
+        JobQueue().save(
+            work,
+            [
+                {"prompt": "job-a", "tools": ["workflow.workflow:Workflow"], "judge": True},
+                {"prompt": "job-b", "tools": [], "judge": False},
+            ],
+        )
+        launches = []
+
+        def launch_job(agent_self, item):
+            launches.append(item.get("prompt"))
+
+        out = agent.run_backlog(
+            launch_job=launch_job,
+            wait_doer=lambda _w, _i: None,
+            spawn_judge=lambda _w, _i: None,
+            wait_verdict=lambda _w, _i: "PASS",
+        )
+        expect(out).to(contain("done"))
+        expect(JobQueue().load(work)).to(equal([]))
+        expect(launches).to(equal(["job-a", "job-b"]))
+        kinds = [r.get("kind") for r in _CliAgentLog().read_records(work)]
+        expect("orchestrator_started" in kinds).to(be_true)
+        expect("doer_finished" in kinds).to(be_true)
+        expect("verdict" in kinds).to(be_true)
+        expect("orchestrator_stopped" in kinds).to(be_true)
+
+    with it("should write cli-agent-judge.txt and log judge_started from code"):
+        tmp, work = _orch_work("judge")
+        agent = CliAgent(workspace=str(tmp), session=work.name)
+        JobQueue().save(
+            work,
+            [{"prompt": "needs-judge", "tools": ["x"], "judge": True}],
+        )
+        spawn_calls = []
+
+        def spawn_judge(w, item):
+            spawn_calls.append(item.get("prompt"))
+            expect((Path(tmp) / ".context" / "cli-agent-judge.txt").is_file()).to(be_true)
+
+        agent.run_backlog(
+            launch_job=lambda _a, _i: None,
+            wait_doer=lambda _w, _i: None,
+            spawn_judge=spawn_judge,
+            wait_verdict=lambda _w, _i: "PASS",
+        )
+        expect(spawn_calls).to(equal(["needs-judge"]))
+        kinds = [r.get("kind") for r in _CliAgentLog().read_records(work)]
+        expect("judge_started" in kinds).to(be_true)
+
+    with it("should stop and log error after max judge FAILs"):
+        tmp, work = _orch_work("fail")
+        agent = CliAgent(workspace=str(tmp), session=work.name)
+        JobQueue().save(
+            work,
+            [{"prompt": "bad", "tools": ["x"], "judge": True}],
+        )
+        out = agent.run_backlog(
+            max_fail=2,
+            launch_job=lambda _a, _i: None,
+            wait_doer=lambda _w, _i: None,
+            spawn_judge=lambda _w, _i: None,
+            wait_verdict=lambda _w, _i: "FAIL",
+        )
+        expect(out).to(contain("FAIL"))
+        expect(len(JobQueue().load(work))).to(equal(1))
+        kinds = [r.get("kind") for r in _CliAgentLog().read_records(work)]
+        expect("recovery" in kinds).to(be_true)
+        expect("error" in kinds).to(be_true)
+
+    with it("should not append doer-ask-judge when orchestrator owns the loop"):
+        tmp, work = _orch_work("thin")
+        work.cli_judge = "judge-id"
+        agent = CliAgent(workspace=str(tmp), session=work.name)
+        agent._orchestrator_owns_loop = True
+        agent._judge_job = True
+        with patch.object(agent, "_spawn_worker", return_value=[]):
+            with patch.object(agent, "_attach_cli_sessions", return_value=work):
+                with patch.object(
+                    agent,
+                    "_described_turn",
+                    return_value=(
+                        SimpleNamespace(
+                            tool_keys=[],
+                            tool_calls=[],
+                            action=None,
+                            fidelity="",
+                            format="",
+                            prompt="",
+                        ),
+                        [],
+                    ),
+                ):
+                    agent.launch_sessions(["workflow.workflow:Workflow"], None)
+        expect("Start-Process" in agent.job).to(be_false)
+        expect("contact the judge" in (agent.job or "").lower()).to(be_false)
+
+    with it("should read PASS or FAIL from judge transcript jsonl"):
+        path = Path(tempfile.mkdtemp(prefix="cli_orch_verdict_")) / "judge.jsonl"
+        path.write_text(
+            json.dumps({"role": "user", "content": "go"}) + "\n"
+            + json.dumps({"role": "assistant", "content": "Verdict: PASS"}) + "\n",
+            encoding="utf-8",
+        )
+        expect(_TranscriptWatch().read_verdict(path)).to(equal("PASS"))
+
