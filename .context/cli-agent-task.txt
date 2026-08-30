@@ -2,22 +2,15 @@ This is an interactive session.
 Turn.action: (none) (guidance — the CLI decides the Turn)
 Turn.tool_keys: workflow.workflow:Workflow
 Turn.toolCalls: workflow.workflow:Workflow name=run workflow.workflow:Workflow
-<<<<<<< Updated upstream
-Turn.prompt: Backlog item: FIRST / BLOCKING: Starting a work session must put work on its own branch (and worktree) for isolation. work session == branch == own tree. This must hold for CliAgent, SubAgent, and no-agent flows ? not only CLI spawn. Today open/start of a work session can leave you on main/parent (e.g. C:\dev\abd-works-repo) so agents read/write the wrong tree. Fix at the work-session / start-ticket layer so every new work session binds to session/<name> with its own worktree before any job runs. After start-ticket, rebind workspace root to that worktree. Do this fix on the current branch first; later backlog items depend on it. (text).
-=======
 Turn.prompt: Backlog item: #44 (ticket).
->>>>>>> Stashed changes
 
-The ticket is confirmed as a defect and start-ticket has already been run. Now analyze:
-- Read all context files (.context/, module-context.md, grill-answers).
-- Analyze repo history for the area in question.
-- Search for similar past incidents and related issues.
-- Be thorough — do not stop at the surface.
+Triage the work. Two entry paths:
 
-Add your full analysis to the ticket notes under ## Analysis (separated from existing content).
-<<<<<<< Updated upstream
+1. A GitHub board item was provided or is implied: pull it from the project's default board.
+2. The user gave qualitative text describing a defect: first run /backlog to create the item on the board, then treat the newly created item as the ticket.
+
+Immediately decide: is this a defect? Do not do any further work before making this call.
+
+- NOT a defect (feature, improvement, or unclear): tell the parent you cannot continue and stop. Do not run start-ticket. Do not analyze.
+- IS a defect: run /start-ticket immediately to create the branch and session before doing anything else. Do not bind or rely on a durable CliAgent work session on main before start-ticket — a leftover ``default`` (or folder-slug) session is the wrong bind. After start-ticket completes, rebind workspace root to the ticket worktree (``rebind_to_worktree``) on ``session/<ticket>``. The same session==branch==worktree isolation and post-start-ticket rebind must hold for CliAgent, SubAgent, and no-agent flows — not only CLI spawn. Then stop this job — analysis is next.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
-After you finish the Turn, you contact the judge. Do not ask the parent to run the judge. The parent is not in this loop. Open the judge in its own console window so the operator can watch. Never use print mode. On Windows: Start-Process cursor-agent -ArgumentList '--force','--trust','--resume','2f58a0e5-597c-48c1-a7f9-bb5b2a5a3e9b','--workspace','C:\dev\abd-cdd-fix-work-session-branch','Read .context/cli-agent-judge.txt and follow it exactly.' -WorkingDirectory 'C:\dev\abd-cdd-fix-work-session-branch' -WindowStyle Normal. Wait for PASS or FAIL from the judge transcript or finish_turn, not by reading this console. On PASS this job is done. Pop the first object from .context/sessions/<session>/cli-agent-job-queue.json (the job you just finished). If another job remains, that is your next Turn — follow its prompt, tools, and actions, then contact the judge again after that Turn. Do not wait for the parent. If the queue is empty, stop. On FAIL, fix, finish the Turn, and send again (attempt n of 3). After three FAILs, stop and wait for the parent.
-=======
-The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
->>>>>>> Stashed changes
