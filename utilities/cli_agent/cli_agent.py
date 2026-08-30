@@ -694,6 +694,117 @@ class _CliAgentLog:
             record["duration_s"] = round((int(time.time() * 1000) - started) / 1000, 3)
         self.append(work, record)
 
+    def orchestrator_started(self, work) -> None:
+        self.append(work, {"kind": "orchestrator_started"})
+
+    def orchestrator_stopped(self, work, *, reason: str = "") -> None:
+        record: dict = {"kind": "orchestrator_stopped"}
+        if reason:
+            record["reason"] = reason
+        self.append(work, record)
+
+    def doer_finished(self, work, *, job_index: int) -> None:
+        self.append(work, {"kind": "doer_finished", "job_index": job_index})
+
+    def recovery(self, work, *, job_index: int, detail: str = "") -> None:
+        record: dict = {"kind": "recovery", "job_index": job_index}
+        if detail:
+            record["detail"] = detail
+        self.append(work, record)
+
+    def error(self, work, *, detail: str, job_index: int | None = None) -> None:
+        record: dict = {"kind": "error", "detail": detail}
+        if job_index is not None:
+            record["job_index"] = job_index
+        self.append(work, record)
+
+
+class _TranscriptWatch:
+    """Poll Cursor agent jsonl transcripts for turn end and judge verdict."""
+
+    _pass_word = re.compile(r"\bPASS\b")
+    _fail_word = re.compile(r"\bFAIL\b")
+
+    def line_count(self, path: Path) -> int:
+        if not path.is_file():
+            return 0
+        return sum(1 for _ in path.open(encoding="utf-8", errors="replace"))
+
+    def wait_for_growth(
+        self,
+        path: Path,
+        before: int,
+        *,
+        stall_s: float,
+        quiet_s: float = 3.0,
+        poll_s: float = 0.5,
+        sleep=time.sleep,
+        clock=time.time,
+    ) -> None:
+        deadline = clock() + max(0.0, stall_s)
+        while clock() < deadline:
+            if self.line_count(path) > before:
+                self._wait_quiescence(
+                    path, quiet_s=quiet_s, deadline=deadline, poll_s=poll_s, sleep=sleep, clock=clock
+                )
+                return
+            sleep(poll_s)
+        raise RuntimeError(
+            f"stall: transcript did not grow within {stall_s}s ({path})"
+        )
+
+    def _wait_quiescence(
+        self,
+        path: Path,
+        *,
+        quiet_s: float,
+        deadline: float,
+        poll_s: float,
+        sleep,
+        clock,
+    ) -> None:
+        last = self.line_count(path)
+        stable_at = clock()
+        while clock() < deadline:
+            now = self.line_count(path)
+            if now != last:
+                last = now
+                stable_at = clock()
+            elif clock() - stable_at >= quiet_s:
+                return
+            sleep(poll_s)
+
+    def read_verdict(self, path: Path) -> str:
+        if not path.is_file():
+            return ""
+        for line in reversed(path.read_text(encoding="utf-8", errors="replace").splitlines()):
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if row.get("role") != "assistant":
+                continue
+            text = self._assistant_text(row).upper()
+            if "FAIL" in text:
+                return "FAIL"
+            if "PASS" in text:
+                return "PASS"
+        return ""
+
+    def _assistant_text(self, row: dict) -> str:
+        content = row.get("content")
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "text":
+                    parts.append(str(block.get("text") or ""))
+            return "\n".join(parts)
+        return str(content or "")
+
 
 class _Pickup:
     """Fail launch if the doer transcript does not take the new job."""
@@ -1508,6 +1619,7 @@ class CliAgent(SubAgent):
         self._current_launch_tools: list = []
         self._current_launch_actions: list | None = None
         self._current_turn = None
+        self._orchestrator_owns_loop = False
 
     @property
     def ide(self) -> IdeCli:
@@ -1686,8 +1798,8 @@ class CliAgent(SubAgent):
         raise RuntimeError(pickup.not_taken_up)
 
     def _should_judge(self, tools, actions) -> bool:
-        """Judge when tools/actions are listed, or when judge is explicitly set."""
-        return bool(self.ide._listed(tools) or self.ide._listed(actions) or self.ide.judge)
+        """Judge when this launch lists tools/actions. IdeCli.judge is capability only."""
+        return bool(self.ide._listed(tools) or self.ide._listed(actions))
 
     def _spawn_worker(self, tools, hanging, actions=None):
         judge_prompt = ""
@@ -1702,11 +1814,12 @@ class CliAgent(SubAgent):
         before = pickup.user_count(
             pickup.cursor_transcript(self._workspace_root(), resume)
         )
+        orchestrating = getattr(self, "_orchestrator_owns_loop", False)
         results = self.ide._detect()._launch_all(
             self.job,
             self._workspace_root(),
             judge_prompt,
-            use_judge=bool(judge_prompt),
+            use_judge=bool(judge_prompt) and not orchestrating,
         )
         failed = self._first_failure(results)
         if failed is not None:
@@ -1889,6 +2002,177 @@ class CliAgent(SubAgent):
             judge=kit.get("judge"),
         )
         return result
+
+    def _job_needs_judge(self, item: dict | None) -> bool:
+        if not item:
+            return False
+        if "judge" in item:
+            return bool(item.get("judge"))
+        tools = item.get("tools") or []
+        actions = item.get("actions") or []
+        return bool(tools or actions)
+
+    def _write_judge_prompt(self, work, item: dict) -> Path:
+        ws = Path(self._workspace_root())
+        prompt = str(item.get("prompt") or "")
+        criteria = str(item.get("judge_criteria") or "")
+        body = (
+            "Validate the doer's Turn for this job.\n\n"
+            f"## Job\n{prompt}\n\n"
+            f"## Criteria\n{criteria or 'PASS only when the job prompt was satisfied.'}\n\n"
+            "Reply PASS or FAIL and finish this Turn.\n"
+        )
+        path = ws / ".context" / "cli-agent-judge.txt"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body, encoding="utf-8")
+        return path
+
+    @agent_tool
+    def run_backlog(
+        self,
+        *,
+        stall_s: float = 600.0,
+        max_fail: int = 3,
+        wait_doer=None,
+        wait_verdict=None,
+        spawn_judge=None,
+        launch_job=None,
+    ) -> str:
+        """Own the backlog/job control loop in-process (judge-in-code, auto-advance).
+
+        Parent launches ``run_backlog`` once and monitors the session log. The doer
+        only executes the job Turn — it must not contact the judge or call
+        ``complete_job`` / ``launch_next``. Hooks (``wait_doer``, ``wait_verdict``,
+        ``spawn_judge``, ``launch_job``) are for tests and alternate transports.
+        """
+        work = self._attach_cli_sessions()
+        log = _CliAgentLog()
+        log.orchestrator_started(work)
+        self._orchestrator_owns_loop = True
+        finished = 0
+        try:
+            while True:
+                item = JobQueue().peek(work)
+                if item is None:
+                    # Prefer advancing backlog when the job queue is empty.
+                    nxt = None
+                    if hasattr(self, "next_backlog_item"):
+                        try:
+                            nxt = self.next_backlog_item()
+                        except Exception:
+                            nxt = None
+                    if not nxt:
+                        log.orchestrator_stopped(work, reason="queue_empty")
+                        break
+                    continue
+
+                all_jobs = JobQueue().load(work)
+                index = all_jobs.index(item) if item in all_jobs else 0
+                self._current_job_index = index
+                fails = 0
+                while True:
+                    if launch_job is not None:
+                        launch_job(self, item)
+                    else:
+                        self.launch_next()
+                    if wait_doer is not None:
+                        wait_doer(work, item)
+                    else:
+                        self._wait_until_doer_turn_ends(work, stall_s=stall_s)
+                    log.doer_finished(work, job_index=index)
+
+                    if not self._job_needs_judge(item):
+                        self.complete_job()
+                        finished += 1
+                        break
+
+                    self._write_judge_prompt(work, item)
+                    judge_id = getattr(work, "cli_judge", "") or ""
+                    log.judge_started(work, job_index=index, judge=judge_id)
+                    if spawn_judge is not None:
+                        spawn_judge(work, item)
+                    else:
+                        self._spawn_judge_for_job(work, item)
+                    if wait_verdict is not None:
+                        result = str(wait_verdict(work, item) or "").strip().upper()
+                    else:
+                        result = self._wait_for_verdict(work, stall_s=stall_s)
+                    log.verdict(work, result=result, job_index=index)
+                    if result == "PASS":
+                        self.complete_job()
+                        finished += 1
+                        break
+                    fails += 1
+                    log.recovery(
+                        work,
+                        job_index=index,
+                        detail=f"judge FAIL {fails}/{max_fail}",
+                    )
+                    if fails >= max_fail:
+                        log.error(
+                            work,
+                            detail=f"judge FAIL x{max_fail}",
+                            job_index=index,
+                        )
+                        log.orchestrator_stopped(work, reason="judge_fail_limit")
+                        return f"run_backlog stopped: FAIL x{max_fail}"
+            return f"run_backlog done: {finished}"
+        finally:
+            self._orchestrator_owns_loop = False
+
+    def _wait_until_doer_turn_ends(self, work, *, stall_s: float) -> None:
+        """Poll doer transcript until turn ends or stall — override via wait_doer hook."""
+        pickup = _Pickup()
+        path = pickup.cursor_transcript(self._workspace_root(), work.cli_doer)
+        before = _TranscriptWatch().line_count(path)
+        _TranscriptWatch().wait_for_growth(path, before, stall_s=stall_s)
+
+    def _spawn_judge_for_job(self, work, item: dict) -> None:
+        """Spawn/resume judge CLI for the current job — override via spawn_judge hook."""
+        ws = self._workspace_root()
+        judge_resume = (work.cli_judge or "").strip()
+        if not judge_resume:
+            raise RuntimeError("no judge resume — bind CLI sessions first")
+        launch = self.ide._launch_prompt(
+            "Read .context/cli-agent-judge.txt and follow it exactly.",
+            ws,
+            name="cli-agent-judge.txt",
+        )
+        vendor = self.ide._detect()
+        vendor._judge_resume = judge_resume
+        argv = vendor._judge_command(launch, ws)
+        result = vendor._spawn(
+            argv, ws, existing_pid=getattr(work, "cli_judge_pid", 0) or 0
+        )
+        if result.exit_code != 0:
+            raise RuntimeError(
+                result.stderr.strip() or result.text.strip() or "judge spawn failed"
+            )
+        work.cli_judge_pid = result.pid
+        work.save_cli_sessions()
+
+    def _wait_for_verdict(self, work, *, stall_s: float) -> str:
+        """Read PASS/FAIL from judge transcript — override via wait_verdict hook."""
+        pickup = _Pickup()
+        watch = _TranscriptWatch()
+        path = pickup.cursor_transcript(self._workspace_root(), work.cli_judge)
+        before = watch.line_count(path)
+        deadline = time.time() + max(0.0, stall_s)
+        while time.time() < deadline:
+            verdict = watch.read_verdict(path)
+            if verdict in ("PASS", "FAIL"):
+                return verdict
+            if watch.line_count(path) > before:
+                verdict = watch.read_verdict(path)
+                if verdict in ("PASS", "FAIL"):
+                    return verdict
+            time.sleep(0.5)
+        _CliAgentLog().error(
+            self.work_session,
+            detail=f"stall: no judge verdict within {stall_s}s",
+            job_index=self._current_job_index,
+        )
+        raise RuntimeError(f"stall: no judge verdict within {stall_s}s")
 
     @prompt(name="kick-cli-agent")
     @agent_tool
@@ -2147,15 +2431,30 @@ class CliAgent(SubAgent):
     @sub_agent
     @agent_tool
     def launch_sessions(self, tools: list[object], actions: list[object] | None = None, prompt: str | None = None, judge: bool | str | dict | None = None) -> str:
-        """Run the listed context tools and actions through the IDE CLI as a non-blocking sub-agent.
+        """Run listed tools/actions via the IDE CLI, or prefer ``run_backlog`` for queue work.
 
-        CliAgent handles all session and workspace setup internally — do not manage those yourself. The parent's role is to launch, then monitor and unblock. The CLI decides each Turn; model, mode, and agent_mode are fixed on this ide instance and must not be passed per call.
+        CliAgent owns session/workspace setup and (via ``run_backlog``) the doer→judge→advance
+        loop. Parent contract is minimal: launch once, read the session log, unblock only after
+        CliAgent recovery stops. Model, mode, and agent_mode are fixed on this ide instance.
 
-        ## Steps
+        ## Preferred Steps (orchestrated)
 
-        1. **Launch.** Pass workspace (and session when known). Do not touch workspace or session utilities — let CliAgent handle all of that. If launch reports NOT TAKEN UP, stop immediately.
-        2. **Monitor.** The session report includes exact file paths — read them directly (do not recurse). Key files: `doer log`, `judge log`, `events log`, `job queue`, `doer jsonl`, `judge jsonl`. Watch with a 30s /loop (Cursor) or poll periodically otherwise. Report back to the user.
-        3. **Unblock on three judge FAILs.** If the doer has stopped waiting, act — do not just report the status. See details below.
+        1. **Enqueue** jobs / backlog (`enqueue_jobs`, `set_backlog`, templates).
+        2. **Launch ``run_backlog`` once.** CliAgent code spawns the doer, waits for Turn end,
+           writes the judge prompt, spawns/resumes the judge, reads PASS/FAIL, then calls
+           ``complete_job`` / ``launch_next`` internally. Do not ask the doer to contact the
+           judge or advance the queue.
+        3. **Monitor the session log** (exact paths in the launch report — read, do not recurse).
+           Key files: session jsonl, job queue, doer/judge transcripts. Notify the user on
+           ``orchestrator_stopped``, ``error``, or hard stall after CliAgent recovery fails.
+        4. **Unblock only on hard failure** (e.g. FAIL×3 after orchestrator stops). Revise the
+           job prompt, then one continue resume — do not stack prompts or drive with -p.
+
+        ## Legacy Steps (single launch_sessions without run_backlog)
+
+        1. **Launch.** Pass workspace (and session when known). If NOT TAKEN UP, stop immediately.
+        2. **Monitor** doer/judge logs and job queue; report back to the user.
+        3. **Unblock on three judge FAILs** if the doer stopped waiting.
 
         ## Job templates
 
@@ -2175,27 +2474,19 @@ class CliAgent(SubAgent):
         - Free-text items that do not match an existing ticket may create one during triage with theme:cli-agent.
         - Order is the order given unless you reorder via the ``order`` argument and record that choice.
 
-        ## What to always include in the prompt you pass to the doer
+        ## Doer prompt (thin when using run_backlog)
 
-        The prompt must tell the doer:
-        - The task in plain language.
-        - The toolset reference so it can call tools: `toolset: cli_agent.cli_agent:CliAgent` with the same workspace and session.
-        - Which queue tools to use and when:
-            - `enqueue_jobs(jobs)` — set up all jobs upfront. Each job: `{prompt, tools, actions}`.
-            - `launch_next()` — run the head job. Call once per judge PASS to advance the queue.
-            - `complete_job()` — pop the finished head before calling launch_next.
+        Tell the doer the task and toolset only. Do **not** instruct it to contact the judge,
+        call ``complete_job`` / ``launch_next``, or edit the job queue — ``run_backlog`` owns that.
+
+        For a one-off ``launch_sessions`` without orchestrator, you may still include queue tool
+        hints (`enqueue_jobs`, `launch_next`, `complete_job`) for doer-driven advance.
 
         ## Judge
 
-        CliAgent spawns both the doer and the judge automatically — the parent (you) never launches, prompts, or scores the judge. CliAgent generates the judge's instructions internally from the job and tools. A judge is spawned when tools or actions are listed, or when the user explicitly requests one.
-
-        After the doer calls finish_turn, the doer sends the judge file and waits for PASS or FAIL. That exchange is entirely between the doer and judge CLIs. Three FAILs: the doer stops and waits for the parent to intervene (see below).
-
-        ## If the doer stopped after three judge FAILs
-
-        1. Read the judge FAIL — check the transcript and named leftovers in the workspace.
-        2. Revise the job prompt and cli-agent-task.txt to target those exact gaps.
-        3. Send one continue resume to the doer. Do not stack prompts. Do not drive with -p.
+        Under ``run_backlog``, CliAgent code spawns/resumes the judge and records the verdict —
+        the parent never launches, prompts, or scores the judge; the doer never contacts it.
+        A judge runs when the job lists tools/actions, or when ``judge=`` is set on the launch/job.
         """
         if prompt:
             self.task_prompt = prompt
@@ -2204,7 +2495,8 @@ class CliAgent(SubAgent):
             self._judge_job = False
         elif judge is not None:
             self.judge = judge
-            self._judge_job = self._should_judge(tools, actions)
+            # Explicit judge= on launch forces a judge; IdeCli.judge alone does not.
+            self._judge_job = True if judge else self._should_judge(tools, actions)
         else:
             self._judge_job = self._should_judge(tools, actions)
         self._bring_in_kits(tools, actions)
@@ -2214,7 +2506,12 @@ class CliAgent(SubAgent):
         self._current_launch_actions = self.ide._listed(actions)
         self._current_turn = hanging
         self.job = self.ide._turn_prompt(hanging, later)
-        if self._judge_job and work.cli_judge:
+        # When run_backlog owns the loop, doer must NOT contact the judge.
+        if (
+            self._judge_job
+            and work.cli_judge
+            and not getattr(self, "_orchestrator_owns_loop", False)
+        ):
             self.job += "\n" + self.ide._doer_ask_judge(
                 work.cli_judge, self._workspace_root()
             )
