@@ -1,4 +1,4 @@
-"""VSCode agent hook - deliver each governed asset's manifest guidance on every touch.
+"""VSCode agent hook - deliver governed-asset manifest guidance once per chat, then reuse.
 
 beforeReadFile / postToolUse / preToolUse:
   Scan the file's header for ``# @toolset-manifest`` lines, run each named
@@ -7,6 +7,12 @@ beforeReadFile / postToolUse / preToolUse:
   satisfy, ...) - into the Agent's context. The edit proceeds directly on
   the same touch that delivered the guidance; there is no separate "run
   compliance yourself first" step and nothing is ever denied.
+
+  When the same conversation already received that governing toolset's
+  guidance earlier in the chat (keyed by ``conversation_id`` + toolset
+  command), later touches skip ``run_manifests`` and do not re-inject the
+  blob — the agent keeps using guidance already in context (fidelity-tool
+  format) without remanifesting.
 
 This applies uniformly to every touch, by any caller (the main agent, an ad
 hoc Task subagent, a launched ``@sub_agent`` tool), and recursively all the
@@ -43,10 +49,12 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]  # utilities/manifest_hook/ -> utilities/ -> abd-context-driven-delivery/
 _LOG_FILE = Path(__file__).resolve().parent / "manifest_gate.log"
+_DELIVERED_CACHE_PATH = Path(__file__).resolve().parent / ".manifest_gate_delivered.json"
 _MANIFEST_PREFIXES = ("# @toolset-manifest", "# invoke-")
 _SCAN_LINES = 15
 _CATEGORY_DIRS = ("primitives", "utilities", "context_tools", "context_tools/actions")
 _MAX_MANIFEST_RETRIES = 2
+_NO_CONVERSATION = "_no_conversation"
 
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
@@ -70,6 +78,82 @@ _MUTATING_TOOLS = frozenset(
     }
 )
 _MANIFEST_CMD_RE = re.compile(r"^#\s*@toolset-manifest\s+(.+)$", re.IGNORECASE)
+
+
+def _conversation_id(data: dict) -> str:
+    cid = str(data.get("conversation_id") or "").strip()
+    return cid or _NO_CONVERSATION
+
+
+def _guidance_cache_keys(path: str, manifest_lines: list[str]) -> list[str]:
+    """Stable keys for guidance already delivered this chat (prefer toolset)."""
+    keys: list[str] = []
+    for line in manifest_lines:
+        if not line.startswith("# @toolset-manifest"):
+            continue
+        cmd = line.removeprefix("# @toolset-manifest").strip()
+        if cmd:
+            keys.append(f"cmd:{cmd}")
+        toolset = toolset_from_manifest_lines([line])
+        if toolset:
+            keys.append(f"toolset:{toolset}")
+    if not keys:
+        try:
+            keys.append(f"path:{Path(path).resolve()}")
+        except OSError:
+            keys.append(f"path:{path}")
+    return keys
+
+
+def _load_delivered_cache() -> dict[str, list[str]]:
+    try:
+        raw = json.loads(_DELIVERED_CACHE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, list[str]] = {}
+    for cid, keys in raw.items():
+        if isinstance(keys, list):
+            out[str(cid)] = [str(k) for k in keys]
+    return out
+
+
+def _save_delivered_cache(cache: dict[str, list[str]]) -> None:
+    try:
+        _DELIVERED_CACHE_PATH.write_text(
+            json.dumps(cache, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    except OSError:
+        pass
+
+
+def guidance_already_delivered(conversation_id: str, keys: list[str]) -> bool:
+    """True when every cache key was already marked delivered for this chat."""
+    if not keys:
+        return False
+    delivered = set(_load_delivered_cache().get(conversation_id, []))
+    return all(k in delivered for k in keys)
+
+
+def mark_guidance_delivered(conversation_id: str, keys: list[str]) -> None:
+    """Record that these guidance keys were delivered in this conversation."""
+    if not keys:
+        return
+    cache = _load_delivered_cache()
+    existing = set(cache.get(conversation_id, []))
+    existing.update(keys)
+    cache[conversation_id] = sorted(existing)
+    _save_delivered_cache(cache)
+
+
+def clear_delivered_cache() -> None:
+    """Test helper — wipe the on-disk delivered-this-chat cache."""
+    try:
+        _DELIVERED_CACHE_PATH.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def _pythonpath_env() -> dict[str, str]:
