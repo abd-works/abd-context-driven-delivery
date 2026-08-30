@@ -8,6 +8,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import time
 import uuid
@@ -30,6 +31,100 @@ class IdeCliResult:
     argv: list[str] = field(default_factory=list)
     elapsed_seconds: float = 0.0
     pid: int = 0
+
+
+def _pid_alive(pid: int) -> bool:
+    """True when ``pid`` refers to a running process (OS-level liveness)."""
+    pid = int(pid or 0)
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes
+
+        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+        if not handle:
+            return False
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def _kill_pid(pid: int) -> bool:
+    """Force-stop ``pid`` if alive. Returns True when a kill was attempted."""
+    pid = int(pid or 0)
+    if pid <= 0 or not _pid_alive(pid):
+        return False
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/PID", str(pid), "/T", "/F"],
+            capture_output=True,
+            check=False,
+        )
+        return True
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except OSError:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError:
+            return False
+    return True
+
+
+def _kill_workspace_agent_procs(workspace: str) -> list[str]:
+    """Kill stray cursor-agent processes whose command line targets ``workspace``."""
+    root = str(Path(workspace).resolve())
+    markers = (root, root.replace("\\", "/"), root.replace("\\", "\\\\"))
+    killed: list[str] = []
+    if os.name != "nt":
+        return killed
+    try:
+        completed = subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                "Get-CimInstance Win32_Process | "
+                "Where-Object { $_.CommandLine -and "
+                "($_.CommandLine -match 'cursor-agent|--resume') } | "
+                "Select-Object ProcessId, CommandLine | ConvertTo-Json -Compress",
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=45,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return killed
+    raw = (completed.stdout or "").strip()
+    if not raw:
+        return killed
+    try:
+        rows = json.loads(raw)
+    except json.JSONDecodeError:
+        return killed
+    if isinstance(rows, dict):
+        rows = [rows]
+    for row in rows or []:
+        cmd = str(row.get("CommandLine") or "")
+        if not any(m in cmd for m in markers):
+            continue
+        if "cursor-agent" not in cmd.lower() and "--resume" not in cmd:
+            continue
+        pid = int(row.get("ProcessId") or 0)
+        if _kill_pid(pid):
+            killed.append(f"orphan:{pid}")
+    return killed
 
 
 class _TaskFile:
@@ -807,18 +902,24 @@ class _TranscriptWatch:
 
 
 class _Pickup:
-    """Fail launch if the doer transcript does not take the new job."""
+    """Fail launch only when the doer neither takes the job nor stays alive."""
 
     not_taken_up = (
-        "NOT TAKEN UP: the doer did not accept the new job. "
-        "Do not wait. A live pid is not proof the Turn started."
+        "NOT TAKEN UP: the doer did not accept the new job and no live doer pid "
+        "is bound. Do not wait."
     )
     _user_mark = '"role":"user"'
 
     def cursor_transcript(self, workspace: str, resume: str) -> Path:
         resume = (resume or "").strip()
         raw = str(Path(workspace).resolve())
-        slug = raw.replace(":", "").replace("\\", "-").replace("/", "-")
+        # Cursor project slug: path seps and underscores become '-'.
+        slug = (
+            raw.replace(":", "")
+            .replace("\\", "-")
+            .replace("/", "-")
+            .replace("_", "-")
+        )
         return (
             Path.home()
             / ".cursor"
@@ -947,12 +1048,11 @@ class _WorkAttach:
         work = agent._ensure_work_session()
         work.load_cli_sessions()
         vendor = agent.ide._detect()
-        if work.agent_open:
-            agent._ide = vendor._copy_policy(vendor._resumed(work.cli_doer, work.cli_judge))
-            return work
         if not work.cli_doer:
             work.associate_cli("doer", vendor._create_chat(agent._workspace_root()))
-        if agent._judge_job and vendor.judge and not work.cli_judge:
+        # Mint judge even when doer already open (run_backlog attaches before
+        # _judge_job is set; a later attach must still bind the judge).
+        if agent._judge_job and vendor.judge and not (work.cli_judge or "").strip():
             work.associate_cli("judge", vendor._create_chat(agent._workspace_root()))
         agent._ide = vendor._copy_policy(vendor._resumed(work.cli_doer, work.cli_judge))
         return work
@@ -1791,10 +1891,13 @@ class CliAgent(SubAgent):
                 return spawned
         return None
 
-    def _await_pickup(self, resume: str, before: int) -> None:
+    def _await_pickup(self, resume: str, before: int, *, pid: int = 0) -> None:
+        """Wait for transcript take-up; a live doer pid counts as taken-up."""
         pickup = _Pickup()
         path = pickup.cursor_transcript(self._workspace_root(), resume)
         if pickup.accepted(path, before, seconds=self.ide.pickup_seconds):
+            return
+        if _pid_alive(pid):
             return
         raise RuntimeError(pickup.not_taken_up)
 
@@ -1828,7 +1931,12 @@ class CliAgent(SubAgent):
                 failed.stderr.strip() or failed.text.strip() or "IDE CLI exited non-zero"
             )
         self._record_cli_binding(results, tools=tools, actions=actions, turn=hanging)
-        self._await_pickup(resume, before)
+        doer_pid = 0
+        if results:
+            doer_pid = int(results[0].pid or 0)
+        if work is not None and not doer_pid:
+            doer_pid = int(getattr(work, "cli_doer_pid", 0) or 0)
+        self._await_pickup(resume, before, pid=doer_pid)
         return results
 
     def _record_cli_binding(
@@ -1945,6 +2053,31 @@ class CliAgent(SubAgent):
         if work is None:
             return
         type(self).cleanup_session(work)
+
+    @agent_tool
+    def close_agents(self) -> str:
+        """Kill doer/judge CLI processes and clear chat bindings. Does **not** close the work session.
+
+        Use when agent windows/processes have piled up but the work session, queue, and
+        backlog should stay. Next ``launch_next`` / ``run_backlog`` will mint fresh CLI chats.
+        """
+        work = self._ensure_work_session()
+        work.load_cli_sessions()
+        killed: list[str] = []
+        for role, pid in (
+            ("doer", int(getattr(work, "cli_doer_pid", 0) or 0)),
+            ("judge", int(getattr(work, "cli_judge_pid", 0) or 0)),
+        ):
+            if _kill_pid(pid):
+                killed.append(f"{role}:{pid}")
+        killed.extend(_kill_workspace_agent_procs(self._workspace_root()))
+        work.close_cli_sessions()
+        self._orchestrator_owns_loop = False
+        detail = ",".join(killed) if killed else "none"
+        return (
+            f"agents closed (killed={detail}); "
+            f"work session {work.name!r} still open"
+        )
 
     @agent_tool
     def enqueue_jobs(self, jobs: list[dict]) -> str:
@@ -2134,10 +2267,12 @@ class CliAgent(SubAgent):
         judge_resume = (work.cli_judge or "").strip()
         if not judge_resume:
             raise RuntimeError("no judge resume — bind CLI sessions first")
+        # Never name=cli-agent-judge.txt: on Windows _needs_task_file is always True,
+        # so _launch_prompt would overwrite real criteria with this stub.
         launch = self.ide._launch_prompt(
             "Read .context/cli-agent-judge.txt and follow it exactly.",
             ws,
-            name="cli-agent-judge.txt",
+            name="cli-agent-judge-launch.txt",
         )
         vendor = self.ide._detect()
         vendor._judge_resume = judge_resume
