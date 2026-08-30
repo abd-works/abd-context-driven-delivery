@@ -11,5 +11,5 @@
 ## End
 
 - **ended:** 2026-08-30
-- **outcome:** Agenda expand instructs the AI to display tools made available (name + purpose) before the suggested flow. Mechanical and agentic BDD green for the display scenario.
+- **outcome:** Agenda expand instructs the AI to display tools made available (name + purpose) before the suggested flow. Mechanical BDD green; agentic display scenario passed. Fix already on main (e32c1a2a / af1e47bd).
 - **handoff:** handoff.md
