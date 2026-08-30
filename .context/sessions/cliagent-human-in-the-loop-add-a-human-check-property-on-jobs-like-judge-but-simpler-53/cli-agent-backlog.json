@@ -1,0 +1,10 @@
+{
+  "template": "small-change",
+  "items": [
+    {
+      "ref": 53,
+      "kind": "ticket",
+      "status": "in_progress"
+    }
+  ]
+}
