@@ -1,12 +1,13 @@
 # powers/extras
 
-Positive modifiers (extras) applied to effects. Child of powers only.
+## Purpose
 
-## Modules fidelity
+Own Extra modifiers that adjust Effect cost and behavior.
 
-### Module `powers/extras`
+## Seam
 
-- **Purpose:** Own Extra modifiers that adjust Effect cost and behavior.
-- **Seam (terms):** Extra
-- **Dependencies (one-way):** `powers`
-- **Build order:** see `sandbox/.context/sessions/discovery/module-build-order.md`
+Extra
+
+## Dependencies
+
+`powers`

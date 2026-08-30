@@ -33,6 +33,12 @@ The **`bdd`** generator supplies the underlying test discipline (RED-GREEN, AAA,
 
 - **`timeout-per-instruct`** — Default 300s. Long generate/repair actions may need 300–600s. On timeout, `instruct_use_tool` falls back to a local YAML replay so a slow agent does not kill the assertion.
 
+## Failures
+
+- **`triage-prompt-vs-code`** — When an agent BDD run fails, decide whether the miss is **prompt/instructions** (agent ignored guidance, wrong tool choice, bad prose) or **code** (toolset, action, domain, or harness logic wrong under a correct agent path). Do not treat every red agent example as a prompt tweak.
+- **`code-failure-needs-vanilla-bdd`** — If the failure is **code-related**, fix the production code **and** add or extend the **vanilla** mamba BDD (ordinary `bdd` specs — no live agent) that would have caught that gap without the agent harness. Name the missing unit of behavior; cover it with `it should` examples against the real API. Agent BDD alone is not enough for a code bug.
+- **`prompt-failure-stays-on-agent-bdd`** — If the failure is **prompt-related**, fix the prompt/skill/instructions (and tighten the agent BDD rubric or steps if needed). Do not invent a vanilla BDD that only re-encodes “the agent must read the prompt.”
+
 ---
 # Generate
 
@@ -44,5 +50,6 @@ The **`bdd`** generator supplies the underlying test discipline (RED-GREEN, AAA,
 4. Assert `response.action`, `response.tools`, and required substrings in `response.instructions`. Use `ai_judge` for prose outputs.
 5. Point every session at `.agent_bdd_sessions/<scenario>.json` beside the spec.
 6. Run **validate**.
+7. On a **red** agent BDD: triage prompt vs code (§ Failures). Code gaps → fix code + add the vanilla BDD that covers the miss; prompt gaps → fix guidance/agent BDD only.
 
-**Do not:** use a `session.` prefix (`session.instruct`, `session.ai_judge`, etc.) — import and call the free functions; mock the harness or the agent; assert on raw `stdout` when `RunResponse` has a parsed field for the same value; share one session across contexts; or catch `AgentHarnessError` in the spec — let it surface with the log-directory path in the message.
+**Do not:** use a `session.` prefix (`session.instruct`, `session.ai_judge`, etc.) — import and call the free functions; mock the harness or the agent; assert on raw `stdout` when `RunResponse` has a parsed field for the same value; share one session across contexts; catch `AgentHarnessError` in the spec — let it surface with the log-directory path in the message; or fix a **code** failure with prompt-only changes and no vanilla BDD for the gap.

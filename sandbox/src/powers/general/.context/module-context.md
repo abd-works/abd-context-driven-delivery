@@ -1,12 +1,13 @@
 # powers/general
 
-General-typed power effects. Child of powers only.
+## Purpose
 
-## Modules fidelity
+Specialize Effect for general-type powers.
 
-### Module `powers/general`
+## Seam
 
-- **Purpose:** Specialize Effect for general-type powers.
-- **Seam (terms):** GeneralEffect
-- **Dependencies (one-way):** `powers`
-- **Build order:** see `sandbox/.context/sessions/discovery/module-build-order.md`
+GeneralEffect
+
+## Dependencies
+
+`powers`

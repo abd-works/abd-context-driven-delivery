@@ -12,10 +12,10 @@ Miniature kit for Clean Engineering Draw.io class / modules diagrams: create the
 
 `Drawio`, `DrawIOCleanEngineeringModel`; `keep_positioning` on render/create_diagram (existing class positions and relationship routing stay put; new classes use the layout algorithm); layout scanners under `scanners/` (`*_scanner.py`); fixtures under `examples/evals/<case>/{faultyAsset,repairedAsset}.drawio`.
 
+## Constraint
+
+Judgment rules in `drawio.md` (e.g. `module-spatial-cohesion`, `ull-bullets-become-rows`, `aggregate-layout-cohesion`) have no scanner — validate covers them as critical-judge prose. `stereotype-above-class-name` is mechanical and has a scanner.
+
 ## Dependencies
 
 `primitives.actions` (`@action` / `@agentic_toolset`); `utilities.scanners` (`Scan` / `Scanner`); `context_tools.actions.repair` (`Repair`); stdlib XML via `drawio_tools`.
-
-## Known scan notes
-
-Judgment rules in `drawio.md` (e.g. `module-spatial-cohesion`, `ull-bullets-become-rows`, `aggregate-layout-cohesion`) have no scanner — validate covers them as critical-judge prose. `stereotype-above-class-name` is mechanical and has a scanner.

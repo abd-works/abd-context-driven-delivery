@@ -1,12 +1,13 @@
 # powers/sensory
 
-Sensory-typed power effects and sense types. Child of powers only.
+## Purpose
 
-## Modules fidelity
+Specialize Effect for sensory-type powers.
 
-### Module `powers/sensory`
+## Seam
 
-- **Purpose:** Specialize Effect for sensory-type powers.
-- **Seam (terms):** SensoryEffect
-- **Dependencies (one-way):** `powers`
-- **Build order:** see `sandbox/.context/sessions/discovery/module-build-order.md`
+SensoryEffect
+
+## Dependencies
+
+`powers`

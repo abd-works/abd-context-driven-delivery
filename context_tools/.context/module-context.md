@@ -6,15 +6,13 @@ Contexts provides functionality to manage knowledge for a field of expertise, an
 
 ## Primary use case
 
-Capture a field’s guidelines and examples as a context, then use its tools to generate and check content against those guidelines. Examples include`clean_engineering`, `bdd`, `stories`, `ux`, `ddd`, `agent_bdd`;
+Capture a field’s guidelines and examples as a context, then use its tools to generate and check content against those guidelines. Examples include `clean_engineering`, `bdd`, `stories`, `ux`, `ddd`, `agent_bdd`.
 
 ## Rationale
 
-1. Knowledge and code regarding using ai for a context stay together — the same context holds the guidelines and the tools that apply them.
+1. Knowledge and code regarding using AI for a context stay together — the same context holds the guidelines and the tools that apply them.
 2. One shape per field of expertise — each context reuses the same generate / validate / document / satisfy / repair surface instead of inventing a custom harness.
 3. Built on Tools/Actions — ordinary Python classes become expertise toolsets; authors focus on the field, not chat wiring.
-
-
 
 ## Seam
 
@@ -32,11 +30,11 @@ Annotate a class with `@context`, then create markdown for the named instruction
 
 **tools** — `Toolset`, `tool` (and manifest/`run` via the toolset surface).
 
-**actions** — `@action`, `_ActionRunner` validation on merge.
+**actions** — `@action` validation on merge.
 
 **primitives** — `Instruction`, `@instruction` expansion and asset location under `module_dir`.
 
-**scanners** (package under this folder) — `ScannerCollection` used by `scan` / `_scanner_collection`.
+**scan** — `ScannerCollection` used by the host `scan` tool.
 
 Does not own practice context prose; each practice folder owns its `{context-slug}.md`, examples, and templates.
 
@@ -44,10 +42,7 @@ Does not own practice context prose; each practice folder owns its `{context-slu
 
 **Key mechanism** — structural pattern instantiated once per practice context generator (`CleanEngineering`, `Bdd`, `Stories`, `Ux`, `Ddd`, `AgentBdd`, `CarChronicle`, …).
 
-Observed from current instances:
-
-
-|                      |                                                                                                                                                                                                                                                                                                                       |
+| | |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Variation points** | Context folder contents (`{context-slug}.md`, examples, templates/formats); optional `format` (and context-specific constructor args such as `fidelity`); optional `@action` body overrides / composition with other toolsets; optional context scanners behind `_scanner_collection`.                                |
-| **Fixed parts**      | `@context` merge (not direct subclass); instruction slots for contexts / generate & document instructions / examples / templates; standard actions `generate` → `validate`, plus `document`, `satisfy`, `repair`; `scan` tool; `module_dir` = folder of the class module; toolset manifest + `run` as the AI surface. |
+| **Variation points** | Context folder contents (`{context-slug}.md`, examples, templates/formats); optional `format` (and context-specific constructor args such as `fidelity`); optional `@action` body overrides / composition with other toolsets; optional context scanners behind the host scanner collection. |
+| **Fixed parts** | `@context` merge (not direct subclass); instruction slots for contexts / generate & document instructions / examples / templates; standard actions `generate` → `validate`, plus `document`, `satisfy`, `repair`; `scan` tool; `module_dir` = folder of the class module; toolset manifest + `run` as the AI surface. |

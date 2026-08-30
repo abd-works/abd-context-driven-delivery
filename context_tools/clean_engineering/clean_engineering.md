@@ -37,7 +37,7 @@ A **module** is a named structural boundary that groups closely related classes 
 - Consume the existing `{session}/.context/{subject}-index.md` and partition chunks if they exist — **do not edit** or wipe partitions.
 - Create module structure (`physical-folder` / `nested-physical-folder`) under `{session}/{module}/`.
 - When nesting, the **parent module** owns shared base classes/terms (e.g. `powers` owns `Effect`). Specializing children use a path under the parent (`powers/attack`) and depend on the parent — not on siblings. Do **not** invent a `parent/base` submodule (e.g. no `powers/effect`) just to hold shared content; that content belongs on the parent. Diagram: path nesting = containment (children drawn inside the parent box).
-- Seed `{session}/{module}/.context/module-context.md` — thin only: **Purpose** (one paragraph), **Seam** (term/class name list), **Dependencies** (one-way module names), optional **Mechanism** note. No full Public API / `I{Class}` yet.
+- Seed `{session}/{module}/.context/module-context.md` — **public seam only** (see **`module-context.md` — public seam only** below). Thin: **Purpose**, **Seam** (public term/class names), **Dependencies**, optional **Extend** / **Mechanism** note. No full Public API / `I{Class}` yet. **Never** internals.
 - Write `{session}/.context/module-build-order.md` (or a **Build order** section on the subject index): topological order from one-way deps. **Cycles are a hard fail** — grill until deps are one-way.
 - Name terms/classes only enough to show independence. Seed **language companion** prose for those names.
 - Seam terms: **one name per concept** (prefer the type name). Do not list singular and plural of the same term (e.g. `Ability` — not `Ability, Abilities`).
@@ -75,6 +75,7 @@ Examples: `powers` (owns Effect) + `powers/attack|control|defense|movement|senso
 - **`low-coupling`** — Modules depend on each other only through well-defined interfaces. Cross-module dependencies are explicit and minimal — no module reaches into another's internals.
 - **`single-boundary`** — Each module is the single source of truth for its domain concept. No other module holds, mutates, or duplicates that concept's state or rules.
 - **`named-seam-and-constraint`** — Every module owns a *seam* — the public surface of classes and operations callers depend on — paired with a *constraint* stating what callers must do or must not do at that boundary. A module is described by what it requires of its callers, not only by what it holds.
+- **`public-seam-only`** — `.context/module-context.md` documents **only** the public seam: how to **use** the module, how to **extend** it, and what its **dependencies** are. Internals are banned (see dedicated section below). Scanner: `public-seam-only`.
 - **`deep-module`** — The seam stays a short named list of classes and operations with substantial functionality behind it (Ousterhout: small interface, large hidden implementation). If internal helpers leak into the seam, encapsulation is overhead without benefit. Scanner heuristic: at most **40%** of top-level symbols may be public (leading underscore for the rest).
 - **`physical-folder`** — Each module occupies its own folder; class files, markdown documents, and other module-level artifacts live in it. Generated code belongs in that folder — not beside the module, not in a flat dump outside it. Nested modules use child folders under the parent (`nested-physical-folder`). Not every folder is a module — chapter or organisational folders may group several modules and must not be treated as one module unless they own `.context/module-context.md`. **Do not stop at an arbitrary depth** — every folder that is a cohesive functional unit owns `.context/module-context.md`; folders that are only implementation detail (`assets/`, thin config/) are absorbed into the parent description. Stopping mid-tree at `pages/My` while leaving nested pages, hooks, and services undocumented is a defect. **`module-context.md` never lives under `.context/sessions/`** — the session folder is for sprint artifacts; the context file belongs beside the source it describes.
 - **`output-format`** — Written markdown is human-readable only. Strip template markup (`<!-- Mu -->`, `<!-- Mv -->`, and similar) before writing. A module heading sits immediately above its `- **Purpose:**` block — no blank line between them.
@@ -97,7 +98,32 @@ A **mechanism** is a structural pattern the codebase instantiates more than once
 
 Whether a module is a mechanism is stereotyped lightly at **modules** fidelity and made precise at **model** / **code** (variation points and fixed parts listed in the context file). Mechanism identification is optional and exploratory — pursue it when the pattern is genuinely recurring, not as a default.
 
-At **modules** fidelity, `.context/module-context.md` is thin: Purpose, Seam (term list), Dependencies (one-way), optional Mechanism note — plus `{session}/.context/module-build-order.md`. At **model** fidelity it expands to **Purpose**, **Primary use case**, **Rationale**, **Seam**, **Public API**, and **Dependencies**.
+At **modules** fidelity, `.context/module-context.md` is thin: Purpose, Seam (term list), Dependencies (one-way), optional Extend / Mechanism note — plus `{session}/.context/module-build-order.md`. At **model** fidelity it expands within the **same public-seam-only allowlist** (Purpose, Primary use case, Rationale, Seam, Public API, Constraint, Extend, Dependencies).
+
+### `module-context.md` — public seam only
+
+`.context/module-context.md` (and any `.module-context` synonym) is the **caller-facing contract**. It must contain **only**:
+
+| Concern | Allowed headings / content |
+|---|---|
+| **Use** | **Purpose**, **Primary use case**, **Rationale**, **Seam**, **Public API** / **Public surface**, **Constraint** — what callers invoke and what they must / must not do |
+| **Extend** | **Extend**, **Extension**, **How to extend**, optional **Mechanism** / **Mechanism stereotype** — variation points and fixed parts that are part of the *public* extension contract; authoring annotations that callers use to extend |
+| **Dependencies** | **Dependencies** — one-way module / package names only |
+
+**Allowed headings (exact, case-insensitive):** `Purpose`, `Primary use case`, `Rationale`, `Seam`, `Public API`, `Public surface`, `Constraint`, `Dependencies`, `Extend`, `Extension`, `How to extend`, `Mechanism`, `Mechanism stereotype`. Authoring tables that document the public annotation protocol (e.g. `@toolset` / `@agent_tool`) may sit under **Extend** or **Seam** — they are how to extend, not internals.
+
+**Hard ban — never put these in module-context:**
+
+- **Internal design**, **Internals**, **Participants** (private collaborators), **Domain separation**, **Pickup**, **Layout** (as an implementation dump), **Known scan notes**, **Implementation**, **Scan violations**, **Tests**, **Scanners** (as a private inventory), or any heading containing *internal*
+- Underscore-prefixed **types**, **helpers**, or **methods** (`_CliAgentLog`, `_Pickup`, `_await_pickup`, `_ensure_work_session`, `_scanner_collection`, …) — leading underscore means private; keep them out of the seam list and out of prose
+- Abstract bases, doers/judges, job-template stores, and other **private participants** that are not the public contract callers import
+- Implementation notes, pickup/transcript heuristics, test inventories, scanner FP notes, private marker wiring beyond the public authoring annotations
+
+**Exception:** public authoring markers of the form `_is_*` (e.g. `_is_toolset`) may appear in an **Extend** / annotation table when they *are* the published protocol. Every other `_…` name is banned.
+
+**Do not** add **Internal design**, **Participants**, or **Domain separation** at **code** (or any) fidelity — those belong in source, sketches, or session notes, never in module-context. Edit the same `.context/module-context.md` in place; never create a parallel internals file beside it.
+
+Scanner rule: **`public-seam-only`**.
 
 ---
 
@@ -111,7 +137,7 @@ At **modules** fidelity, `.context/module-context.md` is thin: Purpose, Seam (te
 - **Opt-in (interface requested):** create a separate **`I{Class}`** contract instead — only when the user explicitly asks for one at this fidelity, or the module genuinely has multiple layers/implementations that need abstracting apart (see **Interfaces** below for the full trigger). Name it `I{Class}` (e.g. `IShoppingCart`) and keep it and its later extender in the **same file** (`cohesive-file`); there is no production `Class` yet in this case.
 - Do not default to `I{Class}` just because this is model fidelity — interfaces are the exception, not the rule.
 - When the type will be used from Stories examples, stub **`{Type}ExampleFactory`** (empty, named methods only — plus `I{Type}ExampleFactory` only if that interface was also requested) in a **sibling** `{type}_example_factory.{ext}` file — see **Example factories** below. Complete the factory at **code** fidelity.
-- Expand `.context/module-context.md` (seeded at modules) with **Purpose**, **Primary use case**, **Rationale**, **Seam**, **Public API**, **Dependencies**, optional **Mechanism stereotype**. Nested children list the **parent base** under Dependencies; parents list children as nested modules (not as a flat dump of sibling APIs).
+- Expand `.context/module-context.md` (seeded at modules) within the **public-seam-only** allowlist: **Purpose**, **Primary use case**, **Rationale**, **Seam**, **Public API**, **Constraint**, **Dependencies**, optional **Extend** / **Mechanism stereotype**. Nested children list the **parent base** under Dependencies; parents list children as nested modules (not as a flat dump of sibling APIs). **Never** add Internal design, Participants, Domain separation, underscore types, or private participants.
 - Ensure code and context for a module belong only in that module's folder (parent owns shared base; child owns specialization).
 - Apply **`cohesive-file`**: one file per class family; example factories live in a sibling file (`example-factory-separate-file`).
 - Edit to carry forward language-companion identity into **Purpose**; expand primary use case and rationale at this fidelity.
@@ -292,7 +318,7 @@ A vertical is not at **code** fidelity while it still depends on a mockup / Stor
 - On `Class`: implement public properties and operations; add private properties/operations as **empty interfaces** (`...` / `@abstractmethod`); add each relationship with its **kind** (composition / aggregation / association) and **cardinality** (e.g. `1..*`, `0..1`); invariants as **comments** (not methods) — formalizing any named at `## model` § Invariants, or newly introduced here.
 - Interactions: `@interaction` abstract methods on `Class` (never on `I{Class}`, whether or not one exists) — formalizing any named at `## model` § Interactions, or newly introduced here.
 - Complete `{Type}ExampleFactory` — fill in Fake, Isolated, and Production modes per the **Example factories** pattern in `## model`.
-- Add context sections: **Participants**, **Public API**, **Internal design**, **Domain separation**, optional **Mechanism** (variation points / fixed parts).
+- Refresh `.context/module-context.md` still **public-seam-only**: ensure **Public API**, **Constraint**, and **Dependencies** match the implemented seam; add **Extend** / **Mechanism** only for public variation points. **Do not** add **Participants**, **Internal design**, **Domain separation**, or any other internals section — those stay in source and sketches, never in module-context.
 - Edit the same `.context/module-context.md` — do not create parallel context files.
 - Edit so remaining language-companion bullets sit on members; class-level docstring keeps only the opening definition.
 

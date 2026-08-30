@@ -15,9 +15,8 @@ Callers must apply `@action` or `@instruction` before `@focus`; applying `@focus
 ## Public API
 
 - `focus` — decorator factory (module-level function, public surface)
-- `_default_filter_key` — derives a singular filter key from a plural group name (module-level, used by `focus` and by tests)
 
 ## Dependencies
 
-- `primitives.actions.action` — `@action` sets `_is_action = True` on the wrapped callable
-- `primitives.instructions.instructions` — `@instruction` sets `_is_instruction_slot = True`
+- `primitives.actions.action` — `@action` marks the wrapped callable for action expansion
+- `primitives.instructions.instructions` — `@instruction` marks the wrapped callable as an instruction slot
