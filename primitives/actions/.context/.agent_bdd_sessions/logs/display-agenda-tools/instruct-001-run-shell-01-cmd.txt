@@ -1,0 +1,1 @@
+Get-Content 'C:/dev/abd-cdd-24/primitives/actions/.context/.agent_bdd_sessions/logs/display-agenda-tools/instruct-001-run-stdin.yaml' -Raw | .\tools.ps1 run -

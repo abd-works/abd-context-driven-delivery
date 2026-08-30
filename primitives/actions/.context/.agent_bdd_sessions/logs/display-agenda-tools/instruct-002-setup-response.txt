@@ -1,0 +1,5 @@
+Tools made available to this chat:
+
+- **ping** — Echo a message.Tools made available to this chat:
+
+- **ping** — Echo a message.

@@ -1,0 +1,6 @@
+From the repo root, run exactly one shell command — pipe the saved request file into tools:
+
+Get-Content 'C:/dev/abd-cdd-24/primitives/actions/.context/.agent_bdd_sessions/logs/display-agenda-tools/instruct-001-run-stdin.yaml' -Raw | .\tools.ps1 run -
+
+Request YAML path (use this exact file only): `C:/dev/abd-cdd-24/primitives/actions/.context/.agent_bdd_sessions/logs/display-agenda-tools/instruct-001-run-stdin.yaml`
+Return the complete fenced YAML stdout from that single command only. Do not remanifest. Do not run follow-up tools from response.instructions.

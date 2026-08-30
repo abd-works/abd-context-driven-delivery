@@ -1,0 +1,21 @@
+```yaml
+ok: true
+toolset: tools.examples.logged_probe:LoggedProbe
+action: narrate
+result: told
+instructions: "Narrate by pinging once.\n\nEvery tool call uses this shape - set `tool`\
+  \ and `arguments`, pipe to CLI:\n\n```yaml\ntoolset: tools.examples.logged_probe:LoggedProbe\n\
+  context:\ntool: <tool name>\narguments:\n  <if needed>\n```\n\nRun: python -m tools\
+  \ run -\n\nBefore following the suggested flow, display the tools made available\
+  \ to this chat in your user-visible reply — each tool name and what it is for. Do\
+  \ not only follow them silently or rediscover them by remanifesting.\n\nTools made\
+  \ available:\n- ping — Echo a message.\n\nSuggested flow (repeat and reorder as\
+  \ the story needs):\n\n1. tool: ping\n   arguments:\n     message: <value>\n\nRead\
+  \ `resources` from each response before choosing the next tool."
+arguments:
+  message: hello
+tools:
+- ping
+resources:
+  mode: action
+```
