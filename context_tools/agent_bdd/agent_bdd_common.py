@@ -40,10 +40,8 @@ JUDGE_LAUNCH = (
 )
 
 RUN_PROMPT_SUFFIX = (
-    "\n\nIMPORTANT: From the repo root, run the full PowerShell block above "
-    "(heredoc pipe into .\\tools.ps1 run -). "
-    "Return the complete fenced YAML stdout from the CLI. Do not summarize. "
-    "Do not remanifest."
+    "\n\nIMPORTANT: Pipe the YAML above on stdin to .\\tools.ps1 run - from repo root. "
+    "Return the complete fenced YAML stdout. Do not summarize. Do not remanifest."
 )
 
 AGENT_DEFERRAL_PHRASES = (

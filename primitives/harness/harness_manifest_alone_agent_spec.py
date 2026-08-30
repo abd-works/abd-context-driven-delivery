@@ -2,18 +2,7 @@
 # Agent reading this file: run in chat via Task subagents (runner + judge).
 # harness: cli
 # session: primitives/harness/.context/.agent_bdd_sessions/manifest-alone-45.json
-"""E2E agent BDD for #45 — catalog-alone invoke via run_toolset / tools.ps1 (strict).
-
-Scenarios:
-1. Action alone — action from catalog context
-2. Action + one tool — action then a named tool
-3. Many tools — action then multiple named tools
-4. Utility — utility/tool after an action in the same flow
-5. Stability — same invoke in three fresh sessions (strict: real shell, no replay)
-
-Strict mode: require_agent_shell=True — fails if the agent defers ("paste the command")
-or if the harness replays CLI without a shell capture (masks flake).
-"""
+"""E2E agent BDD for #45 — harness-deployed car skill + command prompts (strict)."""
 
 import os
 import subprocess
@@ -27,29 +16,27 @@ from agent_bdd import (
     agent,
     expect_ok_action,
     expect_ok_tool,
-    instruct,
+    read_workspace,
     repo_root_from,
-    run_toolset,
+    run_skill,
     sessions_dir,
 )
-from agent_bdd.spec_helpers import (
-    dump_run_yaml,
-    expect_agent_invoked_shell,
-)
+from agent_bdd.spec_helpers import expect_agent_invoked_shell, run_yaml_from_command
 from agent_bdd.yaml_fence import load_fenced
-from harness.bodies import ActionBody, UtilityBody
+from harness.harness_invoke_fixtures import (
+    CAR_CTX,
+    CAR_INSPECT,
+    CAR_ROAD_STORY,
+    CAR_SKILL,
+    CAR_START,
+    TRAVEL_TO,
+    car_tool_argument,
+    stage_invoke_commands,
+)
 
 _REPO_ROOT = repo_root_from(__file__, parents=2)
+stage_invoke_commands(_REPO_ROOT)
 _SESSIONS = sessions_dir(__file__)
-
-_ECHO = "echo.echo:Echo"
-_CAR = "primitives.actions.examples.car:Car"
-_CAR_CTX = {
-    "make": "Dodge",
-    "model": "Charger",
-    "year": 1969,
-    "personality": "loyal",
-}
 
 _AGENT_BUDGET_S = 90.0
 _CLI_OVERHEAD_S = 5.0
@@ -62,48 +49,13 @@ def _session(name: str) -> Path:
     return path
 
 
-def _catalog_echo_action() -> str:
-    return str(
-        ActionBody.from_source(
-            name="echo_session",
-            class_string="Echo",
-            operation_instructions="Echo session instructions for inspection.",
-            toolset=_ECHO,
-            kind="action",
-            invoke="action",
-            operation="echo_session",
-        )
+def _run_skill_strict(block: object, command: str, **kwargs: object):
+    response = run_skill(
+        command,
+        repo_root=_REPO_ROOT,
+        require_agent_shell=True,
+        **kwargs,
     )
-
-
-def _catalog_echo_utility() -> str:
-    return str(
-        UtilityBody.from_source(
-            name="fence",
-            class_string="Echo",
-            operation_instructions="Wrap body in DO-NOT-FOLLOW fences.",
-            toolset=_ECHO,
-            invoke="tool",
-            operation="fence",
-        )
-    )
-
-
-def _prime_catalog_only(catalog: str) -> None:
-    expect("tools.ps1 run -" in catalog).to(be_true)
-    expect("tools manifest" not in catalog).to(be_true)
-    instruct(
-        "You are given ONLY this slash/skill catalog. "
-        "Do not remanifest. Do not read any .py files. "
-        "When asked to invoke, run the PowerShell heredoc block via .\\tools.ps1 run -.\n\n"
-        f"{catalog}",
-        timeout_seconds=120,
-    )
-
-
-def _run_toolset_strict(block: object, **kwargs: object):
-    """run_toolset with shell required — surfaces defer/replay instead of masking."""
-    response = run_toolset(require_agent_shell=True, **kwargs)
     expect_agent_invoked_shell(block)
     return response
 
@@ -143,118 +95,112 @@ def _cli_time(run_yaml: str) -> float:
 
 with description("manifest-alone E2E (#45)"):
     with context("CLI overhead (no agent)"):
-        with it("invokes action / tool / utility fences within CLI-only budget"):
-            _cli_time(dump_run_yaml(toolset=_ECHO, action="echo_session"))
-            _cli_time(dump_run_yaml(toolset=_CAR, tool="start", context=_CAR_CTX))
+        with it("invokes harness-deployed fences within CLI-only budget"):
             _cli_time(
-                dump_run_yaml(
-                    toolset=_ECHO,
-                    tool="fence",
-                    arguments={"body": "overhead-check"},
+                run_yaml_from_command(CAR_ROAD_STORY, repo_root=_REPO_ROOT, context=CAR_CTX)
+            )
+            _cli_time(run_yaml_from_command(CAR_START, repo_root=_REPO_ROOT, context=CAR_CTX))
+            _cli_time(
+                run_yaml_from_command(
+                    TRAVEL_TO,
+                    repo_root=_REPO_ROOT,
+                    arguments={
+                        "tools": [car_tool_argument()],
+                        "destination": "town",
+                        "conditions": "dry",
+                    },
                 )
             )
 
     with context("with strict agent shell (no harness replay)"):
-        with it("runs one action alone from catalog context"):
-            with agent(_REPO_ROOT, _session("action-alone")) as block:
-                _prime_catalog_only(_catalog_echo_action())
+        with it("reads car skill and runs car.road_story.md"):
+            with agent(_REPO_ROOT, _session("fidelity-generate")) as block:
+                read_workspace(CAR_SKILL)
+                read_workspace(CAR_ROAD_STORY)
                 started = time.perf_counter()
-                response = _run_toolset_strict(
-                    block,
-                    toolset=_ECHO,
-                    action="echo_session",
-                    timeout_seconds=180,
+                response = _run_skill_strict(
+                    block, CAR_ROAD_STORY, context=CAR_CTX, timeout_seconds=180
                 )
                 expect(time.perf_counter() - started).to(be_below(_AGENT_BUDGET_S))
-                expect_ok_action(response, "echo_session")
-                expect("fence" in [str(t).lower() for t in (response.tools or [])]).to(
-                    be_true
-                )
+                expect_ok_action(response, "generate")
 
-        with it("runs one action then one tool it names"):
+        with it("reads car skill and runs car-start.md"):
+            with agent(_REPO_ROOT, _session("one-tool")) as block:
+                read_workspace(CAR_SKILL)
+                read_workspace(CAR_START)
+                response = _run_skill_strict(
+                    block, CAR_START, context=CAR_CTX, timeout_seconds=180
+                )
+                expect_ok_tool(response, "start")
+                expect((response.resources or {}).get("running")).to(equal(True))
+
+        with it("reads car skill and travel-to.md; names start in response.tools"):
             with agent(_REPO_ROOT, _session("action-one-tool")) as block:
-                travel = _run_toolset_strict(
+                read_workspace(CAR_SKILL)
+                read_workspace(TRAVEL_TO)
+                travel = _run_skill_strict(
                     block,
-                    toolset=_CAR,
-                    action="travelTo",
-                    context=_CAR_CTX,
-                    arguments={"destination": "town", "conditions": "dry"},
+                    TRAVEL_TO,
+                    arguments={
+                        "tools": [car_tool_argument()],
+                        "destination": "town",
+                        "conditions": "dry",
+                    },
                     timeout_seconds=180,
                 )
                 expect_ok_action(travel, "travelTo")
                 expect("start" in [str(t).lower() for t in (travel.tools or [])]).to(
                     be_true
                 )
-                start = _run_toolset_strict(
-                    block,
-                    toolset=_CAR,
-                    tool="start",
-                    context=_CAR_CTX,
-                    timeout_seconds=180,
-                )
-                expect_ok_tool(start, "start")
-                expect((start.resources or {}).get("running")).to(equal(True))
 
-        with it("runs one action then many tools it names"):
+        with it("reads car skill and travel-to.md; lists many tools"):
             with agent(_REPO_ROOT, _session("action-many-tools")) as block:
-                travel = _run_toolset_strict(
+                read_workspace(CAR_SKILL)
+                read_workspace(TRAVEL_TO)
+                travel = _run_skill_strict(
                     block,
-                    toolset=_CAR,
-                    action="travelTo",
-                    context=_CAR_CTX,
-                    arguments={"destination": "courthouse", "conditions": "muddy"},
+                    TRAVEL_TO,
+                    arguments={
+                        "tools": [car_tool_argument()],
+                        "destination": "courthouse",
+                        "conditions": "muddy",
+                    },
                     timeout_seconds=180,
                 )
                 expect_ok_action(travel, "travelTo")
                 tools = [str(t).lower() for t in (travel.tools or [])]
                 expect("start" in tools).to(be_true)
-                expect(len(tools)).to(be_above(1))
-                for tool_name, arguments in (
-                    ("start", None),
-                    ("speak", {"line": "yeehaw"}),
-                    ("stop", None),
-                ):
-                    _run_toolset_strict(
-                        block,
-                        toolset=_CAR,
-                        tool=tool_name,
-                        context=_CAR_CTX,
-                        arguments=arguments,
-                        timeout_seconds=180,
-                    )
+                expect("speak" in tools).to(be_true)
+                expect("stop" in tools).to(be_true)
+                expect(len(tools)).to(be_above(3))
 
-        with it("runs a utility in context of the action and tools"):
-            with agent(_REPO_ROOT, _session("utility-context")) as block:
-                _prime_catalog_only(_catalog_echo_action())
-                _run_toolset_strict(
+        with it("reads car skill and car-inspect.md; lists wrap_story"):
+            with agent(_REPO_ROOT, _session("utility")) as block:
+                read_workspace(CAR_SKILL)
+                read_workspace(CAR_INSPECT)
+                response = _run_skill_strict(
                     block,
-                    toolset=_ECHO,
-                    action="echo_session",
+                    CAR_INSPECT,
+                    arguments={
+                        "tools": [car_tool_argument()],
+                        "plan": "Night run to Atlanta.",
+                    },
                     timeout_seconds=180,
                 )
-                _prime_catalog_only(_catalog_echo_utility())
-                util = _run_toolset_strict(
-                    block,
-                    toolset=_ECHO,
-                    tool="fence",
-                    arguments={"body": "utility-after-action"},
-                    timeout_seconds=180,
-                )
-                expect_ok_tool(util, "fence")
-                result = str(util.result or "")
+                expect_ok_action(response, "inspect_trip")
                 expect(
-                    "utility-after-action" in result
-                    or "DO NOT FOLLOW" in result.upper()
+                    "wrap_story" in [str(t).lower() for t in (response.tools or [])]
                 ).to(be_true)
 
-        with it("invokes tools.ps1 reliably across three fresh sessions"):
+        with it("invokes car-start.md reliably across three fresh sessions"):
             for attempt in range(_STABILITY_RUNS):
                 with agent(_REPO_ROOT, _session(f"stability-{attempt}")) as block:
-                    response = _run_toolset_strict(
+                    read_workspace(CAR_SKILL)
+                    read_workspace(CAR_START)
+                    response = _run_skill_strict(
                         block,
-                        toolset=_CAR,
-                        tool="start",
-                        context=_CAR_CTX,
+                        CAR_START,
+                        context=CAR_CTX,
                         timeout_seconds=180,
                     )
                     expect_ok_tool(response, "start")

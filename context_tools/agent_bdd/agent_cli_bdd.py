@@ -108,8 +108,22 @@ class _ToolAgentBlock:
         timeout_seconds: int = 300,
         require_agent_shell: bool = False,
     ) -> RunResponse:
-        full_prompt = prompt.rstrip() + RUN_PROMPT_SUFFIX
+        base_prompt = prompt.rstrip()
         prefix = self._next_instruct_prefix("run")
+        request_yaml = yaml_from_prompt(base_prompt + RUN_PROMPT_SUFFIX) or yaml_from_prompt(base_prompt)
+        if request_yaml:
+            stdin_path = self._write_artifact(f"{prefix}-stdin.yaml", request_yaml)
+            stdin_abs = stdin_path.resolve().as_posix()
+            full_prompt = (
+                "From the repo root, run exactly one shell command — pipe the saved "
+                "request file into tools:\n\n"
+                f"Get-Content '{stdin_abs}' -Raw | .\\tools.ps1 run -\n\n"
+                f"Request YAML path (use this exact file only): `{stdin_abs}`\n"
+                "Return the complete fenced YAML stdout from that single command only. "
+                "Do not remanifest. Do not run follow-up tools from response.instructions."
+            )
+        else:
+            full_prompt = base_prompt + RUN_PROMPT_SUFFIX
         _log(f"{prefix} prompt: {full_prompt[:120]}{'...' if len(full_prompt) > 120 else ''}")
         self._write_artifact(f"{prefix}-prompt.txt", full_prompt)
         capture: _AgentRunCapture | None = None
@@ -142,15 +156,19 @@ class _ToolAgentBlock:
             if cli_output is not None and not cli_output_matches_prompt(cli_output, full_prompt):
                 cli_output = None
             if cli_output is None:
-                yaml_body = yaml_from_prompt(full_prompt)
-                if yaml_body:
-                    cli_output = _run_yaml_request(yaml_body, self._workspace, prefix=prefix)
+                replay_yaml = request_yaml or yaml_from_prompt(full_prompt)
+                if replay_yaml:
+                    cli_output = _run_yaml_request(replay_yaml, self._workspace, prefix=prefix)
                     replay_used = True
-                    self._write_artifact(f"{prefix}-replay.txt", yaml_body)
+                    self._write_artifact(f"{prefix}-replay.txt", replay_yaml)
             if cli_output is not None:
                 if require_agent_shell:
                     reject_agent_deferral(agent_text)
                     if not shell_invoked:
+                        self._write_artifact(
+                            f"{prefix}-raw-stream.jsonl",
+                            "".join(capture.raw_lines),
+                        )
                         raise AgentHarnessError(
                             "agent did not invoke shell — harness replay would mask failure",
                             prefix=prefix,
@@ -166,10 +184,10 @@ class _ToolAgentBlock:
                         )
                 return self._finalize_run_response(prefix, capture, cli_output)
         if timed_out:
-            yaml_body = yaml_from_prompt(full_prompt)
-            if yaml_body:
+            replay_yaml = request_yaml or yaml_from_prompt(full_prompt)
+            if replay_yaml:
                 try:
-                    cli_output = _run_yaml_request(yaml_body, self._workspace, prefix=prefix)
+                    cli_output = _run_yaml_request(replay_yaml, self._workspace, prefix=prefix)
                     replay_used = True
                 except AgentHarnessError:
                     cli_output = None
@@ -186,9 +204,9 @@ class _ToolAgentBlock:
                 prefix=prefix,
                 log_dir=self._log_dir,
             )
-        yaml_body = yaml_from_prompt(full_prompt)
-        if yaml_body:
-            cli_output = _run_yaml_request(yaml_body, self._workspace, prefix=prefix)
+        replay_yaml = request_yaml or yaml_from_prompt(full_prompt)
+        if replay_yaml:
+            cli_output = _run_yaml_request(replay_yaml, self._workspace, prefix=prefix)
             replay_used = True
             if require_agent_shell:
                 reject_agent_deferral(agent_text)
@@ -397,7 +415,9 @@ class _ToolAgentBlock:
             prompt_path.write_text(prompt, encoding="utf-8")
             relative = prompt_path.relative_to(self._workspace).as_posix()
             prompt = f"Read and follow the instructions in {relative}"
-        return CursorCli(resume=session.chat_id).command(prompt, str(self._workspace))
+        return CursorCli(resume=session.chat_id, print_mode=True).command(
+            prompt, str(self._workspace)
+        )
 
 
 @dataclass

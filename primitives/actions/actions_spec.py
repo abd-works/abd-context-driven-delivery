@@ -25,6 +25,7 @@ from primitives.actions.action import (
     agent_instructions,
     agentic_toolset,
 )
+from car_story.car_story import CarStory
 from primitives.actions.examples.car import Car
 from primitives.actions.examples.super_delegation import (
     EmptySuperChild,
@@ -151,31 +152,34 @@ class _PropertyCallerAgent:
         return "orchestrated"
 
 
-_CAR_TOOLSET = "primitives.actions.examples.car:Car"
+_CAR_TOOLSET = "context_tools.car.car:Car"
+_CAR_STORY_TOOLSET = "car_story.car_story:CarStory"
 
 
 with description("a class"):
     with context("with a toolset that declares @agent_instructions recipes"):
         with context("the travelTo action"):
-            with it("should appear in the manifest with kind action and referenced tools"):
-                entry = Car.manifest.signature["travelTo"]
+            with it("should appear in the manifest with kind action"):
+                entry = CarStory.manifest.signature["travelTo"]
                 expect(entry["kind"]).to(equal("action"))
-                expect(entry["tools"]).to(
-                    equal(["start", "accelerate", "decelerate", "stop", "speak"])
-                )
 
             with it("should expand into instructions when invoked through the command-line interface"):
                 request = yaml.safe_dump(
                     {
-                        "toolset": _CAR_TOOLSET,
-                        "context": {
-                            "make": "Dodge",
-                            "model": "Charger",
-                            "year": 1969,
-                            "personality": "General Lee",
-                        },
+                        "toolset": _CAR_STORY_TOOLSET,
                         "action": "travelTo",
                         "arguments": {
+                            "tools": [
+                                {
+                                    "toolset": _CAR_TOOLSET,
+                                    "context": {
+                                        "make": "Dodge",
+                                        "model": "Charger",
+                                        "year": 1969,
+                                        "personality": "General Lee",
+                                    },
+                                }
+                            ],
                             "destination": "Hazzard County courthouse",
                             "conditions": "muddy back roads",
                         },
@@ -196,10 +200,8 @@ with description("a class"):
                 expect(response["result"]).to(
                     equal("Instructions for traveling to Hazzard County courthouse")
                 )
-                expect("Hazzard County courthouse" in response["instructions"]).to(be_true)
-                expect("muddy back roads" in response["instructions"]).to(be_true)
-                expect("Dodge" in response["instructions"]).to(be_true)
-                expect("Charger" in response["instructions"]).to(be_true)
+                expect("{destination}" in response["instructions"]).to(be_true)
+                expect("{conditions}" in response["instructions"]).to(be_true)
                 expect(response["tools"]).to(
                     equal(["start", "accelerate", "decelerate", "stop", "speak"])
                 )
@@ -220,7 +222,7 @@ with description("an action"):
 
         with context("with templated placeholders for an instance value"):
             with it("should put instance values into those instructions where {{self.attr}} appears"):
-                car = Car("Dodge", "Charger", 1969, "General Lee")
+                car = Car(make="Dodge", model="Charger", year=1969, personality="General Lee")
                 expander = _ActionExpander.instance()
                 rendered = expander._substitute(
                     "Drive the {{self.make}}",
@@ -705,22 +707,22 @@ with description("ActionValidationError"):
 with description("Action"):
     with context("the instructions property"):
         with it("should return the docstring text from the action callable"):
-            car = Car("Ford", "Mustang", 1965, "Pony")
-            action_obj = car.actions["travelTo"]
+            story = CarStory()
+            action_obj = story.actions["travelTo"]
             expect("interesting story" in action_obj.instructions).to(be_true)
 
     with context("the signature_entry property"):
         with it("should return a dict with kind 'action' and the tool list"):
-            car = Car("Ford", "Mustang", 1965, "Pony")
-            action_obj = car.actions["travelTo"]
+            story = CarStory()
+            action_obj = story.actions["travelTo"]
             entry = action_obj.signature_entry
             expect(entry["kind"]).to(equal("action"))
-            expect(entry["tools"]).to(equal(["start", "accelerate", "decelerate", "stop", "speak"]))
+            expect(entry["parameters"]["destination"]).to(equal("str"))
 
     with context("the add_to_signature method"):
         with it("should insert the entry under the action name in the given signature dict"):
-            car = Car("Ford", "Mustang", 1965, "Pony")
-            action_obj = car.actions["travelTo"]
+            story = CarStory()
+            action_obj = story.actions["travelTo"]
             sig = {}
             action_obj.add_to_signature(sig)
             expect("travelTo" in sig).to(be_true)

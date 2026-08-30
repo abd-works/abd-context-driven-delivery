@@ -38,13 +38,18 @@ _SPEC_HELPER_EXPORTS = frozenset(
         "generate_similar_prompt",
         "generate_similar_rubric",
         "manifest_command_from_header",
+        "command_fence_yaml",
+        "parse_command_fence",
         "read_workspace",
         "repo_root_from",
         "run_manifest_from_header",
+        "run_skill",
         "run_toolset",
+        "run_yaml_from_command",
         "sessions_dir",
         "tools_run_captures",
         "tools_run_prompt",
+        "tools_run_prompt_from_command",
     }
 )
 
