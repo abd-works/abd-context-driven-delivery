@@ -20,6 +20,21 @@ from sub_agent.sub_agent import SubAgent, sub_agent
 from tools.tool import agent_tool
 
 
+def _pid_alive(pid: int) -> bool:
+    """True when ``pid`` still refers to a running process."""
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
 @dataclass
 class IdeCliResult:
     """Outcome of one spawned IDE CLI process."""
@@ -336,6 +351,16 @@ class _CliSpawner:
         role = self.spawn_role(argv)
         if not _skip_log:
             self.append_log(workspace, argv, role)
+        if existing_pid and _pid_alive(int(existing_pid)):
+            # Live doer/judge for this resume — do not open a second console (#48/#49).
+            return IdeCliResult(
+                exit_code=0,
+                text=f"status: already-running\npid: {int(existing_pid)}",
+                stderr="",
+                argv=list(argv),
+                elapsed_seconds=0.0,
+                pid=int(existing_pid),
+            )
         proc = subprocess.Popen(argv, **self.popen_kwargs(workspace))
         return IdeCliResult(
             exit_code=0,
@@ -1790,10 +1815,13 @@ class CliAgent(SubAgent):
                 return spawned
         return None
 
-    def _await_pickup(self, resume: str, before: int) -> None:
+    def _await_pickup(self, resume: str, before: int, live_pid: int = 0) -> None:
         pickup = _Pickup()
         path = pickup.cursor_transcript(self._workspace_root(), resume)
         if pickup.accepted(path, before, seconds=self.ide.pickup_seconds):
+            return
+        # Spawn succeeded and the doer is still live — transcript lag is not a miss (#48).
+        if live_pid and _pid_alive(int(live_pid)):
             return
         raise RuntimeError(pickup.not_taken_up)
 
@@ -1815,11 +1843,15 @@ class CliAgent(SubAgent):
             pickup.cursor_transcript(self._workspace_root(), resume)
         )
         orchestrating = getattr(self, "_orchestrator_owns_loop", False)
+        doer_pid = int(getattr(work, "cli_doer_pid", 0) or 0) if work else 0
+        judge_pid = int(getattr(work, "cli_judge_pid", 0) or 0) if work else 0
         results = self.ide._detect()._launch_all(
             self.job,
             self._workspace_root(),
             judge_prompt,
             use_judge=bool(judge_prompt) and not orchestrating,
+            doer_pid=doer_pid,
+            judge_pid=judge_pid,
         )
         failed = self._first_failure(results)
         if failed is not None:
@@ -1827,7 +1859,10 @@ class CliAgent(SubAgent):
                 failed.stderr.strip() or failed.text.strip() or "IDE CLI exited non-zero"
             )
         self._record_cli_binding(results, tools=tools, actions=actions, turn=hanging)
-        self._await_pickup(resume, before)
+        live = int(results[0].pid or 0) if results else 0
+        if results and "already-running" in (results[0].text or "").lower():
+            return results
+        self._await_pickup(resume, before, live_pid=live)
         return results
 
     def _record_cli_binding(
@@ -2452,7 +2487,11 @@ class CliAgent(SubAgent):
 
         ## Legacy Steps (single launch_sessions without run_backlog)
 
-        1. **Launch.** Pass workspace (and session when known). If NOT TAKEN UP, stop immediately.
+        1. **Launch.** Pass workspace (and session when known). If an existing doer pid is
+           already live for the resume, CliAgent reuses it (status already-running) — do not
+           open a second console. If NOT TAKEN UP (true miss: no live pid and no transcript
+           pickup), stop immediately — do not respawn. A live spawned pid with a slow
+           transcript is not NOT TAKEN UP.
         2. **Monitor** doer/judge logs and job queue; report back to the user.
         3. **Unblock on three judge FAILs** if the doer stopped waiting.
 
