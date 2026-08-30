@@ -110,3 +110,32 @@ Extend CliAgent control loop rather than parent scripts: post-PASS auto-advance;
 - Branch: `session/cliagent-resiliency-self-managed-backlog-doer-judge-loop-stall-detection-minimal-parent-44`
 - Worktree: `C:\dev\abd-cdd-44`
 - Package: `utilities/cli_agent`
+
+## Diagnosis
+
+### Hypothesis (concrete)
+
+The root defect is **missing production orchestration in CliAgent code**. Queue advance, judge spawn, stall recovery, and error capture are split across:
+
+1. **Parent chat** — poll, kick, unstick, sometimes rewrite `cli-agent.json`
+2. **Doer prompts** — `_doer_ask_judge`, instructions to call `complete_job` / `launch_next`
+3. **Passive session log** — timing fields exist (#42) but nothing consumes them
+
+There is **no long-running `run_backlog()` (or equivalent) control loop** in `cli_agent.py` that: launches the doer only → waits for turn end → spawns judge in code → on PASS calls `complete_job` + `launch_next` → on FAIL retries ≤3 → on stall/NOT TAKEN UP logs structured `error`/`recovery` and recovers.
+
+`kick` is a manual parent/operator nudge (and uses print-mode), not an owned loop. Therefore the doer is unreliable at judge dispatch and queue advance — which is exactly the #44 failure mode.
+
+### Confidence
+
+**High.** Matches live logs (more `job_started` than `job_finished`), code seams (`complete_job` / `launch_next` as separate agent tools), and the authoritative implementation direction (2026-08-29).
+
+### Category
+
+**CODE CHANGE**
+
+| Layer | Finding | Fix |
+|-------|---------|-----|
+| **CODE CHANGE** | Missing orchestrator loop (`run_backlog`); judge/queue advance left to doer prompts + parent | Implement orchestrator in `utilities/cli_agent/cli_agent.py` with judge-in-code, auto-advance, stall watcher, structured log kinds; thin doer contract; BDD first |
+
+Prompt/doc updates (remove `_doer_ask_judge`, minimal parent contract in `launch_sessions`) follow the code loop; they are not the root cause.
+
