@@ -105,3 +105,33 @@ Before opening another console for a resume ID:
 - `CliAgent._spawn_worker` — records binding then awaits pickup; failure path has no “pid alive ⇒ not a miss” branch
 - Spec `cli_agent_spec.py` “should still Popen so the new job is injected” — documents current inject-always behavior; any fix must update that contract deliberately (code + tests), not only prompts
 - Prompt/docs (`launch_sessions` Legacy Steps: “If NOT TAKEN UP, stop immediately”) — correct for true misses, but currently fires on false negatives and pushes callers toward retry/duplicate
+
+## Diagnosis
+
+### Category
+**BOTH** — production code failure with a reinforcing prompt/spec contract. Idle-less ownership is already a code change under #44; the remaining #48 surface (NOT TAKEN UP flake + duplicate spawn) is primarily **CODE CHANGE**, with prompt/spec text that currently encodes the broken inject-always / stop-on-miss behavior.
+
+### Root cause hypothesis
+Two coupled code defects, one failure mode:
+
+1. **`_CliSpawner.start` ignores `existing_pid`.** The parameter is threaded from `_spawn_worker` / `_launch_all` / judge spawn (`work.cli_doer_pid` / `cli_judge_pid`), but `start()` never reads it — it always `subprocess.Popen`s a new process (new console on Windows). There is therefore no mechanical “already live for this resume → do not open a second window” guard. Spec text currently requires this always-Popen (“so the new job is injected”), so the contract and the runtime agree on the wrong behavior.
+
+2. **`_await_pickup` / `_Pickup.accepted` is transcript-only.** After Popen succeeds, pickup waits only for transcript `"role":"user"` count to rise within `pickup_seconds`. Slow IDE attach, delayed task-file read, or missed mark growth yields `RuntimeError(NOT TAKEN UP)` even when the new pid (or a prior doer pid) is alive. Callers then retry → second console. The error text itself admits the gap: “A live pid is not proof the Turn started” — and the code never uses pid liveness as a counter-signal either.
+
+Together: **always-Popen + false-negative pickup = NOT TAKEN UP when spawn succeeded + duplicate doer.** That is the exact underlying issue for requirements (1) and (2). Requirement (3) idle-less monitor is a separate seam addressed by `run_backlog` (#44), not by this pickup/spawn guard.
+
+### Why not PROMPT/AI alone
+No prompt rewrite can make `existing_pid` be consulted or stop `_await_pickup` from raising on a live successful spawn. The doer cannot “behave better” out of a parent/tool false miss.
+
+### Why also prompt/spec
+- `launch_sessions` Legacy Steps: “If NOT TAKEN UP, stop immediately” — right for true misses, silent on false negatives / already-running.
+- `cli_agent_spec.py`: “should still Popen so the new job is injected” when a doer pid is already alive — locks in duplicate windows unless the inject path is redesigned (e.g. resume-without-new-console, or status-without-Popen).
+- Fix must update code **and** that contract/docs so tests and operators share one policy.
+
+### Diagnose tool
+Not used — cause is unambiguous from `_CliSpawner.start` (unused `existing_pid`), `_Pickup.accepted` (transcript-only), `_spawn_worker` ordering, the always-Popen spec, and live double-spawn in this session’s `cli-agent-doer.log`. No remaining ambiguous runtime signal.
+
+### What to fix (for later jobs)
+- Code: consult live pid / `existing_pid` before a second `Popen`; distinguish statuses (injected / already-running / true NOT TAKEN UP); optionally treat live just-spawned pid as success even if transcript lags.
+- Spec/prompt: replace inject-always + undifferentiated NOT TAKEN UP guidance with the new status contract.
+- Leave idle-less parent loop on #44/`run_backlog`; keep #49 aligned — same seam.
