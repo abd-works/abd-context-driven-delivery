@@ -11,5 +11,5 @@
 ## End
 
 - **ended:** 2026-08-29
-- **outcome:** CliAgent backlog hygiene: triage_backlog, finish-ticket before next_backlog_item (#46).
+- **outcome:** Closing leftover worktree/session; keep only main and cli-manifest (#45).
 - **handoff:** handoff.md
