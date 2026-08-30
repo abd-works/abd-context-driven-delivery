@@ -415,6 +415,55 @@ with description("a WorkSession that is started in a git working area"):
         _purge_clone(tmp)
 
 
+
+
+with description("a WorkSession that opens on a linked worktree"):
+    with it("should deploy all harness skills into the worktree using the current IDE"):
+        from unittest.mock import MagicMock, patch
+
+        from workspace.git_repo import GitRepo
+        from workspace.workspace import Workspace
+
+        tmp = _init_clone("session_git_harness_deploy_")
+        session = Workspace(str(tmp)).open_work_session("harness-deploy")
+        fake = MagicMock()
+        fake._ide_folder.return_value = ".cursor"
+        with patch("harness.harness.Harness", return_value=fake) as harness_cls:
+            session.ensure_started()
+        expect(session.git.is_linked_worktree()).to(be_true)
+        harness_cls.assert_called_once()
+        args, kwargs = harness_cls.call_args
+        expect(args[0]).to(equal("Cursor"))
+        expect(Path(kwargs["repo_root"]).resolve()).to(equal(session.git.root.resolve()))
+        fake.write_deploy.assert_called_once_with(
+            deploy_path=str(session.git.root / ".cursor")
+        )
+        _purge_clone(tmp)
+
+    with it("should not deploy harness when the session stays on the default branch"):
+        from unittest.mock import MagicMock, patch
+
+        from workspace.git_repo import GitRepo
+        from workspace.workspace import Workspace, WorkSession
+
+        class DefaultBranchSession(WorkSession):
+            @property
+            def session_branch(self) -> str:
+                return self.git.default_branch
+
+        tmp = _init_clone("session_git_harness_main_")
+        started_on = GitRepo(tmp).current_branch
+        parent = Workspace(str(tmp))
+        session = DefaultBranchSession(parent, "on-main-no-deploy")
+        session.git.default_branch = started_on
+        fake = MagicMock()
+        with patch("harness.harness.Harness", return_value=fake) as harness_cls:
+            session.ensure_started()
+        expect(session.git.is_linked_worktree()).to(be_false)
+        harness_cls.assert_not_called()
+        fake.write_deploy.assert_not_called()
+        _purge_clone(tmp)
+
 with description("a sibling worktree directory name"):
     with it("should abbreviate hyphenated clone folders and append the session slug"):
         from workspace.workspace import WorkSession

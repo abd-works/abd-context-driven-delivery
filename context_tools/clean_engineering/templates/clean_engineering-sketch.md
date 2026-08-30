@@ -49,8 +49,9 @@ ClassName : BaseClass
  SubtypeName : ClassName
       otherCollaborator                 <-- construction property (delta)
       operationName param
-       -> otherCollaborator.operation   <-- real call on a held collaborator
-       -> super.operation               <-- base operation when subtype extends it
+       -> result = otherCollaborator.operation param   <-- real call; assignment when binding matters
+       -> otherCollaborator.property                   <-- property read that matters
+       -> super.operation                              <-- base operation when subtype extends it
        // invariant or sequencing note
       ----
  Collaborator
@@ -68,16 +69,21 @@ ClassName : BaseClass
 | `operationName param` | something the class does (verb phrase); trailing tokens are parameters |
 | indent | ownership / composition / subordination |
 | `----` | separator between the primary class block and a peer class it relates to |
-| `-> collaborator.operation` | interaction — a real operation on a property, peer, or `super` |
+| `-> collaborator.operation param…` | interaction — call on a held property, peer, or `super` |
+| `-> result = collaborator.operation param…` | same when the return binding matters |
+| `-> collaborator.property` | interaction — property/field read that matters |
 | `-> _private_helper` | rare — only when no public collaborator operation exists and the helper is essential to the story |
 | `// …` | invariant or sequencing note (`ce-comments-are-for-invariants-and-sequencing-notes-only` — must/never/before/after only; not descriptive prose) |
 
 ## Interaction rules (read these)
 
-- **Prefer real calls.** Write `-> opposingTrait.resolve`, `-> cart.add_item`, `-> super.resolve` — names that exist (or will exist) on the sketch.
+- **Prefer real calls.** Write `-> opposingTrait.resolve`, `-> cart.add_item item`, `-> result = ticket.issue.set_status state`, `-> super.resolve` — names that exist (or will exist) on the sketch.
+- **Params and assignment are allowed** on the `->` line when they clarify the seam (`-> collaborator.operation param…` or `-> result = collaborator.operation param…`).
+- **Nesting:** under the caller, show **direct** collaborations (about one clear level). Put the collaborator's deeper recipe on **that class's own operation** — do not dump the whole call tree under the caller.
 - **Do not invent underscore placeholders** (`_opposing_roll`, `_private_helper_important_enough_to_show`) as a default. Those hide the design. If you cannot name a real receiver + operation, the collaboration is not understood yet — grill it or leave a `//` note.
-- **`-> ClassName` alone is not an interaction.** Point at an operation (or a property read that matters), not the type.
+- **`-> ClassName` alone is not an interaction.** Point at an operation or a property read that matters, not the type.
 - Show only interactions that clarify collaboration; suppress incidental helpers.
+- When asked to flesh out interactions, **follow this notation** — do not restate these rules in the artifact and do not invent a parallel bullet form.
 
 ## Example factory pattern (generation pattern — not a framework Loader type)
 

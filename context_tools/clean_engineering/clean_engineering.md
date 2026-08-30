@@ -215,17 +215,36 @@ Value objects that merely describe (`Money` on a Transaction, `PortingInfo` on a
 
 ### Interactions (optional at this fidelity)
 
-An **interaction** is one class's operation calling another class's operation — who talks to whom, and about what. You **may** name interactions at **model** fidelity to capture collaboration/sequencing intent early; naming none is equally valid — this is optional, not a required artifact for reaching model.
+An **interaction** is one class's operation calling another class's operation or reading a collaborator property — who talks to whom, and about what. You **may** flesh out interactions at **model** fidelity (legacy *specification* nesting lived here; that fidelity is gone — this optional stage replaces it). Naming none is equally valid — optional, not required to reach model.
 
-Reuse the exact notation from `templates/{tool}-sketch.md`'s **Notation**/**Interaction rules** — do not invent a parallel bullet convention:
+When the user asks to flesh out interactions, **reuse this notation only** — do not invent a parallel convention, and do not restate these rules in the sketch.
+
+Reuse the exact notation from `templates/clean_engineering-sketch.md`'s **Notation** / **Interaction rules**:
 
 Do **not** invent `- **Interaction:** calls {Other}.{operation}` or use `- **Invariant:** …` as the sketch/model collaboration marker — that is a parallel symbol set. Sketch/`## model` interactions and notes use `->` / `//` only. Language companion's `- **Invariant:** … <!-- L -->` and Spec's indented `Interaction:` / `Invariant:` labels are different surfaces; neither replaces the sketch notation.
 
-- Nest `-> {collaborator}.{operation}` directly under the calling operation — a real call on a held property, peer, or `super`. No parameters, no body, just the receiver and the operation (or `x = {collaborator}.{attribute}` for a field read).
-- Nest `// …` under the same operation for any invariant or sequencing note — including looping/conditionals around the call (e.g. `// once per {item} in {collection}`). Control flow is a `//` note, never folded into the `->` line.
-- **`ce-comments-are-for-invariants-and-sequencing-notes-only`** — `//` is must/never/always/before/after notes only. Do not use `//` for descriptive prose, implementation asides, or cross-references.
-- `-> ClassName` alone (pointing at a type, not an operation) is not an interaction.
-- Naming an interaction here does **not** add a method to `I{Class}` or `Class` — it stays prose (or class-docstring bullet) until **code**.
+**Shape** (nest under the calling operation):
+
+```
+operationName param
+  -> result = collaborator.operation param param
+    -> collaborator.other.operation param
+  -> collaborator.property
+  // must|never|always|before|after …
+```
+
+- `-> collaborator.operation param…` — call on a held property, peer, or `super` (params allowed when they clarify the seam).
+- `-> result = collaborator.operation param…` — same, when the return binding matters to the story.
+- `-> collaborator.property` — field/property read that matters (not `-> ClassName` alone).
+- Nest `// …` under the same operation for invariant or sequencing notes only (`ce-comments-are-for-invariants-and-sequencing-notes-only`). Control flow is a `//` note, never folded into the `->` line.
+
+**Nesting depth vs other classes:**
+
+- Under the **caller**, show the **direct** collaborations that make the operation's story clear — typically **one meaningful level**, with a second indent only when that step's immediate follow-on is part of *this* operation's story (e.g. `ticket.start` → `issue.set_status`).
+- Do **not** paste the collaborator's full internal recipe under the caller. Put those `->` lines on **that collaborator's own operation** in its class block (or peer `----` block). Readers follow the participant, not a deep call-tree dump.
+- Show only interactions that clarify collaboration; suppress incidental helpers.
+- `-> ClassName` alone (type, not operation/property) is not an interaction.
+- Naming an interaction here does **not** add a method to `I{Class}` or `Class` — it stays in the sketch until **code**.
 - At **code** fidelity, any interaction named here becomes a real `@interaction` abstract stub method on `Class` (not on `I{Class}`) — see `## code` Phase 1 — and is dropped once implemented in Phase 2.
 
 ### Invariants (optional at this fidelity)

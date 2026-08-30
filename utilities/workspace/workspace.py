@@ -1200,6 +1200,69 @@ class WorkSession:
         except OSError:
             return
 
+
+    def _session_harness_ide_type(self) -> str:
+        """IDE for session deploy: saved current deploy type, else Cursor."""
+        candidates: list[Path] = []
+        git = self.git
+        try:
+            candidates.append(Path(git.primary_root()))
+        except Exception:
+            pass
+        try:
+            candidates.append(Path(git.root))
+        except Exception:
+            pass
+        seen: set[Path] = set()
+        for root in candidates:
+            try:
+                resolved = root.resolve()
+            except OSError:
+                resolved = root
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            state_path = resolved / "primitives" / "harness" / ".deploy-state.json"
+            if not state_path.is_file():
+                continue
+            try:
+                payload = json.loads(state_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError, TypeError):
+                continue
+            saved = str(payload.get("type") or "").strip()
+            if saved in {"Cursor", "VS Code"}:
+                return saved
+        return "Cursor"
+
+    def _deploy_session_harness(self) -> None:
+        """Deploy all harness skills/commands into a linked session worktree.
+
+        Uses the current deploy IDE (saved type; default Cursor). Always writes
+        into this worktree's IDE folder so the session has skills/utilities even
+        when the primary deploy targets an umbrella workspace.
+        """
+        git = self.git
+        if getattr(git, "_memory", False) or not self.name:
+            return
+        try:
+            linked = git.is_linked_worktree()
+        except Exception:
+            return
+        if not linked:
+            return
+        try:
+            from harness.harness import Harness
+        except ImportError:
+            return
+        ide = self._session_harness_ide_type()
+        root = Path(git.root)
+        harness = Harness(ide, repo_root=root)
+        deploy_path = str(root / harness._ide_folder())
+        try:
+            harness.write_deploy(deploy_path=deploy_path)
+        except Exception:
+            return
+
     def ensure_started(
         self,
         *,
@@ -1210,6 +1273,7 @@ class WorkSession:
         if not self.name:
             raise ValueError("session name is required to create a sprint folder")
         self._ensure_session_worktree()
+        self._deploy_session_harness()
         self.folder.mkdir(parents=True, exist_ok=True)
         creating = not self.session_md.is_file()
         if creating:
@@ -1510,6 +1574,8 @@ class WorkSession:
         Non-default session branches isolate in a sibling worktree named
         ``{abbrev}-{ticket}`` (or a short slug) next to the primary clone.
         Stay in the primary clone when the session branch is the default branch.
+        Linked worktrees get a full harness deploy (current IDE, default Cursor)
+        into that worktree so skills/commands/utilities are available immediately.
 
         Do not call this from a /cli-agent parent. CliAgent opens the session,
         switches to that path, and binds doer/judge. Resume does not rewrite Start.
