@@ -15,7 +15,7 @@
 - `module_dir` — package folder for the concrete subclass
 - Stage constants: `SHAPING`, `DISCOVERY`, `SPEC`, `ENGINEER`
 - `fidelities: ClassVar[dict[str, str] | None]` — subclasses declare stage → fidelity_name mapping; triggers auto-generated lifecycle methods
-- `_set_fidelity(fidelity_name)` — updates `self.fidelity` and `self.format` at runtime
+- Runtime fidelity/format updates when the host switches fidelity (keeps `self.fidelity` and `self.format` aligned)
 - Composed on host: `workspace` (`Workspace`), `turn` (`Turn`), `scanner` (`Scan` bound to the host), `decisions` (`RecordDecisions`). **No** `repairer` / `eval` / session-turn re-exports. Stage kits (`Sketch`, `GrillContext`, `Iterate`, `Partition`, `Improvement`, `Scan` slash) are **not** slash-invoked from the host composer — slash commands invoke them with `arguments.tools`.
 - Host tools: `render` on the host; `scan` lives on the bound Scan kit (`self.scanner.scan`). `begin_turn`, `finish_turn`, `record_mistake`, `record_correction` (not legacy `close_session`, eval turn names)
 - `supported_formats: ClassVar[frozenset[str]]` — formats this tool can render into; empty on the base

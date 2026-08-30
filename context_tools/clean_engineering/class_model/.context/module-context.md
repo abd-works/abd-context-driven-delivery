@@ -17,8 +17,3 @@ Draw.io lives under `class_model/drawio/`: channel (`drawio_class_model.py`), mi
 ## Dependencies
 
 `update_report` (translation / reconcile); stdlib XML/HTML for draw.io; Drawio kit depends on Scan + Repair. Layout scanners do not depend on OO code scanners.
-
-
-## Known scan notes
-
-Several channel files still have private module-level helpers that `prefer-class-operations` would fold onto the channel class (`DrawIOCleanEngineeringModel`, language models). Left as known debt — do not extract more free functions when editing.

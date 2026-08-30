@@ -14,7 +14,7 @@ expand|run trails explicitly (not via `@log`).
 `Workspace.open_work_session(...)` → sets `currentWorkSession`. Turn/git go through
 `currentWorkSession` (`openTurn`, `git`).
 
-## Layout
+Session paths callers depend on:
 
 ```
 {workspace.path}/                       # Workspace.path — parent of .context/
@@ -65,11 +65,11 @@ expand|run trails explicitly (not via `@log`).
 - `SessionLog` — `append` → events.log + openTurn.toolCalls; **delete `@log` as host primary**
 - `ContextToolHost` — OO host used by `workspace_spec` (production host is `BaseContextTool`)
 
+## Constraint
+
+Work session isolation: opening a named session binds `session/<name>` with its own sibling worktree before jobs run. After `/start-ticket`, rebind the workspace root to that worktree. This holds for CliAgent, SubAgent, and no-agent flows.
+
 ## Dependencies
 
 stdlib (+ optional yaml); `tools.tool`;
 consumed by `context_tools.base.base_context_tool`
-
-
-Work session isolation: opening a named session binds `session/<name>` with its own sibling worktree before jobs run. After `/start-ticket`, rebind the workspace root to that worktree. This holds for CliAgent, SubAgent, and no-agent flows.
-

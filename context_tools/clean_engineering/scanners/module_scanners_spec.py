@@ -25,6 +25,7 @@ from low_coupling_scanner import LowCouplingScanner  # noqa: E402
 from module_scanner import collect_module_files  # noqa: E402
 from named_seam_and_constraint_scanner import NamedSeamAndConstraintScanner  # noqa: E402
 from physical_folder_scanner import PhysicalFolderScanner  # noqa: E402
+from public_seam_only_scanner import PublicSeamOnlyScanner  # noqa: E402
 from scan import Scan, ScannerCollection  # noqa: E402
 
 
@@ -277,4 +278,129 @@ with description("information-hiding scanner"):
             violations = _run(
                 InformationHidingScanner, "information-hiding", self.root
             )
+            expect(violations).to(equal([]))
+
+
+_LEAKY_CONTEXT = """
+# Cart
+
+## Purpose
+
+Shopping cart.
+
+## Seam
+
+Cart, _CartLog, CliParticipant
+
+## Internal design
+
+Private helpers and pickup heuristics.
+
+## Dependencies
+
+none
+""".strip()
+
+_PUBLIC_SEAM_CONTEXT = """
+# Cart
+
+## Purpose
+
+Shopping cart for placing orders.
+
+## Seam
+
+Cart
+
+## Public API
+
+- `Cart.add_item` / `Cart.place_order`
+
+## Constraint
+
+Callers must not mutate cart state after checkout.
+
+## Extend
+
+Subclass only via documented variation points on Cart; do not reach into helpers.
+
+## Dependencies
+
+- `catalog` (one-way)
+""".strip()
+
+_MARKER_OK_CONTEXT = """
+# Tools
+
+## Purpose
+
+Toolset annotations.
+
+## Seam
+
+toolset, agent_tool
+
+## Extend
+
+| Annotation | Marker |
+|---|---|
+| `@toolset` | `_is_toolset` |
+
+## Dependencies
+
+none
+""".strip()
+
+
+with description("public-seam-only scanner"):
+    with context("a module-context that lists underscore types and Internal design"):
+        with before.each:
+            self.tmp = tempfile.TemporaryDirectory()
+            self.root = Path(self.tmp.name)
+            _make_module(
+                self.root,
+                "cart",
+                _LEAKY_CONTEXT,
+                {"cart.py": "class Cart:\n    pass\n"},
+            )
+
+        with it("should flag forbidden heading and private names"):
+            violations = _run(PublicSeamOnlyScanner, "public-seam-only", self.root)
+            expect(len(violations) >= 2).to(be_true)
+            messages = " ".join(v.message for v in violations)
+            expect("Internal design" in messages or "internal design" in messages.lower()).to(
+                be_true
+            )
+            expect("_CartLog" in messages or "_Cli" in messages or "private" in messages.lower()).to(
+                be_true
+            )
+
+    with context("a module-context that is use / extend / dependencies only"):
+        with before.each:
+            self.tmp = tempfile.TemporaryDirectory()
+            self.root = Path(self.tmp.name)
+            _make_module(
+                self.root,
+                "cart",
+                _PUBLIC_SEAM_CONTEXT,
+                {"cart.py": "class Cart:\n    pass\n"},
+            )
+
+        with it("should produce no violations"):
+            violations = _run(PublicSeamOnlyScanner, "public-seam-only", self.root)
+            expect(violations).to(equal([]))
+
+    with context("a module-context that documents public _is_* authoring markers"):
+        with before.each:
+            self.tmp = tempfile.TemporaryDirectory()
+            self.root = Path(self.tmp.name)
+            _make_module(
+                self.root,
+                "tools",
+                _MARKER_OK_CONTEXT,
+                {"tools.py": "class Toolset:\n    pass\n"},
+            )
+
+        with it("should allow _is_* markers under Extend"):
+            violations = _run(PublicSeamOnlyScanner, "public-seam-only", self.root)
             expect(violations).to(equal([]))

@@ -1,12 +1,13 @@
 # conflicts/actions
 
-Resolution of actions and maneuvers (Aid, Grab, etc.). Turn economy is not owned here — turns call IAction. Maneuver/modifier sources are typed ISource from character (no advantage-tag strings).
+## Purpose
 
-## Modules fidelity
+Resolve what happens when a slot is spent; expose IAction for turns.
 
-### Module `conflicts/actions`
+## Seam
 
-- **Purpose:** Resolve what happens when a slot is spent; expose IAction for turns.
-- **Seam (terms):** Action, Maneuver, IAction (source : ISource)
-- **Dependencies (one-way):** `character`
-- **Build order:** see `sandbox/.context/sessions/discovery/module-build-order.md`
+Action, Maneuver, IAction (source : ISource)
+
+## Dependencies
+
+`character`

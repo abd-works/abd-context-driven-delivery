@@ -1,12 +1,13 @@
 # powers/flaws
 
-Negative modifiers (flaws) applied to effects. Child of powers only.
+## Purpose
 
-## Modules fidelity
+Own Flaw modifiers that adjust Effect cost and behavior.
 
-### Module `powers/flaws`
+## Seam
 
-- **Purpose:** Own Flaw modifiers that adjust Effect cost and behavior.
-- **Seam (terms):** Flaw
-- **Dependencies (one-way):** `powers`
-- **Build order:** see `sandbox/.context/sessions/discovery/module-build-order.md`
+Flaw
+
+## Dependencies
+
+`powers`

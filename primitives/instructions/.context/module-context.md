@@ -8,7 +8,7 @@
 
 Declare a method on a `@toolset` class and mark it `@instruction`. When an `@action` that calls the slot expands, the system resolves the label to a markdown file, a folder of assets, or a section heading inside `{slug}.md`, and injects that content into the AI's instructions. The method body is always `...`; the decorator replaces it with a slot.
 
-## Requirement — `module_dir`
+## Constraint
 
 **Any class that declares an `@instruction` (or is ever passed as a `host` to `Instruction.ref`) must define a `module_dir` property:**
 
@@ -18,9 +18,7 @@ def module_dir(self) -> Path:
     return Path(inspect.getfile(type(self))).resolve().parent
 ```
 
-`AssetLocator.locate()` (`primitives/assets/assets.py`) reads this via `getattr(self._host, "module_dir", Path("."))`. Without the property, that silently falls back to `Path(".")` — the process's current working directory, not the class's own folder — and every markdown/section/folder lookup resolves against the wrong location (or a path that never existed). This fails silently or with a confusing `FileNotFoundError` far from the real cause; there is no validation that catches a missing `module_dir` at class-definition time.
-
-Classes with no `@instruction` slots do not need this property.
+Asset lookup reads this via `getattr(host, "module_dir", Path("."))`. Without the property, that silently falls back to `Path(".")` — the process's current working directory, not the class's own folder. Classes with no `@instruction` slots do not need this property.
 
 Three resolution forms exist — chosen automatically by the locator in order of priority:
 
@@ -30,6 +28,8 @@ Three resolution forms exist — chosen automatically by the locator in order of
 | 2 | `module_dir / label.md` is a file | File — full content |
 | 3 | `## Label` heading exists in `{slug}.md` | Section — content under that heading |
 | — | `label=` kwarg on `@instruction` | Overrides the default (method name) |
+
+An unresolvable label expands to empty string without raising.
 
 ## Rationale
 
@@ -44,22 +44,16 @@ The seam is the path from a labeled `@instruction` slot to expanded text:
 1. `AssetLocator(instance, label)` walks `module_dir` — folder → file → section.
 2. `Instruction.ref(host, label)` builds the value object.
 3. `Instruction.expand()` reads the resolved location and returns **raw text** — no substitution happens here.
-4. Action expansion calls `_inline(instance, member)` for each `self.slot_name()` call found in the `@action` body; the result is appended to `prose_parts`.
-5. `_ActionExpander._build_instructions()` iterates every prose part (including text that came from instruction files) through `_substitute()` — **this is where `{{self.attr}}` and `{{param}}` placeholders are resolved**.
-
-**Substitution contract (step 5):**
+4. Action expansion inlines each `self.slot_name()` call found in the `@action` body into the prose parts.
+5. Placeholders `{{self.attr}}` and `{{param}}` are resolved when the action builds final instructions — not at file-read time.
 
 | Placeholder | Resolved from | Raises when |
 |---|---|---|
 | `{{self.attr}}` | `getattr(instance, attr)` | attribute missing on instance |
 | `{{param}}` | action `arguments` dict | argument missing AND `param` is a declared parameter |
-| Unknown `{{token}}` | — | left as-is (not a declared parameter, treated as embedded template content) |
+| Unknown `{{token}}` | — | left as-is (treated as embedded template content) |
 
-`Instruction.expand()` does **not** touch `{{...}}` placeholders — they survive raw into the prose part and are only resolved at step 5. Do not add `{{self.attr}}` to instruction content expecting it to resolve at file-read time.
-
-**Constraint:** An unresolvable label expands to empty string without raising. Validate slot resolution with `_instruction_ref_resolves(instance, label)`.
-
-**`override=True` instructions:** When `@instruction(override=True)` is used, the method body runs as normal Python and returns a plain `str`. That str is treated identically — appended to `prose_parts` and substituted at step 5. `session_guidance()` in `context_tools/base/base_context_tool.py` uses this to delegate to `Session.session_guidance` (`Instruction.ref(self.workspace, "session_guidance")`).
+**`override=True` instructions:** When `@instruction(override=True)` is used, the method body runs as normal Python and returns a plain `str`. That str is treated identically — appended to prose parts and substituted with the other parts.
 
 ## Public API
 
@@ -67,59 +61,9 @@ The seam is the path from a labeled `@instruction` slot to expanded text:
 
 **`Instruction`** — value object carrying `text` and `module_dir`. `expand()` reads the resolved location. `Instruction.ref(host, label)` builds a reference from a live toolset instance.
 
-**`instruction_slot_names(toolset_cls)`** — returns `frozenset[str]` of all slot names on a toolset class; used by the action expander to distinguish slots from plain tools.
+**`instruction_slot_names(toolset_cls)`** — returns `frozenset[str]` of all slot names on a toolset class; used by action expansion to distinguish slots from plain tools.
 
-## Three forms of instruction content (summary)
-
-All three forms end up as entries in `prose_parts`. Every entry goes through `_substitute()` at expand time — `{{self.attr}}` and `{{param}}` work in all three.
-
-**Form A — Inline prose (no `@instruction` slot needed)**
-
-```python
-@action
-def brainstorm(self, theme: str) -> str:
-    """List 5 ideas for {{theme}} in the style of {{self.cuisine}}."""
-    """For each idea write a one-sentence description."""
-    self.add_draft()
-    return "done"
-```
-Each string literal in the `@action` body is injected as instruction prose. `{{theme}}` → resolved from action arguments; `{{self.cuisine}}` → resolved from instance attribute at expansion time.
-
----
-
-**Form B — Named slot → section in `{slug}.md`**
-
-```python
-@instruction
-def technique(self) -> Instruction: ...
-```
-Resolves to the `## Technique` section in `recipe_guide.md` because the method name (`technique`) matches a heading in the kit doc. Any `{{self.attr}}` placeholders in that section are substituted at expansion time — `Instruction.expand()` returns raw text; substitution happens later when the prose part is processed by `_substitute()`.
-
----
-
-**Form C — Named slot → standalone file**
-
-```python
-@instruction(label="plating-rules")
-def plating(self) -> Instruction: ...
-```
-Resolves to `plating-rules.md` beside the package. The `label=` override is needed when the on-disk name would not be a valid Python identifier. Same substitution rule as Form B — placeholders in the file content are resolved at expansion time, not at file-read time.
-
----
-
-Slots are consumed inside `@action` bodies:
-
-```python
-@action
-def draft_recipe(self, name: str) -> str:
-    """Draft a recipe called {{name}}."""
-    self.technique()  # expands to § Technique in recipe_guide.md; {{self.attr}} in that section resolves here
-    self.plating()    # expands to plating-rules.md; same
-    self.add_draft()
-    return f"Drafted: {name}"
-```
-
-## Quick reference
+## Extend
 
 | Form | Where the prose lives | How to declare |
 |---|---|---|
@@ -132,8 +76,3 @@ Resolution priority when the label is looked up: **folder → file → section**
 ## Dependencies
 
 **`primitives/assets`** — `AssetLocator`, `AssetCollection`, `Asset`, `markdown_extractor` own all lookup and reading logic.
-
-## Scan violations
-
-- **deep-module** — cleared.
-- **information-hiding** — cleared.
