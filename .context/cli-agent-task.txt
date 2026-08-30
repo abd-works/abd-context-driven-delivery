@@ -16,4 +16,9 @@ The ticket is confirmed as a small change and start-ticket has already been run.
 - Map the current behavior and the intended delta. Be thorough about the change surface - do not stop at the first file that looks related.
 
 Add your full analysis to the ticket notes under ## Analysis (separated from existing content).
+
+
+PRIOR FAIL: ## Analysis must be on the GitHub ticket #53 itself (issue body or comment), not only session.md.
+Rebind to this worktree. Read context + cli_agent judge path history. Write a full ## Analysis for human-check (pause, notify parent, looks-good vs needs-fixing, redo with feedback) onto ticket #53 via Workflow ticket notes / gh.
+Judge: never write PASS/FAIL except final line alone **PASS** or **FAIL**.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
