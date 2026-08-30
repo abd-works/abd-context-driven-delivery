@@ -394,9 +394,12 @@ class _CliSpawner:
     """Start an IDE CLI process and return immediately."""
 
     def spawn_role(self, argv: list[str]) -> str:
-        if "--mode" in argv:
-            if "ask" in argv:
-                return "judge"
+        # VS Code ask mode, or Cursor judge launch/task file in the prompt argv.
+        if "--mode" in argv and "ask" in argv:
+            return "judge"
+        joined = " ".join(str(a) for a in argv)
+        if "cli-agent-judge" in joined:
+            return "judge"
         return "doer"
 
     def popen_kwargs(self, workspace: str) -> dict:
@@ -429,6 +432,17 @@ class _CliSpawner:
         self, argv: list[str], workspace: str, existing_pid: int = 0, _skip_log: bool = False
     ) -> IdeCliResult:
         role = self.spawn_role(argv)
+        existing_pid = int(existing_pid or 0)
+        if existing_pid > 0 and _pid_alive(existing_pid):
+            # Do not log a second spawn — ground-truth doer log must stay at 1.
+            return IdeCliResult(
+                exit_code=0,
+                text=f"pid: {existing_pid}",
+                stderr="",
+                argv=list(argv),
+                elapsed_seconds=0.0,
+                pid=existing_pid,
+            )
         if not _skip_log:
             self.append_log(workspace, argv, role)
         proc = subprocess.Popen(argv, **self.popen_kwargs(workspace))
@@ -889,7 +903,10 @@ class _TranscriptWatch:
         return ""
 
     def _assistant_text(self, row: dict) -> str:
+        # Flat fixtures use top-level content; live Cursor jsonl nests under message.
         content = row.get("content")
+        if content is None and isinstance(row.get("message"), dict):
+            content = row["message"].get("content")
         if isinstance(content, str):
             return content
         if isinstance(content, list):
@@ -1194,6 +1211,7 @@ class IdeCli:
         other._job = self.job
         other._prompt = self.prompt
         other._source_scope = self.source_scope
+        other._session = self._session
         other._validate_same_lens = self._validate_same_lens
         other._turn_close = self._turn_close
         other._next_turn = self._next_turn
@@ -1432,8 +1450,14 @@ class IdeCli:
         started = time.perf_counter()
         spawner = _CliSpawner()
         role = spawner.spawn_role(argv)
+        existing_pid = int(existing_pid or 0)
+        if existing_pid > 0 and _pid_alive(existing_pid):
+            result = spawner.start(
+                argv, workspace, existing_pid=existing_pid, _skip_log=True
+            )
+            return spawner.with_elapsed(result, started)
         spawner.append_log(workspace, argv, role, session=self._session)
-        result = spawner.start(argv, workspace, existing_pid=existing_pid, _skip_log=True)
+        result = spawner.start(argv, workspace, existing_pid=0, _skip_log=True)
         return spawner.with_elapsed(result, started)
 
     def _launch_cli(
@@ -1919,11 +1943,18 @@ class CliAgent(SubAgent):
             pickup.cursor_transcript(self._workspace_root(), resume)
         )
         orchestrating = getattr(self, "_orchestrator_owns_loop", False)
+        # Duplicate same-job launches are blocked in launch_next (_head_job_in_flight).
+        # Never skip the doer Popen because a prior job's pid is still alive — each
+        # new job must resume with that job's prompt or run_backlog stalls on job 2+.
+        doer_pid = 0
+        judge_pid = 0
         results = self.ide._detect()._launch_all(
             self.job,
             self._workspace_root(),
             judge_prompt,
             use_judge=bool(judge_prompt) and not orchestrating,
+            doer_pid=doer_pid,
+            judge_pid=judge_pid,
         )
         failed = self._first_failure(results)
         if failed is not None:
@@ -2087,9 +2118,32 @@ class CliAgent(SubAgent):
         Returns the number of jobs now on the queue.
         """
         work = self._attach_cli_sessions()
-        JobQueue().save(work, list(jobs or []))
-        _CliAgentLog().jobs_defined(work, list(jobs or []))
-        return f"job_queue: {len(jobs)}"
+        stamped = []
+        for i, job in enumerate(list(jobs or [])):
+            item = dict(job or {})
+            item["index"] = int(item["index"]) if "index" in item else i
+            stamped.append(item)
+        JobQueue().save(work, stamped)
+        _CliAgentLog().jobs_defined(work, stamped)
+        return f"job_queue: {len(stamped)}"
+
+    def _head_job_in_flight(self, work, item: dict) -> bool:
+        """True when this head job was already started, not finished, and doer pid is live."""
+        pid = int(getattr(work, "cli_doer_pid", 0) or 0)
+        if not _pid_alive(pid):
+            return False
+        head_prompt = str(item.get("prompt") or "")
+        in_flight = False
+        for record in _CliAgentLog().read_records(work):
+            kind = record.get("kind")
+            prompt = str(record.get("prompt") or "")
+            if kind == "job_started" and prompt == head_prompt:
+                in_flight = True
+            elif kind == "job_finished" and prompt == head_prompt:
+                in_flight = False
+            elif kind == "job_started" and prompt != head_prompt:
+                in_flight = False
+        return in_flight
 
     @agent_tool
     def launch_next(self) -> str:
@@ -2098,10 +2152,22 @@ class CliAgent(SubAgent):
         item = JobQueue().peek(work)
         if item is None:
             raise RuntimeError(JobQueue.empty)
+        # Same in-flight head job + live doer → do not spawn a second doer (#44 / #49).
+        if self._head_job_in_flight(work, item):
+            pid = int(getattr(work, "cli_doer_pid", 0) or 0)
+            return (
+                f"pid: {pid}\n"
+                "doer already taken up for this head job — not spawning again\n"
+                f"job_queue: {len(JobQueue().load(work))}"
+            )
         if item.get("prompt"):
             self.task_prompt = str(item["prompt"])
         all_jobs = JobQueue().load(work)
-        index = all_jobs.index(item) if item in all_jobs else 0
+        # Prefer stable index stamped at enqueue (survives pop / queue shrink).
+        if "index" in item:
+            index = int(item["index"])
+        else:
+            index = all_jobs.index(item) if item in all_jobs else 0
         self._current_job_index = index
         kit = _CliAgentLog._job_kit(item)
         _CliAgentLog().job_started(
@@ -2201,7 +2267,10 @@ class CliAgent(SubAgent):
                     continue
 
                 all_jobs = JobQueue().load(work)
-                index = all_jobs.index(item) if item in all_jobs else 0
+                if "index" in item:
+                    index = int(item["index"])
+                else:
+                    index = all_jobs.index(item) if item in all_jobs else 0
                 self._current_job_index = index
                 fails = 0
                 while True:
@@ -2220,6 +2289,10 @@ class CliAgent(SubAgent):
                         finished += 1
                         break
 
+                    # run_backlog attaches before _judge_job is known; mint judge now.
+                    self._judge_job = True
+                    work = self._attach_cli_sessions()
+                    work.load_cli_sessions()
                     self._write_judge_prompt(work, item)
                     judge_id = getattr(work, "cli_judge", "") or ""
                     log.judge_started(work, job_index=index, judge=judge_id)
@@ -2275,6 +2348,7 @@ class CliAgent(SubAgent):
             name="cli-agent-judge-launch.txt",
         )
         vendor = self.ide._detect()
+        vendor._session = work.name
         vendor._judge_resume = judge_resume
         argv = vendor._judge_command(launch, ws)
         result = vendor._spawn(

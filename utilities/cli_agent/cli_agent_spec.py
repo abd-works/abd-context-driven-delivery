@@ -976,6 +976,28 @@ with description("a CLI spawn when a doer pid is already alive"):
             expect(result.pid).to(equal(88))
 
 
+with description("CLI spawn role classification"):
+    with it("should tag Cursor judge launch argv as judge (no --mode ask)"):
+        expect(
+            _CliSpawner().spawn_role(
+                [
+                    "cursor-agent.CMD",
+                    "--resume",
+                    "jid",
+                    "Read .context/cli-agent-judge-launch.txt and follow it exactly.",
+                ]
+            )
+        ).to(equal("judge"))
+        expect(
+            _CliSpawner().spawn_role(
+                ["cursor-agent.CMD", "--resume", "did", "Read .context/cli-agent-task.txt"]
+            )
+        ).to(equal("doer"))
+        expect(
+            _CliSpawner().spawn_role(["code", "--mode", "ask", "judge please"])
+        ).to(equal("judge"))
+
+
 with description("a doer that does not take the new job"):
     with context("when the transcript never gains a user turn"):
         with it("should raise NOT TAKEN UP so the parent does not wait"):
@@ -1856,4 +1878,73 @@ with description("CliAgent run_backlog orchestrator (#44)"):
             encoding="utf-8",
         )
         expect(_TranscriptWatch().read_verdict(path)).to(equal("PASS"))
+
+    with it("should read PASS from Cursor message-nested assistant jsonl"):
+        path = Path(tempfile.mkdtemp(prefix="cli_orch_verdict_nest_")) / "judge.jsonl"
+        path.write_text(
+            json.dumps(
+                {
+                    "role": "assistant",
+                    "message": {
+                        "content": [
+                            {"type": "text", "text": "Evidence ok.\n\nPASS"},
+                        ]
+                    },
+                }
+            )
+            + "\n"
+            + json.dumps({"type": "turn_ended", "status": "success"})
+            + "\n",
+            encoding="utf-8",
+        )
+        expect(_TranscriptWatch().read_verdict(path)).to(equal("PASS"))
+
+    with it(
+        "should remove the worktree after finish when CliAgent session temps were committed (#44)"
+    ):
+        import subprocess
+        from git.git import GitRepo, Repo
+        from workspace.workspace import WorkSession
+
+        primary = Path(tempfile.mkdtemp(prefix="cli44_finish_wt_"))
+        subprocess.check_call(["git", "init"], cwd=primary, stdout=subprocess.DEVNULL)
+        subprocess.check_call(["git", "config", "user.email", "e@x"], cwd=primary)
+        subprocess.check_call(["git", "config", "user.name", "e"], cwd=primary)
+        subprocess.check_call(
+            ["git", "commit", "--allow-empty", "-m", "init"],
+            cwd=primary,
+            stdout=subprocess.DEVNULL,
+        )
+        subprocess.check_call(["git", "branch", "-M", "main"], cwd=primary)
+        session = "life-single"
+        WorkSession(
+            workspace=str(primary).replace("\\", "/"), session=session
+        ).start_work_session(name=session, goal="finish dirt")
+        found = GitRepo(primary).worktree_for(f"session/{session}")
+        expect(found is not None).to(be_true)
+        tree = Path(found.path)
+        folder = tree / ".context" / "sessions" / session
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "cli-agent.json").write_text(
+            '{"doer":"d","judge":"j"}', encoding="utf-8"
+        )
+        (folder / "wait_judge-1.txt").write_text("tmp", encoding="utf-8")
+        (folder / "job-1-response.yaml").write_text("ok: true\n", encoding="utf-8")
+        Repo.git(tree, "add", "-A")
+        Repo.git(tree, "commit", "-m", "e2e lifecycle artifacts")
+        WorkSession(
+            workspace=str(tree).replace("\\", "/"), session=session
+        ).finish_work_session(outcome="done")
+        expect(tree.exists()).to(be_false)
+        expect(GitRepo(primary).worktree_for(f"session/{session}")).to(equal(None))
+
+    with it("should mint a judge chat in run_backlog before spawn_judge (#44)"):
+        # Guards against losing the re-attach mint when editing run_backlog.
+        src = Path("utilities/cli_agent/cli_agent.py").read_text(encoding="utf-8")
+        # Locate the judge branch inside run_backlog and require mint lines nearby.
+        start = src.index("def run_backlog")
+        chunk = src[start : start + 8000]
+        expect("_judge_job = True" in chunk).to(be_true)
+        expect("_attach_cli_sessions()" in chunk).to(be_true)
+        expect("no judge resume" in src).to(be_true)
 

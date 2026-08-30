@@ -1016,7 +1016,11 @@ class Repo:
         if self._memory:
             self._worktrees = [tree for tree in self._worktrees if tree.path != dest]
             return
-        self._git("worktree", "remove", str(dest))
+        self._git("worktree", "remove", "--force", str(dest))
+        # Windows often leaves an empty checkout dir after git worktree remove.
+        if dest.exists():
+            import shutil
+            shutil.rmtree(dest, ignore_errors=True)
 
     def fetch(self) -> None:
         if self._memory:

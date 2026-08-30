@@ -89,18 +89,19 @@ with description("Workflow helpers"):
 
 
 with description("Workflow manifest"):
-    with it("should expose backlog start finish as tools"):
+    with it("should expose backlog and finish as tools and start as a sub_agent"):
         sig = Workflow.manifest.signature
         expect(sig["backlog"]["kind"]).to(equal("tool"))
-        expect(sig["start"]["kind"]).to(equal("tool"))
         expect(sig["finish"]["kind"]).to(equal("tool"))
         expect(sig["capture_backlog"]["kind"]).to(equal("tool"))
+        expect(sig["start"]["kind"]).to(equal("sub_agent"))
+        expect(sig["start"]["launch"]).to(equal("non_blocking"))
         exposed = sorted(
             name
             for name, entry in sig.items()
             if isinstance(entry, dict) and entry.get("kind") == "tool"
         )
-        expect(exposed).to(equal(["backlog", "capture_backlog", "finish", "start"]))
+        expect(exposed).to(equal(["backlog", "capture_backlog", "finish"]))
 
 
 with description("a Workflow"):
@@ -444,3 +445,13 @@ with description("a Workflow finish tool"):
             expect(git.current_branch).to(equal("main"))
             expect(87 in self.repo._closed_tickets).to(be_true)
             expect(self.repo._ticket_project_state[87]).to(equal("Done"))
+
+        with it("should mark Done on the project even when ticket is omitted"):
+            result = self.workflow.finish(
+                outcome="shipped without ticket arg",
+                workspace=str(self.tmp),
+            )
+            expect(result["ticket"]).to(equal("87"))
+            expect(result["project_status"]).to(equal("Done"))
+            expect(self.repo._ticket_project_state[87]).to(equal("Done"))
+            expect(87 in self.repo._closed_tickets).to(be_true)

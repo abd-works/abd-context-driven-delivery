@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 
 import yaml
 
@@ -13,6 +14,7 @@ from git import Ticket, TicketNotFoundError
 from git.git import Repo
 from handoff.handoff import Handoff
 from harness.harness_tool import prompt
+from sub_agent.sub_agent import sub_agent
 from tools.tool import agent_tool, toolset
 from workflow.work_ticket import WorkTicket
 from workspace import Workspace
@@ -74,6 +76,20 @@ class Workflow:
     def _session_name_from_issue(self, title: str, number: int) -> str:
         slug = self._kebab(title)
         return f"{slug}-{number}" if slug else f"issue-{number}"
+
+    def _ticket_from_session_name(self, session_name: str) -> str:
+        """Trailing ``-{n}`` on the work-session slug is the GitHub issue number."""
+        match = re.search(r"-(\d+)$", (session_name or "").strip())
+        return match.group(1) if match else ""
+
+    def _resolve_finish_ticket(self, ticket: str, session_name: str) -> str:
+        resolved = (ticket or "").strip() or self._ticket_from_session_name(session_name)
+        if not resolved:
+            raise ValueError(
+                "finish-ticket needs a ticket (pass ticket=) or a session name ending "
+                "in -{issue-number} so the project card can move to Done"
+            )
+        return resolved
 
     def _workflow_config_path(self, repo_root: Path) -> Path:
         return repo_root / ".context" / "workflow.yaml"
@@ -273,6 +289,7 @@ class Workflow:
         return text
 
     @prompt(name="start-ticket")
+    @sub_agent
     @agent_tool
     def start(
         self,
@@ -282,7 +299,12 @@ class Workflow:
         copy_body: bool = False,
         workflow_state: str = "specification",
     ) -> dict[str, str | int]:
-        """Start work from a GitHub issue — In Progress, WorkSession, session branch."""
+        """Start work from a GitHub issue — In Progress, WorkSession, session branch.
+
+        ``kind: sub_agent`` / ``launch: non_blocking`` — the parent launches a sub-agent
+        for this operation and does not wait. Inside that sub-agent, run start (In Progress,
+        open WorkSession, session branch) then continue the ticket work.
+        """
         viewed = self.view_ticket(ticket, workspace=workspace)
         self.set_ticket_project_status(ticket, "In Progress", workspace=workspace)
         opened = self.open_ticket_session(
@@ -322,7 +344,10 @@ class Workflow:
         ticket: str = "",
         reviewed_by: str = "",
     ) -> dict[str, str]:
-        """Finish the open WorkSession — merge to main, Done, close issue, close session.
+        """Finish the open WorkSession — merge to main, Done on the project board, close issue, close session.
+
+        Always moves the GitHub Project Status to **Done** (not issue-closed alone).
+        Pass ``ticket`` or rely on the session slug's trailing ``-{issue}``.
 
         Before calling: in the session worktree run ``git status``. Delete only temps
         you know are ephemeral from this session (deploy output, agent BDD run logs,
@@ -330,6 +355,7 @@ class Workflow:
         Then call finish so merge and worktree removal can proceed on a clean tree.
         """
         session_name = self.require_open_session(workspace=workspace)
+        resolved_ticket = self._resolve_finish_ticket(ticket, session_name)
         ws = self._workspace(workspace)
         session = ws.current_work_session
         if session is not None and (
@@ -342,14 +368,19 @@ class Workflow:
                 context=session_name,
             )
         sha = self.merge_session_to_main(
-            workspace=workspace, ticket=ticket, reviewed_by=reviewed_by
+            workspace=workspace, ticket=resolved_ticket, reviewed_by=reviewed_by
         )
-        if ticket.strip():
-            self.set_ticket_project_status(ticket, "Done", workspace=workspace)
-            self.close_ticket(ticket, workspace=workspace)
-        if outcome.strip() and session is not None:
-            session.close_session(outcome=outcome)
-        return {"commit": sha, "session_name": session_name}
+        # Always move the Kanban Status to Done, then close the GitHub issue.
+        self.set_ticket_project_status(resolved_ticket, "Done", workspace=workspace)
+        self.close_ticket(resolved_ticket, workspace=workspace)
+        if session is not None:
+            session.close_session(outcome=outcome or "finished")
+        return {
+            "commit": sha,
+            "session_name": session_name,
+            "ticket": resolved_ticket,
+            "project_status": "Done",
+        }
 
     def _handoff(self) -> Handoff:
         return Handoff()
