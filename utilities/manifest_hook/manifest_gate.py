@@ -1,4 +1,4 @@
-"""VSCode agent hook - deliver each governed asset's manifest guidance on every touch.
+"""VSCode agent hook - deliver governed-asset manifest guidance once per chat, then reuse.
 
 beforeReadFile / postToolUse / preToolUse:
   Scan the file's header for ``# @toolset-manifest`` lines, run each named
@@ -7,6 +7,12 @@ beforeReadFile / postToolUse / preToolUse:
   satisfy, ...) - into the Agent's context. The edit proceeds directly on
   the same touch that delivered the guidance; there is no separate "run
   compliance yourself first" step and nothing is ever denied.
+
+  When the same conversation already received that governing toolset's
+  guidance earlier in the chat (keyed by ``conversation_id`` + toolset
+  command), later touches skip ``run_manifests`` and do not re-inject the
+  blob — the agent keeps using guidance already in context (fidelity-tool
+  format) without remanifesting.
 
 This applies uniformly to every touch, by any caller (the main agent, an ad
 hoc Task subagent, a launched ``@sub_agent`` tool), and recursively all the
@@ -43,6 +49,7 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]  # utilities/manifest_hook/ -> utilities/ -> abd-context-driven-delivery/
 _LOG_FILE = Path(__file__).resolve().parent / "manifest_gate.log"
+_DELIVERED_CACHE_PATH = Path(__file__).resolve().parent / ".manifest_gate_delivered.json"
 _MANIFEST_PREFIXES = ("# @toolset-manifest", "# invoke-")
 _SCAN_LINES = 15
 _CATEGORY_DIRS = ("primitives", "utilities", "context_tools", "context_tools/actions")
@@ -280,6 +287,64 @@ def _user_notification(path: str) -> str:
     return f"Manifest gate: ran header for {Path(path).name}"
 
 
+def _conversation_id(data: dict) -> str:
+    return str(data.get("conversation_id") or "").strip()
+
+
+def _guidance_cache_key(manifest_lines: list[str]) -> str:
+    """Stable key for governing toolset commands in a header."""
+    cmds = [
+        line.removeprefix("# @toolset-manifest").strip()
+        for line in manifest_lines
+        if line.startswith("# @toolset-manifest")
+    ]
+    return "\n".join(cmds) if cmds else "\n".join(manifest_lines)
+
+
+def _load_delivered_cache() -> dict[str, list[str]]:
+    path = _DELIVERED_CACHE_PATH
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    out: dict[str, list[str]] = {}
+    for convo, keys in payload.items():
+        if isinstance(keys, list):
+            out[str(convo)] = [str(k) for k in keys]
+    return out
+
+
+def _save_delivered_cache(cache: dict[str, list[str]]) -> None:
+    try:
+        _DELIVERED_CACHE_PATH.write_text(
+            json.dumps(cache, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    except OSError:
+        pass
+
+
+def _guidance_already_delivered(conversation_id: str, cache_key: str) -> bool:
+    if not conversation_id or not cache_key:
+        return False
+    return cache_key in _load_delivered_cache().get(conversation_id, [])
+
+
+def _mark_guidance_delivered(conversation_id: str, cache_key: str) -> None:
+    if not conversation_id or not cache_key:
+        return
+    cache = _load_delivered_cache()
+    keys = list(cache.get(conversation_id, []))
+    if cache_key not in keys:
+        keys.append(cache_key)
+    cache[conversation_id] = keys
+    _save_delivered_cache(cache)
+
+
 def _extract_path(data: dict) -> str:
     """Extract file path from hook payload."""
     ti = data.get("tool_input") or {}
@@ -307,13 +372,29 @@ def _is_mutating_tool(data: dict) -> bool:
     return False
 
 
-def _deliver_guidance(mode: str, path: str, lines: list[str], *, post: bool = False) -> dict:
+def _deliver_guidance(
+    mode: str,
+    path: str,
+    lines: list[str],
+    *,
+    post: bool = False,
+    conversation_id: str = "",
+) -> dict:
     """Run every named governing toolset's manifest for ``path`` and build the
     hook response that delivers the guidance.
 
     post=True selects the post-edit satisfy/validate directive; False (default)
     selects the pre-edit hard-stop directive.
+
+    When ``conversation_id`` is set and this chat already received the same
+    governing toolset guidance, skip remanifest and return {} (caller keeps
+    permission allow without re-injecting).
     """
+    cache_key = _guidance_cache_key(lines)
+    if _guidance_already_delivered(conversation_id, cache_key):
+        _log(mode, path, fired=False, detail="reuse guidance already in context")
+        return {}
+
     manifest_output, failures = run_manifests(lines)
     if not manifest_output and not failures:
         _log(mode, path, fired=False, detail="header ran but produced no output")
@@ -331,6 +412,7 @@ def _deliver_guidance(mode: str, path: str, lines: list[str], *, post: bool = Fa
             "Manifest Gate",
             f"{'Satisfy required' if post else 'Stop — follow manifest'} for {name}",
         )
+        _mark_guidance_delivered(conversation_id, cache_key)
     fmt = _format_post_message if post else _format_pre_message
     return {
         "agent_message": fmt(path, lines, manifest_output),
@@ -347,7 +429,9 @@ def handle_before_read_file(data: dict) -> dict:
     if not lines:
         _log("read", path, fired=False)
         return {}
-    return _deliver_guidance("read", path, lines)
+    return _deliver_guidance(
+        "read", path, lines, conversation_id=_conversation_id(data)
+    )
 
 
 def handle_post_tool_use(data: dict) -> dict:
@@ -359,7 +443,9 @@ def handle_post_tool_use(data: dict) -> dict:
     if not lines:
         _log("post", path, fired=False)
         return {}
-    delivered = _deliver_guidance("post", path, lines, post=True)
+    delivered = _deliver_guidance(
+        "post", path, lines, post=True, conversation_id=_conversation_id(data)
+    )
     if not delivered:
         return {}
     delivered["additional_context"] = delivered.pop("agent_message")
@@ -371,7 +457,8 @@ def handle_pre_tool_use(data: dict) -> dict:
     on the same touch that delivered it - see the sketch's "Deliver Guidance
     Once Per Chat, Then Reuse It" story for the full rationale. Applies
     uniformly regardless of caller (main agent, ad hoc Task subagent, or a
-    launched @sub_agent tool).
+    launched @sub_agent tool). Later touches in the same conversation reuse
+    guidance already delivered and do not remanifest.
     """
     path = _extract_path(data)
     if not path or not _is_mutating_tool(data) or not Path(path).is_file():
@@ -380,7 +467,9 @@ def handle_pre_tool_use(data: dict) -> dict:
     if not lines:
         _log("pre ", path, fired=False)
         return {"permission": "allow"}
-    delivered = _deliver_guidance("pre ", path, lines)
+    delivered = _deliver_guidance(
+        "pre ", path, lines, conversation_id=_conversation_id(data)
+    )
     delivered["permission"] = "allow"
     return delivered
 
