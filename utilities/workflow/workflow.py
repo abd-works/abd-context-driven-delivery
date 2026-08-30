@@ -322,7 +322,13 @@ class Workflow:
         ticket: str = "",
         reviewed_by: str = "",
     ) -> dict[str, str]:
-        """Finish the open WorkSession — merge to main, Done, close issue, close session."""
+        """Finish the open WorkSession — merge to main, Done, close issue, close session.
+
+        Before calling: in the session worktree run ``git status``. Delete only temps
+        you know are ephemeral from this session (deploy output, agent BDD run logs,
+        scratch request files). Use session context — do not delete durable artifacts.
+        Then call finish so merge and worktree removal can proceed on a clean tree.
+        """
         session_name = self.require_open_session(workspace=workspace)
         ws = self._workspace(workspace)
         session = ws.current_work_session
