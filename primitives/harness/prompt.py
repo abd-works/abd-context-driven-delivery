@@ -22,7 +22,9 @@ class Prompt(HarnessTool):
 
     def render(self) -> str:
         if self.type == "VS Code":
-            return _frontmatter(self.name, self.description or self.name) + str(self.body)
+            return _frontmatter(
+                self.name, self.description or self.name, self.model
+            ) + str(self.body)
         return str(self.body)
 
     def generate(self, source: Any = None, roots: list[Path] | None = None) -> HarnessTool:
@@ -71,6 +73,7 @@ class Prompt(HarnessTool):
         if self.type == "Cursor":
             command = Command(self.type, self.name)
             command.description = self.description
+            command.model = self.model
             command.body = self.body
             return command.generate(source, roots)
         return super().generate(source, roots)

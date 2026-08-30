@@ -228,9 +228,15 @@ def required_init_params(source_path: Path, class_name: str = "") -> list[str]:
     return []
 
 
-def _frontmatter(name: str, description: str) -> str:
+def _frontmatter(name: str, description: str, model: str = "") -> str:
     safe = description.replace('"', "'").splitlines()[0] if description else name
-    return f"---\nname: {name}\ndescription: \"{safe}\"\n---\n\n"
+    lines = ["---", f"name: {name}", f'description: "{safe}"']
+    model_id = (model or "").strip()
+    if model_id:
+        lines.append(f"model: {model_id}")
+    lines.append("---")
+    lines.append("")
+    return "\n".join(lines) + "\n"
 
 
 class HarnessTool:
@@ -240,6 +246,7 @@ class HarnessTool:
         self.type = type
         self.name = name
         self.description = ""
+        self.model = ""
         self.body: Any = ""
 
     def relative_path(self) -> Path:
@@ -254,6 +261,8 @@ class HarnessTool:
                 self.name = source["name"]
             if source.get("overview"):
                 self.description = source["overview"]
+            if source.get("model"):
+                self.model = str(source.get("model") or "").strip()
             if source.get("body") is not None:
                 self.body = source["body"]
             return

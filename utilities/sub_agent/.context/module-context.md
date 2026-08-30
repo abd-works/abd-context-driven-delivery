@@ -5,6 +5,8 @@
 
 `SubAgent.run` is the slash action `/sub-agent`. When `actions` is listed and non-empty, those kits already open the work session and turn — this kit does **not** wrap them in `performTurn`. When `actions` is missing or empty, the worker runs `performTurn` (`workspace.workspace:Turn`, `action: performTurn`) around the listed context-tool work (open the hanging turn, each context tool as its own tools run, `finish_turn`; report branch and commit). `AgenticToolset.context_tools` loads `tools` (context tools) plus optional `actions` (other action kits). The parent launches **this prompt plus those context tools plus those actions** as one non-blocking sub-agent and does not wait.
 
+Before launch, read `.context/sessions/{session}/model` (or `sessions/default` when none). When set, pass that model id as the sub-agent model; when unset, inherit the parent chat model. Never set disable-model-invocation.
+
 ## Seam
 `SubAgent.run` (`kind: sub_agent`, `launch: non_blocking`); `SubAgentTool`, `sub_agent`, `discover_sub_agent_tools`
 

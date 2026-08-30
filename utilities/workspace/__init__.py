@@ -17,6 +17,7 @@ __all__ = [
     "NullGitRepo",
     "SessionLog",
     "SessionPaths",
+    "SessionModel",
     "docs_dir",
     "session_dir",
     "inherit_annotations",
@@ -34,6 +35,7 @@ def __getattr__(name: str):
         "Mistake",
         "Correction",
         "SessionPaths",
+        "SessionModel",
         "docs_dir",
         "session_dir",
     ):

@@ -18,7 +18,7 @@ CliAgent, CliParticipant, CliDoer, CliJudge, IdeCli, CursorCli, VscodeCli, JobQu
 - `CliParticipant` - abstract base for doer and judge; each holds exactly one `IdeCli` instance and owns its own state (prompt, resume_id).
 - `CliDoer` - participant that executes the current job; has a `current_job` reference.
 - `CliJudge` - participant that evaluates results; holds criteria/instructions.
-- `IdeCli` - thin, nearly stateless invocation layer: model, mode, agent_mode, resume ID, timeouts only. One `IdeCli` per participant.
+- `IdeCli` - thin, nearly stateless invocation layer: model, mode, agent_mode, resume ID, timeouts only. One `IdeCli` per participant. When `model` is empty, `resolve_session_model` reads `.context/sessions/{session}/model` (via `SessionModel`) so cursor-agent gets `--model` from the session preference set by `/model`.
 - `_CliAgentLog` - append-only JSONL event log: session_start, spawn, jobs_defined, job_started, job_finished, verdict.
 - `CliJobTemplate` - named, reusable list of jobs. Shape is identical to a job queue.
 - `CliJobTemplateStore` - persists and retrieves templates. Default root: `utilities/cli_agent/job-templates/`; overridable per project.

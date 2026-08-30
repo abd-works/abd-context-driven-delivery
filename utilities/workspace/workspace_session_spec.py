@@ -874,3 +874,78 @@ with description("session_dir"):
         expect(SessionPaths.session_dir(working, "my-sprint")).to(
             equal(working / ".context" / "sessions" / "my-sprint")
         )
+
+with description("SessionModel"):
+    with it("should persist under .context/sessions/{session}/model"):
+        from workspace.workspace import SessionModel
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_model_"))
+        path = SessionModel.write(tmp, "composer-2.5-fast", "ticket-25")
+        expect(path).to(equal(tmp / ".context" / "sessions" / "ticket-25" / "model"))
+        expect(SessionModel.read(tmp, "ticket-25")).to(equal("composer-2.5-fast"))
+
+    with it("should use sessions/default when session name is empty"):
+        from workspace.workspace import SessionModel
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_model_default_"))
+        SessionModel.write(tmp, "kimi-k3-max", "")
+        expect(SessionModel.read(tmp, "")).to(equal("kimi-k3-max"))
+        expect(SessionModel.read(tmp, "default")).to(equal("kimi-k3-max"))
+
+    with it("should copy session model into a new folder falling back to default"):
+        from workspace.workspace import SessionModel
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_model_copy_"))
+        SessionModel.write(tmp, "cursor-grok-4.6-medium", "default")
+        dest = tmp / "worktree" / ".context" / "sessions" / "new-ticket"
+        copied = SessionModel.copy_into(dest, tmp, "new-ticket")
+        expect(copied is not None).to(be_true)
+        expect((dest / "model").read_text(encoding="utf-8").strip()).to(
+            equal("cursor-grok-4.6-medium")
+        )
+
+
+with description("Workspace /model"):
+    with it("should expose set get and list session model tools plus a model prompt"):
+        from workspace.workspace import Workspace
+
+        ws = Workspace()
+        expect("set_session_model" in ws.tools).to(be_true)
+        expect("get_session_model" in ws.tools).to(be_true)
+        expect("list_session_models" in ws.tools).to(be_true)
+        expect("model" in getattr(ws, "prompts", {}) or "model" in ws.tools or hasattr(ws, "model")).to(
+            be_true
+        )
+
+    with it("should persist via set_session_model and change instructions mention IDE model"):
+        from workspace.workspace import Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="ws_model_"))
+        ws = Workspace(str(tmp))
+        written = ws.set_session_model("composer-2.5-fast", session="sprint-a")
+        expect(written).to(equal("composer-2.5-fast"))
+        expect(ws.get_session_model(session="sprint-a")).to(equal("composer-2.5-fast"))
+        prose = (type(ws).model.__doc__ or "") + "\n".join(
+            getattr(type(ws).model, "__doc__", "") or ""
+        )
+        # agent_instructions use stacked docstrings — read via expand/inspect
+        import inspect
+
+        raw = inspect.getsource(type(ws).model)
+        expect("AskQuestion" in raw).to(be_true)
+        expect("disable-model-invocation" in raw).to(be_true)
+        expect("IDE" in raw or "chat model" in raw.lower() or "model picker" in raw.lower()).to(
+            be_true
+        )
+
+
+with description("a WorkSession that inherits a model"):
+    with it("should copy default model into a new session folder on ensure_started"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import SessionModel, Workspace, WorkSession
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_inherit_model_"))
+        SessionModel.write(tmp, "composer-2.5-fast", "default")
+        session = WorkSession(Workspace(str(tmp)), "child-sprint", git=NullGitRepo(tmp))
+        session.ensure_started(goal="inherit model")
+        expect(session.session_model()).to(equal("composer-2.5-fast"))
