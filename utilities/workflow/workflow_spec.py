@@ -16,7 +16,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
         sys.path.insert(0, _p)
 sys.modules.pop("workflow", None)
 
-from expects import be_true, contain, equal, expect, raise_error
+from expects import be_none, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from git import TicketNotFoundError
@@ -262,6 +262,63 @@ with description("a Workflow backlog helper"):
             )
             expect(prompt).to(contain("/path/to/chat.jsonl"))
 
+
+with description("a Workflow that is asked to backlog from a logged correction"):
+    with before.each:
+        from workspace.workspace import Correction, Mistake
+
+        self.correction = Correction(
+            improved="notes on introducing SHA",
+            how="annotate + link",
+            status="fixed",
+        )
+        self.correction.add(
+            Mistake(
+                entry_id="m001",
+                artifact="path/to/artifact.md",
+                rule="git-primary-mistake-note",
+                wrong="lived in session yaml",
+                original="it should append the mistake id",
+            )
+        )
+        self.workflow = Workflow()
+
+    with context("with that correction paired to a mistake"):
+        with before.each:
+            self.staged = self.workflow.backlog_from_correction(self.correction)
+
+        with it("should stage a backlog item"):
+            expect(self.staged.get("sub_agent_task", "")).to(contain("capture_backlog"))
+            expect(self.staged.get("tools")).to(equal("workflow.workflow:Workflow"))
+
+        with context("the backlog item body"):
+            with it("should include the mistake"):
+                body = self.staged.get("sub_agent_task", "")
+                expect(body).to(contain("## Mistake"))
+                expect(body).to(contain("lived in session yaml"))
+                expect(body).to(contain("git-primary-mistake-note"))
+                expect(body).to(contain("m001"))
+
+            with it("should include the correction"):
+                body = self.staged.get("sub_agent_task", "")
+                expect(body).to(contain("## Correction"))
+                expect(body).to(contain("notes on introducing SHA"))
+                expect(body).to(contain("annotate + link"))
+
+    with context("with a mistake alone and no correction"):
+        with it("should not stage a backlog item"):
+            # A lone Mistake has no backlog staging — only record_correction /
+            # backlog_from_correction stages /backlog after pairing.
+            from workspace.workspace import Mistake
+
+            alone = Mistake(
+                entry_id="m001",
+                artifact="a.md",
+                rule="r",
+                wrong="bad",
+                original="good",
+            )
+            expect(getattr(alone, "backlog", None)).to(be_none)
 
 with description("a WorkTicket"):
     with before.each:

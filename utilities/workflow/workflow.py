@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -164,6 +165,83 @@ class Workflow:
         if request:
             parts.extend(["", "## Request", "", *request])
         return "\n".join(part for part in parts if part is not None).strip() + "\n"
+
+    def backlog_from_correction(
+        self,
+        correction: Any,
+        workspace: str = "",
+        theme: str = "",
+        category: str = "Defect",
+    ) -> dict[str, str]:
+        """Stage /backlog from a logged correction paired to mistake(s).
+
+        Never call this for a mistake alone — the body needs both the mistake
+        and the correction so good vs bad is visible on the issue.
+        """
+        focus = self._correction_backlog_focus(correction)
+        body = self._mistake_correction_issue_body(correction)
+        destination = (workspace.strip() or self._workspace_path or ".").strip() or "."
+        transcript_path = ""
+        try:
+            self._commit_if_dirty(workspace, focus)
+            transcript_path = self._find_transcript_path(workspace)
+            destination = str(self._repo_root(workspace))
+        except Exception:
+            pass
+        return {
+            "committed": "yes",
+            "tools": "workflow.workflow:Workflow",
+            "sub_agent_task": self._backlog_task_prompt(
+                focus=focus,
+                body=body,
+                workspace=destination,
+                theme=theme,
+                category=category,
+                infer_from=f"{focus}\n{body}",
+                transcript_path=transcript_path,
+            ),
+        }
+
+    def _correction_backlog_focus(self, correction: Any) -> str:
+        mistakes = list(getattr(correction, "mistakes", None) or [])
+        if mistakes:
+            rule = str(getattr(mistakes[0], "rule", "") or "").strip()
+            if rule:
+                return f"Fix: {rule}"
+            wrong = str(getattr(mistakes[0], "wrong", "") or "").strip()
+            if wrong:
+                return wrong[:80]
+        improved = str(getattr(correction, "improved", "") or "").strip()
+        return (improved[:80] if improved else "correction")
+
+    def _mistake_correction_issue_body(self, correction: Any) -> str:
+        lines: list[str] = ["## Mistake", ""]
+        mistakes = list(getattr(correction, "mistakes", None) or [])
+        if not mistakes:
+            lines.append("(no paired mistake)")
+            lines.append("")
+        for mistake in mistakes:
+            lines.extend(
+                [
+                    f"- **entry_id:** {getattr(mistake, 'entry_id', '')}",
+                    f"- **artifact:** {getattr(mistake, 'artifact', '')}",
+                    f"- **rule:** {getattr(mistake, 'rule', '')}",
+                    f"- **wrong:** {getattr(mistake, 'wrong', '')}",
+                    f"- **original:** {getattr(mistake, 'original', '')}",
+                    "",
+                ]
+            )
+        lines.extend(
+            [
+                "## Correction",
+                "",
+                f"- **improved:** {getattr(correction, 'improved', '')}",
+                f"- **how:** {getattr(correction, 'how', '')}",
+                f"- **status:** {getattr(correction, 'status', '')}",
+                "",
+            ]
+        )
+        return "\n".join(lines)
 
     def _find_transcript_path(self, workspace: str = "") -> str:
         """Locate the most recent Cursor agent transcript for this workspace."""

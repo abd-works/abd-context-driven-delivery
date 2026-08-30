@@ -57,12 +57,18 @@ a context tool
           it should note the tool name on that commit
           it should note the fidelity on that commit
           it should not note the mistake on its open turn's commit
+          it should not invoke backlog
         that records a correction on its open turn
           it should record the improved content on its correction commit on the session branch
           it should record how the fix was made on its correction commit
           it should record the correction status on its correction commit
           it should record the entry ids of the mistakes it fixes on its correction commit
           it should link those entry ids to those mistakes' introducing commits on the session branch
+          with that correction paired to a mistake
+            it should invoke backlog
+            the backlog item
+              it should include the mistake in its body
+              it should include the correction in its body
       that the agent is finished working with it
         it should finish its turn for the action
       that has finished its turn

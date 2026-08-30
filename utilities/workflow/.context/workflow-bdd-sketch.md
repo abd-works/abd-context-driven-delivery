@@ -56,6 +56,14 @@ a context tool
       it should not open a work session
       it should return immediately without waiting for the sub-agent
       with a github issue from that backlog step
+    that is asked to backlog from a logged correction
+      with that correction paired to a mistake
+        it should stage a backlog item
+        the backlog item body
+          it should include the mistake
+          it should include the correction
+      with a mistake alone and no correction
+        it should not stage a backlog item
         that is asked to start that item
           the forward requirements
             it should be available from the issue body

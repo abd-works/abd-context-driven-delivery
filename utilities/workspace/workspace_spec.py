@@ -375,6 +375,12 @@ with description("a context tool"):
                             equal({})
                         )
 
+                    with it("should not invoke backlog"):
+                        expect(self.session.open_turn.correction).to(be_none)
+                        expect(
+                            getattr(self.mistake, "backlog", None)
+                        ).to(be_none)
+
                 with context("that records a correction on its open turn"):
                     with before.each:
                         self.tmp = Path(tempfile.mkdtemp(prefix="ws-fix-"))
@@ -450,6 +456,29 @@ with description("a context tool"):
                             self.git.read_notes(self.introducing).get("fixed_by")
                         ).to(equal(self.fix))
 
+                    with context("with that correction paired to a mistake"):
+                        with it("should invoke backlog"):
+                            expect(self.correction.backlog is not None).to(be_true)
+                            expect(self.correction.backlog.get("sub_agent_task", "")).to(
+                                contain("capture_backlog")
+                            )
+
+                        with context("the backlog item"):
+                            with it("should include the mistake in its body"):
+                                task = self.correction.backlog.get("sub_agent_task", "")
+                                expect(task).to(contain("## Mistake"))
+                                expect(task).to(contain("lived in session yaml"))
+                                expect(task).to(
+                                    contain("git-primary-mistake-note")
+                                )
+
+                            with it("should include the correction in its body"):
+                                task = self.correction.backlog.get("sub_agent_task", "")
+                                expect(task).to(contain("## Correction"))
+                                expect(task).to(
+                                    contain("notes on introducing SHA")
+                                )
+                                expect(task).to(contain("annotate + link"))
             with context("that the agent is finished working with it"):
                 with before.each:
                     self.tmp = Path(tempfile.mkdtemp(prefix="ws-finish-"))

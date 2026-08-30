@@ -369,6 +369,7 @@ class Turn:
         fidelity: str,
         introducing_commit: str,
     ) -> Mistake:
+        """Log a mistake on the introducing commit. Does not invoke /backlog."""
         session = self.work_session
         if session is None:
             raise RuntimeError("record_mistake requires workSession")
@@ -396,6 +397,11 @@ class Turn:
         how: str = "",
         status: str = "fixed",
     ) -> Correction:
+        """Log a correction paired to mistake entry ids, then invoke /backlog.
+
+        Backlog starts on correction only — never on mistake alone — so the
+        issue body can carry both the mistake and the correction.
+        """
         session = self.work_session
         if session is None:
             raise RuntimeError("record_correction requires workSession")
@@ -431,7 +437,22 @@ class Turn:
                 )
             )
         self.correction = correction
+        if correction.mistakes:
+            correction.backlog = self._invoke_correction_backlog(correction)
         return correction
+
+    def _invoke_correction_backlog(self, correction: Correction) -> dict[str, str] | None:
+        """Stage /backlog from a paired mistake+correction (lazy Workflow import)."""
+        from workflow.workflow import Workflow
+
+        session = self.work_session
+        path = ""
+        if session is not None and getattr(session, "workspace", None) is not None:
+            path = str(session.workspace.path)
+        return Workflow(workspace=path).backlog_from_correction(
+            correction,
+            workspace=path,
+        )
 
 
 @dataclass
@@ -475,6 +496,7 @@ class Correction:
     status: str = "open"
     mistakes: list[Mistake] = field(default_factory=list)
     fix_commit: str | None = None
+    backlog: dict[str, str] | None = None
 
     def add(self, mistake: Mistake) -> None:
         if mistake not in self.mistakes:
