@@ -11,5 +11,5 @@
 ## End
 
 - **ended:** 2026-08-29
-- **outcome:** CliAgent-fixes wave complete through #44. Remaining open: #49 (duplicate-spawn guard), #45 (manifest invoke). #47/#48 closed as superseded. Backlog #23 retagged theme:swarm.
+- **outcome:** Closing leftover worktree/session; keep only main and cli-manifest (#45).
 - **handoff:** handoff.md
