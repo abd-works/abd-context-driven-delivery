@@ -1547,6 +1547,30 @@ class WorkSession:
         self.workspace.current_work_session = self
         return self
 
+    def _finish_without_session(self, *, outcome: str = "") -> str:
+        """No open session: finish turn, attach this chat, push — skip session/worktree."""
+        git = self.git
+        turn = Turn(workspace=str(self.path or self.workspace.path), session="")
+        turn.work_session = None
+        turn._checkout_git = git
+        turn._workspace_root = str(getattr(git, "root", None) or self.path or ".")
+        turn.finish(result=outcome or "finish without session")
+
+        prior_name = self.name
+        if not prior_name:
+            self.name = "default"
+        try:
+            for path in self._running_chat_paths():
+                self.save_chat(path)
+        finally:
+            self.name = prior_name
+
+        try:
+            git.push()
+        except GitConnectError:
+            pass
+        return "finished without work session"
+
     @prompt(name="finish-work-session")
     @agent_tool
     def finish_work_session(
@@ -1569,6 +1593,10 @@ class WorkSession:
         clears any stash (stash must never keep a worktree), and removes the sibling worktree when
         the tree is clean and pushed. If untracked or dirty files remain after you removed known
         temps, leave the worktree and report what blocked removal.
+
+        When no work session is open (e.g. work landed on main without ``start_work_session``),
+        skips session.md / worktree removal and still finishes the turn (commit dirty checkout),
+        attaches this chat, and pushes.
         """
         if tools:
             for item in tools:
@@ -1577,7 +1605,7 @@ class WorkSession:
                 if current is not None:
                     return current.close_session(outcome=outcome, handoff=handoff)
         if not self.name:
-            return "no work session to close"
+            return self._finish_without_session(outcome=outcome)
         return self.close_session(outcome=outcome, handoff=handoff)
 
     def cleanup(self) -> None:
