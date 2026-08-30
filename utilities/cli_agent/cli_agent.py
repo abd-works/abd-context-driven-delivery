@@ -477,6 +477,14 @@ class _CliAgentLog:
         root = getattr(work, "path", None) or "."
         return Path(root) / ".context" / "sessions" / name / self.filename
 
+    def _job_queue_path(self, work) -> str:
+        folder = getattr(work, "folder", None)
+        if folder:
+            return str(Path(folder) / JobQueue.filename)
+        name = getattr(work, "name", "") or "work"
+        root = getattr(work, "path", None) or "."
+        return str(Path(root) / ".context" / "sessions" / name / JobQueue.filename)
+
     def append(self, work, record: dict) -> None:
         path = self.path_for(work)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -484,15 +492,52 @@ class _CliAgentLog:
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(record) + "\n")
 
+    def read_records(self, work) -> list[dict]:
+        path = self.path_for(work)
+        if not path.is_file():
+            return []
+        return [
+            json.loads(line)
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+
+    def header(
+        self,
+        work,
+        *,
+        doer: str,
+        judge: str,
+        doer_pid: int = 0,
+        judge_pid: int = 0,
+        chat: str = "",
+        job_queue: str = "",
+    ) -> None:
+        """One-time session header: ids, chat link, job-queue path."""
+        self.append(
+            work,
+            {
+                "kind": "header",
+                "doer": doer,
+                "judge": judge,
+                "doer_pid": doer_pid,
+                "judge_pid": judge_pid,
+                "chat": chat,
+                "job_queue": job_queue or self._job_queue_path(work),
+            },
+        )
+
     def session_start(self, work, doer: str, judge: str, doer_pid: int, judge_pid: int, doer_transcript: str, judge_transcript: str) -> None:
         self.append(work, {
             "kind": "session_start",
             "doer": doer,
             "doer_pid": doer_pid,
             "doer_transcript": doer_transcript,
+            "chat": doer_transcript,
             "judge": judge,
             "judge_pid": judge_pid,
             "judge_transcript": judge_transcript,
+            "job_queue": self._job_queue_path(work),
         })
 
     def spawn(self, work, role: str, resume: str, prompt: str, argv: str) -> None:
@@ -510,8 +555,21 @@ class _CliAgentLog:
     def job_started(self, work, index: int, prompt: str) -> None:
         self.append(work, {"kind": "job_started", "index": index, "prompt": prompt})
 
-    def job_finished(self, work, index: int, prompt: str) -> None:
-        self.append(work, {"kind": "job_finished", "index": index, "prompt": prompt})
+    def job_finished(
+        self,
+        work,
+        index: int,
+        prompt: str,
+        *,
+        summary: str = "",
+        refs: list[str] | None = None,
+    ) -> None:
+        record: dict = {"kind": "job_finished", "index": index, "prompt": prompt}
+        if summary:
+            record["summary"] = summary
+        if refs:
+            record["refs"] = list(refs)
+        self.append(work, record)
 
     def verdict(self, work, result: str, notes: str = "") -> None:
         self.append(work, {"kind": "verdict", "result": result, "notes": notes})
@@ -1546,14 +1604,31 @@ class CliAgent(SubAgent):
         work.save_cli_sessions()
         pickup = _Pickup()
         ws = self._workspace_root()
-        _CliAgentLog().session_start(
+        log = _CliAgentLog()
+        doer_transcript = str(pickup.cursor_transcript(ws, work.cli_doer))
+        judge_transcript = str(pickup.cursor_transcript(ws, work.cli_judge))
+        job_queue = log._job_queue_path(work)
+        if not any(
+            r.get("kind") == "header"
+            for r in log.read_records(work)
+        ):
+            log.header(
+                work,
+                doer=work.cli_doer,
+                judge=work.cli_judge,
+                doer_pid=work.cli_doer_pid,
+                judge_pid=work.cli_judge_pid,
+                chat=doer_transcript,
+                job_queue=job_queue,
+            )
+        log.session_start(
             work,
             doer=work.cli_doer,
             judge=work.cli_judge,
             doer_pid=work.cli_doer_pid,
             judge_pid=work.cli_judge_pid,
-            doer_transcript=str(pickup.cursor_transcript(ws, work.cli_doer)),
-            judge_transcript=str(pickup.cursor_transcript(ws, work.cli_judge)),
+            doer_transcript=doer_transcript,
+            judge_transcript=judge_transcript,
         )
         for spawned in results:
             role = _CliSpawner().spawn_role(spawned.argv)
