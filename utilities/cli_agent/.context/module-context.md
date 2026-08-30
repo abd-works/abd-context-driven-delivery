@@ -18,8 +18,11 @@ CliAgent, IdeCli, CursorCli, VscodeCli, IdeCliResult, JobQueue, CliBacklog, CliB
 ## Public API
 
 - `launch_next` — send the head job to the doer. One send at a time; do not stack resumes.
-- `run_backlog` — in-process orchestrator: launch doer, wait for the Turn to end, run the judge, and on PASS complete the job then start the next. Parent launches once and monitors the session log.
+- `run_backlog` — in-process orchestrator: launch doer, wait for the Turn to end, then either human-check, judge, or complete and start the next. Parent launches once and monitors the session log.
+- `resolve_human_check` — when a job has `human: true`, record **looks_good** or **needs_fixing** (with feedback) so `run_backlog` can complete or redo that job.
 - `set_backlog` / `triage_backlog` / `next_backlog_item` — assign items; triage the whole backlog up front (map free-text to `#N` or `capture_backlog`, register with **theme:cli-agent**); advance to the next item. When leaving a ticket item, **finish-ticket runs before `next_backlog_item` advances**.
+
+Jobs may set optional `human: true` (alias `human_check`). After the doer finishes such a job, `run_backlog` logs `human_check_needed`, fires an IDE/OS notification (logged as `human_notified`), and waits for parent/human resolution — no second AI agent. `human` replaces `judge` for that job when both are set.
 
 ## Constraint
 

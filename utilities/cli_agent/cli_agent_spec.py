@@ -1949,6 +1949,208 @@ with description("CliAgent run_backlog orchestrator (#44)"):
         expect("no judge resume" in src).to(be_true)
 
 
+with description("CliAgent human check (#53)"):
+    """Job property human=true: pause after doer, parent resolves looks_good / needs_fixing."""
+
+    with it("should preserve human on the job kit like judge"):
+        kit = _CliAgentLog._job_kit({"prompt": "x", "human": True, "judge": False})
+        expect(kit.get("human")).to(be_true)
+        kit2 = _CliAgentLog._job_kit({"prompt": "x", "human_check": True})
+        expect(kit2.get("human")).to(be_true)
+
+    with it("should treat human as needing human and not judge"):
+        tmp, work = _orch_work("human-flag")
+        agent = CliAgent(workspace=str(tmp), session=work.name)
+        item = {"prompt": "review me", "human": True, "judge": True, "tools": ["x"]}
+        expect(agent._job_needs_human(item)).to(be_true)
+        expect(agent._job_needs_judge(item)).to(be_false)
+
+    with it("should complete on looks_good without spawning a judge"):
+        tmp, work = _orch_work("human-ok")
+        agent = CliAgent(workspace=str(tmp), session=work.name)
+        JobQueue().save(
+            work,
+            [{"prompt": "human-job", "tools": [], "judge": False, "human": True}],
+        )
+        launches = []
+        spawn_calls = []
+
+        out = agent.run_backlog(
+            launch_job=lambda _a, item: launches.append(item.get("prompt")),
+            wait_doer=lambda _w, _i: None,
+            spawn_judge=lambda _w, _i: spawn_calls.append("judge"),
+            wait_human=lambda _w, _i: {"result": "looks_good"},
+            wait_verdict=lambda _w, _i: "PASS",
+        )
+        expect(out).to(contain("done"))
+        expect(JobQueue().load(work)).to(equal([]))
+        expect(launches).to(equal(["human-job"]))
+        expect(spawn_calls).to(equal([]))
+        kinds = [r.get("kind") for r in _CliAgentLog().read_records(work)]
+        expect("human_check_needed" in kinds).to(be_true)
+        expect("human_check_resolved" in kinds).to(be_true)
+        expect("judge_started" in kinds).to(be_false)
+        resolved = next(
+            r for r in _CliAgentLog().read_records(work) if r.get("kind") == "human_check_resolved"
+        )
+        expect(resolved.get("result")).to(equal("looks_good"))
+
+    with it("should redo the same job with feedback on needs_fixing then complete"):
+        tmp, work = _orch_work("human-redo")
+        agent = CliAgent(workspace=str(tmp), session=work.name)
+        JobQueue().save(
+            work,
+            [
+                {
+                    "prompt": "ship it",
+                    "tools": [],
+                    "judge": False,
+                    "human": True,
+                    "index": 0,
+                }
+            ],
+        )
+        launches = []
+        human_calls = {"n": 0}
+
+        def wait_human(_w, item):
+            human_calls["n"] += 1
+            if human_calls["n"] == 1:
+                return {"result": "needs_fixing", "feedback": "add a test"}
+            return {"result": "looks_good"}
+
+        def launch_job(_a, item):
+            launches.append(str(item.get("prompt") or ""))
+
+        out = agent.run_backlog(
+            launch_job=launch_job,
+            wait_doer=lambda _w, _i: None,
+            spawn_judge=lambda _w, _i: None,
+            wait_human=wait_human,
+        )
+        expect(out).to(contain("done"))
+        expect(JobQueue().load(work)).to(equal([]))
+        expect(len(launches)).to(equal(2))
+        expect(launches[0]).to(equal("ship it"))
+        expect("HUMAN FEEDBACK" in launches[1]).to(be_true)
+        expect("add a test" in launches[1]).to(be_true)
+        expect(human_calls["n"]).to(equal(2))
+        kinds = [r.get("kind") for r in _CliAgentLog().read_records(work)]
+        expect(kinds.count("human_check_needed")).to(equal(2))
+        expect("recovery" in kinds).to(be_true)
+
+    with it("should expose resolve_human_check as an agent tool that writes the session file"):
+        tmp, work = _orch_work("human-resolve")
+        agent = CliAgent(workspace=str(tmp), session=work.name)
+        JobQueue().save(
+            work,
+            [{"prompt": "gate", "human": True, "judge": False, "index": 3}],
+        )
+        expect(hasattr(CliAgent, "resolve_human_check")).to(be_true)
+        expect(getattr(CliAgent.resolve_human_check, "_is_agent_tool", False)).to(
+            be_true
+        )
+        with patch.object(agent, "_attach_cli_sessions", return_value=work):
+            msg = agent.resolve_human_check("needs_fixing", feedback="fix docs")
+        expect("needs_fixing" in msg).to(be_true)
+        path = Path(work.folder) / "human-check-3.json"
+        expect(path.is_file()).to(be_true)
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        expect(payload.get("result")).to(equal("needs_fixing"))
+        expect(payload.get("feedback")).to(equal("fix docs"))
+
+    with it("should tell the parent to resolve human_check_needed"):
+        text = IdeCli()._parent_checkin.lower()
+        expect("human_check_needed" in text).to(be_true)
+        expect("human_notified" in text or "notification" in text).to(be_true)
+        expect("resolve_human_check" in text).to(be_true)
+        expect("looks_good" in text or "looks good" in text).to(be_true)
+
+    with it("should notify the human before waiting for resolution"):
+        tmp, work = _orch_work("human-notify")
+        agent = CliAgent(workspace=str(tmp), session=work.name)
+        JobQueue().save(
+            work,
+            [
+                {
+                    "prompt": "needs eyes",
+                    "tools": [],
+                    "judge": False,
+                    "human": True,
+                    "index": 0,
+                }
+            ],
+        )
+        notify_calls = []
+        wait_order = []
+
+        def notify_human(_w, item, title, body):
+            notify_calls.append(
+                {"prompt": item.get("prompt"), "title": title, "body": body}
+            )
+            wait_order.append("notify")
+            return "test"
+
+        def wait_human(_w, _i):
+            wait_order.append("wait")
+            return {"result": "looks_good"}
+
+        out = agent.run_backlog(
+            launch_job=lambda _a, _i: None,
+            wait_doer=lambda _w, _i: None,
+            spawn_judge=lambda _w, _i: None,
+            notify_human=notify_human,
+            wait_human=wait_human,
+        )
+        expect(out).to(contain("done"))
+        expect(len(notify_calls)).to(equal(1))
+        expect(notify_calls[0]["prompt"]).to(equal("needs eyes"))
+        expect("human check" in notify_calls[0]["title"].lower()).to(be_true)
+        expect("needs eyes" in notify_calls[0]["body"]).to(be_true)
+        expect(wait_order).to(equal(["notify", "wait"]))
+        kinds = [r.get("kind") for r in _CliAgentLog().read_records(work)]
+        expect("human_notified" in kinds).to(be_true)
+        notified = next(
+            r for r in _CliAgentLog().read_records(work) if r.get("kind") == "human_notified"
+        )
+        expect(notified.get("job_index")).to(equal(0))
+        expect(notified.get("channel")).to(equal("test"))
+        expect("needs eyes" in str(notified.get("body") or "")).to(be_true)
+
+    with it("should call the OS/IDE notifier by default when human check is needed"):
+        tmp, work = _orch_work("human-os-notify")
+        agent = CliAgent(workspace=str(tmp), session=work.name)
+        JobQueue().save(
+            work,
+            [{"prompt": "ping human", "human": True, "judge": False, "index": 2}],
+        )
+        os_calls = []
+
+        def fake_os(title, body, *, error=False):
+            os_calls.append({"title": title, "body": body, "error": error})
+
+        with patch(
+            "utilities.manifest_hook.manifest_gate_conf.show_os_notification",
+            fake_os,
+        ):
+            out = agent.run_backlog(
+                launch_job=lambda _a, _i: None,
+                wait_doer=lambda _w, _i: None,
+                spawn_judge=lambda _w, _i: None,
+                wait_human=lambda _w, _i: {"result": "looks_good"},
+            )
+        expect(out).to(contain("done"))
+        expect(len(os_calls)).to(equal(1))
+        expect("2" in os_calls[0]["title"]).to(be_true)
+        expect("ping human" in os_calls[0]["body"]).to(be_true)
+        kinds = [r.get("kind") for r in _CliAgentLog().read_records(work)]
+        expect("human_notified" in kinds).to(be_true)
+        notified = next(
+            r for r in _CliAgentLog().read_records(work) if r.get("kind") == "human_notified"
+        )
+        expect(notified.get("channel")).to(equal("os"))
+
+
 with description("CliAgent session model"):
     with context("when .context/sessions/{session}/model is set"):
         with it("should load that model onto ide when IdeCli.model is empty"):
