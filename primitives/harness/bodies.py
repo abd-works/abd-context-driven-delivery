@@ -19,8 +19,9 @@ def _context_tool_name(toolset: str) -> str:
 
 
 _CATALOG_LINE = (
-    "Pipe the fence to stdin. Do not write a request file. "
-    "Do not remanifest — this skill is the catalog.\n"
+    "Pipe the fence to stdin from the repo root. Do not write a request file. "
+    "Do not remanifest — this skill is the catalog. "
+    "Follow response.instructions only.\n"
 )
 
 
@@ -32,7 +33,7 @@ def _invoke_block(
     fidelity: str | None = None,
     constructor_context: dict[str, str] | None = None,
 ) -> str:
-    """Filled invoke fence plus one ``run -`` (1b, 1c, 4c, 5a)."""
+    """Filled invoke fence plus one ``tools.ps1 run -`` (manifest-alone path, #45)."""
     lines = ["```yaml", f"toolset: {toolset}"]
     ctx: dict[str, str] = dict(constructor_context or {})
     if fidelity:
@@ -46,7 +47,7 @@ def _invoke_block(
     elif action:
         lines.append(f"action: {action}")
     lines.append("```")
-    lines.append("python -m tools run -")
+    lines.append(".\\tools.ps1 run -")
     return "\n".join(lines) + "\n"
 
 
@@ -86,11 +87,11 @@ def resolve_text(
     if kind == "guidance":
         if actions:
             action_ask = (
-                "AskQuestion constrained to the actions in context_tools/actions: "
+                "AskQuestion constrained to these actions: "
                 + " | ".join(actions)
             )
         else:
-            action_ask = "AskQuestion constrained to the actions in context_tools/actions"
+            action_ask = "AskQuestion constrained to the available actions for this context tool"
         taken = (
             "If you took an action from the context versus being given an explicit one, "
             f"confirm the use of the context. {action_ask}.\n"

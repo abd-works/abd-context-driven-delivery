@@ -65,7 +65,17 @@ class _ChatAgentBlock:
         self._write_artifact(f"{prefix}-response.txt", stdout)
         return AgentResult(exit_code=0, text=stdout, stderr="", elapsed_seconds=0.0)
 
-    def instruct_use_tool(self, prompt: str, *, timeout_seconds: int = 300) -> RunResponse:
+    def instruct_use_tool(
+        self,
+        prompt: str,
+        *,
+        timeout_seconds: int = 300,
+        require_agent_shell: bool = False,
+    ) -> RunResponse:
+        if require_agent_shell:
+            raise AgentHarnessError(
+                "require_agent_shell is only supported on the CLI harness"
+            )
         full_prompt = prompt.rstrip() + RUN_PROMPT_SUFFIX
         prefix = self._next_instruct_prefix("run")
         _log_harness("agent_chat_bdd", f"{prefix} prompt: {full_prompt[:120]}{'...' if len(full_prompt) > 120 else ''}")

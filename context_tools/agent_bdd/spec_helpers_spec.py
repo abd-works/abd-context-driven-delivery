@@ -45,11 +45,20 @@ with description("spec_helpers"):
             ).to(raise_error(ValueError))
 
     with context("tools_run_prompt"):
-        with it("should wrap YAML for stdin tools run"):
+        with it("should use PowerShell heredoc pipe into tools.ps1 (#45)"):
             prompt = tools_run_prompt("toolset: X\naction: generate\n")
-            expect("python -m tools run -" in prompt).to(equal(True))
+            expect("$yaml = @\"" in prompt).to(equal(True))
+            expect("$yaml | .\\tools.ps1 run -" in prompt).to(equal(True))
             expect("action: generate" in prompt).to(equal(True))
-            expect("fenced YAML" in prompt).to(equal(True))
+            expect("python -m tools manifest" in prompt).to(equal(False))
+
+        with it("should round-trip yaml via yaml_from_prompt"):
+            from agent_bdd.agent_bdd_common import yaml_from_prompt
+
+            yaml = dump_run_yaml(toolset="tools.examples.car:Car", tool="start")
+            prompt = tools_run_prompt(yaml)
+            body = yaml_from_prompt(prompt)
+            expect(body.strip()).to(equal(yaml.strip()))
 
     with context("path helpers"):
         with it("should resolve sessions beside the spec file"):

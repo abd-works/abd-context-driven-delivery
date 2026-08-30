@@ -57,12 +57,16 @@ def dump_run_yaml(
 
 
 def tools_run_prompt(run_yaml: str) -> str:
-    """Standard instruct_use_tool prompt that pipes YAML to ``python -m tools run -``."""
+    """Standard instruct_use_tool prompt: PowerShell heredoc pipe into ``.\\tools.ps1 run -``."""
     body = run_yaml.rstrip()
     return (
-        "Using shell, run exactly: python -m tools run -\n"
-        "Pipe this YAML on stdin:\n"
+        "Using shell from the repo root, run this PowerShell block as ONE command "
+        "(copy every line below exactly; do not remanifest; do not write a request file):\n\n"
+        "$env:PYTHONIOENCODING=\"utf-8\"\n"
+        "$yaml = @\"\n"
         f"{body}\n"
+        "\"@\n"
+        "$yaml | .\\tools.ps1 run -\n\n"
         "Return the complete fenced YAML stdout from the CLI."
     )
 
@@ -75,6 +79,7 @@ def run_toolset(
     context: Mapping[str, Any] | None = None,
     arguments: Mapping[str, Any] | None = None,
     timeout_seconds: int = 180,
+    require_agent_shell: bool = False,
 ) -> RunResponse:
     """Build YAML, drive ``instruct_use_tool``, return the parsed ``RunResponse``."""
     run_yaml = dump_run_yaml(
@@ -86,7 +91,23 @@ def run_toolset(
     )
     from agent_bdd import instruct_use_tool
 
-    return instruct_use_tool(tools_run_prompt(run_yaml), timeout_seconds=timeout_seconds)
+    return instruct_use_tool(
+        tools_run_prompt(run_yaml),
+        timeout_seconds=timeout_seconds,
+        require_agent_shell=require_agent_shell,
+    )
+
+
+def expect_agent_invoked_shell(block: Any, *, agent_text: str = "") -> None:
+    """Assert the agent ran shell tools.ps1/tools run — not harness replay or deferral."""
+    from agent_bdd.agent_bdd_common import reject_agent_deferral
+
+    reject_agent_deferral(agent_text)
+    captures = tools_run_captures(block)
+    expect(len(captures) >= 1).to(be_true)
+    combined = combined_capture_text(captures).lower()
+    expect("tools.ps1 run" in combined or "tools run" in combined).to(be_true)
+    expect("tools manifest" not in combined).to(be_true)
 
 
 def read_workspace(path: str, *, timeout_seconds: int = 120) -> Any:
@@ -221,6 +242,7 @@ def tools_run_captures(block: Any) -> list[Any]:
         capture
         for capture in captures
         if "tools run" in capture.command.lower()
+        or "tools.ps1 run" in capture.command.lower()
         or looks_like_tools_run_output(capture.output)
     ]
 

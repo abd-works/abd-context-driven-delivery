@@ -81,7 +81,7 @@ with description("an agent spec file"):
                 "toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\n"
                 "action: repair\n"
                 "Return the complete fenced YAML stdout from the CLI.\n"
-                "\nIMPORTANT: Invoke python -m tools run via shell."
+                "\nIMPORTANT: From the repo root, invoke .\\tools.ps1 run - via shell."
             )
             body = yaml_from_prompt(prompt)
             expect(body).to(equal("toolset: context_tools.create_context_tool.examples.car_chronicle.car_chronicle:CarChronicle\naction: repair"))

@@ -3,7 +3,7 @@
 Workflow for a @toolset class file:
 1. Read the mandatory @toolset-manifest comment at the top of the file (identity only — do not remanifest).
 2. Read the Agent reading this file line — slash/skill is the catalog; instructions load via CLI, not Python source.
-3. Pipe a yaml fence to stdin; python -m tools run - with tool: or action:. Do not write a request file.
+3. Pipe a yaml fence to stdin; .\\tools.ps1 run - with tool: or action:. Do not write a request file.
 4. Follow response.instructions before authoring behavior.
 
 Parse headers with tools.toolset_header.read_toolset_header(path).
@@ -599,7 +599,7 @@ class Toolset:
 
     @_classproperty
     def run_command(cls) -> str:
-        return "python -m tools run <request.yaml|->"
+        return ".\\tools.ps1 run -"
 
     @_classproperty
     def manifest(cls) -> Toolset:
