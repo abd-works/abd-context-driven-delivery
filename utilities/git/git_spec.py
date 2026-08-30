@@ -28,6 +28,7 @@ from git.git import (
     TicketState,
     issue_theme_label,
     resolve_github_status_option,
+    resolve_github_theme_option,
 )
 
 
@@ -140,11 +141,14 @@ with description("a Repo ticket lifecycle"):
         missing = Ticket(number=999, title="", body="", _repo=self.repo)
         expect(lambda: missing.close()).to(raise_error(TicketNotFoundError))
 
-    with it("should put a theme label on the ticket"):
+    with it("should put a theme label and project Theme on the ticket"):
         expect(issue_theme_label("CLI agent")).to(equal("theme:cli-agent"))
         expect(issue_theme_label("theme:cli-agent")).to(equal("theme:cli-agent"))
         self.ticket.add_theme("CLI agent")
         expect(self.ticket.labels).to(equal(["theme:cli-agent"]))
+        expect(self.repo._ticket_project_theme[self.ticket.number]).to(
+            equal("cli-agent")
+        )
 
     with it("should apply an issue type name on the ticket"):
         self.ticket.set_type("Defect")
@@ -206,6 +210,44 @@ with description("GitHub project status names"):
         ticket.set_status("Backlog")
         expect(repo._ticket_project_state[ticket.number]).to(equal("Backlog"))
         expect(ticket.state.name).to(equal("Backlog"))
+
+
+with description("GitHub project theme names"):
+    with it("should match Theme options case-insensitively"):
+        expect(
+            resolve_github_theme_option(
+                "CLI agent", ["cli-agent", "workspace"]
+            )
+        ).to(equal("cli-agent"))
+
+    with it("should send cli-agent to gh while memory still records the slug"):
+        repo = Repo.memory("/tmp/demo-clone")
+        repo.attach_project("demo-org", 3)
+        ticket = repo.create_ticket("Demo", "body")
+        calls: list[tuple[str, ...]] = []
+
+        def fake_gh(*args: str, stdin: str | None = None) -> str:
+            calls.append(args)
+            if len(args) >= 2 and args[1] == "field-list":
+                return (
+                    '{"fields":[{"name":"Theme","options":'
+                    '[{"name":"cli-agent"},{"name":"workspace"}]}]}'
+                )
+            if len(args) >= 2 and args[1] == "item-add":
+                return '{"id":"PVTI_1"}'
+            return ""
+
+        repo._gh = fake_gh  # type: ignore[method-assign]
+        repo._memory = False
+        ticket.add_theme("CLI agent")
+        theme_values = []
+        for call in calls:
+            if "--field" in call and call[call.index("--field") + 1] == "Theme":
+                theme_values.append(call[call.index("--value") + 1])
+        expect(theme_values).to(equal(["cli-agent"]))
+        repo._memory = True
+        ticket.add_theme("CLI agent")
+        expect(repo._ticket_project_theme[ticket.number]).to(equal("cli-agent"))
 
 
 with description("a Repo worktree"):

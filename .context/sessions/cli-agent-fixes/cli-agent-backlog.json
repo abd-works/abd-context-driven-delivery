@@ -2,23 +2,18 @@
   "template": "defect-fix",
   "items": [
     {
-      "ref": 41,
+      "ref": 42,
       "kind": "ticket",
       "status": "done"
     },
     {
-      "ref": 46,
-      "kind": "ticket",
-      "status": "in_progress"
-    },
-    {
-      "ref": 43,
+      "ref": 48,
       "kind": "ticket",
       "status": "pending"
     },
     {
-      "ref": "CliAgent /loop job-finished notifications not firing; poll ~30s for doer then judge completion and report.",
-      "kind": "text",
+      "ref": 47,
+      "kind": "ticket",
       "status": "pending"
     },
     {
@@ -27,13 +22,8 @@
       "status": "pending"
     },
     {
-      "ref": "launch_sessions NOT TAKEN UP pickup flake when spawn already succeeded.",
-      "kind": "text",
-      "status": "pending"
-    },
-    {
-      "ref": "Duplicate doer spawned when NOT TAKEN UP fires: launch_next has no guard to detect an already-running doer for the same session before opening a second window. Fix: check for a live doer process matching the session resume ID before spawning, and surface a clear status rather than a second window.",
-      "kind": "text",
+      "ref": 49,
+      "kind": "ticket",
       "status": "pending"
     },
     {
