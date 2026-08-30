@@ -295,3 +295,15 @@ C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --res
 
 --- spawn 2026-08-28 21:28:07 ---
 C:\Users\jeffa\AppData\Local\cursor-agent\versions\2026.08.25-3e8eec8\cursor-agent.CMD --force --trust --resume 18058e41-c495-4be9-ba1e-4f5effbd25d6 --workspace C:\dev\abd-cdd-plan-and-swarm-utilities-23 Read utilities/plan/.context/.agent_bdd_sessions/logs/small-work-themed-hil/judge-prompt.txt and follow it exactly. Reply with only one JSON line as specified in that file.
+
+--- spawn 2026-08-30 00:46:09 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 1da8b6d4-dff6-4f2f-b72e-9c23d3b88296 --workspace C:\dev\abd-cdd-cli-agent-fixes Read .context/cli-agent-judge.txt and follow it exactly.
+
+--- spawn 2026-08-30 00:47:40 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 1da8b6d4-dff6-4f2f-b72e-9c23d3b88296 --workspace C:\dev\abd-cdd-cli-agent-fixes Read .context/cli-agent-judge.txt and follow it exactly.
+
+--- spawn 2026-08-30 00:48:01 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 1da8b6d4-dff6-4f2f-b72e-9c23d3b88296 --workspace C:\dev\abd-cdd-cli-agent-fixes Read .context/cli-agent-judge.txt and follow it exactly.
+
+--- spawn 2026-08-30 00:48:25 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume 1da8b6d4-dff6-4f2f-b72e-9c23d3b88296 --workspace C:\dev\abd-cdd-cli-agent-fixes Read .context/cli-agent-judge.txt and follow it exactly.
