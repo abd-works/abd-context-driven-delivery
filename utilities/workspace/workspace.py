@@ -1022,7 +1022,8 @@ class WorkSession:
         if occupier.path.resolve() == Path(self.git.root).resolve():
             return
         other = GitRepo(occupier.path)
-        if other.is_dirty() or other.has_stash():
+        other.clear_stash()
+        if other.is_dirty():
             return
         try:
             other.merge_from(
@@ -1037,7 +1038,11 @@ class WorkSession:
         if getattr(git, "_memory", False):
             return
         self._try_push()
-        if git.is_dirty() or git.has_stash() or git.has_unpushed_commits():
+        # Shared/session stash must not keep worktrees around — drop it and remove.
+        git.clear_stash()
+        # Untracked .context session temps must not block removal — agent BDD and
+        # finish_work_session leave disposable CliAgent files that are gitignored.
+        if git.is_dirty(untracked=False) or git.has_unpushed_commits():
             return
         if git.is_linked_worktree():
             try:
@@ -1421,10 +1426,10 @@ class WorkSession:
         anything you cannot attribute to disposable temps. Never ask the user whether
         to delete the worktree.
 
-        Then: commits change-related paths (scope + session artifacts), pushes, merges onto main, and removes the
-        sibling worktree when the tree is clean and pushed. If untracked or dirty files
-        remain after you removed known temps, leave the worktree and report what blocked
-        removal.
+        Then: commits change-related paths (scope + session artifacts), pushes, merges onto main,
+        clears any stash (stash must never keep a worktree), and removes the sibling worktree when
+        the tree is clean and pushed. If untracked or dirty files remain after you removed known
+        temps, leave the worktree and report what blocked removal.
         """
         if tools:
             for item in tools:

@@ -347,3 +347,14 @@ with description("Repo dirty detection"):
         expect(repo.is_dirty()).to(equal(False))
         (tmp / "real.txt").write_text("keep", encoding="utf-8")
         expect(repo.is_dirty()).to(equal(True))
+
+
+with description("Repo stash"):
+    with it("should clear every stash entry"):
+        from git.git import Repo
+
+        repo = Repo.memory("/tmp/stash-clear")
+        repo._stash = True
+        expect(repo.has_stash()).to(equal(True))
+        repo.clear_stash()
+        expect(repo.has_stash()).to(equal(False))

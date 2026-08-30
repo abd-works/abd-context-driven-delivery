@@ -1060,6 +1060,15 @@ class Repo:
             return self._stash
         return bool(self._git("stash", "list"))
 
+    def clear_stash(self) -> None:
+        """Drop every stash entry. Session close must not leave worktrees for stash."""
+        if self._memory:
+            self._stash = False
+            return
+        if not self.has_stash():
+            return
+        self._git("stash", "clear")
+
     def is_linked_worktree(self) -> bool:
         return (self.root / ".git").is_file()
 
