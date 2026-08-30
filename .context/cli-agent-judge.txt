@@ -17,8 +17,12 @@ The ticket is confirmed as a small change and start-ticket has already been run.
 Add your full analysis to the ticket notes under ## Analysis (separated from existing content).
 
 
-## Criteria
-PASS only when: (1) context was read in full; (2) repo history and similar past changes were explored; (3) the write-up is about the intended change, not a defect hunt; (4) analysis was added to the ticket notes under ## Analysis.
+PRIOR FAIL: ## Analysis must be on the GitHub ticket #53 itself (issue body or comment), not only session.md.
+Rebind to this worktree. Read context + cli_agent judge path history. Write a full ## Analysis for human-check (pause, notify parent, looks-good vs needs-fixing, redo with feedback) onto ticket #53 via Workflow ticket notes / gh.
+Judge: never write PASS/FAIL except final line alone **PASS** or **FAIL**.
 
+
+## Criteria
+PASS only when GitHub issue #53 has ## Analysis covering human-check design; context/history explored; final line exactly **PASS** or **FAIL**. session.md alone is not enough.
 
 Reply PASS or FAIL and finish this Turn.

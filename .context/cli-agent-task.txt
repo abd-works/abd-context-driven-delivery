@@ -21,4 +21,7 @@ Add your full analysis to the ticket notes under ## Analysis (separated from exi
 PRIOR FAIL: ## Analysis must be on the GitHub ticket #53 itself (issue body or comment), not only session.md.
 Rebind to this worktree. Read context + cli_agent judge path history. Write a full ## Analysis for human-check (pause, notify parent, looks-good vs needs-fixing, redo with feedback) onto ticket #53 via Workflow ticket notes / gh.
 Judge: never write PASS/FAIL except final line alone **PASS** or **FAIL**.
+
+
+UNBLOCK: ## Analysis is ALREADY on GitHub issue #53 body. Confirm it, do not rewrite from scratch unless thin. Judge must score that ticket body. Final line only **PASS** or **FAIL**.
 The CLI opens the hanging workspace.Turn when it runs the action. Finish that Turn after the action so it commits. CliAgent does not open the Turn.
