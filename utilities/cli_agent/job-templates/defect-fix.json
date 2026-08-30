@@ -26,20 +26,29 @@
       "judge_criteria": "PASS only when: (1) a concrete root cause hypothesis is stated; (2) the /diagnose tool was used if the cause was not obvious; (3) the category (prompt/AI change vs code change vs both) is explicitly stated; (4) the hypothesis and category are in the ticket notes under ## Diagnosis.\n"
     },
     {
-      "prompt": "Write failing tests before writing any fix. Read the ## Diagnosis in the ticket to determine which tests are required:\n\n- PROMPT/AI CHANGE: write an agentic BDD test using /agent-bdd.development. This is the primary test type for prompt or instruction defects. A mechanical BDD test is rarely needed here \u2014 but not never; include one if the prompt change also has a verifiable mechanical side-effect.\n- CODE CHANGE: write a mechanical (vanilla) BDD test using /bdd.development. Also write an agentic BDD test if the code defect was causing AI/agent misbehaviour.\n- BOTH: write both. Mechanical BDD first.\n\nThe failing test is a hard requirement \u2014 write it first, run it, confirm it fails. You may alter existing tests or add new ones, but an explicit red test capturing the defect must exist before any fix is written.\n",
+      "prompt": "Write failing tests before writing any fix. Read the ## Diagnosis in the ticket to determine which tests are required:\n\n- PROMPT/AI CHANGE: write an agentic BDD test using /agent-bdd.development. This is the primary test type for prompt or instruction defects. A mechanical BDD test is rarely needed here \u2014 but not never; include one if the prompt change also has a verifiable mechanical side-effect.\n- CODE CHANGE: write a mechanical (vanilla) BDD test using /bdd.development. Also write an agentic BDD test if the code defect was causing AI/agent misbehaviour.\n- BOTH: write both. Mechanical BDD first.\n\nThe listed items are context tools, not actions. Doer action is generate. Judge action is validate against what the doer generated.\n\nThe failing test is a hard requirement \u2014 write it first, run it, confirm it fails. You may alter existing tests or add new ones, but an explicit red test capturing the defect must exist before any fix is written.\n",
+      "tools": [
+        "context_tools.bdd.bdd:Bdd",
+        "context_tools.agent_bdd.agent_bdd:AgentBdd"
+      ],
       "actions": [
-        "context_tools.bdd.bdd:Bdd"
+        "generate"
       ],
       "judge": true,
-      "judge_criteria": "PASS only when: (1) at least one failing test exists that captures the defect; (2) for code changes: a mechanical BDD test is present; (3) for prompt/AI changes: an agentic BDD test is present; (4) mechanical BDD runs first when both are present; (5) tests were validated against the tools as normal. Pre-existing, unrelated test failures are out of scope \u2014 do not fail the job because of failures that existed before this defect was introduced.\n"
+      "judge_criteria": "The judge has the same listed tools. Doer used generate; judge uses validate against what was generated. PASS only when: (1) at least one failing test exists that captures the defect; (2) for code changes: a mechanical BDD test is present; (3) for prompt/AI changes: an agentic BDD test is present; (4) mechanical BDD runs first when both are present; (5) the judge ran validate against those generated tests with those tools. Pre-existing, unrelated test failures are out of scope \u2014 do not fail the job because of failures that existed before this defect was introduced.\n"
     },
     {
-      "prompt": "Fix the defect using /clean_engineering.code in small iterations. Work one small piece at a time ? fix just enough to make one or a few tests pass, then move to the next piece. Repeat until all BDD and agentic BDD tests are green. Run vanilla BDD first when you have both.\nBefore writing any code: - Explore all impacted codebases and the code they depend on. - Read module-context.md for every module you touch. - Study the existing idioms, patterns, and usage in detail. Do not invent new patterns or paradigms ? follow what is already there. A defect fix should not require new patterns.\nWhen this item's defect-fix jobs are complete: call finish-ticket before next_backlog_item. CliAgent backlog items use theme:cli-agent; triage the entire backlog up front before jobs.\n",
+      "prompt": "Fix the defect using CleanEngineering generate at code fidelity (/clean_engineering.code) in small iterations. The listed items are context tools, not actions. Doer action is generate. Judge action is validate against what the doer generated. Work one small piece at a time ? fix just enough to make one or a few tests pass, then move to the next piece. Repeat until all BDD and agentic BDD tests are green. Run vanilla BDD first when you have both.\nBefore writing any code: - Explore all impacted codebases and the code they depend on. - Read module-context.md for every module you touch. - Study the existing idioms, patterns, and usage in detail. Do not invent new patterns or paradigms ? follow what is already there. A defect fix should not require new patterns.\nWhen this item's defect-fix jobs are complete: call finish-ticket before next_backlog_item. CliAgent backlog items use theme:cli-agent; triage the entire backlog up front before jobs.\n",
+      "tools": [
+        "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+        "context_tools.bdd.bdd:Bdd",
+        "context_tools.agent_bdd.agent_bdd:AgentBdd"
+      ],
       "actions": [
-        "context_tools.clean_engineering.clean_engineering:CleanEngineering"
+        "generate"
       ],
       "judge": true,
-      "judge_criteria": "PASS only when: (1) all tests written for this defect pass; (2) all agentic BDD tests written for this defect pass; (3) the fix follows existing patterns, paradigms, and usage \u2014 no new patterns invented without strong justification; (4) validated against the tools as normal. Pre-existing, unrelated test failures are out of scope \u2014 judge only the tests introduced or changed for this defect, not the full suite baseline.\n"
+      "judge_criteria": "The judge has the same listed tools. Doer used generate; judge uses validate against what was generated. PASS only when: (1) all tests written for this defect pass; (2) all agentic BDD tests written for this defect pass; (3) the fix follows existing patterns, paradigms, and usage — no new patterns invented without strong justification; (4) the judge ran validate against the generated code and tests with those tools. Pre-existing, unrelated test failures are out of scope — judge only the tests introduced or changed for this defect, not the full suite baseline.\n"
     }
   ]
 }
