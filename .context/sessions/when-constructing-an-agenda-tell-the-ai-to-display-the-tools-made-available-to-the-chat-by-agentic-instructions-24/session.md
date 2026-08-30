@@ -4,6 +4,12 @@
 
 - **date:** 2026-08-30
 - **path:** C:\dev\abd-cdd-24
-- **goal:** When constructing an agenda, tell the AI to display the tools made available to the chat by agentic instructions
+- **goal:** (unset)
 - **fidelities:** (unset)
 - **contexts:** (unset)
+
+## End
+
+- **ended:** 2026-08-30
+- **outcome:** Agenda expand instructs the AI to display tools made available (name + purpose) before the suggested flow. Mechanical and agentic BDD green for the display scenario.
+- **handoff:** handoff.md
