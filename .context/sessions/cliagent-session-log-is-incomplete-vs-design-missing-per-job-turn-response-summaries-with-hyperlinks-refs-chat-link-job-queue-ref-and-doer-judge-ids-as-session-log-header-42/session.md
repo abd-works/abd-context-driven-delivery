@@ -114,3 +114,38 @@ Extend `_CliAgentLog` (and emit sites) rather than invent a third file: header w
 - Branch: `session/cliagent-session-log-is-incomplete-vs-design-missing-per-job-turn-response-summaries-with-hyperlinks-refs-chat-link-job-queue-ref-and-doer-judge-ids-as-session-log-header-42`
 - Worktree: `C:\dev\abd-cdd-42`
 - Package: `utilities/cli_agent` (`_CliAgentLog`, launch report, `cli-agent.json` persistence)
+
+## Diagnosis
+
+### Hypothesis (concrete)
+
+The defect is **not** a tip-commit regression or a mis-behaving agent prompt. It is **missing production instrumentation** in `_CliAgentLog` and its emit sites, left out when the lifecycle log shipped:
+
+1. **No response-summary / content-ref writer** — `job_finished(work, index, prompt)` only records `{kind, index, prompt, ts}`. There is no API argument and no call path that gathers a turn/job summary or refs to content read/written/changed from Turn, SessionLog, or the doer transcript.
+
+2. **No first-class chat or job-queue fields in jsonl** — transcript paths are re-emitted on `session_start` and printed in `_session_report`; the job-queue path is printed only in the launch report. Neither is written as a durable structured field that replaces those ephemeral surfaces.
+
+3. **No session-log header that owns doer/judge IDs** — identity lives in parallel `cli-agent.json` via `WorkSession.save_cli_sessions`. `session_start` repeats IDs on every spawn instead of a one-time header that makes the sidecar unnecessary.
+
+Module-context documents the thin event set (`session_start`, `spawn`, `jobs_defined`, `job_started`, `job_finished`, `verdict`) and matches the code — docs describe today’s incomplete contract; they are not an independent prompt bug that causes agents to omit fields the code never writes.
+
+### Why not elsewhere
+
+- `_session_report` already *knows* the missing paths (session log, job queue, transcripts) but only as stdout — proves the gap is “not persisted into jsonl,” not “unknown to the kit.”
+- Workspace Turn/SessionLog already hold richer trails; CliAgent never projects them into `_CliAgentLog`.
+- Adjacent issues (#40 attach transcripts on close, #44 discoverability) are different seams.
+
+### Confidence
+
+**High.** Cause is unambiguous from code + module-context + live log shape; `/diagnose` not required.
+
+### Category
+
+**CODE CHANGE**
+
+| Layer | Finding | Fix kind |
+|-------|---------|----------|
+| **CODE CHANGE** | `_CliAgentLog` / emit sites lack header, summary+refs, and durable `chat` / `job_queue` fields; `job_finished` has no summary seam | Production edits in `utilities/cli_agent/cli_agent.py` (+ possibly WorkSession identity fold-in) |
+| Prompt / module-context | May be updated *after* the code contract exists so BDD/docs match; not the root cause of missing fields | Follow-on doc sync, not the primary fix |
+
+Agents cannot invent structured log fields the writer never emits. Tests implied next: **mechanical BDD** on log shape (header, enriched `job_finished` / summary kind, chat + job-queue fields). Agentic BDD only if launch-report / prompt text is also part of the required contract drift.
