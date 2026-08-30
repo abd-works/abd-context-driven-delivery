@@ -38,6 +38,7 @@ with description("Sketch toolset"):
             expect(entry["kind"]).to(equal("action"))
             expect("find_template" in entry["tools"]).to(be_true)
             expect("save_sketch" in entry["tools"]).to(be_true)
+            expect("complete_tick" in entry["tools"]).to(be_true)
             expect(entry.get("chain")).to(equal(None))
 
     with context("sketch_template property"):
@@ -196,9 +197,22 @@ with description("Sketch toolset"):
             expect("find_template" in self.body.tool_steps).to(be_true)
             expect("save_sketch" in self.body.tool_steps).to(be_true)
 
+        with it("wires complete_tick after save_sketch so each sketch tick finishes a Turn"):
+            steps = list(self.body.tool_steps)
+            expect("complete_tick" in steps).to(be_true)
+            expect("save_sketch" in steps).to(be_true)
+            save_i = steps.index("save_sketch")
+            expect("complete_tick" in steps[save_i:]).to(be_true)
+
         with it("expands prose that instructs the sketcher to persist drafts via save_sketch"):
             joined = "\n".join(self.body.prose_parts)
             expect(joined).to(contain("save_sketch"))
+
+        with it("instructs complete_tick after every save_sketch so each tick is a Turn"):
+            joined = "\n".join(self.body.prose_parts)
+            expect(joined).to(contain("complete_tick"))
+            expect(joined).to(contain("One save_sketch = one Turn"))
+            expect(joined).to(contain("Persisting without complete_tick is a defect"))
 
         with it("includes the grill_with_context body in sketch"):
             joined = "\n".join(self.body.prose_parts)
@@ -214,6 +228,33 @@ with description("a sketch action"):
             joined = "\n".join(body.prose_parts)
             expect(joined).to(contain("Grill the sketch plan"))
             expect(joined).to(contain("save_sketch"))
+
+    with context("that completes a turn after every sketch tick"):
+        with it("should expose complete_tick as a tool"):
+            expect("complete_tick" in Sketch().tools).to(be_true)
+
+        with it("should finish the open turn and open the next with the same action"):
+            import tempfile
+
+            from workspace.git_repo import NullGitRepo
+            from workspace.workspace import ContextToolHost, Workspace
+
+            tmp = Path(tempfile.mkdtemp(prefix="sketch-tick-"))
+            git = NullGitRepo()
+            workspace = Workspace(str(tmp))
+            host = ContextToolHost(workspace, git=git)
+            session = host.run_action("sketch-tick", goal="turn per tick", action="sketch")
+            git.set_dirty(True)
+            sketcher = Sketch(path=str(tmp), session="sketch-tick")
+            sketcher.workspace = workspace
+            before = session.open_turn.id
+            result = sketcher.complete_tick(result="saved sketch draft")
+            expect(result).to(equal("tick-complete"))
+            expect(session.open_turn).not_to(equal(None))
+            expect(session.open_turn.id).not_to(equal(before))
+            expect(session.open_turn.action).to(equal("sketch"))
+            expect(len(session.turns)).to(equal(1))
+            expect(git.commits[0][1]).to(contain("sketch"))
 
 
 with description("BaseContextTool host face for sketch"):

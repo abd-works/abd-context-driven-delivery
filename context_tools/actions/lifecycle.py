@@ -61,6 +61,21 @@ class LifecycleAction:
         self._decisions().record_decisions_session()
         return ""
 
+    @agent_tool
+    def complete_tick(self, result: str = "") -> str:
+        """Finish the current workspace Turn after one grill/sketch tick (commits when dirty), then open the next hanging turn with the same action.
+        Call immediately after every save_sketch and every write_grill_answer — each tick is one durable Turn. Do not batch ticks into one turn."""
+        session = self._session()
+        action = ""
+        if session is not None and session.open_turn is not None:
+            action = session.open_turn.action or ""
+        self._turn().finish_turn(result=result)
+        if session is not None:
+            nxt = session.turn
+            if action:
+                nxt.action = action
+        return "tick-complete"
+
     @agent_instructions
     def end(self) -> str:
         """Finish the turn that hangs off the work session."""

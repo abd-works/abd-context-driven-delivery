@@ -46,8 +46,12 @@ with description("GrillContext toolset"):
         with it("should include the grill_with_context body in grill"):
             entry = GrillContext.manifest.signature["grill"]
             expect(entry["kind"]).to(equal("action"))
-            expect("explore_context_files" in entry["tools"]).to(be_true)
-            expect("read_context_file" in entry["tools"]).to(be_true)
+            expect("grill_with_context" in entry["tools"]).to(be_true)
+            gwc = GrillContext.manifest.signature["grill_with_context"]
+            expect("explore_context_files" in gwc["tools"]).to(be_true)
+            expect("read_context_file" in gwc["tools"]).to(be_true)
+            expect("write_grill_answer" in gwc["tools"]).to(be_true)
+            expect("complete_tick" in gwc["tools"]).to(be_true)
 
     with context("explore_context_files tool"):
         with before.each:
@@ -199,6 +203,20 @@ with description("GrillContext toolset"):
             expect("explore_context_files" in self.body.tool_steps).to(be_true)
             expect("read_context_file" in self.body.tool_steps).to(be_true)
 
+        with it("should wire write_grill_answer and complete_tick so each grill tick finishes a Turn"):
+            expect("write_grill_answer" in self.body.tool_steps).to(be_true)
+            expect("complete_tick" in self.body.tool_steps).to(be_true)
+            expect(
+                self.body.tool_steps.index("write_grill_answer")
+                < self.body.tool_steps.index("complete_tick")
+            ).to(be_true)
+
+        with it("should instruct complete_tick after every write_grill_answer"):
+            joined = "\n".join(self.body.prose_parts)
+            expect(joined).to(contain("complete_tick"))
+            expect(joined).to(contain("One write_grill_answer = one Turn"))
+            expect(joined).to(contain("Persisting without complete_tick is a defect"))
+
 
 with description("a grill action"):
     with context("that expands"):
@@ -206,6 +224,34 @@ with description("a grill action"):
             body = _ActionExpander.instance().parse_body(GrillContext.grill, GrillContext())
             joined = "\n".join(body.prose_parts)
             expect(joined).to(contain("AskQuestion"))
+
+    with context("that completes a turn after every grill tick"):
+        with it("should expose complete_tick as a tool"):
+            expect("complete_tick" in GrillContext().tools).to(be_true)
+
+        with it("should finish the open turn and open the next with the same action"):
+            import tempfile
+            from pathlib import Path
+
+            from workspace.git_repo import NullGitRepo
+            from workspace.workspace import ContextToolHost, Workspace
+
+            tmp = Path(tempfile.mkdtemp(prefix="grill-tick-"))
+            git = NullGitRepo()
+            workspace = Workspace(str(tmp))
+            host = ContextToolHost(workspace, git=git)
+            session = host.run_action("grill-tick", goal="turn per tick", action="grill")
+            git.set_dirty(True)
+            grill = GrillContext(path=str(tmp), session="grill-tick")
+            grill.workspace = workspace
+            before = session.open_turn.id
+            result = grill.complete_tick(result="persisted grill answer")
+            expect(result).to(equal("tick-complete"))
+            expect(session.open_turn).not_to(equal(None))
+            expect(session.open_turn.id).not_to(equal(before))
+            expect(session.open_turn.action).to(equal("grill"))
+            expect(len(session.turns)).to(equal(1))
+            expect(git.commits[0][1]).to(contain("grill"))
 
 
 with description("BaseContextTool host face for grill"):

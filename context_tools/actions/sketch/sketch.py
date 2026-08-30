@@ -96,18 +96,19 @@ class Sketch(LifecycleAction):
     @agent_instructions
     def sketch(self, tools: list) -> str:
         """Sketch then generate - grill + sketch cadence, then the host generate body."""
-        """Sketch interactively - rough artifact through an explicit grill_with_context call. MUST persist via save_sketch on the first interim draft and overwrite on every refinement. Never leave the sketch only in chat. destination defaults to session.path (durable {path}/.context/) — not session.folder. Module sketches: {session.path}/{module}. Question shape (frame + options) comes from grill_with_context - do not restate bare options here."""
+        """Sketch interactively - rough artifact through an explicit grill_with_context call. MUST persist via save_sketch on the first interim draft and overwrite on every refinement. Never leave the sketch only in chat. destination defaults to session.path (durable {path}/.context/) — not session.folder. Module sketches: {session.path}/{module}. Question shape (frame + options) comes from grill_with_context - do not restate bare options here. Each save_sketch tick MUST open and finish a workspace Turn (complete_tick) so the session trail and git history match conversation cadence."""
         """Step 0 - Grill the sketch plan (concept-grounded questions via grill_with_context)."""
         """Step 1 - Resolve destination: session.path (or session.docs_dir). Module -> {session.path}/{module}. If no session sprint exists yet, confirm path with the user, suggest a kebab slug, open, then use session.path. Do not invent {path}/.context/{session-name}/ or write the sketch into sessions/{name}/."""
         """Step 2 - locate the sketch template via find_template(agent_dir=agent_dir). agent_dir is the concrete host toolset module directory (manifest chain agent_dir / module_dir of the invoked Context). If the caller supplied a template directly in context, use that instead."""
-        """Step 3 - draft a rough sketch inspired by the template. Show it in chat, then IMMEDIATELY call save_sketch(destination, slug, content) before continuing the grill. A sketch that exists only in chat is a defect - the file under the destination docs dir is the working record."""
-        """Step 4 - After every 2-3 grill answers, regenerate the sketch showing exactly what changed, show it in chat, and IMMEDIATELY call save_sketch again (same path). Use placeholders for unresolved branches. Do not write formal generate artifacts during the sketch loop - that is iterate/generate territory."""
-        """Step 5 - Repeat until the sketch is stable, the user is satisfied, or the user switches to iterate/generate. Every new grill question still follows grill's Step 3a-3b; this stage only owns sketch persist/show cadence."""
+        """Step 3 - draft a rough sketch inspired by the template. Show it in chat, then IMMEDIATELY call save_sketch(destination, slug, content), then IMMEDIATELY call complete_tick so that draft is one finished Turn (commit on the session branch). A sketch that exists only in chat is a defect - the file under the destination docs dir is the working record. Persisting without complete_tick is a defect."""
+        """Step 4 - After every 2-3 grill answers, regenerate the sketch showing exactly what changed, show it in chat, IMMEDIATELY call save_sketch again (same path), then IMMEDIATELY call complete_tick again. One save_sketch = one Turn. Use placeholders for unresolved branches. Do not write formal generate artifacts during the sketch loop - that is iterate/generate territory."""
+        """Step 5 - Repeat until the sketch is stable, the user is satisfied, or the user switches to iterate/generate. Every new grill question still follows grill's Step 3a-3b; this stage owns sketch persist/show cadence and Turn-per-tick."""
         self.begin(tools, action="sketch")
+        self._grill_context().grill_with_context()
+        self.find_template()
+        self.save_sketch()
+        self.complete_tick()
         for host in self.context_tools(tools):
-            self._grill_context().grill_with_context()
-            self.find_template()
-            self.save_sketch()
             self._generate().generate(tools=[host])
         self.end()
         return "Sketch complete; generate instructions applied."

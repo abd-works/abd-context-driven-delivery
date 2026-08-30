@@ -86,8 +86,8 @@ class GrillContext(LifecycleAction):
     def grill(self, tools: list) -> str:
         """Grill then generate - pure grill loop, then the host generate body."""
         self.begin(tools, action="grill")
+        self.grill_with_context()
         for host in self.context_tools(tools):
-            self.grill_with_context()
             self._generate().generate(tools=[host])
         self.end()
         return "Grill complete; generate instructions applied."
@@ -99,7 +99,7 @@ class GrillContext(LifecycleAction):
 
     @agent_instructions
     def grill_with_context(self, plan: str) -> str:
-        """Conduct a relentless grilling interview about {plan} - ask each question with concept-grounded framing and option rationales (never bare choices), using the AskQuestion Cursor tool when available. Stage-specific show/persist/validate cadence belongs to the wrapping stage (sketch, iterate, ...), not here."""
+        """Conduct a relentless grilling interview about {plan} - ask each question with concept-grounded framing and option rationales (never bare choices), using the AskQuestion Cursor tool when available. Stage-specific show/persist/validate cadence belongs to the wrapping stage (sketch, iterate, ...), not here. Each write_grill_answer tick MUST open and finish a workspace Turn (complete_tick) so the session trail and git history match conversation cadence."""
         """Step 0 - Resolve roots: explore under session.path; write grill-answers under session.docs_dir ({path}/.context/grill-answers.md). If no sprint exists yet, confirm path with the user, suggest a kebab slug from goal/context, open, then continue. Do not invent a divergent root."""
         """Step 1 - Context discovery: call explore_context_files(root=session.path) and any folders referenced in the plan."""
         self.explore_context_files()
@@ -110,5 +110,7 @@ class GrillContext(LifecycleAction):
         """Step 3a - Frame the decision first (2-5 sentences): name the branch of the design tree, name the source file(s) just read, and ground the choice in concepts from those files and the active practice material for this session (whatever domain or generator is in play - do not assume a particular practice). Do not invent trade-offs untethered from that evidence. Prove-read grill-answers.md, but do not paste or restate prior grill-answer bodies into the AskQuestion text — cite grill-answers.md by path or heading only if the user needs a pointer. Do not accumulate the interview into the next question."""
         """Step 3b - Present 3-5 options. Put the recommended answer first (label it "(Recommended)"). For each option, give one short rationale tied to those concepts - what choosing it implies for the design under discussion. Always include an "Other / I'll specify" option last. Wait for the answer before proceeding."""
         """Step 4 - If a question can be answered by exploring the codebase, explore first instead of asking."""
-        """Step 5 - After each resolved insight, call write_grill_answer(root=session.path, ...) immediately. Do not batch. Keep entries concise; reference code paths rather than repeating logic."""
+        """Step 5 - After each resolved insight, call write_grill_answer(root=session.path, ...) immediately, then IMMEDIATELY call complete_tick so that insight is one finished Turn (commit on the session branch). Do not batch. One write_grill_answer = one Turn. Persisting without complete_tick is a defect. Keep entries concise; reference code paths rather than repeating logic."""
+        self.write_grill_answer()
+        self.complete_tick()
         return "Grilling session for: {plan}"
