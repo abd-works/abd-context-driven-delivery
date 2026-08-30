@@ -554,6 +554,17 @@ with description("a WorkSession that is closed in a git worktree"):
         expect(leftover.is_file()).to(be_true)
         _purge_clone(tmp)
 
+    with it("should remove an empty orphan checkout folder after close"):
+        from workspace.workspace import WorkSession, Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_orphan_dir_"))
+        orphan = tmp.parent / "abd-cdd-orphan-empty"
+        orphan.mkdir()
+        session = WorkSession(Workspace(str(tmp)), "orphan-empty", path=str(orphan))
+        session.ensure_started()
+        session.close(outcome="done", handoff="")
+        expect(orphan.exists()).to(be_false)
+
 
 with description("a WorkSession tool"):
     with before.each:

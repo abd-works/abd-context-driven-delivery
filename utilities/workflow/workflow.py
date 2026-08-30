@@ -4,9 +4,6 @@
 """Workflow — backlog, start, finish linking GitHub Issues, handoff, and WorkSession."""
 from __future__ import annotations
 
-import json
-import subprocess
-import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -120,11 +117,10 @@ class Workflow:
     ) -> dict[str, str]:
         """Capture an idea on the backlog — GitHub issue + Project Backlog.
 
-        Runs as a non-blocking sub-agent so the current work is not interrupted.
-        Commits the current turn first to capture state, collects the chat
-        transcript path and git turn context (branch, commit, recent log), then
-        launches a background sub-agent to analyze when and where the issue
-        occurred and create the GitHub issue with that enriched handoff.
+        Commits the current turn to capture state, then returns a ready-to-launch
+        sub-agent task. After this tool returns, launch a non-blocking sub-agent
+        (via /sub-agent with workflow.workflow:Workflow) using the returned
+        ``sub_agent_task`` as the prompt. Do not call capture_backlog inline.
 
         Infer `category` and `theme` unless the user sets them. Types:
 
@@ -135,36 +131,28 @@ class Workflow:
         """
         destination = str(self._repo_root(workspace))
 
-        git_ctx = self._collect_git_context(workspace)
-        head_sha = self._commit_if_dirty(workspace, focus)
-        git_ctx["head_sha"] = head_sha
-
+        self._commit_if_dirty(workspace, focus)
         transcript_path = self._find_transcript_path(workspace)
 
         handoff = self._handoff()
         handoff_md = handoff._render_handoff_markdown(
             handoff._collect_state(destination), next_focus=focus
         )
-        base_body = self._backlog_issue_body(handoff_md, focus=focus, context=context)
-        turn_md = self._format_turn_context(git_ctx, transcript_path)
-        full_body = base_body.rstrip() + "\n\n" + turn_md + "\n"
+        body = self._backlog_issue_body(handoff_md, focus=focus, context=context)
 
-        meta_path = self._write_backlog_staging(
-            workspace=workspace,
-            focus=focus,
-            body=full_body,
-            metadata={
-                "focus": focus,
-                "workspace": destination,
-                "theme": theme,
-                "category": category,
-                "infer_from": f"{focus}\n{context}",
-                "transcript_path": transcript_path,
-                "git": git_ctx,
-            },
-        )
-
-        return self._launch_backlog_agent(workspace, str(meta_path), focus)
+        return {
+            "committed": "yes",
+            "tools": "workflow.workflow:Workflow",
+            "sub_agent_task": self._backlog_task_prompt(
+                focus=focus,
+                body=body,
+                workspace=destination,
+                theme=theme,
+                category=category,
+                infer_from=f"{focus}\n{context}",
+                transcript_path=transcript_path,
+            ),
+        }
 
     def _backlog_issue_body(self, handoff_md: str, focus: str, context: str) -> str:
         parts = [(handoff_md or "").strip()]
@@ -176,29 +164,6 @@ class Workflow:
         if request:
             parts.extend(["", "## Request", "", *request])
         return "\n".join(part for part in parts if part is not None).strip() + "\n"
-
-    def _collect_git_context(self, workspace: str = "") -> dict[str, str]:
-        """Collect branch, commit SHA, and recent log for turn attribution."""
-        ctx: dict[str, str] = {"branch": "", "head_sha": "", "log": ""}
-        try:
-            repo = self._repo(workspace)
-            ctx["branch"] = repo.current_branch
-            ctx["head_sha"] = repo.current_commit
-        except Exception:
-            pass
-        try:
-            root = self._repo_root(workspace)
-            result = subprocess.run(
-                ["git", "log", "-10", "--oneline", "--decorate", "--all"],
-                cwd=str(root),
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            ctx["log"] = result.stdout.strip()
-        except Exception:
-            pass
-        return ctx
 
     def _find_transcript_path(self, workspace: str = "") -> str:
         """Locate the most recent Cursor agent transcript for this workspace."""
@@ -242,80 +207,41 @@ class Workflow:
             except Exception:
                 return ""
 
-    def _format_turn_context(self, git_ctx: dict[str, str], transcript_path: str) -> str:
-        """Render a markdown Turn Context section from collected git and transcript metadata."""
-        lines: list[str] = ["## Turn Context", ""]
-        if git_ctx.get("branch"):
-            lines.append(f"- **Branch:** `{git_ctx['branch']}`")
-        if git_ctx.get("head_sha"):
-            sha = git_ctx["head_sha"]
-            lines.append(f"- **Commit:** `{sha[:12] if len(sha) >= 12 else sha}`")
-        if transcript_path:
-            lines.append(f"- **Transcript:** `{transcript_path}`")
-        if git_ctx.get("log"):
-            lines.extend(["", "### Recent Commits", "", "```", git_ctx["log"], "```"])
-        return "\n".join(lines)
-
-    def _write_backlog_staging(
+    def _backlog_task_prompt(
         self,
-        workspace: str,
         focus: str,
         body: str,
-        metadata: dict,
-    ) -> Path:
-        """Write the enriched backlog body and metadata to .context/ staging files."""
-        root = self._repo_root(workspace)
-        staging_dir = root / ".context"
-        staging_dir.mkdir(parents=True, exist_ok=True)
-        ts = int(time.time())
-        slug = self._kebab(focus)[:40]
-
-        body_path = staging_dir / f"backlog-{slug}-{ts}.md"
-        body_path.write_text(body, encoding="utf-8")
-
-        meta: dict = {**metadata, "body_path": str(body_path)}
-        meta_path = staging_dir / f"backlog-{slug}-{ts}.json"
-        meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
-
-        return meta_path
-
-    def _backlog_agent_task(self, meta_path: str, focus: str) -> str:
-        """Build the task prompt for the backlog sub-agent."""
-        return (
-            f"Backlog task — {focus!r}\n\n"
-            f"Metadata file: {meta_path}\n\n"
-            "Steps:\n"
-            "1. Read the metadata JSON at the path above. It contains: focus, workspace,\n"
-            "   theme, category, infer_from, body_path, transcript_path, and git context.\n"
-            "2. Read body_path — this is the pre-built handoff body including Turn Context.\n"
-            "3. If transcript_path is non-empty and the file exists, read it and scan for\n"
-            "   the turn where this issue was first identified. Determine whether the\n"
-            "   change occurred in the current turn (commit listed in the Turn Context)\n"
-            "   or an earlier one, and note the branch and commit SHA. Update the Turn\n"
-            "   Context section in the body with those specifics before calling capture_backlog.\n"
-            "4. Call capture_backlog with:\n"
-            "   - focus: from metadata\n"
-            "   - body: the updated body content (or body_path if unchanged)\n"
-            "   - workspace: from metadata\n"
-            "   - theme: from metadata\n"
-            "   - category: from metadata\n"
-            "   - infer_from: from metadata\n"
-        )
-
-    def _launch_backlog_agent(
-        self,
         workspace: str,
-        meta_path: str,
-        focus: str,
-    ) -> dict[str, str]:
-        """Spawn a non-blocking CliAgent sub-agent to analyze context and create the issue."""
-        from cli_agent.cli_agent import CliAgent
-
-        ws_root = str(self._repo_root(workspace))
-        agent = CliAgent(workspace=ws_root)
-        agent.task_prompt = self._backlog_agent_task(meta_path, focus)
-        report = agent.launch_sessions(tools=["workflow.workflow:Workflow"])
-        return {"launched": "yes", "staging": meta_path, "report": str(report)}
+        theme: str,
+        category: str,
+        infer_from: str,
+        transcript_path: str,
+    ) -> str:
+        """Build the task prompt for the backlog sub-agent."""
+        lines = [f"Backlog task — {focus!r}", ""]
+        if transcript_path:
+            lines += [
+                f"Transcript: {transcript_path}",
+                "",
+                "Read the transcript and identify which chat turn first noticed this issue.",
+                "Determine whether the change that caused it is in the current commit",
+                "(shown in the Turn Context below) or an earlier one, and note the branch",
+                "and commit SHA. Update the Turn Context section in the body accordingly.",
+                "",
+            ]
+        lines += [
+            "Then call capture_backlog with:",
+            f"  focus: {focus!r}",
+            f"  body: (the body below, updated with transcript findings)",
+            f"  workspace: {workspace!r}",
+            f"  theme: {theme!r}",
+            f"  category: {category!r}",
+            f"  infer_from: {infer_from!r}",
+            "",
+            "--- body ---",
+            body.rstrip(),
+        ]
+        return "\n".join(lines)
 
     @agent_tool
     def capture_backlog(

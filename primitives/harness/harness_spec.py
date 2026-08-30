@@ -356,6 +356,16 @@ with description("a harness"):
                     equal("OLD CONTENT")
                 )
 
+            with it("should never deploy outside the IDE folder when given a repo root path"):
+                root = _sandbox()
+                Harness("Cursor", repo_root=root).write_deploy(
+                    source="stories", deploy_path=str(root)
+                )
+                expect((root / ".cursor" / "commands" / "stories.story_map.md").is_file()).to(
+                    equal(True)
+                )
+                expect((root / "commands" / "stories.story_map.md").is_file()).to(equal(False))
+
         with context("with type VS Code"):
             with it("should write under .github"):
                 root = _sandbox()

@@ -1,4 +1,4 @@
-# Session: workflow-package
+# Session: defect-fix-job-1-creates-work-session-as-default-before-start-ticket-wrong-branch-worktree-41
 
 ## Start
 

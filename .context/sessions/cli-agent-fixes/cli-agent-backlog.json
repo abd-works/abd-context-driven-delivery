@@ -1,0 +1,35 @@
+{
+  "template": "defect-fix",
+  "items": [
+    {
+      "ref": 42,
+      "kind": "ticket",
+      "status": "done"
+    },
+    {
+      "ref": 48,
+      "kind": "ticket",
+      "status": "pending"
+    },
+    {
+      "ref": 47,
+      "kind": "ticket",
+      "status": "pending"
+    },
+    {
+      "ref": 44,
+      "kind": "ticket",
+      "status": "pending"
+    },
+    {
+      "ref": 49,
+      "kind": "ticket",
+      "status": "pending"
+    },
+    {
+      "ref": 23,
+      "kind": "ticket",
+      "status": "pending"
+    }
+  ]
+}

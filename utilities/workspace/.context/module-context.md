@@ -67,3 +67,7 @@ expand|run trails explicitly (not via `@log`).
 
 stdlib (+ optional yaml); `tools.tool`;
 consumed by `context_tools.base.base_context_tool`
+
+
+Work session isolation: opening a named session binds `session/<name>` with its own sibling worktree before jobs run. After `/start-ticket`, rebind the workspace root to that worktree. This holds for CliAgent, SubAgent, and no-agent flows.
+

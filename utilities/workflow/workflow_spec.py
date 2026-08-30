@@ -3,11 +3,9 @@
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """BDD spec for context_tools/actions/workflow/workflow.py."""
 
-import json
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
@@ -138,74 +136,45 @@ with description("a Workflow"):
                 ).to(raise_error(RuntimeError, "no open work session"))
 
 
-def _noop_launch(workflow, workspace, meta_path, focus):
-    return {"launched": "yes", "staging": meta_path, "report": ""}
-
-
 with description("a Workflow backlog path"):
     with context("with a memory Repo"):
         with before.each:
             self.tmp, self.repo = _workflow_fixture("wf-backlog-")
             self.workflow = Workflow(workspace=str(self.tmp), repo=self.repo)
 
-        with it("should launch a sub-agent and return launched status"):
-            with patch.object(Workflow, "_launch_backlog_agent", _noop_launch):
-                result = self.workflow.backlog(
-                    focus="Workflow package",
-                    context="theme by package",
-                    workspace=str(self.tmp),
-                )
-            expect(result["launched"]).to(equal("yes"))
-            expect("staging" in result).to(be_true)
+        with it("should return a committed status and sub_agent_task"):
+            result = self.workflow.backlog(
+                focus="Workflow package",
+                context="theme by package",
+                workspace=str(self.tmp),
+            )
+            expect(result["committed"]).to(equal("yes"))
+            expect("sub_agent_task" in result).to(be_true)
 
-        with it("should write a staging metadata file with focus and workspace"):
-            with patch.object(Workflow, "_launch_backlog_agent", _noop_launch):
-                self.workflow.backlog(
-                    focus="Workflow package",
-                    context="need Todo mapping",
-                    workspace=str(self.tmp),
-                )
-            staging_files = list((self.tmp / ".context").glob("backlog-*.json"))
-            expect(len(staging_files)).to(equal(1))
-            meta = json.loads(staging_files[0].read_text(encoding="utf-8"))
-            expect(meta["focus"]).to(equal("Workflow package"))
-            expect("workspace" in meta).to(be_true)
+        with it("should embed the handoff body in the sub_agent_task"):
+            result = self.workflow.backlog(
+                focus="Workflow package",
+                context="need Todo mapping",
+                workspace=str(self.tmp),
+            )
+            expect(result["sub_agent_task"]).to(contain("**Focus:** Workflow package"))
 
-        with it("should write the handoff body and Turn Context into the staging body file"):
-            with patch.object(Workflow, "_launch_backlog_agent", _noop_launch):
-                self.workflow.backlog(
-                    focus="Workflow package",
-                    context="need Todo mapping",
-                    workspace=str(self.tmp),
-                )
-            body_files = list((self.tmp / ".context").glob("backlog-*.md"))
-            expect(len(body_files)).to(equal(1))
-            body = body_files[0].read_text(encoding="utf-8")
-            expect(body).to(contain("**Focus:** Workflow package"))
-            expect(body).to(contain("## Turn Context"))
+        with it("should embed the theme in the sub_agent_task when given"):
+            result = self.workflow.backlog(
+                focus="Queue for CLI agent",
+                context="same agent or another",
+                workspace=str(self.tmp),
+                theme="cli-agent",
+            )
+            expect(result["sub_agent_task"]).to(contain("cli-agent"))
 
-        with it("should include theme in staging metadata when given"):
-            with patch.object(Workflow, "_launch_backlog_agent", _noop_launch):
-                self.workflow.backlog(
-                    focus="Queue for CLI agent",
-                    context="same agent or another",
-                    workspace=str(self.tmp),
-                    theme="cli-agent",
-                )
-            staging_files = list((self.tmp / ".context").glob("backlog-*.json"))
-            meta = json.loads(staging_files[0].read_text(encoding="utf-8"))
-            expect(meta["theme"]).to(equal("cli-agent"))
-
-        with it("should include category in staging metadata when given"):
-            with patch.object(Workflow, "_launch_backlog_agent", _noop_launch):
-                self.workflow.backlog(
-                    focus="Sketch grill skips a turn",
-                    workspace=str(self.tmp),
-                    category="defect",
-                )
-            staging_files = list((self.tmp / ".context").glob("backlog-*.json"))
-            meta = json.loads(staging_files[0].read_text(encoding="utf-8"))
-            expect(meta["category"]).to(equal("defect"))
+        with it("should embed the category in the sub_agent_task when given"):
+            result = self.workflow.backlog(
+                focus="Sketch grill skips a turn",
+                workspace=str(self.tmp),
+                category="defect",
+            )
+            expect(result["sub_agent_task"]).to(contain("defect"))
 
         with it("should create a github issue with the handoff body via capture_backlog"):
             created = self.workflow.capture_backlog(
@@ -264,55 +233,34 @@ with description("a Workflow backlog path"):
 
 
 with description("a Workflow backlog helper"):
-    with context("_format_turn_context"):
-        with it("should render a Turn Context section with branch and commit"):
+    with context("_backlog_task_prompt"):
+        with it("should include focus, capture_backlog instruction, and body inline"):
             w = Workflow()
-            result = w._format_turn_context(
-                {"branch": "main", "head_sha": "abc123def456", "log": "abc123 finish"},
+            prompt = w._backlog_task_prompt(
+                focus="Fix the scanner bug",
+                body="## Turn Context\n\nbranch: main\n",
+                workspace="/repo",
+                theme="",
+                category="",
+                infer_from="Fix the scanner bug",
                 transcript_path="",
             )
-            expect(result).to(contain("## Turn Context"))
-            expect(result).to(contain("main"))
-            expect(result).to(contain("abc123def456"))
+            expect(prompt).to(contain("Fix the scanner bug"))
+            expect(prompt).to(contain("capture_backlog"))
+            expect(prompt).to(contain("## Turn Context"))
 
-        with it("should include transcript path when given"):
+        with it("should include transcript path and analysis instruction when given"):
             w = Workflow()
-            result = w._format_turn_context(
-                {"branch": "main", "head_sha": "abc", "log": ""},
-                transcript_path="/path/to/t.jsonl",
+            prompt = w._backlog_task_prompt(
+                focus="Fix the scanner bug",
+                body="body",
+                workspace="/repo",
+                theme="",
+                category="",
+                infer_from="",
+                transcript_path="/path/to/chat.jsonl",
             )
-            expect(result).to(contain("/path/to/t.jsonl"))
-
-        with it("should omit empty fields"):
-            w = Workflow()
-            result = w._format_turn_context({"branch": "", "head_sha": "", "log": ""}, "")
-            expect(result).to(contain("## Turn Context"))
-            expect("Branch:" in result).to(equal(False))
-
-    with context("_backlog_agent_task"):
-        with it("should build a task prompt that names the metadata file and focus"):
-            w = Workflow()
-            task = w._backlog_agent_task("/path/meta.json", "Fix the scanner bug")
-            expect(task).to(contain("/path/meta.json"))
-            expect(task).to(contain("Fix the scanner bug"))
-            expect(task).to(contain("capture_backlog"))
-
-    with context("_write_backlog_staging"):
-        with it("should write body and metadata files under .context/"):
-            tmp = Path(tempfile.mkdtemp(prefix="wf-stage-"))
-            w = Workflow()
-            meta_path = w._write_backlog_staging(
-                workspace=str(tmp),
-                focus="Fix the scanner",
-                body="## Body\n\nDetails.\n",
-                metadata={"focus": "Fix the scanner", "workspace": str(tmp)},
-            )
-            expect(meta_path.is_file()).to(be_true)
-            meta = json.loads(meta_path.read_text(encoding="utf-8"))
-            expect(meta["focus"]).to(equal("Fix the scanner"))
-            body_path = Path(meta["body_path"])
-            expect(body_path.is_file()).to(be_true)
-            expect(body_path.read_text(encoding="utf-8")).to(contain("## Body"))
+            expect(prompt).to(contain("/path/to/chat.jsonl"))
 
 
 with description("a WorkTicket"):
