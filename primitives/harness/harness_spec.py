@@ -1280,3 +1280,26 @@ with description("harness bodies for manifest-alone invoke (#45)"):
             expect(text).to(contain("tools.ps1 run -"))
             expect(text).to(contain("Follow response.instructions"))
             expect(text).not_to(contain("<request.yaml|->"))
+
+
+with description("_frontmatter model"):
+    with it("should include model when set and never disable-model-invocation"):
+        from harness.harness_tool import _frontmatter
+        from harness.skill import Skill
+
+        text = _frontmatter("generate", "Generate artifacts", model="composer-2.5-fast")
+        expect(text).to(contain("model: composer-2.5-fast"))
+        expect(text).not_to(contain("disable-model-invocation"))
+        skill = Skill("Cursor", "generate")
+        skill.description = "Generate artifacts"
+        skill.model = "composer-2.5-fast"
+        skill.body = "body"
+        rendered = skill.render()
+        expect(rendered).to(contain("model: composer-2.5-fast"))
+        expect(rendered).not_to(contain("disable-model-invocation"))
+
+    with it("should omit model from frontmatter when unset"):
+        from harness.harness_tool import _frontmatter
+
+        text = _frontmatter("validate", "Validate")
+        expect("model:" in text).to(equal(False))

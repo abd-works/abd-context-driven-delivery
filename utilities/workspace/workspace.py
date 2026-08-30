@@ -19,7 +19,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from primitives.actions.action import agentic_toolset
+from primitives.actions.action import agent_instructions, agentic_toolset
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from record_decisions.record_decisions import RecordDecisions
@@ -91,6 +91,108 @@ class SessionPaths:
 
 docs_dir = SessionPaths.docs_dir
 session_dir = SessionPaths.session_dir
+
+
+class SessionModel:
+    """Persist the preferred Cursor/IDE model under ``.context/sessions/{name}/model``.
+
+    When no work session is active, use the root-repo ``sessions/default`` folder.
+    """
+
+    DEFAULT_SESSION = "default"
+    FILENAME = "model"
+    _FALLBACK_MODELS = (
+        "composer-2.5-fast",
+        "cursor-grok-4.5-high-fast",
+        "cursor-grok-4.6-medium",
+        "kimi-k3-max",
+        "inherit",
+    )
+
+    @classmethod
+    def session_slug(cls, name: str = "") -> str:
+        slug = (name or "").strip()
+        if slug.startswith("session/"):
+            slug = slug[len("session/") :]
+        return slug or cls.DEFAULT_SESSION
+
+    @classmethod
+    def file_path(cls, workspace: str | Path, session: str = "") -> Path:
+        return SessionPaths.session_dir(workspace, cls.session_slug(session)) / cls.FILENAME
+
+    @classmethod
+    def read(cls, workspace: str | Path, session: str = "") -> str:
+        path = cls.file_path(workspace, session)
+        if not path.is_file():
+            return ""
+        try:
+            return path.read_text(encoding="utf-8").strip()
+        except OSError:
+            return ""
+
+    @classmethod
+    def write(cls, workspace: str | Path, model: str, session: str = "") -> Path:
+        value = (model or "").strip()
+        if not value:
+            raise ValueError("model is required")
+        path = cls.file_path(workspace, session)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(value + "\n", encoding="utf-8")
+        return path
+
+    @classmethod
+    def copy_into(
+        cls,
+        dest_folder: str | Path,
+        source_workspace: str | Path,
+        session: str = "",
+    ) -> Path | None:
+        """Copy model into *dest_folder* when missing — session first, then default."""
+        dest = Path(dest_folder) / cls.FILENAME
+        if dest.is_file():
+            return None
+        slug = cls.session_slug(session)
+        for candidate in (slug, cls.DEFAULT_SESSION):
+            src = cls.file_path(source_workspace, candidate)
+            if not src.is_file():
+                continue
+            try:
+                text = src.read_text(encoding="utf-8").strip()
+            except OSError:
+                continue
+            if not text:
+                continue
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(text + "\n", encoding="utf-8")
+            return dest
+        return None
+
+    @classmethod
+    def list_available(cls) -> list[str]:
+        """Prefer ``cursor-agent --list-models``; fall back to known Cursor model ids."""
+        found: list[str] = []
+        try:
+            proc = subprocess.run(
+                ["cursor-agent", "--list-models"],
+                capture_output=True,
+                text=True,
+                timeout=20,
+                check=False,
+            )
+            blob = (proc.stdout or "") + "\n" + (proc.stderr or "")
+            for line in blob.splitlines():
+                token = line.strip().split()[0] if line.strip() else ""
+                if not token or token.startswith("-") or ":" in token:
+                    continue
+                if token.lower() in {"model", "models", "name", "id"}:
+                    continue
+                if token not in found:
+                    found.append(token)
+        except (OSError, subprocess.SubprocessError, FileNotFoundError):
+            pass
+        if found:
+            return found
+        return list(cls._FALLBACK_MODELS)
 
 
 @dataclass
@@ -701,6 +803,39 @@ class WorkSession:
     def cli_agent_file(self) -> Path:
         return self.folder / "cli-agent.json"
 
+    @property
+    def model_file(self) -> Path:
+        return self.folder / SessionModel.FILENAME
+
+    def session_model(self) -> str:
+        """Preferred IDE/CLI model for this session, or empty when unset."""
+        if self.model_file.is_file():
+            try:
+                return self.model_file.read_text(encoding="utf-8").strip()
+            except OSError:
+                return ""
+        return SessionModel.read(self.path or self.workspace.path, self.name)
+
+    def set_session_model(self, model: str) -> str:
+        """Persist *model* under this session folder and return the value written."""
+        path = SessionModel.write(self.path or self.workspace.path, model, self.name)
+        return path.read_text(encoding="utf-8").strip()
+
+    def _inherit_session_model(self) -> None:
+        """Copy model from primary (session or default) into this session folder when missing."""
+        if self.model_file.is_file():
+            return
+        primary: Path | None = None
+        git = self.git
+        if git is not None and not getattr(git, "_memory", False):
+            try:
+                primary = Path(git.primary_root())
+            except Exception:
+                primary = None
+        if primary is None:
+            primary = Path(self.workspace.path)
+        SessionModel.copy_into(self.folder, primary, self.name)
+
     def load_cli_sessions(self) -> None:
         binding = self.cli_agent_binding
         if binding.doer or binding.judge:
@@ -954,7 +1089,10 @@ class WorkSession:
         primary = git.primary_root()
         dest = primary.parent / self._worktree_dirname(primary.name, self.name)
         tree = git.add_worktree(dest, self.session_branch)
+        primary = Path(primary)
         self._retarget_git(tree)
+        self.folder.mkdir(parents=True, exist_ok=True)
+        SessionModel.copy_into(self.folder, primary, self.name)
         self._try_fetch_pull()
 
     @staticmethod
@@ -1084,6 +1222,7 @@ class WorkSession:
             if not self.started:
                 self.started = date.today().isoformat()
             self.session_md.write_text(self._render(), encoding="utf-8")
+        self._inherit_session_model()
         return self.session_md
 
     def open(
@@ -1648,6 +1787,59 @@ class Workspace:
                 PathOverride(tool=tool, fidelity=fidelity, path=normalized)
             )
         self.save()
+
+    def _model_session_name(self, session: str = "") -> str:
+        slug = (session or "").strip()
+        if slug:
+            return SessionModel.session_slug(slug)
+        current = self.current_work_session
+        if current is not None and current.name:
+            return current.name
+        return SessionModel.DEFAULT_SESSION
+
+    @agent_tool
+    def get_session_model(self, session: str = "", workspace: str = "") -> str:
+        """Return the persisted session model id, or empty when unset."""
+        root = (workspace or "").strip() or self.path
+        return SessionModel.read(root, self._model_session_name(session))
+
+    @agent_tool
+    def set_session_model(
+        self, model: str, session: str = "", workspace: str = ""
+    ) -> str:
+        """Persist {model} under ``.context/sessions/{session}/model`` (default session when none)."""
+        root = (workspace or "").strip() or self.path
+        slug = self._model_session_name(session)
+        path = SessionModel.write(root, model, slug)
+        current = self.current_work_session
+        if current is not None and current.name == slug:
+            current.path = current.path or root
+        return path.read_text(encoding="utf-8").strip()
+
+    @agent_tool
+    def list_session_models(self) -> list[str]:
+        """List available Cursor/IDE model ids for AskQuestion choices."""
+        return SessionModel.list_available()
+
+    @prompt(name="model")
+    @agent_instructions
+    def model(self, model: str = "", session: str = "", workspace: str = "") -> str:
+        """Set the preferred IDE/CLI model for this work session (slash ``/model``).
+
+        Persist under ``.context/sessions/{session}/model``. When no session is open,
+        use the root-repo ``sessions/default`` folder. CliAgent and SubAgent read this
+        value when present. Never set disable-model-invocation.
+        """
+        """Step 1 - Resolve the model id. If {model} is already given, use it. If not, call list_session_models, then AskQuestion constrained to that list (plus Other) so the user picks one."""
+        """Step 2 - Call set_session_model with the chosen model (and session/workspace when known)."""
+        if model.strip():
+            self.set_session_model(model, session=session, workspace=workspace)
+        else:
+            self.list_session_models()
+            self.set_session_model
+        """Step 3 - Change the IDE chat model to the chosen id now (Cursor model picker / current chat model). Confirm the switch in chat. Do not set disable-model-invocation."""
+        """Step 4 - Tell the user the model is stored for this session and will be used by cli-agent and sub-agent launches when present."""
+        return "Session model set."
 
     @agent_tool
     def open(

@@ -25,6 +25,7 @@ expand|run trails explicitly (not via `@log`).
     context-index.md                    # PathOverride persistence
     sessions/{name}/                    # WorkSession.folder — session temps only
       session.md
+      model                             # preferred IDE/CLI model id (/model); default session when none
       handoff-latest.md                 # deleted on the next open (consume_handoff)
       logs/events.log                   # gitignored + .cursorignore; not a dirty signal
 ```
@@ -33,6 +34,7 @@ expand|run trails explicitly (not via `@log`).
 
 - `Workspace` — `@agentic_toolset` (`workspace.workspace:Workspace`); `path`, `work_sessions`, `current_work_session`, `path_overrides`;
   `load` / `save` / `lookup_path` / `upsert_path` / `open_work_session`. CLI context is `workspace` path. `open` starts or resumes a named work session.
+  Slash `/model` (`@prompt(name="model")`) sets the preferred IDE/CLI model: AskQuestion when unset (from `list_session_models`), persist via `set_session_model` under `.context/sessions/{session}/model` (root-repo `sessions/default` when no session), then change the IDE chat model. Never set disable-model-invocation. `SessionModel` is the seam; new worktrees / `ensure_started` copy the model from primary session or default when missing.
 - `WorkSession` — `@agentic_toolset` (`workspace.workspace:WorkSession`); back-ref `workspace`; owns `git`, `open_turn`, `turns`, `repairs`, trail;
   session.md kit (`ensure_started`, `close`, `close_session`, context index helpers);
   `start_work_session` / `finish_work_session` `@agent_tool` with `@prompt` names

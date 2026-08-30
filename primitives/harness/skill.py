@@ -20,7 +20,7 @@ class Skill(HarnessTool):
         return Path("skills") / self.name / "SKILL.md"
 
     def render(self) -> str:
-        return _frontmatter(self.name, self.description) + str(self.body)
+        return _frontmatter(self.name, self.description, self.model) + str(self.body)
 
     def generate(self, source: Any = None, roots: list[Path] | None = None) -> HarnessTool:
         self.apply_source(source)

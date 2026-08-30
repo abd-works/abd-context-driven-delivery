@@ -1948,3 +1948,37 @@ with description("CliAgent run_backlog orchestrator (#44)"):
         expect("_attach_cli_sessions()" in chunk).to(be_true)
         expect("no judge resume" in src).to(be_true)
 
+
+with description("CliAgent session model"):
+    with context("when .context/sessions/{session}/model is set"):
+        with it("should load that model onto ide when IdeCli.model is empty"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_session_model_"))
+            model_path = (
+                tmp / ".context" / "sessions" / "model-sprint" / "model"
+            )
+            model_path.parent.mkdir(parents=True, exist_ok=True)
+            model_path.write_text("composer-2.5-fast\n", encoding="utf-8")
+            agent = CliAgent(workspace=str(tmp), session="model-sprint")
+            expect(agent.ide.model).to(equal("composer-2.5-fast"))
+
+        with it("should pass the session model as --model on cursor argv"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_session_model_argv_"))
+            model_path = tmp / ".context" / "sessions" / "argv-sprint" / "model"
+            model_path.parent.mkdir(parents=True, exist_ok=True)
+            model_path.write_text("kimi-k3-max\n", encoding="utf-8")
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                host = CursorCli()
+                host.bind_workspace(str(tmp), "argv-sprint")
+                argv = host._command("go", str(tmp))
+            expect(argv).to(contain("--model"))
+            expect(argv).to(contain("kimi-k3-max"))
+
+    with context("when IdeCli.model is already set"):
+        with it("should keep the explicit model over the session file"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_explicit_model_"))
+            model_path = tmp / ".context" / "sessions" / "keep" / "model"
+            model_path.parent.mkdir(parents=True, exist_ok=True)
+            model_path.write_text("kimi-k3-max\n", encoding="utf-8")
+            agent = CliAgent(workspace=str(tmp), session="keep")
+            agent._ide = IdeCli(model="composer-2.5-fast")
+            expect(agent.ide.model).to(equal("composer-2.5-fast"))

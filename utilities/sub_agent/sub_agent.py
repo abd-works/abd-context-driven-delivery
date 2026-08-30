@@ -113,6 +113,11 @@ class SubAgent:
         The parent sees kind: sub_agent / launch: non_blocking and does not wait.
         Inside this sub-agent: follow this prompt. Do not inline any of that on the parent.
 
+        Model — before launch, read ``.context/sessions/{session}/model`` for the current
+        work session (or ``sessions/default`` when none). When that file has a model id,
+        pass it as the sub-agent model (Task/tool model parameter). When unset, inherit
+        the parent chat model. Never set disable-model-invocation.
+
         When actions is listed and non-empty: run each listed action with the listed
         context tools. Listed action kits already open the work session and turn.
         Do not wrap those in performTurn. This kit does not open a work session itself

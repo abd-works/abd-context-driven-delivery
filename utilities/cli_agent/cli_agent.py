@@ -1003,6 +1003,8 @@ class _SessionArgv:
     def _cursor_model(self, host: IdeCli) -> str:
         name = host.model
         if not name:
+            name = host.resolve_session_model()
+        if not name:
             return ""
         if "[" in name:
             return name
@@ -1157,6 +1159,28 @@ class IdeCli:
         self._prompt = ""
         self._source_scope = type(self)._default_source_scope
         self._session = ""
+        self._workspace = ""
+
+    def bind_workspace(self, workspace: str = "", session: str = "") -> IdeCli:
+        """Remember workspace/session so an unset model can load from session storage."""
+        if workspace:
+            self._workspace = str(workspace).strip()
+        if session:
+            self._session = str(session).strip()
+        return self
+
+    def resolve_session_model(self) -> str:
+        """Read ``.context/sessions/{session}/model`` when IdeCli.model is empty."""
+        if self._model:
+            return self._model
+        root = (self._workspace or "").strip()
+        if not root:
+            return ""
+        try:
+            from workspace.workspace import SessionModel
+        except ImportError:
+            return ""
+        return SessionModel.read(root, self._session)
 
     @property
     def job(self) -> str:
@@ -1750,7 +1774,20 @@ class CliAgent(SubAgent):
     def ide(self) -> IdeCli:
         if self._ide is None:
             self._ide = IdeCli()._detect()
+        self._ide.bind_workspace(self._workspace_root(), self._resolved_session_name())
+        if not self._ide._model:
+            loaded = self._ide.resolve_session_model()
+            if loaded:
+                self._ide._model = loaded
         return self._ide
+
+    def _resolved_session_name(self) -> str:
+        if self._session:
+            return self._session
+        work = self.work_session
+        if work is not None and getattr(work, "name", ""):
+            return str(work.name)
+        return self._session_name_from_git()
 
     @property
     def task_prompt(self) -> str:

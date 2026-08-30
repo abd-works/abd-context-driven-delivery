@@ -242,3 +242,9 @@ with description("SubAgent.run"):
             expect("finish_turn" in text).to(be_true)
             expect("report branch" in text).to(be_true)
 
+
+    with context("when a session model is configured"):
+        with it("should instruct reading sessions model and passing it on launch"):
+            text = discover_sub_agent_tools(SubAgent())["run"].instructions
+            expect("sessions" in text and "model" in text).to(be_true)
+            expect("disable-model-invocation" in text).to(be_true)
