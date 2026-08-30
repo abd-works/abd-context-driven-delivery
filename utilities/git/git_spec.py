@@ -293,6 +293,41 @@ with description("a Repo worktree"):
             expect(self.repo.pushes).to(equal(["main"]))
 
 
+with description("an annotated tag"):
+    with before.each:
+        self.repo = Repo.memory("/tmp/demo-clone")
+        self.repo.branch_named("session/demo").checkout()
+
+    with context("that has been written on a commit"):
+        with it("should return that message when read by name"):
+            self.repo.write_annotated_tag("chat/session/demo", "C:/chats/one.jsonl")
+            expect(self.repo.read_annotated_tag("chat/session/demo")).to(
+                equal("C:/chats/one.jsonl")
+            )
+
+    with context("that has been written again under the same name"):
+        with it("should keep the later message"):
+            self.repo.write_annotated_tag("chat/session/demo", "first")
+            self.repo.write_annotated_tag("chat/session/demo", "first\nsecond")
+            expect(self.repo.read_annotated_tag("chat/session/demo")).to(
+                equal("first\nsecond")
+            )
+
+    with context("that shares a name prefix with other annotated tags"):
+        with it("should list every message for that prefix"):
+            self.repo.write_annotated_tag("chat/session/a", "a.jsonl")
+            self.repo.write_annotated_tag("chat/session/b", "b.jsonl")
+            self.repo.write_annotated_tag("cli-agent/session/a", "other")
+            expect(self.repo.list_annotated_tags("chat/session/")).to(
+                equal(
+                    {
+                        "chat/session/a": "a.jsonl",
+                        "chat/session/b": "b.jsonl",
+                    }
+                )
+            )
+
+
 with description("Repo dirty detection"):
     with it("should ignore events.log so session close is not blocked by the trail"):
         from git.git import GitRepo, Repo

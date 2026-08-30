@@ -13,7 +13,7 @@ for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_false, be_none, be_true, equal, expect, raise_error
+from expects import be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from primitives.actions.action import _ActionRunRequest, _ActionRunner
@@ -439,7 +439,63 @@ with description("a sibling worktree directory name"):
         ).to(equal("abd-cdd-15"))
 
 
+with description("a work session that is saving a chat message"):
+    with before.each:
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import Workspace
+
+        self.tmp = Path(tempfile.mkdtemp(prefix="session_save_chat_"))
+        self.git = NullGitRepo(self.tmp)
+        self.session = Workspace(str(self.tmp)).open_work_session(
+            "chat-save", git=self.git
+        )
+        self.session.ensure_started()
+        self.chat = r"C:\Users\me\.cursor\projects\x\agent-transcripts\id\id.jsonl"
+
+    with it("should put the message on the current commit as a note"):
+        self.session.save_chat(self.chat)
+        notes = self.git.read_notes(self.git.current_commit, ref="refs/notes/chats")
+        expect(notes.get("chat")).to(equal(self.chat))
+
+    with it("should put the message on the session annotated tag"):
+        self.session.save_chat(self.chat)
+        expect(self.git.read_annotated_tag("chat/session/chat-save")).to(equal(self.chat))
+
+
+with description("a work session that has saved more than one chat message"):
+    with it("should return every chat message for that session"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_chats_"))
+        git = NullGitRepo(tmp)
+        session = Workspace(str(tmp)).open_work_session("chat-list", git=git)
+        session.ensure_started()
+        session.save_chat("one.jsonl")
+        session.save_chat("two.jsonl")
+        expect(session.chats()).to(equal(["one.jsonl", "two.jsonl"]))
+
+
 with description("a WorkSession that is closed"):
+    with it("should save the running chat file on the close commit and the session tag"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_close_chat_"))
+        git = NullGitRepo(tmp)
+        session = Workspace(str(tmp)).open_work_session("close-chat", git=git)
+        session.ensure_started()
+        session.associate_cli("doer", "11111111-1111-1111-1111-111111111111")
+        chat = str(session.cursor_chat_file("11111111-1111-1111-1111-111111111111"))
+        session.close(outcome="done", handoff="")
+        expect(session.chats()).to(equal([chat]))
+        noted = [
+            payload.get("chat")
+            for (ref, _sha), payload in git._notes_by_ref.items()
+            if ref == "refs/notes/chats"
+        ]
+        expect(noted).to(contain(chat))
+
     with it("should write an End section with outcome into session.md"):
         import tempfile
         from workspace.workspace import Workspace, WorkSession

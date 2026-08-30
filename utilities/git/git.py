@@ -705,7 +705,8 @@ class Repo:
         self._fetches: list[str] = []
         self._pulls: list[str] = []
         self._stash = False
-        self._cli_agent_tags: dict[str, str] = {}
+        self._annotated_tags: dict[str, str] = {}
+        self._notes_by_ref: dict[tuple[str, str], dict[str, str]] = {}
 
     @property
     def project(self) -> Project | None:
@@ -728,22 +729,56 @@ class Repo:
         return f"cli-agent/{slug}"
 
     def read_cli_agent_tag(self, branch: str) -> CliAgentBinding:
-        name = self.cli_agent_tag_name(branch)
-        if self._memory:
-            return CliAgentBinding.from_message(self._cli_agent_tags.get(name, ""))
-        try:
-            raw = self._git("tag", "-l", "--format=%(contents)", name)
-        except GitConnectError:
-            return CliAgentBinding()
-        return CliAgentBinding.from_message(raw)
+        return CliAgentBinding.from_message(
+            self.read_annotated_tag(self.cli_agent_tag_name(branch))
+        )
 
     def write_cli_agent_tag(self, branch: str, binding: CliAgentBinding) -> None:
-        name = self.cli_agent_tag_name(branch)
-        message = binding.message()
+        self.write_annotated_tag(
+            self.cli_agent_tag_name(branch),
+            binding.message(),
+            branch,
+        )
+
+    def write_annotated_tag(
+        self, name: str, message: str, target: str = "HEAD"
+    ) -> None:
+        name = (name or "").strip()
+        if not name:
+            raise ValueError("annotated tag requires a name")
         if self._memory:
-            self._cli_agent_tags[name] = message
+            self._annotated_tags[name] = message
             return
-        self._git("tag", "-f", "-a", name, "-m", message, branch)
+        self._git("tag", "-f", "-a", name, "-m", message, target)
+
+    def read_annotated_tag(self, name: str) -> str:
+        name = (name or "").strip()
+        if not name:
+            return ""
+        if self._memory:
+            return self._annotated_tags.get(name, "")
+        try:
+            return self._git("tag", "-l", "--format=%(contents)", name)
+        except GitConnectError:
+            return ""
+
+    def list_annotated_tags(self, prefix: str = "") -> dict[str, str]:
+        prefix = prefix or ""
+        if self._memory:
+            return {
+                name: text
+                for name, text in self._annotated_tags.items()
+                if name.startswith(prefix)
+            }
+        try:
+            listing = self._git("tag", "-l", f"{prefix}*") if prefix else self._git("tag", "-l")
+        except GitConnectError:
+            return {}
+        return {
+            name: self.read_annotated_tag(name)
+            for name in listing.splitlines()
+            if name.strip()
+        }
 
     @property
     def branch(self) -> str:
@@ -1091,6 +1126,7 @@ class Repo:
         note_ref = ref or self.NOTES_REF
         if self._memory:
             self._notes[sha] = dict(payload)
+            self._notes_by_ref[(note_ref, sha)] = dict(payload)
             return
         text = Commit.note_text(payload)
         self._git(
@@ -1106,7 +1142,12 @@ class Repo:
     def read_notes(self, sha: str, *, ref: str | None = None) -> dict[str, str]:
         note_ref = ref or self.NOTES_REF
         if self._memory:
-            return dict(self._notes.get(sha, {}))
+            keyed = self._notes_by_ref.get((note_ref, sha))
+            if keyed is not None:
+                return dict(keyed)
+            if note_ref == self.NOTES_REF:
+                return dict(self._notes.get(sha, {}))
+            return {}
         try:
             raw = self._git("notes", f"--ref={note_ref}", "show", sha)
         except GitConnectError:

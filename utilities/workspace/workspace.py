@@ -645,6 +645,7 @@ class WorkSession:
         self.cli_judge = ""
         self.cli_doer_pid = 0
         self.cli_judge_pid = 0
+        self._transcript_home: Path | None = None
 
     def _default_git(self) -> GitRepo:
         root = Repo.find_root(self.workspace.path)
@@ -1191,7 +1192,69 @@ class WorkSession:
         self._bind_session_log()
         return str(self.session_md.resolve())
 
+    def chat_tag_name(self) -> str:
+        return f"chat/{self.session_branch}"
+
+    def save_chat(self, message: str, *, sha: str = "") -> None:
+        text = (message or "").strip()
+        if not text:
+            return
+        target = (sha or "").strip() or self.git.current_commit
+        self.git.note(target, {"chat": text}, ref="refs/notes/chats")
+        existing = [
+            line
+            for line in self.git.read_annotated_tag(self.chat_tag_name()).splitlines()
+            if line.strip()
+        ]
+        if text not in existing:
+            existing.append(text)
+        self.git.write_annotated_tag(self.chat_tag_name(), "\n".join(existing), target)
+
+    def chats(self) -> list[str]:
+        return [
+            line
+            for line in self.git.read_annotated_tag(self.chat_tag_name()).splitlines()
+            if line.strip()
+        ]
+
+    @staticmethod
+    def cursor_project_slug(workspace: str) -> str:
+        raw = str(Path(workspace).resolve())
+        return (
+            raw.replace(":", "")
+            .replace("\\", "-")
+            .replace("/", "-")
+            .replace("_", "-")
+        )
+
+    def cursor_chat_file(self, chat_id: str, *, workspace: str = "") -> Path:
+        chat_id = (chat_id or "").strip()
+        home = self._transcript_home or Path.home()
+        root = workspace or self.path or self.workspace_root
+        return (
+            Path(home)
+            / ".cursor"
+            / "projects"
+            / self.cursor_project_slug(root)
+            / "agent-transcripts"
+            / chat_id
+            / f"{chat_id}.jsonl"
+        )
+
+    def _running_chat_paths(self) -> list[str]:
+        paths: list[str] = []
+        seen: set[str] = set()
+        for chat_id in (self.cli_doer, self.cli_judge):
+            if not chat_id:
+                continue
+            path = str(self.cursor_chat_file(chat_id))
+            if path not in seen:
+                seen.add(path)
+                paths.append(path)
+        return paths
+
     def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
+        running_chats = self._running_chat_paths()
         self.turn.finish(result=outcome or "session close")
         self.cleanup()
         self.close_cli_sessions()
@@ -1210,6 +1273,8 @@ class WorkSession:
                 self.git.commit(self._session_artifact_paths(), "close")
             except (GitConnectError, ValueError):
                 pass
+        for path in running_chats:
+            self.save_chat(path)
         self._land_on_default_branch()
         self._remove_session_worktree_if_clean()
         return self.session_md
