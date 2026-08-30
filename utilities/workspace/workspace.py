@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import inspect
 import json
+import os
 import re
 import shutil
+import subprocess
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
@@ -743,6 +745,25 @@ class WorkSession:
         self.save_cli_sessions()
 
     def close_cli_sessions(self) -> None:
+        """Clear doer/judge chat bindings and stop their processes if still alive.
+
+        Does not close the work session — only the CLI agent processes/bindings.
+        """
+        for pid in (self.cli_doer_pid, self.cli_judge_pid):
+            pid = int(pid or 0)
+            if pid <= 0:
+                continue
+            try:
+                if os.name == "nt":
+                    subprocess.run(
+                        ["taskkill", "/PID", str(pid), "/T", "/F"],
+                        capture_output=True,
+                        check=False,
+                    )
+                else:
+                    os.kill(pid, 15)
+            except OSError:
+                pass
         self.cli_doer = ""
         self.cli_judge = ""
         self.cli_doer_pid = 0

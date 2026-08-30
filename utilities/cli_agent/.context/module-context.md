@@ -1,4 +1,4 @@
-﻿# cli_agent - module context
+# cli_agent - module context
 
 ## Purpose
 
@@ -31,6 +31,12 @@ CliAgent, CliParticipant, CliDoer, CliJudge, IdeCli, CursorCli, VscodeCli, JobQu
 - `workspace` - WorkSession for doer and judge identity (one-way)
 - `harness.harness_tool` (one-way)
 - `primitives.actions` (one-way)
+
+## Pickup
+
+- A **live doer pid** counts as taken-up. `_await_pickup` must not raise NOT TAKEN UP while the spawned/bound doer process is alive — transcript growth alone flakes on slow IDE pickup.
+- `_Pickup.cursor_transcript` slug: path separators **and underscores** become `-`.
+- Do not open a second doer for the same in-flight head job when reuse is intended; inject via resume.
 
 ## Constraint
 

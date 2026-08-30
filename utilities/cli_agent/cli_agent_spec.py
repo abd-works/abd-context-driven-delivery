@@ -35,6 +35,7 @@ from cli_agent.cli_agent import (
     JobQueue,
     _Pickup,
     _TranscriptWatch,
+    _pid_alive,
 )
 from sub_agent.sub_agent import discover_sub_agent_tools
 from workspace.workspace import Workspace, WorkSession
@@ -988,6 +989,31 @@ with description("a doer that does not take the new job"):
                 agent._await_pickup("no-such-resume", 0)
 
             expect(_fail).to(raise_error(RuntimeError))
+
+        with it("should treat a live doer pid as taken-up even without a transcript mark"):
+            agent = CliAgent(workspace=".")
+            agent._ide = IdeCli(pickup_seconds=0.0)
+            with patch("cli_agent.cli_agent._pid_alive", return_value=True):
+                agent._await_pickup("no-such-resume", 0, pid=4242)
+
+        with it("should still raise NOT TAKEN UP when the bound pid is dead"):
+            agent = CliAgent(workspace=".")
+            agent._ide = IdeCli(pickup_seconds=0.0)
+
+            def _fail():
+                with patch("cli_agent.cli_agent._pid_alive", return_value=False):
+                    agent._await_pickup("no-such-resume", 0, pid=4242)
+
+            expect(_fail).to(raise_error(RuntimeError))
+
+    with context("when resolving the Cursor transcript path"):
+        with it("should hyphenate underscores in the project slug"):
+            path = _Pickup().cursor_transcript(
+                r"C:\Users\jeffa\AppData\Local\Temp\cli44_e2e_abc",
+                "resume-id",
+            )
+            expect("_" in path.parts[-3]).to(be_false)
+            expect("cli44-e2e-abc" in path.as_posix()).to(be_true)
 
     with context("when the transcript gains a user turn"):
         with it("should accept the pickup"):
