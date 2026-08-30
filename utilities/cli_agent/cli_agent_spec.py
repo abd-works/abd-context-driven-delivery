@@ -7,6 +7,7 @@
 import json
 import sys
 import tempfile
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -1596,6 +1597,92 @@ with description("CliAgent session log completeness (#42)"):
             refs = row.get("refs") or row.get("content_refs") or []
             expect(str(summary)).not_to(equal(""))
             expect(len(list(refs)) > 0).to(be_true)
+
+
+with description("CliAgent session log observability"):
+    """Tools/actions on job records, ts_ms, duration_s, since_last_s."""
+
+    with it("should record tools and actions on job_started and job_finished"):
+        from workspace.git_repo import NullGitRepo
+
+        tmp = Path(tempfile.mkdtemp(prefix="cli_log_obs_"))
+        work = Workspace(str(tmp)).open_work_session(
+            "log-obs", git=NullGitRepo(tmp)
+        )
+        work.ensure_started()
+        log = _CliAgentLog()
+        log.job_started(
+            work,
+            index=1,
+            prompt="Write tests",
+            tools=["workflow.workflow:Workflow"],
+            actions=["context_tools.bdd.bdd:Bdd"],
+            judge=True,
+        )
+        log.job_finished(
+            work,
+            index=1,
+            prompt="Write tests",
+            tools=["workflow.workflow:Workflow"],
+            actions=["context_tools.bdd.bdd:Bdd"],
+            judge=True,
+            summary="Added red tests.",
+            refs=["utilities/cli_agent/cli_agent_spec.py"],
+        )
+        records = _cli_agent_log_records(work)
+        started = next(r for r in records if r.get("kind") == "job_started")
+        finished = next(r for r in records if r.get("kind") == "job_finished")
+        expect(started.get("tools")).to(equal(["workflow.workflow:Workflow"]))
+        expect(started.get("actions")).to(equal(["context_tools.bdd.bdd:Bdd"]))
+        expect(started.get("judge")).to(be_true)
+        expect(finished.get("tools")).to(equal(["workflow.workflow:Workflow"]))
+        expect(finished.get("duration_s")).not_to(equal(None))
+        expect(finished.get("ts_ms")).not_to(equal(None))
+
+    with it("should stamp ts_ms and since_last_s on every record"):
+        from workspace.git_repo import NullGitRepo
+
+        tmp = Path(tempfile.mkdtemp(prefix="cli_log_ts_"))
+        work = Workspace(str(tmp)).open_work_session(
+            "log-ts", git=NullGitRepo(tmp)
+        )
+        work.ensure_started()
+        log = _CliAgentLog()
+        log.job_started(work, index=0, prompt="one")
+        time.sleep(0.05)
+        log.job_finished(work, index=0, prompt="one")
+        records = _cli_agent_log_records(work)
+        expect(records[0].get("ts_ms")).not_to(equal(None))
+        expect(records[1].get("since_last_s")).not_to(equal(None))
+        expect(records[1].get("since_last_s") > 0).to(be_true)
+
+    with it("should record structured tools on spawn"):
+        from workspace.git_repo import NullGitRepo
+
+        tmp = Path(tempfile.mkdtemp(prefix="cli_log_spawn_"))
+        work = Workspace(str(tmp)).open_work_session(
+            "log-spawn", git=NullGitRepo(tmp)
+        )
+        work.ensure_started()
+        log = _CliAgentLog()
+        log.spawn(
+            work,
+            role="doer",
+            resume="doer-1",
+            prompt="job",
+            argv="agent --resume doer-1",
+            tools=["workflow.workflow:Workflow"],
+            actions=["context_tools.bdd.bdd:Bdd"],
+            tool_calls=["workflow.workflow:Workflow name=run"],
+            job_index=2,
+        )
+        row = _cli_agent_log_records(work)[0]
+        expect(row.get("tools")).to(equal(["workflow.workflow:Workflow"]))
+        expect(row.get("actions")).to(equal(["context_tools.bdd.bdd:Bdd"]))
+        expect(row.get("tool_calls")).to(
+            equal(["workflow.workflow:Workflow name=run"])
+        )
+        expect(row.get("job_index")).to(equal(2))
 
 
 with description("CliAgent cleanup"):

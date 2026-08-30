@@ -468,6 +468,9 @@ class _CliAgentLog:
     """Append-only event log for a cli-agent session: cli-agent-session.jsonl."""
 
     filename = "cli-agent-session.jsonl"
+    _last_ms: dict[str, int] = {}
+    _job_started_ms: dict[str, dict[int, int]] = {}
+    _judge_started_ms: dict[str, int] = {}
 
     def path_for(self, work) -> Path:
         folder = getattr(work, "folder", None)
@@ -477,6 +480,9 @@ class _CliAgentLog:
         root = getattr(work, "path", None) or "."
         return Path(root) / ".context" / "sessions" / name / self.filename
 
+    def _work_key(self, work) -> str:
+        return str(self.path_for(work))
+
     def _job_queue_path(self, work) -> str:
         folder = getattr(work, "folder", None)
         if folder:
@@ -485,10 +491,59 @@ class _CliAgentLog:
         root = getattr(work, "path", None) or "."
         return str(Path(root) / ".context" / "sessions" / name / JobQueue.filename)
 
+    @staticmethod
+    def _kit_list(raw) -> list[str]:
+        if not raw:
+            return []
+        if isinstance(raw, list):
+            return [str(x) for x in raw if x is not None and str(x).strip()]
+        return [str(raw)]
+
+    @classmethod
+    def _job_kit(cls, item: dict | None) -> dict:
+        if not item:
+            return {}
+        out: dict = {}
+        tools = cls._kit_list(item.get("tools"))
+        actions = cls._kit_list(item.get("actions"))
+        if tools:
+            out["tools"] = tools
+        if actions:
+            out["actions"] = actions
+        if "judge" in item:
+            out["judge"] = item.get("judge")
+        return out
+
+    @classmethod
+    def _turn_kit(cls, turn, tools=None, actions=None) -> dict:
+        out: dict = {}
+        tool_keys = cls._kit_list(getattr(turn, "tool_keys", None) if turn else None)
+        if not tool_keys:
+            tool_keys = cls._kit_list(tools)
+        action_keys = cls._kit_list(actions)
+        if turn and getattr(turn, "action", None) and not action_keys:
+            action_keys = [str(turn.action)]
+        if tool_keys:
+            out["tools"] = tool_keys
+        if action_keys:
+            out["actions"] = action_keys
+        calls = []
+        for call in getattr(turn, "tool_calls", None) or []:
+            calls.append(f"{call.toolset} name={call.name} {call.summary}".strip())
+        if calls:
+            out["tool_calls"] = calls
+        return out
+
     def append(self, work, record: dict) -> None:
         path = self.path_for(work)
         path.parent.mkdir(parents=True, exist_ok=True)
-        record["ts"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+        key = self._work_key(work)
+        now_ms = int(time.time() * 1000)
+        record["ts_ms"] = now_ms
+        record["ts"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(now_ms / 1000))
+        if key in self._last_ms:
+            record["since_last_s"] = round((now_ms - self._last_ms[key]) / 1000, 3)
+        self._last_ms[key] = now_ms
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(record) + "\n")
 
@@ -540,20 +595,59 @@ class _CliAgentLog:
             "job_queue": self._job_queue_path(work),
         })
 
-    def spawn(self, work, role: str, resume: str, prompt: str, argv: str) -> None:
-        self.append(work, {
+    def spawn(
+        self,
+        work,
+        role: str,
+        resume: str,
+        prompt: str,
+        argv: str,
+        *,
+        tools: list[str] | None = None,
+        actions: list[str] | None = None,
+        tool_calls: list[str] | None = None,
+        job_index: int | None = None,
+    ) -> None:
+        record: dict = {
             "kind": "spawn",
             "role": role,
             "resume": resume,
             "prompt": prompt,
             "argv": argv,
-        })
+        }
+        if tools:
+            record["tools"] = list(tools)
+        if actions:
+            record["actions"] = list(actions)
+        if tool_calls:
+            record["tool_calls"] = list(tool_calls)
+        if job_index is not None:
+            record["job_index"] = job_index
+        self.append(work, record)
 
     def jobs_defined(self, work, jobs: list) -> None:
         self.append(work, {"kind": "jobs_defined", "jobs": jobs})
 
-    def job_started(self, work, index: int, prompt: str) -> None:
-        self.append(work, {"kind": "job_started", "index": index, "prompt": prompt})
+    def job_started(
+        self,
+        work,
+        index: int,
+        prompt: str,
+        *,
+        tools: list[str] | None = None,
+        actions: list[str] | None = None,
+        judge=None,
+    ) -> None:
+        record: dict = {"kind": "job_started", "index": index, "prompt": prompt}
+        if tools:
+            record["tools"] = list(tools)
+        if actions:
+            record["actions"] = list(actions)
+        if judge is not None:
+            record["judge"] = judge
+        self.append(work, record)
+        key = self._work_key(work)
+        self._job_started_ms.setdefault(key, {})[index] = record["ts_ms"]
 
     def job_finished(
         self,
@@ -563,16 +657,42 @@ class _CliAgentLog:
         *,
         summary: str = "",
         refs: list[str] | None = None,
+        tools: list[str] | None = None,
+        actions: list[str] | None = None,
+        judge=None,
     ) -> None:
         record: dict = {"kind": "job_finished", "index": index, "prompt": prompt}
         if summary:
             record["summary"] = summary
         if refs:
             record["refs"] = list(refs)
+        if tools:
+            record["tools"] = list(tools)
+        if actions:
+            record["actions"] = list(actions)
+        if judge is not None:
+            record["judge"] = judge
+        key = self._work_key(work)
+        started = self._job_started_ms.get(key, {}).pop(index, None)
+        now_ms = int(time.time() * 1000)
+        if started is not None:
+            record["duration_s"] = round((now_ms - started) / 1000, 3)
         self.append(work, record)
 
-    def verdict(self, work, result: str, notes: str = "") -> None:
-        self.append(work, {"kind": "verdict", "result": result, "notes": notes})
+    def judge_started(self, work, *, job_index: int, judge: str) -> None:
+        record = {"kind": "judge_started", "job_index": job_index, "judge": judge}
+        self.append(work, record)
+        self._judge_started_ms[self._work_key(work)] = record["ts_ms"]
+
+    def verdict(self, work, result: str, notes: str = "", *, job_index: int | None = None) -> None:
+        record: dict = {"kind": "verdict", "result": result, "notes": notes}
+        if job_index is not None:
+            record["job_index"] = job_index
+        key = self._work_key(work)
+        started = self._judge_started_ms.pop(key, None)
+        if started is not None:
+            record["duration_s"] = round((int(time.time() * 1000) - started) / 1000, 3)
+        self.append(work, record)
 
 
 class _Pickup:
@@ -1384,6 +1504,10 @@ class CliAgent(SubAgent):
         self._work = None
         self._ide: IdeCli | None = None
         self._judge_job = False
+        self._current_job_index = 0
+        self._current_launch_tools: list = []
+        self._current_launch_actions: list | None = None
+        self._current_turn = None
 
     @property
     def ide(self) -> IdeCli:
@@ -1589,11 +1713,18 @@ class CliAgent(SubAgent):
             raise RuntimeError(
                 failed.stderr.strip() or failed.text.strip() or "IDE CLI exited non-zero"
             )
-        self._record_cli_binding(results)
+        self._record_cli_binding(results, tools=tools, actions=actions, turn=hanging)
         self._await_pickup(resume, before)
         return results
 
-    def _record_cli_binding(self, results: list[IdeCliResult]) -> None:
+    def _record_cli_binding(
+        self,
+        results: list[IdeCliResult],
+        *,
+        tools=None,
+        actions=None,
+        turn=None,
+    ) -> None:
         work = self.work_session
         if work is None:
             return
@@ -1630,16 +1761,27 @@ class CliAgent(SubAgent):
             doer_transcript=doer_transcript,
             judge_transcript=judge_transcript,
         )
+        turn_kit = log._turn_kit(turn, tools=tools, actions=actions)
+        spawn_tools = turn_kit.get("tools")
+        spawn_actions = turn_kit.get("actions")
+        spawn_calls = turn_kit.get("tool_calls")
+        job_index = self._current_job_index
         for spawned in results:
             role = _CliSpawner().spawn_role(spawned.argv)
             resume = work.cli_doer if role == "doer" else work.cli_judge
-            _CliAgentLog().spawn(
+            log.spawn(
                 work,
                 role=role,
                 resume=resume,
                 prompt=self.job,
                 argv=" ".join(spawned.argv),
+                tools=spawn_tools,
+                actions=spawn_actions,
+                tool_calls=spawn_calls,
+                job_index=job_index,
             )
+            if role == "judge" and resume:
+                log.judge_started(work, job_index=job_index, judge=resume)
 
     def _session_report(self, work, results) -> str:
         ws = self._workspace_root()
@@ -1711,8 +1853,18 @@ class CliAgent(SubAgent):
             raise RuntimeError(JobQueue.empty)
         if item.get("prompt"):
             self.task_prompt = str(item["prompt"])
-        index = len([j for j in JobQueue().load(work) if j != item])
-        _CliAgentLog().job_started(work, index=index, prompt=str(item.get("prompt") or ""))
+        all_jobs = JobQueue().load(work)
+        index = all_jobs.index(item) if item in all_jobs else 0
+        self._current_job_index = index
+        kit = _CliAgentLog._job_kit(item)
+        _CliAgentLog().job_started(
+            work,
+            index=index,
+            prompt=str(item.get("prompt") or ""),
+            tools=kit.get("tools"),
+            actions=kit.get("actions"),
+            judge=kit.get("judge"),
+        )
         judge = item.get("judge")
         return self.launch_sessions(
             item.get("tools") or [],
@@ -1726,9 +1878,16 @@ class CliAgent(SubAgent):
         work = self._attach_cli_sessions()
         item = JobQueue().peek(work)
         result = JobQueue().pop(work)
-        all_jobs = JobQueue().load(work)
-        index = 0 if not all_jobs else 0
-        _CliAgentLog().job_finished(work, index=index, prompt=str((item or {}).get("prompt") or ""))
+        kit = _CliAgentLog._job_kit(item)
+        index = self._current_job_index
+        _CliAgentLog().job_finished(
+            work,
+            index=index,
+            prompt=str((item or {}).get("prompt") or ""),
+            tools=kit.get("tools"),
+            actions=kit.get("actions"),
+            judge=kit.get("judge"),
+        )
         return result
 
     @prompt(name="kick-cli-agent")
@@ -1775,7 +1934,12 @@ class CliAgent(SubAgent):
     def record_verdict(self, result: str, notes: str = "") -> str:
         """Record a judge verdict (PASS or FAIL) to the session log. Call this after validating a Turn."""
         work = self._attach_cli_sessions()
-        _CliAgentLog().verdict(work, result=result.strip().upper(), notes=notes)
+        _CliAgentLog().verdict(
+            work,
+            result=result.strip().upper(),
+            notes=notes,
+            job_index=self._current_job_index,
+        )
         return result.strip().upper()
 
     def _template_store(self, path: str | None = None) -> CliJobTemplateStore:
@@ -2046,6 +2210,9 @@ class CliAgent(SubAgent):
         self._bring_in_kits(tools, actions)
         work = self._attach_cli_sessions()
         hanging, later = self._described_turn(tools, actions)
+        self._current_launch_tools = list(self.ide._listed(tools))
+        self._current_launch_actions = self.ide._listed(actions)
+        self._current_turn = hanging
         self.job = self.ide._turn_prompt(hanging, later)
         if self._judge_job and work.cli_judge:
             self.job += "\n" + self.ide._doer_ask_judge(
