@@ -1,0 +1,56 @@
+{
+  "name": "cli-defect",
+  "description": "CliAgent defect-fix workflow plus post-fix regression: agent BDD validation that this fix and prior theme:cli-agent backlog fixes still work with AI in the loop.",
+  "jobs": [
+    {
+      "prompt": "Triage the work. Two entry paths:\n\n1. A GitHub board item was provided or is implied: pull it from the project's default board.\n2. The user gave qualitative text describing a defect: first run /backlog to create the item on the board, then treat the newly created item as the ticket.\n\nImmediately decide: is this a defect? Do not do any further work before making this call.\n\n- NOT a defect (feature, improvement, or unclear): tell the parent you cannot continue and stop. Do not run start-ticket. Do not analyze.\n- IS a defect: run /start-ticket immediately to create the branch and session before doing anything else. Do not bind or rely on a durable CliAgent work session on main before start-ticket — a leftover ``default`` (or folder-slug) session is the wrong bind. After start-ticket completes, rebind workspace root to the ticket worktree (``rebind_to_worktree``) on ``session/<ticket>``. The same session==branch==worktree isolation and post-start-ticket rebind must hold for CliAgent, SubAgent, and no-agent flows — not only CLI spawn. Then stop this job — analysis is next.\n",
+      "tools": [
+        "workflow.workflow:Workflow"
+      ],
+      "judge": false
+    },
+    {
+      "prompt": "The ticket is confirmed as a defect and start-ticket has already been run. Now analyze:\n- Read all context files (.context/, module-context.md, grill-answers).\n- Analyze repo history for the area in question.\n- Search for similar past incidents and related issues.\n- Be thorough — do not stop at the surface.\n\nAdd your full analysis to the ticket notes under ## Analysis (separated from existing content).\n",
+      "tools": [
+        "workflow.workflow:Workflow"
+      ],
+      "judge": true,
+      "judge_criteria": "PASS only when: (1) context was read in full; (2) repo history and similar incidents were explored; (3) analysis was added to the ticket notes under ## Analysis.\n"
+    },
+    {
+      "prompt": "Diagnose the root cause of the defect. Go beyond symptoms — identify the exact underlying issue. If the root cause is unclear or ambiguous, use the /diagnose tool.\n\nCritical distinction — make this explicit in your diagnosis:\n- PROMPT/AI CHANGE: the defect is caused by incorrect, missing, or poorly structured instructions, prompts, or agent behaviour. The fix will be a change to a prompt, docstring, rule, or agent instruction — not production code.\n- CODE CHANGE: the defect is caused by a bug in production code. The fix will be a code edit.\n- BOTH: some defects have both a code failure and an AI/prompt failure layered on top.\n\nState clearly which category applies. This determines what kind of tests are written next.\n\nAdd your diagnosis hypothesis and category to the ticket notes under ## Diagnosis (separated from the analysis above).\n",
+      "tools": [
+        "workflow.workflow:Workflow"
+      ],
+      "judge": true,
+      "judge_criteria": "PASS only when: (1) a concrete root cause hypothesis is stated; (2) the /diagnose tool was used if the cause was not obvious; (3) the category (prompt/AI change vs code change vs both) is explicitly stated; (4) the hypothesis and category are in the ticket notes under ## Diagnosis.\n"
+    },
+    {
+      "prompt": "Write failing tests before writing any fix. Read the ## Diagnosis in the ticket to determine which tests are required:\n\n- PROMPT/AI CHANGE: write an agentic BDD test using /agent-bdd.development. This is the primary test type for prompt or instruction defects. A mechanical BDD test is rarely needed here — but not never; include one if the prompt change also has a verifiable mechanical side-effect.\n- CODE CHANGE: write a mechanical (vanilla) BDD test using /bdd.development. Also write an agentic BDD test if the code defect was causing AI/agent misbehaviour.\n- BOTH: write both. Mechanical BDD first.\n\nThe failing test is a hard requirement — write it first, run it, confirm it fails. You may alter existing tests or add new ones, but an explicit red test capturing the defect must exist before any fix is written.\n",
+      "actions": [
+        "context_tools.bdd.bdd:Bdd"
+      ],
+      "judge": true,
+      "judge_criteria": "PASS only when: (1) at least one failing test exists that captures the defect; (2) for code changes: a mechanical BDD test is present; (3) for prompt/AI changes: an agentic BDD test is present; (4) mechanical BDD runs first when both are present; (5) tests were validated against the tools as normal. Pre-existing, unrelated test failures are out of scope — do not fail the job because of failures that existed before this defect was introduced.\n"
+    },
+    {
+      "prompt": "Fix the defect using /clean_engineering.code in small iterations. Work one small piece at a time — fix just enough to make one or a few tests pass, then move to the next piece. Repeat until all BDD and agentic BDD tests are green. Run vanilla BDD first when you have both.\nBefore writing any code: - Explore all impacted codebases and the code they depend on. - Read module-context.md for every module you touch. - Study the existing idioms, patterns, and usage in detail. Do not invent new patterns or paradigms — follow what is already there. A defect fix should not require new patterns.\nWhen this fix job is complete: stop — regression is the next job.\n",
+      "actions": [
+        "context_tools.clean_engineering.clean_engineering:CleanEngineering"
+      ],
+      "judge": true,
+      "judge_criteria": "PASS only when: (1) all tests written for this defect pass; (2) all agentic BDD tests written for this defect pass; (3) the fix follows existing patterns, paradigms, and usage — no new patterns invented without strong justification; (4) validated against the tools as normal. Pre-existing, unrelated test failures are out of scope — judge only the tests introduced or changed for this defect, not the full suite baseline.\n"
+    },
+    {
+      "prompt": "Backlog item: #N (ticket) — regression after fix.\n\nYou are a real tester, not a test runner. Validate that THIS fix still works AND that previous theme:cli-agent fixes from this backlog session are still working — with AI in the loop.\n\nBefore running anything:\n- Read `.context/sessions/<session>/cli-agent-backlog.json` — every item marked `done` is in scope for regression, plus the ticket you just fixed.\n- For each in-scope ticket: read session notes, GitHub issue/comments, merged commits, and any mechanical BDD or agent BDD specs written for that fix (e.g. `utilities/cli_agent/cli_agent_spec.py`, `utilities/cli_agent/*_agent_spec.py`).\n- Build a checklist: what was broken, what changed, what would prove it still works for a real agent (not just a green exit code).\n\nRun regression like a tester:\n- Run existing agent BDD specs where they cover prior fixes; use /agent-bdd.development or /agent-bdd.validate as appropriate.\n- Run mechanical BDD blocks named for those tickets where code changed.\n- Do NOT treat green as sufficient. Read spec intent, read agent stdout/captures/instructions, confirm behavior matches the original defect intent.\n- Where no agent spec exists yet, write a minimal agent BDD scenario that exercises the fixed behavior through the real harness — then run it.\n- For observability fixes: inspect `.context/sessions/*/cli-agent-session.jsonl` — confirm header, tools/actions, ts_ms, duration_s, and job summaries look right; do not only grep for field names.\n\nIf any prior fix regressed: document under ## Regression on the current ticket and stop — do not finish-ticket.\n\nWhen this fix AND all in-scope prior fixes pass your checklist: call finish-ticket, then next_backlog_item. CliAgent backlog items use theme:cli-agent.\n",
+      "tools": [
+        "workflow.workflow:Workflow"
+      ],
+      "actions": [
+        "context_tools.agent_bdd.agent_bdd:AgentBdd"
+      ],
+      "judge": true,
+      "judge_criteria": "PASS only when: (1) the doer reviewed done backlog items and prior fix artifacts — not just ran tests blindly; (2) agent BDD and/or mechanical BDD were run for in-scope fixes; (3) the doer inspected outputs/artifacts and confirmed behavior, not only exit codes; (4) any regression found is documented or absent; (5) finish-ticket is called only after regression passes.\n"
+    }
+  ]
+}
