@@ -1,0 +1,4 @@
+logs/*.jsonl
+logs/*.log
+logs/*.1
+hook_test_sentinel.txt
