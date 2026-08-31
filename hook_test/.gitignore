@@ -1,4 +1,6 @@
 logs/*.jsonl
 logs/*.log
 logs/*.1
+state/*
+!state/.gitkeep
 hook_test_sentinel.txt

@@ -19,8 +19,10 @@ from hook_lib import (
     MARKER_CTX,
     MARKER_DENY,
     MARKER_FOLLOWUP,
+    MARKER_REWRITE,
     MARKER_STDERR,
     SENTINEL_EDIT_NAME,
+    STOP_FOLLOWUP_FLAG,
     build_summary,
     emit,
     note_stderr,
@@ -85,6 +87,22 @@ def handle_pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
             "user_message": "hook_test: preToolUse blocked this tool call (marker present).",
             "agent_message": "hook_test: preToolUse denied. The agent should see this message and adjust.",
         }
+    tool_input = payload.get("tool_input")
+    if (
+        payload.get("tool_name") == "Shell"
+        and isinstance(tool_input, dict)
+        and MARKER_REWRITE in str(tool_input.get("command", ""))
+    ):
+        original = str(tool_input.get("command", ""))
+        rewritten = original.replace(MARKER_REWRITE, "REWRITTEN_BY_HOOK")
+        new_input = {**tool_input, "command": rewritten}
+        record(
+            "preToolUse",
+            payload,
+            {"decision": "allow_with_rewrite", "original": original, "rewritten": rewritten},
+        )
+        note_stderr(f"preToolUse rewrote Shell command: {original!r} -> {rewritten!r}")
+        return {"permission": "allow", "updated_input": new_input}
     record("preToolUse", payload, {"decision": "allow"})
     return {"permission": "allow"}
 
@@ -166,6 +184,20 @@ def handle_pre_compact(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def handle_stop(payload: dict[str, Any]) -> dict[str, Any]:
+    loop_count = int(payload.get("loop_count") or 0)
+    if STOP_FOLLOWUP_FLAG.exists() and loop_count == 0:
+        try:
+            STOP_FOLLOWUP_FLAG.unlink()
+        except OSError:
+            pass
+        record("stop", payload, {"followup": True})
+        return {
+            "followup_message": (
+                "hook_test: this text was injected by the stop hook via "
+                "`followup_message`. It appears in the transcript as a NEW user "
+                "message. Please acknowledge it and then stop."
+            )
+        }
     record("stop", payload)
     return {}
 

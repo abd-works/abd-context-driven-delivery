@@ -33,6 +33,7 @@ from typing import Any
 
 HOOK_TEST_DIR = Path(__file__).resolve().parent
 LOG_DIR = HOOK_TEST_DIR / "logs"
+STATE_DIR = HOOK_TEST_DIR / "state"
 EVENTS_PATH = LOG_DIR / "events.jsonl"
 PRETTY_PATH = LOG_DIR / "pretty.log"
 MAX_LOG_BYTES = 512 * 1024
@@ -41,7 +42,10 @@ MARKER_DENY = "HOOK_TEST_MARKER_DENY"
 MARKER_CTX = "HOOK_TEST_MARKER_CTX"
 MARKER_FOLLOWUP = "HOOK_TEST_MARKER_FOLLOWUP"
 MARKER_STDERR = "HOOK_TEST_MARKER_STDERR"
+MARKER_REWRITE = "HOOK_TEST_MARKER_REWRITE"
 SENTINEL_EDIT_NAME = "hook_test_sentinel.txt"
+
+STOP_FOLLOWUP_FLAG = STATE_DIR / "stop_followup_pending"
 
 
 def _now_iso() -> str:
