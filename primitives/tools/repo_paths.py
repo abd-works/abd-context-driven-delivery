@@ -5,7 +5,13 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-CATEGORY_DIRS = ("primitives", "utilities", "context_tools", "context_tools/actions")
+CATEGORY_DIRS = (
+    "primitives",
+    "utilities",
+    "context_tools",
+    "context_tools/actions",
+    "agents",
+)
 
 
 def repo_root() -> Path:
@@ -35,3 +41,17 @@ def tools_package_is_from(root: Path | None = None) -> bool:
 
     root = (root or repo_root()).resolve()
     return Path(tools.__file__).resolve().is_relative_to(root)
+
+
+def repo_python(root: Path | None = None) -> str:
+    """Prefer this checkout's venv Python for subprocess ``python -m tools`` calls."""
+    root = (root or repo_root()).resolve()
+    for candidate in (
+        root / ".venv" / "Scripts" / "python.exe",
+        root / "venv" / "Scripts" / "python.exe",
+        root / ".venv" / "bin" / "python",
+        root / "venv" / "bin" / "python",
+    ):
+        if candidate.is_file():
+            return str(candidate)
+    return sys.executable

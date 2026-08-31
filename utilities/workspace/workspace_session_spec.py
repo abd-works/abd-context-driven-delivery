@@ -203,7 +203,7 @@ with description("a WorkSession without a name"):
     with it("should raise ValueError when folder is accessed"):
         from workspace.workspace import Workspace, WorkSession
         s = WorkSession(Workspace("."), "")
-        # Act / Assert — empty name must refuse folder access
+        # Act / Assert â empty name must refuse folder access
         raised = False
         try:
             _ = s.folder
@@ -941,6 +941,14 @@ with description("SessionModel"):
         expect(SessionModel.read(tmp, "")).to(equal("kimi-k3-max"))
         expect(SessionModel.read(tmp, "default")).to(equal("kimi-k3-max"))
 
+    with it("should resolve composer-2.5 when no session model file exists"):
+        from workspace.workspace import SessionModel
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_model_resolve_"))
+        expect(SessionModel.resolve_for_launch(tmp, "any-session")).to(
+            equal("composer-2.5")
+        )
+
     with it("should copy session model into a new folder falling back to default"):
         from workspace.workspace import SessionModel
 
@@ -977,7 +985,7 @@ with description("Workspace /model"):
         prose = (type(ws).model.__doc__ or "") + "\n".join(
             getattr(type(ws).model, "__doc__", "") or ""
         )
-        # agent_instructions use stacked docstrings � read via expand/inspect
+        # agent_instructions use stacked docstrings  read via expand/inspect
         import inspect
 
         raw = inspect.getsource(type(ws).model)

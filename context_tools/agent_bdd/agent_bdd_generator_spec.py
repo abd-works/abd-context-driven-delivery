@@ -27,7 +27,6 @@ from tools.tool import Toolset, _ToolsetLoader
 from validate.validate import Validate
 
 _AGENT_BDD_TOOLSET = "agent_bdd.agent_bdd:AgentBdd"
-_BDD_DIR = _REPO_ROOT / "context_tools" / "bdd"
 _GENERATE_DIR = _REPO_ROOT / "context_tools" / "actions" / "generate"
 _VALIDATE_DIR = _REPO_ROOT / "context_tools" / "actions" / "validate"
 _GENERATE_TOOLSET = "generate.generate:Generate"
@@ -76,7 +75,6 @@ with description("AgentBdd action expansion"):
             self.contexts = Instruction(
                 "\u00a7 Contexts", _AGENT_BDD_DIR, domain_slug="agent_bdd"
             ).expand()
-            self.bdd_contexts = Instruction("\u00a7 Contexts", _BDD_DIR).expand()
 
         with context("that does not own kit lifecycle actions"):
             with it("should not expose generate, validate, satisfy, or repair"):
@@ -105,6 +103,24 @@ with description("AgentBdd action expansion"):
                 expect("with description" in self.response["instructions"]).to(be_true)
                 expect("ai_judge" in self.response["instructions"]).to(be_true)
                 expect(len(template) > 0).to(be_true)
+
+            with it("should inline vanilla BDD hierarchy and signature guidance"):
+                prose = self.response["instructions"]
+                expect("Hierarchy shape" in prose).to(be_true)
+                expect("observable-behavior" in prose).to(be_true)
+                expect("state-not-when" in prose).to(be_true)
+                expect("SIGNATURE" in prose).to(be_true)
+
+            with it("should tell the caller to pass the CE companion to this action as a separate run"):
+                prose = self.response["instructions"]
+                expect("separate tools run" in prose).to(be_true)
+                expect("Clean Engineering" in prose).to(be_true)
+
+            with it("should NOT inline CleanEngineering generate instructions"):
+                expect("Deepen OO design" in self.response["instructions"]).to(equal(False))
+
+            with it("should list companion guidance as a deferred tool hop"):
+                expect("guidance" in self.response["tools"]).to(be_true)
 
         with context("the Validate kit is expanded with this host"):
             with before.each:

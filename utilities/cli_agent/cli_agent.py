@@ -1057,9 +1057,10 @@ class _SessionArgv:
             return ""
         if "[" in name:
             return name
-        if host.mode == "fast":
+        mode = host.effective_mode()
+        if mode == "fast":
             return f"{name}[fast=true]"
-        if host.mode == "medium":
+        if mode == "medium":
             return f"{name}[fast=false]"
         return name
 
@@ -1133,6 +1134,10 @@ class IdeCli:
     and every command() / launch_cli() reuses them.
     job, source_scope, and prompt are this instance's work, not module state.
     Default launch is an interactive session.
+
+    **Model policy:** default ``composer-2.5`` with ``mode=medium`` (non-fast).
+    Use ``cursor-grok-4.6-medium`` only for long, very complex jobs — a rare
+    escalation chosen by the orchestrator, not the default.
     // always one of CursorCli or VscodeCli after detect
     """
 
@@ -1225,17 +1230,33 @@ class IdeCli:
         return self
 
     def resolve_session_model(self) -> str:
-        """Read ``.context/sessions/{session}/model`` when IdeCli.model is empty."""
+        """Session model file, else default session, else composer-2.5."""
         if self._model:
             return self._model
         root = (self._workspace or "").strip()
         if not root:
-            return ""
+            try:
+                from workspace.workspace import SessionModel
+
+                return SessionModel.default_model()
+            except ImportError:
+                return ""
         try:
             from workspace.workspace import SessionModel
         except ImportError:
             return ""
-        return SessionModel.read(root, self._session)
+        return SessionModel.resolve_for_launch(root, self._session)
+
+    def effective_mode(self) -> str:
+        """Cursor fast flag — default medium (non-fast) when unset."""
+        if self._mode:
+            return self._mode
+        try:
+            from workspace.workspace import SessionModel
+
+            return SessionModel.default_mode()
+        except ImportError:
+            return "medium"
 
     @property
     def job(self) -> str:
@@ -1834,6 +1855,8 @@ class CliAgent(SubAgent):
             loaded = self._ide.resolve_session_model()
             if loaded:
                 self._ide._model = loaded
+        if not self._ide._mode:
+            self._ide._mode = self._ide.effective_mode()
         return self._ide
 
     def _resolved_session_name(self) -> str:
@@ -2946,6 +2969,12 @@ class CliAgent(SubAgent):
         loop. Parent contract is minimal for judged jobs: launch once, read the session log, unblock only after
         CliAgent recovery stops. For jobs with ``human: true``, the parent IS the check — resolve
         ``human_check_needed`` via ``resolve_human_check``. Model, mode, and agent_mode are fixed on this ide instance.
+
+        ## Model (CLI doer/judge)
+
+        - **Default (vast majority):** ``composer-2.5`` with **non-fast** mode (`medium` → `composer-2.5[fast=false]` on cursor-agent). Do not default to fast Composer or Grok.
+        - **Rare escalation:** ``cursor-grok-4.6-medium`` only when the job is **long and very complex** (multi-module refactor, large backlog drain, deep cross-cutting work). The orchestrator decides — not every job.
+        - Persist per-session overrides with slash ``/model`` (``.context/sessions/{session}/model``).
 
         ## Preferred Steps (orchestrated)
 

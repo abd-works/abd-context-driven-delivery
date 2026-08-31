@@ -387,3 +387,51 @@ def generate_and_judge(
     ).text
     ai_judge(artifact, rubric or generate_similar_rubric(pass_path))
     return artifact
+
+
+# ---------------------------------------------------------------------------
+# Agent redesign (#55) — ChatAgent toolset prompts for agent BDD specs
+# ---------------------------------------------------------------------------
+
+CHAT_AGENT_TOOLSET = "agent.chat_agent:ChatAgent"
+
+
+def init_temp_workspace(prefix: str = "agent_bdd_") -> Path:
+    """Temp workspace directory for one agent BDD run."""
+    import tempfile
+
+    return Path(tempfile.mkdtemp(prefix=prefix))
+
+
+def chat_agent_context(workspace: Path, session: str) -> dict[str, str]:
+    return {
+        "workspace": str(workspace).replace("\\", "/"),
+        "session": session,
+    }
+
+
+def parse_json_log_kinds(result: str) -> list[str]:
+    import json
+
+    text = (result or "").strip()
+    if not text:
+        return []
+    return json.loads(text)
+
+
+def chat_agent_tool_prompt(
+    tool: str,
+    *,
+    context: Mapping[str, Any],
+    arguments: Mapping[str, Any] | None = None,
+    toolset: str = CHAT_AGENT_TOOLSET,
+) -> str:
+    """Standard ``instruct_use_tool`` prompt for a ChatAgent phased tool."""
+    return tools_run_prompt(
+        dump_run_yaml(
+            toolset=toolset,
+            tool=tool,
+            context=context,
+            arguments=arguments or {},
+        )
+    )

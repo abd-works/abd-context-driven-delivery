@@ -86,21 +86,21 @@ Build each row **vanilla first**; agent BDD only where the column says so — an
 | 4 | **Backlog → current** | `add_tasks`, `clear_backlog`; `_launch_next`; refuse `_launch_next` while doer/judge/human in flight; stubbed participants only | — |
 | 5 | **Queue drain + template** | Two+ tasks; `load_template` → `_instantiate_tasks` → `add_tasks`; `run` drains backlog; `validation_error` skips task; workflow fault stops run | — |
 | 6 | **AgentSession open** | `InMemoryRepo` then real `Repo`; `session.open` → folder, `branch.checkout_or_create`, log `open`; caller sets `contextRoot`; `_ensure_session` before `run` | — |
-| 7 | **SubAgent spawn** | SubAgent `_send` via stubbed child process; `_launch` non-blocking; `_tear_down_children` on `agent.close`; judge optional | — |
-| 8 | **Transcript watcher** | Fake `.jsonl` + injected clock; `AgentRuntimeTranscriptWatcher` accept / growth-then-quiet / verdict; `AIChatFault` `not_accepted`, `stall`; wired into CliAgent `_await_*` with **stubbed** `chat.run` | — |
+| 7 | **SubAgent + two runtime roles** | `SubAgent` `_send` / `_launch` / `_await_*` / `_tear_down_children` for **doer and judge** on one task; same session + contextRoot; spawn/teardown | **One judged job via SubAgent** (first agent BDD — before CliAgent) |
+| 8 | **Transcript watcher** | Fake `.jsonl` + injected clock; `AgentRuntimeTranscriptWatcher` accept / growth-then-quiet / verdict; `AIChatFault`; wired into CliAgent `_await_*` with **stubbed** `chat.run` | — |
 | 9 | **CliAgent bind + launch** | `_bind_workspace_root`, `_bind_chat_context`, `_ensure_chat`; `_launch_doer` / `_launch_judge` with stubbed `AIChatInstance`; `maxFails` / `failCount`; `_auto_kick_stalled_doer` | — |
-| 10 | **CliAgent close** | `close_agents`, `cleanup`, `close_cli_session`; bindings cleared; no zombie PIDs; temps removed | **One judged job** (doer + judge, real or harness chat) |
+| 10 | **CliAgent close** | `close_agents`, `cleanup`, `close_cli_session`; bindings cleared; no zombie PIDs; temps removed | Optional CliAgent judged-job / close regression |
 | 11 | **WorkTicket + start** | `WorkTicket.create`, `openSession`, `start`; `Workflow.start ticket` → `add_tasks` + `run`; sibling worktree path; issue body → `contextRoot` | — |
 | 12 | **Finish + capstone** | `AgentSession.finish outcome` (chats on close commit via `branch._persist_chats`); `Workflow.finish ticket`; multi-repo reject | **Ticket journey** or **two-item queue** |
 
-**Why session opens at 6 (not 1):** increments 1–5 prove Agent queue + participant orchestration + manifest/turn contract with **stubbed** runtimes — no worktree, no transcript files, no IDE. That is most of the business logic. Increment 6 adds the real session seam (folder, branch, log) because isolation and `_ensure_session` need it; increment 7 adds SubAgent before CLI because child spawn is a separate participant strategy. CLI plumbing (8–10) layers on only after orchestration is already green under stubs.
+**Why session opens at 6 (not 1):** increments 1–5 prove Agent queue + participant orchestration + manifest/turn contract with **stubbed** runtimes — no worktree, no transcript files, no IDE. That is most of the business logic. Increment 6 adds the real session seam (folder, branch, log). **Increment 7 delivers SubAgent with both doer and judge runtime roles** (first command you can run for real coordination) **before** CliAgent plumbing (8–10).
 
 **Pyramid per phase:**
 
 ```
 Inc 1–5   ~15–20 vanilla   (Agent core, no plumbing)
-Inc 6–7   ~8–10 vanilla    (session + SubAgent)
-Inc 8–10  ~10–15 vanilla   (CliAgent)  + 1 agent BDD @10
+Inc 6–7   ~8–12 vanilla + 1 agent BDD @7 (session + SubAgent two-role judged job)
+Inc 8–10  ~10–15 vanilla   (CliAgent)  + optional agent BDD @10
 Inc 11–12 ~8–10 vanilla    (Workflow)  + 1–2 agent BDD capstones
 ```
 
@@ -121,11 +121,11 @@ Inc 11–12 ~8–10 vanilla    (Workflow)  + 1–2 agent BDD capstones
 
 ### Defer-only story anchors (no separate specs)
 
-- Complete Agent Task Using Sub/Cli Agent
 - Run Agent Task Queue Using Cli Agent
 
 ### Agent BDD only (after vanilla)
 
+- **Inc 7:** one judged job via SubAgent (doer + judge runtime roles) — first real two-role gate
 - Doer runs context tools/actions with reasonable outcome
 - Judge qualitative validation
 - Full journeys above
@@ -135,7 +135,7 @@ Inc 11–12 ~8–10 vanilla    (Workflow)  + 1–2 agent BDD capstones
 
 ## Error-prone seams — vanilla first
 
-Build these **before** agent BDD on increment 10 (map to vanilla increments):
+Build these **before** agent BDD on increment **7** (SubAgent one judged job):
 
 | Seam | Vanilla increment |
 |------|---------------------|
@@ -143,8 +143,8 @@ Build these **before** agent BDD on increment 10 (map to vanilla increments):
 | Manifest / turn fence (tools, actions, utilities) | 3 |
 | `_launch_next` refuse while in flight; queue drain | 4–5 |
 | `AgentSession.open`, `contextRoot`, `_ensure_session` | 6 |
-| SubAgent spawn / teardown | 7 |
-| Await Accept / Wait For Done / Read Verdict (fake jsonl + clock) | 8 |
+| SubAgent spawn / teardown **and** doer+judge runtime roles on one task | 7 |
+| Await Accept / Wait For Done / Read Verdict (fake jsonl + clock) — **CliAgent** | 8 |
 | Set Chat Context — bind worktree; no durable CliAgent on main before worktree | 9 |
 | Complete & Advance — validation-error skip vs workflow-fault stop; maxFails | 5, 9 |
 | Close Cli — processes stopped, bindings cleared | 10 |

@@ -1,4 +1,4 @@
-﻿fidelity: modules
+fidelity: modules
 issue: 55
 workspace:
   code: agents/
@@ -500,12 +500,13 @@ kick  // @agent_tool
 ## SubAgent : Agent
 // public: kick (+ inherited Agent public API)
 // private: _send, _await_*, _launch, _tear_down_children
+// FIRST runnable two-role path — before CliAgent; one task with doer + judge runtime prompt roles
 _send participant  // private
 _await_accept participant  // private
 _await_done participant  // private
 _await_verdict participant  // private
 kick  // @agent_tool
-_launch participant  // private — non-blocking child for doer or judge
+_launch participant  // private — non-blocking child for doer or judge (both required for judged tasks)
 _tear_down_children  // private — on session.close for SubAgent
 // child decides kits; empty-actions path may performTurn-wrap — still inside child, not Agent.open
 // @agent_tool / slash surface = ops on Agent subtypes (same as CliAgent) — no separate *Tool type

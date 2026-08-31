@@ -23,7 +23,11 @@ from agent_bdd.agent_bdd_common import (  # noqa: F401
 # Spec helpers (expects/mamba) are lazy — `python -m tools` must not require test deps.
 _SPEC_HELPER_EXPORTS = frozenset(
     {
-        "combined_capture_text",
+        "chat_agent_context",
+        "chat_agent_tool_prompt",
+        "CHAT_AGENT_TOOLSET",
+        "init_temp_workspace",
+        "parse_json_log_kinds",
         "dump_run_yaml",
         "expect_agent_invoked_shell",
         "expect_capture_mentions",

@@ -1,17 +1,66 @@
 """Agent orchestration package."""
 
 from agent.agent import (
+    AIChatFault,
+    AIChatInstance,
     Agent,
+    AgentFault,
     AgentParticipant,
+    AgentRuntimeTranscriptWatcher,
     AgentSession,
     AgentSessionLog,
     AgentTask,
+    AgentTaskTemplate,
+    AgentTaskTemplateStore,
+    Branch,
+    CliAgent,
+    CliAgentSessionLog,
+    InMemoryRepo,
+    Issue,
+    MultiRepoSessionError,
+    Project,
+    Repo,
+    Status,
+    SubAgent,
+    Workspace,
+)
+from agent.workflow import (
+    StartTicketResult,
+    WorkTicket,
+    Workflow,
+    WorkflowConfig,
 )
 
+Worktree = Repo.Worktree
+PathOverride = Workspace.PathOverride
+
 __all__ = [
+    "AIChatFault",
+    "AIChatInstance",
     "Agent",
+    "AgentFault",
     "AgentParticipant",
+    "AgentRuntimeTranscriptWatcher",
     "AgentSession",
     "AgentSessionLog",
     "AgentTask",
+    "AgentTaskTemplate",
+    "AgentTaskTemplateStore",
+    "Branch",
+    "CliAgent",
+    "CliAgentSessionLog",
+    "InMemoryRepo",
+    "Issue",
+    "MultiRepoSessionError",
+    "PathOverride",
+    "Project",
+    "Repo",
+    "StartTicketResult",
+    "Status",
+    "SubAgent",
+    "WorkTicket",
+    "Workflow",
+    "WorkflowConfig",
+    "Worktree",
+    "Workspace",
 ]

@@ -24,18 +24,12 @@ class AgentBdd(BaseContextTool):
     @agent_instructions
     def guidance(self) -> str:
         """Provide guidance for writing agent BDD specs against the agent harness."""
-        return super().guidance()
+        super().guidance()
+        self._bdd().guidance()
+        return ""
 
     def _bdd(self) -> Bdd:
         active = self.active
         sprint = active.name if active is not None else None
         path = active.path if active is not None else self._raw_path
         return Bdd(format=self.format, path=path, session=sprint)
-
-    @agent_instructions
-    def generate_output(self) -> str:
-        """"""
-        from generate.generate import Generate
-
-        Generate().generate(tools=[self._bdd()])
-        return ""

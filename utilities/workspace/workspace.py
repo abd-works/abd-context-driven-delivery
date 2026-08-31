@@ -101,13 +101,41 @@ class SessionModel:
 
     DEFAULT_SESSION = "default"
     FILENAME = "model"
+    # CLI doer/judge default — Composer non-fast (vast majority of jobs).
+    DEFAULT_MODEL = "composer-2.5"
+    DEFAULT_MODE = "medium"  # cursor-agent: model[fast=false]
+    # Escalation only — long, very complex work (parent/orchestrator decides).
+    COMPLEX_JOB_MODEL = "cursor-grok-4.6-medium"
     _FALLBACK_MODELS = (
+        DEFAULT_MODEL,
         "composer-2.5-fast",
+        COMPLEX_JOB_MODEL,
         "cursor-grok-4.5-high-fast",
-        "cursor-grok-4.6-medium",
         "kimi-k3-max",
         "inherit",
     )
+
+    @classmethod
+    def default_model(cls) -> str:
+        return cls.DEFAULT_MODEL
+
+    @classmethod
+    def default_mode(cls) -> str:
+        return cls.DEFAULT_MODE
+
+    @classmethod
+    def complex_job_model(cls) -> str:
+        return cls.COMPLEX_JOB_MODEL
+
+    @classmethod
+    def resolve_for_launch(cls, workspace: str | Path, session: str = "") -> str:
+        """Session file, then default session file, then DEFAULT_MODEL."""
+        slug = cls.session_slug(session)
+        for candidate in (slug, cls.DEFAULT_SESSION):
+            text = cls.read(workspace, candidate)
+            if text:
+                return text
+        return cls.default_model()
 
     @classmethod
     def session_slug(cls, name: str = "") -> str:
@@ -1923,8 +1951,11 @@ class Workspace:
         Persist under ``.context/sessions/{session}/model``. When no session is open,
         use the root-repo ``sessions/default`` folder. CliAgent and SubAgent read this
         value when present. Never set disable-model-invocation.
+
+        Default for CLI launches when unset: ``composer-2.5`` (non-fast / medium mode).
+        Use ``cursor-grok-4.6-medium`` only when the user confirms a long, very complex job.
         """
-        """Step 1 - Resolve the model id. If {model} is already given, use it. If not, call list_session_models, then AskQuestion constrained to that list (plus Other) so the user picks one."""
+        """Step 1 - Resolve the model id. If {model} is already given, use it. If not, call list_session_models, then AskQuestion constrained to that list (plus Other) so the user picks one. Recommend composer-2.5 (non-fast) unless the work is long and very complex — then offer cursor-grok-4.6-medium as a rare escalation."""
         """Step 2 - Call set_session_model with the chosen model (and session/workspace when known)."""
         if model.strip():
             self.set_session_model(model, session=session, workspace=workspace)

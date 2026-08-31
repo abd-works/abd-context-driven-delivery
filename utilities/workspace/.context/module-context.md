@@ -34,7 +34,7 @@ Session paths callers depend on:
 
 - `Workspace` — `@agentic_toolset` (`workspace.workspace:Workspace`); `path`, `work_sessions`, `current_work_session`, `path_overrides`;
   `load` / `save` / `lookup_path` / `upsert_path` / `open_work_session`. CLI context is `workspace` path. `open` starts or resumes a named work session.
-  Slash `/model` (`@prompt(name="model")`) sets the preferred IDE/CLI model: AskQuestion when unset (from `list_session_models`), persist via `set_session_model` under `.context/sessions/{session}/model` (root-repo `sessions/default` when no session), then change the IDE chat model. Never set disable-model-invocation. `SessionModel` is the seam; new worktrees / `ensure_started` copy the model from primary session or default when missing.
+  Slash `/model` (`@prompt(name="model")`) sets the preferred IDE/CLI model: AskQuestion when unset (from `list_session_models`), persist via `set_session_model` under `.context/sessions/{session}/model` (root-repo `sessions/default` when no session), then change the IDE chat model. Never set disable-model-invocation. `SessionModel` is the seam; new worktrees / `ensure_started` copy the model from primary session or default when missing. **Default CLI model:** `composer-2.5` non-fast (`medium` mode). **Rare escalation:** `cursor-grok-4.6-medium` for long, very complex jobs only.
 - `WorkSession` — `@agentic_toolset` (`workspace.workspace:WorkSession`); back-ref `workspace`; owns `git`, `open_turn`, `turns`, `repairs`, trail;
   session.md kit (`ensure_started`, `close`, `close_session`, context index helpers);
   `start_work_session` / `finish_work_session` `@agent_tool` with `@prompt` names

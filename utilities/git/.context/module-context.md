@@ -33,9 +33,12 @@ checkout, commit, push, and eval notes. **Workflow** composes `Repo` for backlog
 ## Public API
 
 - `Repo.find_root(start)` / `Repo.open(start)` — locate and open a real clone
-- `Repo.memory(root)` / `NullGitRepo(root)` — in-memory clone for specs
+- `Repo.memory(root)` / `InMemoryRepo(root)` / `NullGitRepo(root)` — in-memory clone for specs
 - `Repo.branch` / `Repo.branch_named(name)` → `Branch`
-- `Branch.checkout()`, `Branch.commit(paths, message)` → `Commit`, `Branch.merge(other)` → `Commit`
+- `Repo.agent_sessions` / `Repo.put_agent_session` / `Repo.default_session_name` — AgentSession registry on primary repo
+- `Branch.checkout()` / `Branch.checkout_or_create()` → `Branch`
+- `Branch.worktree` → `Worktree`; `Branch.bind_agent_session` / `Branch.agent_session`
+- `Branch.commit(paths, message)` → `Commit`, `Branch.merge(other)` → `Commit`
 - `Commit.format(subject, trailers)` / `Commit.from_message(sha, message)` — message + trailer `data`
 - `Repo.attach_project(owner, number)` → `Project` (links the board onto this repository)
 - `Project.link_repository()` — `gh project link` so the board appears on the repo Projects tab

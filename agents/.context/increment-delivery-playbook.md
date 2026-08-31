@@ -23,7 +23,8 @@ Use this document as the **step-by-step runbook** for each increment. Do not ski
 **Loop until judge is green:**
 
 1. **Doer** — generate (see increment row)
-2. **Judge** — host **`validate`** (judge persona; includes **`scan`** internally) → **pytest** (and agent BDD on inc 10 / 12 only)
+2. **Judge** — host **`validate`** (judge persona; includes **`scan`** internally) → **pytest**/mamba (and agent BDD on inc **7** / 12; optional on 10)
+
 3. If red → **doer fixes every reported violation** → back to step 2
 4. If green → **done** with this increment; start next increment
 
@@ -139,7 +140,8 @@ Optional: add `rule: <slug>` to narrow to one scanner.
 1. If doer changed specs  → Bdd · development · validate  (path: agents)
 2. If doer changed code   → CleanEngineering · code · validate  (path: agents)
 3. pytest                 — development specs for this increment
-4. Inc 10 / 12 only       — agent BDD pytest after vanilla judge green
+4. Inc **7** / 12 (optional 10) — agent BDD after vanilla judge green
+
 5. Verdict                — PASS | FAIL + bullet defects (no fixes in judge turn)
 6. If FAIL                — doer fixes violations → judge repeats from step 1
 ```
@@ -172,7 +174,7 @@ Optional: add `rule: <slug>` to narrow to one scanner.
 
 **Doer pattern (every increment):** read the named **stories** + **sketch** classes for this slice → `/clean_engineering.code` + `/bdd.development` → hand to judge.
 
-**Judge pattern (every increment):** Bdd validate · CE validate · pytest (and agent BDD on inc 10 / 12 only).
+**Judge pattern (every increment):** Bdd validate · CE validate · pytest/mamba (and agent BDD on inc **7** / 12; optional on 10).
 
 ---
 
@@ -225,19 +227,41 @@ Optional: add `rule: <slug>` to narrow to one scanner.
 
 ---
 
-### Increment 7 — SubAgent spawn
+### Increment 7 — SubAgent + two runtime roles (+ first agent BDD)
 
-**From sketch/stories:** `SubAgent` — `_send`, `_launch`, `_tear_down_children`
+**From sketch/stories:** `SubAgent` — `_send`, `_launch`, `_await_*`, `_tear_down_children` · Complete Agent Task Using Sub Agent (doer + judge)
 
-**Doer:** stub child process; optional judge child
+**Priority:** SubAgent is the **first runnable two-role path** and lands **before** any CliAgent work (incs 8–10). One task is enough — backlog drain is already proven in 4–5.
+
+**Doer (vanilla):**
+- `SubAgent` overrides participant runtime hooks for **both** doer and judge prompt roles
+- `_launch` non-blocking child per role; `_tear_down_children` on close
+- One judged task: spawn doer → await → spawn judge → verdict → complete (same AgentSession + contextRoot)
+- Stub/real child process as needed for vanilla; must prove role coordination, not spawn alone
+
+**Doer (agent BDD) after vanilla green:** `#55 one judged job` via **SubAgent**  
+Spec: `agents/agent/sub_agent_55_one_judged_job_agent_spec.py`  
+Session: `agents/.context/.agent_bdd_sessions/one-judged-job-55.json`
+
+**Agent BDD must prove (one task — no backlog drain required):**
+1. AgentSession **opens** (log `open`) before work
+2. **Doer** then **judge** runtime prompt roles both run (`send` / accept / done for each; `verdict`)
+3. Kit **Turn open** and **Turn finish** happen for slash/tools work (`open_turn` / `finish_turn`; no hanging turn left)
+4. Single **PASS** verdict; task Done
+5. AgentSession **closes** (log `close`) after the run
+
+**Judge:** vanilla mamba + host scans; then agent BDD above
+
+**Repeat doer/judge loop** until vanilla **and** SubAgent agent BDD are green.
 
 ---
 
-### Increment 8 — Transcript watcher
+### Increment 8 — Transcript watcher (CliAgent path)
 
 **From sketch/stories:** `AgentRuntimeTranscriptWatcher`, `AIChatFault` · Await Accept / Wait For Done / Read Verdict
 
-**Doer:** fake `.jsonl` + injected clock; wire into CliAgent `_await_*` with stubbed `chat.run`
+**Doer:** fake `.jsonl` + injected clock; wire into CliAgent `_await_*` with stubbed `chat.run`  
+(Does not block SubAgent two-role path — that is already green at 7.)
 
 ---
 
@@ -249,19 +273,16 @@ Optional: add `rule: <slug>` to narrow to one scanner.
 
 ---
 
-### Increment 10 — CliAgent close + **first agent BDD**
+### Increment 10 — CliAgent close (+ optional CliAgent agent BDD)
 
 **From sketch/stories:** `close_agents`, `cleanup`, `close_cli_session` · Close Cli Agent Session · Kick Stalled Doer  
-**Vanilla first, then agent BDD**
+**Vanilla first**; agent BDD only if proving CliAgent-specific close/isolation (first judged-job gate already met on SubAgent at 7)
 
 **Doer (vanilla):** close + cleanup specs
 
-**Doer (agent BDD):** `#55 one judged job` — extend `cli_agent_44_one_judged_job_agent_spec.py`  
-Session: `agents/.context/.agent_bdd_sessions/one-judged-job-55.json`
+**Doer (agent BDD, optional):** CliAgent variant of one judged job if still useful for CLI regression
 
-**Judge (agent BDD):** single task → log `verdict` PASS; optional isolation prompt checks
-
-**Repeat doer/judge loop** until both vanilla and agent BDD green.
+**Repeat** until vanilla (and optional agent BDD) green.
 
 ---
 
@@ -302,7 +323,8 @@ Session: `agents/.context/.agent_bdd_sessions/one-judged-job-55.json`
 
 | When | Scenario | Prior art |
 |------|----------|-----------|
-| Inc 10 | `#55 one judged job` | `cli_agent_44_one_judged_job_agent_spec.py` |
+| Inc 7 | `#55 one judged job` (**SubAgent**) | `agents/agent/sub_agent_55_one_judged_job_agent_spec.py` · session `one-judged-job-55.json` |
+| Inc 10 | optional CliAgent judged-job / close regression | same prior art on CliAgent |
 | Inc 12 A | `#55 start ticket to finish` | workflow + `#44 finish worktree` |
 | Inc 12 B | `#55 ordered queue` | `cli_agent_44_ordered_queue_agent_spec.py` |
 
@@ -345,7 +367,7 @@ You are continuing GitHub #55 agent-session redesign implementation.
 5. Set that row to in_progress in increment-progress.md.
 6. Execute exactly that ONE increment:
    - Doer: implement from sketch/stories → clean_engineering.code + bdd.development under agents/
-   - Judge: Bdd development validate + CE code validate + pytest (agent BDD too on inc 10/12)
+   - Judge: Bdd development validate + CE code validate + pytest (agent BDD too on inc **7**/12; optional 10)
    - If judge FAIL: doer fixes every reported violation; judge again until PASS
 7. Set that row to judge_green with brief notes (spec paths, pytest -k).
 8. Do NOT start the next increment in this turn. Stop after one increment is judge_green.

@@ -421,15 +421,35 @@ def _as_pid(raw: str | None) -> int:
 class Branch:
     """Named branch on a repo — checkout, commit, merge."""
 
-    __slots__ = ("_repo", "name")
+    __slots__ = ("_repo", "name", "_agent_session")
 
     def __init__(self, repo: Repo, name: str) -> None:
         self._repo = repo
         self.name = name
+        self._agent_session: Any = None
 
     def checkout(self) -> Branch:
         self._repo.checkout_or_create(self.name)
         return self
+
+    def checkout_or_create(self) -> Branch:
+        """Ensure this branch exists and is checked out (caller-supplied name)."""
+        self._repo.checkout_or_create(self.name)
+        return self
+
+    @property
+    def worktree(self) -> Worktree:
+        found = self._repo.worktree_for(self.name)
+        if found is not None:
+            return found
+        return Worktree(self._repo.root, self.name)
+
+    @property
+    def agent_session(self) -> Any:
+        return self._agent_session
+
+    def bind_agent_session(self, session: Any) -> None:
+        self._agent_session = session
 
     def cli_agent(self) -> CliAgentBinding:
         return self._repo.read_cli_agent_tag(self.name)
@@ -576,6 +596,7 @@ class Repo:
     ) -> None:
         self.root = Path(root).resolve()
         self.default_branch = "main"
+        self.default_session_name = "default"
         self._memory = memory
         self._owner = owner
         self._repo_name = repo_name
@@ -584,6 +605,7 @@ class Repo:
         self._ticket_project_state: dict[int, str] = {}
         self._ticket_project_theme: dict[int, str] = {}
         self._closed_tickets: set[int] = set()
+        self._agent_sessions: dict[str, Any] = {}
         if memory:
             self._init_memory_state()
 
@@ -607,6 +629,20 @@ class Repo:
     @classmethod
     def memory(cls, root: str | Path = ".", *, owner: str = "demo-org", repo_name: str = "demo-repo") -> Repo:
         return cls(root, memory=True, owner=owner, repo_name=repo_name)
+
+    @property
+    def agent_sessions(self) -> list[Any]:
+        """AgentSession objects registered under this primary repo."""
+        return list(self._agent_sessions.values())
+
+    def put_agent_session(self, session: Any) -> None:
+        name = str(getattr(session, "name", "") or "").strip()
+        if not name:
+            raise ValueError("agent session requires a name")
+        self._agent_sessions[name] = session
+
+    def agent_session_named(self, name: str) -> Any | None:
+        return self._agent_sessions.get((name or "").strip())
 
     @classmethod
     def git(cls, root: str | Path, *args: str) -> str:
@@ -921,6 +957,7 @@ class Repo:
         if self._memory:
             self._branch_names.add(name)
             self._branch = name
+            self._retag_primary_worktree(name)
             return name
         existing = self._git( "branch", "--list", name)
         if existing:
@@ -928,6 +965,16 @@ class Repo:
         else:
             self._git( "checkout", "-b", name)
         return name
+
+    def _retag_primary_worktree(self, branch: str) -> None:
+        if not self._memory:
+            return
+        trees = getattr(self, "_worktrees", None)
+        if not trees:
+            self._worktrees = [Worktree(self.root, branch)]
+            return
+        primary = trees[0]
+        trees[0] = Worktree(primary.path, branch)
 
     def commit(self, paths: list[str], message: str) -> str:
         if not paths:
@@ -1325,6 +1372,19 @@ class Repo:
 
 # Legacy names used by workspace and specs
 GitRepo = Repo
+
+
+class InMemoryRepo(Repo):
+    """Same public API as Repo; for specs — no git/gh on PATH."""
+
+    def __init__(
+        self,
+        root: str | Path = ".",
+        *,
+        owner: str = "demo-org",
+        repo_name: str = "demo-repo",
+    ) -> None:
+        super().__init__(root, memory=True, owner=owner, repo_name=repo_name)
 
 
 @toolset

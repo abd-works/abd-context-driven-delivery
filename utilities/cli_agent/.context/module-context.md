@@ -11,7 +11,7 @@ A backlog is an ordered collection of items (ticket refs or free-text) assigned 
 CliAgent, IdeCli, CursorCli, VscodeCli, IdeCliResult, JobQueue, CliBacklog, CliBacklogItem
 
 - `CliAgent` — orchestrator: owns `JobQueue`, manages backlogs and job templates, launches doer/judge turns.
-- `IdeCli` / `CursorCli` / `VscodeCli` / `IdeCliResult` — public IDE CLI invocation surface (model, mode, timeouts, resume ID). When `model` is empty, session preference `.context/sessions/{session}/model` (via `SessionModel` / `resolve_session_model`) supplies `--model` for cursor-agent.
+- `IdeCli` / `CursorCli` / `VscodeCli` / `IdeCliResult` — public IDE CLI invocation surface (model, mode, timeouts, resume ID). When `model` is empty, `SessionModel.resolve_for_launch` supplies `composer-2.5` (session file → `sessions/default` → default). When `mode` is empty, `medium` (non-fast: `composer-2.5[fast=false]` on cursor-agent). Use `cursor-grok-4.6-medium` only when the orchestrator judges the job long and very complex — a rare escalation, not the default.
 - `JobQueue` — ordered FIFO of jobs; head is in progress while not yet completed.
 - `CliBacklog` / `CliBacklogItem` — ordered backlog for one session (`pending | in_progress | done`).
 

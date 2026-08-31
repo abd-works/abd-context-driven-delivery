@@ -2152,6 +2152,26 @@ with description("CliAgent human check (#53)"):
 
 
 with description("CliAgent session model"):
+    with context("when no session model file exists"):
+        with it("should default to composer-2.5 on ide"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_default_model_"))
+            agent = CliAgent(workspace=str(tmp), session="fresh")
+            expect(agent.ide.model).to(equal("composer-2.5"))
+
+        with it("should default mode to medium (non-fast) on ide"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_default_mode_"))
+            agent = CliAgent(workspace=str(tmp), session="fresh")
+            expect(agent.ide.mode).to(equal("medium"))
+
+        with it("should pass composer-2.5[fast=false] on cursor argv by default"):
+            tmp = Path(tempfile.mkdtemp(prefix="cli_default_argv_"))
+            with patch("cli_agent.cli_agent.shutil.which", side_effect=_which_cursor):
+                host = CursorCli()
+                host.bind_workspace(str(tmp), "fresh")
+                argv = host._command("go", str(tmp))
+            expect(argv).to(contain("--model"))
+            expect(argv).to(contain("composer-2.5[fast=false]"))
+
     with context("when .context/sessions/{session}/model is set"):
         with it("should load that model onto ide when IdeCli.model is empty"):
             tmp = Path(tempfile.mkdtemp(prefix="cli_session_model_"))
