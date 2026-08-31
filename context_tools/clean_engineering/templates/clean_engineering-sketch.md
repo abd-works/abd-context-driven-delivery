@@ -1,43 +1,79 @@
-# clean_engineering sketch template — terse indent notation
+# clean_engineering sketch template — headings + indent members
 
 Rough shape for sketching an clean_engineering analysis before generating the formal artifact. Use clean_engineering vocabulary directly (class, property, operation, subtype, composition, aggregation, association) rather than the generic `thing` fallback.
 
-## Module nest (before class detail)
+## Module + class headings
 
-Sketch **nested modules** when children share a base seam. Paths are domain nouns (`powers/attack`).
+Sketch **modules as `#` (H1)** and **classes as `##` (H2)** so the sketch collapses by module and by class. Nested modules that share a base seam still use H1 per module path (`# powers`, `# powers/effect`). Paths are domain nouns (`powers/attack`).
+
+Members (properties, operations, owned nests, `->` interactions) stay **indented body** under the class heading — not further headings.
 
 ```
-powers/                              <-- parent sub-system (has shared seam)
-  effect                             <-- parent-owned shared base module
-  attack -> effect                   <-- child; depends on base, not on siblings
-  control -> effect
-  defense -> effect
-  movement -> effect
-  sensory -> effect
-  general -> effect
-  extras -> effect                   <-- modifiers nest with powers when they only apply to effects
-  flaws -> effect
+# powers
+// parent sub-system (has shared seam)
 
-conflicts/
-  turns                              <-- sequence; stub actions
-  actions                            <-- maneuvers; stub turns
-  conditions                         <-- damage/recovery; uses checks
+# powers/effect
+// parent-owned shared base module
 
-gear/
-  equipment
-  headquarters
-  vehicles
+# powers/attack
+// child; depends on base, not on siblings
+-> effect
 
-checks/                              <-- flat top-level OK when no shared parent seam
-abilities/
+# powers/control
+-> effect
+
+# powers/defense
+-> effect
+
+# powers/movement
+-> effect
+
+# powers/sensory
+-> effect
+
+# powers/general
+-> effect
+
+# powers/extras
+// modifiers nest with powers when they only apply to effects
+-> effect
+
+# powers/flaws
+-> effect
+
+# conflicts
+
+## Turns
+// sequence; stub actions
+
+## Actions
+// maneuvers; stub turns
+
+## Conditions
+// damage/recovery; uses checks
+
+# gear
+
+## Equipment
+
+## Headquarters
+
+## Vehicles
+
+# checks
+// flat top-level OK when no shared parent seam
+
+# abilities
 ```
 
-**Hard rules:** nest only when there is a **shared base** or clear sub-system; children implement independently with siblings stubbed; shared mechanics live once under the parent (e.g. `powers/effect`), not copy-pasted.
+**Hard rules:** nest only when there is a **shared base** or clear sub-system; children implement independently with siblings stubbed; shared mechanics live once under the parent (e.g. `# powers/effect`), not copy-pasted. Module = `#` · Class = `##`.
 
 ## Notation
 
 ```
-ClassName : BaseClass
+# {module}
+
+## ClassName : BaseClass
   propertyName
   operationName param param
   otherPropertyOrOperationName
@@ -46,28 +82,29 @@ ClassName : BaseClass
   RelatedClass                          <-- association candidate
 
   ----
- SubtypeName : ClassName
-      otherCollaborator                 <-- construction property (delta)
-      operationName param
-       -> result = otherCollaborator.operation param   <-- real call; assignment when binding matters
-       -> otherCollaborator.property                   <-- property read that matters
-       -> super.operation                              <-- base operation when subtype extends it
-       // invariant or sequencing note
-      ----
- Collaborator
-      property
-      operation param
+## SubtypeName : ClassName
+  otherCollaborator                 <-- construction property (delta)
+  operationName param
+   -> result = otherCollaborator.operation param   <-- real call; assignment when binding matters
+   -> otherCollaborator.property                   <-- property read that matters
+   -> super.operation                              <-- base operation when subtype extends it
+   // invariant or sequencing note
+  ----
+## Collaborator
+  property
+  operation param
 ```
 
 ## Legend
 
 | Symbol | clean_engineering meaning |
 |---|---|
-| `ClassName` | a class — earn a name once identity, state, behavior, or invariants justify it |
-| `ClassName : BaseClass` | subtype of BaseClass; record only the delta |
+| `# module` | module / package — H1; collapsible |
+| `## ClassName` | a class — H2; earn a name once identity, state, behavior, or invariants justify it |
+| `## ClassName : BaseClass` | subtype of BaseClass; record only the delta |
 | `propertyName` | something the class holds (noun phrase) |
 | `operationName param` | something the class does (verb phrase); trailing tokens are parameters |
-| indent | ownership / composition / subordination |
+| indent | ownership / composition / subordination (under a class heading) |
 | `----` | separator between the primary class block and a peer class it relates to |
 | `-> collaborator.operation param…` | interaction — call on a held property, peer, or `super` |
 | `-> result = collaborator.operation param…` | same when the return binding matters |
@@ -149,7 +186,7 @@ CartExampleFactory
 ## Rules
 
 - Nothing needs a formal name until the grill reveals it. `thing` is fine as a placeholder if the concept isn't stable yet.
-- Indent = owned or subordinate. Never use indent for association — put associated classes as peers below `----`.
+- `#` = module · `##` = class. Indent under a class = owned or subordinate. Never use indent for association — put associated classes as peer `##` headings below `----`.
 - One class family per file (`cohesive-file`): a class plus its subtypes and tightly connected peers (element + collection, small aggregate + part). Multiple unrelated families belong in separate sketches / separate code files. Example factories always go in a sibling `{type}_example_factory` file (`example-factory-separate-file`).
 - **No `I{Type}` interface names in informal or modules-fidelity sketches.** Use concrete class names only. Interface types (`ICart`, `IRepository`, etc.) never appear before model fidelity, and even at model/code they are **opt-in** — only when requested or a genuine multi-layer/multi-implementation seam exists (see `clean_engineering.md` § Interfaces). Default sketches stay on the concrete class name throughout.
 

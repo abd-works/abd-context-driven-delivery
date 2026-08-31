@@ -23,32 +23,38 @@ Do **not** tag lines with fidelity markers. Depth is what you fill:
 | **specification** | Extra scenarios, shared setup / background; still fake + public interface; values from factories |
 | **engineering** | Which tier(s) (`domain` / `client` / `server` / `e2e` / project-specific); not full impl in the sketch |
 
-**Notation:** indent = nesting · `{Actor} --> {Verb Noun}` story · `* approx N–M …` unmapped · `~>` increment · `//` note.
+**Notation:** markdown headings = nesting (`#` Epic · `##` SubEpic · `###` Story · deeper `#` for nested SubEpics) · `{Actor} --> {Verb Noun}` story heading · scenario / GWT as body under the story · `* approx N–M …` unmapped · `~>` increment · `//` note. Headings make the map collapsible.
 
 ---
 
 ## Template
 
 ```
-{Epic verb-noun}
-    * approx N–M total stories
-    {Sub-epic verb-noun}
-        {Actor} --> {Confirming story verb-noun}
-            given {shared setup}                    // specification only
-            {main scenario name}
-                given {precondition the running system actually checks}
-                    and {precondition with object.object.field}
-                    and …
-                when {the domain operation}
-                    and …
-                then {observable outcome {object.field=descriptive term}}
-                    and {next observable outcome}
-            {next scenario name}                    // specification only
-                …
-        {Actor} --> {Confirming story verb-noun}
-        * approx N–M more stories (what unmapped work likely includes)
-    {Sub-epic verb-noun}
-        * approx N–M more stories (what unmapped work likely includes)
+# {Epic verb-noun}
+* approx N–M total stories
+
+## {Sub-epic verb-noun}
+
+### {Actor} --> {Confirming story verb-noun}
+given {shared setup}                    // specification only
+{main scenario name}
+    given {precondition the running system actually checks}
+        and {precondition with object.object.field}
+        and …
+    when {the domain operation}
+        and …
+    then {observable outcome {object.field=descriptive term}}
+        and {next observable outcome}
+{next scenario name}                    // specification only
+    …
+
+### {Actor} --> {Confirming story verb-noun}
+
+* approx N–M more stories (what unmapped work likely includes)
+
+## {Sub-epic verb-noun}
+* approx N–M more stories (what unmapped work likely includes)
+
 ~> Increment 1: {capability outcome}: {Story verb-noun}, {Story verb-noun}, …
 ```
 
@@ -57,35 +63,44 @@ Do **not** tag lines with fidelity markers. Depth is what you fill:
 ## Example
 
 ```
-Manage Customer Orders
-    * approx 18-22 total stories
-    Place New Order
-        Customer --> Browse Product Catalog
-            browse catalog shows available products
-                given a Catalog with published Products
-                    and a Customer with an empty Cart
-                when the Customer browses the Catalog
-                then available Products are listed with price
-                    and Product.name and Product.price are shown
-        Customer --> Submit Order
-            given a Cart with line items and a Payment Method   // specification only
-            order accepted for valid cart and payment
-                given a Cart with Items totalling amount.currency
-                    and a Payment Method with status authorised
-                when the Customer submits the Order
-                then an Order is created with status placed
-                    and an Order.number is returned
-            order rejected when payment declined                // specification only
-                given a Cart with Items totalling amount.currency
-                    and a Payment Method with status declined
-                when the Customer submits the Order
-                then the Order is rejected with reason payment_declined
-                    and the Cart contents are preserved
-        * approx 4-5 more stories (cart, address, delivery, review)
-    Track Order Status
-        * approx 3-4 more stories (pending, shipped, delivered)
-    Cancel Order
-        Customer --> Request Order Cancellation
-        * approx 2-3 more stories (refund, partial cancel, policy)
+# Manage Customer Orders
+* approx 18-22 total stories
+
+## Place New Order
+
+### Customer --> Browse Product Catalog
+browse catalog shows available products
+    given a Catalog with published Products
+        and a Customer with an empty Cart
+    when the Customer browses the Catalog
+    then available Products are listed with price
+        and Product.name and Product.price are shown
+
+### Customer --> Submit Order
+given a Cart with line items and a Payment Method   // specification only
+order accepted for valid cart and payment
+    given a Cart with Items totalling amount.currency
+        and a Payment Method with status authorised
+    when the Customer submits the Order
+    then an Order is created with status placed
+        and an Order.number is returned
+order rejected when payment declined                // specification only
+    given a Cart with Items totalling amount.currency
+        and a Payment Method with status declined
+    when the Customer submits the Order
+    then the Order is rejected with reason payment_declined
+        and the Cart contents are preserved
+
+* approx 4-5 more stories (cart, address, delivery, review)
+
+## Track Order Status
+* approx 3-4 more stories (pending, shipped, delivered)
+
+## Cancel Order
+
+### Customer --> Request Order Cancellation
+
+* approx 2-3 more stories (refund, partial cancel, policy)
+
 ~> Increment 1: Customer can place a paid order: Browse Product Catalog, Submit Order
 ```
