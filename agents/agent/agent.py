@@ -198,6 +198,11 @@ class Turn:
         self.sha = sha
         self.hanging = False
         self.session.log.finish_turn(self)
+        if self.session.open_turn is self:
+            self.session.open_turn = None
+
+    def finish_turn(self, *, subject: str = "", sha: str = "stub") -> None:
+        self.finish(subject=subject, sha=sha)
 
     def close(self) -> None:
         self.hanging = False
@@ -1518,6 +1523,8 @@ class AgentSession:
     branch: Branch | None = None
     log: AgentSessionLog = field(default_factory=AgentSessionLog)
     turns: list[Turn] = field(default_factory=list)
+    open_turn: Turn | None = None
+    decisions: Any = field(default=None, repr=False)
     _agent_slot: _LinkedAgentSlot = field(default_factory=_LinkedAgentSlot, repr=False)
     _gate: _SessionGate = field(default_factory=_SessionGate, repr=False)
     _log_path: _LogPath = field(default_factory=_LogPath, repr=False)
@@ -1530,13 +1537,32 @@ class AgentSession:
             self.context_root = self.folder.parent
         if self.log.path is None:
             self.log.path = self._log_path.under(self.folder)
+        if self.decisions is None:
+            from record_decisions.record_decisions import RecordDecisions
+
+            self.decisions = RecordDecisions()
 
     def _context_root_unset(self) -> bool:
         return not self.context_root or str(self.context_root) == "."
 
+    @property
+    def path(self) -> Path:
+        return self.context_root
+
+    @property
+    def eval_log_dir(self) -> Path:
+        return self.folder / "logs"
+
+    @property
+    def turn(self) -> Turn:
+        if self.open_turn is None or not self.open_turn.hanging:
+            return self.mint_turn()
+        return self.open_turn
+
     def mint_turn(self, *, action: str = "") -> Turn:
         turn = Turn(session=self, name=self._turn_clock.next_id())
         turn.open(action=action)
+        self.open_turn = turn
         return turn
 
     @property
@@ -1687,6 +1713,7 @@ class _ChatPathGatherer:
 class Agent:
     """Orchestrates doer → judge → human for each task on the backlog."""
 
+    _healer_returns_handoff: bool = field(default=False, init=False, repr=False)
     session: AgentSession | None = None
     backlog: list[AgentTask] = field(default_factory=list)
     current_task: AgentTask | None = field(default=None)
@@ -1739,6 +1766,9 @@ class Agent:
         self.log.kick(target)
 
     def run_next_task(self) -> None:
+        self._guard_phase("run_next_task", self._run_next_task_body, handoff=False)
+
+    def _run_next_task_body(self) -> None:
         self._ensure_session()
         if self.current_task is None:
             self._launch_next()
@@ -1749,6 +1779,9 @@ class Agent:
 
     def run_task_queue(self) -> None:
         """Drain the backlog until empty or a workflow fault stops the process."""
+        self._guard_phase("run_backlog", self._run_task_queue_body, handoff=False)
+
+    def _run_task_queue_body(self) -> None:
         self._ensure_session()
         self._drain.active = True
         try:
@@ -1867,7 +1900,9 @@ class Agent:
 
     def _run_tools_cli_for(self, participant: AgentParticipant) -> None:
         session = self._require_session()
-        self.last_guidance = self._tools_cli.run_for_prompt(session, participant.prompt)
+        self.last_guidance = self._tools_cli.run_for_prompt(
+            session, participant.prompt
+        )
 
     def _launch_judge(self) -> None:
         self._send_accepted_if_present(self._require_current_task().judge)
@@ -1972,6 +2007,32 @@ class Agent:
         self.last_phase_name = phase
         self.last_phase_result = str(result or "")
 
+    def _guard_phase(self, phase: str, fn, *, handoff: bool | None = None):
+        """Run *fn*; on exception forward to healer ``eval`` before re-raising."""
+        from agent.healer import HealerStop, format_healer_fix_handoff
+
+        return_handoff = (
+            self._healer_returns_handoff if handoff is None else handoff
+        )
+        try:
+            return fn()
+        except HealerStop:
+            raise
+        except AgentFault:
+            raise
+        except Exception as exc:
+            report = self._healer_eval(
+                phase=phase,
+                trigger="exception",
+                error=exc,
+                stop_on_exception=False,
+            )
+            if report.stop_recommended:
+                raise HealerStop(report) from exc
+            if return_handoff:
+                return format_healer_fix_handoff(report)
+            raise exc
+
     def _healer_eval(
         self,
         *,
@@ -1980,10 +2041,10 @@ class Agent:
         error: BaseException | None = None,
         stop_on_exception: bool = False,
     ):
-        from agent.healer import HealerStop, log_healer_eval
+        from agent.healer import HealerFailure, HealerStop, log_healer_eval
 
-        if self.healer is None or self.session is None:
-            return None
+        if self.healer is None:
+            raise HealerFailure(f"agent has no healer — cannot eval phase {phase!r}")
         records = self._healer_log_records()
         kinds = [row["kind"] for row in records]
         report = self.healer.eval(
@@ -1997,7 +2058,10 @@ class Agent:
             run_context=self._healer_run_context(),
             last_phase_result=self.last_phase_result,
         )
-        log_healer_eval(self.log, report)
+        if report is None:
+            raise HealerFailure(f"healer eval returned no report for phase {phase!r}")
+        if self.session is not None:
+            log_healer_eval(self.log, report)
         if stop_on_exception and report.stop_recommended and trigger == "exception":
             raise HealerStop(report) from error
         return report

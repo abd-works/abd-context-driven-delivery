@@ -439,7 +439,15 @@ class _ToolsetRunner:
     def _build_instance(self, toolset_cls: type, context: dict[str, Any]) -> Toolset:
         reader = _SignatureReader.instance()
         schema = reader.input_schema(toolset_cls.__init__)
-        missing = [name for name in schema.get("required", []) if name not in context]
+        properties = schema.get("properties", {})
+        init_context = (
+            {key: value for key, value in context.items() if key in properties}
+            if properties
+            else {}
+        )
+        missing = [
+            name for name in schema.get("required", []) if name not in init_context
+        ]
         if missing:
             joined = ", ".join(missing)
             raise RunError(
@@ -452,7 +460,7 @@ class _ToolsetRunner:
                 },
             )
         try:
-            return toolset_cls(**context)
+            return toolset_cls(**init_context)
         except TypeError as exc:
             raise RunError(
                 f"invalid context for {toolset_cls.__name__}: {exc}",

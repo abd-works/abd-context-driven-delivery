@@ -82,6 +82,19 @@ with description("a Bdd toolset"):
                 ce = Bdd(fidelity="development", session="satisfy").ce()
                 expect(ce.workspace.current_work_session.name if ce.workspace.current_work_session else None).to(equal("satisfy"))
 
+            with it("should resolve session from SessionLog when omitted from the constructor"):
+                from workspace.session_log import SessionLog
+
+                SessionLog.set_instance(None)
+                SessionLog.instance().set_session("bdd-judge-session")
+                try:
+                    host = Bdd(fidelity="development", path="agents")
+                    expect(host.workspace.current_work_session.name).to(
+                        equal("bdd-judge-session")
+                    )
+                finally:
+                    SessionLog.set_instance(None)
+
         with it("should return a companion with mode set to tool"):
             ce = Bdd().ce()
             expect(ce.mode).to(equal("tool"))

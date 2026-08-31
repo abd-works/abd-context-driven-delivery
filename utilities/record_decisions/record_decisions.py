@@ -76,7 +76,7 @@ class RecordDecisions:
         """Step 1 - Read the format once via read_cdr_format. Internalise the three-criteria gate and the minimal template."""
         self.read_cdr_format()
         """Step 2 - Optionally call list_cdrs(root) so you do not re-record an already-captured decision."""
-        self.list_cdrs()
+        self.list_cdrs(root)
         """Step 3 - During the session (grill, sketch, or generate), watch for decisions that meet ALL three: hard to reverse, surprising without context, and a real trade-off. If any criterion is missing, skip the CDR."""
         """Step 4 - When a qualifying decision crystallises, offer a CDR briefly (title + one-line gist). If the user accepts, call write_cdr immediately with a kebab slug and content matching CDR-FORMAT.md. Do not batch; do not wait until the end."""
         self.write_cdr()

@@ -28,12 +28,10 @@ import subprocess
 from typing import Optional
 
 from agent.chat_agent import ChatAgent, _ChatEngine, _ChatEnginePersistence
-from agent.healer import Healer, HealerRunContext, _SCENARIOS_DIR, format_healer_fix_handoff
+from agent.tools_cli import assert_tools_response
+from agent.healer import Healer, HealerFailure, HealerRunContext, _SCENARIOS_DIR, format_healer_fix_handoff
 from agent.tools_cli import ToolsCliRunner
 from agent.workflow import WorkTicket, Workflow, WorkflowConfig
-from agent._spec_support import (
-    _open_workspace_session,
-)
 from primitives.tools.repo_paths import repo_python, repo_root
 
 from agent.agent import (
@@ -57,7 +55,7 @@ from agent.agent import (
 )
 
 
-def _open_session(name: str = "agent-spec") -> AgentSession:
+def _bare_session(name: str = "agent-spec") -> AgentSession:
     folder = Path(tempfile.mkdtemp()) / ".agent_sessions" / name
     return AgentSession(name=name, folder=folder, context_root=folder.parent)
 
@@ -95,10 +93,64 @@ def _verdicts(session) -> list[str]:
     return _verdict_results(session)
 
 
+def _open_workspace_session(
+    name: str = "sub-agent",
+    *,
+    prefix: str = "sub_agent_",
+) -> AgentSession:
+    root = Path(tempfile.mkdtemp(prefix=prefix))
+    repo = InMemoryRepo(root, Repo.Worktree(root, "main"))
+    workspace = Workspace(path=root, repos=[repo], primary_repo=repo)
+    return workspace.open(name=name, context_root=root)
+
+
+def _judged_echo_task() -> AgentTask:
+    prompt = (
+        "/echo fence one-judged-job-55. Finish the Turn. "
+        "Do not contact the judge or drain a backlog."
+    )
+    return _judged_task(
+        prompt=prompt,
+        judge_prompt=(
+            "/validate. PASS when the doer used Echo and finished the Turn. "
+            "FAIL only if the doer contacted the judge or edited the queue."
+        ),
+    )
+
+
+def _sub_queue_judged_task(label: str) -> AgentTask:
+    prompt = (
+        f"/echo fence sub-queue-{label}-55. Finish the Turn. "
+        "Do not contact the judge or drain a backlog."
+    )
+    return _judged_task(
+        prompt=prompt,
+        judge_prompt=(
+            "/validate. PASS when the doer used Echo and finished the Turn "
+            "for this queue item. FAIL only if the doer skipped echo or edited the queue."
+        ),
+    )
+
+
+def _workflow_fixture():
+    parent = Path(tempfile.mkdtemp(prefix="start_fin55_"))
+    root = parent / "abd-context-driven-delivery"
+    root.mkdir()
+    repo = InMemoryRepo(root, Repo.Worktree(root, "main"))
+    repo._issue_shelf.attach_project(Project())
+    workspace = Workspace(path=root, repos=[repo], primary_repo=repo)
+    workflow = Workflow(
+        workspace=workspace,
+        repo=repo,
+        config=WorkflowConfig(),
+    )
+    return root, repo, workflow
+
+
 with description("Complete Agent Task"):
     with context("with an Agent bound to an open AgentSession"):
         with before.each:
-            self.session = _open_session("inc1")
+            self.session = _bare_session("inc1")
             self.agent = Agent(session=self.session)
 
         with context("with a current task"):
@@ -144,7 +196,7 @@ with description("Complete Agent Task"):
 with description("Complete Agent Task With Judge and Human"):
     with context("with an Agent bound to an open AgentSession"):
         with before.each:
-            self.session = _open_session("inc2")
+            self.session = _bare_session("inc2")
             self.agent = Agent(session=self.session)
 
         with context("with a current task"):
@@ -250,8 +302,354 @@ with description("Complete Agent Task With Judge and Human"):
                         expect(_log_kinds(self.session.log)).to(contain("kick"))
                         expect(self.task.state).to(equal("Done"))
 
+                with context("with a validation error from the judge"):
+                    with before.each:
+                        self.agent._stub_faults.replace(["validation_error"])
 
-# --- from healer_spec.py ---
+                    with it("should record the validation error on the session log"):
+                        self.agent.run_next_task()
+                        expect(_log_kinds(self.session.log)).to(
+                            contain("validation_error")
+                        )
+
+            with context("with a workflow fault on the current task"):
+                with before.each:
+                    self.task = _doer_task()
+                    self.agent.add_tasks([self.task])
+                    self.agent._stub_faults.replace(["invariant"])
+
+                with it("should stop and raise an invariant fault"):
+                    expect(self.agent.run_next_task).to(raise_error(AgentFault))
+
+            with context("that is being rerun"):
+                with before.each:
+                    self.task = _judged_task()
+                    self.agent.add_tasks([self.task])
+                    self.agent._stub_verdicts.replace(["FAIL", "PASS"])
+
+                with it("should mint a new turn id on retry"):
+                    self.agent.run_next_task()
+                    turn_ids = [turn.name for turn in self.session.turns]
+                    expect(len(turn_ids) >= 2).to(be_true)
+                    expect(len(set(turn_ids)) >= 2).to(be_true)
+
+
+def _workspace_fixture(prefix: str = "ws_"):
+    root = Path(tempfile.mkdtemp(prefix=prefix))
+    repo = InMemoryRepo(root, Repo.Worktree(root, "main"))
+    workspace = Workspace(path=root, repos=[repo], primary_repo=repo)
+    return root, repo, workspace
+
+
+with description("Add Agent Tasks To Backlog"):
+    with context("with an Agent that has an open session"):
+        with before.each:
+            self.session = _bare_session("add-tasks")
+            self.agent = Agent(session=self.session)
+
+        with context("with one or more AgentTasks"):
+            with it("should append AgentTasks with state Backlog"):
+                tasks = [_doer_task("/echo a"), _doer_task("/echo b")]
+                self.agent.add_tasks(tasks)
+                expect(self.agent.backlog).to(equal(tasks))
+                expect(all(task.state == "Backlog" for task in tasks)).to(be_true)
+
+            with it("should log add_tasks"):
+                tasks = [_doer_task("/echo a")]
+                self.agent.add_tasks(tasks)
+                expect(_log_kinds(self.session.log)).to(contain("add_tasks"))
+
+        with it("should clear the backlog without touching completed tasks"):
+            done = _doer_task("/echo done")
+            self.agent.completed_tasks = [done]
+            self.agent.add_tasks([_doer_task("/echo queued")])
+            self.agent.clear_backlog()
+            expect(self.agent.backlog).to(equal([]))
+            expect(self.agent.completed_tasks).to(equal([done]))
+            expect(_log_kinds(self.session.log)).to(contain("clear_backlog"))
+
+
+with description("Load Agent Tasks From Template"):
+    with context("with an Agent that has an open session"):
+        with before.each:
+            self.session = _bare_session("load-template")
+            self.agent = Agent(session=self.session)
+            self.agent.template_store.add(
+                AgentTaskTemplate(
+                    name="two-step",
+                    tasks=["/echo one", "/echo two"],
+                    description="pair",
+                )
+            )
+
+        with context("with a template name provided to the agent"):
+            with it("should load the template from the template store"):
+                self.agent.load_template("two-step")
+                expect(len(self.agent.backlog)).to(equal(2))
+
+            with it("should create an agent task for each task in the template"):
+                self.agent.load_template("two-step")
+                expect(self.agent.backlog[0].prompt).to(equal("/echo one"))
+                expect(self.agent.backlog[1].prompt).to(equal("/echo two"))
+
+            with it("should add those agent tasks to the agent backlog with state Backlog"):
+                self.agent.load_template("two-step")
+                expect(all(task.state == "Backlog" for task in self.agent.backlog)).to(
+                    be_true
+                )
+
+            with it("should log add_tasks"):
+                self.agent.load_template("two-step")
+                expect(_log_kinds(self.session.log)).to(contain("add_tasks"))
+
+            with it("should raise when the template name is unknown"):
+                expect(lambda: self.agent.load_template("missing")).to(
+                    raise_error(KeyError)
+                )
+
+
+with description("Launch Next Task As Current"):
+    with context("with an Agent that has an open session"):
+        with before.each:
+            self.session = _bare_session("launch-next")
+            self.agent = Agent(session=self.session)
+
+        with context("with no participant still in flight on the current task"):
+            with before.each:
+                self.task = _doer_task("/echo launch")
+                self.agent.add_tasks([self.task])
+
+            with it("should take the next agent task from the backlog and make it current"):
+                self.agent._launch_next()
+                expect(self.agent.current_task).to(equal(self.task))
+                expect(self.agent.backlog).to(equal([]))
+
+            with it("should mark that task In Progress"):
+                self.agent._launch_next()
+                expect(self.task.state).to(equal("In Progress"))
+
+            with it("should record launch_next on the session log before send"):
+                self.agent.run_next_task()
+                kinds = _log_kinds(self.session.log)
+                expect(kinds.index("launch_next") < kinds.index("send")).to(be_true)
+
+        with context("with a doer still in flight on the current task"):
+            with it("should refuse to take another task from the backlog"):
+                self.agent.current_task = _doer_task("/echo running")
+                self.agent.current_task.doer.state = "running"
+                self.agent.add_tasks([_doer_task("/echo queued")])
+                expect(lambda: self.agent._launch_next()).to(raise_error(RuntimeError))
+
+        with context("with a judge still in flight"):
+            with it("should refuse to take another task from the backlog"):
+                self.task = _judged_task()
+                self.agent.current_task = self.task
+                self.task.judge.state = "running"
+                self.agent.add_tasks([_doer_task("/echo queued")])
+                expect(lambda: self.agent._launch_next()).to(raise_error(RuntimeError))
+
+        with context("with a human still in flight"):
+            with it("should refuse to take another task from the backlog"):
+                self.task = _judged_task()
+                self.task.human = AgentParticipant(type="human", prompt="review")
+                self.agent.current_task = self.task
+                self.task.human.state = "running"
+                self.agent.add_tasks([_doer_task("/echo queued")])
+                expect(lambda: self.agent._launch_next()).to(raise_error(RuntimeError))
+
+
+with description("Open Default Agent Session"):
+    with context("with a Workspace that has a primary Repo"):
+        with before.each:
+            self.root, self.repo, self.workspace = _workspace_fixture("open_def_")
+
+        with context("with no AgentSession name given"):
+            with it("should create session.folder at repo root agent_sessions default"):
+                session = self.workspace.open()
+                expected = self.root / ".agent_sessions" / "default"
+                expect(session.folder).to(equal(expected))
+
+            with it("should include that session in Repo.agent_sessions"):
+                session = self.workspace.open()
+                expect(self.repo.agent_sessions).to(contain(session))
+
+            with it("should record session.log line with kind open"):
+                session = self.workspace.open()
+                expect(_log_kinds(session.log)).to(contain("open"))
+
+            with it("should correlate AgentSession.branch to that Branch"):
+                session = self.workspace.open(name="branch-bind")
+                expect(session.branch).not_to(equal(None))
+                expect(session.branch.agent_session).to(equal(session))
+
+        with context("with an explicit contextRoot override"):
+            with it("should set contextRoot to that resolved path"):
+                docs = self.root / "docs"
+                docs.mkdir()
+                self.workspace.upsert_path("agent", "contextRoot", docs)
+                session = self.workspace.open(name="ctx-override")
+                expect(session.context_root).to(equal(docs))
+
+        with context("with no explicit path override"):
+            with it("should resolve contextRoot from workspace defaults"):
+                session = self.workspace.open(name="default-root")
+                expect(session.context_root).to(equal(self.root))
+
+
+with description("Open New Agent Session"):
+    with context("with a Workspace that has a primary Repo"):
+        with before.each:
+            self.root, self.repo, self.workspace = _workspace_fixture("open_new_")
+
+        with it("should place session.folder at repo agent_sessions name"):
+            session = self.workspace.open(name="feature-a")
+            expect(session.folder).to(equal(self.root / ".agent_sessions" / "feature-a"))
+
+        with it("should resolve contextRoot independently of session.folder"):
+            docs = self.root / "docs"
+            docs.mkdir()
+            session = self.workspace.open(name="feature-b", context_root=docs)
+            expect(session.context_root).to(equal(docs))
+            expect(session.folder).not_to(equal(docs))
+
+        with it("should check out or create the branch worktree and attach it to the session"):
+            session = self.workspace.open(name="feature-c")
+            expect(session.branch).not_to(equal(None))
+            expect(session.worktree).not_to(equal(None))
+            expect(session.branch.name).to(equal("session/feature-c"))
+
+        with it("should link the branch to that session"):
+            session = self.workspace.open(name="feature-link")
+            expect(session.branch).not_to(equal(None))
+            expect(session.branch.agent_session).to(equal(session))
+
+        with it("should append a session log line with kind open name and branch"):
+            session = self.workspace.open(name="feature-d")
+            open_rows = [r for r in session.log._records if r["kind"] == "open"]
+            expect(len(open_rows)).to(equal(1))
+            expect(open_rows[0]["name"]).to(equal("feature-d"))
+            expect("branch" in open_rows[0]).to(be_true)
+
+
+with description("Open Existing Agent Session"):
+    with context("with a Workspace that has a primary Repo"):
+        with before.each:
+            self.root, self.repo, self.workspace = _workspace_fixture("open_exist_")
+
+        with context("with session data on disk"):
+            with before.each:
+                self.first = self.workspace.open(name="resume-me", context_root=self.root / "ctx")
+                self.first.goal = "remember this"
+                self.first.close()
+                self.folder = self.first.folder
+
+            with it("should restore contextRoot from what the session recorded"):
+                session = AgentSession(
+                    name="resume-me",
+                    folder=self.folder,
+                    context_root=self.root / "ctx",
+                    repo=self.repo,
+                )
+                session.open_existing()
+                expect(str(session.context_root)).to(contain("ctx"))
+
+            with it("should record session.log line with kind open on resume"):
+                session = AgentSession(
+                    name="resume-me",
+                    folder=self.folder,
+                    context_root=self.root / "ctx",
+                    repo=self.repo,
+                )
+                session.open_existing()
+                expect(_log_kinds(session.log)).to(contain("open"))
+
+            with it("should bind AgentSession.branch.worktree to that path"):
+                session = AgentSession(
+                    name="resume-me",
+                    folder=self.folder,
+                    context_root=self.root / "ctx",
+                    repo=self.repo,
+                )
+                session.open_existing()
+                expect(session.worktree).not_to(equal(None))
+                expect(session.worktree.path).to(equal(session.branch.worktree.path))
+
+        with context("with no session data on disk yet"):
+            with it("should recreate session.folder scaffolding under the same name"):
+                session = self.workspace.open(name="fresh-name", open_existing=True)
+                expect(session.folder.is_dir()).to(be_true)
+                expect(_log_kinds(session.log)).to(contain("open"))
+
+
+with description("Close Agent Session"):
+    with context("with someone closing the agent session"):
+        with before.each:
+            self.session = _bare_session("close-agent")
+            self.session.open()
+            self.agent = Agent(session=self.session)
+            self.session.agent = self.agent
+
+        with it("should stop live participants without finishing the session folder"):
+            task = _doer_task()
+            self.agent.add_tasks([task])
+            self.agent.current_task = task
+            task.doer.state = "running"
+            folder_before = self.session.folder
+            self.session.close()
+            expect(self.session.folder).to(equal(folder_before))
+            expect(folder_before.is_dir()).to(be_true)
+
+        with it("should append a session log line with kind close"):
+            self.session.close()
+            expect(_log_kinds(self.session.log)).to(contain("close"))
+
+        with it("should clear the live agent link from the session"):
+            self.session.close()
+            expect(self.session.agent is self.agent).to(be_false)
+
+        with it("should not attach or persist chats on close"):
+            self.session.close()
+            branch = self.session.branch
+            if branch is not None:
+                expect(branch.chats).to(equal([]))
+            else:
+                expect(branch).to(equal(None))
+
+
+with description("AgentSession CDD seam"):
+    with context("with a bare AgentSession"):
+        with before.each:
+            self.session = _bare_session("cdd-seam")
+            self.session.open()
+
+        with it("should expose path as context_root"):
+            expect(self.session.path).to(equal(self.session.context_root))
+
+        with it("should compose RecordDecisions on decisions"):
+            from record_decisions.record_decisions import RecordDecisions
+
+            expect(isinstance(self.session.decisions, RecordDecisions)).to(be_true)
+
+        with it("should hang turn on open_turn"):
+            turn = self.session.turn
+            expect(self.session.open_turn).to(equal(turn))
+            expect(turn.hanging).to(be_true)
+            expect(_log_kinds(self.session.log)).to(contain("open_turn"))
+
+        with it("should resolve eval_log_dir under folder/logs"):
+            expect(self.session.eval_log_dir).to(equal(self.session.folder / "logs"))
+
+    with context("with a hanging turn"):
+        with before.each:
+            self.session = _bare_session("finish-turn-alias")
+            self.turn = self.session.mint_turn(action="/echo test")
+
+        with it("should finish via finish_turn alias"):
+            self.turn.finish_turn(subject="done")
+            expect(self.turn.hanging).to(be_false)
+            expect(self.session.open_turn).to(equal(None))
+            expect(_log_kinds(self.session.log)).to(contain("finish_turn"))
+
 
 with description("Healer eval orchestration"):
     with before.each:
@@ -328,9 +726,46 @@ with description("Healer eval orchestration"):
         expect(report.healer_prompt).to(contain("/echo fence test"))
         expect(report.healer_prompt).to(contain('"result": "PASS"'))
 
+    with it("should eval on exception even when the agent has no session"):
+        from agent.agent import Agent
+
+        agent = Agent()
+        agent.healer = Healer()
+        report = agent._healer_eval(
+            phase="run_doer",
+            trigger="exception",
+            error=RuntimeError("need session name"),
+        )
+        expect(report is not None).to(be_true)
+        expect(report.error).to(contain("need session name"))
+        expect(report.fix_recommended).to(be_true)
+
+    with it("should hard stop when the agent has no healer"):
+        from agent.agent import Agent
+
+        agent = Agent()
+        agent.healer = None
+        expect(
+            lambda: agent._healer_eval(
+                phase="run_doer",
+                trigger="exception",
+                error=RuntimeError("boom"),
+            )
+        ).to(raise_error(HealerFailure))
 
 
-# --- from chat_agent_spec.py ---
+with description("Tools CLI response handling"):
+    with it("should treat ok false as a hard failure"):
+        expect(
+            lambda: assert_tools_response("ok: false\nerror: need session name\n")
+        ).to(raise_error(RuntimeError))
+
+    with it("should accept ok true responses"):
+        text = assert_tools_response("ok: true\ntool: fence\n")
+        expect("ok: true" in text).to(be_true)
+
+
+
 
 _CHAT = "agent.chat_agent:ChatAgent"
 _DOER = "/echo fence chat-persist-55. Finish the Turn. Do not contact the judge."
@@ -384,192 +819,388 @@ def _chat_yaml(
             lines.append(f"  {key}: '{text}'")
     return "\n".join(lines) + "\n"
 
-with description("ChatAgent tools CLI runner"):
-    with before.each:
-        self.root = Path(tempfile.mkdtemp(prefix="chat_spec_"))
-        self.runner = ToolsCliRunner(self.root)
+with description("Complete Agent Task Using Chat Agent"):
+    with context("with the tools CLI runner"):
+        with before.each:
+            self.root = Path(tempfile.mkdtemp(prefix="chat_spec_"))
+            self.runner = ToolsCliRunner(self.root)
 
-    with it("should invoke echo fence via real tools run for /echo in prompt"):
-        from agent.agent import AgentSession, InMemoryRepo, Repo, Workspace
+        with it("should invoke echo fence via real tools run for /echo in prompt"):
+            from agent.agent import AgentSession, InMemoryRepo, Repo, Workspace
 
-        repo = InMemoryRepo(self.root, Repo.Worktree(self.root, "main"))
-        workspace = Workspace(path=self.root, repos=[repo], primary_repo=repo)
-        session = workspace.open(name="echo-cli", context_root=self.root)
-        guidance = self.runner.run_for_prompt(
-            session,
-            "/echo fence chat-spec-body. Finish the Turn.",
-        )
-        expect(guidance is not None).to(be_true)
-        kinds = [row["kind"] for row in session.log._records]
-        expect(kinds).to(contain("open_turn"))
-        expect(kinds).to(contain("finish_turn"))
+            repo = InMemoryRepo(self.root, Repo.Worktree(self.root, "main"))
+            workspace = Workspace(path=self.root, repos=[repo], primary_repo=repo)
+            session = workspace.open(name="echo-cli", context_root=self.root)
+            guidance = self.runner.run_for_prompt(
+                session,
+                "/echo fence chat-spec-body. Finish the Turn.",
+            )
+            expect(guidance is not None).to(be_true)
+            kinds = [row["kind"] for row in session.log._records]
+            expect(kinds).to(contain("open_turn"))
+            expect(kinds).to(contain("finish_turn"))
 
-    with it("should invoke bdd development via real tools run for /bdd.development"):
-        from agent.agent import AgentSession, InMemoryRepo, Repo, Workspace
+        with it("should invoke bdd development via real tools run for /bdd.development"):
+            from agent.agent import AgentSession, InMemoryRepo, Repo, Workspace
 
-        repo = InMemoryRepo(self.root, Repo.Worktree(self.root, "main"))
-        workspace = Workspace(path=self.root, repos=[repo], primary_repo=repo)
-        session = workspace.open(name="bdd-cli", context_root=self.root)
-        guidance = self.runner.run_for_prompt(
-            session,
-            "/bdd.development agents Finish the Turn.",
-        )
-        expect(guidance is not None).to(be_true)
-        kinds = [row["kind"] for row in session.log._records]
-        expect(kinds).to(contain("open_turn"))
-        expect(kinds).to(contain("finish_turn"))
+            repo = InMemoryRepo(self.root, Repo.Worktree(self.root, "main"))
+            workspace = Workspace(path=self.root, repos=[repo], primary_repo=repo)
+            session = workspace.open(name="bdd-cli", context_root=self.root)
+            guidance = self.runner.run_for_prompt(
+                session,
+                "/bdd.development agents Finish the Turn.",
+            )
+            expect(guidance is not None).to(be_true)
+            kinds = [row["kind"] for row in session.log._records]
+            expect(kinds).to(contain("open_turn"))
+            expect(kinds).to(contain("finish_turn"))
 
+    with context("with one judged job in-process"):
+        with before.each:
+            self.root = Path(tempfile.mkdtemp(prefix="chat_eng_"))
+            self.engine = _ChatEngine(_workspace=self.root)
+            self.engine.open_named("chat-eng", goal="spec")
+            self.engine.enqueue_judged(
+                "/echo fence chat-eng-echo. Finish the Turn.",
+                "PASS when echo fence was used.",
+            )
 
-with description("ChatAgent engine — one judged job in-process"):
-    with before.each:
-        self.root = Path(tempfile.mkdtemp(prefix="chat_eng_"))
-        self.engine = _ChatEngine(_workspace=self.root)
-        self.engine.open_named("chat-eng", goal="spec")
-        self.engine.enqueue_judged(
-            "/echo fence chat-eng-echo. Finish the Turn.",
-            "PASS when echo fence was used.",
-        )
+        with it("should open session before work"):
+            expect(self.engine.session.name).to(equal("chat-eng"))
+            kinds = self.engine.log_kinds()
+            expect(kinds).to(contain("open"))
 
-    with it("should open session before work"):
-        expect(self.engine.session.name).to(equal("chat-eng"))
-        kinds = self.engine.log_kinds()
-        expect(kinds).to(contain("open"))
+        with it("should run doer phase with turn open and finish"):
+            self.engine.run_doer_phase()
+            kinds = self.engine.log_kinds()
+            expect(kinds).to(contain("send"))
+            expect(kinds).to(contain("accepted"))
+            expect(kinds).to(contain("done"))
+            expect(kinds).to(contain("open_turn"))
+            expect(kinds).to(contain("finish_turn"))
 
-    with it("should run doer phase with turn open and finish"):
-        self.engine.run_doer_phase()
-        kinds = self.engine.log_kinds()
-        expect(kinds).to(contain("send"))
-        expect(kinds).to(contain("accepted"))
-        expect(kinds).to(contain("done"))
-        expect(kinds).to(contain("open_turn"))
-        expect(kinds).to(contain("finish_turn"))
+        with it("should record PASS verdict and complete the task"):
+            self.engine.run_doer_phase()
+            text = self.engine.run_judge_phase("PASS")
+            expect("PASS" in text).to(be_true)
+            expect(self.engine.log_kinds()).to(contain("verdict"))
+            expect(self.engine.completed_tasks[0].state).to(equal("Done"))
 
-    with it("should record PASS verdict and complete the task"):
-        self.engine.run_doer_phase()
-        text = self.engine.run_judge_phase("PASS")
-        expect("PASS" in text).to(be_true)
-        expect(self.engine.log_kinds()).to(contain("verdict"))
-        expect(self.engine.completed_tasks[0].state).to(equal("Done"))
+        with it("should return healer_fix when tools CLI rejects a slash"):
+            engine = _ChatEngine(_workspace=self.root)
+            engine.open_named("healer-tools", goal="spec")
+            engine.enqueue_judged("/not-supported slash", "PASS when done.")
+            result = engine.run_doer_phase()
+            expect(str(result).startswith("healer_fix:")).to(be_true)
+            expect(engine.log_kinds()).to(contain("healer_eval"))
 
+    with context("with the phased toolset"):
+        with before.each:
+            self.root = Path(tempfile.mkdtemp(prefix="chat_kit_"))
+            self.kit = ChatAgent(workspace=str(self.root), session="chat-kit")
 
-with description("ChatAgent toolset"):
-    with before.each:
-        self.root = Path(tempfile.mkdtemp(prefix="chat_kit_"))
-        self.kit = ChatAgent(workspace=str(self.root), session="chat-kit")
+        with it("should expose read_log_kinds after enqueue"):
+            self.kit.open_session(name="chat-kit", goal="kit spec")
+            self.kit.enqueue_judged_job(
+                doer_prompt="/echo fence kit. Finish the Turn.",
+                judge_prompt="PASS when echo used.",
+            )
+            kinds = json.loads(self.kit.read_log_kinds())
+            expect(kinds).to(contain("add_tasks"))
 
-    with it("should expose read_log_kinds after enqueue"):
-        self.kit.open_session(name="chat-kit", goal="kit spec")
-        self.kit.enqueue_judged_job(
-            doer_prompt="/echo fence kit. Finish the Turn.",
-            judge_prompt="PASS when echo used.",
-        )
-        kinds = json.loads(self.kit.read_log_kinds())
-        expect(kinds).to(contain("add_tasks"))
+    with context("with persistence across separate tool instances"):
+        """Regression: phased /agent tools must survive separate tools CLI invocations."""
 
+        with before.each:
+            self.root = Path(tempfile.mkdtemp(prefix="chat_persist_"))
+            self.session = "persist-55"
 
-with description("ChatAgent persistence across separate tool instances"):
-    """Regression: phased /agent tools must survive separate tools CLI invocations."""
+        with it("should write chat-agent-state.json after open_session"):
+            _fresh_kit(self.root, self.session).open_session(
+                name=self.session, goal="persistence spec"
+            )
+            state_path = _ChatEnginePersistence.path_for(self.root, self.session)
+            expect(state_path.is_file()).to(be_true)
 
-    with before.each:
-        self.root = Path(tempfile.mkdtemp(prefix="chat_persist_"))
-        self.session = "persist-55"
+        with it("should run_doer on a fresh instance after enqueue on another"):
+            _fresh_kit(self.root, self.session).open_session(name=self.session)
+            _fresh_kit(self.root, self.session).enqueue_judged_job(
+                doer_prompt=_DOER,
+                judge_prompt=_JUDGE,
+            )
+            result = _fresh_kit(self.root, self.session).run_doer()
+            expect("doer done" in result.lower()).to(be_true)
 
-    with it("should write chat-agent-state.json after open_session"):
-        _fresh_kit(self.root, self.session).open_session(
-            name=self.session, goal="persistence spec"
-        )
-        state_path = _ChatEnginePersistence.path_for(self.root, self.session)
-        expect(state_path.is_file()).to(be_true)
+        with it("should finish a judged job across four fresh instances"):
+            _fresh_kit(self.root, self.session).open_session(name=self.session)
+            _fresh_kit(self.root, self.session).enqueue_judged_job(
+                doer_prompt=_DOER,
+                judge_prompt=_JUDGE,
+            )
+            _fresh_kit(self.root, self.session).run_doer()
+            verdict = _fresh_kit(self.root, self.session).run_judge(verdict="PASS")
+            expect("PASS" in verdict).to(be_true)
+            kinds = json.loads(_fresh_kit(self.root, self.session).read_log_kinds())
+            expect(kinds).to(contain("verdict"))
+            expect(kinds).to(contain("complete_task"))
+            expect(kinds.count("send") >= 2).to(be_true)
+            expect(kinds).to(contain("open_turn"))
+            expect(kinds).to(contain("finish_turn"))
 
-    with it("should run_doer on a fresh instance after enqueue on another"):
-        _fresh_kit(self.root, self.session).open_session(name=self.session)
-        _fresh_kit(self.root, self.session).enqueue_judged_job(
-            doer_prompt=_DOER,
-            judge_prompt=_JUDGE,
-        )
-        result = _fresh_kit(self.root, self.session).run_doer()
-        expect("doer done" in result.lower()).to(be_true)
+    with context("with phased subprocess tools run"):
+        with before.each:
+            self.root = Path(tempfile.mkdtemp(prefix="chat_subproc_"))
+            self.session = "subproc-55"
+            self.ctx = {"workspace": self.root, "session": self.session}
 
-    with it("should finish a judged job across four fresh instances"):
-        _fresh_kit(self.root, self.session).open_session(name=self.session)
-        _fresh_kit(self.root, self.session).enqueue_judged_job(
-            doer_prompt=_DOER,
-            judge_prompt=_JUDGE,
-        )
-        _fresh_kit(self.root, self.session).run_doer()
-        verdict = _fresh_kit(self.root, self.session).run_judge(verdict="PASS")
-        expect("PASS" in verdict).to(be_true)
-        kinds = json.loads(_fresh_kit(self.root, self.session).read_log_kinds())
-        expect(kinds).to(contain("verdict"))
-        expect(kinds).to(contain("complete_task"))
-        expect(kinds.count("send") >= 2).to(be_true)
-        expect(kinds).to(contain("open_turn"))
-        expect(kinds).to(contain("finish_turn"))
-
-
-with description("ChatAgent subprocess tools run — phased /agent"):
-    with before.each:
-        self.root = Path(tempfile.mkdtemp(prefix="chat_subproc_"))
-        self.session = "subproc-55"
-        self.ctx = {"workspace": self.root, "session": self.session}
-
-    with it("should complete judged job across four subprocess tools run calls"):
-        _tools_run(
-            _REPO_ROOT,
-            _chat_yaml(
+        with it("should complete judged job across four subprocess tools run calls"):
+            _tools_run(
                 _REPO_ROOT,
-                workspace=self.root,
-                session=self.session,
-                tool="open_session",
-                arguments={"name": self.session, "goal": "subprocess spec"},
-            ),
-        )
-        _tools_run(
-            _REPO_ROOT,
-            _chat_yaml(
+                _chat_yaml(
+                    _REPO_ROOT,
+                    workspace=self.root,
+                    session=self.session,
+                    tool="open_session",
+                    arguments={"name": self.session, "goal": "subprocess spec"},
+                ),
+            )
+            _tools_run(
                 _REPO_ROOT,
-                workspace=self.root,
-                session=self.session,
-                tool="enqueue_judged_job",
-                arguments={"doer_prompt": _DOER, "judge_prompt": _JUDGE},
-            ),
-        )
-        out_doer = _tools_run(
-            _REPO_ROOT,
-            _chat_yaml(
+                _chat_yaml(
+                    _REPO_ROOT,
+                    workspace=self.root,
+                    session=self.session,
+                    tool="enqueue_judged_job",
+                    arguments={"doer_prompt": _DOER, "judge_prompt": _JUDGE},
+                ),
+            )
+            out_doer = _tools_run(
                 _REPO_ROOT,
-                workspace=self.root,
-                session=self.session,
-                tool="run_doer",
-            ),
-        )
-        expect("doer done" in out_doer.lower()).to(be_true)
-        out_judge = _tools_run(
-            _REPO_ROOT,
-            _chat_yaml(
+                _chat_yaml(
+                    _REPO_ROOT,
+                    workspace=self.root,
+                    session=self.session,
+                    tool="run_doer",
+                ),
+            )
+            expect("doer done" in out_doer.lower()).to(be_true)
+            out_judge = _tools_run(
                 _REPO_ROOT,
-                workspace=self.root,
-                session=self.session,
-                tool="run_judge",
-                arguments={"verdict": "PASS"},
-            ),
-        )
-        expect("PASS" in out_judge).to(be_true)
-        out_log = _tools_run(
-            _REPO_ROOT,
-            _chat_yaml(
+                _chat_yaml(
+                    _REPO_ROOT,
+                    workspace=self.root,
+                    session=self.session,
+                    tool="run_judge",
+                    arguments={"verdict": "PASS"},
+                ),
+            )
+            expect("PASS" in out_judge).to(be_true)
+            out_log = _tools_run(
                 _REPO_ROOT,
-                workspace=self.root,
-                session=self.session,
-                tool="read_log_kinds",
-            ),
-        )
-        expect("verdict" in out_log).to(be_true)
-        expect("complete_task" in out_log).to(be_true)
+                _chat_yaml(
+                    _REPO_ROOT,
+                    workspace=self.root,
+                    session=self.session,
+                    tool="read_log_kinds",
+                ),
+            )
+            expect("verdict" in out_log).to(be_true)
+            expect("complete_task" in out_log).to(be_true)
+
+    with context("with a two-item judged backlog"):
+        with before.each:
+            self.root = Path(tempfile.mkdtemp(prefix="chat_queue_"))
+            self.engine = _ChatEngine(_workspace=self.root)
+            self.engine.open_named("chat-queue", goal="two-item drain")
+            self._doer_a = "/echo fence chat-queue-a. Finish the Turn."
+            self._doer_b = "/echo fence chat-queue-b. Finish the Turn."
+            self._judge = "PASS when echo fence was used."
+            self.engine.enqueue_judged(self._doer_a, self._judge)
+            self.engine.enqueue_judged(self._doer_b, self._judge)
+
+        with it("should drain both tasks in order when run_task_queue runs"):
+            self.engine.run_task_queue()
+            expect(len(self.engine.completed_tasks)).to(equal(2))
+            expect(self.engine.backlog).to(equal([]))
+            expect(self.engine.current_task).to(equal(None))
+            expect(self.engine.completed_tasks[0].prompt).to(equal(self._doer_a))
+            expect(self.engine.completed_tasks[1].prompt).to(equal(self._doer_b))
+
+        with it("should log launch_next once per task"):
+            self.engine.run_task_queue()
+            kinds = self.engine.log_kinds()
+            expect(kinds.count("launch_next")).to(equal(2))
+            expect(kinds.count("complete_task")).to(equal(2))
+            expect(kinds.count("verdict")).to(equal(2))
+
+    with context("with ticket-linked enqueue"):
+        with before.each:
+            self.root = Path(tempfile.mkdtemp(prefix="chat_ticket_"))
+            from agent.agent import Project
+
+            repo = InMemoryRepo(self.root, Repo.Worktree(self.root, "main"))
+            repo._issue_shelf.attach_project(Project())
+            self.engine = _ChatEngine(_workspace=self.root)
+            self.engine._repo_ref = repo
+            self.work = WorkTicket(repo, None).create(
+                "Drain backlog in order",
+                "enqueue from ticket then drain",
+            )
+            self.engine.open_named("chat-ticket", goal="ticket-linked enqueue")
+
+        with it("should link the WorkTicket and forward issue body into the doer prompt"):
+            task = self.engine.enqueue_judged_from_ticket(
+                self.work.issue.number,
+                "PASS when ticket requirements were followed.",
+            )
+            expect(len(task.tickets)).to(equal(1))
+            expect(task.tickets[0].issue.number).to(equal(1))
+            expect(task.doer.prompt).to(contain("# Ticket #1: Drain backlog in order"))
+            expect(task.doer.prompt).to(contain("enqueue from ticket then drain"))
+
+        with it("should persist ticket numbers across separate tool instances"):
+            self.engine.enqueue_judged_from_ticket(
+                self.work.issue.number,
+                "PASS when ticket requirements were followed.",
+            )
+            _ChatEnginePersistence.save(self.engine, session_name="chat-ticket")
+            loaded = _ChatEnginePersistence.load(self.root, "chat-ticket")
+            expect(loaded is not None).to(be_true)
+            expect(len(loaded.backlog)).to(equal(1))
+            expect(len(loaded.backlog[0].tickets)).to(equal(1))
+            expect(loaded.backlog[0].tickets[0].issue.title).to(
+                equal("Drain backlog in order")
+            )
+
+    with context("with phased run_backlog tool"):
+        with before.each:
+            self.root = Path(tempfile.mkdtemp(prefix="chat_drain_"))
+            self.session = "drain-55"
+            self.ctx = {"workspace": self.root, "session": self.session}
+            self._doer_a = "/echo fence drain-a. Finish the Turn."
+            self._doer_b = "/echo fence drain-b. Finish the Turn."
+
+        with it("should drain two enqueued jobs across subprocess tools run calls"):
+            _tools_run(
+                _REPO_ROOT,
+                _chat_yaml(
+                    _REPO_ROOT,
+                    workspace=self.root,
+                    session=self.session,
+                    tool="open_session",
+                    arguments={"name": self.session, "goal": "drain spec"},
+                ),
+            )
+            _tools_run(
+                _REPO_ROOT,
+                _chat_yaml(
+                    _REPO_ROOT,
+                    workspace=self.root,
+                    session=self.session,
+                    tool="enqueue_judged_job",
+                    arguments={"doer_prompt": self._doer_a, "judge_prompt": _JUDGE},
+                ),
+            )
+            _tools_run(
+                _REPO_ROOT,
+                _chat_yaml(
+                    _REPO_ROOT,
+                    workspace=self.root,
+                    session=self.session,
+                    tool="enqueue_judged_job",
+                    arguments={"doer_prompt": self._doer_b, "judge_prompt": _JUDGE},
+                ),
+            )
+            out = _tools_run(
+                _REPO_ROOT,
+                _chat_yaml(
+                    _REPO_ROOT,
+                    workspace=self.root,
+                    session=self.session,
+                    tool="run_backlog",
+                ),
+            )
+            expect("backlog drained" in out.lower()).to(be_true)
+            expect("2" in out).to(be_true)
+            out_log = _tools_run(
+                _REPO_ROOT,
+                _chat_yaml(
+                    _REPO_ROOT,
+                    workspace=self.root,
+                    session=self.session,
+                    tool="read_log_kinds",
+                ),
+            )
+            expect(out_log.count("complete_task") >= 2).to(be_true)
+            expect(out_log.count("verdict") >= 2).to(be_true)
 
 
+with description("Complete Task And Advance Queue"):
+    with context("with an Agent bound to an open AgentSession"):
+        with before.each:
+            self.session = _bare_session("queue-advance")
+            self.agent = Agent(session=self.session)
 
-# --- from sub_agent_spec.py ---
+        with context("with two tasks on the backlog"):
+            with before.each:
+                self.agent.add_tasks(
+                    [_doer_task("/echo one"), _doer_task("/echo two")]
+                )
+
+            with it("should drain both tasks when run_task_queue is called"):
+                self.agent.run_task_queue()
+                expect(len(self.agent.completed_tasks)).to(equal(2))
+                expect(self.agent.backlog).to(equal([]))
+                expect(self.agent.current_task).to(equal(None))
+
+            with it("should log launch_next once per task with the correct prompts"):
+                self.agent.run_task_queue()
+                kinds = _log_kinds(self.session)
+                expect(kinds.count("launch_next")).to(equal(2))
+                launch_records = [
+                    row for row in self.session.log._records if row["kind"] == "launch_next"
+                ]
+                expect(launch_records[0]["prompt"]).to(equal("/echo one"))
+                expect(launch_records[1]["prompt"]).to(equal("/echo two"))
+
+        with context("with the current agent task complete and more on the backlog"):
+            with it("should launch the next task after the first finishes"):
+                first = _doer_task("/echo first")
+                second = _doer_task("/echo second")
+                self.agent.add_tasks([first, second])
+                self.agent.run_task_queue()
+                expect(len(self.agent.completed_tasks)).to(equal(2))
+                expect(self.agent.completed_tasks[1].prompt).to(equal("/echo second"))
+
+        with it("should leave currentTask empty when no tasks remain"):
+            expect(self.agent.current_task).to(equal(None))
+
+        with context("with a validation error on the first task"):
+            with before.each:
+                first = _doer_task("/echo first")
+                second = _doer_task("/echo second")
+                self.agent.add_tasks([first, second])
+                self.agent._stub_faults.replace(["validation_error"])
+
+            with it("should skip the failed task and advance to the next backlog item"):
+                self.agent.run_task_queue()
+                expect(len(self.agent.completed_tasks)).to(equal(2))
+                expect(_log_kinds(self.session)).to(contain("validation_error"))
+                expect(self.agent.backlog).to(equal([]))
+
+        with context("with a broken workflow fault on the first task"):
+            with before.each:
+                first = _judged_task()
+                second = _doer_task("/echo second")
+                self.agent.add_tasks([first, second])
+                self.agent._stub_faults.replace(["invariant"])
+
+            with it("should stop the whole process and leave the second task on the backlog"):
+                expect(self.agent.run_task_queue).to(raise_error(AgentFault))
+                expect(self.agent.completed_tasks).to(equal([]))
+                expect(len(self.agent.backlog)).to(equal(1))
+                expect(self.agent.backlog[0].prompt).to(equal("/echo second"))
+
 
 with description("Complete Agent Task Using Sub Agent"):
     with context("with an Agent that is a SubAgent"):
@@ -630,6 +1261,82 @@ with description("Complete Agent Task Using Sub Agent"):
                     )
                     expect(doer_child.pid != judge_child.pid).to(be_true)
 
+    with context("with a judged echo job"):
+        with before.each:
+            self.session = _open_workspace_session(
+                "one-judged-job-55", prefix="sub55_"
+            )
+            self.agent = SubAgent(session=self.session)
+            self.agent._stub_verdicts.replace(["PASS"])
+            self.task = _judged_echo_task()
+            self.agent.add_tasks([self.task])
+
+        with it("should open the AgentSession before running the judged task"):
+            self.agent.run_next_task()
+            expect(_log_kinds(self.session)).to(contain("open"))
+            expect(self.session.name).to(equal("one-judged-job-55"))
+
+        with it("should coordinate doer then judge runtime prompt roles on one task"):
+            self.agent.run_next_task()
+            kinds = _log_kinds(self.session)
+            expect(kinds.count("send") >= 2).to(be_true)
+            expect(kinds).to(contain("verdict"))
+            expect(self.task.doer.state).to(equal("done"))
+            expect(self.task.judge.state).to(equal("done"))
+
+        with it("should open and finish kit Turns for slash work during the run"):
+            self.agent.run_next_task()
+            kinds = _log_kinds(self.session)
+            expect(kinds).to(contain("open_turn"))
+            expect(kinds).to(contain("finish_turn"))
+            expect(kinds.index("open_turn") < kinds.index("finish_turn")).to(be_true)
+            expect(any(not turn.hanging for turn in self.session.turns)).to(be_true)
+
+        with it("should record a single PASS verdict for the judged job"):
+            self.agent.run_next_task()
+            expect(_verdicts(self.session)).to(equal(["PASS"]))
+            expect(self.task.state).to(equal("Done"))
+
+        with it("should close the AgentSession after the run"):
+            self.agent.run_next_task()
+            self.session.close()
+            expect(_log_kinds(self.session)).to(contain("close"))
+
+    with context("with a two-item judged backlog"):
+        with before.each:
+            self.session = _open_workspace_session(
+                "sub-two-item-queue-55", prefix="sub55q_"
+            )
+            self.agent = SubAgent(session=self.session)
+            self.agent._stub_verdicts.replace(["PASS", "PASS"])
+            self.first = _sub_queue_judged_task("a")
+            self.second = _sub_queue_judged_task("b")
+            self.agent.add_tasks([self.first, self.second])
+
+        with it("should drain both tasks in order when run_task_queue runs"):
+            self.agent.run_task_queue()
+            expect(len(self.agent.completed_tasks)).to(equal(2))
+            expect(self.agent.backlog).to(equal([]))
+            expect(self.agent.current_task).to(equal(None))
+            expect(self.agent.completed_tasks[0].prompt).to(contain("sub-queue-a"))
+            expect(self.agent.completed_tasks[1].prompt).to(contain("sub-queue-b"))
+
+        with it("should launch doer and judge children for each queued task"):
+            self.agent.run_task_queue()
+            kinds = _log_kinds(self.session)
+            expect(kinds.count("send") >= 4).to(be_true)
+            expect(self.first.doer.state).to(equal("done"))
+            expect(self.first.judge.state).to(equal("done"))
+            expect(self.second.doer.state).to(equal("done"))
+            expect(self.second.judge.state).to(equal("done"))
+
+        with it("should record two PASS verdicts and two complete_task lines"):
+            self.agent.run_task_queue()
+            expect(_verdicts(self.session)).to(equal(["PASS", "PASS"]))
+            kinds = _log_kinds(self.session)
+            expect(kinds.count("complete_task")).to(equal(2))
+            expect(kinds.count("launch_next")).to(equal(2))
+
 
 with description("Close Agent Session Using Sub Agent"):
     with context("with someone closing the agent session"):
@@ -659,7 +1366,6 @@ with description("Close Agent Session Using Sub Agent"):
 
 
 
-# --- from workflow_spec.py ---
 
 def _fixture(prefix: str = "wf55_") -> tuple[Path, InMemoryRepo, Workspace, Workflow]:
     parent = Path(tempfile.mkdtemp(prefix=f"{prefix}parent_"))
@@ -854,7 +1560,6 @@ with description("WorkTicket.create and start without Workflow.run"):
 
 
 
-# --- from finish_spec.py ---
 
 def _fixture(prefix: str = "fin55_") -> tuple[Path, InMemoryRepo, Workspace, Workflow]:
     parent = Path(tempfile.mkdtemp(prefix=f"{prefix}parent_"))
@@ -979,6 +1684,54 @@ with description("Finish Ticket Closes Issue And Session"):
                 any(Path(tree.path) == self.sibling for tree in trees)
             ).to(equal(False))
 
+    with context("with a capstone start-through-finish journey"):
+        with before.each:
+            self.root, self.repo, self.workflow = _workflow_fixture()
+            self.work = self.workflow.create_ticket(
+                "Capstone finish",
+                "prove start through finish",
+            )
+            self.workflow.start(self.work.issue.number)
+            agent = self.workflow.agent
+            completed = agent.completed_tasks[0]
+            completed.doer.chat = AIChatInstance(
+                chat_id="ticket-doer",
+                workspace_path=str(self.workflow.session.context_root),
+                session_name=self.workflow.session.name,
+                context_root=str(self.workflow.session.context_root),
+            )
+            self.expected_chat = str(
+                Path(self.workflow.session.context_root)
+                / "agent-transcripts"
+                / "ticket-doer.jsonl"
+            )
+            self.workflow.finish(outcome="capstone done")
+
+        with it("should open a session and branch before finish"):
+            session = self.workflow.session
+            expect(session.name).to(equal(self.work.session_name))
+            expect(session.branch.name).to(
+                equal(f"session/{self.work.session_name}")
+            )
+            kinds = [row["kind"] for row in session.log._records]
+            expect(kinds).to(contain("open"))
+
+        with it("should finish the work session with a close commit and chat note"):
+            session = self.workflow.session
+            expect(session.branch.head).not_to(equal(None))
+            expect(session.branch.head.subject).to(equal("capstone done"))
+            expect(session.branch.chats).to(contain(self.expected_chat))
+            notes = session.branch.head.read_notes("refs/notes/chats")
+            expect(notes).to(contain(self.expected_chat))
+
+        with it("should set the issue Done and closed"):
+            expect(self.work.as_dict()["project_status"]).to(equal("Done"))
+            expect(self.work.issue.closed).to(be_true)
+
+        with it("should close the AgentSession after finish"):
+            kinds = [row["kind"] for row in self.workflow.session.log._records]
+            expect(kinds).to(contain("close"))
+
 
 with description("Reject Multi Repo Session Span on finish workspace"):
     with it("should still refuse multi-repo open without a primary"):
@@ -998,7 +1751,6 @@ with description("Reject Multi Repo Session Span on finish workspace"):
 
 
 
-# --- from cli_agent_spec.py ---
 
 class _FakeClock:
     """Deterministic clock/sleep for transcript polling."""
@@ -1825,130 +2577,3 @@ with description("Read Verdict From Judge Transcript"):
             _write_verdict_fixture(path, _fail_jsonl())
             watch.track(path)
             expect(watch._read_verdict()).to(equal("FAIL"))
-
-
-
-# --- from sub_agent_55_one_judged_job_agent_spec.py ---
-
-def _judged_echo_task():
-    prompt = (
-        "/echo fence one-judged-job-55. Finish the Turn. "
-        "Do not contact the judge or drain a backlog."
-    )
-    return _judged_task(
-        prompt=prompt,
-        judge_prompt=(
-            "/validate. PASS when the doer used Echo and finished the Turn. "
-            "FAIL only if the doer contacted the judge or edited the queue."
-        ),
-    )
-
-
-with description("#55 SubAgent one judged job — runtime"):
-    with before.each:
-        self.session = _open_workspace_session(
-            "one-judged-job-55", prefix="sub55_"
-        )
-        self.agent = SubAgent(session=self.session)
-        self.agent._stub_verdicts.replace(["PASS"])
-        self.task = _judged_echo_task()
-        self.agent.add_tasks([self.task])
-
-    with it("should open the AgentSession before running the judged task"):
-        self.agent.run_next_task()
-        expect(_log_kinds(self.session)).to(contain("open"))
-        expect(self.session.name).to(equal("one-judged-job-55"))
-
-    with it("should coordinate doer then judge runtime prompt roles on one task"):
-        self.agent.run_next_task()
-        kinds = _log_kinds(self.session)
-        expect(kinds.count("send") >= 2).to(be_true)
-        expect(kinds).to(contain("verdict"))
-        expect(self.task.doer.state).to(equal("done"))
-        expect(self.task.judge.state).to(equal("done"))
-
-    with it("should open and finish kit Turns for slash work during the run"):
-        self.agent.run_next_task()
-        kinds = _log_kinds(self.session)
-        expect(kinds).to(contain("open_turn"))
-        expect(kinds).to(contain("finish_turn"))
-        expect(kinds.index("open_turn") < kinds.index("finish_turn")).to(be_true)
-        expect(any(not turn.hanging for turn in self.session.turns)).to(be_true)
-
-    with it("should record a single PASS verdict for the judged job"):
-        self.agent.run_next_task()
-        expect(_verdicts(self.session)).to(equal(["PASS"]))
-        expect(self.task.state).to(equal("Done"))
-
-    with it("should close the AgentSession after the run"):
-        self.agent.run_next_task()
-        self.session.close()
-        expect(_log_kinds(self.session)).to(contain("close"))
-
-
-
-# --- from workflow_55_start_ticket_to_finish_agent_spec.py ---
-
-def _workflow_fixture():
-    parent = Path(tempfile.mkdtemp(prefix="start_fin55_"))
-    root = parent / "abd-context-driven-delivery"
-    root.mkdir()
-    repo = InMemoryRepo(root, Repo.Worktree(root, "main"))
-    repo._issue_shelf.attach_project(Project())
-    workspace = Workspace(path=root, repos=[repo], primary_repo=repo)
-    workflow = Workflow(
-        workspace=workspace,
-        repo=repo,
-        config=WorkflowConfig(),
-    )
-    return root, repo, workflow
-
-
-with description("#55 start ticket to finish — runtime"):
-    with before.each:
-        self.root, self.repo, self.workflow = _workflow_fixture()
-        self.work = self.workflow.create_ticket(
-            "Capstone finish",
-            "prove start through finish",
-        )
-        self.workflow.start(self.work.issue.number)
-        agent = self.workflow.agent
-        completed = agent.completed_tasks[0]
-        completed.doer.chat = AIChatInstance(
-            chat_id="ticket-doer",
-            workspace_path=str(self.workflow.session.context_root),
-            session_name=self.workflow.session.name,
-            context_root=str(self.workflow.session.context_root),
-        )
-        self.expected_chat = str(
-            Path(self.workflow.session.context_root)
-            / "agent-transcripts"
-            / "ticket-doer.jsonl"
-        )
-        self.workflow.finish(outcome="capstone done")
-
-    with it("should open a session and branch before finish"):
-        session = self.workflow.session
-        expect(session.name).to(equal(self.work.session_name))
-        expect(session.branch.name).to(
-            equal(f"session/{self.work.session_name}")
-        )
-        kinds = [row["kind"] for row in session.log._records]
-        expect(kinds).to(contain("open"))
-
-    with it("should finish the work session with a close commit and chat note"):
-        session = self.workflow.session
-        expect(session.branch.head).not_to(equal(None))
-        expect(session.branch.head.subject).to(equal("capstone done"))
-        expect(session.branch.chats).to(contain(self.expected_chat))
-        notes = session.branch.head.read_notes("refs/notes/chats")
-        expect(notes).to(contain(self.expected_chat))
-
-    with it("should set the issue Done and closed"):
-        expect(self.work.as_dict()["project_status"]).to(equal("Done"))
-        expect(self.work.issue.closed).to(be_true)
-
-    with it("should close the AgentSession after finish"):
-        kinds = [row["kind"] for row in self.workflow.session.log._records]
-        expect(kinds).to(contain("close"))
-

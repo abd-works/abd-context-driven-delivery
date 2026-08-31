@@ -64,13 +64,31 @@ All generation/validation goes through **`.\tools.ps1 run -`** from repo root un
 
 **Bdd judge fence (development specs under `agents/`):**
 
+Use the **Validate** kit (same as `/validate` slash) — Bdd does not expose a standalone `validate` action:
+
 ```yaml
-toolset: context_tools.bdd.bdd:Bdd
-context:
-  fidelity: development
-  path: agents
+toolset: validate.validate:Validate
 action: validate
+arguments:
+  tools:
+    - context_tools.bdd.bdd:Bdd
 ```
+
+For code under `agents/`, add CleanEngineering to the same call:
+
+```yaml
+toolset: validate.validate:Validate
+action: validate
+arguments:
+  tools:
+    - context_tools.bdd.bdd:Bdd
+    - context_tools.clean_engineering.clean_engineering:CleanEngineering
+```
+
+Host tools receive `path: agents` via their own context when you run Bdd/CE validate directly; the kit above scans each host's session-rooted paths.
+
+Session is optional when the repo is on a ``session/*`` git branch or ``SessionLog`` already
+binds a work session; ``tools run`` coalesces top-level ``session`` into ``context.session``.
 
 **CleanEngineering judge fence (code under `agents/`):**
 

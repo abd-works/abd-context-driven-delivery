@@ -45,7 +45,7 @@ Agent owns AgentSessionLog writes for send, accept, done, verdict, and fault. Ki
 
 ## Extend
 
-Subtypes specialize participant runtime hooks. ChatAgent in-chat toolset lives in `chat_agent.py`.
+Subtypes specialize participant runtime hooks. ChatAgent in-chat toolset lives in `chat_agent.py` (`open_session`, `enqueue_judged_job`, `enqueue_judged_job_from_ticket`, `run_doer`, `run_judge`, `run_backlog`, `read_log_kinds`, `eval`).
 
 ## Tests
 
