@@ -5,6 +5,7 @@ import json
 import itertools
 import os
 import re
+import shutil
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -491,6 +492,15 @@ class CliAgentSessionLog(AgentSessionLog):
 
     def wait_doer(self) -> None:
         self._append("wait_doer")
+
+    def run_stopped(self, reason: str) -> None:
+        self._append("run_stopped", reason=reason)
+
+    def recovery(self, **fields: Any) -> None:
+        self._append("recovery", **fields)
+
+    def error(self, detail: str, **fields: Any) -> None:
+        self._append("error", detail=detail, **fields)
 
     @override
     def kick(self, participant: AgentParticipant) -> None:
@@ -1772,6 +1782,10 @@ class Agent:
     healer: Any = field(default_factory=_default_healer, repr=False)
     last_phase_name: str = field(default="", repr=False)
     last_phase_result: str = field(default="", repr=False)
+    max_fails: int = 3
+    fail_count: int = 0
+    _healer_tried: bool = field(default=False, init=False, repr=False)
+    _last_healer_output: str = field(default="", init=False, repr=False)
     _workspace: Path = field(default_factory=Path.cwd, repr=False)
     _repo_ref: Repo | None = field(default=None, repr=False)
     _healer_role: AgentParticipant | None = field(default=None, init=False, repr=False)
@@ -1880,7 +1894,6 @@ class Agent:
             if chat is not None:
                 chat.stop()
                 participant.chat = None
-        self.current_task = None
 
     def kick(self, participant: AgentParticipant | None = None) -> None:
         target = participant or self._default_kick_target()
@@ -1965,12 +1978,29 @@ class Agent:
         if result == "PASS":
             self._finish_task_pass()
             return
-        self._healer_eval(phase="task_complete", trigger="success")
+        self._on_judge_fail()
+
+    def _on_judge_fail(self) -> None:
+        self.fail_count += 1
+        if self.fail_count < self.max_fails:
+            self._retry_after_fail()
+            return
+        if not self._healer_tried:
+            self._healer_tried = True
+            self._healer_eval(phase="task_complete", trigger="success")
+            self._apply_healer_prompt_revisions()
+            self._retry_after_fail()
+            return
+        self._give_up_on_judge_fail()
+
+    def _give_up_on_judge_fail(self) -> None:
         self._skip_unhealed_task()
 
     def _finish_task_pass(self) -> None:
         if self._human_requested_retry():
             return
+        self.fail_count = 0
+        self._healer_tried = False
         self._complete_task(outcome=_CompleteOutcome.PASS)
         self._healer_eval(phase="task_complete", trigger="success")
 
@@ -2216,6 +2246,9 @@ class Agent:
         self.log.accepted(participant)
         self._await_done(participant)
         self.log.done(participant)
+        chat = participant.chat
+        if isinstance(chat, SubAgentChatInstance):
+            self._last_healer_output = chat._child_result
 
     def eval_healer(
         self,
@@ -2245,17 +2278,46 @@ class Agent:
         self._advance_backlog()
 
     def _skip_unhealed_task(self) -> None:
-        """Judge FAIL after one try — healer already ran; do not retry."""
+        """Judge FAIL after retries and healer — advance backlog."""
         task = self._require_current_task()
         self.log.complete_task(
             task,
             outcome=_CompleteOutcome.SKIP,
-            detail="judge FAIL; unhealed after one try",
+            detail=f"judge FAIL; unhealed after {self.fail_count} try(s)",
         )
         task.state = "Done"
+        self.fail_count = 0
+        self._healer_tried = False
         self.completed_tasks.append(task)
         self.current_task = None
         self._advance_backlog()
+
+    def _apply_healer_prompt_revisions(self) -> None:
+        text = (self._last_healer_output or "").strip()
+        if not text:
+            return
+        task = self.current_task
+        if task is None:
+            return
+        doer_match = re.search(
+            r"doer_prompt:\s*(.+?)(?=\njudge_prompt:|\Z)",
+            text,
+            re.IGNORECASE | re.DOTALL,
+        )
+        judge_match = re.search(
+            r"judge_prompt:\s*(.+?)(?=\n(?:doer_prompt:|\d+\.|\Z))",
+            text,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if doer_match:
+            revised = doer_match.group(1).strip()
+            if revised:
+                task.doer.prompt = revised
+                task.prompt = revised
+        if judge_match and task.judge is not None:
+            revised = judge_match.group(1).strip()
+            if revised:
+                task.judge.prompt = revised
 
     def _participant_in_flight(self) -> bool:
         task = self.current_task
@@ -2381,6 +2443,15 @@ class AIChatInstance:
     def run_prompt(self, prompt: str) -> None:
         self._runs.append(prompt)
 
+    def create_chat(self) -> str:
+        return self.chat_id
+
+    def list_chats(self) -> list[str]:
+        root = Path(self.workspace_path or ".") / "agent-transcripts"
+        if not root.is_dir():
+            return []
+        return sorted(path.stem for path in root.glob("*.jsonl"))
+
     def continue_chat(self) -> None:
         """Nudge a live chat after kick — not named resume (CE hard rule)."""
         self._continues += 1
@@ -2390,8 +2461,11 @@ class AIChatInstance:
         self.alive = False
         self.pid = None
 
+    def _invoke_slash(self, command: str) -> None:
+        return None
+
     def verdict(self) -> str:
-        """Judge result from this runtime — stub child has no transcript."""
+        """Judge result from this runtime — in-process child has no transcript."""
         return "PASS"
 
 
@@ -2408,17 +2482,24 @@ class _SubAgentMailbox:
             out.write_text("", encoding="utf-8")
         (self._root / f"{role}.in").write_text(prompt.strip() + "\n", encoding="utf-8")
 
-    def wait(self, role: str, *, timeout_s: float = 180.0) -> str:
+    def wait(self, role: str, *, timeout_s: float = 1800.0) -> str:
         path = self._root / f"{role}.out"
-        deadline = time.time() + timeout_s
-        while time.time() < deadline:
+        inbox = self._root / f"{role}.in"
+        idle_deadline = time.time() + timeout_s
+        while True:
             if path.is_file():
                 text = path.read_text(encoding="utf-8").strip()
                 if text:
                     path.write_text("", encoding="utf-8")
                     return text
+            held = ""
+            if inbox.is_file():
+                held = inbox.read_text(encoding="utf-8").strip()
+            if held and held != "STOP":
+                idle_deadline = time.time() + timeout_s
+            elif time.time() >= idle_deadline:
+                raise RuntimeError(f"sub-agent {role} produced no output")
             time.sleep(0.25)
-        raise RuntimeError(f"sub-agent {role} produced no output")
 
     def stop(self) -> None:
         for role in ("doer", "judge", "healer"):
@@ -2460,13 +2541,151 @@ class SubAgentChatInstance(AIChatInstance):
 
 @dataclass
 class CursorChatInstance(AIChatInstance):
-    """Cursor IDE chat runtime — spawn target; waits live on CliAgent."""
+    """Cursor IDE chat runtime — create-chat, spawn cursor-agent, transcript verdict."""
 
     _pid_seq: ClassVar[Any] = itertools.count(1)
+    _cli: Any = field(default=None, repr=False)
+    _proc: Any = field(default=None, repr=False)
+    _transcript_home: Path | None = field(default=None, repr=False)
+    _vendor_chat: bool = field(default=False, repr=False)
+
+    def create_chat(self) -> str:
+        if self._vendor_chat and self.chat_id:
+            return self.chat_id
+        cli = self._cli
+        if cli is None:
+            return self.chat_id
+        workspace = self.workspace_path or "."
+        self.chat_id = cli.create_chat(workspace)
+        self._vendor_chat = True
+        return self.chat_id
+
+    def run_prompt(self, prompt: str) -> None:
+        super().run_prompt(prompt)
+        self._spawn_cli(prompt)
+
+    def continue_chat(self) -> None:
+        super().continue_chat()
+        self._spawn_cli("")
+
+    def stop(self) -> None:
+        proc = self._proc
+        if proc is not None:
+            try:
+                proc.terminate()
+            except OSError:
+                pass
+            self._proc = None
+        super().stop()
+
+    def _invoke_slash(self, command: str) -> None:
+        from primitives.tools.repo_paths import pythonpath_entries, repo_python, repo_root
+
+        root = repo_root()
+        env = os.environ.copy()
+        env["PYTHONPATH"] = os.pathsep.join(pythonpath_entries(root))
+        fence = (
+            f"sessionName: {self.session_name}\n"
+            f"contextRoot: {self.context_root}\n"
+            f"workspacePath: {self.workspace_path}\n"
+        )
+        subprocess.run(
+            [repo_python(root), "-m", "tools", "run", "-"],
+            input=fence + command.strip() + "\n",
+            cwd=self.workspace_path or str(root),
+            env=env,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+
+    def verdict(self) -> str:
+        path = _TranscriptPath(home=self._transcript_home).under_chat(self)
+        result = _VerdictReader().from_transcript(_JsonlTranscript(path))
+        if result not in ("PASS", "FAIL"):
+            raise AIChatFault(
+                kind="connection",
+                detail="judge transcript had no PASS or FAIL",
+            )
+        return result
+
+    def list_chats(self) -> list[str]:
+        if self.chat_id:
+            return [self.chat_id]
+        return super().list_chats()
+
+    def _spawn_cli(self, prompt: str) -> None:
+        cli = self._cli
+        if cli is None:
+            return
+        self.create_chat()
+        argv = self._argv(prompt)
+        proc = cli.spawn(argv, cwd=self.workspace_path or ".")
+        self._proc = proc
+        self.pid = getattr(proc, "pid", None)
+        self.alive = True
+
+    def _argv(self, prompt: str) -> list[str]:
+        exe = self._cli.launcher()
+        args = [exe, "--force", "--trust"]
+        if self.chat_id:
+            args.extend(["--resume", self.chat_id])
+        if self.workspace_path:
+            args.extend(["--workspace", self.workspace_path])
+        if prompt:
+            args.append(prompt)
+        return args
 
 
 class VscodeChatInstance(CursorChatInstance):
     """VS Code chat runtime — spawn target; waits live on CliAgent."""
+
+
+class CliAgentParticipant(AgentParticipant):
+    """CLI participant — one CursorChatInstance or VscodeChatInstance on chat."""
+
+
+class _CursorCli:
+    """cursor-agent create-chat and Popen — live CLI backend."""
+
+    _chat_id = re.compile(
+        r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+        re.IGNORECASE,
+    )
+
+    def launcher(self) -> str:
+        exe = shutil.which("cursor-agent") or shutil.which("agent")
+        if exe is None:
+            raise RuntimeError("cursor-agent not found on PATH")
+        return exe
+
+    def create_chat(self, workspace: str) -> str:
+        completed = subprocess.run(
+            [self.launcher(), "create-chat", "--workspace", str(workspace)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=60,
+            check=False,
+        )
+        if completed.returncode != 0:
+            raise RuntimeError(
+                "cursor-agent create-chat failed "
+                f"(exit {completed.returncode}).\n"
+                f"stdout: {completed.stdout}\nstderr: {completed.stderr}"
+            )
+        match = self._chat_id.search(completed.stdout or "")
+        if match:
+            return match.group(0)
+        raise RuntimeError(
+            "cursor-agent create-chat returned no chat id.\n"
+            f"stdout: {completed.stdout}\nstderr: {completed.stderr}"
+        )
+
+    def spawn(self, argv: list[str], *, cwd: str):
+        return subprocess.Popen(list(argv), cwd=cwd or None)
 
 
 _SUB_AGENT_STATE_FILE = "sub-agent-state.json"
@@ -2791,8 +3010,38 @@ class SubAgent(Agent):
 class _TranscriptPath:
     """Vendor transcript location from chat workspace + chat id."""
 
+    def __init__(self, home: Path | None = None) -> None:
+        self.home = home
+
     def under_chat(self, chat: AIChatInstance) -> Path:
-        return Path(chat.workspace_path) / "agent-transcripts" / f"{chat.chat_id}.jsonl"
+        if self.home is not None or isinstance(chat, CursorChatInstance):
+            return self._cursor_layout(chat)
+        workspace = chat.workspace_path or "."
+        return Path(workspace) / "agent-transcripts" / f"{chat.chat_id}.jsonl"
+
+    def _cursor_layout(self, chat: AIChatInstance) -> Path:
+        workspace = chat.workspace_path or "."
+        chat_id = chat.chat_id
+        home = self.home if self.home is not None else Path.home()
+        return (
+            home
+            / ".cursor"
+            / "projects"
+            / _cursor_project_slug(workspace)
+            / "agent-transcripts"
+            / chat_id
+            / f"{chat_id}.jsonl"
+        )
+
+
+def _cursor_project_slug(workspace: str) -> str:
+    raw = str(Path(workspace).resolve())
+    return (
+        raw.replace(":", "")
+        .replace("\\", "-")
+        .replace("/", "-")
+        .replace("_", "-")
+    )
 
 
 class _JsonlTranscript:
@@ -3010,7 +3259,13 @@ class AgentRuntimeTranscriptWatcher:
             self._timing.sleep_poll()
 
     def _read_verdict(self) -> str:
-        return self._verdicts.from_transcript(self._file)
+        result = self._verdicts.from_transcript(self._file)
+        if result not in ("PASS", "FAIL"):
+            raise AIChatFault(
+                kind="connection",
+                detail="judge transcript had no PASS or FAIL",
+            )
+        return result
 
 
 @dataclass
@@ -3037,29 +3292,6 @@ class _CliWorkspaceBind:
         if self.pending:
             return True
         return session.worktree is None
-
-
-@dataclass
-class _CliChatFactory:
-    """Bind and release CliAgent chat instances."""
-
-    def bind_context(
-        self,
-        participant: AgentParticipant,
-        *,
-        session: AgentSession,
-        workspace_path: str,
-    ) -> CursorChatInstance:
-        chat = participant.chat
-        if chat is None:
-            raise RuntimeError(
-                f"CliAgent participant {participant.type} has no chat to bind"
-            )
-        chat.session_name = session.name
-        chat.context_root = str(session.context_root)
-        if workspace_path:
-            chat.workspace_path = workspace_path
-        return chat
 
 
 _ARGV_SOFT_LIMIT = 7000
@@ -3136,6 +3368,7 @@ class CliAgent(Agent):
     _log: CliAgentSessionLog = field(
         default_factory=CliAgentSessionLog, init=False, repr=False
     )
+    _cli: Any = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         if self.session is not None:
@@ -3164,9 +3397,53 @@ class CliAgent(Agent):
 
     @override
     def close(self) -> None:
+        self.close_agents()
+        self.cleanup()
+
+    def close_agents(self) -> None:
+        """Stop live doer/judge/healer CLI processes and clear chat bindings."""
         super().close()
         self._worktree_bind.clear()
+
+    def cleanup(self) -> None:
+        """Remove orchestration temps; never delete durable session artifacts."""
         self._wipe_scratch()
+
+    def close_cli_session(self) -> None:
+        """Stop CLI runtimes, wipe temps, then close the AgentSession."""
+        self.close_agents()
+        self.cleanup()
+        session = self.session
+        if session is not None:
+            session.close()
+
+    def run(self) -> str:
+        """Slash run — drain the backlog on live CLI participants."""
+        self._ensure_session()
+        self.run_backlog()
+        return self.queue_status()
+
+    @override
+    def run_backlog(self) -> None:
+        self.log._append("run")
+        try:
+            super().run_backlog()
+        except Exception as exc:
+            self.log.error(str(exc))
+            self.log.run_stopped(type(exc).__name__)
+            raise
+        self.log.run_stopped("complete")
+
+    @override
+    def run_next_task(self) -> None:
+        self.log._append("run")
+        try:
+            super().run_next_task()
+        except Exception as exc:
+            self.log.error(str(exc))
+            self.log.run_stopped(type(exc).__name__)
+            raise
+        self.log.run_stopped("complete")
 
     def _wipe_scratch(self) -> None:
         session = self.session
@@ -3200,34 +3477,39 @@ class CliAgent(Agent):
     def _runtime_class(self) -> type[AIChatInstance]:
         return CursorChatInstance
 
+    @override
+    def _ensure_runtime(self, participant: AgentParticipant) -> None:
+        super()._ensure_runtime(participant)
+        chat = participant.chat
+        if isinstance(chat, CursorChatInstance):
+            chat._cli = self._cli
+            chat._transcript_home = self._paths.home
+            if not chat.workspace_path:
+                chat.workspace_path = self._worktree_bind.path
+            chat.create_chat()
+
+    @override
+    def _run_tools_cli_for(self, participant: AgentParticipant) -> None:
+        return None
+
+    @override
+    def _give_up_on_judge_fail(self) -> None:
+        self._raise(
+            AgentFault(
+                kind="judge_fail_limit",
+                detail=f"judge FAIL x{self.fail_count}",
+            )
+        )
+
     def _bind_chat_context(self, participant: AgentParticipant) -> None:
         super()._bind_chat_context(
             participant, workspace_path=self._worktree_bind.path
         )
-        self.log.bind_chat_context(participant)
 
     @override
     def _wait_doer(self) -> None:
         super()._wait_doer()
         self.log.wait_doer()
-
-    @override
-    def _finish_task_pass(self) -> None:
-        self.fail_count = 0
-        super()._finish_task_pass()
-
-    @override
-    def _retry_after_fail(self) -> None:
-        self.fail_count += 1
-        if self.fail_count >= self.max_fails:
-            self._raise(
-                AgentFault(
-                    kind="judge_fail_limit",
-                    detail=f"judge FAIL x{self.max_fails}",
-                )
-            )
-            return
-        super()._retry_after_fail()
 
     def _auto_kick_stalled_doer(self) -> None:
         task = self.current_task
@@ -3240,9 +3522,35 @@ class CliAgent(Agent):
             return
         self.kick(doer)
 
+    def _child_prompt(self, participant: AgentParticipant) -> str:
+        prompt = participant.prompt
+        if participant.type != "judge":
+            return prompt
+        task = self.current_task
+        if task is None:
+            return prompt
+        doer_chat = task.doer.chat
+        if doer_chat is None:
+            return prompt
+        answer = self._latest_assistant_text(doer_chat)
+        if not answer:
+            return prompt
+        return f"The doer answered: {answer}\n\n{prompt}"
+
+    def _latest_assistant_text(self, chat: AIChatInstance) -> str:
+        transcript = _JsonlTranscript(self._paths.under_chat(chat))
+        text = _AssistantText()
+        for row in transcript.rows_newest_first():
+            if row.get("role") != "assistant":
+                continue
+            reply = text.from_row(row).strip()
+            if reply:
+                return reply
+        return ""
+
     @override
     def _deliver_to_runtime(self, participant: AgentParticipant) -> None:
-        if participant.type == "doer" and self._pending_session:
+        if self._pending_session:
             raise RuntimeError(
                 "refuse durable CliAgent launch on main before branch worktree exists"
             )
@@ -3250,10 +3558,12 @@ class CliAgent(Agent):
         self._bind_chat_context(participant)
         if participant.type == "doer":
             self._persist_prompt_to_task_file(participant.prompt)
-        super()._deliver_to_runtime(participant)
+        prompt = self._child_prompt(participant)
+        self._require_runtime(participant).run_prompt(prompt)
+        self.log.bind_chat_context(participant)
         chat = self._require_runtime(participant)
         self.watch.track(self._paths.under_chat(chat))
-        self.log.run_chat(chat, participant.prompt)
+        self.log.run_chat(chat, prompt)
         if participant.type == "judge":
             self.log.launch_judge(participant)
 
@@ -3270,13 +3580,27 @@ class CliAgent(Agent):
         if participant.type == "healer":
             Agent._done_on_runtime(self, participant)
             return
-        self.watch._await_growth_then_quiet(self.stall_seconds, self.quiet_seconds)
+        try:
+            self.watch._await_growth_then_quiet(
+                self.stall_seconds, self.quiet_seconds
+            )
+        except AIChatFault as fault:
+            if fault.kind == "stall" and participant.type == "doer":
+                prior = participant.state
+                participant.state = "done"
+                self._auto_kick_stalled_doer()
+                participant.state = prior
+            raise
 
     @override
     def _await_verdict(self, participant: AgentParticipant) -> str:
         participant.state = "awaiting_verdict"
         self.watch._await_growth_then_quiet(self.stall_seconds, self.quiet_seconds)
-        result = self.watch._read_verdict()
+        chat = self._require_runtime_alive(participant)
+        if isinstance(chat, CursorChatInstance):
+            result = chat.verdict()
+        else:
+            result = self.watch._read_verdict()
         participant.state = "done"
         return result
 
@@ -3584,14 +3908,16 @@ class ChatAgent(Agent):
                 "PASS. Task complete.",
                 "healer eval.",
             )
-        self._healer_eval(phase="task_complete", trigger="success")
-        self._skip_unhealed_task()
+        self._on_judge_fail()
         self._chat_phase = "idle"
-        if self.backlog or self.current_task is not None:
+        if self.current_task is not None:
             follow = self._chat_deliver_doer()
-            return f"FAIL. Skipped after one try.\n\n{follow}"
+            return f"FAIL. Retrying doer.\n\n{follow}"
+        if self.backlog:
+            follow = self._chat_deliver_doer()
+            return f"FAIL. Skipped after judge retries.\n\n{follow}"
         return self._chat_reply(
-            "FAIL. Skipped after one try.",
+            "FAIL. Skipped after judge retries.",
             "add work with /agent-backlog, or healer eval.",
         )
 

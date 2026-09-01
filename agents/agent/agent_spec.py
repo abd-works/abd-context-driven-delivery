@@ -27,6 +27,7 @@ import os
 import subprocess
 import threading
 import time
+import uuid
 from typing import Optional
 
 from agent.agent import (
@@ -42,12 +43,18 @@ from agent.agent import (
     ChatAgent,
     ChatAgentKit,
     CliAgent,
+    CliAgentParticipant,
+    CursorChatInstance,
     InMemoryRepo,
     MultiRepoSessionError,
     Project,
     Repo,
     SubAgent,
     ToolCall,
+    _AssistantText,
+    _JsonlTranscript,
+    _SubAgentMailbox,
+    _TranscriptPath,
     Workspace,
     _ChatAgentPersistence,
 )
@@ -149,6 +156,13 @@ def _judged_echo_task() -> AgentTask:
             "/validate. PASS when the doer used Echo and finished the Turn. "
             "FAIL only if the doer contacted the judge or edited the queue."
         ),
+    )
+
+
+def _cli_judged_echo_task() -> AgentTask:
+    return _judged_task(
+        prompt="/echo fence cli-echo-job-55",
+        judge_prompt="PASS when echo fence was used.",
     )
 
 
@@ -271,6 +285,8 @@ with description("Complete Agent Task With Judge and Human"):
 
                 with context("with a failing verdict"):
                     with before.each:
+                        self.agent.max_fails = 1
+                        self.agent._healer_tried = True
                         _script_verdicts(self.agent, ["FAIL"])
 
                     with it("should skip the task after one try"):
@@ -1274,6 +1290,30 @@ with description("SubAgentKit tools via subprocess"):
         expect("run_backlog" in doc).to(be_true)
 
 
+with description("SubAgent mailbox wait while a child is in flight"):
+    with it("should not raise no output while inbox still holds the prompt"):
+        root = Path(tempfile.mkdtemp(prefix="mbox_hold_"))
+        box = _SubAgentMailbox(root)
+        box.send("doer", "Compute 1.")
+
+        def _reply() -> None:
+            time.sleep(0.45)
+            (root / "doer.out").write_text("1\n", encoding="utf-8")
+
+        threading.Thread(target=_reply, daemon=True).start()
+        text = box.wait("doer", timeout_s=0.2)
+        expect(text).to(equal("1"))
+
+    with it("should raise when inbox is empty and outbox stays empty"):
+        root = Path(tempfile.mkdtemp(prefix="mbox_empty_"))
+        box = _SubAgentMailbox(root)
+
+        def _wait() -> None:
+            box.wait("doer", timeout_s=0.25)
+
+        expect(_wait).to(raise_error(RuntimeError, contain("produced no output")))
+
+
 def _pump_live_mailbox(runtime: Path, replies: dict[str, list[str]], seen: dict) -> None:
     """Answer each new inbox payload once. Do not re-answer while .in still holds the prompt."""
     indexes = {role: 0 for role in replies}
@@ -1417,6 +1457,8 @@ with description("Complete Task And Advance Backlog"):
                 second = _judged_task("/echo two", "/validate")
                 self.agent.clear_backlog()
                 self.agent.add_tasks([first, second])
+                self.agent.max_fails = 1
+                self.agent._healer_tried = True
                 _script_verdicts(self.agent, ["FAIL", "PASS"])
                 self.agent.run_backlog()
                 expect(len(self.agent.completed_tasks)).to(equal(2))
@@ -2046,7 +2088,8 @@ class _FakeClock:
 
 
 def _transcript_location(chat: AIChatInstance) -> Path:
-    return Path(chat.workspace_path) / "agent-transcripts" / f"{chat.chat_id}.jsonl"
+    home = Path(chat.workspace_path) if chat.workspace_path else None
+    return _TranscriptPath(home=home).under_chat(chat)
 
 def _ensure_transcript_file(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -2086,6 +2129,24 @@ class _TranscriptScript:
         if row is None:
             return
         self._append_jsonl(path, row)
+
+
+class _DoerReplyScript(_TranscriptScript):
+    """Sleep hook: user turn then assistant reply (default did it)."""
+
+    def __init__(self, path: Path, *, reply: str = "did it") -> None:
+        super().__init__(path)
+        self._reply = reply
+
+    def __call__(self, _ignored: float) -> None:
+        text = self._read_if_present(self._path)
+        if self._text_lacks_role(text, "user"):
+            self._append_jsonl(self._path, {"role": "user", "content": "go"})
+            return
+        if self._text_lacks_role(text, "assistant"):
+            self._append_jsonl(
+                self._path, {"role": "assistant", "content": self._reply}
+            )
 
 
 class _GrowScript(_TranscriptScript):
@@ -2134,6 +2195,8 @@ class _RolePairScript(_TranscriptScript):
             return
         if tracked.resolve() == self._judge_path.resolve():
             self._grow_path(self._judge_path, "judge", "Verdict: PASS")
+            return
+        _GrowScript(tracked)(_ignored)
 
     def _grow_path(self, path: Path, user_content: str, assistant_content: str) -> None:
         text = self._read_if_present(path)
@@ -2167,6 +2230,8 @@ class _FailVerdictScript(_RolePairScript):
             return
         if tracked.resolve() == self._judge_path.resolve():
             self._grow_path(self._judge_path, "judge", "Verdict: FAIL")
+            return
+        _GrowScript(tracked)(_ignored)
 
 
 class _FailThenPassScript(_RolePairScript):
@@ -2184,6 +2249,40 @@ class _FailThenPassScript(_RolePairScript):
                 "Verdict: FAIL" if self._agent.fail_count < 1 else "Verdict: PASS"
             )
             self._grow_path(self._judge_path, "judge", verdict)
+            return
+        _GrowScript(tracked)(_ignored)
+
+
+class _ToolUseOnlyScript(_RolePairScript):
+    """Sleep hook: judge transcript ends with tool_use only (no PASS/FAIL)."""
+
+    def __call__(self, _ignored: float) -> None:
+        tracked = self._agent.watch.path
+        if tracked is None:
+            return
+        if tracked.resolve() == self._doer_path.resolve():
+            self._grow_path(self._doer_path, "go", "did it")
+            return
+        if tracked.resolve() == self._judge_path.resolve():
+            text = self._read_if_present(self._judge_path)
+            if self._text_lacks_role(text, "user"):
+                self._append_jsonl(
+                    self._judge_path, {"role": "user", "content": "judge"}
+                )
+                return
+            if self._text_lacks_role(text, "assistant"):
+                self._append_jsonl(
+                    self._judge_path,
+                    {
+                        "role": "assistant",
+                        "message": {
+                            "content": [{"type": "tool_use", "name": "grep"}]
+                        },
+                    },
+                )
+            return
+        _GrowScript(tracked)(_ignored)
+
 
 def _bind_records(session) -> list[dict]:
     return [
@@ -2258,10 +2357,14 @@ with description("Set Chat Context From Session Worktree"):
             )
 
         with it("should ensure one AI chat runtime per CliAgentParticipant"):
+            expect(issubclass(CliAgentParticipant, AgentParticipant)).to(be_true)
             expect(self.task.doer.chat).to(equal(None))
             self.agent.run_next_task()
             expect(self.task.doer.chat).not_to(equal(None))
             expect(self.task.doer.chat.chat_id).not_to(equal(""))
+            expect(self.task.doer.chat.list_chats()).to(
+                contain(self.task.doer.chat.chat_id)
+            )
 
         with it("should set chat.workspacePath to session.branch.worktree.path"):
             self.agent.run_next_task()
@@ -2351,7 +2454,7 @@ with description("Launch Judge On Agent Runtime"):
                 doer_path = _transcript_path(doer)
                 judge = self.task.judge.chat
                 if judge is None:
-                    _GrowScript(doer_path)(_now)
+                    _DoerReplyScript(doer_path)(_now)
                     return
                 judge_path = _transcript_path(judge)
                 _RolePairScript(self.agent, doer_path, judge_path)(_now)
@@ -2376,7 +2479,25 @@ with description("Launch Judge On Agent Runtime"):
 
         with it("should run the judge prompt on the judge agent runtime"):
             self.agent.run_next_task()
-            expect(self.task.judge.chat.runs).to(contain(self.task.judge.prompt))
+            sent = self.task.judge.chat.runs[-1]
+            expect(sent).to(contain(self.task.judge.prompt))
+            expect(sent).to(contain("The doer answered:"))
+
+        with it("should forward the doer transcript answer into the judge prompt"):
+            self.agent.run_next_task()
+            doer_path = _transcript_path(self.task.doer.chat)
+            transcript = _JsonlTranscript(doer_path)
+            answer = _AssistantText()
+            doer_reply = ""
+            for row in transcript.rows_newest_first():
+                if row.get("role") != "assistant":
+                    continue
+                doer_reply = answer.from_row(row).strip()
+                if doer_reply:
+                    break
+            sent = self.task.judge.chat.runs[-1]
+            expect(sent).to(contain(f"The doer answered: {doer_reply}"))
+            expect(sent).to(contain(self.task.judge.prompt))
 
         with it("should append a session log line that the judge prompt was sent"):
             self.agent.run_next_task()
@@ -2490,6 +2611,16 @@ with description("Close Cli Agent Session"):
                 expect(self.session.folder.is_dir()).to(be_true)
                 expect(self.durable.is_file()).to(be_true)
 
+        with it("should expose close_agents cleanup and close_cli_session"):
+            self.agent.close_agents()
+            expect(self.doer_chat.alive).to(be_false)
+            expect(self.task.doer.chat).to(equal(None))
+            self.agent.cleanup()
+            expect(self.temp_task.exists()).to(be_false)
+            expect(self.durable.is_file()).to(be_true)
+            self.agent.close_cli_session()
+            expect(_log_kinds(self.session)).to(contain("close"))
+
 
 with description("Complete Agent Task Using Cli Agent"):
     with context("with a current task"):
@@ -2513,6 +2644,12 @@ with description("Complete Agent Task Using Cli Agent"):
             expect(self.agent.completed_tasks).to(equal([self.task]))
             expect(self.task.state).to(equal("Done"))
             expect(self.chat.runs).to(contain(self.task.doer.prompt))
+
+        with it("should finish with done in the result"):
+            result = self.agent.run()
+            expect(self.task.state).to(equal("Done"))
+            expect(result).to(contain("Done:"))
+            expect(result).to(contain(self.task.prompt))
 
         with context("with max fails reached on the current task"):
             with context("with a validation error"):
@@ -2571,17 +2708,34 @@ with description("Complete Agent Task Using Cli Agent"):
 
                     self.clock.on_sleep(_grow)
 
-                with it("should skip the task after one FAIL"):
-                    self.agent.run_next_task()
-                    expect(self.task.state).to(equal("Done"))
-                    expect(_verdicts(self.session)).to(contain("FAIL"))
-                    expect(_log_kinds(self.session)).not_to(contain("kick"))
-                    outcomes = [
-                        record["outcome"]
-                        for record in self.session.log._records
-                        if record["kind"] == "complete_task"
-                    ]
-                    expect(outcomes).to(contain("skip"))
+                with it("should stop with AgentFault judge_fail_limit"):
+                    expect(self.agent.run_next_task).to(raise_error(AgentFault))
+
+        with context("with a broken workflow fault on the first task"):
+            with before.each:
+                self.clock = _FakeClock()
+                self.session = _open_workspace_session(
+                    "cli-invariant", prefix="cli_inv_"
+                )
+                self.agent = _cli_agent(self.session, self.clock)
+                first = _judged_task()
+                second = _doer_task("/echo second")
+                self.agent.add_tasks([first, second])
+                _raise_on_next_cycle(self.agent, "invariant")
+                self.clock.on_sleep(
+                    lambda _n: _GrowScript(self.agent.watch.path)(_n)
+                    if self.agent.watch.path is not None
+                    else None
+                )
+
+            with it(
+                "should stop the whole process and leave the second task on the backlog"
+            ):
+                expect(self.agent.run_backlog).to(raise_error(AgentFault))
+                expect(self.agent.completed_tasks).to(equal([]))
+                expect(len(self.agent.backlog)).to(equal(1))
+                expect(self.agent.backlog[0].prompt).to(equal("/echo second"))
+                expect(_log_kinds(self.session)).to(contain("error", "run_stopped"))
 
             with context("under maxFails with a later PASS"):
                 with before.each:
@@ -2611,11 +2765,11 @@ with description("Complete Agent Task Using Cli Agent"):
 
                     self.clock.on_sleep(_grow)
 
-                with it("should skip after one FAIL instead of retrying to PASS"):
+                with it("should kick the doer and complete on pass"):
                     self.agent.run_next_task()
                     expect(self.task.state).to(equal("Done"))
-                    expect(_verdicts(self.session)).to(equal(["FAIL"]))
-                    expect(_log_kinds(self.session)).not_to(contain("kick"))
+                    expect(_verdicts(self.session)).to(contain("FAIL", "PASS"))
+                    expect(_log_kinds(self.session)).to(contain("kick"))
 
 
 def _bind_chat(
@@ -2635,6 +2789,28 @@ def _bind_chat(
     return chat
 
 
+class _SpecProc:
+    def __init__(self, pid: int = 4242) -> None:
+        self.pid = pid
+
+    def terminate(self) -> None:
+        return None
+
+    def poll(self):
+        return None
+
+
+class _SpecCursorCli:
+    def launcher(self) -> str:
+        return "cursor-agent"
+
+    def create_chat(self, workspace: str) -> str:
+        return str(uuid.uuid4())
+
+    def spawn(self, argv: list, *, cwd: str):
+        return _SpecProc()
+
+
 def _cli_agent(
     session,
     clock: _FakeClock,
@@ -2646,13 +2822,30 @@ def _cli_agent(
     watch = AgentRuntimeTranscriptWatcher(
         sleep=clock.sleep, clock=clock.time, poll_s=0.1
     )
-    return CliAgent(
+    home = Path(session.context_root)
+    paths = _TranscriptPath(home=home)
+    agent = CliAgent(
         session=session,
         watch=watch,
         accept_seconds=accept_seconds,
         stall_seconds=stall_seconds,
         quiet_seconds=quiet_seconds,
+        _paths=paths,
+        _cli=_SpecCursorCli(),
     )
+
+    def _grow_healer(_now: float) -> None:
+        healer = agent._healer_role
+        tracked = agent.watch.path
+        if tracked is None or healer is None or healer.chat is None:
+            return
+        healer_path = agent._paths.under_chat(healer.chat)
+        if tracked.resolve() != healer_path.resolve():
+            return
+        _GrowScript(tracked)(_now)
+
+    clock.on_sleep(_grow_healer)
+    return agent
 
 
 def _expect_fault_kind(run, kind: str) -> None:
@@ -2855,3 +3048,239 @@ with description("Read Verdict From Judge Transcript"):
             _write_verdict_fixture(path, _fail_jsonl())
             watch.track(path)
             expect(watch._read_verdict()).to(equal("FAIL"))
+
+
+with description("Cli Agent One Judged Echo Job"):
+    with context("that enqueues and runs the backlog"):
+        with before.each:
+            self.clock = _FakeClock()
+            self.session = _open_workspace_session(
+                "cli-echo-job", prefix="cli_echo_"
+            )
+            self.agent = _cli_agent(self.session, self.clock)
+            self.task = _cli_judged_echo_task()
+            self.agent.add_tasks([self.task])
+
+            def _grow(_now: float) -> None:
+                doer = self.task.doer.chat
+                if doer is None:
+                    return
+                doer_path = _transcript_path(doer)
+                judge = self.task.judge.chat
+                if judge is None:
+                    _GrowScript(doer_path)(_now)
+                    return
+                _RolePairScript(
+                    self.agent,
+                    doer_path,
+                    _transcript_path(judge),
+                )(_now)
+
+            self.clock.on_sleep(_grow)
+
+        with it("should finish with done in the result"):
+            result = self.agent.run()
+            expect(self.task.state).to(equal("Done"))
+            expect(result).to(contain("Done:"))
+            expect(result).to(contain(self.task.prompt))
+
+        with it("should record exactly one pass verdict on the session log"):
+            self.agent.run_next_task()
+            expect(_verdicts(self.session)).to(equal(["PASS"]))
+            expect(_log_kinds(self.session)).to(contain("run_stopped"))
+
+
+with description("Cli Agent Session Log Kinds"):
+    with context("with a successful CliAgent run"):
+        with before.each:
+            self.clock = _FakeClock()
+            self.session = _open_workspace_session(
+                "cli-log-ok", prefix="cli_log_ok_"
+            )
+            self.agent = _cli_agent(self.session, self.clock)
+            self.task = _doer_task()
+            self.agent.add_tasks([self.task])
+            self.clock.on_sleep(
+                lambda _n: _GrowScript(self.agent.watch.path)(_n)
+                if self.agent.watch.path is not None
+                else None
+            )
+
+        with it("should append run_stopped complete after run_next_task"):
+            self.agent.run_next_task()
+            stopped = [
+                row
+                for row in self.session.log._records
+                if row["kind"] == "run_stopped"
+            ]
+            expect(len(stopped) > 0).to(be_true)
+            expect(stopped[-1]["reason"]).to(equal("complete"))
+
+    with context("with a transcript fault during run"):
+        with before.each:
+            self.clock = _FakeClock()
+            self.session = _open_workspace_session(
+                "cli-log-fault", prefix="cli_log_fault_"
+            )
+            self.agent = _cli_agent(
+                self.session, self.clock, accept_seconds=0.5
+            )
+            self.task = _doer_task()
+            self.chat = _bind_chat(
+                self.task.doer,
+                workspace=Path(self.session.context_root),
+                chat_id="dead-log",
+                alive=False,
+            )
+            _transcript_path(self.chat)
+            self.agent.add_tasks([self.task])
+
+        with it("should append error and run_stopped with the exception name"):
+            _expect_fault_kind(self.agent.run_next_task, "not_accepted")
+            kinds = _log_kinds(self.session)
+            expect(kinds).to(contain("error", "run_stopped"))
+            stopped = [
+                row
+                for row in self.session.log._records
+                if row["kind"] == "run_stopped"
+            ]
+            expect(stopped[-1]["reason"]).to(equal("AIChatFault"))
+
+
+with description("Cli Agent Tools Cli No Op"):
+    with context("with a doer prompt that would invoke tools on Agent"):
+        with before.each:
+            self.clock = _FakeClock()
+            self.session = _open_workspace_session(
+                "cli-no-tools", prefix="cli_no_tools_"
+            )
+            self.agent = _cli_agent(self.session, self.clock)
+            self.task = _doer_task("/echo fence hello")
+            self.agent.add_tasks([self.task])
+            self.clock.on_sleep(
+                lambda _n: _GrowScript(self.agent.watch.path)(_n)
+                if self.agent.watch.path is not None
+                else None
+            )
+
+        with it("should not run the in-process tools CLI stub on CliAgent"):
+            self.agent.run_next_task()
+            expect(self.agent.last_guidance).to(equal(None))
+
+
+with description("Cli Agent Empty Judge Verdict"):
+    with context("with a judge transcript that has tool_use only"):
+        with before.each:
+            self.clock = _FakeClock()
+            self.session = _open_workspace_session(
+                "cli-empty-verdict", prefix="cli_empty_"
+            )
+            self.agent = _cli_agent(self.session, self.clock)
+            self.task = _judged_task()
+            self.agent.add_tasks([self.task])
+
+            def _grow(_now: float) -> None:
+                doer = self.task.doer.chat
+                if doer is None:
+                    return
+                doer_path = _transcript_path(doer)
+                judge = self.task.judge.chat
+                if judge is None:
+                    _GrowScript(doer_path)(_now)
+                    return
+                _ToolUseOnlyScript(
+                    self.agent,
+                    doer_path,
+                    _transcript_path(judge),
+                )(_now)
+
+            self.clock.on_sleep(_grow)
+
+        with it("should raise AIChatFault connection when no PASS or FAIL is present"):
+            _expect_fault_kind(self.agent.run_next_task, "connection")
+
+
+with description("Cli Agent Healer Runtime"):
+    with context("after a judged task completes on CliAgent"):
+        with before.each:
+            self.clock = _FakeClock()
+            self.session = _open_workspace_session(
+                "cli-healer", prefix="cli_healer_"
+            )
+            self.agent = _cli_agent(self.session, self.clock)
+            self.agent.healer = Healer()
+            self.task = _judged_task()
+            self.agent.add_tasks([self.task])
+
+            def _grow(_now: float) -> None:
+                doer = self.task.doer.chat
+                if doer is None:
+                    return
+                doer_path = _transcript_path(doer)
+                judge = self.task.judge.chat
+                if judge is None:
+                    _GrowScript(doer_path)(_now)
+                    return
+                _RolePairScript(
+                    self.agent,
+                    doer_path,
+                    _transcript_path(judge),
+                )(_now)
+
+            self.clock.on_sleep(_grow)
+
+        with it("should deliver healer on the CLI runtime path"):
+            self.agent.run_next_task()
+            healer = self.agent._healer_role
+            expect(healer is not None).to(be_true)
+            expect(healer.chat is not None).to(be_true)
+            expect(isinstance(healer.chat, CursorChatInstance)).to(be_true)
+            expect(healer.chat.runs[-1]).to(contain("You are the Healer"))
+
+
+with description("Pending Session Blocks Participant Deliver"):
+    with context("with no branch worktree yet"):
+        with before.each:
+            self.clock = _FakeClock()
+            self.session = _open_workspace_session(
+                "cli-pending-deliver", prefix="cli_pending_d_"
+            )
+            self.session.branch = None
+            self.agent = _cli_agent(self.session, self.clock)
+            self.task = _judged_task()
+            self.agent.add_tasks([self.task])
+            self.agent._ensure_session()
+
+        with it("should refuse judge deliver on main before worktree exists"):
+            judge = self.task.judge
+            expect(self.agent._pending_session).to(be_true)
+            expect(
+                lambda: self.agent._deliver_to_runtime(judge)
+            ).to(raise_error(RuntimeError))
+
+
+with description("Cli Agent Stall Kick On Run Path"):
+    with context("with a doer that accepted but never finished"):
+        with before.each:
+            self.clock = _FakeClock()
+            self.session = _open_workspace_session(
+                "cli-stall-kick", prefix="cli_stall_kick_"
+            )
+            self.workspace = Path(self.session.context_root)
+            self.agent = _cli_agent(
+                self.session,
+                self.clock,
+                stall_seconds=2.0,
+                quiet_seconds=0.3,
+            )
+            self.task = _doer_task()
+            self.chat = _bind_chat(
+                self.task.doer, workspace=self.workspace, chat_id="stall-kick"
+            )
+            self.path = _transcript_path(self.chat)
+            self.agent.add_tasks([self.task])
+            self.clock.on_sleep(_AcceptOnlyScript(self.path))
+
+        with it("should log kick before re-raising AIChatFault stall"):
+            _expect_fault_kind(self.agent.run_next_task, "stall")
+            expect(_log_kinds(self.session)).to(contain("kick"))
