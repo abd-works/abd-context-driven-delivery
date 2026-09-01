@@ -33,7 +33,7 @@ from context_tools.stories.stories import Stories
 from context_tools.ux.ux import Ux
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-for _p in [str(_REPO_ROOT), *[str(_REPO_ROOT / c) for c in ("context_tools", "primitives", "utilities", "context_tools/actions")]]:
+for _p in [str(_REPO_ROOT), *[str(_REPO_ROOT / c) for c in ("context_tools", "primitives", "utilities", "context_tools/actions", "agents")]]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 from document.document import Document
@@ -321,8 +321,8 @@ with description("BaseContextTool public host face"):
     with it("should default context_index_key to empty"):
         expect(type(self.host).context_index_key).to(equal(""))
 
-    with it("should hold a Workspace as workspace"):
-        from workspace.workspace import Workspace
+    with it("should hold an agent Workspace as workspace"):
+        from agent.agent import Workspace
 
         expect(isinstance(self.host.workspace, Workspace)).to(be_true)
 
@@ -355,8 +355,8 @@ with description("BaseContextTool public host face"):
     with it("should not hold RecordDecisions as decisions"):
         expect(hasattr(self.host, "decisions")).to(be_false)
 
-    with it("should expose active as the current work session"):
-        expect(self.host.active).to(equal(self.host.workspace.current_work_session))
+    with it("should expose active as the current agent session when unset"):
+        expect(self.host.active).to(equal(None))
 
     with it("should require an open work session before session_guidance"):
         expect(lambda: self.host.session_guidance()).to(raise_error(ValueError))

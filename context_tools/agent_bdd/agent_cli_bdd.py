@@ -407,7 +407,7 @@ class _ToolAgentBlock:
         )
 
     def _build_agent_args(self, session: AgentSession, prompt: str) -> list[str]:
-        from cli_agent.cli_agent import CursorCli
+        from _internal_cli.cli_agent import CursorCli
 
         if len(prompt) > CMDLINE_SAFE:
             prompt_path = self._log_dir / f"prompt-{self._instruct_count + 1:03d}.txt"

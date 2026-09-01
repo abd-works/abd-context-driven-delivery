@@ -1,3 +1,3 @@
 PASS
 
-The entry has a ### heading and a concrete description of recursive scanning, .context/ paths, and explicit skip rules for __pycache__ and underscore-prefixed paths.
+The entry has a ### heading and a substantive body that concretely describes recursive discovery, .context/ paths, and skipping __pycache__ and underscore-prefixed paths.

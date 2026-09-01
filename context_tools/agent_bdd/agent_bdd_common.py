@@ -180,7 +180,7 @@ class AgentSession:
 
     @staticmethod
     def launcher() -> str | None:
-        from cli_agent.cli_agent import CursorCli
+        from _internal_cli.cli_agent import CursorCli
 
         return CursorCli().launcher()
 
@@ -211,7 +211,7 @@ class AgentSession:
             if existing is not None:
                 _log_harness("cursor_channel", f"session resumed: {existing.chat_id} ({session_file.name})")
                 return existing
-        from cli_agent.cli_agent import CursorCli
+        from _internal_cli.cli_agent import CursorCli
 
         _log_harness("cursor_channel", f"creating new session for {session_file.name} in {workspace} ...")
         chat_id = CursorCli().create_chat(str(workspace.resolve()))
@@ -221,7 +221,7 @@ class AgentSession:
         return session
 
     def run(self, prompt: str, workspace: Path, *, timeout_seconds: int = 300) -> AgentResult:
-        from cli_agent.cli_agent import CursorCli
+        from _internal_cli.cli_agent import CursorCli
 
         _log_harness(
             "cursor_channel",

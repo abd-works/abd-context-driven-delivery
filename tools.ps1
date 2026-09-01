@@ -14,6 +14,7 @@ $parts = @(
     (Join-Path $Root "utilities")
     (Join-Path $Root "context_tools")
     (Join-Path $Root "context_tools\actions")
+    (Join-Path $Root "agents")
 )
 $env:PYTHONPATH = ($parts -join [IO.Path]::PathSeparator)
 if ($MyInvocation.ExpectingInput) {

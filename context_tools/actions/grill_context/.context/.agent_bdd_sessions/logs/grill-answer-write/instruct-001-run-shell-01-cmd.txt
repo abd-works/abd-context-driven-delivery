@@ -1,1 +1,1 @@
-cd "C:\Users\thoma\OneDrive - Agile by Design\Shared Documents\Assets\abd-works-repo\abd-context-driven-delivery"; $env:PYTHONIOENCODING="utf-8"; python -m tools run -
+Get-Content 'C:/dev/abd-cdd-55/context_tools/actions/grill_context/.context/.agent_bdd_sessions/logs/grill-answer-write/instruct-001-run-stdin.yaml' -Raw | .\tools.ps1 run -

@@ -24,7 +24,7 @@
 | Phase | Scope | Status | Notes |
 |-------|--------|--------|-------|
 | 1a | ChatAgent `/agent` — one judged job, in_chat | judge_green | phased tools + persistence; `AGENT_BDD_IN_CHAT=1` for agent BDD gate |
-| 1b | ChatAgent + backlog tickets | judge_green | `enqueue_judged_from_ticket`, `run_backlog`; vanilla in `agent_spec.py`; two-item queue agent BDD (in_chat gated) |
+| 1b | ChatAgent + backlog tickets | judge_green | `add_task_from_ticket_to_backlog`, `run_backlog`; vanilla in `agent_spec.py`; two-item queue agent BDD (in_chat gated) |
 | 2a | SubAgent — one judged job | judge_green | vanilla + `agent_agent_spec.py` in_process gate (open / doer+judge / turns / PASS / close); session `one-judged-job-55.json` |
 | 2b | SubAgent + backlog | judge_green | vanilla two-item queue in `agent_spec.py`; in_process agent BDD; session `sub-two-item-queue-55.json` |
 | 3a | CliAgent — one judged job | blocked | **blocked on session unification** — see `session-unification-backlog.md` U1–U6 |
@@ -37,7 +37,7 @@ Run as **independent `/sub-agent` tasks** with backlog in `agents/.context/sessi
 | U | Task | Status |
 |---|------|--------|
 | U1 | AgentSession CDD seam | judge_green |
-| U2 | Lifecycle → AgentSession | pending |
+| U2 | Lifecycle → AgentSession | judge_green |
 | U3 | BaseContextTool → AgentSession | pending |
 | U4 | SessionLog + tools run | pending |
 | U5 | CliAgent → AgentSession.folder | pending |

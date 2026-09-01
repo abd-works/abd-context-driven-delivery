@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from cli_agent.cli_agent import CliAgent, IdeCli
+from _internal_cli.cli_agent import CliAgent, IdeCli
 from plan.plan import Plan, PlanExecution
 from primitives.actions.action import agentic_toolset
 from workspace.workspace import Turn, WorkSession, Workspace

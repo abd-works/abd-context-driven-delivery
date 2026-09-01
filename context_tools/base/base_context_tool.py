@@ -27,10 +27,13 @@ from primitives.actions.action import AgenticToolset
 from primitives.actions.action import agent_instructions
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
+from agent.agent import AgentSession, InMemoryRepo, Repo, Workspace
 from scan.scan import Scan
 from scan.scanner_collection import ScannerCollection
-from workspace.workspace import Workspace, WorkSession
 from tools.tool import resource
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_WORKSPACE_SESSION_KIT = _REPO_ROOT / "utilities" / "workspace"
 
 
 class BaseContextTool(AgenticToolset):
@@ -80,16 +83,61 @@ class BaseContextTool(AgenticToolset):
         self.format = format
         self._raw_path = path
         self._session_name = session or ""
-        root = workspace or path or "."
-        self.workspace = Workspace(str(root))
-        self.workspace.load()
+        self._workspace_path = workspace or path or "."
+        self.workspace = self._build_workspace(self._workspace_path)
+        self._agent_session: AgentSession | None = None
         self.scanner = Scan.bound_to(self)
         if self._session_name:
-            self.workspace.open(
-                self,
-                name=self._session_name,
-                path=path or "",
-            )
+            self._open_session(name=self._session_name, path=path or "")
+
+    def _build_workspace(self, path: str) -> Workspace:
+        root = Path(path).resolve()
+        repo = InMemoryRepo(root, Repo.Worktree(root, "main"))
+        workspace = Workspace(path=root, repos=[repo], primary_repo=repo)
+        self._load_path_overrides(workspace, root)
+        return workspace
+
+    @staticmethod
+    def _load_path_overrides(workspace: Workspace, root: Path) -> None:
+        index = root / ".context" / "context-index.md"
+        if not index.is_file():
+            return
+        for line in index.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped.startswith("|"):
+                continue
+            parts = [part.strip() for part in stripped.strip("|").split("|")]
+            if len(parts) < 3:
+                continue
+            tool, fidelity, row_path = parts[0], parts[1], parts[2]
+            if tool in {"tool", "---", "*(none)*"} or tool.startswith("---"):
+                continue
+            if not tool or not fidelity or not row_path:
+                continue
+            workspace.upsert_path(tool, fidelity, row_path)
+
+    def _resolve_context_root(self, workspace_path: Path) -> Path:
+        override = self.workspace.lookup_path("agent", "contextRoot")
+        if override is not None:
+            return override
+        root = workspace_path.resolve()
+        context = root / ".context"
+        if context.is_dir():
+            return context
+        return root
+
+    def _open_session(self, name: str = "", path: str = "") -> AgentSession:
+        working = Path((path or self._workspace_path or ".").strip()).resolve()
+        effective_name = (name or self._session_name or "").strip()
+        folder = working / ".agent_sessions" / (effective_name or "default")
+        session = self.workspace.open(
+            name=effective_name or None,
+            context_root=self._resolve_context_root(working),
+            open_existing=folder.is_dir(),
+        )
+        self._agent_session = session
+        self._session_name = session.name
+        return session
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -154,17 +202,20 @@ class BaseContextTool(AgenticToolset):
    
     @property
     @resource
-    def active(self) -> WorkSession | None:
-        """The current work session — exposes currentWorkSession as a host resource."""
-        return self.workspace.current_work_session
+    def active(self) -> AgentSession | None:
+        """The current agent session — exposes AgentSession as a host resource."""
+        return self._agent_session
 
     @instruction(override=True)
     def session_guidance(self) -> Instruction:
-        """Delegate to WorkSession — prose lives in workspace_session.md."""
-        current = self.workspace.current_work_session
-        if current is None:
+        """Session layout prose — workspace_session.md."""
+        if self._agent_session is None:
             raise ValueError("No current work session — call open first")
-        return Instruction.ref(current, "session_guidance")
+        return Instruction(
+            "# Session Guidance",
+            _WORKSPACE_SESSION_KIT,
+            domain_slug="workspace_session",
+        )
 
     # -- Instructions --------------------------------------------------------
     @instruction

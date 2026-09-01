@@ -1,8 +1,8 @@
 """Session-scoped logging — explicit ``SessionLog.append`` (no ``@log`` decorator).
 
 Utility package. Run requests may set ``session``. Events append under
-``{session.path}/.context/sessions/{session.name}/logs/``. Expand is logged by
-the framework; run is logged by author calls to ``append``.
+``{AgentSession.folder}/logs/`` (``eval_log_dir``). Expand is logged by the
+framework; run is logged by author calls to ``append``.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 if TYPE_CHECKING:
-    from workspace.workspace import WorkSession
+    from agent.agent import AgentSession
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -69,17 +69,17 @@ class _LastPayload:
 
 
 class ISessionLog(ABC):
-    """Append-only session event log bound to a ``WorkSession``."""
+    """Append-only session event log bound to an ``AgentSession``."""
 
     @classmethod
     @abstractmethod
     def instance(cls) -> ISessionLog: ...
 
     @abstractmethod
-    def bind(self, session: WorkSession) -> None: ...
+    def bind(self, session: AgentSession) -> None: ...
 
     @abstractmethod
-    def set_session(self, session: str | WorkSession | None) -> None: ...
+    def set_session(self, session: str | AgentSession | None) -> None: ...
 
     @abstractmethod
     def append(
@@ -101,7 +101,7 @@ class ISessionLog(ABC):
 
     @property
     @abstractmethod
-    def session(self) -> WorkSession: ...
+    def session(self) -> AgentSession: ...
 
 
 class SessionLog(ISessionLog):
@@ -110,18 +110,18 @@ class SessionLog(ISessionLog):
     _instance: SessionLog | None = None
 
     @staticmethod
-    def _session_cls():
-        from workspace.workspace import WorkSession, Workspace
+    def _agent_session_cls():
+        from agent.agent import AgentSession
 
-        return WorkSession, Workspace
+        return AgentSession
 
     def __init__(self, sessions_root: Path | None = None) -> None:
         # Test override only: when set, log_dir = sessions_root / session.name
         self._sessions_root = sessions_root
-        work_session_cls, workspace_cls = SessionLog._session_cls()
-        self._session = work_session_cls(workspace_cls("."), "default")
+        self._session = self._resolve_agent_session("default")
         self._last_payload: _LastPayload | None = None
         self._event_count = 0
+        self._explicit_binding = False
 
     @classmethod
     def instance(cls) -> SessionLog:
@@ -134,7 +134,7 @@ class SessionLog(ISessionLog):
         cls._instance = log
 
     @property
-    def session(self) -> WorkSession:
+    def session(self) -> AgentSession:
         return self._session
 
     @property
@@ -145,24 +145,34 @@ class SessionLog(ISessionLog):
     def log_dir(self) -> Path:
         if self._sessions_root is not None:
             return self._sessions_root / self.session_name
-        return self._session.log
+        return self._session.eval_log_dir
 
     @property
     def last_payload(self) -> _LastPayload | None:
         return self._last_payload
 
-    def bind(self, session: WorkSession) -> None:
-        """Bind a WorkSession; events go under ``session.log``."""
+    def bind(self, session: AgentSession) -> None:
+        """Bind an AgentSession; events go under ``session.eval_log_dir``."""
         self._session = session
+        self._explicit_binding = True
 
-    def set_session(self, session: str | WorkSession | None) -> None:
-        """Bind a WorkSession, or a name (legacy) as ``WorkSession(Workspace("."), name)``."""
-        work_session_cls, workspace_cls = SessionLog._session_cls()
-        if isinstance(session, work_session_cls):
+    def set_session(self, session: str | AgentSession | None) -> None:
+        """Bind an AgentSession, or resolve one from ``name`` under ``.agent_sessions/``."""
+        agent_session_cls = SessionLog._agent_session_cls()
+        if isinstance(session, agent_session_cls):
             self.bind(session)
             return
         name = (session or "").strip() or "default"
-        self._session = work_session_cls(workspace_cls("."), name)
+        self._session = self._resolve_agent_session(name)
+        self._explicit_binding = True
+
+    def _resolve_agent_session(self, name: str) -> AgentSession:
+        agent_session_cls = SessionLog._agent_session_cls()
+        effective = (name or "").strip() or "default"
+        root = self._sessions_root if self._sessions_root is not None else Path.cwd().resolve()
+        folder = root / ".agent_sessions" / effective
+        context = root / ".context" if (root / ".context").is_dir() else root
+        return agent_session_cls(name=effective, folder=folder, context_root=context)
 
     def append(
         self,
@@ -221,7 +231,7 @@ class SessionLog(ISessionLog):
         open_turn = getattr(self._session, "open_turn", None)
         if open_turn is None:
             return
-        from workspace.workspace import ToolCall
+        from agent.agent import ToolCall
 
         open_turn.tool_calls.append(
             ToolCall(

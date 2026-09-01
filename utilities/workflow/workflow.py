@@ -14,7 +14,7 @@ from git import Ticket, TicketNotFoundError
 from git.git import Repo
 from handoff.handoff import Handoff
 from harness.harness_tool import prompt
-from sub_agent.sub_agent import sub_agent
+from tools.sub_agent import sub_agent
 from tools.tool import agent_tool, toolset
 from workflow.work_ticket import WorkTicket
 from workspace import Workspace

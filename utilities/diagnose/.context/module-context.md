@@ -10,4 +10,4 @@ action markdown.
 `Diagnose.diagnose` is `@prompt(name="diagnose")` plus `@sub_agent` `@agent_tool` (`kind: sub_agent`, `launch: non_blocking`). Slash `/diagnose` is the command; hosts still call `diagnose()` as a non-blocking sub-agent.
 
 ## Dependencies
-`sub_agent.sub_agent`, `tools.tool`
+`tools.sub_agent`, `tools.tool`

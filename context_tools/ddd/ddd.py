@@ -108,12 +108,8 @@ class Ddd(BaseContextTool):
             fidelity=_CE_FIDELITY.get(self.fidelity, "modules"),
             format=self.format,
             path=self.workspace.path,
-            session=(
-                self.workspace.current_work_session.name
-                if self.workspace.current_work_session
-                else ""
-            ),
-            workspace=self.workspace.path,
+            session=(self.active.name if self.active else ""),
+            workspace=str(self.workspace.path),
         )
         instance.mode = "tool"
         return instance
@@ -134,18 +130,16 @@ class Ddd(BaseContextTool):
         """
         generate_folder = type(self).default_workspace_folder
         if self._raw_path is not None:
-            current = self.workspace.current_work_session
-            return current.path if current is not None else self.workspace.path
+            active = self.active
+            return str(active.path) if active is not None else str(self.workspace.path)
         if self.default_workspace_folder != generate_folder:
-            current = self.workspace.current_work_session
-            return current.path if current is not None else self.workspace.path
+            active = self.active
+            return str(active.path) if active is not None else str(self.workspace.path)
         self.default_workspace_folder = type(self)._DOCUMENT_WORKSPACE_FOLDER
-        current = self.workspace.current_work_session
-        if current is None:
-            return self.workspace.path
-        current.default_workspace_folder = type(self)._DOCUMENT_WORKSPACE_FOLDER
-        current.path = current._resolve_working_area(None)
-        return current.path
+        active = self.active
+        if active is None:
+            return str(self.workspace.path)
+        return str(active.path)
 
     @instruction
     def contexts(self) -> Instruction: ...

@@ -118,7 +118,7 @@ with description("python -m tools run"):
             expect(response.get("ok")).to(equal(False))
 
 
-_SUB_AGENT = "sub_agent.examples.parallel_runner.parallel_runner:ParallelRunner"
+_SUB_AGENT = "tools.examples.parallel_runner.parallel_runner:ParallelRunner"
 
 
 with description("the tools CLI"):

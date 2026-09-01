@@ -393,7 +393,7 @@ def generate_and_judge(
 # Agent redesign (#55) — ChatAgent toolset prompts for agent BDD specs
 # ---------------------------------------------------------------------------
 
-CHAT_AGENT_TOOLSET = "agent.chat_agent:ChatAgent"
+CHAT_AGENT_TOOLSET = "agent.agent:ChatAgentKit"
 
 
 def init_temp_workspace(prefix: str = "agent_bdd_") -> Path:

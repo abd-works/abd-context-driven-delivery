@@ -10,7 +10,7 @@ editing this file triggers the BDD manifest, not GatedWidget's own manifest.
 from __future__ import annotations
 
 from primitives.actions.action import agent_instructions, agentic_toolset
-from sub_agent.sub_agent import sub_agent
+from tools.sub_agent import sub_agent
 from tools.tool import resource, agent_tool
 
 _REVISION = 1

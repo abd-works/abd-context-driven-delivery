@@ -125,12 +125,8 @@ class Stories(BaseContextTool):
             fidelity="code",
             format=ce_format,
             path=self._raw_path,
-            session=(
-                self.workspace.current_work_session.name
-                if self.workspace.current_work_session
-                else ""
-            ),
-            workspace=self.workspace.path,
+            session=(self.active.name if self.active else ""),
+            workspace=str(self.workspace.path),
         )
         instance.mode = "tool"
         return instance

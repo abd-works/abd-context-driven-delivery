@@ -14,7 +14,7 @@ import importlib.util
 import inspect
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable, Mapping, get_args, get_origin
@@ -356,10 +356,10 @@ class _ToolsetRunner:
         cls._instance = runner
 
     def run_request(self, request: RunRequestDocument) -> RunResponseDocument:
-        from workspace import SessionLog
-
         parsed = self._parse_run_request(request)
-        SessionLog.instance().set_session(parsed.session)
+        context = coalesce_run_context(parsed.context, parsed.session)
+        bind_run_session(context, None)
+        parsed = replace(parsed, context=context)
         toolset_cls = self._loader.load(str(parsed.toolset_path))
         instance = self._build_instance(toolset_cls, parsed.context)
         if parsed.action_name:
@@ -533,6 +533,37 @@ class _RunRequest:
     arguments: dict[str, Any]
     session: str | None = None
     log_control: str | None = None
+
+
+def coalesce_run_context(
+    context: Mapping[str, Any],
+    session: str | None,
+) -> dict[str, Any]:
+    """Merge top-level ``session`` into ``context.session``; fall back to SessionLog binding."""
+    from workspace import SessionLog
+
+    merged = dict(context)
+    top = (session or "").strip()
+    ctx = str(merged.get("session") or "").strip()
+    if top and not ctx:
+        merged["session"] = top
+    elif not ctx and not top:
+        log = SessionLog.instance()
+        if log._explicit_binding:
+            bound = log.session
+            if getattr(bound, "name", None):
+                merged["session"] = bound.name
+    return merged
+
+
+def bind_run_session(context: Mapping[str, Any], session: str | None) -> None:
+    """Bind SessionLog to the run's AgentSession when a session name is known."""
+    from workspace import SessionLog
+
+    merged = coalesce_run_context(context, session)
+    name = str(merged.get("session") or "").strip()
+    if name:
+        SessionLog.instance().set_session(name)
 
 
 def _slugify_class_name(name: str) -> str:

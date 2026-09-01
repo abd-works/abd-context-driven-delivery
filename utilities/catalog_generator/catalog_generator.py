@@ -62,7 +62,7 @@ UTILITY_REGISTRY: tuple[tuple[str, str, str], ...] = (
     ("echo", "echo.echo", "Echo"),
     ("handoff", "handoff.handoff", "Handoff"),
     ("workspace", "workspace.workspace", "WorkSession"),
-    ("sub_agent", "sub_agent.sub_agent", "SubAgent"),
+    ("sub_agent", "agent.sub_agent_kit", "SubAgentKit"),
 )
 
 

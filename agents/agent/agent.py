@@ -3,13 +3,19 @@ from __future__ import annotations
 
 import json
 import itertools
+import os
 import re
+import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, ClassVar, Literal, Optional, override
 
-_ParticipantType = Literal["doer", "judge", "human"]
+from harness.harness_tool import prompt
+from primitives.actions.action import agent_instructions, agentic_toolset
+from tools.tool import agent_tool
+
+_ParticipantType = Literal["doer", "judge", "human", "healer"]
 _ParticipantState = Literal[
     "idle",
     "sending",
@@ -31,7 +37,7 @@ _AIChatFaultKind = Literal["not_accepted", "stall", "send_failed", "connection"]
 
 @dataclass
 class AgentParticipant:
-    """One doer, judge, or human role on a task."""
+    """One doer, judge, human, or healer role."""
 
     type: _ParticipantType
     prompt: str = ""
@@ -54,12 +60,56 @@ class AgentTask:
     judge: AgentParticipant | None = None
     human: AgentParticipant | None = None
     tickets: list[Any] = field(default_factory=list)
+    kit: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.doer.prompt:
             self.doer.prompt = self.prompt
         if self.doer.type != "doer":
             self.doer.type = "doer"
+
+    @classmethod
+    def from_spec(cls, spec: dict) -> AgentTask:
+        """Build one backlog task from a serializable spec (tools CLI / all agent types)."""
+        if not isinstance(spec, dict):
+            raise TypeError("task spec must be a dict")
+        doer_prompt = str(spec.get("doer_prompt") or spec.get("prompt") or "").strip()
+        if not doer_prompt:
+            raise ValueError("task spec requires doer_prompt or prompt")
+        task = _TemplateInstantiator._task_from_prompt(doer_prompt)
+        judge_prompt = str(spec.get("judge_prompt") or "").strip()
+        if not judge_prompt:
+            judge_val = spec.get("judge")
+            if isinstance(judge_val, str) and judge_val.strip():
+                judge_prompt = judge_val.strip()
+        if judge_prompt:
+            task.judge = AgentParticipant(type="judge", prompt=judge_prompt)
+        if spec.get("human"):
+            human_prompt = str(spec.get("human_prompt") or "human check").strip()
+            task.human = AgentParticipant(type="human", prompt=human_prompt)
+        for key in ("tools", "actions", "human", "judge", "index"):
+            if key in spec and key not in task.kit:
+                if key == "judge" and task.judge is not None:
+                    continue
+                task.kit[key] = spec[key]
+        return task
+
+    def to_spec(self) -> dict[str, Any]:
+        """Round-trip spec for tools CLI and JobQueue persistence."""
+        row: dict[str, Any] = {
+            "doer_prompt": self.doer.prompt or self.prompt,
+            "prompt": self.doer.prompt or self.prompt,
+        }
+        if self.judge is not None and self.judge.prompt:
+            row["judge_prompt"] = self.judge.prompt
+        if self.human is not None:
+            row["human"] = True
+            if self.human.prompt:
+                row["human_prompt"] = self.human.prompt
+        for key, value in self.kit.items():
+            if key not in row:
+                row[key] = value
+        return row
 
 
 class _KindedFault(Exception):
@@ -442,6 +492,7 @@ class CliAgentSessionLog(AgentSessionLog):
     def wait_doer(self) -> None:
         self._append("wait_doer")
 
+    @override
     def kick(self, participant: AgentParticipant) -> None:
         fields: dict[str, Any] = {
             "participant": self._participant_label(participant),
@@ -492,19 +543,6 @@ class _ParticipantOps:
     def mark_idle(participants: list[AgentParticipant]) -> None:
         for participant in participants:
             participant.state = "idle"
-
-
-class _StubSeries:
-    def __init__(self, items: list[str] | None = None) -> None:
-        self._items = list(items or [])
-
-    def pop(self, default: str) -> str:
-        if self._items:
-            return self._items.pop(0)
-        return default
-
-    def replace(self, items: list[str]) -> None:
-        self._items = list(items)
 
 
 class _SlashManifest:
@@ -623,6 +661,7 @@ class _TemplateInstantiator:
 class _CompleteOutcome:
     PASS = "PASS"
     VALIDATION_ERROR = "validation_error"
+    SKIP = "skip"
 
 
 class MultiRepoSessionError(RuntimeError):
@@ -1709,9 +1748,15 @@ class _ChatPathGatherer:
         return str(_TranscriptPath().under_chat(chat))
 
 
+def _default_healer():
+    from agent.healer import Healer
+
+    return Healer()
+
+
 @dataclass
 class Agent:
-    """Orchestrates doer → judge → human for each task on the backlog."""
+    """Orchestrates doer → judge → healer for each task on the backlog."""
 
     _healer_returns_handoff: bool = field(default=False, init=False, repr=False)
     session: AgentSession | None = None
@@ -1721,21 +1766,15 @@ class Agent:
     template_store: AgentTaskTemplateStore = field(
         default_factory=AgentTaskTemplateStore
     )
-    _stub_verdicts: _StubSeries = field(default_factory=_StubSeries, repr=False)
-    _stub_human_feedback: _StubSeries = field(default_factory=_StubSeries, repr=False)
-    _stub_faults: _StubSeries = field(default_factory=_StubSeries, repr=False)
     _tools_cli: _ToolsCliStub = field(default_factory=_ToolsCliStub, repr=False)
     _drain: _DrainGate = field(default_factory=_DrainGate, repr=False)
     last_guidance: Turn.Guidance | None = field(default=None, repr=False)
-    healer: Any = field(default=None, repr=False)
+    healer: Any = field(default_factory=_default_healer, repr=False)
     last_phase_name: str = field(default="", repr=False)
     last_phase_result: str = field(default="", repr=False)
-
-    def __post_init__(self) -> None:
-        if self.healer is None:
-            from agent.healer import Healer
-
-            self.healer = Healer()
+    _workspace: Path = field(default_factory=Path.cwd, repr=False)
+    _repo_ref: Repo | None = field(default=None, repr=False)
+    _healer_role: AgentParticipant | None = field(default=None, init=False, repr=False)
 
     @property
     def log(self):
@@ -1749,19 +1788,105 @@ class Agent:
             self.backlog.append(task)
         self.log.add_tasks(tasks)
 
+    def add_tasks_from_specs(self, specs: list[dict]) -> list[AgentTask]:
+        """Append tasks built from serializable specs — same entry point for every agent type."""
+        tasks = [self._task_from_spec(spec) for spec in list(specs or [])]
+        if tasks:
+            self.add_tasks(tasks)
+        return tasks
+
+    def load_backlog_from_specs(self, specs: list[dict]) -> list[AgentTask]:
+        """Replace backlog from specs (reload from persisted backlog)."""
+        self.backlog = []
+        return self.add_tasks_from_specs(specs)
+
+    def _task_from_spec(self, spec: dict) -> AgentTask:
+        ticket_number = spec.get("ticket_number")
+        if ticket_number is None or not str(ticket_number).strip():
+            return AgentTask.from_spec(spec)
+        from agent.workflow import WorkTicket
+
+        work = WorkTicket.from_ref(self._repo(), int(ticket_number))
+        judge_prompt = str(spec.get("judge_prompt") or "").strip()
+        doer_prompt = str(spec.get("doer_prompt") or spec.get("prompt") or "").strip()
+        instructions = str(spec.get("instructions") or "").strip()
+        prompt_text = (
+            doer_prompt or _ticket_doer_prompt(work, instructions=instructions)
+        ).strip()
+        if not prompt_text:
+            raise RuntimeError(
+                "ticket task requires doer_prompt, prompt, or ticket body"
+            )
+        task = AgentTask.from_spec(
+            {"doer_prompt": prompt_text, "judge_prompt": judge_prompt}
+        )
+        task.tickets = [work]
+        return task
+
+    def _bind_session(self, session: AgentSession) -> None:
+        self.session = session
+        session.agent = self
+
+    def _known_tasks(self) -> list[AgentTask]:
+        tasks: list[AgentTask] = []
+        if self.current_task is not None:
+            tasks.append(self.current_task)
+        tasks.extend(self.completed_tasks)
+        tasks.extend(self.backlog)
+        return tasks
+
+    def _participants_on_tasks(self) -> list[AgentParticipant]:
+        participants: list[AgentParticipant] = []
+        for task in self._known_tasks():
+            participants.extend(_ParticipantOps.of_task(task))
+        if self._healer_role is not None:
+            participants.append(self._healer_role)
+        return participants
+
+    def _repo(self) -> Repo:
+        if self._repo_ref is None:
+            root = self._workspace.resolve()
+            self._repo_ref = InMemoryRepo(root, Repo.Worktree(root, "main"))
+        return self._repo_ref
+
+    def open_session(self, name: str, *, goal: str = "") -> AgentSession:
+        """Open an AgentSession — same for every agent subtype."""
+        session_name = name.strip()
+        repo = self._repo()
+        ws = Workspace(path=self._workspace, repos=[repo], primary_repo=repo)
+        folder = Path(repo.root) / ".agent_sessions" / session_name
+        session = ws.open(
+            name=session_name,
+            context_root=self._workspace,
+            open_existing=folder.is_dir(),
+        )
+        if goal:
+            session.goal = goal
+        self._bind_session(session)
+        return session
+
     def clear_backlog(self) -> None:
         self.backlog = []
         self.log.clear_backlog()
 
-    def load_template(self, name: str) -> None:
+    def load_task_backlog_template(self, name: str) -> None:
         template = self.template_store.load(name)
-        self.add_tasks(self._instantiate_tasks(template))
+        self.add_tasks(_TemplateInstantiator.tasks_from(template))
 
     def close(self) -> None:
+        """Stop owned runtimes and clear chat bindings."""
+        for participant in self._participants_on_tasks():
+            chat = participant.chat
+            if chat is not None:
+                chat.stop()
+                participant.chat = None
         self.current_task = None
 
     def kick(self, participant: AgentParticipant | None = None) -> None:
         target = participant or self._default_kick_target()
+        chat = target.chat
+        if chat is not None:
+            chat.continue_chat()
         target.state = "idle"
         self.log.kick(target)
 
@@ -1777,11 +1902,44 @@ class Agent:
         while self.current_task is not None:
             self._run_current_task_cycle()
 
-    def run_task_queue(self) -> None:
+    def run_backlog(self) -> None:
         """Drain the backlog until empty or a workflow fault stops the process."""
-        self._guard_phase("run_backlog", self._run_task_queue_body, handoff=False)
+        self._guard_phase("run_backlog", self._run_backlog_body, handoff=False)
 
-    def _run_task_queue_body(self) -> None:
+    def queue_status(self) -> str:
+        """In progress / Done / Left — public readout of the Agent queue."""
+        def _label(task: AgentTask) -> str:
+            return (task.prompt or task.doer.prompt).strip() or "(empty)"
+
+        lines = ["---", "In progress:"]
+        current = self.current_task
+        if current is None:
+            lines.append("  (none)")
+        else:
+            role = "doer"
+            if current.judge is not None and current.judge.state in (
+                "sending",
+                "awaiting_accept",
+                "running",
+                "awaiting_verdict",
+            ):
+                role = "judge"
+            lines.append(f"  {_label(current)} [{role}]")
+        lines.append("Done:")
+        if not self.completed_tasks:
+            lines.append("  (none)")
+        else:
+            for index, task in enumerate(self.completed_tasks, 1):
+                lines.append(f"  {index}. {_label(task)}")
+        lines.append("Left:")
+        if not self.backlog:
+            lines.append("  (none)")
+        else:
+            for index, task in enumerate(self.backlog):
+                lines.append(f"  {index}. {_label(task)}")
+        return "\n".join(lines)
+
+    def _run_backlog_body(self) -> None:
         self._ensure_session()
         self._drain.active = True
         try:
@@ -1796,8 +1954,6 @@ class Agent:
             self._drain.active = False
 
     def _run_current_task_cycle(self) -> None:
-        if self._apply_stub_fault_if_any():
-            return
         self._launch_doer()
         self._wait_doer()
         task = self._require_current_task()
@@ -1809,23 +1965,8 @@ class Agent:
         if result == "PASS":
             self._finish_task_pass()
             return
-        self._retry_after_fail()
-
-    def _apply_stub_fault_if_any(self) -> bool:
-        kind = self._stub_faults.pop("")
-        if not kind:
-            return False
-        self._raise(AgentFault(kind=self._as_fault_kind(kind), detail=kind))
-        return True
-
-    def _as_fault_kind(self, kind: str) -> _AgentFaultKind:
-        if kind == "validation_error":
-            return "validation_error"
-        if kind == "parse_failed":
-            return "parse_failed"
-        if kind == "judge_fail_limit":
-            return "judge_fail_limit"
-        return "invariant"
+        self._healer_eval(phase="task_complete", trigger="success")
+        self._skip_unhealed_task()
 
     def _finish_task_pass(self) -> None:
         if self._human_requested_retry():
@@ -1868,9 +2009,6 @@ class Agent:
         if self.session is None:
             raise RuntimeError("Agent requires an open AgentSession before run")
         return self.session
-
-    def _instantiate_tasks(self, template: AgentTaskTemplate) -> list[AgentTask]:
-        return _TemplateInstantiator.tasks_from(template)
 
     def _launch_next(self) -> None:
         if self._participant_in_flight():
@@ -1921,18 +2059,13 @@ class Agent:
 
     def _wait_human(self) -> None:
         participant = self._require_current_task().human
-        for target in self._present_participants(participant):
+        for target in _ParticipantOps.present(participant):
             self._await_done(target)
             self.log.done(target)
 
     def _send_accepted_if_present(self, participant: AgentParticipant | None) -> None:
-        for target in self._present_participants(participant):
+        for target in _ParticipantOps.present(participant):
             self._send_and_log_accept(target)
-
-    def _present_participants(
-        self, participant: AgentParticipant | None
-    ) -> list[AgentParticipant]:
-        return _ParticipantOps.present(participant)
 
     def _send_and_log_accept(self, participant: AgentParticipant) -> None:
         self._send(participant)
@@ -1947,9 +2080,9 @@ class Agent:
         task.state = "Done"
         self.completed_tasks.append(task)
         self.current_task = None
-        self._advance_queue()
+        self._advance_backlog()
 
-    def _advance_queue(self) -> None:
+    def _advance_backlog(self) -> None:
         if not self._drain.active:
             return
         if self.backlog:
@@ -2062,9 +2195,27 @@ class Agent:
             raise HealerFailure(f"healer eval returned no report for phase {phase!r}")
         if self.session is not None:
             log_healer_eval(self.log, report)
+            self._run_healer_runtime(report.healer_prompt)
         if stop_on_exception and report.stop_recommended and trigger == "exception":
             raise HealerStop(report) from error
         return report
+
+    def _healer_participant(self) -> AgentParticipant:
+        if self._healer_role is None:
+            self._healer_role = AgentParticipant(type="healer", prompt="")
+        return self._healer_role
+
+    def _run_healer_runtime(self, prompt: str) -> None:
+        """Send the healer prompt on the same runtime path as doer and judge."""
+        participant = self._healer_participant()
+        participant.prompt = prompt
+        participant.state = "idle"
+        self._send(participant)
+        self.log.send(participant, prompt=prompt)
+        self._await_accept(participant)
+        self.log.accepted(participant)
+        self._await_done(participant)
+        self.log.done(participant)
 
     def eval_healer(
         self,
@@ -2091,7 +2242,20 @@ class Agent:
         task.state = "Done"
         self.completed_tasks.append(task)
         self.current_task = None
-        self._advance_queue()
+        self._advance_backlog()
+
+    def _skip_unhealed_task(self) -> None:
+        """Judge FAIL after one try — healer already ran; do not retry."""
+        task = self._require_current_task()
+        self.log.complete_task(
+            task,
+            outcome=_CompleteOutcome.SKIP,
+            detail="judge FAIL; unhealed after one try",
+        )
+        task.state = "Done"
+        self.completed_tasks.append(task)
+        self.current_task = None
+        self._advance_backlog()
 
     def _participant_in_flight(self) -> bool:
         task = self.current_task
@@ -2104,181 +2268,80 @@ class Agent:
             raise RuntimeError("no current task")
         return self.current_task
 
+    def _bind_chat_context(
+        self, participant: AgentParticipant, *, workspace_path: str = ""
+    ) -> None:
+        session = self._require_session()
+        chat = self._require_runtime(participant)
+        chat.session_name = session.name
+        chat.context_root = str(session.context_root)
+        if workspace_path:
+            chat.workspace_path = workspace_path
+
     def _send(self, participant: AgentParticipant) -> None:
         participant.state = "sending"
+        self._deliver_to_runtime(participant)
         participant.state = "awaiting_accept"
 
     def _await_accept(self, participant: AgentParticipant) -> None:
         if participant.state != "awaiting_accept":
             raise RuntimeError(f"expected awaiting_accept, got {participant.state}")
+        self._accept_on_runtime(participant)
         participant.state = "running"
 
     def _await_done(self, participant: AgentParticipant) -> None:
         if participant.state != "running":
             raise RuntimeError(f"expected running, got {participant.state}")
+        self._done_on_runtime(participant)
         participant.state = "done"
 
     def _await_verdict(self, participant: AgentParticipant) -> str:
         participant.state = "awaiting_verdict"
-        result = self._next_verdict()
+        result = self._require_runtime_alive(participant).verdict()
         participant.state = "done"
         return result
 
-    def _next_verdict(self) -> str:
-        return self._stub_verdicts.pop("PASS")
+    def _require_runtime(self, participant: AgentParticipant) -> AIChatInstance:
+        chat = participant.chat
+        if chat is None:
+            raise RuntimeError(
+                f"participant {participant.type} has no chat runtime"
+            )
+        return chat
+
+    def _require_runtime_alive(self, participant: AgentParticipant) -> AIChatInstance:
+        chat = self._require_runtime(participant)
+        if not chat.alive:
+            raise RuntimeError(
+                f"runtime for {participant.type} already stopped"
+            )
+        return chat
+
+    def _runtime_class(self) -> type[AIChatInstance]:
+        return AIChatInstance
+
+    def _ensure_runtime(self, participant: AgentParticipant) -> None:
+        if participant.chat is not None:
+            return
+        self._runtime_class().mint(participant, self._require_session())
+
+    def _deliver_to_runtime(self, participant: AgentParticipant) -> None:
+        self._ensure_runtime(participant)
+        self._require_runtime(participant).run_prompt(participant.prompt)
+
+    def _accept_on_runtime(self, participant: AgentParticipant) -> None:
+        self._require_runtime_alive(participant)
+
+    def _done_on_runtime(self, participant: AgentParticipant) -> None:
+        self._require_runtime_alive(participant)
 
     def _next_human_feedback(self) -> str:
-        return self._stub_human_feedback.pop("")
-
-
-class _ChildHandle:
-    """One non-blocking child runtime for a doer or judge prompt role."""
-
-    _pids = itertools.count(10_000)
-
-    def __init__(
-        self,
-        *,
-        role: str,
-        prompt: str,
-        session_name: str,
-        context_root: str,
-    ) -> None:
-        self._role = role
-        self._prompt = prompt
-        self._session_name = session_name
-        self._context_root = context_root
-        self._pid = next(self._pids)
-        self._alive = True
-        self._accepted = False
-        self._finished = False
-
-    @property
-    def role(self) -> str:
-        return self._role
-
-    @property
-    def session_name(self) -> str:
-        return self._session_name
-
-    @property
-    def context_root(self) -> str:
-        return self._context_root
-
-    @property
-    def pid(self) -> int:
-        return self._pid
-
-    @property
-    def alive(self) -> bool:
-        return self._alive
-
-    def accept(self) -> None:
-        if not self._alive:
-            raise RuntimeError(f"child for {self._role} already stopped")
-        self._accepted = True
-
-    def finish(self) -> None:
-        if not self._alive:
-            raise RuntimeError(f"child for {self._role} already stopped")
-        self._finished = True
-
-    def stop(self) -> None:
-        self._alive = False
-        self._finished = True
-
-
-class _ChildRoster:
-    """Tracks live SubAgent children keyed by participant identity."""
-
-    def __init__(self) -> None:
-        self._by_id: dict[int, _ChildHandle] = {}
-        self._launch_order: list[str] = []
-
-    def register(self, participant: AgentParticipant, handle: _ChildHandle) -> None:
-        self._by_id[id(participant)] = handle
-        self._launch_order.append(handle.role)
-
-    def handle_for(self, participant: AgentParticipant) -> _ChildHandle | None:
-        key = id(participant)
-        if key not in self._by_id:
-            return None
-        return self._by_id[key]
-
-    def launched_roles(self) -> list[str]:
-        return list(self._launch_order)
-
-    def live_handles(self) -> list[_ChildHandle]:
-        return [handle for handle in self._by_id.values() if handle.alive]
-
-    def stop_all(self) -> None:
-        for handle in list(self._by_id.values()):
-            handle.stop()
-        self._by_id.clear()
-
-
-@dataclass
-class SubAgent(Agent):
-    """Agent subtype — non-blocking child per doer/judge role; first two-role path."""
-
-    _children: _ChildRoster = field(default_factory=_ChildRoster, repr=False)
-
-    def close(self) -> None:
-        self._tear_down_children()
-        super().close()
-
-    def _tear_down_children(self) -> None:
-        self._children.stop_all()
-
-    def _launch(self, participant: AgentParticipant) -> _ChildHandle:
-        """Start a non-blocking child for the participant role; returns immediately."""
-        session = self._require_session()
-        handle = _ChildHandle(
-            role=participant.type,
-            prompt=participant.prompt,
-            session_name=session.name,
-            context_root=str(session.context_root),
-        )
-        self._children.register(participant, handle)
-        return handle
-
-    def _send(self, participant: AgentParticipant) -> None:
-        participant.state = "sending"
-        self._launch(participant)
-        participant.state = "awaiting_accept"
-
-    def _await_accept(self, participant: AgentParticipant) -> None:
-        if participant.state != "awaiting_accept":
-            raise RuntimeError(f"expected awaiting_accept, got {participant.state}")
-        handle = self._require_child(participant)
-        handle.accept()
-        participant.state = "running"
-
-    def _await_done(self, participant: AgentParticipant) -> None:
-        if participant.state != "running":
-            raise RuntimeError(f"expected running, got {participant.state}")
-        handle = self._require_child(participant)
-        handle.finish()
-        participant.state = "done"
-
-    def _await_verdict(self, participant: AgentParticipant) -> str:
-        handle = self._require_child(participant)
-        participant.state = "awaiting_verdict"
-        result = self._next_verdict()
-        handle.finish()
-        participant.state = "done"
-        return result
-
-    def _require_child(self, participant: AgentParticipant) -> _ChildHandle:
-        handle = self._children.handle_for(participant)
-        if handle is None:
-            raise RuntimeError(f"no child launched for {participant.type}")
-        return handle
+        return ""
 
 
 @dataclass
 class AIChatInstance:
-    """CLI chat boundary — stubbed run_prompt for CliAgent transcript-watcher specs."""
+    """Chat runtime boundary — one instance per participant; subtype = spawn target."""
 
     chat_id: str = ""
     pid: Optional[int] = None
@@ -2290,6 +2353,22 @@ class AIChatInstance:
     mode: str = ""
     _runs: list[str] = field(default_factory=list, repr=False)
     _continues: int = field(default=0, repr=False)
+    _pid_seq: ClassVar[Any] = itertools.count(1)
+
+    @classmethod
+    def mint(
+        cls, participant: AgentParticipant, session: AgentSession
+    ) -> AIChatInstance:
+        pid = next(cls._pid_seq)
+        chat = cls(
+            chat_id=f"{participant.type}-{pid}",
+            pid=pid,
+            alive=True,
+            session_name=session.name,
+            context_root=str(session.context_root),
+        )
+        participant.chat = chat
+        return chat
 
     @property
     def runs(self) -> list[str]:
@@ -2307,9 +2386,406 @@ class AIChatInstance:
         self._continues += 1
 
     def stop(self) -> None:
-        """Mark the runtime dead and clear the stub PID — no zombie chat."""
+        """Mark the runtime dead — no zombie chat."""
         self.alive = False
         self.pid = None
+
+    def verdict(self) -> str:
+        """Judge result from this runtime — stub child has no transcript."""
+        return "PASS"
+
+
+class _SubAgentMailbox:
+    """Inbox/outbox files so SubAgent.run_backlog can feed Cursor Task waiters."""
+
+    def __init__(self, root: Path) -> None:
+        self._root = root
+        root.mkdir(parents=True, exist_ok=True)
+
+    def send(self, role: str, prompt: str) -> None:
+        out = self._root / f"{role}.out"
+        if out.is_file():
+            out.write_text("", encoding="utf-8")
+        (self._root / f"{role}.in").write_text(prompt.strip() + "\n", encoding="utf-8")
+
+    def wait(self, role: str, *, timeout_s: float = 180.0) -> str:
+        path = self._root / f"{role}.out"
+        deadline = time.time() + timeout_s
+        while time.time() < deadline:
+            if path.is_file():
+                text = path.read_text(encoding="utf-8").strip()
+                if text:
+                    path.write_text("", encoding="utf-8")
+                    return text
+            time.sleep(0.25)
+        raise RuntimeError(f"sub-agent {role} produced no output")
+
+    def stop(self) -> None:
+        for role in ("doer", "judge", "healer"):
+            (self._root / f"{role}.in").write_text("STOP\n", encoding="utf-8")
+
+
+@dataclass
+class SubAgentChatInstance(AIChatInstance):
+    """Sub-agent chat runtime — one long-lived child per doer/judge/healer role."""
+
+    role: str = ""
+    cursor_agent_id: str = ""
+    _child_result: str = field(default="", repr=False)
+    _pid_seq: ClassVar[Any] = itertools.count(10_000)
+
+    @classmethod
+    @override
+    def mint(
+        cls, participant: AgentParticipant, session: AgentSession
+    ) -> SubAgentChatInstance:
+        chat = super().mint(participant, session)
+        chat.role = participant.type  # type: ignore[attr-defined]
+        chat.workspace_path = str(session.context_root)
+        return chat  # type: ignore[return-value]
+
+    @override
+    def run_prompt(self, prompt: str) -> None:
+        super().run_prompt(prompt)
+
+    @override
+    def verdict(self) -> str:
+        result = self._child_result.strip().upper()
+        if "FAIL" in result:
+            return "FAIL"
+        if "PASS" in result:
+            return "PASS"
+        return "PASS"
+
+
+@dataclass
+class CursorChatInstance(AIChatInstance):
+    """Cursor IDE chat runtime — spawn target; waits live on CliAgent."""
+
+    _pid_seq: ClassVar[Any] = itertools.count(1)
+
+
+class VscodeChatInstance(CursorChatInstance):
+    """VS Code chat runtime — spawn target; waits live on CliAgent."""
+
+
+_SUB_AGENT_STATE_FILE = "sub-agent-state.json"
+_SUB_AGENT_DRAIN_ENV = "SUB_AGENT_DRAIN"
+
+
+@dataclass
+class SubAgent(Agent):
+    """Delegates participant I/O to SubAgentChatInstance — _launch spawns child cards."""
+
+    _healer_returns_handoff: bool = field(default=True, init=False, repr=False)
+    _doer_runtime: SubAgentChatInstance | None = field(default=None, init=False, repr=False)
+    _judge_runtime: SubAgentChatInstance | None = field(default=None, init=False, repr=False)
+    _healer_runtime: SubAgentChatInstance | None = field(default=None, init=False, repr=False)
+
+    @override
+    def _runtime_class(self) -> type[AIChatInstance]:
+        return SubAgentChatInstance
+
+    @override
+    def run_backlog(self) -> None:
+        try:
+            super().run_backlog()
+        finally:
+            self.persist()
+            if (
+                self.session is not None
+                and self._runtime_live()
+                and self.current_task is None
+                and not self.backlog
+            ):
+                self.close()
+
+    def run(self) -> str:
+        """Slash ``run`` — enqueue already done; live returns immediately."""
+        self._ensure_session()
+        if self._runtime_live() and os.environ.get(_SUB_AGENT_DRAIN_ENV) != "1":
+            self.persist()
+            note = self._spawn_live_drain()
+            return f"{self.queue_status()}\n\n{note}"
+        self.run_backlog()
+        return self.queue_status()
+
+    def persist(self) -> None:
+        session = self.session
+        if session is None:
+            return
+        try:
+            Path(session.folder).resolve().relative_to(self._workspace.resolve())
+        except ValueError:
+            if not self._runtime_live():
+                return
+        store = _ChatAgentPersistence
+        payload: dict = {
+            "session_name": session.name,
+            "goal": session.goal,
+            "backlog": store._serialize_backlog(self.backlog),
+            "current": store._serialize_task(self.current_task),
+            "completed": store._serialize_backlog(self.completed_tasks),
+            "doer_runtime": self._runtime_row(self._doer_runtime),
+            "judge_runtime": self._runtime_row(self._judge_runtime),
+            "healer_runtime": self._runtime_row(self._healer_runtime),
+        }
+        target = self._queue_path(self._workspace, session.name)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    @classmethod
+    def load(cls, workspace: Path, session_name: str) -> SubAgent | None:
+        path = cls._queue_path(workspace, session_name)
+        if not path.is_file():
+            return None
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if not isinstance(payload, dict):
+            return None
+        engine = cls(_workspace=workspace)
+        name = str(payload.get("session_name") or session_name).strip()
+        engine.open_session(name, goal=str(payload.get("goal") or ""))
+        store = _ChatAgentPersistence
+        repo = engine._repo()
+        engine.backlog = store._deserialize_tasks(payload.get("backlog") or [])
+        for row, task in zip(payload.get("backlog") or [], engine.backlog):
+            store._link_tickets(task, row, repo=repo)
+        current_row = payload.get("current")
+        current = store._deserialize_task(current_row)
+        store._link_tickets(current, current_row, repo=repo)
+        engine.current_task = current
+        completed_rows = payload.get("completed") or []
+        engine.completed_tasks = store._deserialize_tasks(completed_rows)
+        for row, task in zip(completed_rows, engine.completed_tasks):
+            store._link_tickets(task, row, repo=repo)
+        engine._doer_runtime = cls._runtime_from_row(payload.get("doer_runtime"))
+        engine._judge_runtime = cls._runtime_from_row(payload.get("judge_runtime"))
+        engine._healer_runtime = cls._runtime_from_row(payload.get("healer_runtime"))
+        engine._bind_loaded_runtimes()
+        return engine
+
+    @classmethod
+    def run_drain_worker(cls, workspace: str, session_name: str) -> None:
+        os.environ[_SUB_AGENT_DRAIN_ENV] = "1"
+        ws = Path(workspace)
+        engine = cls.load(ws, session_name)
+        if engine is None:
+            engine = cls(_workspace=ws)
+            engine.open_session(session_name)
+        engine.run_backlog()
+
+    @staticmethod
+    def _queue_path(workspace: Path, session_name: str) -> Path:
+        return workspace / ".agent_sessions" / session_name / _SUB_AGENT_STATE_FILE
+
+    @staticmethod
+    def _runtime_row(chat: SubAgentChatInstance | None) -> dict | None:
+        if chat is None:
+            return None
+        return {
+            "chat_id": chat.chat_id,
+            "cursor_agent_id": chat.cursor_agent_id,
+            "pid": chat.pid,
+            "alive": chat.alive,
+            "role": chat.role,
+        }
+
+    @staticmethod
+    def _runtime_from_row(row: object) -> SubAgentChatInstance | None:
+        if not isinstance(row, dict):
+            return None
+        return SubAgentChatInstance(
+            chat_id=str(row.get("chat_id") or ""),
+            pid=row.get("pid"),
+            alive=bool(row.get("alive", True)),
+            cursor_agent_id=str(row.get("cursor_agent_id") or ""),
+            role=str(row.get("role") or ""),
+        )
+
+    def _bind_loaded_runtimes(self) -> None:
+        task = self.current_task
+        if task is not None:
+            if self._doer_runtime is not None:
+                task.doer.chat = self._doer_runtime
+            if task.judge is not None and self._judge_runtime is not None:
+                task.judge.chat = self._judge_runtime
+        if self._healer_runtime is not None:
+            healer = self._healer_participant()
+            healer.chat = self._healer_runtime
+
+    def _spawn_live_drain(self) -> str:
+        from primitives.tools.repo_paths import pythonpath_entries, repo_python, repo_root
+
+        session = self._require_session()
+        runtime = self._runtime_dir()
+        runtime.mkdir(parents=True, exist_ok=True)
+        pid_path = runtime / "drain.pid"
+        if pid_path.is_file():
+            try:
+                existing = int(pid_path.read_text(encoding="utf-8").strip() or "0")
+            except ValueError:
+                existing = 0
+            if existing > 0:
+                try:
+                    os.kill(existing, 0)
+                except OSError:
+                    pass
+                else:
+                    return f"Drain already running (pid {existing})."
+        root = repo_root()
+        env = os.environ.copy()
+        env["PYTHONPATH"] = os.pathsep.join(pythonpath_entries(root))
+        env[_SUB_AGENT_DRAIN_ENV] = "1"
+        log = runtime / "drain.log"
+        creationflags = 0
+        if os.name == "nt":
+            creationflags = (
+                subprocess.CREATE_NEW_PROCESS_GROUP
+                | getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+                | 0x00000008
+                | 0x01000000
+            )
+        workspace = str(self._workspace)
+        name = session.name
+
+        def _start(flags: int) -> subprocess.Popen:
+            log_file = log.open("ab")
+            try:
+                return subprocess.Popen(
+                    [
+                        repo_python(root),
+                        "-c",
+                        (
+                            "from agent.agent import SubAgent; "
+                            f"SubAgent.run_drain_worker({workspace!r}, {name!r})"
+                        ),
+                    ],
+                    cwd=str(root),
+                    env=env,
+                    stdout=log_file,
+                    stderr=subprocess.STDOUT,
+                    creationflags=flags,
+                )
+            finally:
+                log_file.close()
+
+        try:
+            proc = _start(creationflags)
+        except OSError:
+            fallback = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+            proc = _start(fallback)
+        pid_path.write_text(str(proc.pid), encoding="utf-8")
+        return f"Drain running (pid {proc.pid})."
+
+    @override
+    def close(self) -> None:
+        super().close()
+        self._tear_down_children()
+
+    def _tear_down_children(self) -> None:
+        """Stop non-blocking doer/judge/healer children — session.close for SubAgent."""
+        for chat in (self._doer_runtime, self._judge_runtime, self._healer_runtime):
+            if chat is not None:
+                chat.stop()
+        if self.session is not None and self._runtime_live():
+            self._mailbox().stop()
+        self._doer_runtime = None
+        self._judge_runtime = None
+        self._healer_runtime = None
+
+    @override
+    def _ensure_runtime(self, participant: AgentParticipant) -> None:
+        role = participant.type
+        if role == "doer" and self._doer_runtime is not None:
+            participant.chat = self._doer_runtime
+            return
+        if role == "judge" and self._judge_runtime is not None:
+            participant.chat = self._judge_runtime
+            return
+        if role == "healer" and self._healer_runtime is not None:
+            participant.chat = self._healer_runtime
+            return
+        super()._ensure_runtime(participant)
+        chat = participant.chat
+        if isinstance(chat, SubAgentChatInstance):
+            chat.role = role
+            if role == "doer":
+                self._doer_runtime = chat
+            elif role == "judge":
+                self._judge_runtime = chat
+            elif role == "healer":
+                self._healer_runtime = chat
+
+    def _runtime_dir(self) -> Path:
+        session = self._require_session()
+        return self._workspace / ".agent_sessions" / session.name / "runtime"
+
+    def _runtime_live(self) -> bool:
+        return (self._runtime_dir() / "enabled").is_file()
+
+    def _mailbox(self) -> _SubAgentMailbox:
+        return _SubAgentMailbox(self._runtime_dir())
+
+    def _child_prompt(self, participant: AgentParticipant) -> str:
+        prompt = participant.prompt
+        if participant.type != "judge":
+            return prompt
+        answer = ""
+        if self._doer_runtime is not None:
+            answer = self._doer_runtime._child_result.strip()
+        if not answer:
+            return prompt
+        return f"The doer answered: {answer}\n\n{prompt}"
+
+    def _launch(self, participant: AgentParticipant) -> None:
+        """Non-blocking child for doer, judge, or healer — same runtimes for the session."""
+        self._ensure_runtime(participant)
+        self._bind_chat_context(participant)
+        prompt = self._child_prompt(participant)
+        self._require_runtime(participant).run_prompt(prompt)
+        if self._runtime_live():
+            self._mailbox().send(participant.type, prompt)
+
+    @override
+    def _await_done(self, participant: AgentParticipant) -> None:
+        if not self._runtime_live():
+            super()._await_done(participant)
+            return
+        if participant.state != "running":
+            raise RuntimeError(f"expected running, got {participant.state}")
+        text = self._mailbox().wait(participant.type)
+        chat = participant.chat
+        if isinstance(chat, SubAgentChatInstance):
+            chat._child_result = text
+        participant.state = "done"
+
+    @override
+    def _await_verdict(self, participant: AgentParticipant) -> str:
+        if not self._runtime_live():
+            return super()._await_verdict(participant)
+        participant.state = "awaiting_verdict"
+        text = self._mailbox().wait("judge")
+        chat = participant.chat
+        if isinstance(chat, SubAgentChatInstance):
+            chat._child_result = text
+        result = self._require_runtime_alive(participant).verdict()
+        participant.state = "done"
+        return result
+
+    @override
+    def _deliver_to_runtime(self, participant: AgentParticipant) -> None:
+        self._launch(participant)
+
+    @override
+    def _accept_on_runtime(self, participant: AgentParticipant) -> None:
+        self._require_runtime_alive(participant)
+
+    @override
+    def _done_on_runtime(self, participant: AgentParticipant) -> None:
+        self._require_runtime_alive(participant)
 
 
 class _TranscriptPath:
@@ -2565,20 +3041,7 @@ class _CliWorkspaceBind:
 
 @dataclass
 class _CliChatFactory:
-    """Mint AIChatInstance per CliAgentParticipant when missing."""
-
-    _ids: Any = field(default_factory=lambda: itertools.count(1), repr=False)
-
-    def ensure(self, participant: AgentParticipant) -> AIChatInstance:
-        if participant.chat is not None:
-            return participant.chat
-        chat = AIChatInstance(
-            chat_id=f"{participant.type}-{next(self._ids)}",
-            alive=True,
-            pid=1,
-        )
-        participant.chat = chat
-        return chat
+    """Bind and release CliAgent chat instances."""
 
     def bind_context(
         self,
@@ -2586,7 +3049,7 @@ class _CliChatFactory:
         *,
         session: AgentSession,
         workspace_path: str,
-    ) -> AIChatInstance:
+    ) -> CursorChatInstance:
         chat = participant.chat
         if chat is None:
             raise RuntimeError(
@@ -2597,16 +3060,6 @@ class _CliChatFactory:
         if workspace_path:
             chat.workspace_path = workspace_path
         return chat
-
-    def release(self, participant: AgentParticipant) -> None:
-        chat = participant.chat
-        if chat is not None:
-            chat.stop()
-        participant.chat = None
-
-    def release_all(self, participants: list[AgentParticipant]) -> None:
-        for participant in participants:
-            self.release(participant)
 
 
 _ARGV_SOFT_LIMIT = 7000
@@ -2675,91 +3128,59 @@ class CliAgent(Agent):
         default_factory=AgentRuntimeTranscriptWatcher
     )
     _paths: _TranscriptPath = field(default_factory=_TranscriptPath, repr=False)
-    _workspace: _CliWorkspaceBind = field(
+    _worktree_bind: _CliWorkspaceBind = field(
         default_factory=_CliWorkspaceBind, repr=False
     )
-    _chats: _CliChatFactory = field(default_factory=_CliChatFactory, repr=False)
     _task_files: _CliTaskFile = field(default_factory=_CliTaskFile, repr=False)
     _scratch: _CliScratch = field(default_factory=_CliScratch, repr=False)
+    _log: CliAgentSessionLog = field(
+        default_factory=CliAgentSessionLog, init=False, repr=False
+    )
+
+    def __post_init__(self) -> None:
+        if self.session is not None:
+            self._bind_session(self.session)
+
+    @override
+    def _bind_session(self, session: AgentSession) -> None:
+        self._wire_session_log(session)
+        super()._bind_session(session)
+
+    def _wire_session_log(self, session: AgentSession) -> None:
+        if session.log is self._log:
+            return
+        self._log._adopt_from(session.log)
+        session.log = self._log
 
     @property
-    def workspace_root(self) -> str:
-        return self._workspace.path
+    def _workspace_root(self) -> str:
+        return self._worktree_bind.path
 
     @property
-    def pending_session(self) -> bool:
+    def _pending_session(self) -> bool:
         if self.session is None:
             return True
-        return self._workspace.lacks_worktree(self.session)
+        return self._worktree_bind.lacks_worktree(self.session)
 
-    def kick(self, participant: AgentParticipant | None = None) -> None:
-        target = participant or self._default_kick_target()
-        chat = target.chat
-        if chat is not None:
-            chat.continue_chat()
-        target.state = "idle"
-        self.log.kick(target)
+    @override
+    def close(self) -> None:
+        super().close()
+        self._worktree_bind.clear()
+        self._wipe_scratch()
 
-    def close_agents(self) -> None:
-        """Stop live doer/judge CLI processes and clear chat bindings."""
-        self._chats.release_all(self._bound_participants())
-        self._workspace.clear()
-
-    def cleanup(self) -> None:
-        """Remove orchestration temps; keep durable session artifacts."""
+    def _wipe_scratch(self) -> None:
         session = self.session
         if session is None:
             return
         self._scratch.wipe(context_root=Path(session.context_root))
 
-    def close_cli_session(self) -> None:
-        """Close Cli Agent Session — stop runtimes, wipe temps, then session.close."""
-        self.close_agents()
-        self.cleanup()
-        self._require_session().close()
-
-    def close(self) -> None:
-        self.close_agents()
-        self.cleanup()
-        super().close()
-
-    def _bound_participants(self) -> list[AgentParticipant]:
-        participants: list[AgentParticipant] = []
-        for task in self._known_tasks():
-            participants.extend(_ParticipantOps.of_task(task))
-        return participants
-
-    def _known_tasks(self) -> list[AgentTask]:
-        tasks: list[AgentTask] = []
-        if self.current_task is not None:
-            tasks.append(self.current_task)
-        tasks.extend(self.completed_tasks)
-        tasks.extend(self.backlog)
-        return tasks
-
+    @override
     def _ensure_session(self) -> None:
-        session = self._require_session()
-        session.open()
-        session.agent = self
-        self._install_cli_log(session)
+        super()._ensure_session()
         self._bind_workspace_root()
 
-    def _install_cli_log(self, session: AgentSession) -> None:
-        if isinstance(session.log, CliAgentSessionLog):
-            return
-        upgraded = CliAgentSessionLog()
-        upgraded._adopt_from(session.log)
-        session.log = upgraded
-
     def _bind_workspace_root(self) -> None:
-        session = self._require_session()
-        if session.worktree is None:
-            self._workspace.bind_worktree(session)
-            return
-        self._workspace.bind_worktree(session)
-
-    def _pending_session(self) -> bool:
-        return self.pending_session
+        self._worktree_bind.bind_worktree(self._require_session())
 
     def _persist_prompt_to_task_file(self, prompt: str) -> Optional[Path]:
         plan = self._task_files.plan_for(
@@ -2775,66 +3196,27 @@ class CliAgent(Agent):
             written = self._task_files.write(planned_file)
         return written
 
-    def _ensure_chat(self, participant: AgentParticipant) -> AIChatInstance:
-        return self._chats.ensure(participant)
+    @override
+    def _runtime_class(self) -> type[AIChatInstance]:
+        return CursorChatInstance
 
     def _bind_chat_context(self, participant: AgentParticipant) -> None:
-        session = self._require_session()
-        self._chats.bind_context(
-            participant,
-            session=session,
-            workspace_path=self._workspace.path,
+        super()._bind_chat_context(
+            participant, workspace_path=self._worktree_bind.path
         )
         self.log.bind_chat_context(participant)
 
-    def _launch_doer(self) -> None:
-        if self._pending_session():
-            raise RuntimeError(
-                "refuse durable CliAgent launch on main before branch worktree exists"
-            )
-        task = self._require_current_task()
-        participant = task.doer
-        self._ensure_chat(participant)
-        self._bind_chat_context(participant)
-        self._persist_prompt_to_task_file(participant.prompt)
-        self._send(participant)
-        self.log.run_chat(self._require_chat(participant), participant.prompt)
-        self.log.send(participant, prompt=participant.prompt)
-        self._await_accept(participant)
-        self.log.accepted(participant)
-        self._run_tools_cli_for(participant)
-
+    @override
     def _wait_doer(self) -> None:
-        task = self._require_current_task()
-        participant = task.doer
-        self._await_done(participant)
+        super()._wait_doer()
         self.log.wait_doer()
-        self.log.done(participant)
 
-    def _launch_judge(self) -> None:
-        for participant in self._present_participants(
-            self._require_current_task().judge
-        ):
-            self._launch_bound_judge(participant)
-
-    def _launch_bound_judge(self, participant: AgentParticipant) -> None:
-        self._ensure_chat(participant)
-        self._bind_chat_context(participant)
-        self._send(participant)
-        chat = self._require_chat(participant)
-        self.log.run_chat(chat, participant.prompt)
-        self.log.launch_judge(participant)
-        self.log.send(participant, prompt=participant.prompt)
-        self._await_accept(participant)
-        self.log.accepted(participant)
-        self._run_tools_cli_for(participant)
-
+    @override
     def _finish_task_pass(self) -> None:
         self.fail_count = 0
-        if self._human_requested_retry():
-            return
-        self._complete_task(outcome=_CompleteOutcome.PASS)
+        super()._finish_task_pass()
 
+    @override
     def _retry_after_fail(self) -> None:
         self.fail_count += 1
         if self.fail_count >= self.max_fails:
@@ -2845,9 +3227,7 @@ class CliAgent(Agent):
                 )
             )
             return
-        task = self._require_current_task()
-        self.kick(task.doer)
-        self._reset_participants_for_retry(task)
+        super()._retry_after_fail()
 
     def _auto_kick_stalled_doer(self) -> None:
         task = self.current_task
@@ -2860,26 +3240,39 @@ class CliAgent(Agent):
             return
         self.kick(doer)
 
-    def _send(self, participant: AgentParticipant) -> None:
-        participant.state = "sending"
-        chat = self._require_chat(participant)
-        chat.run_prompt(participant.prompt)
+    @override
+    def _deliver_to_runtime(self, participant: AgentParticipant) -> None:
+        if participant.type == "doer" and self._pending_session:
+            raise RuntimeError(
+                "refuse durable CliAgent launch on main before branch worktree exists"
+            )
+        self._ensure_runtime(participant)
+        self._bind_chat_context(participant)
+        if participant.type == "doer":
+            self._persist_prompt_to_task_file(participant.prompt)
+        super()._deliver_to_runtime(participant)
+        chat = self._require_runtime(participant)
         self.watch.track(self._paths.under_chat(chat))
-        participant.state = "awaiting_accept"
+        self.log.run_chat(chat, participant.prompt)
+        if participant.type == "judge":
+            self.log.launch_judge(participant)
 
-    def _await_accept(self, participant: AgentParticipant) -> None:
-        if participant.state != "awaiting_accept":
-            raise RuntimeError(f"expected awaiting_accept, got {participant.state}")
-        chat = self._require_chat(participant)
+    @override
+    def _accept_on_runtime(self, participant: AgentParticipant) -> None:
+        if participant.type == "healer":
+            Agent._accept_on_runtime(self, participant)
+            return
+        chat = self._require_runtime(participant)
         self.watch._await_user_turn(self.accept_seconds, alive=chat.alive)
-        participant.state = "running"
 
-    def _await_done(self, participant: AgentParticipant) -> None:
-        if participant.state != "running":
-            raise RuntimeError(f"expected running, got {participant.state}")
+    @override
+    def _done_on_runtime(self, participant: AgentParticipant) -> None:
+        if participant.type == "healer":
+            Agent._done_on_runtime(self, participant)
+            return
         self.watch._await_growth_then_quiet(self.stall_seconds, self.quiet_seconds)
-        participant.state = "done"
 
+    @override
     def _await_verdict(self, participant: AgentParticipant) -> str:
         participant.state = "awaiting_verdict"
         self.watch._await_growth_then_quiet(self.stall_seconds, self.quiet_seconds)
@@ -2887,7 +3280,503 @@ class CliAgent(Agent):
         participant.state = "done"
         return result
 
-    def _require_chat(self, participant: AgentParticipant) -> AIChatInstance:
-        if participant.chat is None:
-            raise RuntimeError(f"CliAgent participant {participant.type} has no chat")
-        return participant.chat
+
+# ---------------------------------------------------------------------------
+# ChatAgent — in-chat subtype (same loop as Agent; hooks differ)
+# ---------------------------------------------------------------------------
+
+_CHAT_STATE_FILE = "chat-agent-state.json"
+
+
+def _ticket_doer_prompt(work: "WorkTicket", *, instructions: str = "") -> str:
+    from agent.workflow import WorkTicket
+
+    issue = work.issue
+    number = 0 if issue is None else issue.number
+    title = "" if issue is None else issue.title
+    body = "" if issue is None else issue.body
+    lines = [f"# Ticket #{number}: {title}", "", body.strip()]
+    if instructions.strip():
+        lines.extend(["", "## Start instructions", instructions.strip()])
+    return "\n".join(lines).strip() + "\n"
+
+
+class _ChatAgentPersistence:
+    """Persist ChatAgent across separate `python -m tools run` processes (this chat based agent kit, not CliAgent)."""
+
+    @staticmethod
+    def path_for(workspace: Path, session_name: str) -> Path:
+        return workspace / ".agent_sessions" / session_name / _CHAT_STATE_FILE
+
+    @classmethod
+    def save(cls, engine: "ChatAgent", *, session_name: str, goal: str = "") -> None:
+        session = engine.session
+        if session is None:
+            return
+        payload: dict = {
+            "session_name": session.name,
+            "goal": goal or session.goal,
+            "backlog": cls._serialize_backlog(engine.backlog),
+            "current": cls._serialize_task(engine.current_task),
+            "completed": cls._serialize_backlog(engine.completed_tasks),
+            "chat_phase": engine._chat_phase,
+            "pending_verdict": engine._pending_verdict,
+        }
+        target = cls.path_for(engine._workspace, session.name)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    @classmethod
+    def load(cls, workspace: Path, session_name: str) -> "ChatAgent | None":
+        path = cls.path_for(workspace, session_name)
+        if not path.is_file():
+            return None
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if not isinstance(payload, dict):
+            return None
+        engine = ChatAgent(_workspace=workspace)
+        name = str(payload.get("session_name") or session_name).strip()
+        goal = str(payload.get("goal") or "")
+        engine.open_session(name, goal=goal)
+        repo = engine._repo()
+        engine.backlog = cls._deserialize_tasks(payload.get("backlog") or [])
+        for row, task in zip(payload.get("backlog") or [], engine.backlog):
+            cls._link_tickets(task, row, repo=repo)
+        current_row = payload.get("current")
+        current = cls._deserialize_task(current_row)
+        cls._link_tickets(current, current_row, repo=repo)
+        engine.current_task = current
+        completed_rows = payload.get("completed") or []
+        engine.completed_tasks = cls._deserialize_tasks(completed_rows)
+        for row, task in zip(completed_rows, engine.completed_tasks):
+            cls._link_tickets(task, row, repo=repo)
+        engine._chat_phase = str(payload.get("chat_phase") or "idle")
+        engine._pending_verdict = str(payload.get("pending_verdict") or "")
+        return engine
+
+    @staticmethod
+    def _serialize_backlog(tasks: list[AgentTask]) -> list[dict]:
+        return [_ChatAgentPersistence._task_dict(t) for t in tasks]
+
+    @staticmethod
+    def _serialize_task(task: AgentTask | None) -> dict | None:
+        if task is None:
+            return None
+        return _ChatAgentPersistence._task_dict(task)
+
+    @staticmethod
+    def _task_dict(task: AgentTask) -> dict:
+        row: dict = {
+            "doer_prompt": task.doer.prompt or task.prompt,
+            "state": task.state,
+            "doer_state": task.doer.state,
+        }
+        if task.judge is not None:
+            row["judge_prompt"] = task.judge.prompt
+            row["judge_state"] = task.judge.state
+        if task.tickets:
+            snapshots = []
+            for ticket in task.tickets:
+                issue = getattr(ticket, "issue", None)
+                if issue is None:
+                    continue
+                snapshots.append(
+                    {
+                        "number": issue.number,
+                        "title": issue.title,
+                        "body": issue.body,
+                    }
+                )
+            if snapshots:
+                row["tickets"] = snapshots
+        return row
+
+    @classmethod
+    def _deserialize_tasks(cls, rows: list) -> list[AgentTask]:
+        tasks: list[AgentTask] = []
+        for row in rows:
+            task = cls._deserialize_task(row)
+            if task is not None:
+                tasks.append(task)
+        return tasks
+
+    @classmethod
+    def _deserialize_task(cls, row) -> AgentTask | None:
+        if not isinstance(row, dict):
+            return None
+        doer_prompt = str(row.get("doer_prompt") or "").strip()
+        if not doer_prompt:
+            return None
+        task = _TemplateInstantiator._task_from_prompt(doer_prompt)
+        judge_prompt = str(row.get("judge_prompt") or "").strip()
+        if judge_prompt:
+            task.judge = AgentParticipant(type="judge", prompt=judge_prompt)
+            task.judge.state = row.get("judge_state") or "idle"
+        task.state = row.get("state") or "Backlog"
+        task.doer.state = row.get("doer_state") or "idle"
+        return task
+
+    @classmethod
+    def _link_tickets(cls, task: AgentTask | None, row, *, repo: Repo) -> None:
+        if task is None or not isinstance(row, dict):
+            return
+        snapshots = row.get("tickets") or []
+        if not snapshots:
+            return
+        from agent.workflow import WorkTicket
+
+        shelf = repo._issue_shelf
+        if shelf.project is None:
+            shelf.attach_project(Project())
+        linked: list[WorkTicket] = []
+        for snap in snapshots:
+            if not isinstance(snap, dict):
+                continue
+            number = int(snap.get("number") or 0)
+            title = str(snap.get("title") or "")
+            body = str(snap.get("body") or "")
+            try:
+                work = WorkTicket.from_ref(repo, number)
+            except Exception:
+                work = WorkTicket(repo, None).create(title, body)
+            else:
+                if work.issue is not None and title:
+                    work.issue.title = title
+                    work.issue.body = body
+            linked.append(work)
+        task.tickets = linked
+
+
+@dataclass
+class ChatAgent(Agent):
+    """In-chat Agent — same doer→judge loop; this window is the runtime."""
+
+    _healer_returns_handoff: bool = field(default=True, init=False, repr=False)
+    _chat_phase: str = field(default="idle", repr=False)
+    _pending_verdict: str = field(default="", repr=False)
+
+    @override
+    def _deliver_to_runtime(self, participant: AgentParticipant) -> None:
+        if participant.type == "healer":
+            Agent._deliver_to_runtime(self, participant)
+            return
+        return None
+
+    @override
+    def _accept_on_runtime(self, participant: AgentParticipant) -> None:
+        if participant.type == "healer":
+            Agent._accept_on_runtime(self, participant)
+            return
+        return None
+
+    @override
+    def _done_on_runtime(self, participant: AgentParticipant) -> None:
+        if participant.type == "healer":
+            Agent._done_on_runtime(self, participant)
+            return
+        return None
+
+    @override
+    def _await_verdict(self, participant: AgentParticipant) -> str:
+        participant.state = "awaiting_verdict"
+        result = self._pending_verdict.strip().upper() or "PASS"
+        if result not in ("PASS", "FAIL"):
+            result = "PASS"
+        self._pending_verdict = ""
+        participant.state = "done"
+        return result
+
+    @override
+    def _run_tools_cli_for(self, participant: AgentParticipant) -> None:
+        """In-chat orchestration only — kit turns belong to the doer/judge runtime."""
+        return None
+
+    def _task_label(self, task: AgentTask) -> str:
+        return (task.prompt or task.doer.prompt).strip() or "(empty)"
+
+    def _chat_status_block(self) -> str:
+        lines = ["---", "In progress:"]
+        current = self.current_task
+        if current is None:
+            lines.append("  (none)")
+        else:
+            role = "doer"
+            if self._chat_phase == "judge_out":
+                role = "judge"
+            elif self._chat_phase == "doer_out":
+                role = "doer"
+            lines.append(f"  {self._task_label(current)} [{role}]")
+        lines.append("Done:")
+        if not self.completed_tasks:
+            lines.append("  (none)")
+        else:
+            for index, task in enumerate(self.completed_tasks, 1):
+                lines.append(f"  {index}. {self._task_label(task)}")
+        lines.append("Left:")
+        if not self.backlog:
+            lines.append("  (none)")
+        else:
+            for index, task in enumerate(self.backlog):
+                lines.append(f"  {index}. {self._task_label(task)}")
+        return "\n".join(lines)
+
+    def _chat_reply(self, body: str, next_step: str) -> str:
+        return f"{body}\n\n{self._chat_status_block()}\n\nNext: {next_step}"
+
+    def step_from_chat(self, *, verdict: str = "") -> str:
+        """One in-chat wait — returns the prompt for this window plus the next slash step."""
+        if verdict.strip():
+            self._pending_verdict = verdict.strip().upper()
+        self._ensure_session()
+        if self._chat_phase == "doer_out":
+            return self._chat_finish_doer()
+        if self._chat_phase == "judge_out":
+            return self._chat_take_verdict()
+        return self._chat_deliver_doer()
+
+    def _chat_deliver_doer(self) -> str:
+        if self.current_task is None:
+            self._launch_next()
+        if self.current_task is None:
+            self._chat_phase = "idle"
+            return self._chat_reply(
+                "No current task.",
+                "add work with /agent-backlog, or healer eval.",
+            )
+        self._launch_doer()
+        self._chat_phase = "doer_out"
+        return self._chat_reply(
+            self.current_task.doer.prompt,
+            "do this work, then /agent.",
+        )
+
+    def _chat_finish_doer(self) -> str:
+        self._wait_doer()
+        task = self._require_current_task()
+        if task.judge is None:
+            self._finish_task_pass()
+            self._chat_phase = "idle"
+            if self.backlog:
+                return self._chat_deliver_doer()
+            return self._chat_reply(
+                "Task complete (no judge).",
+                "healer eval.",
+            )
+        self._launch_judge()
+        self._chat_phase = "judge_out"
+        return self._chat_reply(
+            task.judge.prompt,
+            "judge PASS or FAIL, then /agent.",
+        )
+
+    def _chat_take_verdict(self) -> str:
+        result = self._wait_verdict()
+        if result == "PASS":
+            self._finish_task_pass()
+            self._chat_phase = "idle"
+            if self.backlog:
+                follow = self._chat_deliver_doer()
+                return f"PASS.\n\n{follow}"
+            return self._chat_reply(
+                "PASS. Task complete.",
+                "healer eval.",
+            )
+        self._healer_eval(phase="task_complete", trigger="success")
+        self._skip_unhealed_task()
+        self._chat_phase = "idle"
+        if self.backlog or self.current_task is not None:
+            follow = self._chat_deliver_doer()
+            return f"FAIL. Skipped after one try.\n\n{follow}"
+        return self._chat_reply(
+            "FAIL. Skipped after one try.",
+            "add work with /agent-backlog, or healer eval.",
+        )
+
+
+# @toolset-manifest python -m tools manifest agent.agent:ChatAgentKit
+@agentic_toolset
+class ChatAgentKit:
+    """Slash ``/agent`` — parent orchestration in this chat window."""
+
+    def __init__(self, workspace: str = "", session: str = "") -> None:
+        self._workspace = Path((workspace or os.getcwd()).strip())
+        self._session_name = (session or "agent-chat").strip()
+        self._engine_ref: ChatAgent | None = None
+
+    def _select_session(self, name: str = "") -> None:
+        requested = (name or "").strip()
+        if not requested:
+            return
+        bound_name = ""
+        if self._engine_ref is not None and self._engine_ref.session is not None:
+            bound_name = self._engine_ref.session.name
+        if requested != self._session_name or (
+            bound_name and bound_name != requested
+        ):
+            self._engine_ref = None
+        self._session_name = requested
+
+    def _get_engine(self) -> ChatAgent:
+        if self._engine_ref is not None:
+            return self._engine_ref
+        loaded = _ChatAgentPersistence.load(self._workspace, self._session_name)
+        if loaded is not None:
+            self._engine_ref = loaded
+            return loaded
+        self._engine_ref = ChatAgent(_workspace=self._workspace)
+        return self._engine_ref
+
+    def _persist(self, *, goal: str = "") -> None:
+        engine = self._engine_ref
+        if engine is None or engine.session is None:
+            return
+        _ChatAgentPersistence.save(
+            engine, session_name=engine.session.name, goal=goal
+        )
+
+    def _run_guarded(self, phase: str, fn):
+        from agent.healer import HealerStop, format_healer_fix_handoff
+
+        engine = self._get_engine()
+        try:
+            result = engine._guard_phase(phase, fn)
+            engine.note_phase_result(phase, str(result))
+            self._persist()
+            text = str(result)
+            if text.startswith("healer_fix:") or text.startswith("healer_stop:"):
+                return (
+                    f"{text}\n\n{engine._chat_status_block()}\n\n"
+                    "Next: apply the healer fix, then /agent."
+                )
+            return result
+        except HealerStop as stop:
+            self._persist()
+            return (
+                f"healer_stop: {stop.report.summary()}\n{stop.report.to_json()}\n\n"
+                f"{engine._chat_status_block()}\n\n"
+                "Next: apply the healer fix, then /agent."
+            )
+        except AgentFault as fault:
+            self._persist()
+            report = engine.eval_healer(
+                phase=phase,
+                trigger="exception",
+                error=fault,
+                stop_on_exception=False,
+            )
+            return (
+                f"{format_healer_fix_handoff(report)}\n\n"
+                f"{engine._chat_status_block()}\n\n"
+                "Next: apply the healer fix, then /agent."
+            )
+
+    def _ensure_named_session(self, name: str = "", goal: str = "") -> ChatAgent:
+        self._select_session(name)
+        engine = self._get_engine()
+        if engine.session is None:
+            engine.open_session(self._session_name, goal=goal)
+        elif goal:
+            engine.session.goal = goal
+        return engine
+
+    def _format_backlog(self, engine: ChatAgent) -> str:
+        return engine._chat_status_block()
+
+    @agent_tool
+    def agent(
+        self,
+        session_name: str = "",
+        goal: str = "",
+        doer_prompt: str = "",
+        judge_prompt: str = "",
+        verdict: str = "",
+        tasks: list[dict] | None = None,
+    ) -> str:
+        """Advance one wait. Result always includes In progress / Done / Left, then Next."""
+
+        self._select_session(session_name)
+
+        def _run() -> str:
+            engine = self._ensure_named_session(session_name, goal)
+            specs = list(tasks or [])
+            if doer_prompt.strip():
+                specs.append(
+                    {
+                        "doer_prompt": doer_prompt.strip(),
+                        "judge_prompt": judge_prompt.strip(),
+                    }
+                )
+            if (
+                specs
+                and engine._chat_phase == "idle"
+                and engine.current_task is None
+            ):
+                engine.add_tasks_from_specs(specs)
+            return engine.step_from_chat(verdict=verdict)
+
+        return self._run_guarded("agent", _run)
+
+    @agent_tool
+    def backlog(
+        self,
+        action: str = "",
+        tasks: list[dict] | None = None,
+        index: int = -1,
+        prompt: str = "",
+    ) -> str:
+        """List, add, or remove items. Result is In progress / Done / Left."""
+
+        def _run() -> str:
+            engine = self._ensure_named_session()
+            hint = f"{action} {prompt}".strip().lower()
+            rows = list(tasks or [])
+            if hint.startswith("clear"):
+                engine.clear_backlog()
+                return self._format_backlog(engine)
+            if rows or hint.startswith("add"):
+                if rows:
+                    engine.add_tasks_from_specs(rows)
+                return self._format_backlog(engine)
+            if hint.startswith("remove") or hint.startswith("delete") or index >= 0:
+                if index >= 0 and index < len(engine.backlog):
+                    engine.backlog.pop(index)
+                elif prompt.strip():
+                    needle = prompt.strip().lower()
+                    engine.backlog = [
+                        task
+                        for task in engine.backlog
+                        if needle not in task.prompt.lower()
+                    ]
+                return self._format_backlog(engine)
+            return self._format_backlog(engine)
+
+        return self._run_guarded("backlog", _run)
+
+    @prompt(name="agent-backlog")
+    @agent_instructions
+    def agent_backlog(self) -> str:
+        """Call tool ``backlog``. The result lists In progress, Done, and Left."""
+        return (
+            "Call tool backlog to list, add, or remove items. "
+            "Read In progress, Done, and Left in the result. Do not drain the loop."
+        )
+
+    @prompt(name="agent")
+    @agent_instructions
+    def run_judged_job(
+        self,
+        doer_prompt: str = "",
+        judge_prompt: str = "",
+        session_name: str = "",
+    ) -> str:
+        """Call tool ``agent`` once per wait. Print In progress / Done / Left from the result."""
+        return (
+            "Call tool agent (session_name, doer_prompt, judge_prompt on the first call). "
+            "The result is the work for this chat, then In progress, Done, and Left, then Next. "
+            "Show that board in your reply. Do the work Next names. Call tool agent again. "
+            "When Next says judge, pass verdict PASS or FAIL. "
+            "After PASS, the board shows which tasks are Done and which are Left."
+        )

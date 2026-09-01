@@ -16,7 +16,7 @@ from pathlib import Path
 from primitives.actions.action import agent_instructions, agentic_toolset
 from primitives.instructions import Instruction, instruction
 from scan.scan import Scan
-from sub_agent.sub_agent import sub_agent
+from tools.sub_agent import sub_agent
 from tools.tool import agent_tool
 
 from context_tools.clean_engineering.class_model.drawio.drawio_class_model import (

@@ -1,16 +1,23 @@
-Exit code **1**:
+Searching for the saved request file and how to pipe it into `tools`.
+Running the exact command from the prompt file.
+Command completed successfully. `write_grill_answer` ran and wrote the result to a temp file:
 
 ```yaml
-ok: false
-error: request missing toolset
-```Exit code **1**:
+ok: true
+toolset: grill_context.grill_context:GrillContext
+tool: write_grill_answer
+result: C:\Users\jeffa\AppData\Local\Temp\tmp5chrz40x\.context\grill-answers.md
+resources:
+  mode: action
+```Searching for the saved request file and how to pipe it into `tools`.
+Running the exact command from the prompt file.
+Command completed successfully. `write_grill_answer` ran and wrote the result to a temp file:
 
 ```yaml
-ok: false
-error: request missing toolset
-```Exit code **1**:
-
-```yaml
-ok: false
-error: request missing toolset
+ok: true
+toolset: grill_context.grill_context:GrillContext
+tool: write_grill_answer
+result: C:\Users\jeffa\AppData\Local\Temp\tmp5chrz40x\.context\grill-answers.md
+resources:
+  mode: action
 ```

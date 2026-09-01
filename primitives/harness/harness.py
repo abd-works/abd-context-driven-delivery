@@ -29,9 +29,9 @@ from harness.skill import Skill
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _IMPLEMENTED = frozenset({"Cursor", "VS Code"})
-_SKIP_DIRS = frozenset({"__pycache__", "examples"})
+_SKIP_DIRS = frozenset({"__pycache__", "examples", "_internal_cli"})
 _COMPOSER_CLASSES = frozenset({"BaseContextTool", "LifecycleAction"})
-_WALK_TREES = ("context_tools", "utilities")
+_WALK_TREES = ("context_tools", "utilities", "agents")
 _FORMATS = (
     "markdown",
     "json",

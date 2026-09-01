@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from harness.harness_tool import prompt
-from sub_agent.sub_agent import sub_agent
+from tools.sub_agent import sub_agent
 from tools.tool import agent_tool, toolset
 
 
