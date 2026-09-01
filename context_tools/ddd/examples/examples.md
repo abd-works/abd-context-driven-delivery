@@ -4,31 +4,25 @@
 
 # Bounded Context Map — Shop
 
-## Catalog
+## Catalog | custom
 
-- **Owning team:** Merchandising
-- **Scope:** Product identity and pricing. Changes slower than carts and checkout — its own context, not a "Catalog page" theme.
-- **Implementation:** monolith module
+Product identity and pricing — slower-changing than checkout.
 
 ### Product
 
-- **Root:** Product
-- **Boundary members:** none beyond Product
-- **Protected invariants:** price always non-negative
-- **Cross-aggregate refs:** ShoppingCart (by ID) — consistency: snapshot; unit price locked at add_item
+- Product
+→ Sales · ShoppingCart · CartItem
 
-## Sales
+## Sales | custom
 
-- **Owning team:** Checkout
-- **Scope:** Shopping carts, checkout, discounts. Faster-changing than Catalog identity; cart and payment live here — not under a slow Customer identity context, and not under an "Onboarding" UI theme.
-- **Implementation:** monolith module
+Shopping carts, checkout, discounts.
 
 ### ShoppingCart
 
-- **Root:** ShoppingCart
-- **Boundary members:** CartItem, Discount — total and checkout invariants span the cart
-- **Protected invariants:** once checked out, cart may not be modified; discount may not reduce total below zero
-- **Cross-aggregate refs:** Customer (by ID), Inventory (by ID) — consistency: eventual on stock
+- CartItem
+- Discount
+- unit_price snapshot → Catalog · Product
+→ Catalog · Product
 
 #### **ShoppingCart** <<Aggregate Root>> <<Entity>>
 
@@ -98,13 +92,3 @@
 	Invariant: Raised when ShoppingCart.checkout succeeds.
 	Invariant: Consumers are Inventory (assert/reserve) and Notifications (receipt).
 ----
-
-## Dependencies
-
-### Catalog → Sales
-
-- **Direction:** Catalog is upstream; Sales is downstream
-- **What crosses:** product identity and unit price into cart lines
-- **How they integrate:** Synchronous call — at `add_item`, Sales reads `Catalog.Product.unit_price` and stores a snapshot on the line
-- **Relationship pattern:** Customer/Supplier
-- **Rationale:** Later Catalog price changes do not rewrite open carts

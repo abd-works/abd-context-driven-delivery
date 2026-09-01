@@ -94,7 +94,7 @@
 <p>Ask: what must be consistent in one transaction? what can tolerate lag? cost of brief inconsistency? who is the single access point (root)?</p>
 <p><strong>Cross-aggregate:</strong> when roots reference by ID — if A changes, does B need to know and how soon (immediate / eventual / snapshot)? copy or reference? what does the business do today? Outside the boundary, only through the root.</p>
 <p><strong>Input traps:</strong> hidden coupling; ownership ambiguity; false cognates; missing unnamed contexts; unclear direction.</p>
-<p><strong>Produce:</strong> one <code>bounded-context-map.md</code> — inventory, dependencies, aggregates per context (root, members, invariants, cross-agg consistency); every inventoried context on an arc or declared standalone. Fill <code>templates/bounded-context-template.md</code>. Call clean_engineering at <strong>modules</strong>.</p>
+<p><strong>Produce:</strong> one <code>bounded-context-map.md</code> — inventory; each context with <strong>Vendor</strong> (<code>custom</code>, <code>bespoke</code>, or vendor name) and <strong>Scope</strong>; each aggregate with <strong>Root</strong>, bulleted <strong>Boundary members</strong>, <strong>Refs</strong>, and <code>#### Dependencies</code> on aggregates that depend on another. Fill <code>templates/bounded-context-template.md</code>. Call clean_engineering at <strong>modules</strong>.</p>
 <p><strong>Rules:</strong></p>
 <ul>
 <li><strong><code>experts-words-preferred</code></strong> — Prefer the words domain experts use; do not invent technical synonyms when a domain word already exists.</li>
@@ -102,8 +102,10 @@
 <li><strong><code>one-meaning-per-context</code></strong> — Inside a context, one definition per term; false cognates across contexts are named and translated.</li>
 <li><strong><code>dependency-fields-tracked</code></strong> — Every arc states direction (named sides or mutual), what crosses, how they integrate (concrete mechanism), and catalogue relationship pattern — or a dated follow-up with owner.</li>
 <li><strong><code>no-orphan-contexts</code></strong> — Every inventoried context appears in a dependency arc or is declared standalone with rationale.</li>
-<li><strong><code>aggregate-protects-invariants</code></strong> — Name root, members, and the business invariants that require the boundary; do not cluster by relatedness alone.</li>
-<li><strong><code>invariants-from-business-logic</code></strong> — Invariants come from domain rules and expert statements, not convenient code shape.</li>
+<li><strong><code>vendor-not-implementation</code></strong> — Each context card carries <strong>Vendor:</strong> <code>custom</code>, <code>bespoke</code>, or the vendor/product name. No owning team or implementation stack on the card.</li>
+<li><strong><code>aggregate-root-and-members</code></strong> — <strong>Root</strong> and bulleted <strong>Boundary members</strong> (names only). No prose explaining why a member is inside.</li>
+<li><strong><code>refs-not-consistency-labels</code></strong> — Cross-aggregate links are <strong>Refs:</strong> — what is referenced (<code>OtherRoot (by ID)</code>). No immediate / eventual / snapshot labels on the bounded_context card.</li>
+<li><strong><code>hang-deps-on-owning-bc</code></strong> — List each upstream context under <code>#### Dependencies</code> on the <strong>aggregate</strong> that depends on it (after <strong>Refs</strong>, before building blocks). No global <code>## Dependencies</code> parking lot.</li>
 </ul>
 <hr></section>
 <section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>markdown</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/4d01623dadcd0a757141f9f54c96dab611b3b557/context_tools/ddd/templates/bounded-context-template.md">templates/bounded-context-template.md</a></p><pre class="code-fence"><code class="language-markdown">&lt;!--
@@ -111,23 +113,27 @@
 
   One artifact. Aggregates are direct children of the context (no Aggregates
   wrapper). Building-blocks = CE compact classes + stereotypes as #### under
-  each ### aggregate. Dependencies name a concrete integrate call site.
+  each ### aggregate. Dependencies sit on the aggregate that has them.
 --&gt;
 
 # Bounded Context Map — {{project_name}}
 
 ## {{ContextName}}
 
-- **Owning team:** {{team_name}}
+- **Vendor:** {{custom | bespoke | vendor name}}
 - **Scope:** {{what this context owns}}
-- **Implementation:** {{monolith module | microservice | shared library | legacy system | external vendor}}
 
 ### {{AggregateRoot}}
 
 - **Root:** {{Entity}}
-- **Boundary members:** {{member}} — {{why inside}}
-- **Protected invariants:** {{business rule that requires atomic change}}
-- **Cross-aggregate refs:** {{OtherRoot}} (by ID) — consistency: {{immediate | eventual | snapshot}}; rule: {{what happens when this changes}}
+- **Boundary members:**
+  - {{member}}
+  - {{member}}
+- **Refs:** {{OtherRoot}} (by ID); {{OtherContext}}.{{Part}}
+
+#### Dependencies
+
+- **{{UpstreamContext}}** — {{Relationship pattern}}. {{What crosses}}. {{How they integrate — concrete call site}}
 
 #### **{{AggregateRoot}}** &lt;&lt;Aggregate Root&gt;&gt; &lt;&lt;Entity&gt;&gt;
 
@@ -173,26 +179,19 @@
 
 ## {{AnotherContext}}
 
-- **Owning team:** {{team_name}}
+- **Vendor:** {{custom | bespoke | vendor name}}
 - **Scope:** {{what this context owns}}
-- **Implementation:** {{implementation type}}
 
 ### {{AggregateRoot}}
 
 - **Root:** {{Entity}}
-- **Boundary members:** {{members}}
-- **Protected invariants:** {{rules}}
-- **Cross-aggregate refs:** {{OtherRoot}} (by ID) — consistency: {{immediate | eventual | snapshot}}; rule: {{…}}
+- **Boundary members:**
+  - {{member}}
+- **Refs:** {{OtherRoot}} (by ID)
 
-## Dependencies
+#### Dependencies
 
-### {{SourceContext}} → {{TargetContext}}
-
-- **Direction:** {{Source is upstream; Target is downstream | mutual — what flows each way}}
-- **What crosses:** {{concepts + translation}}
-- **How they integrate:** {{concrete mechanism + call site — e.g. Synchronous call — at `add_item`, Sales reads `Catalog.Product.unit_price` and stores a snapshot}}
-- **Relationship pattern:** {{Shared Kernel | Customer/Supplier | Conformist | Anticorruption Layer | Open Host/Published Language | Separate Ways}}
-- **Rationale:** {{why; trade-offs}}
+- **{{UpstreamContext}}** — {{Relationship pattern}}. {{What crosses}}. {{How they integrate — concrete call site}}
 </code></pre></section>
 <section class="skill-cr-single illustrated-example"><h2>Illustrated example</h2><p>No illustrated example configured yet.</p></section>
 

@@ -163,9 +163,13 @@ with description("a Ddd toolset"):
             prose = Ddd().contexts().expand()
             expect("user-facing-system-first" in prose).to(be_true)
 
-        with it("should include the load-with-identity-in-hand rule slug"):
+        with it("should include the context-tree-bc-aggregate-concept rule slug"):
             prose = Ddd().contexts().expand()
-            expect("load-with-identity-in-hand" in prose).to(be_true)
+            expect("context-tree-bc-aggregate-concept" in prose).to(be_true)
+
+        with it("should include the link-arrow-target rule slug"):
+            prose = Ddd().contexts().expand()
+            expect("link-arrow-target" in prose).to(be_true)
 
         with it("should name the bounded_context fidelity"):
             prose = Ddd().contexts().expand()

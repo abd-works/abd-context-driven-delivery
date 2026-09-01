@@ -522,7 +522,15 @@ def _web_capture(base_url: str, paths: list[str], pages_root: Path) -> list[Page
             screenshot_path = str(page_dir / "screenshot.png")
             aria_path = str(page_dir / "aria.yaml")
             try:
-                page.goto(url, timeout=10_000, wait_until="load")
+                page.goto(url, timeout=30_000, wait_until="networkidle")
+                # SPAs often paint after networkidle; wait for #root content or settle.
+                try:
+                    page.wait_for_function(
+                        "() => { const r = document.querySelector('#root'); return !!(r && r.childElementCount > 0); }",
+                        timeout=10_000,
+                    )
+                except Exception:
+                    page.wait_for_timeout(1500)
                 page.screenshot(path=screenshot_path, full_page=True)
                 # page.aria_snapshot() returns an ARIA-roles text representation (Playwright ≥1.44)
                 aria_text = page.aria_snapshot()

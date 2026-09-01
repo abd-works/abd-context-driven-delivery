@@ -86,7 +86,7 @@
 <p><strong>Goal:</strong> Deepen the same context map — under each owning context, add CE compact class detail with DDD stereotypes. Not a separate BB document; added detail on the aggregates already placed in the BC.</p>
 <p>Honour aggregate boundaries from bounded_context; do not redraw by relatedness. Same class shape as clean_engineering — stereotypes layered on. Every source concept classified (or Unresolved) with supporting model content.</p>
 <p><strong>Input traps:</strong> identity by habit; aggregate redrawn by relatedness; VO as Entity; Service as dump; silent consistency.</p>
-<p><strong>Produce:</strong> Update <code>bounded-context-map.md</code> — CE compact blocks + stereotypes under each owning context (<code>templates/bounded-context-template.md</code>). Call clean_engineering at <strong>specification</strong>. No tables, brokers, frameworks, or REST endpoints here — infrastructure at <strong>tactics</strong>.</p>
+<p><strong>Produce:</strong> Update <code>bounded-context-map.md</code> — CE compact blocks + stereotypes under each owning context (<code>templates/bounded-context-template.md</code>); keep <code>#### Dependencies</code> on each aggregate from bounded_context. Call clean_engineering at <strong>specification</strong>. No tables, brokers, frameworks, or REST endpoints here — infrastructure at <strong>tactics</strong>.</p>
 <p><strong>Rules:</strong></p>
 <ul>
 <li><strong><code>identity-test-entity-vs-vo</code></strong> — Entity vs VO by identity that transcends attributes; prefer Value Object.</li>
@@ -94,6 +94,7 @@
 <li><strong><code>service-is-homeless</code></strong> — Service only when no concept can own the operation without distortion; domain-named, typically stateless.</li>
 <li><strong><code>domain-events-past-tense</code></strong> — Past-tense domain name; trigger and consumers as invariants; not commands or infra names.</li>
 <li><strong><code>no-premature-infrastructure</code></strong> — Design intent only: no tables, brokers, framework annotations, or endpoints.</li>
+<li><strong><code>hang-deps-on-owning-bc</code></strong> — Keep <code>#### Dependencies</code> on the <strong>aggregate</strong> from bounded_context (after <strong>Refs</strong>, before building blocks). No global <code>## Dependencies</code> parking lot.</li>
 </ul>
 <hr></section>
 <section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>markdown</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/4d01623dadcd0a757141f9f54c96dab611b3b557/context_tools/ddd/templates/bounded-context-template.md">templates/bounded-context-template.md</a></p><pre class="code-fence"><code class="language-markdown">&lt;!--
@@ -101,23 +102,27 @@
 
   One artifact. Aggregates are direct children of the context (no Aggregates
   wrapper). Building-blocks = CE compact classes + stereotypes as #### under
-  each ### aggregate. Dependencies name a concrete integrate call site.
+  each ### aggregate. Dependencies sit on the aggregate that has them.
 --&gt;
 
 # Bounded Context Map — {{project_name}}
 
 ## {{ContextName}}
 
-- **Owning team:** {{team_name}}
+- **Vendor:** {{custom | bespoke | vendor name}}
 - **Scope:** {{what this context owns}}
-- **Implementation:** {{monolith module | microservice | shared library | legacy system | external vendor}}
 
 ### {{AggregateRoot}}
 
 - **Root:** {{Entity}}
-- **Boundary members:** {{member}} — {{why inside}}
-- **Protected invariants:** {{business rule that requires atomic change}}
-- **Cross-aggregate refs:** {{OtherRoot}} (by ID) — consistency: {{immediate | eventual | snapshot}}; rule: {{what happens when this changes}}
+- **Boundary members:**
+  - {{member}}
+  - {{member}}
+- **Refs:** {{OtherRoot}} (by ID)
+
+#### Dependencies
+
+- **{{UpstreamContext}}** — {{Relationship pattern}}. {{What crosses}}. {{How they integrate — concrete call site}}
 
 #### **{{AggregateRoot}}** &lt;&lt;Aggregate Root&gt;&gt; &lt;&lt;Entity&gt;&gt;
 
@@ -163,26 +168,19 @@
 
 ## {{AnotherContext}}
 
-- **Owning team:** {{team_name}}
+- **Vendor:** {{custom | bespoke | vendor name}}
 - **Scope:** {{what this context owns}}
-- **Implementation:** {{implementation type}}
 
 ### {{AggregateRoot}}
 
 - **Root:** {{Entity}}
-- **Boundary members:** {{members}}
-- **Protected invariants:** {{rules}}
-- **Cross-aggregate refs:** {{OtherRoot}} (by ID) — consistency: {{immediate | eventual | snapshot}}; rule: {{…}}
+- **Boundary members:**
+  - {{member}}
+- **Refs:** {{OtherRoot}} (by ID)
 
-## Dependencies
+#### Dependencies
 
-### {{SourceContext}} → {{TargetContext}}
-
-- **Direction:** {{Source is upstream; Target is downstream | mutual — what flows each way}}
-- **What crosses:** {{concepts + translation}}
-- **How they integrate:** {{concrete mechanism + call site — e.g. Synchronous call — at `add_item`, Sales reads `Catalog.Product.unit_price` and stores a snapshot}}
-- **Relationship pattern:** {{Shared Kernel | Customer/Supplier | Conformist | Anticorruption Layer | Open Host/Published Language | Separate Ways}}
-- **Rationale:** {{why; trade-offs}}
+- **{{UpstreamContext}}** — {{Relationship pattern}}. {{What crosses}}. {{How they integrate — concrete call site}}
 </code></pre></section>
 <section class="skill-cr-single illustrated-example"><h2>Illustrated example</h2><p>No illustrated example configured yet.</p></section>
 
