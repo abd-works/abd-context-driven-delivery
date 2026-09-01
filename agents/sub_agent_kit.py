@@ -1,4 +1,4 @@
-# @toolset-manifest python -m tools manifest agent.sub_agent_kit:SubAgentKit
+# @toolset-manifest python -m tools manifest agents.sub_agent_kit:SubAgentKit
 # Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 """SubAgentKit — slash ``/sub-agent`` calls ``SubAgent.run``."""
 from __future__ import annotations
@@ -6,7 +6,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from agent.agent import SubAgent
+from agents.agent import SubAgent
 from harness.harness_tool import prompt
 from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool

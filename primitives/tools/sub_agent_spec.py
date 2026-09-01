@@ -24,7 +24,7 @@ from tools.sub_agent import (
     discover_sub_agent_tools,
     sub_agent,
 )
-from agent.sub_agent_kit import SubAgentKit
+from agents.sub_agent_kit import SubAgentKit
 
 
 # ---------------------------------------------------------------------------

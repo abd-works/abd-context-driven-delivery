@@ -24,7 +24,7 @@ if _agents not in sys.path:
 from expects import be_false, be_none, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from agent.agent import AgentSession, InMemoryRepo, Repo, Workspace
+from agents.agent import AgentSession, InMemoryRepo, Repo, Workspace
 from lifecycle import LifecycleAction
 from record_decisions.record_decisions import RecordDecisions
 
@@ -35,9 +35,9 @@ def _log_kinds(session: AgentSession) -> list[str]:
 
 with description("a lifecycle action"):
     with context("whose module source is inspected"):
-        with it("should open via agent.agent.Workspace and AgentSession"):
+        with it("should open via agents.agent.Workspace and AgentSession"):
             source = Path(inspect.getfile(LifecycleAction)).read_text(encoding="utf-8")
-            expect("from agent.agent import" in source).to(be_true)
+            expect("from agents.agent import" in source).to(be_true)
             expect("workspace.open" in source).to(be_true)
             expect("WorkSession" in source).to(be_false)
             expect("workspace.workspace" in source).to(be_false)
@@ -49,7 +49,7 @@ with description("a lifecycle action"):
             (self.root / ".context").mkdir()
             self.action = LifecycleAction(path=str(self.root))
 
-        with it("should build an agent.agent.Workspace with a primary repo"):
+        with it("should build an agents.agent.Workspace with a primary repo"):
             expect(isinstance(self.action.workspace, Workspace)).to(be_true)
             expect(self.action.workspace.primary_repo).not_to(be_none)
             expect(isinstance(self.action.workspace.primary_repo, InMemoryRepo)).to(be_true)

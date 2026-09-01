@@ -1,6 +1,6 @@
 """Agent orchestration package."""
 
-from agent.agent import (
+from agents.agent import (
     AIChatFault,
     AIChatInstance,
     Agent,
@@ -25,7 +25,7 @@ from agent.agent import (
     SubAgent,
     Workspace,
 )
-from agent.workflow import (
+from agents.workflow import (
     StartTicketResult,
     WorkTicket,
     Workflow,

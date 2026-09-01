@@ -322,7 +322,7 @@ with description("BaseContextTool public host face"):
         expect(type(self.host).context_index_key).to(equal(""))
 
     with it("should hold an agent Workspace as workspace"):
-        from agent.agent import Workspace
+        from agents.agent import Workspace
 
         expect(isinstance(self.host.workspace, Workspace)).to(be_true)
 

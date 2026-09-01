@@ -19,7 +19,7 @@ from mamba import before, context, description, it
 
 from workspace import SessionLog
 from tools.tool import _ToolsetRunner, coalesce_run_context
-from agent.agent import AgentSession
+from agents.agent import AgentSession
 
 
 with description("an action that is expanded"):

@@ -1759,7 +1759,7 @@ class _ChatPathGatherer:
 
 
 def _default_healer():
-    from agent.healer import Healer
+    from agents.healer import Healer
 
     return Healer()
 
@@ -1818,7 +1818,7 @@ class Agent:
         ticket_number = spec.get("ticket_number")
         if ticket_number is None or not str(ticket_number).strip():
             return AgentTask.from_spec(spec)
-        from agent.workflow import WorkTicket
+        from agents.workflow import WorkTicket
 
         work = WorkTicket.from_ref(self._repo(), int(ticket_number))
         judge_prompt = str(spec.get("judge_prompt") or "").strip()
@@ -2131,7 +2131,7 @@ class Agent:
         raise fault
 
     def _healer_run_context(self) -> Any:
-        from agent.healer import HealerRunContext
+        from agents.healer import HealerRunContext
 
         session = self.session
         if session is None:
@@ -2172,7 +2172,7 @@ class Agent:
 
     def _guard_phase(self, phase: str, fn, *, handoff: bool | None = None):
         """Run *fn*; on exception forward to healer ``eval`` before re-raising."""
-        from agent.healer import HealerStop, format_healer_fix_handoff
+        from agents.healer import HealerStop, format_healer_fix_handoff
 
         return_handoff = (
             self._healer_returns_handoff if handoff is None else handoff
@@ -2204,7 +2204,7 @@ class Agent:
         error: BaseException | None = None,
         stop_on_exception: bool = False,
     ):
-        from agent.healer import HealerFailure, HealerStop, log_healer_eval
+        from agents.healer import HealerFailure, HealerStop, log_healer_eval
 
         if self.healer is None:
             raise HealerFailure(f"agent has no healer — cannot eval phase {phase!r}")
@@ -2878,7 +2878,7 @@ class SubAgent(Agent):
                         repo_python(root),
                         "-c",
                         (
-                            "from agent.agent import SubAgent; "
+                            "from agents.agent import SubAgent; "
                             f"SubAgent.run_drain_worker({workspace!r}, {name!r})"
                         ),
                     ],
@@ -3613,7 +3613,7 @@ _CHAT_STATE_FILE = "chat-agent-state.json"
 
 
 def _ticket_doer_prompt(work: "WorkTicket", *, instructions: str = "") -> str:
-    from agent.workflow import WorkTicket
+    from agents.workflow import WorkTicket
 
     issue = work.issue
     number = 0 if issue is None else issue.number
@@ -3750,7 +3750,7 @@ class _ChatAgentPersistence:
         snapshots = row.get("tickets") or []
         if not snapshots:
             return
-        from agent.workflow import WorkTicket
+        from agents.workflow import WorkTicket
 
         shelf = repo._issue_shelf
         if shelf.project is None:
@@ -3922,7 +3922,7 @@ class ChatAgent(Agent):
         )
 
 
-# @toolset-manifest python -m tools manifest agent.agent:ChatAgentKit
+# @toolset-manifest python -m tools manifest agents.agent:ChatAgentKit
 @agentic_toolset
 class ChatAgentKit:
     """Slash ``/agent`` — parent orchestration in this chat window."""
@@ -3964,7 +3964,7 @@ class ChatAgentKit:
         )
 
     def _run_guarded(self, phase: str, fn):
-        from agent.healer import HealerStop, format_healer_fix_handoff
+        from agents.healer import HealerStop, format_healer_fix_handoff
 
         engine = self._get_engine()
         try:

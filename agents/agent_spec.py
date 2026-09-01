@@ -1,4 +1,4 @@
-"""BDD spec for agents/agent/agent.py — Agent backlog orchestration.
+"""BDD spec for agents/agent.py — Agent backlog orchestration.
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
 # Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
@@ -30,7 +30,7 @@ import time
 import uuid
 from typing import Optional
 
-from agent.agent import (
+from agents.agent import (
     Agent,
     AgentFault,
     AgentParticipant,
@@ -58,10 +58,10 @@ from agent.agent import (
     Workspace,
     _ChatAgentPersistence,
 )
-from agent.sub_agent_kit import SubAgentKit
-from agent.tools_cli import assert_tools_response, ToolsCliRunner
-from agent.healer import Healer, HealerFailure, HealerRunContext, format_healer_fix_handoff
-from agent.workflow import WorkTicket, Workflow, WorkflowConfig
+from agents.sub_agent_kit import SubAgentKit
+from agents.tools_cli import assert_tools_response, ToolsCliRunner
+from agents.healer import Healer, HealerFailure, HealerRunContext, format_healer_fix_handoff
+from agents.workflow import WorkTicket, Workflow, WorkflowConfig
 from primitives.tools.repo_paths import repo_python, repo_root
 
 
@@ -728,7 +728,7 @@ with description("Healer eval orchestration"):
         expect(report.summary()).to(contain("error:"))
 
     with it("should format healer fix handoff with fix permission"):
-        from agent.healer import format_healer_fix_handoff
+        from agents.healer import format_healer_fix_handoff
 
         report = self.healer.eval(
             [],
@@ -795,7 +795,7 @@ with description("Healer eval orchestration"):
         expect(len(report.mistakes)).to(equal(1))
 
     with it("should embed run metadata and log records in the eval prompt"):
-        from agent.healer import HealerRunContext
+        from agents.healer import HealerRunContext
 
         records = [
             {"kind": "send", "participant": "doer", "prompt": "/echo fence test"},
@@ -822,7 +822,7 @@ with description("Healer eval orchestration"):
         expect(report.healer_prompt).to(contain('"result": "PASS"'))
 
     with it("should eval on exception even when the agent has no session"):
-        from agent.agent import SubAgent
+        from agents.agent import SubAgent
 
         agent = SubAgent()
         agent.healer = Healer()
@@ -836,7 +836,7 @@ with description("Healer eval orchestration"):
         expect(report.fix_recommended).to(be_true)
 
     with it("should hard stop when the agent has no healer"):
-        from agent.agent import SubAgent
+        from agents.agent import SubAgent
 
         agent = SubAgent()
         agent.healer = None
@@ -874,8 +874,8 @@ with description("Tools CLI response handling"):
 
 
 
-_CHAT = "agent.agent:ChatAgentKit"
-_SUB = "agent.sub_agent_kit:SubAgentKit"
+_CHAT = "agents.agent:ChatAgentKit"
+_SUB = "agents.sub_agent_kit:SubAgentKit"
 _DOER = "/echo fence chat-persist-55. Finish the Turn. Do not contact the judge."
 _JUDGE = "PASS when echo fence was used and the Turn finished."
 
@@ -976,7 +976,7 @@ with description("Complete Agent Task Using Chat Agent"):
             self.runner = ToolsCliRunner(self.root)
 
         with it("should invoke echo fence via real tools run for /echo in prompt"):
-            from agent.agent import AgentSession, InMemoryRepo, Repo, Workspace
+            from agents.agent import AgentSession, InMemoryRepo, Repo, Workspace
 
             repo = InMemoryRepo(self.root, Repo.Worktree(self.root, "main"))
             workspace = Workspace(path=self.root, repos=[repo], primary_repo=repo)
@@ -991,7 +991,7 @@ with description("Complete Agent Task Using Chat Agent"):
             expect(kinds).to(contain("finish_turn"))
 
         with it("should invoke bdd development via real tools run for /bdd.development"):
-            from agent.agent import AgentSession, InMemoryRepo, Repo, Workspace
+            from agents.agent import AgentSession, InMemoryRepo, Repo, Workspace
 
             repo = InMemoryRepo(self.root, Repo.Worktree(self.root, "main"))
             workspace = Workspace(path=self.root, repos=[repo], primary_repo=repo)
@@ -1171,7 +1171,7 @@ with description("Complete Agent Task Using Chat Agent"):
     with context("with ticket-linked enqueue"):
         with before.each:
             self.root = Path(tempfile.mkdtemp(prefix="chat_ticket_"))
-            from agent.agent import Project
+            from agents.agent import Project
 
             repo = InMemoryRepo(self.root, Repo.Worktree(self.root, "main"))
             repo._issue_shelf.attach_project(Project())
@@ -1423,7 +1423,7 @@ with description("SubAgent close after live drain"):
     with it("should not treat child runtime stop as waiter STOP mid-queue"):
         inbox = self.runtime / "doer.in"
         inbox.write_text("Compute 10 - 3. Reply with the number only.\n", encoding="utf-8")
-        from agent.agent import AgentParticipant, SubAgentChatInstance
+        from agents.agent import AgentParticipant, SubAgentChatInstance
 
         participant = AgentParticipant(type="doer", prompt="held")
         chat = SubAgentChatInstance.mint(participant, self.engine.session)
@@ -1784,7 +1784,7 @@ with description("Start Ticket Opens Agent Session And Branch"):
             expect(isinstance(self.workflow.agent, SubAgent)).to(be_true)
 
         with it("should use CliAgent when agent type says so"):
-            from agent.agent import CliAgent
+            from agents.agent import CliAgent
 
             session = self.work.open_session()
             agent = self.workflow._bind_agent(session, "CliAgent")
@@ -1878,7 +1878,7 @@ def _fixture(prefix: str = "fin55_") -> tuple[Path, InMemoryRepo, Workspace, Wor
     root = parent / "abd-context-driven-delivery"
     root.mkdir()
     repo = InMemoryRepo(root, Repo.Worktree(root, "main"))
-    from agent.agent import Project
+    from agents.agent import Project
 
     repo._issue_shelf.attach_project(Project())
     workspace = Workspace(path=root, repos=[repo], primary_repo=repo)

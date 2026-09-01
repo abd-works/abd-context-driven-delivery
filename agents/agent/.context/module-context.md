@@ -51,8 +51,8 @@ Subtypes specialize participant runtime hooks. `ChatAgent` (domain) and `ChatAge
 
 | Layer | File | Runner |
 |-------|------|--------|
-| Vanilla BDD | `agent_spec.py` | `mamba agents/agent/agent_spec.py` |
-| Agent BDD | `agent_agent_spec.py` | `python -m tools agent-spec agents/agent/agent_agent_spec.py` (ChatAgent in_chat: `AGENT_BDD_IN_CHAT=1`) |
+| Vanilla BDD | `agent_spec.py` | `mamba agents/agent_spec.py` |
+| Agent BDD | `agent_agent_spec.py` | `python -m tools agent-spec agents/agent_agent_spec.py` (ChatAgent in_chat: `AGENT_BDD_IN_CHAT=1`) |
 
 Shared agent BDD helpers: `context_tools/agent_bdd/spec_helpers.py` (`chat_agent_tool_prompt`, `sessions_dir`, …). Session JSON under `.context/.agent_bdd_sessions/`.
 

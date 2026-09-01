@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 if TYPE_CHECKING:
-    from agent.agent import AgentSession
+    from agents.agent import AgentSession
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -111,7 +111,7 @@ class SessionLog(ISessionLog):
 
     @staticmethod
     def _agent_session_cls():
-        from agent.agent import AgentSession
+        from agents.agent import AgentSession
 
         return AgentSession
 
@@ -231,7 +231,7 @@ class SessionLog(ISessionLog):
         open_turn = getattr(self._session, "open_turn", None)
         if open_turn is None:
             return
-        from agent.agent import ToolCall
+        from agents.agent import ToolCall
 
         open_turn.tool_calls.append(
             ToolCall(

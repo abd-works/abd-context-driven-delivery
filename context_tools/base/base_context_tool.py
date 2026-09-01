@@ -27,7 +27,7 @@ from primitives.actions.action import AgenticToolset
 from primitives.actions.action import agent_instructions
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
-from agent.agent import AgentSession, InMemoryRepo, Repo, Workspace
+from agents.agent import AgentSession, InMemoryRepo, Repo, Workspace
 from scan.scan import Scan
 from scan.scanner_collection import ScannerCollection
 from tools.tool import resource

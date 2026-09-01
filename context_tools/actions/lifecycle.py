@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from agent.agent import AgentSession, InMemoryRepo, Repo, Turn, Workspace
+from agents.agent import AgentSession, InMemoryRepo, Repo, Turn, Workspace
 from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
 
