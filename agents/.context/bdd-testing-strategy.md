@@ -18,16 +18,19 @@ Agent BDD became the integration test suite. Each run surfaced another **code** 
 
 ---
 
-## Two test layers
+## Four test layers (do not invert)
 
-| Layer | Tool | What it proves | How |
-|-------|------|----------------|-----|
-| **Vanilla BDD** | `bdd` behavior specs | Orchestration **contract**: state, paths, log kinds, timeouts, faults | Fake transcript `.jsonl`, injected `clock` / `sleep`, stubbed `chat.run`, `run_backlog` hooks |
-| **Agent BDD** | `agent_bdd` | **Behavior**: did a real chat reasonably do the work? | Live cursor-agent (or in-chat harness), artifacts on disk, `ai_judge` on file contents |
+Stories sketch header is the source of truth. Specs must use the same `##` story names, in sketch order.
 
-Stories sketch header rule:
+| Layer | Where | What it proves | Marker |
+|-------|--------|----------------|--------|
+| **1. Run Agent Runtime** | vanilla + live | Same Agent ops (`_send` / `_await_*`). **AIChatInstance is a handle.** No clocks. | **CliAgent** in `agent_spec.py` (not agentic). SubAgent/ChatAgent live: `(agentic)` |
+| **2. Time Agent Runtime** | vanilla + live timeouts | FileSync wait_accept / wait_done | **CliAgent** + SubAgent same stories. SubAgent live: `(agentic)`. ChatAgent has no FileSync. |
+| **3. Vanilla story map** | `agent_spec.py` | Orchestration with stubbed runtimes | unmarked |
+| **4. Isolate session by subtype** | C test helpers | Same session/queue examples on each Agent | **CliAgent** in `agent_spec.py`. SubAgent/ChatAgent: `(agentic)` |
+| **5. End-to-end** | last | Pieces together | **CliAgent** in `agent_spec.py`. SubAgent/ChatAgent: `(agentic)` |
 
-> vanilla BDD signatures for code seams; agent BDD GWT later for agent-facing journeys
+`(agentic)` = `agent_agent_spec.py` / agent_bdd — the subject talks to AI chat (SubAgent child, ChatAgent parent). **CliAgent is never `(agentic)`:** live `CursorChatInstance` stays in vanilla `agents/agent_spec.py`.
 
 From `agent_bdd.md`: if agent BDD fails on **code**, fix code **and** add vanilla BDD that would have caught it. Prompt-only failures stay in agent BDD.
 
@@ -52,59 +55,40 @@ Existing patterns to extend: `_TranscriptWatch.wait_for_growth(..., sleep=, cloc
 
 ## Agent BDD — when it runs
 
-**After** vanilla BDD is green on the increment being exercised.
+Live I/O for **Run Agent Runtime** runs first (mailbox, jsonl, parent window) — that is not e2e. E2e journeys run **last**, after vanilla orchestration is green.
 
-Suggested journeys (map to increments above — not per-story duplication):
-
-1. **Inc 10** — one judged backlog item (doer + judge; extend `#44 one judged job` to redesign model)
-2. **Inc 12** — ordered queue (two items) **or** start-ticket → PASS → finish ticket
-3. Session / worktree isolation (prompt + doc regression — fold into Inc 10–12 agent BDD)
-
-Agent BDD must **not** be the first test that proves transcript grew, worktree bound, or queue advanced.
+If agent BDD fails on **code**, add a vanilla repro under the matching runtime or timing story.
 
 ---
 
-## Recommended pyramid (Option A)
+## Recommended pyramid
 
 ```
-        ┌─────────────────────┐
-        │  2–4 Agent BDD      │  nightly / manual gate
-        ├─────────────────────┤
-        │  ~30–50 Vanilla BDD │  every PR — one spec per story seam
-        └─────────────────────┘
+        ┌──────────────────────────────┐
+        │  End To End (agentic)        │  last
+        ├──────────────────────────────┤
+        │  Vanilla story map           │  session / queue / ticket
+        ├──────────────────────────────┤
+        │  Time Agent Runtime          │  subtype clocks
+        ├──────────────────────────────┤
+        │  Run Agent Runtime           │  FIRST — same ops, three types
+        │  (agentic I/O + vanilla stub)│
+        └──────────────────────────────┘
 ```
 
-**Increments (12 — evolutionary, plumbing last):**
+**Increments (stories sketch footer):**
 
-Build each row **vanilla first**; agent BDD only where the column says so — and only after that increment’s vanilla specs are green.
+| # | Increment | What |
+|---|-----------|------|
+| 0 | **Run Agent Runtime** | send / accept / done / verdict / continue / stop on Agent for CliAgent, SubAgent, ChatAgent. Handle is AIChatInstance. Wait is FileSync (Cli/Sub) or parent window (Chat). No clocks. |
+| 0b | **Time Agent Runtime** | FileSync acceptSeconds / stall / quiet — C test CliAgent and SubAgent. ChatAgent has no FileSync. |
+| 1 | **Run Agent Session + queue** | Canonical session/queue examples — one set |
+| 1b | **Isolate Agent Session By Subtype** | `C test` that set on SubAgent, CliAgent, ChatAgent |
+| 2 | **Subtype extras** | children, close_agents, parent ToolsCli — not copies of Complete Task |
+| 3 | **Ticket** | Create / Start / Finish |
+| 4 | **End To End** | one judged job, two-item queue, start-ticket-to-finish |
 
-| # | Increment | Vanilla first (what goes green) | Agent BDD after green |
-|---|-----------|--------------------------------|------------------------|
-| 1 | **One task, stubbed doer** | Single `AgentTask`; stub `_send` / `_await_accept` / `_await_done`; log kinds `send`, `accepted`, `done`; no git, no chat | — |
-| 2 | **Doer + judge, stubbed** | Same stubs; `_wait_verdict`; PASS → `_complete_task` Done; FAIL → kick + retry same task | — |
-| 3 | **Manifest / turn fence** | Stub `chat.run` + tools CLI path: slash → action begin/end, `Turn.open` / `Turn.finish`, `append_tool`; context guidance carries `sessionName`, `contextRoot`, turn id; tools / actions / utilities from doer prompt | — |
-| 4 | **Backlog → current** | `add_tasks`, `clear_backlog`; `_launch_next`; refuse `_launch_next` while doer/judge/human in flight; stubbed participants only | — |
-| 5 | **Queue drain + template** | Two+ tasks; `load_template` → `_instantiate_tasks` → `add_tasks`; `run` drains backlog; `validation_error` skips task; workflow fault stops run | — |
-| 6 | **AgentSession open** | `InMemoryRepo` then real `Repo`; `session.open` → folder, `branch.checkout_or_create`, log `open`; caller sets `contextRoot`; `_ensure_session` before `run` | — |
-| 7 | **SubAgent + two runtime roles** | `SubAgent` `_send` / `_launch` / `_await_*` / `_tear_down_children` for **doer and judge** on one task; same session + contextRoot; spawn/teardown | **One judged job via SubAgent** (first agent BDD — before CliAgent) |
-| 8 | **Transcript watcher** | Fake `.jsonl` + injected clock; `AgentRuntimeTranscriptWatcher` accept / growth-then-quiet / verdict; `AIChatFault`; wired into CliAgent `_await_*` with **stubbed** `chat.run` | — |
-| 9 | **CliAgent bind + launch** | `_bind_workspace_root`, `_bind_chat_context`, `_ensure_chat`; `_launch_doer` / `_launch_judge` with stubbed `AIChatInstance`; `maxFails` / `failCount`; `_auto_kick_stalled_doer` | — |
-| 10 | **CliAgent close** | `close_agents`, `cleanup`, `close_cli_session`; bindings cleared; no zombie PIDs; temps removed | Optional CliAgent judged-job / close regression |
-| 11 | **WorkTicket + start** | `WorkTicket.create`, `openSession`, `start`; `Workflow.start ticket` → `add_tasks` + `run`; sibling worktree path; issue body → `contextRoot` | — |
-| 12 | **Finish + capstone** | `AgentSession.finish outcome` (chats on close commit via `branch._persist_chats`); `Workflow.finish ticket`; multi-repo reject | **Ticket journey** or **two-item queue** |
-
-**Why session opens at 6 (not 1):** increments 1–5 prove Agent queue + participant orchestration + manifest/turn contract with **stubbed** runtimes — no worktree, no transcript files, no IDE. That is most of the business logic. Increment 6 adds the real session seam (folder, branch, log). **Increment 7 delivers SubAgent with both doer and judge runtime roles** (first command you can run for real coordination) **before** CliAgent plumbing (8–10).
-
-**Pyramid per phase:**
-
-```
-Inc 1–5   ~15–20 vanilla   (Agent core, no plumbing)
-Inc 6–7   ~8–12 vanilla + 1 agent BDD @7 (session + SubAgent two-role judged job)
-Inc 8–10  ~10–15 vanilla   (CliAgent)  + optional agent BDD @10
-Inc 11–12 ~8–10 vanilla    (Workflow)  + 1–2 agent BDD capstones
-```
-
-**Step-by-step delivery (doer/judge, tools, pytest):** `increment-delivery-playbook.md`
+**Why runtime ops at 0:** a judged job is the wrong first test of "has the Agent sent a request" and "is FileSync still waiting." Those are `Agent._send` / `_await_*` plus FileSync, not flags on `AIChatInstance`. Time stories add clocks on FileSync. Orchestration stories assume that channel already works.
 
 ---
 

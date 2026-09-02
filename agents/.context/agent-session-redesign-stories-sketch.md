@@ -1,12 +1,175 @@
-﻿fidelity: story_map + behavior
+fidelity: story_map + behavior
 source: agents/.context/agent-session-redesign-sketch.md
 testing: agents/.context/bdd-testing-strategy.md
 issue: 55
 // Combined sketch: story-map headings (# epic · ## story) with nested BDD state trees
 //   (with / that / it should) under each story — trees build on standing conditions.
-// testing: vanilla BDD signatures for code seams; agent BDD GWT later for agent-facing journeys
+//
+// Spec file alignment: agents/agent_spec.py (vanilla) and agents/agent_agent_spec.py (agentic)
+// MUST use the same top-level description names as ## stories, in this file's order.
+//
+// Same behavior on SubAgent / CliAgent / ChatAgent — sketch the route explicitly:
+//   shared_context '{subject line}'     → shared it should once (Mamba: with shared_context)
+//   with {Implementation}               → domain state (e.g. with a SubAgent (agentic))
+//     -> included_context('{same subject line}')   → include shared examples on this branch
+//     it should …                      → implementation-only; not in shared_context
+// Do not copy the shared it-should tree under every implementation branch.
+//
+// (agentic) — story needs agent_bdd because the subject talks to AI chat
+//   (SubAgent children, ChatAgent parent window). Flag every such branch.
+// CliAgent is NOT (agentic): prove in agents/agent_spec.py (live CursorChatInstance
+//   or jsonl stub). Do not put CliAgent live paths in agent_bdd.
+//
+// Four test layers — do not invert:
+//   1. Run Agent Runtime — SAME Agent operations (_send / _await_accept / _await_done / verdict / continue / stop)
+//   2. Time Agent Runtime — SAME FileSync clocks on CliAgent and SubAgent. ChatAgent has no file channel.
+//   3. Vanilla stories below — Agent orchestration with those runtimes stubbed
+//   4. End To End — SubAgent and ChatAgent (agentic); CliAgent in agent_spec.py
+
+# Run Agent Runtime
+// FIRST — Agent._send / _await_* / stop. One AIChatInstance per participant as the chat handle only
+// (run, continue, stop, chatId, pid). Do not hang received / waiting / accepted / done / clocks / verdict
+// parse on AIChatInstance.
+// CliAgent and SubAgent wait through AgentRuntimeFileSync (same file protocol, different paths).
+// ChatAgent has no file channel — parent window is the wait.
+// No clocks here — Time Agent Runtime.
+
+## Send Request To Agent Runtime
+shared_context with an agent runtime with a prompt delivered
+    it should record that the Agent has sent the request
+    it should show FileSync is waiting on that request
+    it should not yet be done
+with an agent runtime
+    with a prompt delivered
+        with a SubAgent (agentic)
+            -> included_context('with an agent runtime with a prompt delivered')
+            it should write the request file and leave it until consumed
+        with a CliAgent
+            // not (agentic) — CliAgent
+            -> included_context('with an agent runtime with a prompt delivered')
+            it should spawn against workspacePath with that prompt
+        with a ChatAgent (agentic)
+            -> included_context('with an agent runtime with a prompt delivered')
+            it should show the parent window is waiting on that request
+
+## Accept Request On Agent Runtime
+shared_context with an agent runtime that has received a request and is waiting on it
+    it should show the request as accepted
+    it should still be waiting for output
+    with a SubAgent (agentic)
+        -> included_context('with an agent runtime that has received a request and is waiting on it')
+            // request file consumed
+    with a CliAgent
+        // not (agentic) — CliAgent
+        -> included_context('with an agent runtime that has received a request and is waiting on it')
+            // accept signal on the reply file (user line)
+    with a ChatAgent (agentic)
+        -> included_context('with an agent runtime that has received a request and is waiting on it')
+            // parent chat continued the prompt
+
+## Finish Request On Agent Runtime
+shared_context with an agent runtime that has accepted a request
+    it should show the runtime as done
+    it should yield the reply
+    with a SubAgent (agentic)
+        -> included_context('with an agent runtime that has accepted a request')
+            // reply file has output
+        with drain restart while the request file still holds work
+            it should keep waiting on that request
+            it should not drop the unconsumed request
+    with a CliAgent
+        // not (agentic) — CliAgent
+        -> included_context('with an agent runtime that has accepted a request')
+            // reply file grew then went quiet
+    with a ChatAgent (agentic)
+        -> included_context('with an agent runtime that has accepted a request')
+            // parent chat finished producing
+
+## Read Verdict On Agent Runtime
+shared_context with an agent runtime used as a judge
+    with plain text PASS or FAIL
+        it should return that verdict
+    with no PASS or FAIL
+        it should raise AIChatFault — never default PASS
+    with a SubAgent (agentic)
+        -> included_context('with an agent runtime used as a judge')
+            // FileSync.read_verdict on the reply file
+    with a CliAgent
+        // not (agentic) — CliAgent
+        -> included_context('with an agent runtime used as a judge')
+            // same FileSync.read_verdict; tool_use-only is "no PASS or FAIL"
+    with a ChatAgent (agentic)
+        -> included_context('with an agent runtime used as a judge')
+            // parent typed verdict; untyped keeps waiting
+
+## Continue Agent Runtime
+shared_context with an agent runtime that has stalled or been kicked
+    it should continue the same runtime identity
+    with a SubAgent (agentic)
+        -> included_context('with an agent runtime that has stalled or been kicked')
+            // same role files
+    with a CliAgent
+        // not (agentic) — CliAgent
+        -> included_context('with an agent runtime that has stalled or been kicked')
+            // same chatId
+    with a ChatAgent (agentic)
+        -> included_context('with an agent runtime that has stalled or been kicked')
+            // same parent window
+
+## Stop Agent Runtime
+shared_context with an agent runtime that is alive
+    it should no longer wait
+    with a SubAgent (agentic)
+        -> included_context('with an agent runtime that is alive')
+            // FileSync.stop
+    with a CliAgent
+        // not (agentic) — CliAgent
+        -> included_context('with an agent runtime that is alive')
+            // FileSync.stop and terminate process
+    with a ChatAgent (agentic)
+        -> included_context('with an agent runtime that is alive')
+            // clear the live parent binding
+
+# Time Agent Runtime
+// SECOND — same clocks, same file wait, CliAgent and SubAgent.
+// AgentRuntimeFileSync: wait_accept (acceptSeconds) then wait_done (stallSeconds / quietSeconds).
+// Paths differ (jsonl vs {role}.in/.out); operations do not. Request file still holding work is not stall.
+// AIChatInstance does not clock or parse. ChatAgent has no file channel — no Time stories.
+
+## Time Accept On Agent Runtime
+shared_context with an Agent using AgentRuntimeFileSync
+    with a request sent
+        with an accept signal on the file channel before acceptSeconds
+            it should treat the request as accepted in time
+        with acceptSeconds run out and no accept signal
+            it should raise AIChatFault not_accepted
+    with a CliAgent
+        // not (agentic) — CliAgent
+        -> included_context('with an Agent using AgentRuntimeFileSync')
+            // Await Accept On Transcript
+    with a SubAgent (agentic)
+        -> included_context('with an Agent using AgentRuntimeFileSync')
+
+## Time Done On Agent Runtime
+shared_context with an Agent using AgentRuntimeFileSync that has accepted
+    with new output on the reply file before stallSeconds
+        it should wait until quietSeconds with no further growth
+        it should then treat the request as done
+    with the request file still holding work
+        it should keep waiting
+        it should not raise stall
+    with the request file empty and no reply before stallSeconds
+        it should raise AIChatFault stall
+    with a CliAgent
+        // not (agentic) — CliAgent
+        -> included_context('with an Agent using AgentRuntimeFileSync that has accepted')
+            // Wait For Done On Transcript
+    with a SubAgent (agentic)
+        -> included_context('with an Agent using AgentRuntimeFileSync that has accepted')
 
 # Run Agent Session
+// Each ## story: `shared_context {## title}` wraps its it-should tree in the spec.
+// Isolate-by-subtype routes use `-> included_context('{## title}')` to that story.
 
 ## Reject Multi Repo Session Span
 with a Workspace that has multiple Repos
@@ -14,6 +177,7 @@ with a Workspace that has multiple Repos
     it should refuse a session that spans more than one repo
 
 ## Open Default Agent Session
+shared_context Open Default Agent Session
 with a Workspace that has a primary Repo
     with no AgentSession name given
         it should create session.folder at {repo.root}/.agent_sessions/{defaultName}
@@ -66,6 +230,7 @@ with a Workspace that has a primary Repo
 
 
 ## Complete Agent Task
+shared_context Complete Agent Task
     with an Agent bound to an open AgentSession
         with a current task
             with a doer prompt
@@ -159,20 +324,18 @@ with a Workspace that has a primary Repo
                 // long-lived branch — many finish cycles, many paths; same as WorkSession.save_chat today
             it should record on AnnotatedTag chat/{branch.name}
 
-## Complete Agent Task Using Sub Agent
+## Complete Agent Task Using Sub Agent (agentic)
     with an Agent that is a SubAgent
+        -> included_context('Complete Agent Task')
+        -> included_context('Complete Agent Task With Judge and Human')
         with a current task
-             it should launch a non-blocking child for the doer
-            it should complete the agent task
-                // same as Complete Agent Task — tests pass in SubAgent
+            it should launch a non-blocking child for the doer
             with a judge and a human
                 it should also launch a non-blocking child for the judge
-                it should complete the agent task with judging and human
-                    // same as Complete Agent Task With Judge and Human — tests pass in SubAgent
 
-## Close Agent Session Using Sub Agent
+## Close Agent Session Using Sub Agent (agentic)
         with someone closing the agent session
-            it should close the agent session
+            -> included_context('Close Agent Session')
             it should tear down non-blocking doer and judge children
 
 # Run Agent Task Queue
@@ -216,7 +379,53 @@ with an Agent that has an open session
     with no tasks on the backlog
         it should leave currentTask empty
 
+# Isolate Agent Session By Subtype
+// Isolated session tests — SubAgent, CliAgent, and ChatAgent sessions do the SAME things
+// including AgentSession.open (branch + worktree). Isolation is not CliAgent-only.
+// Each ## story above defines shared_context '{## title}' with its it-should tree.
+// Below: each implementation branch states domain state; route with included_context to those stories.
+// SubAgent and ChatAgent live paths are (agentic); CliAgent is not (agentic).
+
+with an Agent that is a SubAgent (agentic)
+    -> included_context('Open Default Agent Session')
+    -> included_context('Open Existing Agent Session')
+    -> included_context('Open New Agent Session')
+    -> included_context('Close Agent Session')
+    -> included_context('Complete Agent Task')
+    -> included_context('Complete Agent Task With Judge and Human')
+    -> included_context('Add Agent Tasks To Backlog')
+    -> included_context('Load Agent Tasks From Template')
+    -> included_context('Launch Next Task As Current')
+    -> included_context('Complete Task And Advance Queue')
+    -> included_context('Finish Work Session')
+with an Agent that is a CliAgent
+    // not (agentic) — CliAgent
+    -> included_context('Open Default Agent Session')
+    -> included_context('Open Existing Agent Session')
+    -> included_context('Open New Agent Session')
+    -> included_context('Close Agent Session')
+    -> included_context('Complete Agent Task')
+    -> included_context('Complete Agent Task With Judge and Human')
+    -> included_context('Add Agent Tasks To Backlog')
+    -> included_context('Load Agent Tasks From Template')
+    -> included_context('Launch Next Task As Current')
+    -> included_context('Complete Task And Advance Queue')
+    -> included_context('Finish Work Session')
+with an Agent that is a ChatAgent (agentic)
+    -> included_context('Open Default Agent Session')
+    -> included_context('Open Existing Agent Session')
+    -> included_context('Open New Agent Session')
+    -> included_context('Close Agent Session')
+    -> included_context('Complete Agent Task')
+    -> included_context('Complete Agent Task With Judge and Human')
+    -> included_context('Add Agent Tasks To Backlog')
+    -> included_context('Load Agent Tasks From Template')
+    -> included_context('Launch Next Task As Current')
+    -> included_context('Complete Task And Advance Queue')
+    -> included_context('Finish Work Session')
+
 # Run Cli Agent Session
+// not (agentic) — CliAgent; vanilla agents/agent_spec.py
 
 with an Agent that is a CliAgent
 
@@ -239,7 +448,7 @@ with an Agent that is a CliAgent
                 // may include task index
                 // Await Accept and Wait For Done On Transcript — same for doer and judge
             with context tools, actions, or utilities in the prompt
-                // same as Complete Agent Task — tests pass in CliAgent
+                -> included_context('Complete Agent Task')
 
 ## Launch Judge On Agent Runtime
         with a judge prompt
@@ -249,9 +458,10 @@ with an Agent that is a CliAgent
             it should append a session log line that the judge prompt was sent
                 // Await Accept On Transcript — same for doer and judge
             with context tools in the judge prompt
-                // same as Complete Agent Task With Judge and Human — tests pass in CliAgent
+                -> included_context('Complete Agent Task') With Judge and Human
 
 ## Await Accept On Transcript
+        // included_context('Time Accept On Agent Runtime') — FileSync.wait_accept; not a second clock model
         with a participant agent runtime that is running
             it should pick up the prompt before the accept timeout runs out
             it should append a session log line that the participant accepted the prompt
@@ -259,6 +469,7 @@ with an Agent that is a CliAgent
             it should raise AIChatFault not_accepted
 
 ## Wait For Done On Transcript
+        // included_context('Time Done On Agent Runtime') — FileSync.wait_done; not a second clock model
         with a participant agent runtime that accepted the prompt
             with a doer participant
                 it should wait up to the stall timeout for any new output on the transcript
@@ -268,7 +479,7 @@ with an Agent that is a CliAgent
                         it should append a session log line that the participant finished producing output
                             // may include task index, summary, and duration
                         it should complete the agent task
-                            // same as Complete Agent Task — tests pass in CliAgent
+                            -> included_context('Complete Agent Task')
                 with no new output before the stall timeout runs out
                     it should raise AIChatFault stall
             with a judge participant
@@ -278,15 +489,15 @@ with an Agent that is a CliAgent
 
 
 ## Read Verdict From Judge Transcript
+            // runtime verdict is under Read Verdict On Agent Runtime; this story is CliAgent wiring to the log
             with a readable PASS or FAIL on the judge transcript before the stall timeout runs out
                 it should append a session log line with the verdict and result
                 it should complete the agent task with judging and human
-                    // same as Complete Agent Task With Judge and Human — tests pass in CliAgent
+                    -> included_context('Complete Agent Task') With Judge and Human
 
 ## Complete Agent Task Using Cli Agent
     with a current task
-        it should complete the agent task
-            // same as Complete Agent Task — tests pass in CliAgent
+        -> included_context('Complete Agent Task')
             // mechanics under Set Chat Context through Wait For Done On Transcript
         with max fails reached on the current task
             with a validation error
@@ -295,8 +506,7 @@ with an Agent that is a CliAgent
                 it should stop the whole process
                     // invariant or parse fault — raised under Complete Agent Task
         with a judge prompt and a human participant
-            it should complete the agent task with judging and human
-                // same as Complete Agent Task With Judge and Human — tests pass in CliAgent
+                -> included_context('Complete Agent Task With Judge and Human')
                 // mechanics under Launch Judge On Agent Runtime through Read Verdict From Judge Transcript
 
 ## Run Agent Task Queue Using Cli Agent
@@ -312,7 +522,7 @@ with an Agent that is a CliAgent
                 with the current task complete
                     with more tasks on the backlog
                         it should take the next backlog item as the current task
-                            // Complete Task And Advance Queue — tests pass in CliAgent
+                            -> included_context('Complete Task And Advance Queue')
 
 ## Kick Stalled Doer
         with a doer that finished its job but the queue did not advance
@@ -333,7 +543,34 @@ with an Agent that is a CliAgent
         with the agent session closed successfully
             it should leave no live CLI processes or stale chat bindings
         it should close the agent session
-            // same as Close Agent Session — tests pass in CliAgent
+            -> included_context('Close Agent Session')
+
+# Run Chat Agent Session (agentic)
+// ChatAgent parent chat IS the runtime — tools run in this window.
+// (agentic) — parent AI chat; mimic through agent_bdd, not CliAgent.
+
+## Complete Agent Task Using Chat Agent (agentic)
+with an Agent that is a ChatAgent
+    with a current task
+        -> included_context('Complete Agent Task')
+        with a judge prompt
+                -> included_context('Complete Agent Task With Judge and Human')
+                // verdict is typed into the parent /agent tool — not read from a child transcript
+        with a Human participant
+            it should not invoke slash or ToolsCli for the human
+            it should post a parent-chat message that the human should look at the work
+            it should include a URL of what to look at (contextRoot)
+            it should wait for typed feedback in this window
+        with context tools, actions, or utilities in the doer prompt
+            it should run those in the parent chat window
+            it should not invoke ToolsCli from ChatAgent._run_tools_cli_for
+
+## Persist Chat Agent Queue Across Kit Calls (agentic)
+with ChatAgentKit tools agent and backlog
+    it should bind the named AgentSession and forward to Agent
+    it should persist queue state under session.folder
+    with a later kit instance on the same session name
+        it should resume the queue from what the session recorded
 
 # Work On Ticket
 
@@ -378,6 +615,52 @@ with a Workflow
                 it should close the AgentSession
                     // continues under Close Agent Session
 
-~> Increment 1: Run Agent Session + task queue: Open Default, Open Existing, Enqueue, Launch Next, Complete Task
-~> Increment 2: Agent kinds + CliAgent trail: Complete Agent Task Using Sub/Cli Agent, Run Cli Chat Instance, Await Accept And Done
-~> Increment 3: Ticket encapsulation: Create Work Ticket, Start Opens Session, Finish Closes Issue
+# End To End Agent Journeys
+// LAST. SubAgent and ChatAgent journeys are (agentic) — AI chat via agent_bdd.
+// CliAgent journeys are NOT (agentic) — agents/agent_spec.py. If e2e fails on code,
+// add a vanilla repro under the matching runtime or timing story.
+
+## One Judged Job Via Sub Agent (agentic)
+with a live SubAgent drain
+    with one judged task
+        it should open the AgentSession
+        it should run doer then judge through the mailbox
+        it should record PASS or FAIL on the session log
+        it should close the session when the backlog is empty
+
+## One Judged Job Via Cli Agent
+// not (agentic) — CliAgent
+with a live CliAgent
+    with one judged task
+        it should bind workspacePath to the session worktree
+        it should run doer then judge on cursor-agent
+        it should record PASS or FAIL from the judge transcript
+        it should close CliAgent session with no live processes
+
+## Two Item Queue Via Sub Agent (agentic)
+with a live SubAgent drain
+    with two judged tasks on the backlog
+        it should drain both in order
+        it should record two verdicts and two complete_task lines
+
+## Two Item Queue Via Chat Agent (agentic)
+with ChatAgent in the parent window
+    with two judged tasks on the backlog
+        it should drain both in order through /agent and /agent-backlog
+
+## Start Ticket To Finish
+with a Workflow starting a ticket
+    it should open an isolated session branch and sibling worktree
+    it should run the ticket task
+    it should finish the work session and close the issue
+    with SubAgent or ChatAgent selected (agentic)
+    with CliAgent selected
+        // not (agentic) — CliAgent
+
+~> Increment 0: Run Agent Runtime — shared_context + included_context per CliAgent, SubAgent, ChatAgent. Sub/Chat (agentic); CliAgent not (agentic)
+~> Increment 0b: Time Agent Runtime — FileSync wait_accept / wait_done on CliAgent and SubAgent. ChatAgent has no file channel.
+~> Increment 1: Run Agent Session + task queue (vanilla) — the ONE set of session examples
+~> Increment 1b: Isolate Agent Session By Subtype — included_context to each ## story on CliAgent, SubAgent (agentic), ChatAgent (agentic)
+~> Increment 2: Subtype extras — Sub/Chat (agentic); CliAgent in agent_spec.py
+~> Increment 3: Ticket encapsulation (vanilla)
+~> Increment 4: End To End — Sub/Chat (agentic); CliAgent in agent_spec.py

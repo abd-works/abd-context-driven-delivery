@@ -10,7 +10,7 @@
 
 ## Progress (2026-08-31)
 
-- **Inc 1–12 vanilla:** judge_green — mamba **160** in consolidated `agents/agent/agent_spec.py`
+- **Inc 1–12 vanilla:** judge_green — mamba **160** in consolidated `agents/agent_spec.py`
 - **Phase 1a–1b:** judge_green — ChatAgent judged job + backlog/tickets
 - **Phase 2a:** judge_green — SubAgent one judged job agent BDD (`agent_agent_spec.py`)
 - **Phase 2b:** judge_green — SubAgent two-item backlog drain

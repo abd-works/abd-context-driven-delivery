@@ -1,323 +1,334 @@
+"""SKELETON TO START FROM — (agentic) stories only, from agent-session-redesign-stories-sketch.md.
+Empty it bodies. Fill later via agent_bdd; no CliAgent live here.
 # @agent-spec-manifest python -m tools agent-spec agents/agent_agent_spec.py
-# Agent reading this file: run via agent BDD harness (cli or in-chat per context).
-# harness: mixed — ChatAgent in_chat requires AGENT_BDD_IN_CHAT=1; SubAgent 2a/2b in_process
-# session: agents/.context/.agent_bdd_sessions/
-"""Agent BDD spec for agents — thin in_chat gates for story journeys.
-
-Vanilla behavior lives in agent_spec.py. This file holds session descriptors
-and in_chat runtime checks aligned to the agent-session redesign stories.
-
-Run ChatAgent in_chat examples:
-  AGENT_BDD_IN_CHAT=1 python -m tools agent-spec agents/agent_agent_spec.py
 """
-import os
-import sys
-import tempfile
-from pathlib import Path
-
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("agents", "utilities", "primitives", "context_tools"):
-    _p = str(_REPO_ROOT / _cat)
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
-
-from expects import be_true, contain, equal, expect
-from mamba import after, before, context, description, it
-
-from agents.agent import (
-    AgentParticipant,
-    AgentSession,
-    AgentTask,
-    InMemoryRepo,
-    Repo,
-    SubAgent,
-    Workspace,
-)
-from agent_bdd import agent
-from agent_bdd.spec_helpers import (
-    chat_agent_context,
-    chat_agent_tool_prompt,
-    expect_ok_tool,
-    init_temp_workspace,
-    parse_json_log_kinds,
-    repo_root_from,
-    sessions_dir,
-)
-
-_SESSIONS = sessions_dir(__file__)
-_CHAT_SESSION = _SESSIONS / "chat-one-judged-job-55.json"
-_QUEUE_SESSION = _SESSIONS / "chat-two-item-queue-55.json"
-_SUB_SESSION = _SESSIONS / "one-judged-job-55.json"
-_SUB_QUEUE_SESSION = _SESSIONS / "sub-two-item-queue-55.json"
-_WORKFLOW_SESSION = _SESSIONS / "start-ticket-to-finish-55.json"
-_HOP_S = 180
-_CHAT_DOER = (
-    "/echo fence chat-one-judged-job-55. Finish the Turn. "
-    "Do not contact the judge or edit the queue."
-)
-_CHAT_JUDGE = (
-    "PASS when the doer used Echo and finished the Turn. "
-    "FAIL only if the doer contacted the judge or edited the queue."
-)
-_QUEUE_DOER_A = (
-    "/echo fence chat-queue-a-55. Finish the Turn. "
-    "Do not contact the judge or edit the queue."
-)
-_QUEUE_DOER_B = (
-    "/echo fence chat-queue-b-55. Finish the Turn. "
-    "Do not contact the judge or edit the queue."
-)
-_QUEUE_JUDGE = (
-    "PASS when the doer used Echo and finished the Turn for this queue item. "
-    "FAIL only if the doer skipped echo or edited the queue."
-)
-_RUN_IN_CHAT = os.environ.get("AGENT_BDD_IN_CHAT", "").strip().lower() in {
-    "1",
-    "true",
-    "yes",
-}
+from mamba import description, context, it, shared_context, included_context
+from expects import expect, equal
 
 
-def _log_kinds(log_or_session) -> list[str]:
-    log = log_or_session.log if hasattr(log_or_session, "log") else log_or_session
-    return [record["kind"] for record in log._records]
+# --- shared contexts (subset copied from agent_spec.py by repair_shared_context_specs.py) ---
+with shared_context("Close Agent Session"):
+    with context("with someone closing the agent session"):
+        pass
+        with it('should stop live participants without finishing the session folder'):
+            # BDD: SIGNATURE
+            pass
+        with it('should append a session log line with kind "close"'):
+            # BDD: SIGNATURE
+            pass
+        with it('should clear the live agent link from the session'):
+            # BDD: SIGNATURE
+            pass
+        with it('should not attach or persist chats'):
+            # BDD: SIGNATURE
+            pass
+        # chats attach on finish work session, not turn close or agent close
 
+with shared_context("Complete Agent Task"):
+    with context("with an Agent bound to an open AgentSession"):
+        pass
+        with context("with a current task"):
+            pass
+            with context("with a doer prompt"):
+                pass
+                with it('should run the doer prompt on the doer agent runtime'):
+                    # BDD: SIGNATURE
+                    pass
+                with context("with context tools, actions, or utilities in the prompt"):
+                    pass
+                    with it('should run those according to their manifest in the agent runtime'):
+                        # BDD: SIGNATURE
+                        pass
+                    with context("with context guidance received from running a context tool through the manifest"):
+                        pass
+                        with it('should provide session name, context root, new turn id, and context tool guidance text to the AI chat runtime'):
+                            # BDD: SIGNATURE
+                            pass
+                        with context("with an action run through the manifest in that context"):
+                            pass
+                            with it('should run within that open session and open turn'):
+                                # BDD: SIGNATURE
+                                pass
+                            with it('should use the guidance from the context tool'):
+                                # BDD: SIGNATURE
+                                pass
+                            with it('should read and write output relative to the context root'):
+                                # BDD: SIGNATURE
+                                pass
+                        with context("with a utility run through the manifest in that context"):
+                            pass
+                            with it('should run within that open session and open turn'):
+                                # BDD: SIGNATURE
+                                pass
+                            with it('should use the action and context tool guidance it was given'):
+                                # BDD: SIGNATURE
+                                pass
+                        with it('should close the turn when any accompanying actions or utilities are completed'):
+                            # BDD: SIGNATURE
+                            pass
 
-with description("Agent BDD session descriptors"):
-    with it("should keep ChatAgent one-judged-job session on disk"):
-        expect(_CHAT_SESSION.is_file()).to(be_true)
-        text = _CHAT_SESSION.read_text(encoding="utf-8")
-        expect("ChatAgent" in text).to(be_true)
+with shared_context("Complete Agent Task With Judge and Human"):
+    with context("with a judge prompt"):
+        pass
+        with it('should run the judge prompt on the judge agent runtime'):
+            # BDD: SIGNATURE
+            pass
+        with it('should work within the same session as the doer'):
+            # BDD: SIGNATURE
+            pass
+        # one AgentSession — same branch worktree for git
+        with it('should work within the same context root as the doer'):
+            # BDD: SIGNATURE
+            pass
+        # contextRoot — where documentation and other artifacts are read and written
+        with it('should write session log lines under session.folder'):
+            # BDD: SIGNATURE
+            pass
+        # orchestration log — not contextRoot
+        with context("with doer output from the current task"):
+            pass
+            with it('should validate the content the doer generated'):
+                # BDD: SIGNATURE
+                pass
+            with it('should validate the outcome of the action the doer ran'):
+                # BDD: SIGNATURE
+                pass
+        with context("with context tools in the judge prompt"):
+            pass
+            with it('should run those according to their manifest in the agent runtime'):
+                # BDD: SIGNATURE
+                pass
+            with context("with context guidance received from running a context tool through the manifest"):
+                pass
+                with it('should provide session name, context root, open turn id, and context tool guidance text to the AI chat runtime'):
+                    # BDD: SIGNATURE
+                    pass
+                # validate reads doer artifacts from the same context root the doer wrote to
+                with context("with an action run through the manifest in that context"):
+                    pass
+                    with it('should run within that same open session and open turn'):
+                        # BDD: SIGNATURE
+                        pass
+                    with it('should use the guidance from the context tool'):
+                        # BDD: SIGNATURE
+                        pass
+                    with it('should read and write output relative to the same context root'):
+                        # BDD: SIGNATURE
+                        pass
+        with context("with default validation instructions"):
+            pass
+            with it('should run the validate action through the manifest on the context guidance provided'):
+                # BDD: SIGNATURE
+                pass
+            with it('should record the verdict on the session log'):
+                # BDD: SIGNATURE
+                pass
+        with context("with an additional judge prompt"):
+            pass
+            with it('should also apply the judge extra rubric before verdict'):
+                # BDD: SIGNATURE
+                pass
+        with context("with a passing verdict"):
+            pass
+            with it('should mark the agent task as complete'):
+                # BDD: SIGNATURE
+                pass
+            with it('should record that the task completed on the session log'):
+                # BDD: SIGNATURE
+                pass
+        with context("with a failing verdict"):
+            pass
+            with context("with fails still under the limit"):
+                pass
+                with it('should kick the doer agent or tell it to retry'):
+                    # BDD: SIGNATURE
+                    pass
+                with it('should rerun the task according to the prompt as well as additional judge verdict and instructions'):
+                    # BDD: SIGNATURE
+                    pass
+            with context("with fails at the limit"):
+                pass
+                with it('should stop and raise a judge fail limit fault'):
+                    # BDD: SIGNATURE
+                    pass
+        with context("with a validation error from the validate action"):
+            pass
+            with it('should record the validation error on the session log'):
+                # BDD: SIGNATURE
+                pass
+    with context("with no judge prompt"):
+        pass
+        with it('should automatically pass once the doer is done'):
+            # BDD: SIGNATURE
+            pass
+        with it('should mark the agent task as complete'):
+            # BDD: SIGNATURE
+            pass
+        with it('should record that the task completed on the session log'):
+            # BDD: SIGNATURE
+            pass
+    with context("with a workflow fault on the current task"):
+        pass
+        with it('should stop and raise an invariant or parse fault'):
+            # BDD: SIGNATURE
+            pass
+    with context("with a Human participant"):
+        pass
+        with it('should wait for the human to finish'):
+            # BDD: SIGNATURE
+            pass
+        with context("with human feedback"):
+            pass
+            with it('should record the feedback on the session log'):
+                # BDD: SIGNATURE
+                pass
+            with it('should kick the doer agent or tell it to retry'):
+                # BDD: SIGNATURE
+                pass
+            with it('should rerun the task according to its prompt  as well as additional humanfeedback'):
+                # BDD: SIGNATURE
+                pass
+            with context("with a judge prompt"):
+                pass
+                with it('should evaluate the doer again'):
+                    # BDD: SIGNATURE
+                    pass
+    with context("with that is being rerun"):
+        pass
+        with it('should be providing a new turn ID'):
+            # BDD: SIGNATURE
+            pass
+        with it('should be providing the same session name and context root as its first run'):
+            # BDD: SIGNATURE
+            pass
 
-    with it("should keep ChatAgent two-item queue session on disk"):
-        expect(_QUEUE_SESSION.is_file()).to(be_true)
-        text = _QUEUE_SESSION.read_text(encoding="utf-8")
-        expect("ChatAgent" in text).to(be_true)
-        expect("two-item" in text).to(be_true)
+# --- end shared contexts ---
 
-    with it("should keep SubAgent one-judged-job session on disk"):
-        expect(_SUB_SESSION.is_file()).to(be_true)
-        text = _SUB_SESSION.read_text(encoding="utf-8")
-        expect("SubAgent" in text).to(be_true)
+# SKELETON TO START FROM
 
-    with it("should keep SubAgent two-item queue session on disk"):
-        expect(_SUB_QUEUE_SESSION.is_file()).to(be_true)
-        text = _SUB_QUEUE_SESSION.read_text(encoding="utf-8")
-        expect("SubAgent" in text).to(be_true)
-        expect("two-item" in text).to(be_true)
+# # Run Agent Session
 
-    with it("should keep start-ticket-to-finish session on disk"):
-        expect(_WORKFLOW_SESSION.is_file()).to(be_true)
-        text = _WORKFLOW_SESSION.read_text(encoding="utf-8")
-        expect("Workflow" in text).to(be_true)
+# ## Complete Agent Task Using Sub Agent (agentic)
+with description("Complete Agent Task Using Sub Agent (agentic)"):
+    with context("with an Agent that is a SubAgent"):
+        with included_context("Complete Agent Task"):
+            pass
+        with included_context("Complete Agent Task With Judge and Human"):
+            pass
+        with context("with a current task"):
+            pass
+            with it("should launch a non-blocking child for the doer"):
+                # BDD: SIGNATURE
+                pass
+            with context("with a judge and a human"):
+                pass
+                with it("should also launch a non-blocking child for the judge"):
+                    # BDD: SIGNATURE
+                    pass
 
+# ## Close Agent Session Using Sub Agent (agentic)
+with description("Close Agent Session Using Sub Agent (agentic)"):
+    with context("with someone closing the agent session"):
+        pass
+        with included_context("Close Agent Session"):
+            pass
+        with it("should tear down non-blocking doer and judge children"):
+            # BDD: SIGNATURE
+            pass
 
-with description("Complete Agent Task Using Chat Agent"):
-    if _RUN_IN_CHAT:
+# # Run Chat Agent Session (agentic)
 
-        with before.all:
-            self._repo = repo_root_from(__file__, parents=2)
-            self._workspace = init_temp_workspace("chat55_bdd_")
-            self._context = chat_agent_context(self._workspace, "chat55-one")
-            self._ag = agent(self._repo, _CHAT_SESSION, in_chat=True)
-            self._block = self._ag.__enter__()
+# ## Complete Agent Task Using Chat Agent (agentic)
+with description("Complete Agent Task Using Chat Agent (agentic)"):
+    with context("with an Agent that is a ChatAgent"):
+        with context("with a current task"):
+            pass
+            with included_context("Complete Agent Task"):
+                pass
+            with context("with a judge prompt"):
+                pass
+                with included_context("Complete Agent Task With Judge and Human"):
+                    pass
+                    # verdict is typed into the parent /agent tool — not read from a child transcript
+            with context("with a Human participant"):
+                pass
+                with it("should not invoke slash or ToolsCli for the human"):
+                    # BDD: SIGNATURE
+                    pass
+                with it("should post a parent-chat message that the human should look at the work"):
+                    # BDD: SIGNATURE
+                    pass
+                with it("should include a URL of what to look at (contextRoot)"):
+                    # BDD: SIGNATURE
+                    pass
+                with it("should wait for typed feedback in this window"):
+                    # BDD: SIGNATURE
+                    pass
+            with context("with context tools, actions, or utilities in the doer prompt"):
+                pass
+                with it("should run those in the parent chat window"):
+                    # BDD: SIGNATURE
+                    pass
+                with it("should not invoke ToolsCli from ChatAgent._run_tools_cli_for"):
+                    # BDD: SIGNATURE
+                    pass
 
-        with after.all:
-            self._ag.__exit__(None, None, None)
+# ## Persist Chat Agent Queue Across Kit Calls (agentic)
+with description("Persist Chat Agent Queue Across Kit Calls (agentic)"):
+    with context("with ChatAgentKit tools agent and backlog"):
+        pass
+        with it("should bind the named AgentSession and forward to Agent"):
+            # BDD: SIGNATURE
+            pass
+        with it("should persist queue state under session.folder"):
+            # BDD: SIGNATURE
+            pass
+        with context("with a later kit instance on the same session name"):
+            pass
+            with it("should resume the queue from what the session recorded"):
+                # BDD: SIGNATURE
+                pass
 
-        with it("should open an agent session via chat tools CLI"):
-            opened = self._block.instruct_run(
-                chat_agent_tool_prompt(
-                    "agent",
-                    context=self._context,
-                    arguments={
-                        "session_name": "chat55-one",
-                        "goal": "one judged echo",
-                        "doer_prompt": _CHAT_DOER,
-                        "judge_prompt": _CHAT_JUDGE,
-                    },
-                ),
-                timeout_seconds=_HOP_S,
-            )
-            expect_ok_tool(opened, "agent")
-            expect("chat55-one" in str(opened.result or "") or "Next:" in str(opened.result or "")).to(be_true)
+# # End To End Agent Journeys
 
-        with it("should add one task to the backlog"):
-            queued = self._block.instruct_run(
-                chat_agent_tool_prompt("backlog", context=self._context),
-                timeout_seconds=_HOP_S,
-            )
-            expect_ok_tool(queued, "backlog")
+# ## One Judged Job Via Sub Agent (agentic)
+with description("One Judged Job Via Sub Agent (agentic)"):
+    with context("with a live SubAgent drain"):
+        pass
+        with context("with one judged task"):
+            pass
+            with it("should open the AgentSession"):
+                # BDD: SIGNATURE
+                pass
+            with it("should run doer then judge through the mailbox"):
+                # BDD: SIGNATURE
+                pass
+            with it("should record PASS or FAIL on the session log"):
+                # BDD: SIGNATURE
+                pass
+            with it("should close the session when the backlog is empty"):
+                # BDD: SIGNATURE
+                pass
 
-        with it("should drain the backlog with run_backlog"):
-            drained = self._block.instruct_run(
-                chat_agent_tool_prompt("agent", context=self._context),
-                timeout_seconds=_HOP_S,
-            )
-            expect_ok_tool(drained, "agent")
+# ## Two Item Queue Via Sub Agent (agentic)
+with description("Two Item Queue Via Sub Agent (agentic)"):
+    with context("with a live SubAgent drain"):
+        pass
+        with context("with two judged tasks on the backlog"):
+            pass
+            with it("should drain both in order"):
+                # BDD: SIGNATURE
+                pass
+            with it("should record two verdicts and two complete_task lines"):
+                # BDD: SIGNATURE
+                pass
 
-    with context("with a two-item backlog drain in_chat"):
-        if _RUN_IN_CHAT:
-
-            with before.all:
-                self._repo = repo_root_from(__file__, parents=2)
-                self._workspace = init_temp_workspace("chat55_queue_")
-                self._context = chat_agent_context(self._workspace, "chat55-queue")
-                self._ag = agent(self._repo, _QUEUE_SESSION, in_chat=True)
-                self._block = self._ag.__enter__()
-
-            with after.all:
-                self._ag.__exit__(None, None, None)
-
-            with it("should add two tasks to the backlog"):
-                resp = self._block.instruct_run(
-                    chat_agent_tool_prompt(
-                        "backlog",
-                        context=self._context,
-                        arguments={
-                            "action": "add",
-                            "tasks": [
-                                {
-                                    "doer_prompt": _QUEUE_DOER_A,
-                                    "judge_prompt": _QUEUE_JUDGE,
-                                },
-                                {
-                                    "doer_prompt": _QUEUE_DOER_B,
-                                    "judge_prompt": _QUEUE_JUDGE,
-                                },
-                            ],
-                        },
-                    ),
-                    timeout_seconds=_HOP_S,
-                )
-                expect_ok_tool(resp, "backlog")
-
-            with it("should drain the backlog with run_backlog"):
-                drained = self._block.instruct_run(
-                    chat_agent_tool_prompt("agent", context=self._context),
-                    timeout_seconds=_HOP_S,
-                )
-                expect_ok_tool(drained, "agent")
-
-
-_SUB_DOER = (
-    "/echo fence sub-one-judged-job-55. Finish the Turn. "
-    "Do not contact the judge or drain a backlog."
-)
-_SUB_JUDGE = (
-    "/validate. PASS when the doer used Echo and finished the Turn. "
-    "FAIL only if the doer contacted the judge or edited the queue."
-)
-_SUB_QUEUE_DOER_A = (
-    "/echo fence sub-queue-a-55. Finish the Turn. "
-    "Do not contact the judge or drain a backlog."
-)
-_SUB_QUEUE_DOER_B = (
-    "/echo fence sub-queue-b-55. Finish the Turn. "
-    "Do not contact the judge or drain a backlog."
-)
-_SUB_QUEUE_JUDGE = (
-    "/validate. PASS when the doer used Echo and finished the Turn "
-    "for this queue item. FAIL only if the doer skipped echo or edited the queue."
-)
-
-
-def _sub_agent_workspace(name: str = "one-judged-job-55") -> AgentSession:
-    root = Path(tempfile.mkdtemp(prefix="sub_bdd_"))
-    repo = InMemoryRepo(root, Repo.Worktree(root, "main"))
-    workspace = Workspace(path=root, repos=[repo], primary_repo=repo)
-    return workspace.open(name=name, context_root=root)
-
-
-def _sub_judged_task() -> AgentTask:
-    doer = AgentParticipant(type="doer", prompt=_SUB_DOER)
-    judge = AgentParticipant(type="judge", prompt=_SUB_JUDGE)
-    return AgentTask(prompt=_SUB_DOER, doer=doer, judge=judge)
-
-
-def _sub_queue_judged_task(prompt: str, judge_prompt: str) -> AgentTask:
-    doer = AgentParticipant(type="doer", prompt=prompt)
-    judge = AgentParticipant(type="judge", prompt=judge_prompt)
-    return AgentTask(prompt=prompt, doer=doer, judge=judge)
-
-
-with description("Complete Agent Task Using Sub Agent"):
-    with context("with one judged echo job in_process"):
-        with before.each:
-            self.session = _sub_agent_workspace("one-judged-job-55")
-            self.agent = SubAgent(session=self.session)
-            self.task = _sub_judged_task()
-            self.agent.add_tasks([self.task])
-
-        with it("should open the AgentSession before running the judged task"):
-            self.agent.run_next_task()
-            expect(_log_kinds(self.session)).to(contain("open"))
-            expect(self.session.name).to(equal("one-judged-job-55"))
-
-        with it("should coordinate doer then judge runtime prompt roles on one task"):
-            self.agent.run_next_task()
-            kinds = _log_kinds(self.session)
-            expect(kinds.count("send") >= 2).to(be_true)
-            expect(kinds).to(contain("verdict"))
-            expect(self.task.doer.state).to(equal("done"))
-            expect(self.task.judge.state).to(equal("done"))
-
-        with it("should open and finish kit Turns for slash work during the run"):
-            self.agent.run_next_task()
-            kinds = _log_kinds(self.session)
-            expect(kinds).to(contain("open_turn"))
-            expect(kinds).to(contain("finish_turn"))
-            expect(kinds.index("open_turn") < kinds.index("finish_turn")).to(be_true)
-
-        with it("should record a single PASS verdict for the judged job"):
-            self.agent.run_next_task()
-            verdicts = [
-                row["result"]
-                for row in self.session.log._records
-                if row["kind"] == "verdict"
-            ]
-            expect(verdicts).to(equal(["PASS"]))
-            expect(self.task.state).to(equal("Done"))
-
-        with it("should close the AgentSession after the run"):
-            self.agent.run_next_task()
-            self.session.close()
-            expect(_log_kinds(self.session)).to(contain("close"))
-
-    with context("with a two-item judged backlog in_process"):
-        with before.each:
-            self.session = _sub_agent_workspace("sub-two-item-queue-55")
-            self.agent = SubAgent(session=self.session)
-            self.first = _sub_queue_judged_task(_SUB_QUEUE_DOER_A, _SUB_QUEUE_JUDGE)
-            self.second = _sub_queue_judged_task(_SUB_QUEUE_DOER_B, _SUB_QUEUE_JUDGE)
-            self.agent.add_tasks([self.first, self.second])
-
-        with it("should drain both judged tasks in order via run_backlog"):
-            self.agent.run_backlog()
-            expect(len(self.agent.completed_tasks)).to(equal(2))
-            expect(self.agent.backlog).to(equal([]))
-            expect(self.agent.completed_tasks[0].prompt).to(equal(_SUB_QUEUE_DOER_A))
-            expect(self.agent.completed_tasks[1].prompt).to(equal(_SUB_QUEUE_DOER_B))
-
-        with it("should coordinate doer and judge children for each queue item"):
-            self.agent.run_backlog()
-            kinds = _log_kinds(self.session)
-            expect(kinds.count("send") >= 4).to(be_true)
-            expect(self.first.doer.state).to(equal("done"))
-            expect(self.first.judge.state).to(equal("done"))
-            expect(self.second.doer.state).to(equal("done"))
-            expect(self.second.judge.state).to(equal("done"))
-
-        with it("should record two PASS verdicts and two complete_task lines"):
-            self.agent.run_backlog()
-            verdicts = [
-                row["result"]
-                for row in self.session.log._records
-                if row["kind"] == "verdict"
-            ]
-            expect(verdicts).to(equal(["PASS", "PASS"]))
-            kinds = _log_kinds(self.session)
-            expect(kinds.count("complete_task")).to(equal(2))
-            expect(kinds.count("launch_next")).to(equal(2))
+# ## Two Item Queue Via Chat Agent (agentic)
+with description("Two Item Queue Via Chat Agent (agentic)"):
+    with context("with ChatAgent in the parent window"):
+        pass
+        with context("with two judged tasks on the backlog"):
+            pass
+            with it("should drain both in order through /agent and /agent-backlog"):
+                # BDD: SIGNATURE
+                pass

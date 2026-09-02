@@ -28,5 +28,5 @@ Workspace-relative roots for each context tool. Prefer these over defaults when 
 - 2026-08-28: stories = ./* (was ./../story-ui/*)
 - 2026-08-28: clean_engineering = ./* (was ./primitives/harness/*)
 - 2026-08-31: bdd = ./* (was ./primitives/harness/*)
-- 2026-08-31: bdd = ./agents/agent/* (was ./*)
+- 2026-08-31: bdd = ./agents/agent/* (was ./*) — **retired:** flat `agents/*` only; no `agents/agent/` subfolder
 - 2026-08-31: bdd = ./* (was ./agents/agent/*)

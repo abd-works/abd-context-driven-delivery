@@ -3645,6 +3645,7 @@ class _ChatAgentPersistence:
             "completed": cls._serialize_backlog(engine.completed_tasks),
             "chat_phase": engine._chat_phase,
             "pending_verdict": engine._pending_verdict,
+            "pending_human_feedback": engine._pending_human_feedback,
         }
         target = cls.path_for(engine._workspace, session.name)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -3679,6 +3680,9 @@ class _ChatAgentPersistence:
             cls._link_tickets(task, row, repo=repo)
         engine._chat_phase = str(payload.get("chat_phase") or "idle")
         engine._pending_verdict = str(payload.get("pending_verdict") or "")
+        engine._pending_human_feedback = str(
+            payload.get("pending_human_feedback") or ""
+        )
         return engine
 
     @staticmethod
@@ -3701,6 +3705,9 @@ class _ChatAgentPersistence:
         if task.judge is not None:
             row["judge_prompt"] = task.judge.prompt
             row["judge_state"] = task.judge.state
+        if task.human is not None:
+            row["human"] = True
+            row["human_prompt"] = task.human.prompt
         if task.tickets:
             snapshots = []
             for ticket in task.tickets:
@@ -3739,6 +3746,9 @@ class _ChatAgentPersistence:
         if judge_prompt:
             task.judge = AgentParticipant(type="judge", prompt=judge_prompt)
             task.judge.state = row.get("judge_state") or "idle"
+        if row.get("human"):
+            human_prompt = str(row.get("human_prompt") or "human check").strip()
+            task.human = AgentParticipant(type="human", prompt=human_prompt)
         task.state = row.get("state") or "Backlog"
         task.doer.state = row.get("doer_state") or "idle"
         return task
@@ -3781,6 +3791,7 @@ class ChatAgent(Agent):
     _healer_returns_handoff: bool = field(default=True, init=False, repr=False)
     _chat_phase: str = field(default="idle", repr=False)
     _pending_verdict: str = field(default="", repr=False)
+    _pending_human_feedback: str = field(default="", repr=False)
 
     @override
     def _deliver_to_runtime(self, participant: AgentParticipant) -> None:
@@ -3812,6 +3823,30 @@ class ChatAgent(Agent):
         self._pending_verdict = ""
         participant.state = "done"
         return result
+
+    @override
+    def _next_human_feedback(self) -> str:
+        text = self._pending_human_feedback.strip()
+        self._pending_human_feedback = ""
+        return text
+
+    def _human_review_url(self) -> str:
+        session = self.session
+        if session is None:
+            return ""
+        return Path(session.context_root).resolve().as_uri()
+
+    def _human_review_message(self) -> str:
+        task = self.current_task
+        prompt = "review the work"
+        if task is not None and task.human is not None and task.human.prompt:
+            prompt = task.human.prompt.strip()
+        url = self._human_review_url()
+        return (
+            f"Human: look at this work. {prompt}\n"
+            f"{url}\n"
+            "Do not run a slash. Reply in this chat, then /agent with your feedback."
+        )
 
     @override
     def _run_tools_cli_for(self, participant: AgentParticipant) -> None:
@@ -3850,8 +3885,10 @@ class ChatAgent(Agent):
     def _chat_reply(self, body: str, next_step: str) -> str:
         return f"{body}\n\n{self._chat_status_block()}\n\nNext: {next_step}"
 
-    def step_from_chat(self, *, verdict: str = "") -> str:
+    def step_from_chat(self, *, verdict: str = "", feedback: str = "") -> str:
         """One in-chat wait — returns the prompt for this window plus the next slash step."""
+        if feedback.strip():
+            self._pending_human_feedback = feedback.strip()
         if verdict.strip():
             self._pending_verdict = verdict.strip().upper()
         self._ensure_session()
@@ -3859,6 +3896,8 @@ class ChatAgent(Agent):
             return self._chat_finish_doer()
         if self._chat_phase == "judge_out":
             return self._chat_take_verdict()
+        if self._chat_phase == "human_out":
+            return self._chat_take_human()
         return self._chat_deliver_doer()
 
     def _chat_deliver_doer(self) -> str:
@@ -3881,14 +3920,7 @@ class ChatAgent(Agent):
         self._wait_doer()
         task = self._require_current_task()
         if task.judge is None:
-            self._finish_task_pass()
-            self._chat_phase = "idle"
-            if self.backlog:
-                return self._chat_deliver_doer()
-            return self._chat_reply(
-                "Task complete (no judge).",
-                "healer eval.",
-            )
+            return self._offer_human_or_finish("Task complete (no judge).")
         self._launch_judge()
         self._chat_phase = "judge_out"
         return self._chat_reply(
@@ -3899,15 +3931,12 @@ class ChatAgent(Agent):
     def _chat_take_verdict(self) -> str:
         result = self._wait_verdict()
         if result == "PASS":
-            self._finish_task_pass()
-            self._chat_phase = "idle"
-            if self.backlog:
-                follow = self._chat_deliver_doer()
-                return f"PASS.\n\n{follow}"
-            return self._chat_reply(
-                "PASS. Task complete.",
-                "healer eval.",
-            )
+            offered = self._offer_human_or_finish("PASS. Task complete.")
+            if self._chat_phase == "human_out":
+                return offered
+            if offered.startswith("PASS."):
+                return offered
+            return f"PASS.\n\n{offered}"
         self._on_judge_fail()
         self._chat_phase = "idle"
         if self.current_task is not None:
@@ -3920,6 +3949,28 @@ class ChatAgent(Agent):
             "FAIL. Skipped after judge retries.",
             "add work with /agent-backlog, or healer eval.",
         )
+
+    def _offer_human_or_finish(self, done_body: str) -> str:
+        task = self.current_task
+        if (
+            task is not None
+            and task.human is not None
+            and not self._pending_human_feedback.strip()
+        ):
+            self._chat_phase = "human_out"
+            return self._chat_reply(
+                self._human_review_message(),
+                "type feedback, then /agent.",
+            )
+        self._finish_task_pass()
+        self._chat_phase = "idle"
+        if self.current_task is not None or self.backlog:
+            follow = self._chat_deliver_doer()
+            return f"{done_body}\n\n{follow}"
+        return self._chat_reply(done_body, "healer eval.")
+
+    def _chat_take_human(self) -> str:
+        return self._offer_human_or_finish("Human feedback recorded.")
 
 
 # @toolset-manifest python -m tools manifest agents.agent:ChatAgentKit
@@ -4019,6 +4070,7 @@ class ChatAgentKit:
         doer_prompt: str = "",
         judge_prompt: str = "",
         verdict: str = "",
+        feedback: str = "",
         tasks: list[dict] | None = None,
     ) -> str:
         """Advance one wait. Result always includes In progress / Done / Left, then Next."""
@@ -4041,7 +4093,7 @@ class ChatAgentKit:
                 and engine.current_task is None
             ):
                 engine.add_tasks_from_specs(specs)
-            return engine.step_from_chat(verdict=verdict)
+            return engine.step_from_chat(verdict=verdict, feedback=feedback)
 
         return self._run_guarded("agent", _run)
 

@@ -30,7 +30,7 @@ open path
        AnnotatedTag
 
 ## InMemoryRepo : Repo
-// same public API as Repo; for specs — no git/gh on PATH
+// same public API as Repo; for specs with explicit no_branch only — never Agent._repo in production
 
 ## Branch
 // public: checkout, commit, push, merge, chats; private: _persist_chats
@@ -147,6 +147,9 @@ lookupPath tool fidelity
 upsertPath tool fidelity path
 open
   -> _refuse_multi_repo_session
+  // default: isolate — branch session/{name} + worktree (see AgentSession.open)
+  // opt-out: explicit no_branch / branch=False — tests only; log isolated: false
+  // never implicit InMemoryRepo in production Agent._repo
 load
 save
 _refuse_multi_repo_session  // private
@@ -186,10 +189,15 @@ open
   -> branch.checkout_or_create
     // branch name session/{name} — convention here; not a separate primitive elsewhere
   -> branch.worktree
+    // attach dedicated worktree (sibling beside primary for ticket flows)
+    // skip worktree when caller passed explicit no_branch
   -> log.open
+    // fields include isolated: true|false
 resume
   // Open Existing — from session recorded on disk; dirty worktree preserved
+  // code name: open_existing — must keep sketch name resume as the public verb
   // _recreate_scaffolding when folder missing — private, inside resume
+  // with no worktree: checkout_or_create Branch worktree before resume; bind session.branch.worktree
 close
   -> agent.close
     // stop live participants; clear session.agent link; do not delete session.folder
@@ -491,10 +499,15 @@ find_matching prompt
 ## ChatAgent : Agent
 // public: kick (+ inherited Agent public API)
 // private: _send, _await_*
+// parent chat IS the doer/judge/human runtime — Complete Agent Task Using Chat Agent
+// tools/actions/utilities in prompts run in this window; _run_tools_cli_for is a no-op
+// verdict arrives via parent /agent tool (typed PASS/FAIL), not a child transcript
+// human: do not invoke slash / ToolsCli — post a parent message (look at X Y Z + URL of the work), wait for typed feedback
 _send participant  // private
 _await_accept participant  // private
 _await_done participant  // private
 _await_verdict participant  // private
+_next_human_feedback  // private — text typed in the parent window
 kick  // @agent_tool
 
 ## SubAgent : Agent
@@ -508,22 +521,44 @@ _await_verdict participant  // private
 kick  // @agent_tool
 _launch participant  // private — non-blocking child for doer or judge (both required for judged tasks)
 _tear_down_children  // private — on session.close for SubAgent
+  files
+       AgentRuntimeFileSync
+  // session.folder/runtime/{doer,judge,healer}.{in,out} — same FileSync as CliAgent jsonl
 // child decides kits; empty-actions path may performTurn-wrap — still inside child, not Agent.open
 // @agent_tool / slash surface = ops on Agent subtypes (same as CliAgent) — no separate *Tool type
+
+## AgentRuntimeFileSync
+// process-to-process over files — THE wait for CliAgent and SubAgent. Same operations; paths differ.
+// SubAgent: requestPath={role}.in replyPath={role}.out
+// CliAgent: same jsonl for both (accept = user line; done = growth then quiet)
+// ChatAgent has no FileSync.
+// public: send, wait_accept, wait_done, read_verdict, stop
+acceptSeconds
+stallSeconds
+quietSeconds
+requestPath
+replyPath
+send role prompt
+wait_accept
+  // Time Accept — timeout → AIChatFault not_accepted
+wait_done
+  // Time Done — request file still holds work → keep waiting; empty + no reply → AIChatFault stall
+  // growth then quietSeconds → done
+read_verdict
+  // PASS or FAIL; AIChatFault when unreadable — never default PASS
+stop
 
 # CliAgent
 
 ## CliAgent : Agent
-// CLI-only: AIChatInstance, transcript watcher, timing/retry, CliAgentSessionLog
+// CLI-only: AIChatInstance handle + AgentRuntimeFileSync + CliAgentSessionLog
 // public @agent_tool: kick, close_agents, cleanup, close_cli_session (+ inherited close, run, backlog ops)
 // private: _ensure_session override, _launch_* / _wait_* / _complete_task overrides, chat bind helpers
-acceptSeconds
-stallSeconds
-quietSeconds
 maxFails
 failCount
-  watch
-       AgentRuntimeTranscriptWatcher
+  files
+       AgentRuntimeFileSync
+// clocks live on FileSync, not on CliAgent and not on AIChatInstance
 // session.log is CliAgentSessionLog
 _bind_workspace_root  // private
   // bind agent runtime workspace to session.branch.worktree.path (git checkout)
@@ -547,8 +582,7 @@ _launch_doer  // private — override Agent
     -> log.send participant
     // after chat.run returns: Agent plane ends — never tools.ps1 / Turn.open here
   -> _await_accept currentTask.doer
-    -> watch._await_user_turn
-      // transcript under chat.workspacePath + chat.chatId
+    -> files.wait_accept
     // on timeout and not chat.alive: always AIChatFault not_accepted
     -> log.accepted participant
   -> currentTask.doer.chat._invoke_slash command
@@ -558,7 +592,7 @@ _launch_doer  // private — override Agent
     // Turn open/finish + append_tool happen inside that external path
 _wait_doer  // private — override Agent
   -> _await_done currentTask.doer
-    -> watch._await_growth_then_quiet
+    -> files.wait_done
     // dispatch-back: poll only — never Turn.finish → Agent
     // on stall: always AIChatFault stall
     -> log.wait_doer
@@ -574,13 +608,13 @@ _launch_judge  // private — override Agent
     -> log.launch_judge
     -> log.send participant
   -> _await_accept currentTask.judge
-    -> watch._await_user_turn
+    -> files.wait_accept
     -> log.accepted participant
   -> currentTask.judge.chat._invoke_slash command
     // slash → external tools CLI (unchanged)
 _wait_verdict  // private — override Agent
   -> _await_verdict currentTask.judge
-    -> watch._read_verdict
+    -> files.read_verdict
     -> log.verdict participant result
 _complete_task  // private — override Agent
   // on FAIL under maxFails: kick doer and retry same task; increment failCount
@@ -645,47 +679,46 @@ error detail
        AIChatInstance
 // one AIChatInstance per CLI participant — CursorChatInstance | VscodeChatInstance | …
 
-## AgentRuntimeTranscriptWatcher
-// private: _path, _await_user_turn, _await_growth_then_quiet, _read_verdict
-// owned by CliAgent.watch — polls AIChatInstance transcripts
-_path  // private
-// derived from chat.workspacePath + chat.chatId (vendor transcript location)
-userCount
-_await_user_turn acceptSeconds  // private — timeout from CliAgent.acceptSeconds
-_await_growth_then_quiet stallSeconds quietSeconds  // private — from CliAgent
-_read_verdict  // private
-
 ## AIChatInstance
-// public: run, list_chats, continue, resume
+// public: run, continue, stop
 // private: _invoke_slash
-// CLI integration boundary — duplicate session fields on purpose for the runtime fence
+// Chat handle only — spawn and identity. NOT a wait state machine.
+// No received / waiting / accepted / done. No clocks. No verdict parse (FileSync.read_verdict).
 chatId
 pid
 alive
 workspacePath
-// branch worktree path — agent runtime --workspace; ToolsCli cwd; not contextRoot
+// spawn cwd — branch worktree; ToolsCli cwd; not contextRoot
 sessionName
-// AgentSession.name — tools YAML fence session field
+// fence copy from AgentSession — not wait state
 contextRoot
-// AgentSession.contextRoot — passed in context guidance; tools read/write artifacts here
+// fence copy from AgentSession — artifacts; not wait state
 model
 mode
 run prompt
-  // uses chatId + workspacePath on this instance
+  // spawn / deliver prompt to the chat process
 _invoke_slash command  // private
   // must: fence carries sessionName; never remanifest; never omit session
 list_chats
 continue
-resume
+  // same chatId
+stop
+  // terminate process / clear pid — FileSync.stop is the wait-side halt
+
+## SubAgentChatInstance : AIChatInstance
+// child process that reads/writes FileSync paths — not a second wait implementation
 
 ## CursorChatInstance : AIChatInstance
 // public: create_chat
 create_chat
-// sets chatId on this instance
+// sets chatId on this instance — spawn is how this realization receives a request
 
 ## VscodeChatInstance : AIChatInstance
 
 ## ClaudeChatInstance : AIChatInstance
+
+## ChatAgentRuntime : AIChatInstance
+// parent chat window — handle only; no FileSync, no clocks
 
 # workflow
 
@@ -828,4 +861,17 @@ defaultBranch
 ## ToolsCli
 // primitives/tools — tools.ps1; slash YAML → action begin/execute/end; Turn open/finish; append_tool
 // fence: sessionName, contextRoot, workspacePath (worktree cwd)
+
+## ChatAgentKit
+// thin slash `/agent` — bind session name, forward to ChatAgent; no queue/participant/healer logic
+
+## SubAgentKit
+// thin slash `/sub-agent` — prepare_channel (mailbox waiters) then Agent.run
+
+## CliAgentKit
+// thin slash `/cli-agent` — prepare_channel (bind) then Agent.run; no one-shot open+add+run in the kit
+
+## Healer
+// eval after judged FAIL — not a fourth participant type; same Agent runtime as doer/judge
+// stories: Complete Agent Task With Judge — healer runs before give-up; then skip or judge_fail_limit
 

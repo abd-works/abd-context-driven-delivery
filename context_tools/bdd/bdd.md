@@ -1,6 +1,6 @@
 # Contexts
 
-Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`templates/bdd-sketch.md`).
+Behavior-driven development describes an application's behavior from the perspective of its stakeholders — as concrete examples in domain language. Sketch that usage story first (`templates/bdd-sketch.md`); automate it only once the examples read cleanly.
 
 ## Hierarchy shape (required)
 
@@ -11,6 +11,21 @@ describe {subject — domain thing, state, or observable condition}
       it should {observable outcome}
 ```
 
+**Same behavior, different implementations** — extend the hierarchy with explicit routes:
+
+```
+describe {story name}
+  shared_context {abstract subject — exact string for included_context}
+    it should {shared outcome}
+    it should {second shared outcome}
+  with {Implementation}
+    -> included_context('{abstract subject — same string}')
+    it should {outcome only for this implementation}
+  with {second Implementation}
+    -> included_context('{abstract subject — same string}')
+    it should {outcome only for second implementation}
+```
+
 Read top-down as a **usage / storytelling sequence**: what the user or system does first, then what is true, then what is observed. Nest by the **real events and conditions** that make the next observation possible — not by package, class role, or test fixture type.
 
 | Line | Names | Never names |
@@ -18,6 +33,8 @@ Read top-down as a **usage / storytelling sequence**: what the user or system do
 | **describe** | Subject under observation in plain English (thing, state, condition) | Manager / hub / runner / service / internal class; decorator symbol (`@log`); marker name |
 | **that …** | Past or present event/condition on that subject (`that has been logged`, `that is invoked`) | `when …` |
 | **with …** | Narrower standing condition (`with no session name given`, `with verbose off`) | `when …`; implementation knobs phrased as API flags |
+| **shared_context …** | Shared `it should` outcomes written **once**; string reused by `included_context` | Copying the same `it should` under every implementation branch |
+| **-> included_context('…')** | Route to the matching `shared_context` on this implementation branch | Omitting the route and assuming the spec will wire it |
 | **it should …** | One stakeholder-visible outcome | Internals, private fields, call counts on mocks of the subject |
 
 **Pass (storytelling / usage order):**
@@ -59,8 +76,10 @@ when no session name is given        ← never "when" for state — use "with �
 - **`describe-is-plain-english`** — Full English phrases (e.g. "an action that is annotated with log", "an action that is not annotated"). Never symbol/mechanism names (`"@log marker"`) as the subject.
 - **`state-not-when`** — Never name a nested state with `when`. Use `that …` for events/conditions on the subject and `with …` for standing conditions. Ask: what event or condition must already be true for this observation?
 - **`nest-by-enabling-events`** — Each nested `that` / `with` must be a real precondition or event required for the nested `it should` — not a test-file grouping convenience.
+- **`abstract-subject-then-concrete-backends`** — When the same behavior must hold for several implementations, write the shared `it should` outcomes **once** on the abstract subject (the domain thing before you name the implementation). Each concrete `with …` branch (a subtype, format, or adapter) **includes** that contract — it does not restate it. Add new `it should` lines under a concrete branch only for proofs that differ because of that implementation. See [Same behavior, different implementations](#same-behavior-different-implementations) below.
 - **`full-surface-coverage`** — When generating or satisfying tests for a module that already exists, scan the production source for every public method, property, class, and constant. Each must have at least one `it should` covering its observable behavior. Any gap is a violation. Private and underscore-prefixed members are excluded unless they are part of a documented public contract.
 - **`scan-fixture-pair`** — A mechanical mistake spec passes the fail file to `expect_scan_fails` and the pass file to `expect_scan_passes` (`context_tools.bdd.spec_helpers`). Do not invent a parallel eval spec harness.
+
 
 ---
 
@@ -90,6 +109,8 @@ Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.
 | --- | --- | --- | --- |
 | Top-level concept | `describe('Context', () => {` | `with description('Context'):` | `@Nested class Context` |
 | Nested state/context | `describe('that has…', () => {` | `with context('that has…'):` | `@Nested class ThatHas…` |
+| Shared contract (once) | shared `describe` / `it` group (project convention) | `with shared_context('…'):` | `@Nested` shared fixture class |
+| Include shared contract | nested `describe` including shared group | `with included_context('…'): pass` | extend / compose shared fixture |
 | Behavior | `it('should …', () => {` | `with it('should …'):` | `@Test void should…()` |
 | Marker | `// BDD: SIGNATURE` | `# BDD: SIGNATURE` | `// BDD: SIGNATURE` |
 
@@ -109,7 +130,40 @@ it('should apply a percentage discount to eligible items', () => {
 
 **Fail:** any assertion, mock, import of production code, or helper inside the body.
 
+**Pass (shared behavior across implementations):**
+```python
+with shared_context('with an agent runtime that has accepted a request'):
+    with it('should show the runtime as done'):
+        # BDD: SIGNATURE
+    with it('should yield the reply'):
+        # BDD: SIGNATURE
+
+with description('Finish request on agent runtime'):
+    with context('with a SubAgent'):
+        with included_context('with an agent runtime that has accepted a request'):
+            pass
+        with it('should leave the reply on doer.out'):
+            # BDD: SIGNATURE
+```
+
 ---
+## Same behavior, different implementations
+
+Write shared `it should` once on the abstract subject (`shared_context`). Each `with {Implementation}` branch names domain state and routes with `-> included_context('…')` — **same string**, no copy-paste. Extra `it should` lines belong only on the branch they differ by.
+
+```
+shared_context with an agent runtime that has accepted a request
+  it should show the runtime as done
+  it should yield the reply
+with a SubAgent
+  -> included_context('with an agent runtime that has accepted a request')
+  it should leave the reply on the role out file
+with a CliAgent
+  -> included_context('with an agent runtime that has accepted a request')
+  it should detect completion when the transcript stops growing
+```
+
+**Fail:** the shared pair repeated under every `with …` branch. Fixture: `examples/evals/backends-restate-shared-behavior/`.
 
 ## development
 
@@ -120,7 +174,7 @@ it('should apply a percentage discount to eligible items', () => {
 1. **Confirm framework** — inherit from the behavior file.
 2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report count.
 3. **Identify shared setup** — extract to `beforeEach` / `with before.each:` or a factory when three or more siblings share arrangement.
-4. Pick **one** marker. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
+4. Pick **one** marker. Replace it with a minimal body from the DEVELOPMENT TESTS section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
 5. Run the test — confirm RED for the right reason.
 6. Write the **minimum** production code until GREEN (PRODUCTION CODE section of the same template).
 7. Refactor only while green. Move to the next marker.
@@ -141,9 +195,9 @@ When generating or satisfying against a module that already exists, read the pro
 **GREEN** — least production code that makes this assertion pass.  
 **REFACTOR** — clean up while green. One test, one production change, one green — do not batch all bodies first.
 
-### Arrange-Act-Assert
+### One outcome per `it`
 
-Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behavior` above). Split unrelated expects. Shared construction → `beforeEach` / factory at three sibling dupes.
+One observable outcome per `it` (`observable-behavior` above). Split unrelated `expect` calls into separate examples. Shared construction → `beforeEach` / factory only when three or more sibling examples need the same setup — no Arrange / Act / Assert labels.
 
 ### Rules
 
@@ -156,6 +210,7 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 - **`no-remaining-signatures`** — Zero `BDD: SIGNATURE` markers when done.
 - **`full-surface-coverage`** — Before generating or satisfying, scan the production source for all public members. Add `it should` entries for every uncovered public method, property, or class. Complete coverage is required; no public surface may be left untested.
 - **`context-sharing`** — Shared construction in `beforeEach` / factory at three sibling dupes.
+- **`shared-behavior-across-implementations`** — When a behavior file has an abstract subject and several concrete `with …` implementations, extract the shared `it should` bodies once (`shared_context` + `included_context` in Mamba). Each concrete branch names domain state in `with context('with …')` and includes the shared group. Do not duplicate the same assertions under every branch.
 - **`oo-api-design`** — Ask-don't-tell: construct fully; own state on the object; operations on the closest domain concept.
 - **`honors-documented-surface-contracts`** — Public API must match documented surface contracts; if a spec fights the contract, fix the spec.
 - **`roundtrip-parity-is-required`** — Adapter parse/render seams assert `counts(parse(render(canonical))) == counts(canonical)`.
