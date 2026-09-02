@@ -1,0 +1,28 @@
+---
+description: Rules for implementing Miro diagram backends in stories/diagram/miro
+globs: context_tools/stories/diagram/miro/**
+alwaysApply: true
+---
+
+# Miro Story Diagram Backend — Rules
+
+## Architecture contract (never break)
+
+1. **Same base classes, different output.** `MiroStoryMap` extends `StoryMap`. `MiroEpic`, `MiroSubEpic`, `MiroStory`, `MiroScenario`, `MiroIncrement` mirror the DrawIO equivalents — same factory chain, same `create_child_*` pattern.
+2. **Layout comes from `DiagramStoryMap`.** No pixel coordinate is ever hard-coded. All x/y/width/height values flow from `DiagramStoryMap(canonical)` methods (`epic_x`, `epic_row_y`, `sub_epic_x`, etc.). Scale up uniformly if needed.
+3. **Do not touch `DiagramStoryMap` or `diagram_story_map.py`.** That file is shared with the DrawIO backend. Any change there affects both.
+4. **`UpdateReport` is imported from `context_tools.stories.story_model.update_report`, never redefined.**
+5. **`sync(text, canonical)` always delegates to `parse(text)` then `canonical.translate_from(parsed)`.** Do not implement a custom diff; the diff lives in `translate_from`.
+
+## Output format
+
+6. **`render()` returns an SVG string** in the Miro canvas-composer DSL (`canvas_create_from_svg` format). Every node carries a `data-role` attribute encoding its type (`epic`, `subepic:{depth}`, `story:{story_type}`, `scenario`, `clause:{phase}`). `parse()` reads back that same SVG.
+7. **`render_thin_slice()` returns an SVG** with a `<foreignObject data-type="table">` widget. Each row = one increment; columns = epic/subepic headers + one story per cell.
+8. **`render_scenario()` returns an SVG** with a `<foreignObject data-type="doc">` widget in Markdown.
+9. **No Miro REST API calls inside nodes.py.** Nodes generate serialisable SVG strings. The agent posts them to Miro via `canvas_create_from_svg` during test verification.
+
+## Test rules
+
+10. **Every new view mirrors the matching DrawIO BDD spec** (`drawio_story_map_spec.py`) one-for-one: same `description`/`context`/`it` nesting, same fixture factory, analogous assertions over SVG instead of XML.
+11. **Each fidelity (story-map, thin_slice, scenario) lives in its own `description` block** inside `miro_story_map_spec.py`. Start a new turn commit after each block's BDD run passes.
+12. **No stubs.** After the Python mamba spec passes, the agent posts the `render()` output to an actual Miro board via `canvas_create_from_svg` and reads it back with `canvas_read_as_svg` to confirm the board reflects the canonical model.
