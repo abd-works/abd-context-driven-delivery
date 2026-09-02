@@ -1,0 +1,28 @@
+---
+description: Rules for implementing Miro diagram backends in clean_engineering/class_model/miro
+globs: context_tools/clean_engineering/class_model/miro/**
+alwaysApply: true
+---
+
+# Miro Clean Engineering Diagram Backend — Rules
+
+## Architecture contract (never break)
+
+1. **Same base classes, different output.** `MiroCleanEngineeringModel` extends `CleanEngineeringModel`. `MiroModule` extends `Module`. `MiroOoadClass` extends `OoadClass`. Mirror the DrawIO equivalents exactly — same factory chain, same `create_child_*` pattern.
+2. **Do not touch `base_class_model.py`.** That is shared by all backends. Never replicate its node types or graph semantics.
+3. **Do not copy layout logic from `drawio_class_model.py`.** The layout for the Miro class diagram is expressed as Mermaid; positioning coordinates are implicit in Mermaid's auto-layout.
+4. **`UpdateReport` is imported from `context_tools.clean_engineering.class_model.update_report`, never redefined.**
+
+## Output format
+
+5. **Both views render as SVG** in the Miro canvas-composer DSL (`canvas_create_from_svg` format).
+6. **Modules view:** a single `<foreignObject data-type="diagram">` with Mermaid `flowchart LR` body. Each module = one node labelled `**name**<br/>purpose<br/>---<br/>• term…`. Each dependency = one directed edge `A --> B`. Nested paths rendered as parent-child grouping via Mermaid `subgraph`.
+7. **Class view:** a single `<foreignObject data-type="diagram">` with Mermaid `classDiagram` body. Each `OoadClass` = one `class` block with `+type field` properties and `+return method()` operations. Relationships = Mermaid arrows keyed by `kind` (`inheritance`, `composition`, `aggregation`, `association`).
+8. **`parse(svg)` extracts the Mermaid source** from the foreignObject body and reconstructs the model using regex/line-based parsing. Auto-detect view type by the Mermaid header (`flowchart` → modules, `classDiagram` → class).
+9. **No Miro REST API calls inside miro_class_model.py.** Generate SVG strings; the agent posts them via `canvas_create_from_svg`.
+
+## Test rules
+
+10. **Every new view mirrors the matching DrawIO BDD spec** (`drawio_module_model_spec.py`) one-for-one: same `description`/`context`/`it` nesting, same fixture markdown, analogous assertions over SVG/Mermaid instead of XML.
+11. **Modules fidelity and class fidelity each live in their own `description` block** in `miro_class_model_spec.py`. Start a new turn commit after each block's BDD run passes.
+12. **No stubs.** After the Python mamba spec passes, the agent posts the `render()` SVG to an actual Miro board via `canvas_create_from_svg` and verifies the diagram appears correctly by reading with `canvas_read_as_svg`.
