@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg">
+  <foreignObject id="CleanEngineering-model" x="0" y="4000" width="1600" height="900" data-type="diagram" data-title="Heroes Handbook - Modules">flowchart LR
+    checks["checks\nResolve d20 + trait against difficulty.\n---\n• Trait\n• Check\n• CheckResult\n• Modifier"]
+    character["character\nCharacter sheet ownership and ISource.\n---\n• Character\n• Ability\n• Defense\n• ISource"]
+    conflicts_conditions["conflicts/conditions\nModel condition states applied during conflict.\n---\n• Condition\n• ConditionState"]
+    skills["skills\nTyped skill abilities via character.\n---\n• Skill\n• TypedAbility"]
+    advantages["advantages\nAdvantage modifiers implementing ISource.\n---\n• Advantage\n• ISource"]
+    conflicts_actions["conflicts/actions\nAction economy and maneuver source.\n---\n• Action\n• Maneuver\n• IAction"]
+    subgraph powers["powers\nPower effects and shared Effect base.\n---\n• Power\n• Effect"]
+        powers_attack["powers/attack\nAttack powers: damage, affliction, nullify, weaken.\n---\n• Attack\n• Damage\n• Affliction\n• Nullify\n• Weaken"]
+        powers_control["powers/control\nControl power effects.\n---\n• Control"]
+        powers_defense["powers/defense\nDefensive power effects.\n---\n• DefensePower"]
+        powers_movement["powers/movement\nMovement power effects.\n---\n• MovementPower"]
+        powers_general["powers/general\nGeneral power effects.\n---\n• GeneralPower"]
+        powers_extras["powers/extras\nPower extras that modify powers.\n---\n• Extra"]
+        powers_flaws["powers/flaws\nPower flaws that limit powers.\n---\n• Flaw"]
+        powers_sensory["powers/sensory\nSensory power effects after attack/affliction family.\n---\n• SensoryPower"]
+    end
+    conflicts_turns["conflicts/turns\nTurn order and action allotment in conflict.\n---\n• Turn\n• TurnOrder\n• ActionAllotment"]
+    gear_equipment["gear/equipment\nEquipment with typed effects, no effect ids.\n---\n• Equipment"]
+    gear_vehicles["gear/vehicles\nVehicle gear.\n---\n• Vehicle"]
+    gear_headquarters["gear/headquarters\nHeadquarters as the final gear tier.\n---\n• Headquarters"]
+    character --&gt; checks
+    conflicts_conditions --&gt; checks
+    skills --&gt; character
+    skills --&gt; checks
+    advantages --&gt; character
+    conflicts_actions --&gt; character
+    powers --&gt; character
+    powers --&gt; checks
+    powers_attack --&gt; checks
+    conflicts_turns --&gt; conflicts_actions
+    conflicts_turns --&gt; conflicts_conditions
+    powers_control --&gt; checks
+    gear_equipment --&gt; character
+    gear_equipment --&gt; powers
+    gear_vehicles --&gt; character
+    gear_vehicles --&gt; powers
+    gear_headquarters --&gt; character</foreignObject>
+</svg>
