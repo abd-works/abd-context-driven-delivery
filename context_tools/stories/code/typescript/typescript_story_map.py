@@ -25,18 +25,14 @@ def _is_gwt_leaf(path: str) -> bool:
         return False
     if "/examples/" in path.replace("\\", "/"):
         return False
-    if not name.endswith(".ts"):
-        return False
-    return "." in name[:-3]
+    return name.endswith("_story.ts")
 
 
 def _story_slug_from_filename(name: str) -> str | None:
-    if not name.endswith(".ts"):
+    if not name.endswith("_story.ts"):
         return None
-    stem = name[:-3]
-    if "." not in stem:
-        return None
-    return stem.rsplit(".", 1)[0]
+    stem = name[:-9]  # strip "_story.ts"
+    return stem.replace("_", "-")
 
 
 class TypeScriptStoryMap(CodeStoryMap):
@@ -86,6 +82,8 @@ class TypeScriptStoryMap(CodeStoryMap):
             if not story_slug:
                 continue
             epic_slug, sub_slugs = parts[0], parts[1:-1]
+            if sub_slugs and sub_slugs[-1] == story_slug:
+                sub_slugs = sub_slugs[:-1]
             if not sub_slugs:
                 continue
             key = (epic_slug, *sub_slugs, story_slug)

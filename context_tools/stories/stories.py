@@ -167,6 +167,10 @@ class Stories(BaseContextTool):
         target = target_cls()
         parsed_input = _normalize_input(source_format, content)
         canonical = source.parse(parsed_input)
+        if source_format == "markdown" and target_format in _CODE_FORMATS:
+            from context_tools.stories.document.markdown.nodes import MarkdownScenario
+            scenarios = MarkdownScenario.parse_text(content, self._raw_path or "story-scenarios.md")
+            canonical.attach_scenarios(scenarios)
         rendered = target.render(canonical)
         return {"format": target_format, "content": rendered}
 

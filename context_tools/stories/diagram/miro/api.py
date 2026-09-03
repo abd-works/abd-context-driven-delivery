@@ -78,18 +78,19 @@ class MiroApiClient:
             "data": {"shape": shape_type, "content": f"<p>{_html_escape(content)}</p>"},
             "style": {
                 "fillColor": fill,
-                "strokeColor": stroke,
-                "strokeWidth": str(float(stroke_width)),
-                "borderOpacity": "1.0",
                 "fillOpacity": "1.0",
+                "borderColor": stroke,
+                "borderWidth": str(float(stroke_width)),
+                "borderOpacity": "1.0",
+                "borderStyle": "normal",
                 "textAlign": "center",
                 "textAlignVertical": "middle",
-                "fontSize": str(font_size),
+                "fontSize": str(max(12, int(font_size))),
                 "fontFamily": "open_sans",
                 "color": "#1a1a1a",
             },
             "geometry": {"width": w, "height": h},
-            "position": {"x": x, "y": y, "relativeTo": "canvas_center"},
+            "position": {"x": x, "y": y},
         }
         return self._request("POST", f"/boards/{_encode(board_id)}/shapes", payload)
 
@@ -167,7 +168,8 @@ class MiroApiClient:
             os.path.join(".cursor", "miro-token.txt"),
         ]:
             if os.path.isfile(candidate):
-                return open(candidate, encoding="utf-8").read().strip() or None
+                raw = open(candidate, encoding="utf-8-sig").read().strip()
+                return raw or None
         return None
 
 

@@ -39,10 +39,7 @@ def render_story_file(
     *,
     relative_story_test_path: str = "../../story-test",
 ) -> str:
-    fn = f"create{to_pascal(story.name)}Story"
-    helper_iface = f"{to_pascal(story.name)}Helper"
     actor = (story.users[0] if story.users else "").strip()
-    methods, method_for = build_helper_seam(story)
 
     lines: List[str] = [
         "/**",
@@ -52,59 +49,47 @@ def render_story_file(
         lines.append(f" * Actor: {actor}")
     lines.extend(
         [
-            " * Calls helper-interface methods only - no assertions, no tier mechanism here.",
-            f" * Tiers: {_snake(story.name)}_test_helper.{{tier}}.ts implements {helper_iface}.",
             " */",
             "",
             f'import {{ scenario, story }} from "{relative_story_test_path}";',
             "",
-            f"export interface {helper_iface} {{",
+            f"story({_ts_string(story.name)}, () => {{",
         ]
     )
-    for method in methods:
-        lines.append(f"  {method.name}(): void | Promise<void>;")
-    lines.append("}")
-    lines.append("")
-    lines.append(f"export function {fn}(h: {helper_iface}): void {{")
-    lines.append(f"  story({_ts_string(story.name)}, () => {{")
 
     scenarios = list(getattr(story, "scenarios", []) or [])
     if not scenarios:
-        lines.append("    // TODO: add main-flow scenario")
+        lines.append("  // TODO: add main-flow scenario")
     for scenario_ in scenarios:
-        lines.extend(_render_scenario(scenario_, method_for))
+        lines.extend(_render_scenario(scenario_))
 
-    lines.append("  });")
-    lines.append("}")
+    lines.append("});")
     lines.append("")
     return "\n".join(lines)
 
 
-def _render_scenario(scenario, method_for) -> List[str]:
-    lines = [f"    scenario({_ts_string(scenario.name)}, ({{ given, when, then }}) => {{"]
+def _render_scenario(scenario) -> List[str]:
+    lines = [f"  scenario({_ts_string(scenario.name)}, ({{ given, when, then }}) => {{"]
     for clause in scenario.given:
-        method = method_for("given", clause.text)
         lines.append(
-            f"      given({_ts_string(method.display_text)}, () => h.{method.name}());"
+            f"    given({_ts_string(clause.text)}, () => {{\n      // TODO: implement step\n    }});"
         )
     for interaction in scenario.interactions:
         for clause in interaction.when:
-            method = method_for("when", clause.text)
             lines.append(
-                f"      when({_ts_string(method.display_text)}, () => h.{method.name}());"
+                f"    when({_ts_string(clause.text)}, () => {{\n      // TODO: implement step\n    }});"
             )
         then_lines: List[str] = []
         for i, clause in enumerate(interaction.then):
-            method = method_for("then", clause.text)
             verb = "then" if i == 0 else ".and"
-            indent = "      " if i == 0 else "        "
+            indent = "    " if i == 0 else "      "
             then_lines.append(
-                f"{indent}{verb}({_ts_string(method.display_text)}, () => h.{method.name}())"
+                f"{indent}{verb}({_ts_string(clause.text)}, () => {{\n{indent}  // TODO: implement step\n{indent}}})"
             )
         if then_lines:
             then_lines[-1] += ";"
             lines.extend(then_lines)
-    lines.append("    });")
+    lines.append("  });")
     lines.append("")
     return lines
 

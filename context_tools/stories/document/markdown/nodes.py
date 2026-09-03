@@ -175,8 +175,13 @@ class MarkdownScenario(Scenario):
     def parse_file(cls, path: Path, rel: str) -> List["MarkdownScenario"]:
         """Parse a scenarios markdown file into a list of MarkdownScenario nodes."""
         text = path.read_text(encoding="utf-8")
+        return cls.parse_text(text, rel)
+
+    @classmethod
+    def parse_text(cls, text: str, rel: str) -> List["MarkdownScenario"]:
+        """Parse a scenarios markdown string into a list of MarkdownScenario nodes."""
         lines = text.splitlines()
-        story_name = cls._infer_story_name(path, lines)
+        story_name = cls._infer_story_name(Path(rel), lines)
 
         background: List[Clause] = []
         scenarios: List[MarkdownScenario] = []
