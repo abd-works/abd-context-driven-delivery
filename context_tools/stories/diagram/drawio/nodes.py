@@ -260,7 +260,6 @@ class DrawIOStoryMap(StoryMap):
         story_map = DrawIOStoryMap()
         current_epic: DrawIOEpic | None = None
         current_sub_epic_stack: List[DrawIOSubEpic] = []
-        current_actor = ""
 
         for cell in cells:
             style = cell.attrib.get("style", "")
@@ -269,7 +268,6 @@ class DrawIOStoryMap(StoryMap):
                 current_epic = DrawIOEpic(value.strip(), len(story_map.epics) + 1)
                 story_map.epics.append(current_epic)
                 current_sub_epic_stack = []
-                current_actor = ""
             elif style.startswith("subepic") and current_epic is not None:
                 depth = int(style.split(":", 1)[1].split(";", 1)[0]) if ":" in style else 0
                 while len(current_sub_epic_stack) > depth:
@@ -282,14 +280,9 @@ class DrawIOStoryMap(StoryMap):
                 sub_epic = DrawIOSubEpic(value, len(parent_children) + 1)
                 parent_children.append(sub_epic)
                 current_sub_epic_stack.append(sub_epic)
-                current_actor = ""
-            elif style.startswith("actor") and current_sub_epic_stack:
-                current_actor = value.strip()
             elif style.startswith("story") and current_sub_epic_stack:
                 parent = current_sub_epic_stack[-1]
                 story = DrawIOStory(value, len(parent.stories) + 1, StoryType.USER)
-                if current_actor:
-                    story.users = [current_actor]
                 parent.stories.append(story)
             elif style.startswith("text") and current_epic is not None and not current_sub_epic_stack:
                 estimate = _parse_estimate_value(value)
@@ -523,9 +516,14 @@ class DrawIOStoryMap(StoryMap):
         # Own stories first (left columns) so parse stack attaches them to this
         # sub-epic before nested children push the stack deeper.
         current_actor: str = ""
+        seen_story_slugs: Dict[str, int] = {}
         for i, story in enumerate(sub_epic.stories):
             story_x = sub_x + SUBEPIC_TIGHTEN + i * STORY_PITCH_X
             actor = story.users[0] if story.users else ""
+            base_slug = _slugify(story.name)
+            count = seen_story_slugs.get(base_slug, 0)
+            seen_story_slugs[base_slug] = count + 1
+            story_slug = base_slug if count == 0 else f"{base_slug}-{count + 1}"
             # Actor labels when there is room above the story row.
             if (
                 detail_y >= row_y + SUBEPIC_HEIGHT + ACTOR_LABEL_HEIGHT + ACTOR_LABEL_GAP
@@ -535,14 +533,14 @@ class DrawIOStoryMap(StoryMap):
                 actor_y = detail_y - ACTOR_LABEL_HEIGHT - ACTOR_LABEL_GAP
                 self._add_cell(
                     graph_root,
-                    f"{sub_slug}/{_slugify(story.name)}/actor",
+                    f"{sub_slug}/{story_slug}/actor",
                     actor,
                     story_x, actor_y, STORY_SIZE, ACTOR_LABEL_HEIGHT,
                     style=_STYLE_ACTOR,
                 )
                 current_actor = actor
             self._add_cell(
-                graph_root, f"{sub_slug}/{_slugify(story.name)}", story.name,
+                graph_root, f"{sub_slug}/{story_slug}", story.name,
                 story_x, detail_y, STORY_SIZE, STORY_SIZE,
                 style=_STYLE_STORY_TMPL.format(role=story.story_type.value),
             )
