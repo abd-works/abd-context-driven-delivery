@@ -1,0 +1,13 @@
+The command finished successfully (exit code 0).
+
+It printed the manifest for `MernDomainDriven` (`type: merndomaindriven`) with capabilities `tool` and `agent`. The signature includes workspace/session tools (`create_session`, `ensure_session`, `close_session`, `scan`, `log_fix`, `verify_regression`, etc.) and actions such as `document`, `generate`, `grill`, `sketch`, `iterate`, `satisfy`, `validate`, `repair`, `improve`, and `partition`, plus the sub-agent `run_regression`.
+
+Note: `PYTHONIOENCODING=utf-8` was set before the run per repo rules; the manifest path you gave was unchanged.The command finished successfully (exit code 0).
+
+It printed the manifest for `MernDomainDriven` (`type: merndomaindriven`) with capabilities `tool` and `agent`. The signature includes workspace/session tools (`create_session`, `ensure_session`, `close_session`, `scan`, `log_fix`, `verify_regression`, etc.) and actions such as `document`, `generate`, `grill`, `sketch`, `iterate`, `satisfy`, `validate`, `repair`, `improve`, and `partition`, plus the sub-agent `run_regression`.
+
+Note: `PYTHONIOENCODING=utf-8` was set before the run per repo rules; the manifest path you gave was unchanged.The command finished successfully (exit code 0).
+
+It printed the manifest for `MernDomainDriven` (`type: merndomaindriven`) with capabilities `tool` and `agent`. The signature includes workspace/session tools (`create_session`, `ensure_session`, `close_session`, `scan`, `log_fix`, `verify_regression`, etc.) and actions such as `document`, `generate`, `grill`, `sketch`, `iterate`, `satisfy`, `validate`, `repair`, `improve`, and `partition`, plus the sub-agent `run_regression`.
+
+Note: `PYTHONIOENCODING=utf-8` was set before the run per repo rules; the manifest path you gave was unchanged.

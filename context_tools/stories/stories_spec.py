@@ -12,7 +12,7 @@ for _cat in ("context_tools", "primitives", "utilities"):
         sys.path.insert(0, _p)
 
 from expects import be_a, be_true, equal, expect, raise_error
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
 from context_tools.stories.stories import Stories
 from primitives.actions.action import _ActionExpander
@@ -156,6 +156,61 @@ with description("Stories"):
             for path, text in self.result["content"].items():
                 expect(isinstance(path, str)).to(be_true)
                 expect(isinstance(text, str)).to(be_true)
+
+    with context("whose transform tool converts markdown to typescript"):
+        with before.each:
+            import tempfile
+
+            self.tempdir = tempfile.TemporaryDirectory()
+            self.stories = Stories(
+                fidelity="scenarios",
+                workspace=self.tempdir.name,
+            )
+            self.result = self.stories.transform(
+                source_format="markdown",
+                target_format="typescript",
+                content=_SAMPLE_MARKDOWN,
+            )
+
+        with after.each:
+            self.tempdir.cleanup()
+
+        with it("should default code output under tests/"):
+            paths = self.result["content"]
+            expect(any(p.startswith("tests/") for p in paths)).to(be_true)
+            expect("tests/story-test.ts" in paths).to(be_true)
+
+    with context("whose transform tool colocates typescript beside story-scenarios.md"):
+        with before.each:
+            import tempfile
+
+            self.tempdir = tempfile.TemporaryDirectory()
+            root = Path(self.tempdir.name)
+            deploy = root / "stories" / "create-customer"
+            deploy.mkdir(parents=True)
+            (deploy / "story-scenarios.md").write_text(_SAMPLE_MARKDOWN, encoding="utf-8")
+            self.stories = Stories(
+                fidelity="scenarios",
+                workspace=str(root),
+                path=str(deploy / "story-scenarios.md"),
+            )
+            self.result = self.stories.transform(
+                source_format="markdown",
+                target_format="typescript",
+                content=_SAMPLE_MARKDOWN,
+            )
+
+        with after.each:
+            self.tempdir.cleanup()
+
+        with it("should emit files under the story-scenarios folder instead of tests/"):
+            paths = self.result["content"]
+            expect(any(p.startswith("stories/create-customer/") for p in paths)).to(
+                be_true
+            )
+            expect("stories/story-test.ts" in paths).to(be_true)
+            expect("stories/create-customer/story-test.ts" in paths).to(equal(False))
+            expect(any(p.startswith("tests/") for p in paths)).to(equal(False))
 
     with context("whose contexts slot is expanded at story_map"):
         with before.each:

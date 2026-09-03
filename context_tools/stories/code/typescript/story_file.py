@@ -34,10 +34,23 @@ from context_tools.stories.code.helper_interface import build_helper_seam
 from context_tools.stories.story_model.nodes import Story
 
 
+def story_test_import_path(deploy_root: str) -> str:
+    """Stable workspace-root import for ``story-test`` (depth-independent)."""
+    root = deploy_root.strip("/")
+    if root == "stories" or root.startswith("stories/"):
+        return "stories/story-test"
+    return f"{root}/story-test" if root else "story-test"
+
+
+def story_test_file_path(deploy_root: str) -> str:
+    """Filesystem path for the shared ``story-test.ts`` seed."""
+    return f"{story_test_import_path(deploy_root)}.ts"
+
+
 def render_story_file(
     story: Story,
     *,
-    relative_story_test_path: str = "../../story-test",
+    story_test_import_path: str = "tests/story-test",
 ) -> str:
     actor = (story.users[0] if story.users else "").strip()
 
@@ -51,7 +64,7 @@ def render_story_file(
         [
             " */",
             "",
-            f'import {{ scenario, story }} from "{relative_story_test_path}";',
+            f'import {{ scenario, story }} from "{story_test_import_path}";',
             "",
             f"story({_ts_string(story.name)}, () => {{",
         ]

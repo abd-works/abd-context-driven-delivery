@@ -9,6 +9,8 @@ from context_tools.stories.code.code_story_map import to_kebab, to_snake, to_pas
 from context_tools.stories.code.typescript.story_file import (
     render_story_file,
     render_test_helper_file,
+    story_test_file_path,
+    story_test_import_path,
 )
 from context_tools.stories.story_model.nodes import Epic, Story, SubEpic
 from context_tools.stories.story_model.story_map import StoryMap
@@ -40,24 +42,31 @@ _EXAMPLES = (
 )
 
 
+def _path_join(*parts: str) -> str:
+    return "/".join(p.strip("/") for p in parts if p and p.strip("/"))
+
+
 def render_ts_tree(
     story_map: StoryMap,
     *,
-    tests_root: str = "tests",
+    tests_root: str | None = None,
     include_shared: bool = True,
     tiers: Sequence[str] | None = None,
 ) -> Dict[str, str]:
     tree: Dict[str, str] = {}
-    root = tests_root.strip("/") or "tests"
+    root = (tests_root if tests_root is not None else "tests").strip("/")
+    deploy_root = root
     seam_tiers = tuple(tiers) if tiers else DEFAULT_TIERS
     if include_shared:
         test_path = TEMPLATES_DIR / "story-test.ts"
-        if test_path.exists():
-            tree[f"{root}/story-test.ts"] = test_path.read_text(encoding="utf-8")
-        else:
-            tree[f"{root}/story-test.ts"] = _default_story_test()
+        story_test = (
+            test_path.read_text(encoding="utf-8")
+            if test_path.exists()
+            else _default_story_test()
+        )
+        tree[story_test_file_path(deploy_root)] = story_test
     for epic in getattr(story_map, "epics", []) or []:
-        _render_epic(epic, root=root, tree=tree, tiers=seam_tiers)
+        _render_epic(epic, deploy_root=deploy_root, tree=tree, tiers=seam_tiers)
     return tree
 
 
@@ -131,54 +140,53 @@ def _ensure_fixtures(node: Epic | SubEpic, folder: str, tree: Dict[str, str]) ->
     agg_kebab = to_kebab(agg_noun)
     examples_content = _render_examples_file(node.name, agg_noun)
 
-    tree.setdefault(f"{folder}/givens.ts", _GIVENS)
-    tree.setdefault(f"{folder}/examples/{agg_kebab}.examples.ts", examples_content)
+    tree.setdefault(_path_join(folder, "givens.ts"), _GIVENS)
+    tree.setdefault(_path_join(folder, "examples", f"{agg_kebab}.examples.ts"), examples_content)
 
 
 def _render_epic(
-    epic: Epic, *, root: str, tree: Dict[str, str], tiers: Sequence[str]
+    epic: Epic, *, deploy_root: str, tree: Dict[str, str], tiers: Sequence[str]
 ) -> None:
-    epic_folder = f"{root}/{to_kebab(epic.name)}"
+    epic_folder = _path_join(deploy_root, to_kebab(epic.name))
     _ensure_fixtures(epic, epic_folder, tree)
     for sub in getattr(epic, "sub_epics", []) or []:
-        _render_sub_epic(sub, parent=epic_folder, depth=2, tree=tree, tiers=tiers)
+        _render_sub_epic(sub, parent=epic_folder, deploy_root=deploy_root, tree=tree, tiers=tiers)
 
 
 def _render_sub_epic(
     sub: SubEpic,
     *,
     parent: str,
-    depth: int,
+    deploy_root: str,
     tree: Dict[str, str],
     tiers: Sequence[str],
 ) -> None:
-    folder = f"{parent}/{to_kebab(sub.name)}"
+    folder = _path_join(parent, to_kebab(sub.name))
     _ensure_fixtures(sub, folder, tree)
     for nested in getattr(sub, "sub_epics", []) or []:
         _render_sub_epic(
-            nested, parent=folder, depth=depth + 1, tree=tree, tiers=tiers
+            nested, parent=folder, deploy_root=deploy_root, tree=tree, tiers=tiers
         )
     for story in getattr(sub, "stories", []) or []:
         if not story.scenarios:
             continue
-        _render_story(story, folder=folder, depth=depth, tree=tree, tiers=tiers)
+        _render_story(story, folder=folder, deploy_root=deploy_root, tree=tree, tiers=tiers)
 
 
 def _render_story(
     story: Story,
     *,
     folder: str,
-    depth: int,
+    deploy_root: str,
     tree: Dict[str, str],
     tiers: Sequence[str],
 ) -> None:
     slug = to_kebab(story.name)
     story_snake = to_snake(story.name)
-    story_folder = f"{folder}/{slug}"
-    relative_test = "../" * (depth + 1) + "story-test"
-    gwt = render_story_file(story, relative_story_test_path=relative_test)
+    story_folder = _path_join(folder, slug)
+    import_path = story_test_import_path(deploy_root)
+    gwt = render_story_file(story, story_test_import_path=import_path)
     tree[f"{story_folder}/{story_snake}_story.ts"] = gwt
-
 
 def _default_story_test() -> str:
     return (

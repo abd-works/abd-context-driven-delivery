@@ -71,6 +71,38 @@ with description("a TypeScript runnable-story Story Map") as self:
         with it("should include story-test shared helper"):
             expect("tests/story-test.ts" in self.tree).to(be_true)
 
+        with it("should default output under tests/"):
+            expect(self.ts.tests_root).to(equal("tests"))
+            expect(any(p.startswith("tests/") for p in self.tree)).to(be_true)
+
+        with it("should import story-test from the workspace deploy root"):
+            leaf = next(p for p in self.leaf_paths)
+            expect(self.tree[leaf]).to(contain('from "tests/story-test"'))
+
+    with context("that overrides the deploy root"):
+        with before.each:
+            self.custom_root = "stories/create-customer"
+            self.ts = TypeScriptStoryMap(tests_root=self.custom_root)
+            self.tree = self.ts.render(_story_map_with_stories())
+
+        with it("should place story-test at the stories workspace root"):
+            expect("stories/story-test.ts" in self.tree).to(be_true)
+
+        with it("should emit story files under the custom root"):
+            expect(
+                any(
+                    p.startswith(f"{self.custom_root}/")
+                    and p.endswith("_story.ts")
+                    for p in self.tree
+                )
+            ).to(be_true)
+
+        with it("should import story-test from the stories workspace root"):
+            leaf = next(
+                p for p in self.tree if p.endswith("redeem_a_voucher_story.ts")
+            )
+            expect(self.tree[leaf]).to(contain('from "stories/story-test"'))
+
     with context("a scenario with two Then outcomes"):
         with it("should chain the second outcome with .and()"):
             story = Story("Select Plan", 1, StoryType.USER)

@@ -2,7 +2,7 @@
  * Story: {Story Verb-Noun}
  */
 
-import { scenario, story } from "../../../story-test";
+import { scenario, story } from "stories/story-test";
 
 story("{Story Verb-Noun}", () => {
   scenario("{main-flow outcome}", ({ given, when, then }) => {

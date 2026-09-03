@@ -66,6 +66,19 @@ def _normalize_input(format_name: str, content: Any) -> Any:
     return content
 
 
+def _root_glob_to_prefix(root_glob: str) -> str:
+    text = (root_glob or "./").strip().replace("\\", "/")
+    if text.endswith("/*"):
+        text = text[:-2]
+    if text.endswith("/"):
+        text = text[:-1]
+    if text in ("", ".", "./"):
+        return ""
+    if text.startswith("./"):
+        text = text[2:]
+    return text.strip("/")
+
+
 class Stories(BaseContextTool):
     """# Instructions"""
 
@@ -136,6 +149,54 @@ class Stories(BaseContextTool):
         instance.mode = "tool"
         return instance
 
+    def _resolve_tests_root(self) -> str | None:
+        """Workspace-relative prefix for code renders. ``None`` → default ``tests``."""
+        from utilities.workspace.context_index import ContextIndex
+
+        workspace_path = Path(self.workspace.path).resolve()
+        key = getattr(type(self), "context_index_key", "") or ""
+        indexed = ContextIndex.lookup_root(workspace_path, key) if key else None
+        if indexed:
+            return _root_glob_to_prefix(indexed)
+
+        deploy = self._deploy_folder_prefix()
+        if deploy is not None:
+            return deploy
+        return None
+
+    def _deploy_folder_prefix(self) -> str | None:
+        """Infer colocated output root from ``path`` when it targets story artifacts."""
+        if not self._raw_path:
+            return None
+        workspace = Path(self.workspace.path).resolve()
+        raw = Path(self._raw_path)
+        if not raw.is_absolute():
+            raw = (workspace / raw).resolve()
+
+        deploy: Path | None = None
+        if raw.is_file() and raw.name in ("story-scenarios.md", "story-map.md"):
+            deploy = raw.parent
+        elif raw.is_dir():
+            if (raw / "story-scenarios.md").is_file():
+                deploy = raw
+            elif (raw / "story-map.md").is_file():
+                deploy = raw
+
+        if deploy is None:
+            return None
+        try:
+            rel = deploy.resolve().relative_to(workspace)
+        except ValueError:
+            return None
+        rel_str = rel.as_posix()
+        return "" if rel_str in (".", "") else rel_str
+
+    def _make_target(self, target_format: str):
+        target_cls = _load_channel_class(target_format)
+        if target_format in _CODE_FORMATS:
+            return target_cls(tests_root=self._resolve_tests_root())
+        return target_cls()
+
     @instruction
     def contexts(self) -> Instruction: ...
 
@@ -144,7 +205,7 @@ class Stories(BaseContextTool):
         """Provide guidance for creating story maps, scenarios, and acceptance tests.
         At scaffold fidelity: write epic, sub-epic, and story names only.
         At story_map fidelity: write the story map and thin-slice only.
-        At scenarios fidelity: write main-flow scenarios (single or multiple per story) with optional variations; fixtures live in examples/ and givens.ts at the lowest shared epic/sub-epic/story folder.
+        At scenarios fidelity: write main-flow scenarios (single or multiple per story) with optional variations; fixtures live in examples/ and givens.ts at the lowest shared epic/sub-epic/story folder beside story-scenarios.md (use tests/ only when that is the chosen output root).
         At acceptance_tests fidelity: write tests/{epic}/{sub-epic}/{story}.{tier}.ts (one GWT file per story per seam, no story folder). When those files are written, call guidance on the CE companion and pass that companion to this action as a separate tools run so wrap classes under domain/ stay in sync.
         If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails).
         When this Stories work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline."""
@@ -162,9 +223,8 @@ class Stories(BaseContextTool):
         All formatters are peer channels. Sideways format move at the same fidelity.
         At acceptance_tests fidelity: after transforming story artifacts, call ce().transform() or call guidance on the CE companion and pass that companion to this action as a separate tools run."""
         source_cls = _load_channel_class(source_format)
-        target_cls = _load_channel_class(target_format)
         source = source_cls()
-        target = target_cls()
+        target = self._make_target(target_format)
         parsed_input = _normalize_input(source_format, content)
         canonical = source.parse(parsed_input)
         if source_format == "markdown" and target_format in _CODE_FORMATS:

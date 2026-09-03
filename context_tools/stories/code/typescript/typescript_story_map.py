@@ -5,7 +5,12 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional
 
-from context_tools.stories.code.code_story_map import CodeStoryMap, CodeStoryMapError, to_kebab
+from context_tools.stories.code.code_story_map import (
+    CodeStoryMap,
+    CodeStoryMapError,
+    strip_tests_root_prefix,
+    to_kebab,
+)
 from context_tools.stories.code.typescript.nodes import (
     TypeScriptEpic,
     TypeScriptStoryMap as _TypeScriptStoryMap,
@@ -38,6 +43,9 @@ def _story_slug_from_filename(name: str) -> str | None:
 class TypeScriptStoryMap(CodeStoryMap):
     LEAF_EXTENSION = ".ts"
     LANGUAGE_LINE_COMMENT = "//"
+
+    def __init__(self, tests_root: str | None = None) -> None:
+        super().__init__(tests_root=tests_root)
 
     def _make_story_map(self) -> _TypeScriptStoryMap:
         return _TypeScriptStoryMap()
@@ -73,8 +81,10 @@ class TypeScriptStoryMap(CodeStoryMap):
             if not _is_gwt_leaf(path):
                 continue
             parts = path.strip("/").replace("\\", "/").split("/")
-            if parts and parts[0] == self.tests_root:
-                parts = parts[1:]
+            stripped = strip_tests_root_prefix(parts, self.tests_root)
+            if stripped is None:
+                continue
+            parts = stripped
             if len(parts) < 3:
                 continue
             filename = parts[-1]
