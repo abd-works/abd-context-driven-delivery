@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import re
 import xml.etree.ElementTree as ET
+from html import escape
 from typing import Dict, List, Optional, Tuple
 
 from context_tools.clean_engineering.class_model.base_class_model import (
@@ -75,6 +76,39 @@ def _is_mermaid_modules(source: str) -> bool:
     return stripped.startswith("flowchart") or stripped.startswith("graph")
 
 
+def _plain_class_name(name: str) -> str:
+    """Return the Mermaid identifier portion of a decorated OOAD class name."""
+    plain = re.sub(r"\*+", "", name)
+    plain = re.sub(r"<<[^>]+>>", "", plain)
+    plain = re.sub(r"\s+extends\s+.+$", "", plain, flags=re.IGNORECASE)
+    return plain.strip()
+
+
+def _class_id(name: str) -> str:
+    """Return a stable Mermaid-safe identifier for a class name."""
+    identifier = re.sub(r"\W+", "_", _plain_class_name(name)).strip("_")
+    if identifier and identifier[0].isdigit():
+        identifier = f"class_{identifier}"
+    return identifier or "UnnamedClass"
+
+
+def _class_stereotypes(name: str) -> List[str]:
+    return [stereotype.strip() for stereotype in re.findall(r"<<([^>]+)>>", name)]
+
+
+def _extends_base_name(name: str) -> Optional[str]:
+    undecorated = re.sub(r"\*+|<<[^>]+>>", "", name)
+    match = re.search(r"\bextends\s+([A-Za-z_]\w*)", undecorated, re.IGNORECASE)
+    return match.group(1) if match else None
+
+
+def _module_label(name: str) -> str:
+    for separator in (" — ", " – ", " - ", "—", "–"):
+        if separator in name:
+            return name.split(separator, 1)[0].strip()
+    return name.strip()
+
+
 # ---------------------------------------------------------------------------
 # Channel node types (same factory-chain pattern as DrawIO)
 # ---------------------------------------------------------------------------
@@ -118,12 +152,21 @@ class MiroCleanEngineeringModel(CleanEngineeringModel):
         Extracts the Mermaid source from the foreignObject body and delegates
         to _parse_modules or _parse_classes based on the diagram header.
         """
-        mermaid_src = cls._extract_mermaid(text)
-        if mermaid_src is None:
+        diagrams = cls._extract_diagrams(text)
+        if not diagrams:
             return cls(name="", sequential_order=1)
+        mermaid_src = diagrams[0][1]
         if _is_mermaid_modules(mermaid_src):
             return cls._parse_modules(mermaid_src)
-        return cls._parse_classes(mermaid_src)
+
+        model = cls(name=diagrams[0][0].get("data-system", ""), sequential_order=1)
+        for element, source in diagrams:
+            parsed = cls._parse_classes(
+                source,
+                module_name=element.get("data-module", ""),
+            )
+            model.modules.extend(parsed.modules)
+        return model
 
     @classmethod
     def sync(
@@ -314,42 +357,112 @@ class MiroCleanEngineeringModel(CleanEngineeringModel):
 
     @classmethod
     def _render_classes(cls, canonical: CleanEngineeringModel) -> str:
-        """Generate a Mermaid classDiagram for the model."""
-        lines: List[str] = ["classDiagram"]
+        """Generate one Mermaid class diagram widget per canonical module."""
+        modules = [module for module in canonical.modules if module.classes]
+        if not modules:
+            return cls._wrap_diagram(
+                "classDiagram", f"{canonical.name or 'System'} - Class Diagram"
+            )
 
-        all_classes: List[OoadClass] = list(canonical.classes)
-        for m in canonical.modules:
-            for c in m.classes:
-                if c not in all_classes:
-                    all_classes.append(c)
+        all_classes = list(canonical.classes)
+        class_by_id = {_class_id(oclass.name): oclass for oclass in all_classes}
+        module_by_id = {
+            _class_id(oclass.name): module.name
+            for module in modules
+            for oclass in module.classes
+        }
+        relationships = cls._class_relationships(all_classes, class_by_id)
 
-        for oclass in all_classes:
-            lines.append(f"    class {oclass.name} {{")
-            for prop in oclass.properties:
-                type_hint = prop.type_hint or "object"
-                lines.append(f"        +{type_hint} {prop.name}")
-            for op in oclass.operations:
-                ret = op.return_type or "void"
-                lines.append(f"        +{op.name}() {ret}")
-            lines.append("    }")
+        diagrams: List[Tuple[str, str]] = []
+        for module in modules:
+            local_ids = [_class_id(oclass.name) for oclass in module.classes]
+            local_set = set(local_ids)
+            import_ids: set[str] = set()
+            for source_id, target_id, kind in relationships:
+                if source_id in local_set and target_id not in local_set:
+                    import_ids.add(target_id)
+                elif (
+                    kind == "inheritance"
+                    and target_id in local_set
+                    and source_id not in local_set
+                ):
+                    import_ids.add(source_id)
 
-        for oclass in all_classes:
-            for rel in oclass.relationships:
-                arrow = cls._REL_ARROWS.get(rel.kind or "association", "-->")
-                lines.append(
-                    f"    {oclass.name} {arrow} {rel.target} : {rel.kind or 'association'}"
-                )
+            visible_ids = local_set | import_ids
+            lines: List[str] = ["classDiagram"]
+            for class_id in local_ids + sorted(import_ids):
+                oclass = class_by_id[class_id]
+                imported = class_id in import_ids
+                marker = "imported" if imported else "local"
+                lines.append(f"    %% {marker}: {class_id}")
+                lines.append(f"    class {class_id} {{")
+                if imported:
+                    source_module = _module_label(module_by_id.get(class_id, "other"))
+                    lines.append(f"        <<from {source_module}>>")
+                for stereotype in _class_stereotypes(oclass.name):
+                    lines.append(f"        <<{stereotype}>>")
+                properties = oclass.properties[:4] if imported else oclass.properties
+                for prop in properties:
+                    lines.append(f"        +{prop.type_hint or 'object'} {prop.name}")
+                if not imported:
+                    for operation in oclass.operations:
+                        parameters = ", ".join(operation.parameters)
+                        lines.append(
+                            f"        +{operation.name}({parameters}) "
+                            f"{operation.return_type or 'void'}"
+                        )
+                lines.append("    }")
 
-        mermaid = "\n".join(lines)
-        system_name = canonical.name or "System"
-        title = f"{system_name} - Class Diagram"
-        return cls._wrap_diagram(mermaid, title)
+            for source_id, target_id, kind in relationships:
+                if source_id not in visible_ids or target_id not in visible_ids:
+                    continue
+                arrow = cls._REL_ARROWS.get(kind, "-->")
+                if kind == "inheritance":
+                    lines.append(f"    {target_id} {arrow} {source_id}")
+                else:
+                    lines.append(f"    {source_id} {arrow} {target_id} : {kind}")
+
+            diagrams.append((module.name, "\n".join(lines)))
+
+        return cls._wrap_class_diagrams(diagrams, canonical.name or "System")
 
     @classmethod
-    def _parse_classes(cls, mermaid_src: str) -> "MiroCleanEngineeringModel":
+    def _class_relationships(
+        cls,
+        classes: List[OoadClass],
+        class_by_id: Dict[str, OoadClass],
+    ) -> List[Tuple[str, str, str]]:
+        relationships: List[Tuple[str, str, str]] = []
+        aliases = {
+            alias: class_id
+            for class_id, oclass in class_by_id.items()
+            for alias in (oclass.name, _plain_class_name(oclass.name))
+        }
+        for oclass in classes:
+            source_id = _class_id(oclass.name)
+            for relationship in oclass.relationships:
+                target_id = aliases.get(relationship.target)
+                if target_id is None:
+                    continue
+                item = (source_id, target_id, relationship.kind or "association")
+                if item not in relationships:
+                    relationships.append(item)
+            base_name = _extends_base_name(oclass.name)
+            target_id = aliases.get(base_name or "")
+            item = (source_id, target_id or "", "inheritance")
+            if target_id and item not in relationships:
+                relationships.append(item)
+        return relationships
+
+    @classmethod
+    def _parse_classes(
+        cls,
+        mermaid_src: str,
+        module_name: str = "",
+    ) -> "MiroCleanEngineeringModel":
         """Parse a Mermaid classDiagram back into a class model."""
         model = cls(name="", sequential_order=1)
-        module = MiroModule(name="", sequential_order=1)
+        module = MiroModule(name=module_name, sequential_order=1)
         model.modules.append(module)
         order = 1
         id_to_class: Dict[str, MiroOoadClass] = {}
@@ -358,11 +471,16 @@ class MiroCleanEngineeringModel(CleanEngineeringModel):
         class_block_re = re.compile(
             r"class\s+(\w+)\s*\{([^}]*)\}", re.MULTILINE | re.DOTALL
         )
-        prop_re = re.compile(r"\+(\S+)\s+(\w+)\s*$")
-        op_re = re.compile(r"\+(\w+)\(\)\s+(\S+)\s*$")
+        prop_re = re.compile(r"\+(.+?)\s+(\w+)\s*$")
+        op_re = re.compile(r"\+(\w+)\((.*)\)\s+(.+?)\s*$")
+        local_names = set(
+            re.findall(r"^\s*%%\s+local:\s+(\w+)\s*$", mermaid_src, re.MULTILINE)
+        )
 
         for m in class_block_re.finditer(mermaid_src):
             name = m.group(1)
+            if local_names and name not in local_names:
+                continue
             body = m.group(2)
             props: List[Property] = []
             ops: List[Operation] = []
@@ -372,7 +490,18 @@ class MiroCleanEngineeringModel(CleanEngineeringModel):
                     continue
                 op_m = op_re.match(line)
                 if op_m:
-                    ops.append(Operation(name=op_m.group(1), return_type=op_m.group(2)))
+                    parameters = [
+                        parameter.strip()
+                        for parameter in op_m.group(2).split(",")
+                        if parameter.strip()
+                    ]
+                    ops.append(
+                        Operation(
+                            name=op_m.group(1),
+                            parameters=parameters,
+                            return_type=op_m.group(3),
+                        )
+                    )
                     continue
                 prop_m = prop_re.match(line)
                 if prop_m:
@@ -391,6 +520,8 @@ class MiroCleanEngineeringModel(CleanEngineeringModel):
         )
         for m in rel_re.finditer(mermaid_src):
             src_name, arrow, tgt_name = m.group(1), m.group(2), m.group(3)
+            if arrow == "<|--":
+                src_name, tgt_name = tgt_name, src_name
             src_cls = id_to_class.get(src_name)
             if src_cls is None:
                 continue
@@ -428,17 +559,55 @@ class MiroCleanEngineeringModel(CleanEngineeringModel):
         )
 
     @classmethod
+    def _wrap_class_diagrams(
+        cls,
+        diagrams: List[Tuple[str, str]],
+        system_name: str,
+    ) -> str:
+        elements: List[str] = []
+        for index, (module_name, mermaid) in enumerate(diagrams):
+            escaped_mermaid = escape(mermaid, quote=False)
+            escaped_module = escape(module_name, quote=True)
+            escaped_system = escape(system_name, quote=True)
+            # Miro reports the requested foreignObject bounds, not the UML content's
+            # rendered bounds. Leave enough horizontal room for that overflow while
+            # keeping related module diagrams together in one readable row.
+            x = 1000 + (index * 3500)
+            y = 2000
+            element_id = f"CleanEngineering-{_module_id(module_name)}"
+            title = escape(f"{module_name} - Class Diagram", quote=True)
+            elements.append(
+                f'  <foreignObject id="{element_id}" x="{x}" y="{y}" '
+                f'width="1600" height="900" data-type="diagram" '
+                f'data-title="{title}" data-module="{escaped_module}" '
+                f'data-system="{escaped_system}">{escaped_mermaid}</foreignObject>'
+            )
+        return (
+            "<?xml version='1.0' encoding='utf-8'?>\n"
+            '<svg xmlns="http://www.w3.org/2000/svg">\n'
+            + "\n".join(elements)
+            + "\n</svg>"
+        )
+
+    @classmethod
     def _extract_mermaid(cls, text: str) -> Optional[str]:
         """Extract Mermaid source from a canvas-composer SVG string."""
+        diagrams = cls._extract_diagrams(text)
+        return diagrams[0][1] if diagrams else None
+
+    @classmethod
+    def _extract_diagrams(cls, text: str) -> List[Tuple[ET.Element, str]]:
+        """Extract every Mermaid diagram widget from a canvas-composer SVG."""
         try:
             root_el = ET.fromstring(
                 text.split("\n", 1)[1] if text.startswith("<?") else text
             )
         except ET.ParseError:
-            return None
+            return []
 
+        diagrams: List[Tuple[ET.Element, str]] = []
         for el in root_el.iter():
             tag = el.tag.split("}")[-1] if "}" in el.tag else el.tag
             if tag == "foreignObject" and el.get("data-type") == "diagram":
-                return (el.text or "").strip()
-        return None
+                diagrams.append((el, (el.text or "").strip()))
+        return diagrams

@@ -22,7 +22,6 @@ from context_tools.stories.story_model.scenario import Clause, Phase, Scenario
 from context_tools.stories.story_model.story_map import StoryMap
 from context_tools.stories.story_model.thin_slice import Increment
 from context_tools.stories.story_model.update_report import UpdateReport
-from context_tools.stories.diagram.diagram_story_map import BASE_WIDTH, ROW_HEIGHT, DiagramStoryMap
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +51,14 @@ EPIC_HEIGHT = 60
 EPIC_CONTENT_INSET = 10
 LEFT_MARGIN_X = 20
 EPIC_ROW_Y = 120
+SUBEPIC_ROW_Y = 195
+SUBEPIC_HEIGHT = 60
+SUBEPIC_DEPTH_GAP = 8
+STORY_ROW_Y = 345
+STORY_SIZE = 50
+ACTOR_LABEL_HEIGHT = STORY_SIZE
+ACTOR_LABEL_GAP = 4
+DETAIL_BELOW_SUBEPIC_PAD = 16
 
 SCENARIO_WIDTH = 400
 SCENARIO_HEIGHT = 40
@@ -78,6 +85,34 @@ def _subepic_style(depth: int) -> str:
     """Slightly darker fill for each nesting depth."""
     darken = min(depth * 12, 40)
     return f"#{max(0xd5 - darken, 0xa0):02x}{max(0xe8 - darken, 0xc0):02x}{max(0xd4 - darken, 0xa0):02x}"
+
+
+def _subepic_y_for_depth(depth: int) -> int:
+    return SUBEPIC_ROW_Y + depth * (SUBEPIC_HEIGHT + SUBEPIC_DEPTH_GAP)
+
+
+def _max_sub_epic_depth(story_map: StoryMap) -> int:
+    def depth_of(sub_epic: SubEpic, depth: int) -> int:
+        if not sub_epic.sub_epics:
+            return depth
+        return max(depth_of(child, depth + 1) for child in sub_epic.sub_epics)
+
+    return max(
+        (
+            depth_of(sub_epic, 0)
+            for epic in story_map.epics
+            for sub_epic in epic.sub_epics
+        ),
+        default=0,
+    )
+
+
+def _story_row_y(story_map: StoryMap) -> int:
+    deepest_bottom = _subepic_y_for_depth(_max_sub_epic_depth(story_map)) + SUBEPIC_HEIGHT
+    return max(
+        STORY_ROW_Y,
+        deepest_bottom + ACTOR_LABEL_HEIGHT + ACTOR_LABEL_GAP + DETAIL_BELOW_SUBEPIC_PAD,
+    )
 
 
 # -- Leaf node types -----------------------------------------------------------
@@ -140,21 +175,28 @@ class MiroStoryMap(StoryMap):
         Elements are emitted in depth-first tree order so that parse() can
         reconstruct the hierarchy by processing in document order.
         """
-        layout = DiagramStoryMap(canonical)
         lines: List[str] = []
+        epic_x = LEFT_MARGIN_X
+        story_y = _story_row_y(canonical)
 
-        for epic in canonical.epics:
-            ex = layout.epic_x(epic)
-            ew = layout.epic_width(epic)
-            ey = layout.epic_row_y()
-            eid = f"epic-{_slugify(epic.name)}"
+        for epic_index, epic in enumerate(canonical.epics, start=1):
+            epic_width = self._epic_width(epic)
+            eid = f"epic-{epic_index}-{_slugify(epic.name)}"
             lines.append(
-                f'  <rect id="{eid}" x="{ex}" y="{ey}" '
-                f'width="{ew}" height="{ROW_HEIGHT}" rx="6" '
+                f'  <rect id="{eid}" x="{epic_x}" y="{EPIC_ROW_Y}" '
+                f'width="{epic_width}" height="{EPIC_HEIGHT}" rx="6" '
                 f'fill="{_FILL_EPIC}" stroke="{_STROKE_EPIC}" stroke-width="2" '
                 f'data-content="{_xe(epic.name)}" data-role="epic" data-font-size="11" />'
             )
-            self._collect_sub_epic_lines(epic.sub_epics, layout, lines, depth=0)
+            self._collect_sub_epic_lines(
+                epic.sub_epics,
+                lines,
+                depth=0,
+                parent_id=eid,
+                start_x=epic_x + EPIC_CONTENT_INSET,
+                story_y=story_y,
+            )
+            epic_x += epic_width + EPIC_GAP
 
         body = "\n".join(lines)
         return (
@@ -217,6 +259,9 @@ class MiroStoryMap(StoryMap):
             elif role.startswith("story:") and current_sub_epic_stack:
                 parent = current_sub_epic_stack[-1]
                 story = MiroStory(label, len(parent.stories) + 1, StoryType.USER)
+                actor = el.get("data-actor", "").strip()
+                if actor:
+                    story.users = [actor]
                 parent.stories.append(story)
 
         return story_map
@@ -389,37 +434,70 @@ class MiroStoryMap(StoryMap):
     def _collect_sub_epic_lines(
         self,
         sub_epics: List[SubEpic],
-        layout: DiagramStoryMap,
         lines: List[str],
         depth: int,
+        parent_id: str,
+        start_x: int,
+        story_y: int,
     ) -> None:
-        for sub in sub_epics:
-            sx = layout.sub_epic_x(sub)
-            sy = layout.sub_epic_row_y(depth)
-            sw = layout.sub_epic_width(sub)
-            sh = ROW_HEIGHT
-            sid = f"sub-{_slugify(sub.name)}-d{depth}"
+        sub_x = start_x
+        for sub_index, sub in enumerate(sub_epics, start=1):
+            span = max(sub.diagram_span_columns(), 1)
+            width = span * STORY_PITCH_X - SUBEPIC_TIGHTEN * 2
+            sub_y = _subepic_y_for_depth(depth)
+            sid = (
+                f"{parent_id}/sub-{sub_index}-{_slugify(sub.name)}-d{depth}"
+            )
             fill = _subepic_style(depth)
             lines.append(
-                f'  <rect id="{sid}" x="{sx}" y="{sy}" '
-                f'width="{sw}" height="{sh}" rx="4" '
+                f'  <rect id="{sid}" x="{sub_x}" y="{sub_y}" '
+                f'width="{width}" height="{SUBEPIC_HEIGHT}" rx="4" '
                 f'fill="{fill}" stroke="{_STROKE_SUBEPIC}" stroke-width="1" '
                 f'data-content="{_xe(sub.name)}" data-role="subepic:{depth}" data-font-size="10" />'
             )
             # Own stories come before nested children (left columns)
-            for story in sub.stories:
-                story_x = layout.story_x(story)
-                story_y = layout.story_row_y()
+            current_actor = ""
+            for index, story in enumerate(sub.stories):
+                story_x = sub_x + SUBEPIC_TIGHTEN + index * STORY_PITCH_X
+                actor = story.users[0].strip() if story.users else ""
+                story_id = f"{sid}/story-{index + 1}-{_slugify(story.name)}"
+                if actor and actor != current_actor:
+                    lines.append(
+                        f'  <rect id="{story_id}/actor" '
+                        f'x="{story_x}" y="{story_y - ACTOR_LABEL_HEIGHT - ACTOR_LABEL_GAP}" '
+                        f'width="{STORY_SIZE}" height="{ACTOR_LABEL_HEIGHT}" rx="0" '
+                        f'fill="{_FILL_SCENARIO}" stroke="{_STROKE_SCENARIO}" stroke-width="1" '
+                        f'data-content="{_xe(actor)}" data-role="actor" data-font-size="7" />'
+                    )
+                    current_actor = actor
                 lines.append(
-                    f'  <rect id="story-{_slugify(story.name)}" '
+                    f'  <rect id="{story_id}" '
                     f'x="{story_x}" y="{story_y}" '
-                    f'width="{BASE_WIDTH}" height="{ROW_HEIGHT}" rx="0" '
+                    f'width="{STORY_SIZE}" height="{STORY_SIZE}" rx="0" '
                     f'fill="{_FILL_STORY}" stroke="{_STROKE_STORY}" stroke-width="1" '
                     f'data-content="{_xe(story.name)}" '
-                    f'data-role="story:{story.story_type.value}" data-font-size="8" />'
+                    f'data-role="story:{story.story_type.value}" '
+                    f'data-actor="{_xe(actor)}" data-font-size="8" />'
                 )
             # Recurse into nested sub-epics
-            self._collect_sub_epic_lines(sub.sub_epics, layout, lines, depth + 1)
+            nested_x = sub_x + len(sub.stories) * STORY_PITCH_X
+            self._collect_sub_epic_lines(
+                sub.sub_epics,
+                lines,
+                depth + 1,
+                sid,
+                nested_x,
+                story_y,
+            )
+            sub_x += span * STORY_PITCH_X
+
+    def _epic_width(self, epic: Epic) -> int:
+        if not epic.sub_epics:
+            return STORY_PITCH_X
+        return sum(
+            max(sub_epic.diagram_span_columns(), 1) * STORY_PITCH_X
+            for sub_epic in epic.sub_epics
+        )
 
     def _leaf_sub_epics(self, sub: SubEpic) -> List[SubEpic]:
         if not sub.sub_epics:

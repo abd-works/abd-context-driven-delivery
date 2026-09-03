@@ -260,6 +260,7 @@ class DrawIOStoryMap(StoryMap):
         story_map = DrawIOStoryMap()
         current_epic: DrawIOEpic | None = None
         current_sub_epic_stack: List[DrawIOSubEpic] = []
+        current_actor = ""
 
         for cell in cells:
             style = cell.attrib.get("style", "")
@@ -268,6 +269,7 @@ class DrawIOStoryMap(StoryMap):
                 current_epic = DrawIOEpic(value.strip(), len(story_map.epics) + 1)
                 story_map.epics.append(current_epic)
                 current_sub_epic_stack = []
+                current_actor = ""
             elif style.startswith("subepic") and current_epic is not None:
                 depth = int(style.split(":", 1)[1].split(";", 1)[0]) if ":" in style else 0
                 while len(current_sub_epic_stack) > depth:
@@ -280,9 +282,14 @@ class DrawIOStoryMap(StoryMap):
                 sub_epic = DrawIOSubEpic(value, len(parent_children) + 1)
                 parent_children.append(sub_epic)
                 current_sub_epic_stack.append(sub_epic)
+                current_actor = ""
+            elif style.startswith("actor") and current_sub_epic_stack:
+                current_actor = value.strip()
             elif style.startswith("story") and current_sub_epic_stack:
                 parent = current_sub_epic_stack[-1]
                 story = DrawIOStory(value, len(parent.stories) + 1, StoryType.USER)
+                if current_actor:
+                    story.users = [current_actor]
                 parent.stories.append(story)
             elif style.startswith("text") and current_epic is not None and not current_sub_epic_stack:
                 estimate = _parse_estimate_value(value)

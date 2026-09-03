@@ -124,6 +124,19 @@ def _extract_mermaid(svg_text: str) -> str:
     return ""
 
 
+def _extract_diagrams(svg_text: str):
+    """Return every Miro diagram widget and its Mermaid source."""
+    root = ET.fromstring(
+        svg_text.split("\n", 1)[1] if svg_text.startswith("<?") else svg_text
+    )
+    return [
+        (el, (el.text or "").strip())
+        for el in root.iter()
+        if el.tag.split("}")[-1] == "foreignObject"
+        and el.get("data-type") == "diagram"
+    ]
+
+
 def _shop_model(
     extra_properties=None,
     extra_class: Optional[OoadClass] = None,
@@ -354,3 +367,98 @@ with description("MiroCleanEngineeringModel class fidelity") as self:
 
         with it("should use the <|-- inheritance arrow"):
             expect("<|--" in self.mermaid).to(be_true)
+
+    with context("a decorated model split across source modules"):
+        with before.each:
+            model = CleanEngineeringModel(name="Paradise Mobile", sequential_order=1)
+            customer = Module(name="Customer — abstract base", sequential_order=1)
+            customer.classes.extend([
+                OoadClass(
+                    name="**Customer** <<Abstract>> <<Entity>>",
+                    sequential_order=1,
+                    properties=[Property(name="identity", type_hint="Identity")],
+                    relationships=[Relationship(target="Identity", kind="composition")],
+                ),
+                OoadClass(name="**Identity** <<Entity>>", sequential_order=2),
+            ])
+            prospect = Module(name="Prospect — onboarding", sequential_order=2)
+            prospect.classes.append(
+                OoadClass(
+                    name="**Prospect** <<Aggregate Root>> <<Entity>> extends Customer",
+                    sequential_order=1,
+                    operations=[
+                        Operation(
+                            name="selectPlan",
+                            parameters=["plan: Plan"],
+                            return_type="AccountCredentials",
+                        )
+                    ],
+                )
+            )
+            model.modules.extend([customer, prospect])
+            self.svg = MiroCleanEngineeringModel.render(model)
+            self.diagrams = _extract_diagrams(self.svg)
+            self.by_module = {
+                element.get("data-module"): mermaid
+                for element, mermaid in self.diagrams
+            }
+
+        with it("should create one Miro diagram widget for every source module"):
+            expect(self.diagrams).to(have_len(2))
+            expect(set(self.by_module)).to(
+                equal({"Customer — abstract base", "Prospect — onboarding"})
+            )
+
+        with it("should place widgets left to right beyond their rendered overflow"):
+            positions = [
+                (int(element.get("x")), int(element.get("y")))
+                for element, _ in self.diagrams
+            ]
+            expect(positions).to(equal([(1000, 2000), (4500, 2000)]))
+
+        with it("should keep local classes on their owning module diagram"):
+            expect(
+                "%% local: Customer" in self.by_module["Customer — abstract base"]
+            ).to(be_true)
+            expect(
+                "%% local: Prospect" in self.by_module["Prospect — onboarding"]
+            ).to(be_true)
+            expect(
+                "%% local: Prospect" in self.by_module["Customer — abstract base"]
+            ).to(be_false)
+
+        with it("should show cross-module inheritance participants as imports"):
+            expect(
+                "%% imported: Prospect" in self.by_module["Customer — abstract base"]
+            ).to(be_true)
+            expect(
+                "%% imported: Customer" in self.by_module["Prospect — onboarding"]
+            ).to(be_true)
+
+        with it("should use plain Mermaid identifiers and separate UML stereotypes"):
+            customer_diagram = self.by_module["Customer — abstract base"]
+            expect("class Customer {" in customer_diagram).to(be_true)
+            expect("class **Customer**" in customer_diagram).to(be_false)
+            expect("<<Abstract>>" in customer_diagram).to(be_true)
+            expect("<<Entity>>" in customer_diagram).to(be_true)
+
+        with it("should derive inheritance from an extends clause"):
+            expect(
+                "Customer <|-- Prospect" in self.by_module["Prospect — onboarding"]
+            ).to(be_true)
+
+        with it("should preserve operation parameters in the class member"):
+            expect(
+                "+selectPlan(plan: Plan) AccountCredentials"
+                in self.by_module["Prospect — onboarding"]
+            ).to(be_true)
+
+        with it("should restore source module boundaries without imported duplicates"):
+            parsed = MiroCleanEngineeringModel.parse(self.svg)
+            expect([module.name for module in parsed.modules]).to(
+                equal(["Customer — abstract base", "Prospect — onboarding"])
+            )
+            expect([c.name for c in parsed.modules[0].classes]).to(
+                equal(["Customer", "Identity"])
+            )
+            expect([c.name for c in parsed.modules[1].classes]).to(equal(["Prospect"]))

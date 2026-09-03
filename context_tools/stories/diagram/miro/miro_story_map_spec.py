@@ -214,6 +214,62 @@ with description("a Miro Story Map (story-map fidelity)") as self:
             expect(extras.sub_epics).to(have_len(1))
             expect(extras.sub_epics[0].name).to(equal("Apply Delivery Extra"))
 
+    with context("that lays stories out as a story-map backbone"):
+        with before.each:
+            self.source = StoryMap()
+            epic = Epic("Onboard A Customer", 1)
+            capability = SubEpic("Get Sign Up Plan", 1)
+            first = Story("Open Plan Deep Link", 1, StoryType.USER)
+            first.users = ["Prospect"]
+            second = Story("Query Product Offerings", 2, StoryType.SYSTEM)
+            second.users = ["System"]
+            third = Story("List Product Offerings", 3, StoryType.SYSTEM)
+            third.users = ["System"]
+            capability.stories.extend([first, second, third])
+            epic.sub_epics.append(capability)
+            self.source.append_epic(epic)
+            self.text = self.miro.render(self.source)
+            self.rects = _svg_rects_with_role(self.text)
+
+        with it("should place story cards in distinct left-to-right columns"):
+            stories = _rects_by_role(self.text, "story:")
+            expect([int(story.get("x")) for story in stories]).to(
+                equal([35, 95, 155])
+            )
+
+        with it("should use compact square story cards like the DrawIO map"):
+            stories = _rects_by_role(self.text, "story:")
+            expect(
+                [(int(story.get("width")), int(story.get("height"))) for story in stories]
+            ).to(equal([(50, 50), (50, 50), (50, 50)]))
+
+        with it("should span the capability and Epic across their story columns"):
+            epic = _rects_by_role(self.text, "epic")[0]
+            capability = _rects_by_role(self.text, "subepic:0")[0]
+            expect((int(epic.get("x")), int(epic.get("width")))).to(equal((20, 180)))
+            expect((int(capability.get("x")), int(capability.get("width")))).to(
+                equal((30, 170))
+            )
+
+        with it("should place actor cards above each change of actor"):
+            actors = _rects_by_role(self.text, "actor")
+            expect([actor.get("data-content") for actor in actors]).to(
+                equal(["Prospect", "System"])
+            )
+            story_y = int(_rects_by_role(self.text, "story:")[0].get("y"))
+            expect(all(int(actor.get("y")) < story_y for actor in actors)).to(be_true)
+
+        with it("should give every rendered card a unique hierarchy-based identity"):
+            ids = [rect.get("id") for rect in self.rects]
+            expect(len(ids)).to(equal(len(set(ids))))
+
+        with it("should preserve each story actor when parsed back"):
+            parsed = self.miro.parse(self.text)
+            stories = parsed.epics[0].sub_epics[0].stories
+            expect([story.users for story in stories]).to(
+                equal([["Prospect"], ["System"], ["System"]])
+            )
+
 
 # ===========================================================================
 # Turn 2 — thin-slice fidelity
