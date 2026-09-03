@@ -12,4 +12,4 @@
 
 - **ended:** 2026-09-02
 - **outcome:** handoff written
-- **handoff:** handoffs/handoff-2026-09-02.md
+- **handoff:** handoff.md
