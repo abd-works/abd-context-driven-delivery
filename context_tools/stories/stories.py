@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from context_tools.base.base_context_tool import BaseContextTool
@@ -172,11 +173,30 @@ class Stories(BaseContextTool):
     @agent_tool
     def render(self, format: str, content: str = "") -> dict:
         """Render already-generated story output into ``format`` via channel parse/render."""
+        source = None
         if not content:
-            raise ValueError("content is required — pass the already-generated artifact")
-        source = self.format
+            if self._raw_path:
+                p = Path(self._raw_path)
+                if p.is_file():
+                    content = p.read_text(encoding="utf-8")
+                    if p.suffix == ".md":
+                        source = "markdown"
+                    elif p.suffix == ".json":
+                        source = "json"
+                    elif p.suffix in (".ts", ".tsx"):
+                        source = "typescript"
+                    elif p.suffix == ".js":
+                        source = "javascript"
+                elif p.is_dir():
+                    for name in ("story-scenarios.md", "story-map.md"):
+                        if (p / name).exists():
+                            content = (p / name).read_text(encoding="utf-8")
+                            source = "markdown"
+                            break
+            if not content:
+                raise ValueError("content is required — pass the already-generated artifact or a valid path")
         if not source:
-            raise ValueError("source format is not set")
+            source = self.format or "markdown"
         return self.transform(source, format, content)
 
     @agent_tool

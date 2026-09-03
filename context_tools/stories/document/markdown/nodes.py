@@ -75,6 +75,8 @@ class MarkdownIncrement(Increment):
     def from_workspace(cls, root: "Path") -> List["MarkdownIncrement"]:
         """Find thin-slicing markdown in *root* and return parsed increments."""
         root = Path(root).resolve()
+        if root.is_file():
+            return []
         for name in ("thin-slicing.md", "thin-slice.md", "thin-slices.md", "increments.md"):
             candidate = root / name
             if candidate.exists():
@@ -133,11 +135,11 @@ class MarkdownIncrement(Increment):
 # -- MarkdownScenario ----------------------------------------------------------
 
 _SCENARIO_H3 = re.compile(
-    r"^###\s+Scenario(?:\s+Outline)?(?:\s+\d+)?\s*:\s*(.+?)\s*$", re.IGNORECASE
+    r"^#+\s+Scenario(?:\s+Outline)?(?:\s+\d+)?\s*[:\-]?\s*(.+?)\s*$", re.IGNORECASE
 )
-_STORY_H2 = re.compile(r"^##\s+Story\s*:\s*(.+?)\s*$", re.IGNORECASE)
-_BACKGROUND_H3 = re.compile(r"^###\s+Background\b", re.IGNORECASE)
-_EXAMPLES_H3 = re.compile(r"^#{3,4}\s+Examples\b", re.IGNORECASE)
+_STORY_H2 = re.compile(r"^#+\s+Story\s*[:\-]?\s*(.+?)\s*$", re.IGNORECASE)
+_BACKGROUND_H3 = re.compile(r"^#+\s+Background\b", re.IGNORECASE)
+_EXAMPLES_H3 = re.compile(r"^#+\s+Examples\b", re.IGNORECASE)
 _ITALIC_STEP = re.compile(r"^\s*\*(Given|When|Then|And|But)\*\s+(.+?)\s*$", re.IGNORECASE)
 _BULLET_STEP = re.compile(r"^\s*[-*]\s+(Given|When|Then|And|But)\b\s*(.+?)\s*$", re.IGNORECASE)
 _BOLD_TERM = re.compile(r"\*\*([^*]+)\*\*")
@@ -153,11 +155,13 @@ class MarkdownScenario(Scenario):
     def from_workspace(cls, root: "Path") -> List["MarkdownScenario"]:
         """Find all scenario markdown files under *root* and return parsed scenarios."""
         root = Path(root).resolve()
+        if root.is_file():
+            return cls.parse_file(root, root.name)
         scenarios: List["MarkdownScenario"] = []
         seen: set = set()
         for pattern in (
             "**/scenarios/*.md", "**/scenarios/**/*.md", "**/scenarios.md",
-            "**/md/*.md", "**/md/**/*.md",
+            "**/md/*.md", "**/md/**/*.md", "**/story-scenarios.md", "**/stories/**/*.md",
         ):
             for md in root.glob(pattern):
                 rel = str(md.relative_to(root)).replace("\\", "/")
@@ -191,6 +195,14 @@ class MarkdownScenario(Scenario):
         for i, raw in enumerate(lines, start=1):
             if not raw.strip():
                 continue
+            m_story = _STORY_H2.match(raw)
+            if m_story:
+                flush()
+                story_name = _strip_markup(m_story.group(1))
+                background = []  # Clear background for the new story
+                in_background = False
+                in_examples = False
+                continue
             m_scen = _SCENARIO_H3.match(raw)
             if m_scen:
                 flush()
@@ -212,7 +224,7 @@ class MarkdownScenario(Scenario):
                 in_background = False
                 example_headers = []
                 continue
-            if re.match(r"^###\s+", raw):
+            if re.match(r"^#+\s+", raw):
                 in_background = False
                 in_examples = False
             parsed_step = _parse_step(raw)
@@ -419,10 +431,13 @@ class MarkdownStoryMap(StoryMap):
     def from_workspace(cls, root: "Path") -> Optional["MarkdownStoryMap"]:
         """Find story-map.md files under *root*, merge, and return; None if absent."""
         root = Path(root).resolve()
-        candidates = (
-            [root / "story-map.md"] if (root / "story-map.md").exists()
-            else list(root.rglob("story-map.md"))
-        )
+        if root.is_file():
+            candidates = [root]
+        else:
+            candidates = (
+                [root / "story-map.md"] if (root / "story-map.md").exists()
+                else list(root.rglob("story-map.md"))
+            )
         if not candidates:
             return None
         merged = cls()
@@ -434,7 +449,10 @@ class MarkdownStoryMap(StoryMap):
                 continue
             for epic in parsed.epics:
                 merged.epics.append(epic)
-            rel = str(md_path.relative_to(root)).replace("\\", "/")
+            if root.is_file():
+                rel = root.name
+            else:
+                rel = str(md_path.relative_to(root)).replace("\\", "/")
             merged.attach_source_locations(text, rel)
             if not getattr(merged, "source", None):
                 from context_tools.stories.story_model.source_location import SourceLocation as _SL

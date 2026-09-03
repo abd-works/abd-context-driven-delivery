@@ -60,6 +60,10 @@ class JavaStoryMap(StoryMap):
     def from_workspace(cls, root: Path) -> List[TestSuite]:
         """Find and parse all Java test files under *root*."""
         root = Path(root).resolve()
+        if root.is_file():
+            if root.suffix == ".java":
+                return [cls._parse_file(root, root.parent)]
+            return []
         seen: set = set()
         suites: List[TestSuite] = []
         for pattern in _GLOBS:
