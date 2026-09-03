@@ -143,6 +143,13 @@ with description("a DrawIO Story Map") as self:
             first_story = self.parsed.epics[0].sub_epics[0].stories[0]
             expect(first_story.scenarios).to(have_len(0))
 
+        with it("should preserve the actor shown above a Story"):
+            self.original.epics[0].sub_epics[0].stories[0].users = ["Customer"]
+            parsed = self.drawio.parse(self.drawio.render(self.original))
+            expect(parsed.epics[0].sub_epics[0].stories[0].users).to(
+                equal(["Customer"])
+            )
+
     with context("that is not a valid DrawIO document"):
         with context("the parse"):
             with it("should be rejected"):
