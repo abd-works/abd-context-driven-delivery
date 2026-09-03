@@ -203,7 +203,7 @@ with description("a WorkSession without a name"):
     with it("should raise ValueError when folder is accessed"):
         from workspace.workspace import Workspace, WorkSession
         s = WorkSession(Workspace("."), "")
-        # Act / Assert — empty name must refuse folder access
+        # Act / Assert â empty name must refuse folder access
         raised = False
         try:
             _ = s.folder
@@ -928,7 +928,7 @@ with description("Workspace /model"):
         prose = (type(ws).model.__doc__ or "") + "\n".join(
             getattr(type(ws).model, "__doc__", "") or ""
         )
-        # agent_instructions use stacked docstrings � read via expand/inspect
+        # agent_instructions use stacked docstrings  read via expand/inspect
         import inspect
 
         raw = inspect.getsource(type(ws).model)
@@ -949,3 +949,60 @@ with description("a WorkSession that inherits a model"):
         session = WorkSession(Workspace(str(tmp)), "child-sprint", git=NullGitRepo(tmp))
         session.ensure_started(goal="inherit model")
         expect(session.session_model()).to(equal("composer-2.5-fast"))
+
+
+with description("default work session when none is set"):
+    with it("should open the default session folder when workspace open has no name"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import SessionModel, Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="ws-default-open-"))
+        git = NullGitRepo(tmp)
+        ws = Workspace(str(tmp))
+        session = ws.open(name="", path=str(tmp))
+        session.git = git
+        session.ensure_started()
+        expect(session.name).to(equal("default"))
+        expect(session.folder).to(equal(tmp / ".context" / "sessions" / "default"))
+        expect(session.session_md.is_file()).to(be_true)
+
+    with it("should warn when default session opens off main without switching branch"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import SessionModel, Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="ws-default-warn-"))
+        git = NullGitRepo(tmp)
+        git.checkout_or_create("feature/side")
+        ws = Workspace(str(tmp))
+        session = ws.open_work_session(
+            SessionModel.DEFAULT_SESSION,
+            path=str(tmp),
+            isolate=False,
+            git=git,
+        )
+        session.ensure_started()
+        expect(git.current_branch).to(equal("feature/side"))
+        expect(session.branch_warning()).to(contain("warning:"))
+        expect(session.branch_warning()).to(contain("feature/side"))
+
+    with it("should close the default session on main with commit only and no push"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import SessionModel, Workspace, WorkSession
+
+        tmp = Path(tempfile.mkdtemp(prefix="ws-default-close-"))
+        git = NullGitRepo(tmp)
+        git.set_dirty(True)
+        ws = Workspace(str(tmp))
+        session = ws.open_work_session(
+            SessionModel.DEFAULT_SESSION,
+            path=str(tmp),
+            isolate=False,
+            git=git,
+        )
+        session.ensure_started(goal="adhoc")
+        session.turn.action = "sketch"
+        path = session.close_session(outcome="synced on main")
+        expect("default" in path).to(be_true)
+        expect(session.sync_only_close).to(be_true)
+        expect(git.commits).not_to(be_none)
+        expect(git.pushes).to(equal([]))

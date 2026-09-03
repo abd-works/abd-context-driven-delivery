@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
-from workspace.workspace import Workspace
+from workspace.workspace import SessionModel, Workspace
 
 
 @agentic_toolset
@@ -17,7 +17,7 @@ class LifecycleAction:
         self.workspace.load()
         self._session_name = session
         if session:
-            self.workspace.open(name=session, path=path)
+            self._open_session(session, path=path)
 
     def _session(self):
         return self.workspace.current_work_session
@@ -40,21 +40,32 @@ class LifecycleAction:
         # when no work session is open (Turn() would probe git for session/).
         return Turn.__new__(Turn)
 
+    def _open_session(self, name: str = "", *, path: str = "") -> str:
+        session_name = SessionModel.session_slug(name or self._session_name)
+        session = self.workspace.open(
+            name=session_name,
+            path=path or self.workspace.path,
+            isolate=session_name != SessionModel.DEFAULT_SESSION,
+        )
+        return session.branch_warning()
+
     @agent_tool
     def open_workspace(self, name: str = "", path: str = "") -> str:
         """Open the workspace if it is not already open. /open-workspace"""
         if self.workspace.current_work_session is not None and not name:
             return self.workspace.current_work_session.name
-        self.workspace.open(
-            name=name or self._session_name, path=path or self.workspace.path
-        )
-        return self.workspace.current_work_session.name
+        warning = self._open_session(name or self._session_name, path=path)
+        session_name = self.workspace.current_work_session.name
+        if warning:
+            return f"{warning}\n{session_name}"
+        return session_name
 
     @agent_instructions
     def begin(self, tools: list | None = None, action: str = "") -> str:
         """Open the workspace if it is not already open. The turn hangs off the work session — it is already there when the session is awake. Decision records hang off the work session. Session is optional — actions work without one."""
-        if self.workspace.current_work_session is None and self._session_name:
-            self.workspace.open(name=self._session_name, path=self.workspace.path)
+        warning = ""
+        if self.workspace.current_work_session is None:
+            warning = self._open_session(self._session_name)
         session = self._session()
         if session is not None:
             try:
@@ -62,9 +73,11 @@ class LifecycleAction:
                 if action:
                     session.turn.action = action
                 self._decisions().record_decisions_session()
-            except AttributeError:
+            except (AttributeError, TypeError):
                 pass
-        return ""
+            if not warning:
+                warning = session.branch_warning()
+        return warning
 
     @agent_instructions
     def end(self) -> str:

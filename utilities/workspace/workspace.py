@@ -271,10 +271,14 @@ class Turn:
                     name = branch[len("session/") :]
                     root = root or str(git_root)
         if not name:
-            return None
+            name = SessionModel.DEFAULT_SESSION
         loaded = Workspace(root or ".")
         loaded.load()
-        loaded.open(name=name, path=root or loaded.path)
+        loaded.open(
+            name=name,
+            path=root or loaded.path,
+            isolate=name != SessionModel.DEFAULT_SESSION,
+        )
         return loaded.current_work_session
 
     @property
@@ -446,7 +450,8 @@ class Turn:
                 session.turns.append(self)
         if session is not None:
             try:
-                git.push()
+                if not session.sync_only_close:
+                    git.push()
             except GitConnectError:
                 pass
             session.open_turn = None
@@ -755,12 +760,39 @@ class WorkSession:
     def _default_git(self) -> GitRepo:
         root = Repo.find_root(self.workspace.path)
         if root is None:
-            return NullGitRepo()
+            return NullGitRepo(self.workspace.path)
         return GitRepo(root)
 
     @property
     def session_branch(self) -> str:
         return f"session/{self.name}"
+
+    @property
+    def is_default_work_session(self) -> bool:
+        return self.name == SessionModel.DEFAULT_SESSION
+
+    def _main_branch_names(self) -> set[str]:
+        default = getattr(self.git, "default_branch", "main") or "main"
+        return {default, "main", "master"}
+
+    def _on_main_branch(self) -> bool:
+        branch = getattr(self.git, "current_branch", "") or ""
+        return branch in self._main_branch_names()
+
+    @property
+    def sync_only_close(self) -> bool:
+        """Default session on main — commit session artifacts, no branch landing."""
+        return self.is_default_work_session and self._on_main_branch()
+
+    def branch_warning(self) -> str:
+        if self._on_main_branch():
+            return ""
+        branch = getattr(self.git, "current_branch", "") or ""
+        default = getattr(self.git, "default_branch", "main") or "main"
+        return (
+            f"warning: current branch is {branch!r}, not {default!r} — "
+            "staying on this branch (no switch)"
+        )
 
     @property
     def dirty(self) -> bool:
@@ -1055,6 +1087,8 @@ class WorkSession:
         self.scope_paths = [str(root)]
 
     def _session_branch_is_default(self) -> bool:
+        if self.is_default_work_session:
+            return True
         default = getattr(self.git, "default_branch", "main") or "main"
         if self.name in {default, "main", "master"}:
             return True
@@ -1075,6 +1109,8 @@ class WorkSession:
     def _ensure_session_worktree(self) -> None:
         git = self.git
         if getattr(git, "_memory", False):
+            if not self.isolate or self._session_branch_is_default():
+                return
             git.checkout_or_create(self.session_branch)
             return
         if not self.isolate or self._session_branch_is_default():
@@ -1255,10 +1291,8 @@ class WorkSession:
         if isolate is not None:
             self.isolate = isolate
         if not self.name:
-            return (
-                "need session name — confirm working path and kebab slug with the user, "
-                "then call open before grill/sketch"
-            )
+            self.name = SessionModel.DEFAULT_SESSION
+            self.isolate = False
         self.ensure_started(goal=goal, fidelities=fidelities, contexts=contexts)
         self._bind_session_log()
         self.load_cli_sessions()
@@ -1271,6 +1305,9 @@ class WorkSession:
             "sprint docs = folder; "
             "context index loaded when present."
         )
+        warning = self.branch_warning()
+        if warning:
+            opened = f"{warning}\n{opened}"
         if not consumed:
             return opened
         return (
@@ -1324,12 +1361,7 @@ class WorkSession:
         path: str = "",
     ) -> str:
         effective_path = path.strip() or self.path
-        effective_name = name.strip() or (self.name or "")
-        if not effective_name:
-            return (
-                "need session name — confirm working path and kebab slug with the user, "
-                "then call open before grill/sketch"
-            )
+        effective_name = SessionModel.session_slug(name.strip() or (self.name or ""))
         loaded = type(self).load(effective_path, effective_name)
         if loaded.session_md.is_file():
             self._take_from(loaded)
@@ -1496,8 +1528,9 @@ class WorkSession:
                 pass
         for path in running_chats:
             self.save_chat(path)
-        self._land_on_default_branch()
-        self._remove_session_worktree_if_clean()
+        if not self.sync_only_close:
+            self._land_on_default_branch()
+            self._remove_session_worktree_if_clean()
         return self.session_md
 
     def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:
@@ -1622,7 +1655,21 @@ class WorkSession:
                 if current is not None:
                     return current.close_session(outcome=outcome, handoff=handoff)
         if not self.name:
-            return self._finish_without_session(outcome=outcome)
+            parent = (
+                self.workspace
+                if isinstance(self.workspace, Workspace)
+                else Workspace(str(self.path or "."))
+            )
+            default = parent.open_work_session(
+                SessionModel.DEFAULT_SESSION,
+                path=self.path or parent.path,
+                isolate=False,
+                git=self.git,
+            )
+            conv = getattr(self, "_conversation_id", None)
+            if conv is not None:
+                default._conversation_id = conv
+            return default.close_session(outcome=outcome, handoff=handoff)
         return self.close_session(outcome=outcome, handoff=handoff)
 
     def cleanup(self) -> None:
@@ -1898,14 +1945,13 @@ class Workspace:
         isolate: bool = True,
     ) -> WorkSession:
         """Open the workspace if it is not already open. The work session's turn and decision records hang off it."""
-        effective_name = (
-            name or (getattr(host, "_session_name", None) if host is not None else None) or ""
-        ).strip()
-        if not effective_name:
-            raise ValueError(
-                "need session name — confirm working path and kebab slug with the user, "
-                "then open before grill/sketch"
-            )
+        effective_name = SessionModel.session_slug(
+            name
+            or (getattr(host, "_session_name", None) if host is not None else None)
+            or ""
+        )
+        if effective_name == SessionModel.DEFAULT_SESSION:
+            isolate = False
         working = (
             path
             or (getattr(host, "_raw_path", None) if host is not None else None)

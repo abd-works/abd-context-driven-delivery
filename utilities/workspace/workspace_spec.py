@@ -637,8 +637,8 @@ with description("WorkSession"):
             expect("sprint-finish-cli" in path).to(equal(True))
             expect(kit.ended).not_to(equal(""))
 
-        with it("should finish turn attach chat and push when no work session is bound"):
-            from workspace.workspace import WorkSession
+        with it("should finish the default session when no work session name is bound"):
+            from workspace.workspace import SessionModel, WorkSession
 
             git = NullGitRepo()
             git.set_dirty(True)
@@ -646,13 +646,11 @@ with description("WorkSession"):
             kit.name = ""
             kit.git = git
             kit._conversation_id = "no-session-chat"
-            msg = kit.finish_work_session(outcome="landed on main")
-            expect(msg).to(equal("finished without work session"))
+            path = kit.finish_work_session(outcome="landed on main")
+            expect("default" in path).to(equal(True))
             expect(kit.name).to(equal(""))
             expect(git.commits[0][1]).to(equal("finish"))
-            expect(git.pushes).to(contain(git.current_branch))
-            chat_tag = git.read_annotated_tag("chat/session/default")
-            expect("no-session-chat" in chat_tag).to(equal(True))
+            expect(git.pushes).to(equal([]))
 
         with it("should start from workspace and session context without a host"):
             from workspace.workspace import WorkSession

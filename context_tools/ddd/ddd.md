@@ -69,9 +69,12 @@ An **Aggregate** is decided **inside** the context already named. Cluster for **
 
 | Stereotype | Business question |
 |---|---|
-| **Entity** | Can we tell them apart over time when attributes change? Identity transcends attributes — not "importance." |
+
+| **Entity** | An object defined by its unique identity rather than its attributes, maintaining continuity across state changes over time.|
+| **Aggregate** | A cluster of associated domain objects (entities and value objects) grouped together to maintain consistent business rules as a single unit. |
+| **Aggregate Root** | The main entity inside an aggregate that acts as the sole gateway, controlling all external access and enforcing consistency rules for the entire cluster. |
 | **Value Object** | Fully described by values — interchangeable, replaceable, immutable? Prefer VO unless tracked identity is required. |
-| **Repository** | How does the business find, store, and retire this aggregate? Collection-style seam only (`add` / `remove` / `update` / `find_by_*`). No repository if there is no independent collection lifecycle. |
+| **Repository** | A design pattern that hides database operations, allowing your code to load, save, and query entire aggregates as if they lived in a simple memory collection. How does the business find, store, and retire this aggregate? Collection-style seam only (`add` / `remove` / `update` / `find_by_*`). No repository if there is no independent collection lifecycle. |
 | **Factory** | Complex birth / invariants at creation / subtype choice? |
 | **Service** | Rare **doer** — only when the operation cannot sit cleanly on a single domain object. Not SOA / application `FooService`. `CheckoutService.placeOrder` is `Cart.checkout`. |
 | **Domain Event** | Significant past-tense moment — trigger and consumers as invariants; payload as properties. Facts, not commands. |
