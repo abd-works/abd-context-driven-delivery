@@ -12,7 +12,7 @@ section: header
 
 ### Domain terms
 
-- *`<ConceptA>`* — `<plain-language gloss>`
-- *`<ConceptB>`* — `<plain-language gloss>`
+- ++`<ConceptA>`++ — `<plain-language gloss>`
+- ++`<ConceptB>`++ — `<plain-language gloss>`
 
-> In steps: bold domain concepts (`**<Concept>**`); italic concrete values (`*<value>*`).
+> In steps: underline examples and domain terms (`++<Concept>++`, `++<example>++`). Italic concrete values (`*<value>*`).

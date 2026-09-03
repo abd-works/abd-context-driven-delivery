@@ -7,10 +7,10 @@ section: body
 
 ### Domain terms
 
-- *`<ConceptA>`* — `<plain-language gloss>`
-- *`<ConceptB>`* — `<plain-language gloss>`
+- ++`<ConceptA>`++ — `<plain-language gloss>`
+- ++`<ConceptB>`++ — `<plain-language gloss>`
 
-> In steps: bold domain concepts (`**<Concept>**`); italic concrete values (`*<value>*`).
+> In steps: underline examples and domain terms (`++<Concept>++`, `++<example>++`). Italic concrete values (`*<value>*`).
 
 ### Evidence
 
@@ -20,8 +20,8 @@ section: body
 
 ### Background
 
-*Given* a **`<ConceptX>`** from `helper.given<ConceptX…>({ mode: "fake" })`  
-  *And* that **`<ConceptX>`** exposes `<public property / operation>`  
+*Given* a ++`<ConceptX>`++ from `helper.given<ConceptX…>({ mode: "fake" })`  
+  *And* that ++`<ConceptX>`++ exposes `<public property / operation>`  
 
 ---
 
@@ -29,18 +29,18 @@ section: body
 
 #### Scenario Outline: `<outcome-oriented name>`
 
-*Given* a **`<ConceptA>`** with {`<field_1>`}  
-  *And* the **`<ConceptB>`** for that **`<ConceptA>`** is {`<field_2>`}  
+*Given* a ++`<ConceptA>`++ with {`<field_1>`}  
+  *And* the ++`<ConceptB>`++ for that ++`<ConceptA>`++ is {`<field_2>`}  
 *When* the **`<Actor>`** `<action>`  
-*Then* the **`<result concept>`** `<outcome>` is visible on the public interface  
-  *And* a **`<related concept>`** shows {`<field_3>`}
+*Then* the ++`<result concept>`++ `<outcome>` is visible on the public interface  
+  *And* a ++`<related concept>`++ shows {`<field_3>`}
 
 ### Examples
 
 | scenario   | `<field_1>` | `<field_2>` | `<field_3>` |
 |------------|-------------|-------------|-------------|
-| Scenario 1 | `<value>`   | `<value>`   | `<value>`   |
-| Scenario 2 | `<value>`   | `<value>`   | `<value>`   |
+| ++Scenario 1++ | `<value>`   | `<value>`   | `<value>`   |
+| ++Scenario 2++ | `<value>`   | `<value>`   | `<value>`   |
 
 > Markdown keeps examples tables for documentation. Code wires values via `{Type}ExampleFactory` (AI fills helper/story method bodies). Do not copy inventable `examples: [{ … }]` literals into code story files.
 

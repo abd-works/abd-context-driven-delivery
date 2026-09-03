@@ -175,10 +175,40 @@ class MiroStoryMap(StoryMap):
         Elements are emitted in depth-first tree order so that parse() can
         reconstruct the hierarchy by processing in document order.
         """
+        lines = self._build_rect_lines(canonical)
+        body = "\n".join(lines)
+        return (
+            "<?xml version='1.0' encoding='utf-8'?>\n"
+            '<svg xmlns="http://www.w3.org/2000/svg">\n'
+            + body
+            + "\n</svg>"
+        )
+
+    def render_chunks(self, canonical: "MiroStoryMap", chunk_size: int = 80) -> List[str]:
+        """Render story-map SVG as a list of valid SVG chunks for incremental Miro upload.
+
+        Each chunk is self-contained and has at most chunk_size rect elements.
+        Attribute values use single quotes to avoid JSON escaping issues when
+        passing SVG strings to canvas_create_from_svg via MCP tool calls.
+
+        Usage: call canvas_create_from_svg(is_repository=True, svg=chunk) for
+        each returned chunk in sequence.
+        """
+        lines = self._build_rect_lines(canonical)
+        lines_sq = [re.sub(r'="([^"]*)"', r"='\1'", line) for line in lines]
+        header = "<?xml version='1.0' encoding='utf-8'?>\n<svg xmlns='http://www.w3.org/2000/svg'>"
+        footer = "</svg>"
+        chunks = []
+        for i in range(0, len(lines_sq), chunk_size):
+            body = "\n".join(lines_sq[i:i + chunk_size])
+            chunks.append(f"{header}\n{body}\n{footer}")
+        return chunks
+
+    def _build_rect_lines(self, canonical: "MiroStoryMap") -> List[str]:
+        """Build the flat list of SVG rect lines for the full story map."""
         lines: List[str] = []
         epic_x = LEFT_MARGIN_X
         story_y = _story_row_y(canonical)
-
         for epic_index, epic in enumerate(canonical.epics, start=1):
             epic_width = self._epic_width(epic)
             eid = f"epic-{epic_index}-{_slugify(epic.name)}"
@@ -197,14 +227,7 @@ class MiroStoryMap(StoryMap):
                 story_y=story_y,
             )
             epic_x += epic_width + EPIC_GAP
-
-        body = "\n".join(lines)
-        return (
-            "<?xml version='1.0' encoding='utf-8'?>\n"
-            '<svg xmlns="http://www.w3.org/2000/svg">\n'
-            + body
-            + "\n</svg>"
-        )
+        return lines
 
     def parse(self, text: str) -> "MiroStoryMap":
         """Parse a canvas-composer SVG back into a MiroStoryMap.

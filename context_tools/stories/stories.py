@@ -178,3 +178,25 @@ class Stories(BaseContextTool):
         if not source:
             raise ValueError("source format is not set")
         return self.transform(source, format, content)
+
+    @agent_tool
+    def render_chunks(self, content: str, chunk_size: int = 80) -> dict:
+        """Render story map into Miro SVG chunks for incremental board upload.
+
+        Use instead of transform/render when the target is a Miro board.
+        Each chunk is a valid SVG string with single-quoted attribute values
+        (safe for MCP JSON transport). Call canvas_create_from_svg with
+        is_repository=True for each chunk in the returned list, in order.
+
+        Returns {"format": "miro", "chunk_count": N, "chunks": [svg, ...]}.
+        """
+        if not content:
+            raise ValueError("content is required — pass the story map artifact")
+        source_fmt = self.format or "markdown"
+        source_cls = _load_channel_class(source_fmt)
+        target_cls = _load_channel_class("miro")
+        source = source_cls()
+        target = target_cls()
+        canonical = source.parse(_normalize_input(source_fmt, content))
+        chunks = target.render_chunks(canonical, chunk_size)
+        return {"format": "miro", "chunk_count": len(chunks), "chunks": chunks}

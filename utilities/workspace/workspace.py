@@ -703,6 +703,7 @@ class WorkSession:
         context_index_key: str | None = None,
         default_workspace_folder: str | None = None,
         host: Any | None = None,
+        isolate: bool = True,
     ) -> None:
         if isinstance(workspace, Workspace):
             parent = workspace
@@ -748,6 +749,8 @@ class WorkSession:
         self.cli_doer_pid = 0
         self.cli_judge_pid = 0
         self._transcript_home: Path | None = None
+        # False → session folders / turns / logs on the current checkout (no sibling worktree).
+        self.isolate = isolate
 
     def _default_git(self) -> GitRepo:
         root = Repo.find_root(self.workspace.path)
@@ -1053,13 +1056,15 @@ class WorkSession:
 
     def _session_branch_is_default(self) -> bool:
         default = getattr(self.git, "default_branch", "main") or "main"
+        if self.name in {default, "main", "master"}:
+            return True
         return self.session_branch in {default, "main", "master"}
 
     def _attach_existing_session_worktree(self) -> None:
         git = self.git
         if getattr(git, "_memory", False) or not self.name:
             return
-        if self._session_branch_is_default():
+        if not self.isolate or self._session_branch_is_default():
             return
         existing = git.worktree_for(self.session_branch)
         if existing is None:
@@ -1072,7 +1077,7 @@ class WorkSession:
         if getattr(git, "_memory", False):
             git.checkout_or_create(self.session_branch)
             return
-        if self._session_branch_is_default():
+        if not self.isolate or self._session_branch_is_default():
             self._try_fetch_pull()
             return
         self._attach_existing_session_worktree()
@@ -1135,6 +1140,9 @@ class WorkSession:
             return
 
     def _land_on_default_branch(self) -> None:
+        if not self.isolate or self._session_branch_is_default():
+            self._try_push()
+            return
         default = self.git.default_branch
         for candidate in (default, f"origin/{default}", "main", "origin/main"):
             try:
@@ -1173,7 +1181,7 @@ class WorkSession:
 
     def _remove_session_worktree_if_clean(self) -> None:
         git = self.git
-        if getattr(git, "_memory", False):
+        if getattr(git, "_memory", False) or not self.isolate:
             return
         self._try_push()
         # Shared/session stash must not keep worktrees around — drop it and remove.
@@ -1232,6 +1240,7 @@ class WorkSession:
         fidelities: str = "",
         contexts: str = "",
         path: str = "",
+        isolate: bool | None = None,
     ) -> str:
         if name:
             self.name = name
@@ -1243,6 +1252,8 @@ class WorkSession:
             self.contexts = contexts
         if path:
             self.path = path
+        if isolate is not None:
+            self.isolate = isolate
         if not self.name:
             return (
                 "need session name — confirm working path and kebab slug with the user, "
@@ -1504,12 +1515,15 @@ class WorkSession:
         contexts: str = "",
         path: str = "",
         host: Any | None = None,
+        isolate: bool = True,
     ) -> WorkSession:
         """start_work_session — agent starts or resumes a named work session.
 
         Non-default session branches isolate in a sibling worktree named
         ``{abbrev}-{ticket}`` (or a short slug) next to the primary clone.
         Stay in the primary clone when the session branch is the default branch.
+        Pass ``isolate: false`` to keep session folders / turns / logs on the
+        current checkout (no sibling worktree) — e.g. track work on main.
 
         Do not call this from a /cli-agent parent. CliAgent opens the session,
         switches to that path, and binds doer/judge. Resume does not rewrite Start.
@@ -1525,6 +1539,7 @@ class WorkSession:
                         fidelities=fidelities,
                         contexts=contexts,
                         path=path,
+                        isolate=isolate,
                     )
         if host is not None:
             workspace = getattr(host, "workspace", None)
@@ -1536,6 +1551,7 @@ class WorkSession:
                     fidelities=fidelities,
                     contexts=contexts,
                     path=path,
+                    isolate=isolate,
                 )
         self.open(
             name=name,
@@ -1543,6 +1559,7 @@ class WorkSession:
             fidelities=fidelities,
             contexts=contexts,
             path=path,
+            isolate=isolate,
         )
         self.workspace.current_work_session = self
         return self
@@ -1878,6 +1895,7 @@ class Workspace:
         fidelities: str = "",
         contexts: str = "",
         path: str = "",
+        isolate: bool = True,
     ) -> WorkSession:
         """Open the workspace if it is not already open. The work session's turn and decision records hang off it."""
         effective_name = (
@@ -1902,6 +1920,7 @@ class Workspace:
             or "",
             contexts=contexts,
             path=working or self.path,
+            isolate=isolate,
             context_index_key=(
                 getattr(type(host), "context_index_key", "") if host is not None else ""
             ),
@@ -1928,6 +1947,7 @@ class Workspace:
         contexts: str = "",
         path: str = "",
         *,
+        isolate: bool = True,
         git: GitRepo | None = None,
         context_index_key: str | None = None,
         default_workspace_folder: str | None = None,
@@ -1950,10 +1970,12 @@ class Workspace:
                 default_workspace_folder=default_workspace_folder,
                 format=format,
                 host=host,
+                isolate=isolate,
             )
             self.work_sessions.append(session)
         else:
             session = existing
+            session.isolate = isolate
             if git is not None:
                 session.git = git
             if goal:
@@ -1979,6 +2001,7 @@ class Workspace:
             fidelities=fidelities,
             contexts=contexts,
             path=path or session.path,
+            isolate=isolate,
         )
         return session
 

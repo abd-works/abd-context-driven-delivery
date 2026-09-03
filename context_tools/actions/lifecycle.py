@@ -52,13 +52,18 @@ class LifecycleAction:
 
     @agent_instructions
     def begin(self, tools: list | None = None, action: str = "") -> str:
-        """Open the workspace if it is not already open. The turn hangs off the work session — it is already there when the session is awake. Decision records hang off the work session."""
-        if self.workspace.current_work_session is None:
-            self.workspace.open()
-        self._session().turn
-        if action:
-            self._session().turn.action = action
-        self._decisions().record_decisions_session()
+        """Open the workspace if it is not already open. The turn hangs off the work session — it is already there when the session is awake. Decision records hang off the work session. Session is optional — actions work without one."""
+        if self.workspace.current_work_session is None and self._session_name:
+            self.workspace.open(name=self._session_name, path=self.workspace.path)
+        session = self._session()
+        if session is not None:
+            try:
+                session.turn
+                if action:
+                    session.turn.action = action
+                self._decisions().record_decisions_session()
+            except AttributeError:
+                pass
         return ""
 
     @agent_instructions
