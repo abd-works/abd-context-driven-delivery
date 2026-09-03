@@ -200,3 +200,70 @@ class Stories(BaseContextTool):
         canonical = source.parse(_normalize_input(source_fmt, content))
         chunks = target.render_chunks(canonical, chunk_size)
         return {"format": "miro", "chunk_count": len(chunks), "chunks": chunks}
+
+    @agent_tool
+    def render_miro(
+        self,
+        content: str,
+        board_id: str,
+        token: str = "",
+        scale: float = 1.5,
+        origin_x: float = 0.0,
+        origin_y: float = 6000.0,
+        clear_ids: str = "",
+    ) -> dict:
+        """Upload a story map directly to a Miro board via the REST API.
+
+        Shapes are placed at exact board coordinates — no chunking, no stacking.
+        Each shape is created as a Miro rectangle/round_rectangle with correct
+        position (x/y centre, relative to canvas_center), size, colour, and label.
+
+        Args:
+            content: story map markdown (or other source format matching this instance).
+            board_id: the board ID from the Miro URL (e.g. ``uXjVHuiSsAA=``).
+            token: Miro PAT. Falls back to MIRO_TOKEN env var or ~/.miro-token.
+                   Get a token at https://miro.com/app/settings/user-profile/apps
+            scale: SVG units → Miro board units multiplier (default 1.5; story items
+                   become 75×75 board units). Increase for larger / more readable items.
+            origin_x: board X of the story-map top-left corner (default 0).
+            origin_y: board Y of the story-map top-left corner (default 6000, below
+                      most existing content).
+            clear_ids: comma-separated Miro shape IDs to delete before uploading.
+                       Use to clean up a previous broken upload.
+
+        Returns:
+            {"board_id", "shape_count", "scale", "origin", "ids": {semantic_id: miro_id}}.
+
+        Estimated time: ~3 min for 541 shapes (350 ms delay between API calls).
+        """
+        from context_tools.stories.diagram.miro.api import MiroApiClient
+        from context_tools.stories.diagram.miro.uploader import MiroUploader
+
+        if not content:
+            raise ValueError("content is required")
+        if not board_id:
+            raise ValueError("board_id is required")
+
+        source_fmt = self.format or "markdown"
+        source_cls = _load_channel_class(source_fmt)
+        target_cls = _load_channel_class("miro")
+        canonical = source_cls().parse(_normalize_input(source_fmt, content))
+
+        client = MiroApiClient(token=token or None)
+        uploader = MiroUploader(client)
+
+        if clear_ids:
+            ids_to_clear = [i.strip() for i in clear_ids.split(",") if i.strip()]
+            deleted = uploader.clear(board_id, ids_to_clear)
+        else:
+            deleted = 0
+
+        result = uploader.upload(
+            canonical,
+            board_id,
+            scale=scale,
+            origin_x=origin_x,
+            origin_y=origin_y,
+        )
+        result["deleted"] = deleted
+        return result

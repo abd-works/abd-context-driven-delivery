@@ -204,30 +204,51 @@ class MiroStoryMap(StoryMap):
             chunks.append(f"{header}\n{body}\n{footer}")
         return chunks
 
-    def _build_rect_lines(self, canonical: "MiroStoryMap") -> List[str]:
-        """Build the flat list of SVG rect lines for the full story map."""
-        lines: List[str] = []
+    def render_api_shapes(self, canonical: "MiroStoryMap") -> List[dict]:
+        """Return a flat list of shape descriptors for direct Miro REST API upload.
+
+        Each dict has: id, x, y, w, h, rx, fill, stroke, stroke_width,
+        content, role, font_size — all in SVG-coordinate space.
+        Multiply x/y/w/h by a scale factor to convert to Miro board units.
+        """
+        return self._build_shape_dicts(canonical)
+
+    def _build_shape_dicts(self, canonical: "MiroStoryMap") -> List[dict]:
+        """Core layout engine: build one shape dict per visible node."""
+        shapes: List[dict] = []
         epic_x = LEFT_MARGIN_X
         story_y = _story_row_y(canonical)
         for epic_index, epic in enumerate(canonical.epics, start=1):
             epic_width = self._epic_width(epic)
             eid = f"epic-{epic_index}-{_slugify(epic.name)}"
-            lines.append(
-                f'  <rect id="{eid}" x="{epic_x}" y="{EPIC_ROW_Y}" '
-                f'width="{epic_width}" height="{EPIC_HEIGHT}" rx="6" '
-                f'fill="{_FILL_EPIC}" stroke="{_STROKE_EPIC}" stroke-width="2" '
-                f'data-content="{_xe(epic.name)}" data-role="epic" data-font-size="11" />'
-            )
-            self._collect_sub_epic_lines(
-                epic.sub_epics,
-                lines,
-                depth=0,
-                parent_id=eid,
+            shapes.append({
+                "id": eid, "x": epic_x, "y": EPIC_ROW_Y,
+                "w": epic_width, "h": EPIC_HEIGHT, "rx": 6,
+                "fill": _FILL_EPIC, "stroke": _STROKE_EPIC, "stroke_width": 2,
+                "content": epic.name, "role": "epic", "font_size": 11,
+            })
+            self._collect_sub_epic_shapes(
+                epic.sub_epics, shapes,
+                depth=0, parent_id=eid,
                 start_x=epic_x + EPIC_CONTENT_INSET,
                 story_y=story_y,
             )
             epic_x += epic_width + EPIC_GAP
-        return lines
+        return shapes
+
+    def _build_rect_lines(self, canonical: "MiroStoryMap") -> List[str]:
+        """Build the flat list of SVG rect lines for the full story map."""
+        return [self._shape_to_svg_line(s) for s in self._build_shape_dicts(canonical)]
+
+    @staticmethod
+    def _shape_to_svg_line(s: dict) -> str:
+        return (
+            f'  <rect id="{s["id"]}" x="{s["x"]}" y="{s["y"]}" '
+            f'width="{s["w"]}" height="{s["h"]}" rx="{s["rx"]}" '
+            f'fill="{s["fill"]}" stroke="{s["stroke"]}" stroke-width="{s["stroke_width"]}" '
+            f'data-content="{_xe(s["content"])}" data-role="{s["role"]}" '
+            f'data-font-size="{s["font_size"]}" />'
+        )
 
     def parse(self, text: str) -> "MiroStoryMap":
         """Parse a canvas-composer SVG back into a MiroStoryMap.
@@ -454,10 +475,10 @@ class MiroStoryMap(StoryMap):
 
     # -- Private helpers -------------------------------------------------------
 
-    def _collect_sub_epic_lines(
+    def _collect_sub_epic_shapes(
         self,
         sub_epics: List[SubEpic],
-        lines: List[str],
+        shapes: List[dict],
         depth: int,
         parent_id: str,
         start_x: int,
@@ -468,49 +489,42 @@ class MiroStoryMap(StoryMap):
             span = max(sub.diagram_span_columns(), 1)
             width = span * STORY_PITCH_X - SUBEPIC_TIGHTEN * 2
             sub_y = _subepic_y_for_depth(depth)
-            sid = (
-                f"{parent_id}/sub-{sub_index}-{_slugify(sub.name)}-d{depth}"
-            )
-            fill = _subepic_style(depth)
-            lines.append(
-                f'  <rect id="{sid}" x="{sub_x}" y="{sub_y}" '
-                f'width="{width}" height="{SUBEPIC_HEIGHT}" rx="4" '
-                f'fill="{fill}" stroke="{_STROKE_SUBEPIC}" stroke-width="1" '
-                f'data-content="{_xe(sub.name)}" data-role="subepic:{depth}" data-font-size="10" />'
-            )
-            # Own stories come before nested children (left columns)
+            sid = f"{parent_id}/sub-{sub_index}-{_slugify(sub.name)}-d{depth}"
+            shapes.append({
+                "id": sid, "x": sub_x, "y": sub_y,
+                "w": width, "h": SUBEPIC_HEIGHT, "rx": 4,
+                "fill": _subepic_style(depth), "stroke": _STROKE_SUBEPIC, "stroke_width": 1,
+                "content": sub.name, "role": f"subepic:{depth}", "font_size": 10,
+            })
             current_actor = ""
             for index, story in enumerate(sub.stories):
                 story_x = sub_x + SUBEPIC_TIGHTEN + index * STORY_PITCH_X
                 actor = story.users[0].strip() if story.users else ""
                 story_id = f"{sid}/story-{index + 1}-{_slugify(story.name)}"
                 if actor and actor != current_actor:
-                    lines.append(
-                        f'  <rect id="{story_id}/actor" '
-                        f'x="{story_x}" y="{story_y - ACTOR_LABEL_HEIGHT - ACTOR_LABEL_GAP}" '
-                        f'width="{STORY_SIZE}" height="{ACTOR_LABEL_HEIGHT}" rx="0" '
-                        f'fill="{_FILL_SCENARIO}" stroke="{_STROKE_SCENARIO}" stroke-width="1" '
-                        f'data-content="{_xe(actor)}" data-role="actor" data-font-size="7" />'
-                    )
+                    shapes.append({
+                        "id": f"{story_id}/actor",
+                        "x": story_x,
+                        "y": story_y - ACTOR_LABEL_HEIGHT - ACTOR_LABEL_GAP,
+                        "w": STORY_SIZE, "h": ACTOR_LABEL_HEIGHT, "rx": 0,
+                        "fill": _FILL_SCENARIO, "stroke": _STROKE_SCENARIO, "stroke_width": 1,
+                        "content": actor, "role": "actor", "font_size": 7,
+                    })
                     current_actor = actor
-                lines.append(
-                    f'  <rect id="{story_id}" '
-                    f'x="{story_x}" y="{story_y}" '
-                    f'width="{STORY_SIZE}" height="{STORY_SIZE}" rx="0" '
-                    f'fill="{_FILL_STORY}" stroke="{_STROKE_STORY}" stroke-width="1" '
-                    f'data-content="{_xe(story.name)}" '
-                    f'data-role="story:{story.story_type.value}" '
-                    f'data-actor="{_xe(actor)}" data-font-size="8" />'
-                )
-            # Recurse into nested sub-epics
+                shapes.append({
+                    "id": story_id,
+                    "x": story_x, "y": story_y,
+                    "w": STORY_SIZE, "h": STORY_SIZE, "rx": 0,
+                    "fill": _FILL_STORY, "stroke": _STROKE_STORY, "stroke_width": 1,
+                    "content": story.name,
+                    "role": f"story:{story.story_type.value}",
+                    "font_size": 8,
+                    "actor": actor,
+                })
             nested_x = sub_x + len(sub.stories) * STORY_PITCH_X
-            self._collect_sub_epic_lines(
-                sub.sub_epics,
-                lines,
-                depth + 1,
-                sid,
-                nested_x,
-                story_y,
+            self._collect_sub_epic_shapes(
+                sub.sub_epics, shapes,
+                depth + 1, sid, nested_x, story_y,
             )
             sub_x += span * STORY_PITCH_X
 
