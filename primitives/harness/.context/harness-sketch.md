@@ -97,23 +97,29 @@ Harness
          // body: run the context tool / actions using the following format: {format}
          // mostly generate and render
          // Cursor has no prompt files — deploy as a command
-       with a CDD stage fidelity
-         -> prompt = new Prompt(type)
-         -> prompt.generate(stage)
-         // slash name is {context_tool}.{fidelity} — dots are allowed in .cursor/commands
-         // fidelity values only — no stage-key aliases
-         // discovery, specification, engineering
-       with a tool-specific fidelity
-         -> prompt = new Prompt(type)
-         -> prompt.generate(fidelity)
-         // slash name is {context_tool}.{fidelity} e.g. /stories.story_map /ux.ia
-         // hardcoded from each tool's fidelities table values — no stage-key aliases
-         // Stories: story_map, scenarios, acceptance_tests
-         // DDD: bounded_context, building_blocks, tactics
-         // CleanEngineering: modules, model, specification, code
-         // UX: ia, mockup, front_end_code
-         // BDD: modules, behavior, development
-         // CDD: spec, engineer
+        with a CDD stage fidelity
+          -> prompt = new Prompt(type)
+          -> prompt.generate(stage)
+          // slash name is {context_tool}.{fidelity} — dots are allowed in .cursor/commands
+          // fidelity values only — no stage-key aliases
+          // discovery, specification, engineering
+        with a tool-specific fidelity
+          -> prompt = new Prompt(type)
+          -> prompt.generate(fidelity)
+          // slash name is {context_tool}.{fidelity} e.g. /stories.story_map /ux.ia
+          // hardcoded from each tool's fidelities table values — no stage-key aliases
+          // Stories: story_map, scenarios, acceptance_tests
+          // DDD: bounded_context, building_blocks, tactics
+          // CleanEngineering: modules, model, specification, code
+          // UX: ia, mockup, front_end_code
+          // BDD: modules, behavior, development
+          // CDD: spec, engineer
+          // extended=True (opt-in parameter on write_deploy) — same loop writes
+          //    {context_tool}-{fidelity} composites instead: iterate the guidance
+          //    command like run time (load the class, construct with context.fidelity,
+          //    expand action: guidance) and bake the returned instructions into the
+          //    command; fall back to the guidance docstring
+          // default (no parameter) — the slim {context_tool}.{fidelity} prompts stay
        with @skill, @prompt, or @instruction on the operation
          // VS Code names only — no Cursor-specific decorators
          // @prompt from Prompt; @instruction from Instruction; @skill from Skill
@@ -125,7 +131,7 @@ Harness
          // write vehicles inherit: annotate the base; subclasses do not repeat
          // an override without a write vehicle still inherits the base write
          // a write vehicle on the subclass operation replaces the inherited one
-         // context tools still write fidelity prompts after inherited writes
+          // context tools still write fidelity prompts after inherited writes
          // body still follows source kind
          // body includes class string and the merged operation instructions
        with type Cursor
@@ -240,21 +246,32 @@ Harness
            // source is the context tool or the action
 
   ----
- Resolve
+  Resolve
       // action: if you took guidance from the context and not a tool, confirm the use of the context; AskQuestion constrained to the context tools (baked context-tool slugs plus use existing context only)
       // guidance: if you took an action from the context versus being given an explicit one, confirm the use of the context; AskQuestion constrained to the actions in context_tools/actions (baked slash names)
-      // if the fidelity does not belong to the in-scope tool or has not been provided: guess the correct one and confirm with AskQuestion constrained to the other fidelities — context-tool skills and action bodies only, never a fidelity prompt
+      // extended=True swaps both lines: with a straight prompt passed, run this action on the context in general / take the action from the prompt; confirm only what you took from the context and not a straight prompt
+      // if the fidelity does not belong to the in-scope tool or has not been provided: guess the correct one and confirm with AskQuestion constrained to the other fidelities — context-tool skills and action bodies only, never a fidelity prompt or ct-fidelity command
       // never AskQuestion constrained to this source — the skill is the guidance, the action prompt is the action
       // context-tool fidelity prompt — first line: Run the action on {context_tool} at {fidelity} fidelity through the tools cli; then the CLI lines; no Then run, no heading, no Instructions, no AskQuestion
+      // ct-fidelity command (extended=True) — first line: Run the action on {context_tool} at {fidelity} fidelity through the tools cli; then the returned guidance instructions (all ct content); Then run + the CLI lines with context.fidelity pinned and action: generate; no fidelity AskQuestion
       // utility and format — operation (or format) text; through the tools cli; then the CLI lines; no Then run; no Run this action; no guidance/fidelity AskQuestion
 
   ----
- ContextToolBody
+  ContextToolBody
       // same recipe whether the file is a skill or a command
       // does not require an action
       // 1. what this skill does — first line of guidance() on the context tool (tooltip too)
       // 2. Resolve — then the CLI; per-fidelity and diagnose prose stay on the tool for the manifest
       //      pipe invoke fence; python -m tools run -  (no _req.yaml; skill is the catalog)
+
+  ----
+  ContextToolFidelityBody : ContextToolBody   (extended=True only)
+        // composite subtype — one {context_tool}-{fidelity} command per fidelity value
+        // content: returned guidance — run the tool's action: guidance at that fidelity
+        //   through the run-time expansion (load the class, construct with context.fidelity,
+        //   expand, take response.instructions); fall back to the guidance docstring, then the overview
+        // then Resolve ct-fidelity + the CLI fence with context.fidelity pinned and action: generate
+        // the default deploy keeps the slim {context_tool}.{fidelity} ActionBody prompts
 
   ----
  ActionBody
@@ -297,8 +314,8 @@ Harness
   ----
  Prompt : HarnessTool
        // @prompt
-       // VS Code: .github/prompts/{name}.prompt.md — same {name} as Cursor, including {context_tool}.{fidelity}
-       // VS Code slash name comes from the file stem before .prompt.md and the YAML name field (periods are allowed)
+        // VS Code: .github/prompts/{name}.prompt.md — same {name} as Cursor, including {context_tool}.{fidelity} ({context_tool}-{fidelity} when extended=True)
+        // VS Code slash name comes from the file stem before .prompt.md and the YAML name field (periods are allowed)
        // Cursor has no prompt files — deploy as a command
        generate source
 

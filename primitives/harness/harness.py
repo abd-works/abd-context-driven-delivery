@@ -24,6 +24,7 @@ from harness.harness_tool import operation_writes, required_init_params
 from harness.hook import Hook
 from harness.instruction import Instruction
 from harness.prompt import Prompt, prompt
+from harness.returned_guidance import returned_guidance
 from harness.rule import Rule
 from harness.skill import Skill
 
@@ -95,6 +96,7 @@ class Harness:
             raise TypeError("type is required")
         self.type = type
         self.repo_root = Path(repo_root) if repo_root is not None else _REPO_ROOT
+        self._extended = False
         self.skills: list[Skill] = []
         self.prompts: list[Prompt] = []
         self.commands: list[Command] = []
@@ -342,6 +344,24 @@ class Harness:
                         names.extend(self._dict_values(item.value))
         return self._unique_names(names)
 
+    def _has_agent_instructions(self, path: Path, class_name: str) -> bool:
+        """True when the class at path has an @agent_instructions operation."""
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError):
+            return False
+        for node in tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if class_name and node.name != class_name:
+                continue
+            for item in node.body:
+                if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                if any(_deco_id(dec) == "agent_instructions" for dec in item.decorator_list):
+                    return True
+        return False
+
     def _action_option_names(self) -> list[str]:
         names: list[str] = []
         for entry in json.loads(self.walk()):
@@ -426,10 +446,10 @@ class Harness:
         if name == wanted:
             return True
         if derived == "fidelity":
-            short = name.rsplit(".", 1)[-1]
+            short = name.rsplit("-" if self._extended else ".", 1)[-1]
             if wanted == short:
                 return True
-        return source_slug == wanted and derived != "fidelity"
+        return source_slug == wanted
 
     def _emit(self, kind: str, source: dict, roots: list[Path], seen: set[tuple[str, str]]) -> str | None:
         name = source["name"]
@@ -485,6 +505,8 @@ class Harness:
                 "operation": operation,
                 "invoke": invoke,
             }
+            if self._extended:
+                payload["extended"] = True
             if kind == "action":
                 payload["action"] = True
                 payload["context_tools"] = (
@@ -528,13 +550,32 @@ class Harness:
                 written = self._emit("skill", source_for(slug, meta["guidance"]), roots, seen)
                 if written:
                     names.append(written)
+        elif kind == "utility":
+            default_name = toolset.rsplit(":", 1)[0].rsplit(".", 1)[-1] or slug
+            if self._wanted(wanted, default_name, slug, "source") and self._has_agent_instructions(
+                path, class_name
+            ):
+                payload = source_for(default_name, meta["guidance"])
+                if cc:
+                    payload["constructor_context"] = cc
+                written = self._emit("prompt", payload, roots, seen)
+                if written:
+                    names.append(written)
         if kind != "action":
             for fidelity_name in self._fidelity_option_names(path, class_name):
-                deploy_name = f"{slug}.{fidelity_name}"
+                deploy_name = f"{slug}{'-' if self._extended else '.'}{fidelity_name}"
                 if not self._wanted(wanted, deploy_name, slug, "fidelity"):
                     continue
-                guidance = f"Run at fidelity {fidelity_name}."
-                payload = source_for(deploy_name, guidance)
+                payload = source_for(
+                    deploy_name,
+                    meta["guidance"] if self._extended else f"Run at fidelity {fidelity_name}.",
+                )
+                if self._extended:
+                    if cc:
+                        payload["constructor_context"] = cc
+                    payload["returned"] = returned_guidance(
+                        path, class_name, toolset, fidelity_name, cc or None
+                    )
                 payload["fidelity"] = True
                 payload["fidelity_slug"] = fidelity_name
                 written = self._emit("prompt", payload, roots, seen)
@@ -612,6 +653,8 @@ class Harness:
         payload = {"type": self.type}
         if deploy_path:
             payload["deploy_path"] = deploy_path
+        if self._extended:
+            payload["extended"] = True
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     def walk(self, name_filter: str = "") -> str:
@@ -673,9 +716,21 @@ class Harness:
         return str(self._suggested_deploy_path())
 
     @agent_tool
-    def write_deploy(self, source: str = "", name_filter: str = "", deploy_path: str = "") -> str:
-        """Walk if needed, then write sources plus Harness prompts into the deploy area."""
+    def write_deploy(
+        self,
+        source: str = "",
+        name_filter: str = "",
+        deploy_path: str = "",
+        extended: bool = False,
+    ) -> str:
+        """Walk if needed, then write sources plus Harness prompts into the deploy area.
+
+        extended=True writes ct-fidelity commands ({context_tool}-{fidelity}) that
+        bake the guidance the tool returns at each fidelity; the default keeps the
+        {context_tool}.{fidelity} fidelity prompts.
+        """
         self._require_implemented()
+        self._extended = bool(extended)
         self.skills = []
         self.prompts = []
         self.commands = []
@@ -725,6 +780,7 @@ class Harness:
         deploy_path: str | None = None,
     ) -> str:
         """With no IDE given, AskQuestion: Which IDE? Cursor | VS Code."""
+        """Set context.type to the chosen IDE before running."""
         self._require_implemented()
         """With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring."""
         """With no deploy path given, call suggested_deploy_path, then AskQuestion: deploy to that suggested path (recommended) / enter another path."""
@@ -745,13 +801,15 @@ class Harness:
             state = json.loads(path.read_text(encoding="utf-8"))
             saved = state.get("type")
             deploy_path = state.get("deploy_path") or ""
+            extended = bool(state.get("extended"))
         except (OSError, json.JSONDecodeError):
             saved = None
             deploy_path = ""
+            extended = False
         if not saved:
             raise RuntimeError("no saved IDE")
         self.type = saved
-        return self.write_deploy(deploy_path=deploy_path)
+        return self.write_deploy(deploy_path=deploy_path, extended=extended)
 
     @prompt(name="clean-harness")
     @agent_tool

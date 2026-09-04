@@ -38,6 +38,7 @@ class Skill(HarnessTool):
                     context_tools=meta.get("context_tools") or (),
                     invoke=meta.get("invoke") or "action",
                     operation=meta.get("operation") or "",
+                    extended=meta.get("extended") or False,
                 )
             elif meta.get("source_kind") == "utility":
                 self.body = UtilityBody.from_source(
@@ -55,6 +56,7 @@ class Skill(HarnessTool):
                     toolset=meta.get("toolset", ""),
                     fidelities=meta.get("fidelities") or (),
                     actions=meta.get("actions") or (),
+                    extended=meta.get("extended") or False,
                 )
             if not self.description:
                 self.description = meta.get("overview", name)

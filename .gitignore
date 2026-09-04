@@ -11,9 +11,7 @@ primitives/tools/hooks/manifest_gate.log
 # Sandbox Node toolchain
 sandbox/node_modules/
 
-# Generated Cursor skills and commands (agent_skills)
-.cursor/commands/
-.cursor/skills/
+# Generated deploy state (local; the deployed .cursor artifacts are tracked)
 .kilo/
 utilities/agent_skills/.deploy-state.json
 primitives/harness/.deploy-state.json

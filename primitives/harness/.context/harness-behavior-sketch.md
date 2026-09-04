@@ -93,16 +93,26 @@ a harness
       it should name generate and render
       it should not set a fidelity
       it should not use action resolve
-    with a CDD stage fidelity
-      -> prompt = new Prompt(type)
-      -> prompt.generate(stage)
-      it should add that prompt
-      it should not AskQuestion about fidelities
-    with a tool-specific fidelity
-      -> prompt = new Prompt(type)
-      -> prompt.generate(fidelity)
-      it should add that prompt
-      it should not AskQuestion about fidelities
+     with a CDD stage fidelity
+       -> prompt = new Prompt(type)
+       -> prompt.generate(stage)
+       it should add that prompt
+       it should name it {context_tool}.{fidelity}
+       it should not AskQuestion about fidelities
+     with a tool-specific fidelity
+       -> prompt = new Prompt(type)
+       -> prompt.generate(fidelity)
+       it should add that prompt
+       it should name it {context_tool}.{fidelity}
+       it should not AskQuestion about fidelities
+     with extended=True
+       -> prompt = new Prompt(type)
+       -> prompt.generate(fidelity)
+       it should add that prompt
+       it should name it {context_tool}-{fidelity}
+       it should contain the returned guidance for that fidelity
+       it should pin the fidelity in the invoke fence
+       it should not AskQuestion about fidelities
     with CleanEngineering model
       it should write a model prompt
     with DDD bounded_context
@@ -153,12 +163,14 @@ a generated harness tool
     with qualitative guidance or an action taken from the context
       it should confirm
         -> expect(tool.body).to contain "confirm"
+    with extended=True and a straight prompt passed
+      it should not AskQuestion for an action or a context tool
     with a fidelity that does not belong to the in-scope tool or has not been provided
       with a context-tool skill or an action body
         it should guess the correct fidelity
         it should confirm with AskQuestion constrained to the other fidelities
-      with a fidelity prompt
-        it should not AskQuestion about fidelities
+        with a fidelity prompt or an extended ct-fidelity command
+          it should not AskQuestion about fidelities
     with neither qualitative guidance nor an action available
       it should not AskQuestion constrained to this source
     with the action specified

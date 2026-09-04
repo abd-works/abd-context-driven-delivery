@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from harness.bodies import ActionBody, FormatBody, UtilityBody
+from harness.bodies import ActionBody, ContextToolFidelityBody, FormatBody, UtilityBody
 from harness.command import Command
 from harness.harness_tool import HarnessTool, _frontmatter, prompt as prompt_decorator
 
@@ -36,15 +36,27 @@ class Prompt(HarnessTool):
                 self.description = self.description or name
             elif source.get("fidelity"):
                 fidelity_name = source.get("fidelity_slug") or name
-                self.body = ActionBody.from_source(
-                    name=fidelity_name,
-                    class_string=source.get("class_string", name),
-                    operation_instructions=source.get("guidance", ""),
-                    toolset=source.get("toolset", ""),
-                    kind="fidelity",
-                    fidelities=source.get("fidelities") or (),
-                    constructor_context=source.get("constructor_context") or None,
-                )
+                if source.get("extended"):
+                    self.body = ContextToolFidelityBody.from_source(
+                        overview=source.get("overview", name),
+                        toolset=source.get("toolset", ""),
+                        guidance=source.get("guidance", ""),
+                        instructions=source.get("returned", ""),
+                        fidelities=source.get("fidelities") or (),
+                        actions=source.get("actions") or (),
+                        fidelity=fidelity_name,
+                        constructor_context=source.get("constructor_context") or None,
+                    )
+                else:
+                    self.body = ActionBody.from_source(
+                        name=fidelity_name,
+                        class_string=source.get("class_string", name),
+                        operation_instructions=source.get("guidance", ""),
+                        toolset=source.get("toolset", ""),
+                        kind="fidelity",
+                        fidelities=source.get("fidelities") or (),
+                        constructor_context=source.get("constructor_context") or None,
+                    )
             elif source.get("action") or source.get("source_kind") == "action":
                 self.body = ActionBody.from_source(
                     name=name,
@@ -57,6 +69,7 @@ class Prompt(HarnessTool):
                     invoke=source.get("invoke") or "action",
                     operation=source.get("operation") or "",
                     constructor_context=source.get("constructor_context") or None,
+                    extended=source.get("extended") or False,
                 )
             else:
                 self.body = UtilityBody.from_source(

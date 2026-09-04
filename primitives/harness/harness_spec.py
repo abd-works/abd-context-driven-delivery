@@ -903,6 +903,78 @@ with description("a harness"):
                 expect(body).not_to(contain("Run at fidelity scaffold"))
                 expect(body).not_to(contain("If the fidelity does not belong"))
 
+        with context("with an extended deploy"):
+            with it("should write the scaffold composite as a hyphenated ct-fidelity command"):
+                root = _sandbox()
+                harness = Harness("Cursor", repo_root=root)
+                harness.write_deploy(source="scaffold", extended=True)
+                body = (root / ".cursor" / "commands" / "stories-scaffold.md").read_text(encoding="utf-8")
+                expect(body).to(contain("Run the action on stories at scaffold fidelity through the tools cli"))
+                expect(body).to(contain("Stories."))
+                expect(body).to(contain("Then run:"))
+                expect(body).to(contain("fidelity: scaffold"))
+                expect(body).to(contain("action: generate"))
+                expect(body).not_to(contain("AskQuestion constrained to the other fidelities"))
+                expect(body).not_to(contain("Every tool call uses this shape"))
+                expect((root / ".cursor" / "commands" / "scaffold.md").is_file()).to(equal(False))
+                expect((root / ".cursor" / "commands" / "stories.scaffold.md").is_file()).to(equal(False))
+
+            with it("should swap the confirm lines for straight prompt passed vs ct"):
+                root = _sandbox()
+                harness = Harness("Cursor", repo_root=root)
+                harness.write_deploy(source="stories", extended=True)
+                text = (root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")
+                expect(text).to(contain("With a straight prompt passed, take the action from the prompt"))
+                expect(text).to(contain("If you took an action from the context versus being given a straight prompt"))
+                expect(text).to(contain("or has not been provided"))
+                expect(text).not_to(contain("versus being given an explicit one"))
+                expect(text).to(contain("tools.ps1 run -"))
+                expect((root / ".cursor" / "commands" / "stories-story_map.md").is_file()).to(equal(True))
+
+            with it("should swap the action confirm line for straight prompt passed vs ct"):
+                root = _sandbox()
+                Harness("Cursor", repo_root=root).write_deploy(source="sketch", extended=True)
+                text = (root / ".cursor" / "commands" / "sketch.md").read_text(encoding="utf-8")
+                expect(text).to(contain("With a straight prompt passed, run this action on the context in general"))
+                expect(text).to(contain("If you took a context tool from the context and not a straight prompt"))
+                expect(text).not_to(contain("If you took guidance from the context and not a tool"))
+
+        with context("with an expandable context tool fidelity"):
+            with it("should bake the returned guidance instructions into the extended ct-fidelity command"):
+                root = _sandbox()
+                path = root / "context_tools" / "bddish" / "bddish.py"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(
+                    "# @toolset-manifest python -m tools manifest context_tools.bddish.bddish:Bddish\n"
+                    '"""Bddish."""\n'
+                    "from primitives.actions.action import agentic_toolset, agent_instructions\n"
+                    "\n"
+                    "\n"
+                    "@agentic_toolset\n"
+                    "class Bddish:\n"
+                    '    fidelities = {"discovery": "modules", "specification": "behavior"}\n'
+                    "\n"
+                    '    def __init__(self, fidelity: str = "behavior"):\n'
+                    "        self.fidelity = fidelity\n"
+                    "\n"
+                    "    @agent_instructions\n"
+                    "    def guidance(self):\n"
+                    '        """Provide guidance for bddish work."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(source="behavior", extended=True)
+                body = (root / ".cursor" / "commands" / "bddish-behavior.md").read_text(encoding="utf-8")
+                expect(body).to(contain("Run the action on bddish at behavior fidelity through the tools cli"))
+                expect(body).to(contain("Provide guidance for bddish work."))
+                expect(body).to(contain("Every tool call uses this shape"))
+                expect(body).to(contain("fidelity: behavior"))
+                expect(body).to(contain("action: generate"))
+                expect(body).to(contain("tools.ps1 run -"))
+                expect(body).not_to(contain("AskQuestion constrained to the other fidelities"))
+                expect((root / ".cursor" / "commands" / "bddish.behavior.md").is_file()).to(equal(False))
+                expect((root / ".cursor" / "commands" / "behavior.md").is_file()).to(equal(False))
+
         with context("with a format"):
             with it("should write a format prompt that names generate and render"):
                 root = _sandbox()
@@ -1254,6 +1326,24 @@ with description("harness bodies for manifest-alone invoke (#45)"):
             expect(text).to(contain("Do not remanifest"))
             expect(text).not_to(contain("_req.yaml"))
             expect(text).not_to(contain("python -m tools manifest "))
+
+    with context("when resolving a ct-fidelity composite body"):
+        with it("should pin the fidelity and follow response.instructions without remanifest"):
+            text = resolve_text(
+                "behavior",
+                "context_tools.bdd.bdd:Bdd",
+                kind="ct_fidelity",
+            )
+            expect(text).to(contain("tools.ps1 run -"))
+            expect(text).to(contain("Follow response.instructions"))
+            expect(text).to(contain("Do not remanifest"))
+            expect(text).to(contain("fidelity: behavior"))
+            expect(text).to(contain("action: generate"))
+            expect(text).to(contain("Then run:"))
+            expect(text).to(contain("If you took an action from the context versus being given a straight prompt"))
+            expect(text).not_to(contain("_req.yaml"))
+            expect(text).not_to(contain("python -m tools manifest "))
+            expect(text).not_to(contain("AskQuestion constrained to the other fidelities"))
 
     with context("when resolving a guidance body"):
         with it("should not point AskQuestion at a source tree path"):
