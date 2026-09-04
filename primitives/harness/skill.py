@@ -18,6 +18,9 @@ skill = skill_decorator
 class Skill(HarnessTool):
     def relative_path(self) -> Path:
         if self.folder:
+            # overview skill: folder ends with slug == name → SKILL.md at folder root
+            if self.folder.endswith(f"/{self.name}") or self.folder == self.name:
+                return Path("skills") / self.folder / "SKILL.md"
             return Path("skills") / self.folder / self.name / "SKILL.md"
         return Path("skills") / self.name / "SKILL.md"
 

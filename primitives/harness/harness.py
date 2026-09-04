@@ -545,7 +545,13 @@ class Harness:
         toolset = entry.get("manifest_command", "").rsplit(" ", 1)[-1]
         names: list[str] = []
 
-        _KIND_FOLDER = {"context_tool": "context_tools", "action": "actions", "utility": "utilities"}
+        _BASE_FOLDER = {"context_tool": "context_tools", "action": "actions", "utility": "utilities"}
+
+        def _folder_for(k: str, s: str) -> str:
+            base = _BASE_FOLDER.get(k, "")
+            if k == "context_tool":
+                return f"{base}/{s}"
+            return base
 
         def source_for(name: str, guidance: str, *, operation: str = "", invoke: str = "action") -> dict:
             payload = {
@@ -556,7 +562,7 @@ class Harness:
                 "source_kind": kind,
                 "operation": operation,
                 "invoke": invoke,
-                "folder": _KIND_FOLDER.get(kind, ""),
+                "folder": _folder_for(kind, slug),
             }
             if self._extended:
                 payload["extended"] = True
