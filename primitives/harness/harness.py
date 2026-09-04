@@ -704,9 +704,22 @@ class Harness:
             agents_dir = ct_dir / "agents"
             if agents_dir.is_dir():
                 agent_sources.extend(agents_dir.glob("*.md"))
+        written_names = {src.name for src in agent_sources}
         for root in roots:
             agents_root = root / "agents"
             agents_root.mkdir(parents=True, exist_ok=True)
+            # remove stale items (subdirectories or old .md files no longer in source)
+            for item in list(agents_root.iterdir()):
+                if item.is_dir():
+                    try:
+                        shutil.rmtree(item)
+                    except OSError:
+                        pass
+                elif item.name not in written_names:
+                    try:
+                        item.unlink()
+                    except OSError:
+                        pass
             for src in agent_sources:
                 dest = agents_root / src.name
                 dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
