@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeSubmitPrompt": [
+      {
+        "command": "python primitives/hooks/prompt_echo.py",
+        "timeout": 10,
+        "failClosed": false,
+        "matcher": "UserPromptSubmit"
+      }
+    ]
+  }
+}
