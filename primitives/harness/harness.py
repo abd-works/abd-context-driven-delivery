@@ -545,7 +545,7 @@ class Harness:
         toolset = entry.get("manifest_command", "").rsplit(" ", 1)[-1]
         names: list[str] = []
 
-        _KIND_FOLDER = {"context_tool": "context_tools", "action": "actions"}
+        _KIND_FOLDER = {"context_tool": "context_tools", "action": "actions", "utility": "utilities"}
 
         def source_for(name: str, guidance: str, *, operation: str = "", invoke: str = "action") -> dict:
             payload = {
@@ -658,6 +658,7 @@ class Harness:
                 "guidance": doc or name,
                 "toolset": "harness.harness:Harness",
                 "source_kind": "utility",
+                "folder": "primitives",
                 "operation": cli_operation,
                 "invoke": cli_invoke,
             }
@@ -829,7 +830,7 @@ class Harness:
         for fmt in _FORMATS:
             if wanted and fmt != wanted:
                 continue
-            written = self._emit("prompt", {"name": fmt, "format": fmt}, roots, seen)
+            written = self._emit("prompt", {"name": fmt, "format": fmt, "folder": "formats"}, roots, seen)
             if written:
                 names.append(written)
         names.extend(self._write_harness_files(roots, seen))
