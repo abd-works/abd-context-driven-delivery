@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from harness.bodies import ActionBody, ContextToolFidelityBody, FormatBody, UtilityBody
-from harness.command import Command
 from harness.harness_tool import HarnessTool, _frontmatter, prompt as prompt_decorator
+from harness.skill import Skill
 
 prompt = prompt_decorator
 
@@ -84,9 +84,15 @@ class Prompt(HarnessTool):
             if source.get("overview"):
                 self.description = source["overview"]
         if self.type == "Cursor":
-            command = Command(self.type, self.name)
-            command.description = self.description
-            command.model = self.model
-            command.body = self.body
-            return command.generate(source, roots)
+            skill = Skill(self.type, self.name)
+            skill.model = self.model
+            skill.body = self.body
+            skill.folder = self.folder
+            skill.disable_model_invocation = True
+            if isinstance(source, dict):
+                op_guidance = ((source.get("guidance") or "").splitlines() or [""])[0]
+                skill_source = {**source, "overview": op_guidance} if op_guidance else source
+            else:
+                skill_source = source
+            return skill.generate(skill_source, roots)
         return super().generate(source, roots)

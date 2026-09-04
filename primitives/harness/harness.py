@@ -58,6 +58,13 @@ def _deco_id(node: ast.expr) -> str | None:
     return None
 
 
+def _is_dev_only_class(tree: ast.AST, class_name: str) -> bool:
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name == class_name:
+            return any(_deco_id(dec) == "dev_only" for dec in node.decorator_list)
+    return False
+
+
 def _class_slug(name: str) -> str:
     stepped = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
     return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", stepped).lower()
@@ -97,6 +104,7 @@ class Harness:
         self.type = type
         self.repo_root = Path(repo_root) if repo_root is not None else _REPO_ROOT
         self._extended = False
+        self._prod = False
         self.skills: list[Skill] = []
         self.prompts: list[Prompt] = []
         self.commands: list[Command] = []
@@ -446,7 +454,7 @@ class Harness:
         if name == wanted:
             return True
         if derived == "fidelity":
-            short = name.rsplit("-" if self._extended else ".", 1)[-1]
+            short = name.rsplit("-", 1)[-1]
             if wanted == short:
                 return True
         return source_slug == wanted
@@ -472,7 +480,9 @@ class Harness:
         prompt_file = Prompt(self.type, name)
         written = prompt_file.generate(source, roots)
         self.prompts.append(prompt_file)
-        if isinstance(written, Command):
+        if isinstance(written, Skill):
+            self.skills.append(written)
+        elif isinstance(written, Command):
             self.commands.append(written)
         return name
 
@@ -490,10 +500,19 @@ class Harness:
             if self._wanted(wanted, slug, slug, "source"):
                 self._drop_source_slug(slug, roots)
             return []
+        if self._prod:
+            try:
+                tree_ast = ast.parse(path.read_text(encoding="utf-8"))
+                if _is_dev_only_class(tree_ast, class_name):
+                    return []
+            except (OSError, SyntaxError):
+                pass
         kind = self._classify_path(str(path))
         meta = self._read_meta(path, slug, class_name)
         toolset = entry.get("manifest_command", "").rsplit(" ", 1)[-1]
         names: list[str] = []
+
+        _KIND_FOLDER = {"context_tool": "context_tools", "action": "actions"}
 
         def source_for(name: str, guidance: str, *, operation: str = "", invoke: str = "action") -> dict:
             payload = {
@@ -504,6 +523,7 @@ class Harness:
                 "source_kind": kind,
                 "operation": operation,
                 "invoke": invoke,
+                "folder": _KIND_FOLDER.get(kind, ""),
             }
             if self._extended:
                 payload["extended"] = True
@@ -563,19 +583,16 @@ class Harness:
                     names.append(written)
         if kind != "action":
             for fidelity_name in self._fidelity_option_names(path, class_name):
-                deploy_name = f"{slug}{'-' if self._extended else '.'}{fidelity_name}"
+                deploy_name = f"{slug}-{fidelity_name}"
                 if not self._wanted(wanted, deploy_name, slug, "fidelity"):
                     continue
-                payload = source_for(
-                    deploy_name,
-                    meta["guidance"] if self._extended else f"Run at fidelity {fidelity_name}.",
+                payload = source_for(deploy_name, meta["guidance"])
+                payload["extended"] = True
+                if cc:
+                    payload["constructor_context"] = cc
+                payload["returned"] = compound_guidance(
+                    path, class_name, fidelity_name, cc or None
                 )
-                if self._extended:
-                    if cc:
-                        payload["constructor_context"] = cc
-                    payload["returned"] = compound_guidance(
-                        path, class_name, fidelity_name, cc or None
-                    )
                 payload["fidelity"] = True
                 payload["fidelity_slug"] = fidelity_name
                 written = self._emit("prompt", payload, roots, seen)
@@ -646,6 +663,20 @@ class Harness:
                 ):
                     if leftover.is_file():
                         leftover.unlink()
+
+    def _deploy_agents(self, roots: list[Path]) -> None:
+        """Copy context_tools/*/agents/*.md → agents/{name}.md in each deploy root."""
+        agent_sources: list[Path] = []
+        for ct_dir in (self.repo_root / "context_tools").iterdir():
+            agents_dir = ct_dir / "agents"
+            if agents_dir.is_dir():
+                agent_sources.extend(agents_dir.glob("*.md"))
+        for root in roots:
+            agents_root = root / "agents"
+            agents_root.mkdir(parents=True, exist_ok=True)
+            for src in agent_sources:
+                dest = agents_root / src.name
+                dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
 
     def _save_ide(self, deploy_path: str = "") -> None:
         path = self._state_path()
@@ -722,15 +753,17 @@ class Harness:
         name_filter: str = "",
         deploy_path: str = "",
         extended: bool = False,
+        prod: bool = False,
     ) -> str:
         """Walk if needed, then write sources plus Harness prompts into the deploy area.
 
-        extended=True writes ct-fidelity commands ({context_tool}-{fidelity}) that
-        bake the guidance the tool returns at each fidelity; the default keeps the
-        {context_tool}.{fidelity} fidelity prompts.
+        extended=True writes ct-fidelity skills ({context_tool}-{fidelity}) that
+        bake the guidance the tool returns at each fidelity.
+        prod=True skips any class decorated with @dev_only.
         """
         self._require_implemented()
         self._extended = bool(extended)
+        self._prod = bool(prod)
         self.skills = []
         self.prompts = []
         self.commands = []
@@ -754,6 +787,8 @@ class Harness:
             if written:
                 names.append(written)
         names.extend(self._write_harness_files(roots, seen))
+        if not wanted:
+            self._deploy_agents(roots)
         skill_names = {item.name for item in self.skills}
         prompt_names = {item.name for item in self.prompts} | {item.name for item in self.commands}
         for prompt_file in self.prompts:

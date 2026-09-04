@@ -4,7 +4,7 @@
 """Car — example context tool for in-character road stories and vehicle tools."""
 from __future__ import annotations
 
-from harness.harness_tool import prompt
+from harness.harness_tool import dev_only, prompt
 from context_tools.base.base_context_tool import BaseContextTool
 from primitives.actions.action import agent_instructions
 from primitives.instructions import Instruction
@@ -21,6 +21,7 @@ _FIDELITY_FORMAT_DEFAULTS = {
 }
 
 
+@dev_only
 class Car(BaseContextTool):
     """# Instructions
 

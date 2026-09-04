@@ -24,6 +24,12 @@ def _mark(kind: _Kind, name: str | None = None):
     return apply
 
 
+def dev_only(cls: type) -> type:
+    """Class-level marker. Harness skips this class when deploying with prod=True."""
+    cls._dev_only = True  # type: ignore[attr-defined]
+    return cls
+
+
 def skill(fn: Callable[..., Any] | None = None, *, name: str | None = None):
     deco = _mark("skill", name)
     return deco if fn is None else deco(fn)
@@ -228,12 +234,21 @@ def required_init_params(source_path: Path, class_name: str = "") -> list[str]:
     return []
 
 
-def _frontmatter(name: str, description: str, model: str = "") -> str:
-    safe = description.replace('"', "'").splitlines()[0] if description else name
-    lines = ["---", f"name: {name}", f'description: "{safe}"']
+def _frontmatter(
+    name: str,
+    description: str,
+    model: str = "",
+    disable_model_invocation: bool = False,
+) -> str:
+    lines = ["---", f"name: {name}"]
+    if description:
+        safe = description.replace('"', "'").splitlines()[0]
+        lines.append(f'description: "{safe}"')
     model_id = (model or "").strip()
     if model_id:
         lines.append(f"model: {model_id}")
+    if disable_model_invocation:
+        lines.append("disable-model-invocation: true")
     lines.append("---")
     lines.append("")
     return "\n".join(lines) + "\n"
@@ -248,6 +263,8 @@ class HarnessTool:
         self.description = ""
         self.model = ""
         self.body: Any = ""
+        self.folder: str = ""
+        self.disable_model_invocation: bool = False
 
     def relative_path(self) -> Path:
         raise NotImplementedError
@@ -265,6 +282,8 @@ class HarnessTool:
                 self.model = str(source.get("model") or "").strip()
             if source.get("body") is not None:
                 self.body = source["body"]
+            if source.get("folder") is not None:
+                self.folder = source["folder"]
             return
         if source is not None and not self.body:
             self.body = source
