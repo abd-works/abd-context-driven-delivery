@@ -404,9 +404,13 @@ class Harness:
 
     def _drop_action_skill(self, slug: str, roots: list[Path]) -> None:
         for root in roots:
-            skill_dir = root / "skills" / slug
-            if skill_dir.is_dir():
-                shutil.rmtree(skill_dir)
+            for candidate in (
+                root / "skills" / slug,
+                root / "skills" / "context_tools" / slug,
+                root / "skills" / "actions" / slug,
+            ):
+                if candidate.is_dir():
+                    shutil.rmtree(candidate)
 
     def _drop_source_slug(self, slug: str, roots: list[Path]) -> None:
         self._drop_action_skill(slug, roots)
@@ -419,13 +423,42 @@ class Harness:
                     leftover.unlink()
 
     def _drop_unwritten_skills(self, roots: list[Path], written: set[str]) -> None:
+        """Remove skill folders not in ``written``.
+
+        ``written`` contains either plain skill names (for flat skills) or
+        ``"<subfolder>/<name>"`` strings (for skills nested inside a category
+        subfolder like ``context_tools/`` or ``actions/``).
+        """
         for root in roots:
             skills_root = root / "skills"
             if not skills_root.is_dir():
                 continue
-            for child in skills_root.iterdir():
-                if child.is_dir() and child.name not in written:
-                    shutil.rmtree(child)
+            for child in list(skills_root.iterdir()):
+                if not child.is_dir():
+                    continue
+                skill_md = child / "SKILL.md"
+                if skill_md.exists():
+                    # flat skill folder (no category subfolder)
+                    if child.name not in written:
+                        try:
+                            shutil.rmtree(child)
+                        except OSError:
+                            pass
+                else:
+                    # category subfolder (e.g. context_tools/, actions/)
+                    for grandchild in list(child.iterdir()):
+                        if grandchild.is_dir():
+                            key = f"{child.name}/{grandchild.name}"
+                            if key not in written:
+                                try:
+                                    shutil.rmtree(grandchild)
+                                except OSError:
+                                    pass
+                    # remove the category subfolder itself if now empty
+                    try:
+                        child.rmdir()
+                    except OSError:
+                        pass
 
     def _prompt_stem(self, path: Path) -> str | None:
         name = path.name
@@ -789,10 +822,14 @@ class Harness:
         names.extend(self._write_harness_files(roots, seen))
         if not wanted:
             self._deploy_agents(roots)
-        skill_names = {item.name for item in self.skills}
+        skill_names = {
+            f"{item.folder}/{item.name}" if item.folder else item.name
+            for item in self.skills
+        }
+        skill_name_only = {item.name for item in self.skills}
         prompt_names = {item.name for item in self.prompts} | {item.name for item in self.commands}
         for prompt_file in self.prompts:
-            if prompt_file.name not in skill_names:
+            if prompt_file.name not in skill_name_only:
                 self._drop_action_skill(prompt_file.name, roots)
         if not wanted:
             self._drop_unwritten_skills(roots, skill_names)

@@ -265,6 +265,7 @@ class HarnessTool:
         self.body: Any = ""
         self.folder: str = ""
         self.disable_model_invocation: bool = False
+        self.is_fidelity: bool = False
 
     def relative_path(self) -> Path:
         raise NotImplementedError
@@ -284,6 +285,8 @@ class HarnessTool:
                 self.body = source["body"]
             if source.get("folder") is not None:
                 self.folder = source["folder"]
+            if source.get("fidelity"):
+                self.is_fidelity = True
             return
         if source is not None and not self.body:
             self.body = source

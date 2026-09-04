@@ -17,13 +17,19 @@ prompt = prompt_decorator
 
 
 class Prompt(HarnessTool):
+    def _vs_code_name(self) -> str:
+        if self.type == "VS Code" and self.is_fidelity:
+            return self.name.replace("-", ".")
+        return self.name
+
     def relative_path(self) -> Path:
-        return Path("prompts") / f"{self.name}.prompt.md"
+        return Path("prompts") / f"{self._vs_code_name()}.prompt.md"
 
     def render(self) -> str:
         if self.type == "VS Code":
+            name = self._vs_code_name()
             return _frontmatter(
-                self.name, self.description or self.name, self.model
+                name, self.description or name, self.model
             ) + str(self.body)
         return str(self.body)
 

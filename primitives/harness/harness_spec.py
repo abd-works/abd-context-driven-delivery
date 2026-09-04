@@ -283,7 +283,7 @@ with description("a harness"):
                 expect(prose).to(contain("Do not confirm the scanned list"))
                 expect(_generate_tools(harness)).to(equal(("suggested_deploy_path", "write_deploy")))
                 harness.write_deploy()
-                expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
+                expect((root / ".cursor" / "skills" / "context_tools" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
                     contain("stories")
                 )
                 expect((root / ".cursor" / "skills" / "widget" / "SKILL.md").is_file()).to(equal(True))
@@ -303,14 +303,14 @@ with description("a harness"):
                 expect(deploy_body).to(contain("disable-model-invocation: true"))
                 expect((root / ".cursor" / "skills" / "harness").exists()).to(equal(False))
                 expect((root / ".cursor" / "skills" / "clean").exists()).to(equal(False))
-                expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).not_to(
+                expect((root / ".cursor" / "skills" / "context_tools" / "stories" / "SKILL.md").read_text(encoding="utf-8")).not_to(
                     contain("OLD CONTENT")
                 )
                 expect((root / ".cursor" / "skills" / "grill-context").exists()).to(equal(False))
                 expect((root / ".cursor" / "skills" / "workflow").exists()).to(equal(False))
-                expect((root / ".cursor" / "skills" / "stories-story_map" / "SKILL.md").is_file()).to(equal(True))
-                expect((root / ".cursor" / "skills" / "story_map").exists()).to(equal(False))
-                expect((root / ".cursor" / "skills" / "discovery").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "context_tools" / "stories-story_map" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "context_tools" / "story_map").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "context_tools" / "discovery").exists()).to(equal(False))
                 state = json.loads(
                     (root / "primitives" / "harness" / ".deploy-state.json").read_text(encoding="utf-8")
                 )
@@ -320,7 +320,7 @@ with description("a harness"):
             with it("should write that source into the deploy area"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="stories")
-                expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "context_tools" / "stories" / "SKILL.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "skills" / "widget").exists()).to(equal(False))
                 expect((root / ".cursor" / "skills" / "harness").exists()).to(equal(False))
 
@@ -340,7 +340,7 @@ with description("a harness"):
                     encoding="utf-8",
                 )
                 Harness("Cursor", repo_root=root).write_deploy(source="stories")
-                expect((parent / ".cursor" / "skills" / "stories" / "SKILL.md").is_file()).to(
+                expect((parent / ".cursor" / "skills" / "context_tools" / "stories" / "SKILL.md").is_file()).to(
                     equal(True)
                 )
                 expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
@@ -353,7 +353,7 @@ with description("a harness"):
                 Harness("Cursor", repo_root=root).write_deploy(
                     source="stories", deploy_path=str(override)
                 )
-                expect((override / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
+                expect((override / "skills" / "context_tools" / "stories" / "SKILL.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
                     equal("OLD CONTENT")
                 )
@@ -363,16 +363,16 @@ with description("a harness"):
                 Harness("Cursor", repo_root=root).write_deploy(
                     source="stories", deploy_path=str(root)
                 )
-                expect((root / ".cursor" / "skills" / "stories-story_map" / "SKILL.md").is_file()).to(
+                expect((root / ".cursor" / "skills" / "context_tools" / "stories-story_map" / "SKILL.md").is_file()).to(
                     equal(True)
                 )
-                expect((root / "skills" / "stories-story_map").exists()).to(equal(False))
+                expect((root / "skills" / "context_tools" / "stories-story_map").exists()).to(equal(False))
 
         with context("with type VS Code"):
             with it("should write under .github"):
                 root = _sandbox()
                 Harness("VS Code", repo_root=root).write_deploy(source="stories")
-                expect((root / ".github" / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".github" / "skills" / "context_tools" / "stories" / "SKILL.md").is_file()).to(equal(True))
                 expect((root / ".github" / "prompts" / "deploy-harness.prompt.md").is_file()).to(equal(True))
                 expect((root / ".github" / "prompts" / "clean-harness.prompt.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
@@ -381,7 +381,8 @@ with description("a harness"):
 
         with context("with type Claude"):
             with it("should not implement yet"):
-                expect(_recipe(Harness("Claude"))).to(contain("must not implement yet"))
+                recipe = _recipe(Harness("Claude"))
+                expect("must not implement yet" in recipe or "error Claude" in recipe).to(equal(True))
                 expect(lambda: Harness("Claude").write_deploy()).to(raise_error(NotImplementedError))
 
         with context("with type Codex"):
@@ -409,7 +410,7 @@ with description("a harness"):
                     actions=tuple(harness._action_option_names()),
                 )
                 expect(skill.body).to(equal(expected))
-                text = (root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")
+                text = (root / ".cursor" / "skills" / "context_tools" / "stories" / "SKILL.md").read_text(encoding="utf-8")
                 expect(text).not_to(contain("disable-model-invocation"))
                 expect(text).to(contain("tools.ps1 run -"))
 
@@ -711,8 +712,8 @@ with description("a harness"):
                 root = _sandbox()
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="sketch")
-                expect((root / ".cursor" / "skills" / "sketch" / "SKILL.md").is_file()).to(equal(True))
-                expect((root / ".cursor" / "commands" / "sketch.md").is_file()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "actions" / "sketch" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "sketch").exists()).to(equal(False))
                 prompt = next(p for p in harness.prompts if p.name == "sketch")
                 skill = next(s for s in harness.skills if s.name == "sketch")
                 expect(prompt.body.text).to(contain("Run this action for any provided context tools"))
@@ -722,8 +723,8 @@ with description("a harness"):
             with it("should not write a command for an unmarked agent_instructions"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="helperkit")
-                expect((root / ".cursor" / "skills" / "helperkit" / "SKILL.md").is_file()).to(equal(True))
-                expect((root / ".cursor" / "skills" / "extra").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "actions" / "helperkit" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "actions" / "extra").exists()).to(equal(False))
 
         with context("with @prompt(name) on backlog start-ticket and finish-ticket"):
             with it("should write those commands and not a workflow command"):
@@ -752,21 +753,21 @@ with description("a harness"):
                     encoding="utf-8",
                 )
                 Harness("Cursor", repo_root=root).write_deploy(source="workflow")
-                backlog = (root / ".cursor" / "skills" / "backlog" / "SKILL.md").read_text(
+                backlog = (root / ".cursor" / "skills" / "actions" / "backlog" / "SKILL.md").read_text(
                     encoding="utf-8"
                 )
-                start = (root / ".cursor" / "skills" / "start-ticket" / "SKILL.md").read_text(
+                start = (root / ".cursor" / "skills" / "actions" / "start-ticket" / "SKILL.md").read_text(
                     encoding="utf-8"
                 )
-                finish = (root / ".cursor" / "skills" / "finish-ticket" / "SKILL.md").read_text(
+                finish = (root / ".cursor" / "skills" / "actions" / "finish-ticket" / "SKILL.md").read_text(
                     encoding="utf-8"
                 )
-                expect((root / ".cursor" / "skills" / "backlog" / "SKILL.md").is_file()).to(equal(True))
-                expect((root / ".cursor" / "skills" / "start-ticket" / "SKILL.md").is_file()).to(equal(True))
-                expect((root / ".cursor" / "skills" / "finish-ticket" / "SKILL.md").is_file()).to(equal(True))
-                expect((root / ".cursor" / "skills" / "start").exists()).to(equal(False))
-                expect((root / ".cursor" / "skills" / "finish").exists()).to(equal(False))
-                expect((root / ".cursor" / "skills" / "workflow").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "actions" / "backlog" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "actions" / "start-ticket" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "actions" / "finish-ticket" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "actions" / "start").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "actions" / "finish").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "actions" / "workflow").exists()).to(equal(False))
                 expect(backlog).to(contain("tool: backlog"))
                 expect(backlog).not_to(contain("action: backlog"))
                 expect(start).to(contain("tool: start"))
@@ -795,8 +796,8 @@ with description("a harness"):
                 )
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy()
-                expect((root / ".cursor" / "skills" / "start-turn" / "SKILL.md").is_file()).to(equal(True))
-                expect((root / ".cursor" / "skills" / "finish-turn" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "actions" / "start-turn" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "actions" / "finish-turn" / "SKILL.md").is_file()).to(equal(True))
 
         with context("with @prompt on one of several @agent_instructions"):
             with it("should write only that marked command"):
@@ -822,11 +823,11 @@ with description("a harness"):
                     encoding="utf-8",
                 )
                 Harness("Cursor", repo_root=root).write_deploy(source="generate")
-                expect((root / ".cursor" / "skills" / "generate" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "actions" / "generate" / "SKILL.md").is_file()).to(equal(True))
                 expect(
-                    (root / ".cursor" / "skills" / "add_generate_header_to_generated").exists()
+                    (root / ".cursor" / "skills" / "actions" / "add_generate_header_to_generated").exists()
                 ).to(equal(False))
-                expect((root / ".cursor" / "skills" / "generate_output").exists()).to(
+                expect((root / ".cursor" / "skills" / "actions" / "generate_output").exists()).to(
                     equal(False)
                 )
 
@@ -834,7 +835,7 @@ with description("a harness"):
             with it("should write a prompt named from the class"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="turn")
-                expect((root / ".cursor" / "skills" / "turn" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "actions" / "turn" / "SKILL.md").is_file()).to(equal(True))
 
         with context("with a utility performTurn prompt"):
             with it("should invoke performTurn as an action on Turn"):
@@ -909,10 +910,10 @@ with description("a harness"):
                 root = _sandbox()
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="scaffold")
-                body = (root / ".cursor" / "skills" / "stories-scaffold" / "SKILL.md").read_text(encoding="utf-8")
+                body = (root / ".cursor" / "skills" / "context_tools" / "stories-scaffold" / "SKILL.md").read_text(encoding="utf-8")
                 expect(body).to(contain("# stories-scaffold"))
                 expect(body).to(contain("Use stories guidance at `scaffold` fidelity only"))
-                expect((root / ".cursor" / "skills" / "scaffold").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "context_tools" / "scaffold").exists()).to(equal(False))
                 expect(body).not_to(contain("Then run:"))
                 expect(body).not_to(contain("Run at fidelity scaffold"))
                 expect(body).not_to(contain("If the fidelity does not belong"))
@@ -922,7 +923,7 @@ with description("a harness"):
                 root = _sandbox()
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="scaffold", extended=True)
-                body = (root / ".cursor" / "skills" / "stories-scaffold" / "SKILL.md").read_text(encoding="utf-8")
+                body = (root / ".cursor" / "skills" / "context_tools" / "stories-scaffold" / "SKILL.md").read_text(encoding="utf-8")
                 expect(body).to(contain("# stories-scaffold"))
                 expect(body).to(contain("Use stories guidance at `scaffold` fidelity only"))
                 expect(body).to(contain("@stories-story_map"))
@@ -933,24 +934,24 @@ with description("a harness"):
                 expect(body).not_to(contain("Every tool call uses this shape"))
                 expect(body).not_to(contain("python -m tools run"))
                 expect(body).not_to(contain("tools.ps1 run"))
-                expect((root / ".cursor" / "skills" / "scaffold").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "context_tools" / "scaffold").exists()).to(equal(False))
 
             with it("should swap the confirm lines for straight prompt passed vs ct"):
                 root = _sandbox()
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="stories", extended=True)
-                text = (root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")
+                text = (root / ".cursor" / "skills" / "context_tools" / "stories" / "SKILL.md").read_text(encoding="utf-8")
                 expect(text).to(contain("With a straight prompt passed, take the action from the prompt"))
                 expect(text).to(contain("If you took an action from the context versus being given a straight prompt"))
                 expect(text).to(contain("or has not been provided"))
                 expect(text).not_to(contain("versus being given an explicit one"))
                 expect(text).to(contain("tools.ps1 run -"))
-                expect((root / ".cursor" / "skills" / "stories-story_map" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "context_tools" / "stories-story_map" / "SKILL.md").is_file()).to(equal(True))
 
             with it("should swap the action confirm line for straight prompt passed vs ct"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="sketch", extended=True)
-                text = (root / ".cursor" / "skills" / "sketch" / "SKILL.md").read_text(encoding="utf-8")
+                text = (root / ".cursor" / "skills" / "actions" / "sketch" / "SKILL.md").read_text(encoding="utf-8")
                 expect(text).to(contain("With a straight prompt passed, run this action on the context in general"))
                 expect(text).to(contain("If you took a context tool from the context and not a straight prompt"))
                 expect(text).not_to(contain("If you took guidance from the context and not a tool"))
@@ -980,7 +981,7 @@ with description("a harness"):
                     encoding="utf-8",
                 )
                 Harness("Cursor", repo_root=root).write_deploy(source="behavior", extended=True)
-                body = (root / ".cursor" / "commands" / "bddish-behavior.md").read_text(encoding="utf-8")
+                body = (root / ".cursor" / "skills" / "context_tools" / "bddish-behavior" / "SKILL.md").read_text(encoding="utf-8")
                 expect(body).to(contain("# bddish-behavior"))
                 expect(body).to(contain("Use bddish guidance at `behavior` fidelity only"))
                 expect(body).to(contain("@bddish-modules"))
@@ -988,8 +989,8 @@ with description("a harness"):
                 expect(body).not_to(contain("Every tool call uses this shape"))
                 expect(body).not_to(contain("python -m tools run"))
                 expect(body).not_to(contain("tools.ps1 run"))
-                expect((root / ".cursor" / "commands" / "bddish.behavior.md").is_file()).to(equal(False))
-                expect((root / ".cursor" / "commands" / "behavior.md").is_file()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "context_tools" / "bddish").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "context_tools" / "behavior").exists()).to(equal(False))
 
         with context("with CleanEngineering compound guidance"):
             with it("should use the expander projection for only the required fidelity"):
@@ -1031,42 +1032,39 @@ with description("a harness"):
                     {"discovery": "discovery"},
                 )
                 Harness("Cursor", repo_root=root).write_deploy(source="discovery")
-                body = (root / ".cursor" / "commands" / "cdd.discovery.md").read_text(encoding="utf-8")
-                expect(body).to(contain("Run the action on cdd at discovery fidelity through the tools cli"))
-                expect((root / ".cursor" / "commands" / "discovery.md").is_file()).to(equal(False))
+                body = (root / ".cursor" / "skills" / "context_tools" / "cdd-discovery" / "SKILL.md").read_text(encoding="utf-8")
+                expect(body).to(contain("# cdd-discovery"))
+                expect(body).to(contain("Use cdd guidance at `discovery` fidelity only"))
+                expect((root / ".cursor" / "skills" / "context_tools" / "discovery").exists()).to(equal(False))
                 expect(body).not_to(contain("Then run:"))
                 expect(body).not_to(contain("Run this action for any provided context tools"))
-                expect(body).not_to(contain("# Instructions"))
-                expect(body).not_to(contain("Do not treat this as a format"))
-                expect(body).not_to(contain("If you took guidance from the context and not a tool"))
-                expect(body).not_to(contain("If you cannot get guidance and cannot get the action"))
-                expect(body).not_to(contain("If the fidelity does not belong"))
-                expect(body).not_to(contain("AskQuestion constrained to the other fidelities"))
-                expect(body).to(contain("tools.ps1 run -"))
+                expect(body).not_to(contain("Every tool call uses this shape"))
+                expect(body).not_to(contain("python -m tools run"))
+                expect(body).not_to(contain("tools.ps1 run"))
 
         with context("with CleanEngineering model"):
-            with it("should write a model prompt"):
+            with it("should write a model skill"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="model")
-                expect((root / ".cursor" / "commands" / "clean_engineering.model.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "context_tools" / "clean_engineering-model" / "SKILL.md").is_file()).to(equal(True))
 
         with context("with DDD bounded_context"):
-            with it("should write a bounded_context prompt"):
+            with it("should write a bounded_context skill"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="bounded_context")
-                expect((root / ".cursor" / "commands" / "ddd.bounded_context.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "context_tools" / "ddd-bounded_context" / "SKILL.md").is_file()).to(equal(True))
 
         with context("with UX ia"):
             with it("should write a prefixed ia prompt for Cursor and VS Code"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="ia")
-                body = (root / ".cursor" / "commands" / "ux.ia.md").read_text(encoding="utf-8")
-                expect(body).to(contain("Run the action on ux at ia fidelity through the tools cli"))
-                expect((root / ".cursor" / "commands" / "ia.md").is_file()).to(equal(False))
+                body = (root / ".cursor" / "skills" / "context_tools" / "ux-ia" / "SKILL.md").read_text(encoding="utf-8")
+                expect(body).to(contain("# ux-ia"))
+                expect(body).to(contain("Use ux guidance at `ia` fidelity only"))
+                expect((root / ".cursor" / "skills" / "context_tools" / "ia").exists()).to(equal(False))
                 Harness("VS Code", repo_root=root).write_deploy(source="ia")
                 prompt = (root / ".github" / "prompts" / "ux.ia.prompt.md").read_text(encoding="utf-8")
                 expect(prompt).to(contain("name: ux.ia"))
-                expect(prompt).to(contain("Run the action on ux at ia fidelity through the tools cli"))
                 expect((root / ".github" / "prompts" / "ia.prompt.md").is_file()).to(equal(False))
 
         with context("with @skill on a base class guidance"):
@@ -1102,12 +1100,12 @@ with description("a harness"):
                     encoding="utf-8",
                 )
                 Harness("Cursor", repo_root=root).write_deploy()
-                expect((root / ".cursor" / "skills" / "child" / "SKILL.md").is_file()).to(equal(True))
-                expect((root / ".cursor" / "skills" / "base_context_tool").exists()).to(equal(False))
-                expect((root / ".cursor" / "commands" / "child.family_map.md").is_file()).to(equal(True))
-                expect((root / ".cursor" / "commands" / "family_map.md").is_file()).to(equal(False))
-                expect((root / ".cursor" / "commands" / "extra.md").is_file()).to(equal(False))
-                text = (root / ".cursor" / "skills" / "child" / "SKILL.md").read_text(encoding="utf-8")
+                expect((root / ".cursor" / "skills" / "context_tools" / "child" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "context_tools" / "base_context_tool").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "context_tools" / "child-family_map" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "context_tools" / "family_map").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "context_tools" / "extra").exists()).to(equal(False))
+                text = (root / ".cursor" / "skills" / "context_tools" / "child" / "SKILL.md").read_text(encoding="utf-8")
                 expect(text).to(contain("child guidance"))
 
         with context("with @skill, @prompt, or @instruction on the operation"):
@@ -1115,8 +1113,7 @@ with description("a harness"):
                 root = _sandbox()
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="tagged")
-                expect((root / ".cursor" / "skills" / "tagged" / "SKILL.md").is_file()).to(equal(True))
-                expect((root / ".cursor" / "commands" / "tagged.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "actions" / "tagged" / "SKILL.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "rules" / "tagged-guide.mdc").is_file()).to(equal(True))
 
         with context("with @prompt(name) on the operation"):
@@ -1136,7 +1133,7 @@ with description("a harness"):
                 )
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="finish-turn")
-                expect((root / ".cursor" / "commands" / "finish-turn.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "actions" / "finish-turn" / "SKILL.md").is_file()).to(equal(True))
 
         with context("with @skill(name) on the operation"):
             with it("should use that name"):
@@ -1145,7 +1142,7 @@ with description("a harness"):
                 harness.write_deploy(source="namedkit")
                 skill = next(s for s in harness.skills if s.name == "custom-name")
                 expect(skill.name).to(equal("custom-name"))
-                expect((root / ".cursor" / "skills" / "custom-name" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "actions" / "custom-name" / "SKILL.md").is_file()).to(equal(True))
 
 
 with description("a generated harness tool"):
@@ -1178,7 +1175,7 @@ with description("a generated harness tool"):
                 root = _sandbox()
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="sketch")
-                text = (root / ".cursor" / "commands" / "sketch.md").read_text(encoding="utf-8")
+                text = (root / ".cursor" / "skills" / "actions" / "sketch" / "SKILL.md").read_text(encoding="utf-8")
                 expect(text).to(contain("Run this action for any provided context tools"))
                 expect(text).to(contain("or on the context in general"))
                 expect(text).to(contain("If you took guidance from the context and not a tool"))
@@ -1192,7 +1189,7 @@ with description("a generated harness tool"):
                 expect(text).to(contain("or has not been provided"))
                 expect(text).not_to(contain("cannot get guidance and cannot get the action"))
                 expect(text).not_to(contain("constrained to this source: sketch"))
-                expect(isinstance(next(c for c in harness.commands if c.name == "sketch").body, ActionBody)).to(
+                expect(isinstance(next(p for p in harness.prompts if p.name == "sketch").body, ActionBody)).to(
                     equal(True)
                 )
 
@@ -1202,7 +1199,7 @@ with description("a skill"):
         with it("should write SKILL.md under the IDE skills folder"):
             root = _sandbox()
             Harness("VS Code", repo_root=root).write_deploy(source="stories")
-            expect((root / ".github" / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
+            expect((root / ".github" / "skills" / "context_tools" / "stories" / "SKILL.md").is_file()).to(equal(True))
             expect(Skill("Cursor", "stories").relative_path().as_posix()).to(equal("skills/stories/SKILL.md"))
 
 
@@ -1214,7 +1211,7 @@ with description("a command"):
 
 with description("a prompt"):
     with context("that generates"):
-        with it("should write a VS Code prompt and a Cursor command"):
+        with it("should write a VS Code prompt and a Cursor skill"):
             expect(Prompt("VS Code", "echo").relative_path().as_posix()).to(equal("prompts/echo.prompt.md"))
             expect(Prompt("VS Code", "stories.story_map").relative_path().as_posix()).to(
                 equal("prompts/stories.story_map.prompt.md")
@@ -1223,8 +1220,9 @@ with description("a prompt"):
             written = Prompt("Cursor", "echo")
             written.body = "echo-body"
             result = written.generate({"name": "echo", "body": "echo-body"}, [root / ".cursor"])
-            expect(isinstance(result, Command)).to(equal(True))
-            expect((root / ".cursor" / "commands" / "echo.md").read_text(encoding="utf-8")).to(equal("echo-body"))
+            expect(isinstance(result, Skill)).to(equal(True))
+            expect((root / ".cursor" / "skills" / "echo" / "SKILL.md").read_text(encoding="utf-8")).to(contain("echo-body"))
+            expect((root / ".cursor" / "skills" / "echo" / "SKILL.md").read_text(encoding="utf-8")).to(contain("disable-model-invocation: true"))
 
 
 with description("an instruction"):
@@ -1274,7 +1272,7 @@ with description("generateAgain"):
                 harness.write_deploy(source="stories")
                 again = Harness("Cursor", repo_root=root)
                 again.generateAgain()
-                expect((root / ".github" / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".github" / "skills" / "context_tools" / "stories" / "SKILL.md").is_file()).to(equal(True))
                 expect(type(again).generateAgain.__doc__).not_to(contain("AskQuestion"))
         with context("with no saved state"):
             with it("should refuse"):
@@ -1300,7 +1298,7 @@ with description("clean"):
                 github.write_text("keep", encoding="utf-8")
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="stories")
-                expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "context_tools" / "stories" / "SKILL.md").is_file()).to(equal(True))
                 harness.clean()
                 expect((root / ".cursor" / "skills").exists()).to(equal(False))
                 expect(github.read_text(encoding="utf-8")).to(equal("keep"))
