@@ -1,35 +1,11 @@
-Run the action on clean_engineering at model fidelity through the tools cli
+# clean_engineering-model
 
-Provide guidance for creating OO modules, models, and code.
+Use clean_engineering guidance at `model` fidelity only.
 
-Provide guidance from contexts, examples, and templates.
+Use higher-level fidelity guidance only when required information is missing. Reference these commands with `@`; do not inline their content:
+@clean_engineering-modules
 
 # Contexts
-
-Deepen OO design from modules toward production code. Each fidelity **adds** artifacts — do not invent detail from a deeper level.
-
-**Progression:** `partition` (action) → **scaffold** → **modules** → **model** → **code**.
-
-| Fidelity | Default format | Produce |
-|---|---|---|
-| **modules** | markdown (+ drawio) | Independent modules, one-way deps, build order, thin seam terms |
-| **model** | python | Empty public seam (on `Class` directly by default, or on a separate `I{Class}` contract **only when interfaces are explicitly requested**) + full module-context; stub example factories |
-| **code** | python | Typed contracts (`Class(I{Class})` when an interface was requested, otherwise `Class` directly) → full production implementation |
-
-**Interfaces (`I{Class}`) are optional, not automatic.** See `## model` § Interfaces for the trigger — ask for one, or a genuine multi-layer/multi-implementation seam.
-
----
-
-## Language companion (not a fidelity)
-
-**Language is not invocable** (`context.fidelity: language` is rejected). Natural-language identity is a **companion** that deepens at every stage through code.
-
-- At each fidelity, refresh prose for terms/classes already named at that stage — definition, story bullets, invariants in plain English.
-- Keep identity on the class (or `## ClassName` section); member bullets move onto members as model/code deepen.
-- Do **not** invent types, method bodies, relationship kinds, or Public API ahead of the active fidelity.
-- Prose lives under `{session}/{module}/` (markdown sections and/or class docstrings) and is updated in place — never a separate language-only generate run.
-
----
 
 ## model
 
@@ -176,7 +152,6 @@ Do **not** put factory wiring in the production family file. Do **not** generate
 ## shopping-cart/examples.py
 
 # @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
 # invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
 from __future__ import annotations
@@ -398,77 +373,7 @@ class Discount(IDiscount):
     def compute_reduction(self, subtotal: Decimal) -> Decimal:
         ...
 
-
-"""
-# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-# invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
-# invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
-
-CleanEngineering Python template - two files when Stories-bound:
-
-    {family_slug}.py                 - (I{Class} +) {Class} (+ subtypes)   PRODUCTION
-    {type_slug}_example_factory.py   - (I{Class}ExampleFactory +) factory  SEPARATE
-
-INTERFACES ARE OPTIONAL (see clean_engineering.md SS Interfaces). I{Class} and
-I{Class}ExampleFactory below are shown because this is the richer case to document -
-default to OMITTING both and stubbing {Class} / {Class}ExampleFactory directly
-(empty bodies at Md, filled at S/C, no ABC base needed) unless the user asked for an
-interface, or the module genuinely has multiple layers/implementations behind one
-seam. The two decisions (domain type vs. factory) are independent.
-
-A production file holds the public seam (I{Class} when one exists), the production
-Class that extends it (or stands alone when no interface exists), subtypes, and
-tightly connected peers. Not one class per file. Example factories are NEVER in
-that file (example-factory-separate-file).
-
-Layout (physical-folder): write each file under the **module** folder
-(e.g. {module_slug}/{family_slug}.py). Module context:
-{module_slug}/.context/module-context.md.
-
-Naming:
-    File (production)  {family_slug}.py
-    File (factory)     {type_slug}_example_factory.py
-    Interface          I{Class}                (OPTIONAL - public seam only when requested; model fidelity)
-    Class              {Class}(I{Class})       (production; drop "(I{Class})" when no interface exists)
-    ExampleFactory     {Class}ExampleFactory   (plain class; no Loader base; Md+/S+)
-    Modes              Fake | Isolated | Production  (factory behavior - not subclasses)
-    Property           {owned_property}, ...     (snake_case slots)
-    Operation          {operation_name}, ...     (snake_case slots)
-    Params             {param}, {dep}
-    Type slots         {Type}, {ReturnType}
-    Invariant          comment                 (plain-English; not a method)
-    Interaction        abstract method at S    (on Class only; dropped at code)
-
-Fidelity tags:
-    L  = language companion (prose; refined every stage - not a fidelity)
-    Mu = modules       (thin terms, one-way deps, build order - markdown / module-context)
-    Md = model         (empty public props/ops directly on Class by default; I{Class} - and
-                       optional I{Class}ExampleFactory in factory file - only when requested)
-    S  = specification (Class extends I{Class} when one exists, else stands alone; public
-                       filled; privates empty on Class; {Class}ExampleFactory modes in
-                       sibling factory file when Stories-bound)
-    C  = code          (fill remaining empties on Class; drop interactions)
-"""
-
-from __future__ import annotations
-from abc import ABC, abstractmethod
-
-
-# =============================================================================
-# FILE: {family_slug}.py - production family only (cohesive-file)
-# =============================================================================
-
-
-# OPTIONAL - omit this whole class by default. Only add I{ClassName} when the
-# user requested an interface, or {ClassName} has multiple layers/implementations
-# behind one seam. Otherwise skip straight to `class {ClassName}:` below with the
-# same empty (# Md) bodies, and drop `(I{ClassName})` from its base list.
 class I{ClassName}(ABC):                                                # Md
-    """*{ClassName}* is - one sentence: what it is, its unique role.
-    Identity only. No relationship or behavior sentences here."""     # L
-
-    # -- Public properties (empty interfaces) --------------------------------
 
     @property                                                           # Md
     @abstractmethod                                                     # Md
@@ -477,8 +382,6 @@ class I{ClassName}(ABC):                                                # Md
     @property                                                           # Md
     @abstractmethod                                                     # Md
     def {plain_property}(self) -> {Type}: ...                           # Md
-
-    # -- Public operations (empty interfaces) --------------------------------
 
     @abstractmethod                                                     # Md
     def __init__(self, {param}: {Type}) -> None: ...                    # Md
@@ -489,126 +392,13 @@ class I{ClassName}(ABC):                                                # Md
     @abstractmethod                                                     # Md
     def {another_operation}(self) -> {ReturnType}: ...                  # Md
 
-
-class {ClassName}(I{ClassName}):                                        # S
-    # Drop "(I{ClassName})" above when no interface exists - {ClassName} then
-    # carries the # Md empty-body members itself instead of inheriting them.
-    """*{ClassName}* is - one sentence: what it is, its unique role."""  # L
-
-    # -- Public properties (filled at specification) -------------------------
-
-    """{sentence about this property - what it holds and why.}
-    @composition"""                                                     # S
-    @property                                                           # S
-    def {owned_property}(self) -> {Type}:                               # S
-        ...                                                             # S
-
-    """{sentence about this plain property.}"""                         # L
-    # Invariant: {constraint sentence - the rule in plain English.}    # S
-    @property                                                           # S
-    def {plain_property}(self) -> {Type}:                               # S
-        ...                                                             # S
-
-    # -- Constructor / public operations (filled at specification) -----------
-
-    def __init__(self, {param}: {Type}) -> None:                        # S
-        self._{plain_property} = {param}                                # S
-
-    """{language bullet for this operation}"""                          # L
-    # Invariant: {constraint sentence applicable to this operation.}   # S
-    def {operation_name}(self, {param}: {Type}) -> {ReturnType}:        # S
-        ...                                                             # S / C
-
-    def {another_operation}(self) -> {ReturnType}:                      # S
-        """{language bullet for this operation}"""                      # L
-        ...                                                             # S / C
-
-    # -- Private operations (empty interfaces at S; filled at C) -------------
-
-    """{what this helper does}"""                                       # S
-    @abstractmethod                                                     # S
-    def _{private_helper}(self, {param}: {Type}) -> {ReturnType}: ...   # S
-
-    def _{private_helper}(self, {param}: {Type}) -> {ReturnType}:       # C
-        """{what this helper does}"""                                   # S
-        ...                                                             # C
-
-    # -- Interactions (specification only; omit at code) ---------------------
-
-    @abstractmethod                                                     # S
-    def {interaction_summary_as_a_method_name}(self) -> None:           # S
-        """@interaction"""
-        ...
-
-
 # Subtype - delta only; parent members are inherited, not repeated     # Md/S
 class I{ChildClass}(ABC):                                               # Md
-    """{delta - what {ChildClass} adds}"""                              # L
 
     @abstractmethod                                                     # Md
     def {delta_operation}(self, {param}: {Type}) -> {ReturnType}: ...   # Md
 
-
-class {ChildClass}({ClassName}, I{ChildClass}):                         # S
-    """{delta - what {ChildClass} adds or overrides}"""                 # L
-
-    def {delta_operation}(self, {param}: {Type}) -> {ReturnType}:       # S/C
-        ...                                                             # S/C
-
-
-# =============================================================================
-# FILE: {type_slug}_example_factory.py - Stories factory (separate file)
-# from .{family_slug} import {ClassName}, I{ClassName}
-# Pattern only - no ExampleLoader base. examples[{example_key}] is a
-# multi-type bundle (not examples[{Type}][...]).
-# Fake / Isolated / Production are modes - not Fake{ClassName} subclasses.
-# =============================================================================
-
-
-# OPTIONAL - same opt-in rule as I{ClassName} above; omit by default and go
-# straight to `class {ClassName}ExampleFactory:` below.
 class I{ClassName}ExampleFactory(ABC):                                  # Md
-    """Loads examples[{example_key}] as Fake | Isolated | Production modes."""  # L
 
     @abstractmethod                                                     # Md
     def load_{example_key}(self, *, mode: str = "fake") -> I{ClassName}: ...  # Md
-
-
-class {ClassName}ExampleFactory(I{ClassName}ExampleFactory):            # S
-    # Drop "(I{ClassName}ExampleFactory)" above when no interface exists.
-    """Fake: mock framework + examples; Isolated: {ClassName}(injected mocks);
-    Production: {ClassName}(real collaborators)."""                     # L
-
-    def load_{example_key}(self, *, mode: str = "fake") -> I{ClassName}:  # S
-        # examples[{example_key}] -> I{ClassName} (+ peer types if needed)  # S
-        ...                                                             # S/C
-
-
-
-Every tool call uses this shape - set `tool` and `arguments`, pipe to CLI:
-
-```yaml
-toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
-context:
-  fidelity: model
-tool: <tool name>
-arguments:
-  <if needed>
-```
-
-Run: python -m tools run -
-
-Suggested flow (repeat and reorder as the story needs):
-
-Read `resources` from each response before choosing the next tool.
-
-With a straight prompt passed, take the action from the prompt. If you took an action from the context versus being given a straight prompt, confirm the use of the context. AskQuestion constrained to these actions: car-inspect | createRule | document | generate | grill | iterate | partition | render | repair | satisfy | scan | sketch | travel-to | validate.
-Then run:
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
-toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
-context:
-  fidelity: model
-action: generate
-```
-.\tools.ps1 run -

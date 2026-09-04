@@ -1,13 +1,6 @@
-Run the action on car at trip_outline fidelity through the tools cli
+# car-trip_outline
 
-Provide guidance for in-character road stories at the current fidelity.
-At trip_outline fidelity: write bullet beats only — destination, conditions, tool order.
-At road_story fidelity: write full prose with start, drive, speak, and stop woven in.
-At full_journey fidelity: write prose and call wrap_story when a trip log is needed for inspection.
-Every tool call uses this toolset with context make, model, year, and personality.
-When the story needs a scripted trip, call travelTo on the CarStory companion and pass this Car as a tool argument.
-
-Provide guidance from contexts, examples, and templates.
+Use car guidance at `trip_outline` fidelity only.
 
 # Contexts
 
@@ -51,7 +44,6 @@ General Lee roared off the farm lane with Rosco's siren wailing behind us. I cal
 
 Engine first — always. I eased onto the highway, kept the speed honest, and let the Charger talk when the moon cleared the pines: "Atlanta lights don't scare a Dodge that's seen worse."
 
-
 # Trip outline template
 
 ```markdown
@@ -66,32 +58,3 @@ Engine first — always. I eased onto the highway, kept the speed honest, and le
 ```
 
 Use at **trip_outline** fidelity. Expand into prose at **road_story**.
-
-
-Every tool call uses this shape - set `tool` and `arguments`, pipe to CLI:
-
-```yaml
-toolset: context_tools.car.car:Car
-context:
-  fidelity: trip_outline
-tool: <tool name>
-arguments:
-  <if needed>
-```
-
-Run: python -m tools run -
-
-Suggested flow (repeat and reorder as the story needs):
-
-Read `resources` from each response before choosing the next tool.
-
-With a straight prompt passed, take the action from the prompt. If you took an action from the context versus being given a straight prompt, confirm the use of the context. AskQuestion constrained to these actions: car-inspect | createRule | document | generate | grill | iterate | partition | render | repair | satisfy | scan | sketch | travel-to | validate.
-Then run:
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
-toolset: context_tools.car.car:Car
-context:
-  fidelity: trip_outline
-action: generate
-```
-.\tools.ps1 run -

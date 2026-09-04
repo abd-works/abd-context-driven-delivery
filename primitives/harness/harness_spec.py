@@ -29,6 +29,7 @@ from harness.harness_tool import required_init_params
 from harness.hook import Hook
 from harness.instruction import Instruction
 from harness.prompt import Prompt
+from harness.returned_guidance import compound_guidance
 from harness.rule import Rule
 from harness.skill import Skill
 from primitives.actions.action import _ActionExpander
@@ -909,13 +910,16 @@ with description("a harness"):
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="scaffold", extended=True)
                 body = (root / ".cursor" / "commands" / "stories-scaffold.md").read_text(encoding="utf-8")
-                expect(body).to(contain("Run the action on stories at scaffold fidelity through the tools cli"))
+                expect(body).to(contain("# stories-scaffold"))
+                expect(body).to(contain("Use stories guidance at `scaffold` fidelity only"))
+                expect(body).to(contain("@stories-story_map"))
+                expect(body).to(contain("only when required information is missing"))
                 expect(body).to(contain("Stories."))
-                expect(body).to(contain("Then run:"))
-                expect(body).to(contain("fidelity: scaffold"))
-                expect(body).to(contain("action: generate"))
-                expect(body).not_to(contain("AskQuestion constrained to the other fidelities"))
+                expect(body).not_to(contain("Then run:"))
+                expect(body).not_to(contain("action: generate"))
                 expect(body).not_to(contain("Every tool call uses this shape"))
+                expect(body).not_to(contain("python -m tools run"))
+                expect(body).not_to(contain("tools.ps1 run"))
                 expect((root / ".cursor" / "commands" / "scaffold.md").is_file()).to(equal(False))
                 expect((root / ".cursor" / "commands" / "stories.scaffold.md").is_file()).to(equal(False))
 
@@ -965,15 +969,29 @@ with description("a harness"):
                 )
                 Harness("Cursor", repo_root=root).write_deploy(source="behavior", extended=True)
                 body = (root / ".cursor" / "commands" / "bddish-behavior.md").read_text(encoding="utf-8")
-                expect(body).to(contain("Run the action on bddish at behavior fidelity through the tools cli"))
+                expect(body).to(contain("# bddish-behavior"))
+                expect(body).to(contain("Use bddish guidance at `behavior` fidelity only"))
+                expect(body).to(contain("@bddish-modules"))
                 expect(body).to(contain("Provide guidance for bddish work."))
-                expect(body).to(contain("Every tool call uses this shape"))
-                expect(body).to(contain("fidelity: behavior"))
-                expect(body).to(contain("action: generate"))
-                expect(body).to(contain("tools.ps1 run -"))
-                expect(body).not_to(contain("AskQuestion constrained to the other fidelities"))
+                expect(body).not_to(contain("Every tool call uses this shape"))
+                expect(body).not_to(contain("python -m tools run"))
+                expect(body).not_to(contain("tools.ps1 run"))
                 expect((root / ".cursor" / "commands" / "bddish.behavior.md").is_file()).to(equal(False))
                 expect((root / ".cursor" / "commands" / "behavior.md").is_file()).to(equal(False))
+
+        with context("with CleanEngineering compound guidance"):
+            with it("should use the expander projection for only the required fidelity"):
+                source = _REPO_ROOT / "context_tools" / "clean_engineering" / "clean_engineering.py"
+                code = compound_guidance(source, "CleanEngineering", "code")
+                expect(code).to(contain("# Contexts\n\n## code"))
+                expect(code).not_to(contain("\n## modules\n"))
+                expect(code).not_to(contain("\n## model\n"))
+                expect(code).to(contain("# C"))
+                expect(code).not_to(contain("# Md"))
+                expect(code).not_to(contain("Fidelity tags:"))
+                expect(code).not_to(contain("Every tool call uses this shape"))
+                expect(code).not_to(contain("python -m tools run"))
+                expect(code).not_to(contain("tools.ps1 run"))
 
         with context("with a format"):
             with it("should write a format prompt that names generate and render"):

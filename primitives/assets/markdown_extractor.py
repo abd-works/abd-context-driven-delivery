@@ -16,34 +16,60 @@ def _read_file(file_path: Path) -> str:
     return file_path.read_text(encoding="utf-8")
 
 
+def _markdown_headings(content: str) -> list[tuple[int, int, int, str]]:
+    """Headings with offsets, excluding heading-looking lines in fenced code."""
+    headings: list[tuple[int, int, int, str]] = []
+    offset = 0
+    fence: str | None = None
+    for line in content.splitlines(keepends=True):
+        bare = line.rstrip("\r\n")
+        fence_match = re.match(r"^\s*(```|~~~)", bare)
+        if fence_match:
+            marker = fence_match.group(1)
+            if fence is None:
+                fence = marker
+            elif fence == marker:
+                fence = None
+        elif fence is None:
+            heading = re.match(r"^(#{1,6})\s+(.+?)\s*$", bare)
+            if heading:
+                headings.append(
+                    (offset, offset + len(bare), len(heading.group(1)), heading.group(2))
+                )
+        offset += len(line)
+    return headings
+
+
 def _section_exists(file_path: Path, section_heading: str) -> bool:
     if not section_heading:
         return True
     content = _read_file(file_path)
-    pattern = re.compile(
-        rf"^#{{1,6}}\s+{re.escape(section_heading)}\s*$",
-        re.MULTILINE | re.IGNORECASE,
+    return any(
+        heading.casefold() == section_heading.casefold()
+        for _start, _end, _level, heading in _markdown_headings(content)
     )
-    return pattern.search(content) is not None
 
 
 def _read_section(file_path: Path, section_heading: str) -> str:
     content = _read_file(file_path)
     if not section_heading:
         return content
-    pattern = re.compile(
-        rf"^(#{{1,6}})\s+{re.escape(section_heading)}\s*$",
-        re.MULTILINE | re.IGNORECASE,
+    headings = _markdown_headings(content)
+    found = next(
+        (
+            (index, item)
+            for index, item in enumerate(headings)
+            if item[3].casefold() == section_heading.casefold()
+        ),
+        None,
     )
-    match = pattern.search(content)
-    if not match:
+    if found is None:
         return content
-    level = len(match.group(1))
-    start = match.start()
-    rest = content[match.end() :]
-    next_pattern = re.compile(rf"^#{{1,{level}}}\s+\S", re.MULTILINE)
-    next_match = next_pattern.search(rest)
-    end = match.end() + next_match.start() if next_match else len(content)
+    index, (start, _heading_end, level, _heading) = found
+    end = next(
+        (position for position, _e, next_level, _h in headings[index + 1 :] if next_level <= level),
+        len(content),
+    )
     return content[start:end].strip()
 
 
@@ -168,14 +194,20 @@ def _h2_slug(heading: str) -> str:
 
 
 def _iter_h2_blocks(text: str) -> list[tuple[str, str]]:
-    matches = list(re.finditer(r"^##\s+(.+?)\s*$", text, re.MULTILINE))
+    headings = _markdown_headings(text)
     blocks: list[tuple[str, str]] = []
-    for match in matches:
-        start = match.start()
-        rest = text[match.end() :]
-        next_match = re.compile(r"^#{1,2}\s+\S", re.MULTILINE).search(rest)
-        end = match.end() + next_match.start() if next_match else len(text)
-        blocks.append((match.group(1).strip(), text[start:end].strip()))
+    for index, (start, _end, level, heading) in enumerate(headings):
+        if level != 2:
+            continue
+        end = next(
+            (
+                position
+                for position, _e, next_level, _h in headings[index + 1 :]
+                if next_level <= level
+            ),
+            len(text),
+        )
+        blocks.append((heading.strip(), text[start:end].strip()))
     return blocks
 
 

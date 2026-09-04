@@ -1,41 +1,11 @@
-Run the action on stories at story_map fidelity through the tools cli
+# stories-story_map
 
-Provide guidance for creating story maps, scenarios, and acceptance tests.
-At scaffold fidelity: write epic, sub-epic, and story names only.
-At story_map fidelity: write the story map and thin-slice only.
-At scenarios fidelity: write main-flow scenarios (single or multiple per story) with optional variations; fixtures live in examples/ and givens.ts at the lowest shared epic/sub-epic/story folder.
-At acceptance_tests fidelity: write tests/{epic}/{sub-epic}/{story}.{tier}.ts (one GWT file per story per seam, no story folder). When those files are written, call guidance on the CE companion and pass that companion to this action as a separate tools run so wrap classes under domain/ stay in sync.
-If the same acceptance scenario is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (tier wiring, stale Story constant, vocabulary drift, or transform that fixed the map while the leaf still fails).
-When this Stories work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline.
+Use stories guidance at `story_map` fidelity only.
 
-Provide guidance from contexts, examples, and templates.
+Use higher-level fidelity guidance only when required information is missing. Reference these commands with `@`; do not inline their content:
+@stories-scaffold
 
 # Contexts
-
-Map stakeholder and system interactions as behaviours that deliver a solution.
-
-Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic` → `Story`. Each story is `Scenario`s with discrete steps; backgrounds and scenarios carry examples.
-
-| Fidelity | Default Format | Produce |
-|---|---|---|
-| **story_map** | markdown | Story map + thin-slice |
-| **scenarios** | typescript | Main-flow scenarios per story (single or multiple); optional variations; `examples/` + `givens.ts`. Pass `format markdown` when the strategy asks for a markdown view. |
-| **acceptance_tests** | typescript | `tests/{epic}/{sub-epic}/{story}.{tier}.ts` — one GWT file per story per seam (`front-end`, `back-end`, or another system name). No story folder. Fixtures: `examples/` + `givens.ts`. CE runs alongside for wrap classes. |
-
-**Templates** live under `templates/` per format. **Scanners** read the canonical model only — never language syntax.
-
----
-
-## Shared rules
-
-- **`vocabulary-traces-to-domain-source`** — Trace terms to domain language / model when present.
-- **`artifacts-mirror-story-hierarchy`** — Mirror Epic → SubEpic → Story on disk as folders for epic and sub-epic, and as `{story}.{tier}.ts` files (no per-story directory).
-- **`read-all-source-context-in-full`** — Before locking hierarchy **and before any grill/iterate question about a seam**, prove-read **every relevant referenced context** for that decision: owning `*-segment.md`, `module-context.md`, session sketches / grill-answers / handoff, peer story-context, build-order, and any path the plan or prior answers cite. Index / mid-epic stub columns are structure hints only — **not** story inventory. Grep or primer-only skims do not count; cite concrete terms from the files read in the question turn. Also re-read these rules. Do not thin from titles or memory!
-- **`do-not-invent-requirements`** — Only model behaviours present in source context or an explicit ask. Never invent:
-  - status concepts, maintenance signals, warning badges, or config columns (e.g. `Status (ok/stale)`) the source does not require — unconfigured / not-yet-current = **no row** + the existing fallback, never a new invented state to render;
-  - a second, competing command / invoke surface beside one the user already specified (e.g. a raw YAML `toolset`/`fidelity`/`action` "Invoke" block given equal billing next to an already-locked `/{skill} <action> {fidelity}` line). Keep the specified surface primary; any secondary format is a subsidiary link at most — never inlined, never a co-equal page element.
-
----
 
 ## story_map
 
@@ -161,7 +131,6 @@ example-of: thin-slice
 - *Send Shipping Notification with Tracking Number*
 - *Track Order Status*
 
-
 ## story-context.md
 
 ---
@@ -269,41 +238,3 @@ section: body
 
 - *`<Story verb-noun>`*
 - *`<Story verb-noun>`*
-
-
-Separate tools run — toolset: `context_tools.clean_engineering.clean_engineering:CleanEngineering` action: `guidance` context.fidelity: `code`
-
-Every tool call uses this shape - set `tool` and `arguments`, pipe to CLI:
-
-```yaml
-toolset: context_tools.stories.stories:Stories
-context:
-  fidelity: story_map
-tool: <tool name>
-arguments:
-  <if needed>
-```
-
-Run: python -m tools run -
-
-Before following the suggested flow, display the tools made available to this chat in your user-visible reply — each tool name and what it is for. Do not only follow them silently or rediscover them by remanifesting.
-
-Tools made available:
-- guidance
-
-Suggested flow (repeat and reorder as the story needs):
-
-1. tool: guidance
-
-Read `resources` from each response before choosing the next tool.
-
-With a straight prompt passed, take the action from the prompt. If you took an action from the context versus being given a straight prompt, confirm the use of the context. AskQuestion constrained to these actions: car-inspect | createRule | document | generate | grill | iterate | partition | render | repair | satisfy | scan | sketch | travel-to | validate.
-Then run:
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
-toolset: context_tools.stories.stories:Stories
-context:
-  fidelity: story_map
-action: generate
-```
-.\tools.ps1 run -

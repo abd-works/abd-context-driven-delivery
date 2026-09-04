@@ -1,14 +1,6 @@
-Run the action on bdd at modules fidelity through the tools cli
+# bdd-modules
 
-Provide guidance for creating behavior skeletons and development tests.
-At modules fidelity: no BDD spec file is written — bootstrap CE class structure via the companion.
-At behavior fidelity: write all BDD test signatures (SIGNATURE markers).
-At development fidelity: write full test bodies and production code.
-When the target module already exists, scan the production source for every public method and property and verify each has test coverage — add missing signatures for any gap before writing new ones.
-BDD tests must conform to CE class structure: describe/it hierarchies must map onto public CE interfaces and operations.
-When this BDD work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline.
-
-Provide guidance from contexts, examples, and templates.
+Use bdd guidance at `modules` fidelity only.
 
 # Contexts
 
@@ -528,7 +520,6 @@ describe('VoucherService', () => {
 
 **Mock is at the boundary** (repository) — the service is fully tested; the repository mock is not the thing under test.
 
-
 // =============================================================================
 // BDD Development Template — JUnit 5 / Java Test Implementation
 // =============================================================================
@@ -620,41 +611,3 @@ class {DomainEntity}Spec {
         }
     }
 }
-
-
-Separate tools run — toolset: `context_tools.clean_engineering.clean_engineering:CleanEngineering` action: `guidance` context.fidelity: `modules`
-
-Every tool call uses this shape - set `tool` and `arguments`, pipe to CLI:
-
-```yaml
-toolset: context_tools.bdd.bdd:Bdd
-context:
-  fidelity: modules
-tool: <tool name>
-arguments:
-  <if needed>
-```
-
-Run: python -m tools run -
-
-Before following the suggested flow, display the tools made available to this chat in your user-visible reply — each tool name and what it is for. Do not only follow them silently or rediscover them by remanifesting.
-
-Tools made available:
-- guidance
-
-Suggested flow (repeat and reorder as the story needs):
-
-1. tool: guidance
-
-Read `resources` from each response before choosing the next tool.
-
-With a straight prompt passed, take the action from the prompt. If you took an action from the context versus being given a straight prompt, confirm the use of the context. AskQuestion constrained to these actions: car-inspect | createRule | document | generate | grill | iterate | partition | render | repair | satisfy | scan | sketch | travel-to | validate.
-Then run:
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
-toolset: context_tools.bdd.bdd:Bdd
-context:
-  fidelity: modules
-action: generate
-```
-.\tools.ps1 run -

@@ -1,9 +1,6 @@
-Run the action on cdd at discovery fidelity through the tools cli
+# cdd-discovery
 
-Provide guidance for orchestrating CDD stages across stories, ddd, ux, clean_engineering, and bdd.
-Call guidance on each stage child and pass that child to this action as a separate tools run. The action already knows what to do for every tool. Do not inline.
-
-Provide guidance from contexts, examples, and templates.
+Use cdd guidance at `discovery` fidelity only.
 
 # Contexts
 
@@ -294,7 +291,6 @@ None at modules fidelity (example data arrives with the generation pattern).
 ## example-factories/example-factories.md
 
 <!-- @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering -->
-<!-- Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source. -->
 <!-- invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering -->
 <!-- invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering -->
 
@@ -446,53 +442,3 @@ ce:
 ## log
 - explore / Increment 1 / Place New Order / pass #ddd
 ```
-
-
-Separate tools run — toolset: `context_tools.stories.stories:Stories` action: `guidance` context.fidelity: `story_map`
-
-Separate tools run — toolset: `context_tools.ddd.ddd:Ddd` action: `guidance` context.fidelity: `bounded_context`
-
-Separate tools run — toolset: `context_tools.ux.ux:Ux` action: `guidance` context.fidelity: `ia`
-
-Separate tools run — toolset: `context_tools.clean_engineering.clean_engineering:CleanEngineering` action: `guidance` context.fidelity: `modules`
-
-Every tool call uses this shape - set `tool` and `arguments`, pipe to CLI:
-
-```yaml
-toolset: context_tools.cdd.cdd:Cdd
-context:
-  fidelity: discovery
-tool: <tool name>
-arguments:
-  <if needed>
-```
-
-Run: python -m tools run -
-
-Before following the suggested flow, display the tools made available to this chat in your user-visible reply — each tool name and what it is for. Do not only follow them silently or rediscover them by remanifesting.
-
-Tools made available:
-- guidance
-
-Suggested flow (repeat and reorder as the story needs):
-
-1. tool: guidance
-
-2. tool: guidance
-
-3. tool: guidance
-
-4. tool: guidance
-
-Read `resources` from each response before choosing the next tool.
-
-With a straight prompt passed, take the action from the prompt. If you took an action from the context versus being given a straight prompt, confirm the use of the context. AskQuestion constrained to these actions: car-inspect | createRule | document | generate | grill | iterate | partition | render | repair | satisfy | scan | sketch | travel-to | validate.
-Then run:
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
-toolset: context_tools.cdd.cdd:Cdd
-context:
-  fidelity: discovery
-action: generate
-```
-.\tools.ps1 run -

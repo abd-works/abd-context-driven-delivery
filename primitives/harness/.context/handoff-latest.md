@@ -3,7 +3,7 @@
 ## Resume
 
 - **Stage:** Experiment 1 implemented — composite ct-fidelity commands as an opt-in `extended` deploy mode
-- **Last work:** `write_deploy(extended=True)` writes `{ct}-{fidelity}` commands baking the run-time `action: guidance` instructions per fidelity (`returned_guidance.py` + `ContextToolFidelityBody`); the default deploy keeps the slim `{ct}.{fidelity}` prompts and original confirm lines
+- **Last work:** `write_deploy(extended=True)` uses the same ActionExpander/fidelity path as YAML, projects exact-fidelity contexts and annotated templates, references earlier fidelity commands with `@`, and omits runtime CLI prose/fences; default deploy remains unchanged
 - **Next action:** run an extended deploy on the real repo and measure it, then resume the isolated-plugin experiment (compiled guidance now exists to compile from)
 - **Next focus:** plugin package emit; do not treat `com.cursor.ide/` as a documented Cursor loader
 

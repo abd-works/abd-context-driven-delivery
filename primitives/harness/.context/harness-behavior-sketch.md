@@ -111,7 +111,9 @@ a harness
        it should add that prompt
        it should name it {context_tool}-{fidelity}
        it should contain the returned guidance for that fidelity
-       it should pin the fidelity in the invoke fence
+       it should reference earlier/higher-level fidelity commands with @ only when missing
+       it should include only template lines/sections tagged for that fidelity
+       it should not include a run-time CLI paragraph or invoke fence
        it should not AskQuestion about fidelities
     with CleanEngineering model
       it should write a model prompt

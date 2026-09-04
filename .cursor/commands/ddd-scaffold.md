@@ -1,12 +1,6 @@
-Run the action on ddd at scaffold fidelity through the tools cli
+# ddd-scaffold
 
-Provide guidance for creating bounded contexts, building blocks, and tactics.
-When DDD scaffolding is ready, call guidance on the CE companion and pass that companion to this action as a separate tools run for matching OO artifacts.
-Scan the production source for every public method and property; flag any with no corresponding test as a coverage gap. Fix every BDD violation and coverage gap — confirm each failing test is RED for the right reason.
-If the same test is still RED after 2 consecutive fix attempts — stop guessing. Call diagnostic().diagnose() before a third fix (wrong exception, wrong line, shifting failure mode, or a re-read of the code that does not explain the failure).
-When this DDD work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline.
-
-Provide guidance from contexts, examples, and templates.
+Use ddd guidance at `scaffold` fidelity only.
 
 # Contexts
 
@@ -211,7 +205,6 @@ Shopping carts, checkout, discounts.
 	Invariant: Consumers are Inventory (assert/reserve) and Notifications (receipt).
 ----
 
-
 ## bounded-context-template.md
 
 <!--
@@ -311,42 +304,3 @@ Three levels: **BC** → **Aggregate** → **concept**.
 
 
 <!-- building_blocks: under each ### aggregate, add #### CE compact + stereotypes per bounded-context-template-building-blocks.md -->
-
-
-
-Separate tools run — toolset: `context_tools.clean_engineering.clean_engineering:CleanEngineering` action: `guidance` context.fidelity: `modules`
-
-Every tool call uses this shape - set `tool` and `arguments`, pipe to CLI:
-
-```yaml
-toolset: context_tools.ddd.ddd:Ddd
-context:
-  fidelity: scaffold
-tool: <tool name>
-arguments:
-  <if needed>
-```
-
-Run: python -m tools run -
-
-Before following the suggested flow, display the tools made available to this chat in your user-visible reply — each tool name and what it is for. Do not only follow them silently or rediscover them by remanifesting.
-
-Tools made available:
-- guidance
-
-Suggested flow (repeat and reorder as the story needs):
-
-1. tool: guidance
-
-Read `resources` from each response before choosing the next tool.
-
-With a straight prompt passed, take the action from the prompt. If you took an action from the context versus being given a straight prompt, confirm the use of the context. AskQuestion constrained to these actions: car-inspect | createRule | document | generate | grill | iterate | partition | render | repair | satisfy | scan | sketch | travel-to | validate.
-Then run:
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
-toolset: context_tools.ddd.ddd:Ddd
-context:
-  fidelity: scaffold
-action: generate
-```
-.\tools.ps1 run -

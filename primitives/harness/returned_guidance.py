@@ -7,13 +7,22 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
-from primitives.actions.action import _ActionExpandRequest, _ActionExpander
+from primitives.actions.action import _ActionExpander
 
 _LOADED_CLASSES: dict[tuple[str, str], type] = {}
+
+_TEMPLATE_TAGS = ("Mu", "Md", "L", "S", "C")
+_FIDELITY_TAG = {
+    "modules": "Mu",
+    "model": "Md",
+    "specification": "S",
+    "code": "C",
+}
 
 
 def _load_class(path: Path, class_name: str) -> type | None:
@@ -54,21 +63,97 @@ def _guidance_function(cls: type) -> Any | None:
     return func
 
 
-def returned_guidance(
+def _fidelity_section(text: str, fidelity: str) -> str:
+    """Select one exact ``## fidelity`` section from markdown."""
+    lines = text.splitlines()
+    heading = re.compile(rf"^##\s+{re.escape(fidelity)}(?:\s|$)", re.IGNORECASE)
+    start = next((index for index, line in enumerate(lines) if heading.match(line)), None)
+    if start is None:
+        return ""
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        if re.match(r"^#{1,2}\s+", lines[index]):
+            end = index
+            break
+    selected = "\n".join(lines[start:end]).strip()
+    return f"# Contexts\n\n{selected}" if selected else ""
+
+
+def _line_tags(line: str) -> tuple[set[str], bool]:
+    """Return fidelity tags and whether they annotate a markdown section."""
+    html = re.search(r"<!--\s*([^>]+?)\s*-->", line)
+    if html:
+        annotation = html.group(1).strip()
+        if re.match(r"^(?:Mu|Md|L|S|C)(?:\b|\s*/)", annotation):
+            return set(re.findall(r"\b(?:Mu|Md|L|S|C)\b", annotation)), True
+    if "#" not in line:
+        return set(), False
+    annotation = line.rsplit("#", 1)[-1].strip()
+    if re.fullmatch(
+        r"(?:Mu|Md|L|S|C)(?:\s*/\s*(?:Mu|Md|L|S|C))*", annotation
+    ):
+        return set(re.findall(r"\b(?:Mu|Md|L|S|C)\b", annotation)), False
+    return set(), False
+
+
+def _filter_annotated_template(text: str, fidelity: str) -> str:
+    """Keep only template lines/sections annotated for the requested fidelity.
+
+    HTML comments annotate markdown sections; trailing ``# Md/S``-style tags
+    annotate individual code lines. The legend and all other fidelities are
+    mechanically excluded before the compound reaches the model.
+    """
+    target = _FIDELITY_TAG.get(fidelity)
+    tagged = [_line_tags(line) for line in text.splitlines()]
+    if not target or not any(tags for tags, _section in tagged):
+        return text.strip()
+
+    section_annotations = any(section for tags, section in tagged if tags)
+    selected: list[str] = []
+    active_section: set[str] = set()
+    for line, (tags, section) in zip(text.splitlines(), tagged):
+        if section_annotations:
+            if section:
+                active_section = tags
+            include = target in (tags if tags else active_section)
+        else:
+            include = target in tags
+        if include:
+            selected.append(line.rstrip())
+        elif selected and not line.strip():
+            selected.append("")
+
+    while selected and not selected[-1]:
+        selected.pop()
+    compact: list[str] = []
+    for line in selected:
+        if not line and compact and not compact[-1]:
+            continue
+        compact.append(line)
+    return "\n".join(compact).strip()
+
+
+def _strip_invocation_prose(text: str) -> str:
+    """Drop run-time invocation text from already-expanded guidance assets."""
+    omitted = (
+        "Pipe the fence to stdin",
+        "Run: python -m tools run -",
+        ".\\tools.ps1 run -",
+    )
+    return "\n".join(
+        line for line in text.splitlines() if not any(item in line for item in omitted)
+    ).strip()
+
+
+def compound_guidance(
     path: Path | str,
     class_name: str,
-    toolset: str,
     fidelity: str,
     constructor_context: dict[str, str] | None = None,
 ) -> str:
-    """Run the context tool's guidance action at one fidelity — the run-time
-    expansion path — and return response.instructions to bake into a
-    ``{context_tool}-{fidelity}`` command.
-
-    Empty string when the class has no expandable guidance or the expansion
-    fails; the caller falls back to the guidance docstring.
-    """
-    loaded = _load_class(Path(path), class_name)
+    """Compile fidelity-only guidance without any run-time invocation prose."""
+    source_path = Path(path)
+    loaded = _load_class(source_path, class_name)
     if loaded is None:
         return ""
     guidance_func = _guidance_function(loaded)
@@ -79,19 +164,23 @@ def returned_guidance(
         context.setdefault(param, value)
     try:
         instance = loaded(**context)
-        tools = dict(getattr(instance, "tools", None) or {})
-        expanded = _ActionExpander.instance().expand(
-            _ActionExpandRequest(
-                action_func=guidance_func,
-                toolset_path=toolset,
-                context=context,
-                arguments={},
-                tool_callables={
-                    name: getattr(tool, "callable", tool) for name, tool in tools.items()
-                },
-                instance=instance,
-            )
+        parts = list(
+            _ActionExpander.instance().parse_body(guidance_func, instance).prose_parts
         )
     except Exception:
         return ""
-    return str(expanded.get("instructions") or "").strip()
+    if len(parts) < 3:
+        return ""
+
+    selected_context = _fidelity_section(parts[2], fidelity) or parts[2].strip()
+
+    selected = [selected_context]
+    for part in parts[3:]:
+        if part.lstrip().startswith("Separate tools run"):
+            continue
+        filtered = _strip_invocation_prose(
+            _filter_annotated_template(part, fidelity)
+        )
+        if filtered:
+            selected.append(filtered)
+    return "\n\n".join(part for part in selected if part).strip()

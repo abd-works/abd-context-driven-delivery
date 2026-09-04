@@ -24,7 +24,7 @@ from harness.harness_tool import operation_writes, required_init_params
 from harness.hook import Hook
 from harness.instruction import Instruction
 from harness.prompt import Prompt, prompt
-from harness.returned_guidance import returned_guidance
+from harness.returned_guidance import compound_guidance
 from harness.rule import Rule
 from harness.skill import Skill
 
@@ -573,8 +573,8 @@ class Harness:
                 if self._extended:
                     if cc:
                         payload["constructor_context"] = cc
-                    payload["returned"] = returned_guidance(
-                        path, class_name, toolset, fidelity_name, cc or None
+                    payload["returned"] = compound_guidance(
+                        path, class_name, fidelity_name, cc or None
                     )
                 payload["fidelity"] = True
                 payload["fidelity_slug"] = fidelity_name

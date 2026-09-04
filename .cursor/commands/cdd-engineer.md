@@ -1,9 +1,10 @@
-Run the action on cdd at engineer fidelity through the tools cli
+# cdd-engineer
 
-Provide guidance for orchestrating CDD stages across stories, ddd, ux, clean_engineering, and bdd.
-Call guidance on each stage child and pass that child to this action as a separate tools run. The action already knows what to do for every tool. Do not inline.
+Use cdd guidance at `engineer` fidelity only.
 
-Provide guidance from contexts, examples, and templates.
+Use higher-level fidelity guidance only when required information is missing. Reference these commands with `@`; do not inline their content:
+@cdd-spec
+@cdd-discovery
 
 # Contexts
 
@@ -142,7 +143,6 @@ GENERATE_TYPE_EXTENDING_INTERFACE: Final = {
 
 """BDD spec for Generate Type Extending Interface story data (factory modes).
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """
@@ -210,7 +210,6 @@ with description("a generate-type-extending-interface story"):
 ## example-factories/example_factories.py
 
 # @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
 # invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
 """Example factory seams at model fidelity - I{Class} only.
@@ -263,7 +262,6 @@ class ICartExampleFactory(ABC):
 
 """BDD spec for example factory seams — I{Type} contracts and factory modes.
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """
@@ -311,57 +309,3 @@ with description("an example factory seam"):
 
         with it("should refuse concrete instantiation without cart_with_items"):
             expect(lambda: ICartExampleFactory()).to(raise_error(TypeError))
-
-
-Separate tools run — toolset: `context_tools.ddd.ddd:Ddd` action: `guidance` context.fidelity: `tactics`
-
-Separate tools run — toolset: `context_tools.stories.stories:Stories` action: `guidance` context.fidelity: `acceptance_tests`
-
-Separate tools run — toolset: `context_tools.ux.ux:Ux` action: `guidance` context.fidelity: `front_end_code`
-
-Separate tools run — toolset: `context_tools.clean_engineering.clean_engineering:CleanEngineering` action: `guidance` context.fidelity: `code`
-
-Separate tools run — toolset: `context_tools.bdd.bdd:Bdd` action: `guidance` context.fidelity: `development`
-
-Every tool call uses this shape - set `tool` and `arguments`, pipe to CLI:
-
-```yaml
-toolset: context_tools.cdd.cdd:Cdd
-context:
-  fidelity: engineer
-tool: <tool name>
-arguments:
-  <if needed>
-```
-
-Run: python -m tools run -
-
-Before following the suggested flow, display the tools made available to this chat in your user-visible reply — each tool name and what it is for. Do not only follow them silently or rediscover them by remanifesting.
-
-Tools made available:
-- guidance
-
-Suggested flow (repeat and reorder as the story needs):
-
-1. tool: guidance
-
-2. tool: guidance
-
-3. tool: guidance
-
-4. tool: guidance
-
-5. tool: guidance
-
-Read `resources` from each response before choosing the next tool.
-
-With a straight prompt passed, take the action from the prompt. If you took an action from the context versus being given a straight prompt, confirm the use of the context. AskQuestion constrained to these actions: car-inspect | createRule | document | generate | grill | iterate | partition | render | repair | satisfy | scan | sketch | travel-to | validate.
-Then run:
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
-toolset: context_tools.cdd.cdd:Cdd
-context:
-  fidelity: engineer
-action: generate
-```
-.\tools.ps1 run -

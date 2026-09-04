@@ -189,10 +189,9 @@ class ContextToolBody:
 class ContextToolFidelityBody(ContextToolBody):
     """Composite — all context-tool content plus the pinned fidelity.
 
-    One ``{context_tool}-{fidelity}`` command: the run-time guidance
-    instructions returned by expanding ``action: guidance`` at that
-    fidelity, then the CLI fence with the fidelity pinned. Falls back to
-    the guidance docstring, then the overview.
+    One ``{context_tool}-{fidelity}`` command: guidance expanded through
+    the same ActionExpander as the YAML contract, projected to this fidelity,
+    with higher-abstraction fidelity commands referenced rather than inlined.
     """
 
     @classmethod
@@ -212,18 +211,25 @@ class ContextToolFidelityBody(ContextToolBody):
         if not content:
             candidate = (guidance or "").strip()
             content = candidate if candidate and candidate != "guidance" else overview
-        text = (
-            f"Run the action on {_context_tool_name(toolset)} at {fidelity} fidelity through the tools cli\n\n"
-            f"{content}\n\n"
-            + resolve_text(
-                fidelity,
-                toolset,
-                kind="ct_fidelity",
-                fidelities=fidelities,
-                actions=actions,
-                constructor_context=constructor_context,
-                extended=True,
+        tool_name = _context_tool_name(toolset)
+        previous: list[str] = []
+        if fidelity in fidelities:
+            previous = list(fidelities[: fidelities.index(fidelity)])
+        references = ""
+        if previous:
+            mentions = "\n".join(
+                f"@{tool_name}-{higher}" for higher in reversed(previous)
             )
+            references = (
+                "\n\nUse higher-level fidelity guidance only when required information "
+                "is missing. Reference these commands with `@`; do not inline "
+                f"their content:\n{mentions}"
+            )
+        text = (
+            f"# {tool_name}-{fidelity}\n\n"
+            f"Use {tool_name} guidance at `{fidelity}` fidelity only."
+            f"{references}\n\n"
+            f"{content}"
         )
         return cls(text)
 

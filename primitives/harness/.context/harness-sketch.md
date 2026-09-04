@@ -253,7 +253,7 @@ Harness
       // if the fidelity does not belong to the in-scope tool or has not been provided: guess the correct one and confirm with AskQuestion constrained to the other fidelities — context-tool skills and action bodies only, never a fidelity prompt or ct-fidelity command
       // never AskQuestion constrained to this source — the skill is the guidance, the action prompt is the action
       // context-tool fidelity prompt — first line: Run the action on {context_tool} at {fidelity} fidelity through the tools cli; then the CLI lines; no Then run, no heading, no Instructions, no AskQuestion
-      // ct-fidelity command (extended=True) — first line: Run the action on {context_tool} at {fidelity} fidelity through the tools cli; then the returned guidance instructions (all ct content); Then run + the CLI lines with context.fidelity pinned and action: generate; no fidelity AskQuestion
+      // ct-fidelity command (extended=True) — expand guidance with the same ActionExpander + fidelity-bearing instance as the YAML contract; keep only the requested fidelity context and annotated template sections; reference earlier/higher-level commands with @ only when information is missing; no run-time CLI paragraph or invoke fence
       // utility and format — operation (or format) text; through the tools cli; then the CLI lines; no Then run; no Run this action; no guidance/fidelity AskQuestion
 
   ----
@@ -267,10 +267,10 @@ Harness
   ----
   ContextToolFidelityBody : ContextToolBody   (extended=True only)
         // composite subtype — one {context_tool}-{fidelity} command per fidelity value
-        // content: returned guidance — run the tool's action: guidance at that fidelity
-        //   through the run-time expansion (load the class, construct with context.fidelity,
-        //   expand, take response.instructions); fall back to the guidance docstring, then the overview
-        // then Resolve ct-fidelity + the CLI fence with context.fidelity pinned and action: generate
+        // content: guidance expanded by ActionExpander with context.fidelity, projected
+        //   from structured prose parts to exact fidelity context/examples and exact-tag templates
+        // previous/higher-level fidelities are @ references, nearest first; never inline them
+        // no response.instructions tool-call paragraph, Then run, or CLI fence
         // the default deploy keeps the slim {context_tool}.{fidelity} ActionBody prompts
 
   ----

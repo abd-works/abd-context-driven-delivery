@@ -52,6 +52,25 @@ with description("reading a markdown section"):
                 expect("alpha content" in result).to(equal(True))
                 expect("beta content" in result).to(equal(False))
 
+        with it("should ignore heading-looking lines inside fenced examples"):
+            from primitives.assets.markdown_extractor import _read_section
+
+            with tempfile.TemporaryDirectory() as tmp:
+                md = Path(tmp) / "doc.md"
+                _write(
+                    md,
+                    "# Contexts\n\n"
+                    "## model\n\nmodel content\n\n"
+                    "```text\n# generated_file.py\n```\n\n"
+                    "## code\n\ncode content\n\n"
+                    "# Scaffold\n\nscaffold content\n",
+                )
+                result = _read_section(md, "Contexts")
+                expect(result).to(contain("# generated_file.py"))
+                expect(result).to(contain("## code"))
+                expect(result).to(contain("code content"))
+                expect(result).not_to(contain("scaffold content"))
+
     with context("with a section heading that does not exist"):
         with it("should return the full file content"):
             from primitives.assets.markdown_extractor import _read_section

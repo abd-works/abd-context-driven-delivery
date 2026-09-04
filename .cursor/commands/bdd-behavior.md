@@ -1,87 +1,11 @@
-Run the action on bdd at behavior fidelity through the tools cli
+# bdd-behavior
 
-Provide guidance for creating behavior skeletons and development tests.
-At modules fidelity: no BDD spec file is written — bootstrap CE class structure via the companion.
-At behavior fidelity: write all BDD test signatures (SIGNATURE markers).
-At development fidelity: write full test bodies and production code.
-When the target module already exists, scan the production source for every public method and property and verify each has test coverage — add missing signatures for any gap before writing new ones.
-BDD tests must conform to CE class structure: describe/it hierarchies must map onto public CE interfaces and operations.
-When this BDD work is done, call guidance on the Clean Engineering companion and pass that companion to this action as a separate tools run. The action already knows what to do for every tool. Do not inline.
+Use bdd guidance at `behavior` fidelity only.
 
-Provide guidance from contexts, examples, and templates.
+Use higher-level fidelity guidance only when required information is missing. Reference these commands with `@`; do not inline their content:
+@bdd-modules
 
 # Contexts
-
-Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`templates/bdd-sketch.md`).
-
-## Hierarchy shape (required)
-
-```
-describe {subject — domain thing, state, or observable condition}
-  that {event or condition that sets the subject up}
-    with {narrower condition}
-      it should {observable outcome}
-```
-
-Read top-down as a **usage / storytelling sequence**: what the user or system does first, then what is true, then what is observed. Nest by the **real events and conditions** that make the next observation possible — not by package, class role, or test fixture type.
-
-| Line | Names | Never names |
-| --- | --- | --- |
-| **describe** | Subject under observation in plain English (thing, state, condition) | Manager / hub / runner / service / internal class; decorator symbol (`@log`); marker name |
-| **that …** | Past or present event/condition on that subject (`that has been logged`, `that is invoked`) | `when …` |
-| **with …** | Narrower standing condition (`with no session name given`, `with verbose off`) | `when …`; implementation knobs phrased as API flags |
-| **it should …** | One stakeholder-visible outcome | Internals, private fields, call counts on mocks of the subject |
-
-**Pass (storytelling / usage order):**
-```
-an action that is annotated with log
-  that is invoked
-    it should record a run event on the session trail
-  that has been logged
-    with no session name given
-      it should use the default session
-    with a given session name
-      it should keep events under that session
-    with verbose off
-      it should write a summary line and keep the last payload
-      with full logging requested
-        it should flush the last payload
-    with verbose on
-      it should write payload files for later events
-
-an action that is not annotated
-  that is invoked
-    it should leave the session trail empty
-```
-
-**Fail:**
-```
-@log marker                          ← mechanism / symbol, not a subject
-ToolsetRunner                        ← manager / internal
-a logged tool                        ← splits the same subject; use one action story
-when no session name is given        ← never "when" for state — use "with …"
-```
-
-**Shared Rules:**
-
-- **`observable-behavior`** — Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals.
-- **`domain-practice-alignment`** — Describe names must match domain language / model exactly.
-- **`usage-order-behaviors`** — Order describes, contexts, and examples as a **usage story** or operational sequence (what happens first → next). Do not order by implementation layer, package, or internal type.
-- **`describe-is-subject-not-internal`** — A `describe` is a domain subject, state, or observable condition — never a manager, hub, runner, service, or other internal (`SessionLog`, `ToolsetRunner`, …).
-- **`describe-is-plain-english`** — Full English phrases (e.g. "an action that is annotated with log", "an action that is not annotated"). Never symbol/mechanism names (`"@log marker"`) as the subject.
-- **`state-not-when`** — Never name a nested state with `when`. Use `that …` for events/conditions on the subject and `with …` for standing conditions. Ask: what event or condition must already be true for this observation?
-- **`nest-by-enabling-events`** — Each nested `that` / `with` must be a real precondition or event required for the nested `it should` — not a test-file grouping convenience.
-- **`full-surface-coverage`** — When generating or satisfying tests for a module that already exists, scan the production source for every public method, property, class, and constant. Each must have at least one `it should` covering its observable behavior. Any gap is a violation. Private and underscore-prefixed members are excluded unless they are part of a documented public contract.
-- **`scan-fixture-pair`** — A mechanical mistake spec passes the fail file to `expect_scan_fails` and the pass file to `expect_scan_passes` (`context_tools.bdd.spec_helpers`). Do not invent a parallel eval spec harness.
-
----
-
-This skill operates at **multiple levels of fidelity**. Start from an agreed sketch and deepen toward green tests and production code. Each level **adds** artifacts and **extends** the previous — do not fill in details from a more detailed fidelity. Least detail → most detail below.
-
-| Fidelity | Output |
-|---|---|
-| **behavior** | describe/it hierarchy with `BDD: SIGNATURE` markers in each `it` |
-| **development** | Implemented tests + production code |
 
 ## behavior
 
@@ -1179,10 +1103,8 @@ describe('VoucherService', () => {
 
 **Mock is at the boundary** (repository) — the service is fully tested; the repository mock is not the thing under test.
 
-
 """
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """
@@ -1251,41 +1173,3 @@ with description('a scan fixture pair'):
     with context('a file that satisfies the rule'):
         with it('should pass scan'):
             expect_scan_passes({scan}, '{PassFixturePath}', rule='{Rule}')
-
-
-Separate tools run — toolset: `context_tools.clean_engineering.clean_engineering:CleanEngineering` action: `guidance` context.fidelity: `model`
-
-Every tool call uses this shape - set `tool` and `arguments`, pipe to CLI:
-
-```yaml
-toolset: context_tools.bdd.bdd:Bdd
-context:
-  fidelity: behavior
-tool: <tool name>
-arguments:
-  <if needed>
-```
-
-Run: python -m tools run -
-
-Before following the suggested flow, display the tools made available to this chat in your user-visible reply — each tool name and what it is for. Do not only follow them silently or rediscover them by remanifesting.
-
-Tools made available:
-- guidance
-
-Suggested flow (repeat and reorder as the story needs):
-
-1. tool: guidance
-
-Read `resources` from each response before choosing the next tool.
-
-With a straight prompt passed, take the action from the prompt. If you took an action from the context versus being given a straight prompt, confirm the use of the context. AskQuestion constrained to these actions: car-inspect | createRule | document | generate | grill | iterate | partition | render | repair | satisfy | scan | sketch | travel-to | validate.
-Then run:
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
-toolset: context_tools.bdd.bdd:Bdd
-context:
-  fidelity: behavior
-action: generate
-```
-.\tools.ps1 run -
