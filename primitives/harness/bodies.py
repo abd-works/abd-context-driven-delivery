@@ -219,9 +219,22 @@ class ContextToolFidelityBody(ContextToolBody):
             candidate = (guidance or "").strip()
             content = candidate if candidate and candidate != "guidance" else overview
         tool_name = _context_tool_name(toolset)
+        previous: list[str] = []
+        if fidelity in fidelities:
+            previous = list(fidelities[: fidelities.index(fidelity)])
+        references = ""
+        if previous:
+            mentions = "\n".join(
+                f"@{tool_name}-{higher}" for higher in reversed(previous)
+            )
+            references = (
+                "\n\nUse higher-level fidelity guidance only when required information "
+                f"is missing. Reference these commands with `@`:\n{mentions}"
+            )
         text = (
             f"# {tool_name}-{fidelity}\n\n"
-            f"Use {tool_name} guidance at `{fidelity}` fidelity only.\n\n"
+            f"Use {tool_name} guidance at `{fidelity}` fidelity only."
+            f"{references}\n\n"
             f"{content}"
         )
         return cls(text)
