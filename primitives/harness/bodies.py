@@ -8,6 +8,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+# Shaping-only fidelities deploy as skills but are not offered on the main context-tool router.
+_ROUTER_SKIP_FIDELITIES = frozenset({"scaffold"})
+
 
 def _context_tool_name(toolset: str) -> str:
     ref = toolset.strip()
@@ -93,22 +96,17 @@ def resolve_text(
             )
         return "through the tools cli\n\n" + _CATALOG_LINE + _invoke_block(toolset, constructor_context=cc)
     if kind in {"guidance", "ct_fidelity"}:
-        if actions:
-            action_ask = (
-                "AskQuestion constrained to these actions: "
-                + " | ".join(actions)
-            )
-        else:
-            action_ask = "AskQuestion constrained to the available actions for this context tool"
-        if extended or kind == "ct_fidelity":
+        if kind == "ct_fidelity":
+            if actions:
+                action_ask = (
+                    "AskQuestion constrained to these actions: "
+                    + " | ".join(actions)
+                )
+            else:
+                action_ask = "AskQuestion constrained to the available actions for this context tool"
             taken = (
                 "With a straight prompt passed, take the action from the prompt. "
                 "If you took an action from the context versus being given a straight prompt, "
-                f"confirm the use of the context. {action_ask}.\n"
-            )
-        else:
-            taken = (
-                "If you took an action from the context versus being given an explicit one, "
                 f"confirm the use of the context. {action_ask}.\n"
             )
     else:
@@ -137,16 +135,16 @@ def resolve_text(
     if kind == "guidance":
         if fidelities:
             skill_options = " | ".join(f"{source}-{fidelity}" for fidelity in fidelities)
-            fidelity_ask = (
-                f"AskQuestion constrained to these fidelity skills: {skill_options}. "
-                f"Run the chosen skill (@{source}-<fidelity>); do not pipe YAML from this skill.\n"
+            return (
+                "If you cannot tell which skill to run from the context, "
+                f"AskQuestion: {skill_options}.\n"
+                "Run the appropriate skill.\n"
             )
-        else:
-            fidelity_ask = (
-                "AskQuestion to choose the appropriate fidelity skill for this context tool. "
-                "Run the chosen skill; do not pipe YAML from this skill.\n"
-            )
-        return taken + fidelity_ask
+        return (
+            "If you cannot tell which skill to run from the context, "
+            "AskQuestion to choose the appropriate fidelity skill.\n"
+            "Run the appropriate skill.\n"
+        )
     fidelity_ask = (
         "If the fidelity does not belong to the in-scope tool or has not been provided, "
         "guess the correct fidelity and confirm with AskQuestion constrained to the other fidelities"
@@ -187,10 +185,11 @@ class ContextToolBody:
         actions: list[str] | tuple[str, ...] = (),
         extended: bool = False,
     ) -> "ContextToolBody":
+        router_fidelities = [f for f in fidelities if f not in _ROUTER_SKIP_FIDELITIES]
         text = (
             f"# {name}\n\n"
             f"{overview}\n\n"
-            f"{resolve_text(name, toolset, kind='guidance', fidelities=fidelities, actions=actions, extended=extended)}"
+            f"{resolve_text(name, toolset, kind='guidance', fidelities=router_fidelities, actions=actions, extended=extended)}"
         )
         return cls(text)
 
