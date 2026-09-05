@@ -40,7 +40,7 @@ _FIDELITY_TEMPLATE_STEMS: dict[str, frozenset[str]] = {
 }
 
 # Frontmatter `artifact:` values that mark a file as belonging to a fidelity
-# (e.g. story-context.md is story_map; components/story-header.md is scenarios).
+# (e.g. components/story-header.md is scenarios).
 _FIDELITY_TEMPLATE_ARTIFACTS: dict[str, frozenset[str]] = {
     "story_map": frozenset({"story-map", "thin-slice"}),
     "scenarios": frozenset({"story-scenarios"}),
@@ -362,8 +362,8 @@ def keep_template_file(rel: str, content: str, fidelity: str | None) -> bool:
     """Whether a templates/ file belongs in the merged blob for this fidelity.
 
     No fidelity → keep everything (same as a whole-folder merge). Never keep
-    stories-sketch on a format-filtered pack. story_map keeps story-map +
-    thin-slice plus files whose frontmatter artifact is clearly story-map.
+    stories-sketch on a format-filtered pack. story_map keeps story-map and
+    thin-slice stems only (not story-context — separate artifact).
     """
     if not fidelity:
         return True

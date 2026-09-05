@@ -1,6 +1,6 @@
 ---
 fidelity: [shaping, discovery, exploration, specification, engineering]
-artifact: [story-map]
+artifact: [story-context]
 ---
 
 # `<Epic / Sub-Epic Verb–Noun>`

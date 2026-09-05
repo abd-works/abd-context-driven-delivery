@@ -6,7 +6,6 @@ section: body
 ---
 
 <!-- Discovery fidelity — every sub-epic decomposed to named stories.
-     Shaping outline maps use templates/md/story-map-outline.md instead.
      Do not wrap epic, sub-epic, story, or actor names in backticks. -->
 
 # Story Map — Product / Feature Name
