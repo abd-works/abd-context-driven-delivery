@@ -25,6 +25,7 @@ from harness.harness_tool import skill
 from primitives.actions.action import _ActionRunner
 from primitives.actions.action import AgenticToolset
 from primitives.actions.action import agent_instructions
+from primitives.tools.tool import agent_tool
 from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from scan.scan import Scan
@@ -178,6 +179,39 @@ class BaseContextTool(AgenticToolset):
 
     @instruction
     def scaffold(self) -> Instruction: ...
+
+    @agent_tool
+    def load_template(self, format: str = "", fidelity: str = "") -> str:
+        """Return the template content for the given format and fidelity.
+
+        Pass the format you are about to generate (e.g. ``typescript``,
+        ``python``, ``markdown``) and the fidelity (e.g. ``story_map``,
+        ``scenarios``, ``code``).  Template lines and files are filtered to
+        only those annotated for the requested fidelity.  Falls back to the
+        instance's active format/fidelity when not given."""
+        from primitives.assets import AssetLocator
+
+        target_format = (format or "").strip() or getattr(self, "format", "") or ""
+        target_fidelity = (fidelity or "").strip() or getattr(self, "fidelity", "") or ""
+        module_dir = self.module_dir
+        domain_slug = getattr(self, "domain_slug", module_dir.name)
+
+        class _Host:
+            pass
+
+        host = _Host()
+        host.module_dir = module_dir  # type: ignore[attr-defined]
+        host.domain_slug = domain_slug  # type: ignore[attr-defined]
+        host.format = target_format  # type: ignore[attr-defined]
+        host.fidelity = target_fidelity  # type: ignore[attr-defined]
+
+        result = AssetLocator(host, "templates").expand()
+        if not result:
+            return f"No template found for format '{target_format}' / fidelity '{target_fidelity}' in {module_dir / 'templates'}"
+        if target_fidelity:
+            from primitives.assets.assets import filter_template_lines
+            result = filter_template_lines(result, target_fidelity)
+        return result
 
     # -- Guidance (contexts, examples, templates). Lifecycle lives on Generate / Validate / Document / Satisfy / Render. ---
     @skill

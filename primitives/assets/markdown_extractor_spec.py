@@ -52,6 +52,25 @@ with description("reading a markdown section"):
                 expect("alpha content" in result).to(equal(True))
                 expect("beta content" in result).to(equal(False))
 
+        with it("should ignore heading-looking lines inside fenced examples"):
+            from primitives.assets.markdown_extractor import _read_section
+
+            with tempfile.TemporaryDirectory() as tmp:
+                md = Path(tmp) / "doc.md"
+                _write(
+                    md,
+                    "# Contexts\n\n"
+                    "## model\n\nmodel content\n\n"
+                    "```text\n# generated_file.py\n```\n\n"
+                    "## code\n\ncode content\n\n"
+                    "# Scaffold\n\nscaffold content\n",
+                )
+                result = _read_section(md, "Contexts")
+                expect(result).to(contain("# generated_file.py"))
+                expect(result).to(contain("## code"))
+                expect(result).to(contain("code content"))
+                expect(result).not_to(contain("scaffold content"))
+
     with context("with a section heading that does not exist"):
         with it("should return the full file content"):
             from primitives.assets.markdown_extractor import _read_section
@@ -272,7 +291,7 @@ with description("thinning examples by format"):
 
 with description("thinning examples by fidelity"):
     with context("when fidelity is story_map"):
-        with it("should keep story-map and thin-slice and drop scenario files"):
+        with it("should keep story-map and drop scenario files"):
             from primitives.assets.markdown_extractor import thin_examples_by_fidelity
 
             items = {
@@ -281,14 +300,7 @@ with description("thinning examples by fidelity"):
                 "orders/md/scenario-main-flow.md": "scenario",
             }
             result = thin_examples_by_fidelity(items, "story_map")
-            expect(result).to(
-                equal(
-                    {
-                        "orders/md/story-map.md": "map",
-                        "orders/md/thin-slice.md": "slice",
-                    }
-                )
-            )
+            expect(result).to(equal({"orders/md/story-map.md": "map"}))
 
     with context("when fidelity is scenarios"):
         with it("should keep scenario-* files only"):
@@ -296,10 +308,10 @@ with description("thinning examples by fidelity"):
 
             items = {
                 "orders/md/story-map.md": "map",
-                "orders/md/scenario-outline.md": "outline",
+                "orders/md/scenario-template.md": "template",
             }
             result = thin_examples_by_fidelity(items, "scenarios")
-            expect(result).to(equal({"orders/md/scenario-outline.md": "outline"}))
+            expect(result).to(equal({"orders/md/scenario-template.md": "template"}))
 
     with context("when no stem matches"):
         with it("should leave the collection unchanged"):

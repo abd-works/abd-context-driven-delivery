@@ -33,6 +33,7 @@ class Instruction(HarnessTool):
                     context_tools=source.get("context_tools") or (),
                     invoke=source.get("invoke") or "action",
                     operation=source.get("operation") or "",
+                    extended=source.get("extended") or False,
                 )
             elif source.get("source_kind") == "utility":
                 self.body = UtilityBody.from_source(
@@ -50,6 +51,7 @@ class Instruction(HarnessTool):
                     toolset=source.get("toolset", ""),
                     fidelities=source.get("fidelities") or (),
                     actions=source.get("actions") or (),
+                    extended=source.get("extended") or False,
                 )
             if source.get("overview"):
                 self.description = source["overview"]

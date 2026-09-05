@@ -46,9 +46,11 @@ _support = _DddSpecSupport()
 
 with description("a Ddd toolset"):
     with context("that is created"):
-        with context("with scaffold fidelity"):
-            with it("should default to markdown format"):
-                expect(Ddd(fidelity="scaffold").format).to(equal("markdown"))
+        with context("with scaffold stage alias"):
+            with it("should resolve to bounded_context and default to markdown format"):
+                tool = Ddd(fidelity="scaffold")
+                expect(tool.fidelity).to(equal("bounded_context"))
+                expect(tool.format).to(equal("markdown"))
 
         with context("with building_blocks fidelity"):
             with it("should default to markdown format"):

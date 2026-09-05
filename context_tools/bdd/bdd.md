@@ -2,6 +2,8 @@
 
 Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`templates/bdd-sketch.md`).
 
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
+
 ## Hierarchy shape (required)
 
 ```
@@ -68,8 +70,23 @@ This skill operates at **multiple levels of fidelity**. Start from an agreed ske
 
 | Fidelity | Output |
 |---|---|
+| **modules** | Thin subject index — top-level `describe`s with candidate `that`/`with` + TODOs (partition pass) |
 | **behavior** | describe/it hierarchy with `BDD: SIGNATURE` markers in each `it` |
 | **development** | Implemented tests + production code |
+
+## modules
+
+**Default format:** markdown
+
+**Goal:** Name the BDD subject tree before behavior signatures — delegates module structure to Clean Engineering at the same depth.
+
+### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ## behavior / ## development below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
+
+Rough subject index for a **partition** pass or first cut — domain things, states, or observable conditions (top-level `describe`s); subject + candidate `that`/`with` + TODOs. Not full `it should` suites.
+
+Key rules: `state-not-when` — nest by the state or condition that enables an observation, never by a `when` trigger; `nest-by-enabling-events` — sub-groupings are conditions that unlock further behavior, not implementation steps.
 
 ## behavior
 
@@ -84,21 +101,12 @@ This skill operates at **multiple levels of fidelity**. Start from an agreed ske
 
 Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
 
-### Framework syntax
-
-| Construct | Jest (TypeScript) | Mamba (Python) | JUnit 5 (Java) |
-| --- | --- | --- | --- |
-| Top-level concept | `describe('Context', () => {` | `with description('Context'):` | `@Nested class Context` |
-| Nested state/context | `describe('that has…', () => {` | `with context('that has…'):` | `@Nested class ThatHas…` |
-| Behavior | `it('should …', () => {` | `with it('should …'):` | `@Test void should…()` |
-| Marker | `// BDD: SIGNATURE` | `# BDD: SIGNATURE` | `// BDD: SIGNATURE` |
-
 ### Rules
 
 - **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count.
 - **`signature-markers`** — Every `it` body is exactly `// BDD: SIGNATURE` or `# BDD: SIGNATURE`.
 - **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
-- **`framework-syntax`** — One confirmed framework throughout. Do not mix Jest and Mamba constructs.
+- **`framework-syntax`** — Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
 
 **Pass:**
 ```typescript
@@ -116,6 +124,8 @@ it('should apply a percentage discount to eligible items', () => {
 **Default format:** Python
 
 **Goal:** Replace `BDD: SIGNATURE` markers one at a time with it shgould /expect bodies, then minimum production code until green. Inherit the framework from the **behavior** artifactif already completed.
+
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
 
 1. **Confirm framework** — inherit from the behavior file.
 2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report count.
@@ -166,10 +176,6 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 
 ---
 
+## Story acceptance (Python)
 
-
-# Scaffold
-
-A scaffold produces thin subject index — domain things, states, or observable conditions (top-level `describe`s); subject + candidate `that`/`with` + TODOs. Not full `it should` suites.
-
-Key rules: `state-not-when` — nest by the state or condition that enables an observation, never by a `when` trigger; `nest-by-enabling-events` — sub-groupings are conditions that unlock further behavior, not implementation steps.
+Story files import **`story_test.py`** — it extends **Mamba** with **`with given`**, **`with when`**, **`with then`**, **`with and_`**, and **`with background.all` / `with background.each`** (like **`with before.all` / `with before.each`**). Run with **`python -m story_test`**. Unit BDD specs keep plain `description` / `context` / `it`.

@@ -2,7 +2,7 @@
 
 Deepen OO design from modules toward production code. Each fidelity **adds** artifacts — do not invent detail from a deeper level.
 
-**Progression:** `partition` (action) → **scaffold** → **modules** → **model** → **code**.
+**Progression:** `partition` (action) → **modules** (scaffold → full map) → **model** → **code**.
 
 | Fidelity | Default format | Produce |
 |---|---|---|
@@ -31,6 +31,14 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 **Diagram format:** `drawio` (modules view — blue boxes, seam-term bullets, one-way dependency arrows; template `templates/modules.drawio`). Language channels (python/java/…) are for **model** and later — not required here.
 
 **Goal:** Refine **modules** purpose, primary use case, rationale, key terms, and relationship to other modules. Strive for **independent modules with one-way dependencies** and an explicit **build order**. Thin class/term identification only — enough to show independence.
+
+### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
+
+Rough module index for a **partition** pass or first cut — module paths, chunk files, seam terms, and thin dependency notes only. Formal one-way graph and full `module-context.md` wait for **modules** generate.
+
+Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `domain-nouns-only` — module names are domain nouns or paths, never action verbs or `*Model`/`*Runtime` suffixes. Use **abd-code-research** (not raw file scraping) when the corpus is code.
 
 A **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
@@ -313,6 +321,7 @@ A vertical is not at **code** fidelity while it still depends on a mockup / Stor
 
 ### Phase 1 — typed contracts
 
+- **Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific recommendations for coding.
 - **When an `I{Class}` interface was requested at model** (interfaces are optional — see `## model` § Interfaces): add `Class(I{Class})` (Java: `implements I{Class}`) in the **same file** as `I{Class}`. Do **not** fill out `I{Class}` or add private members to it.
 - **When no interface was requested:** skip that step — the empty `Class` stub already exists from **model** fidelity in its own family file; continue directly onto it.
 - On `Class`: implement public properties and operations; add private properties/operations as **empty interfaces** (`...` / `@abstractmethod`); add each relationship with its **kind** (composition / aggregation / association) and **cardinality** (e.g. `1..*`, `0..1`); invariants as **comments** (not methods) — formalizing any named at `## model` § Invariants, or newly introduced here.
@@ -353,14 +362,6 @@ State which side **navigates** to the other — direction is explicit.
 - **`use-exceptions-properly`** — Domain exceptions that name the failure.
 - **`never-swallow-exceptions`** — Log and re-raise or convert; never bare swallow.
 - **`stop-writing-useless-comments`** — Comments explain **why**, not **what**.
-
-# Scaffold
-
-A scaffold produces a thin module index — rough public API; obvious mechanisms and their role — including nested modules when a shared base exists (§ Nested modules). Thin dependency notes only; formal one-way graph waits for **modules** generate.
-
-Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `domain-nouns-only` — module names are domain nouns or paths, never action verbs or `*Model`/`*Runtime` suffixes.
-
-Use **abd-code-research** (not raw file scraping) when the corpus is code.
 
 # Document
 

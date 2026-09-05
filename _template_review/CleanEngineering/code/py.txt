@@ -1,0 +1,173 @@
+"""
+# ---
+# format: python
+# fidelity: all
+# ---
+# @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
+# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+# invoke-check: action validate | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+
+CleanEngineering Python template - two files when Stories-bound:
+
+    {family_slug}.py                 - (I{Class} +) {Class} (+ subtypes)   PRODUCTION
+    {type_slug}_example_factory.py   - (I{Class}ExampleFactory +) factory  SEPARATE
+
+INTERFACES ARE OPTIONAL (see clean_engineering.md SS Interfaces). I{Class} and
+I{Class}ExampleFactory below are shown because this is the richer case to document -
+default to OMITTING both and stubbing {Class} / {Class}ExampleFactory directly
+(empty bodies at Md, filled at C, no ABC base needed) unless the user asked for an
+interface, or the module genuinely has multiple layers/implementations behind one
+seam. The two decisions (domain type vs. factory) are independent.
+
+A production file holds the public seam (I{Class} when one exists), the production
+Class that extends it (or stands alone when no interface exists), subtypes, and
+tightly connected peers. Not one class per file. Example factories are NEVER in
+that file (example-factory-separate-file).
+
+Layout (physical-folder): write each file under the **module** folder
+(e.g. {module_slug}/{family_slug}.py). Module context:
+{module_slug}/.context/module-context.md.
+
+Naming:
+    File (production)  {family_slug}.py
+    File (factory)     {type_slug}_example_factory.py
+    Interface          I{Class}                (OPTIONAL - public seam only when requested; model fidelity)
+    Class              {Class}(I{Class})       (production; drop "(I{Class})" when no interface exists)
+    ExampleFactory     {Class}ExampleFactory   (plain class; no Loader base; Md+/C+)
+    Modes              Fake | Isolated | Production  (factory behavior - not subclasses)
+    Property           {owned_property}, ...     (snake_case slots)
+    Operation          {operation_name}, ...     (snake_case slots)
+    Params             {param}, {dep}
+    Type slots         {Type}, {ReturnType}
+    Invariant          comment                 (plain-English; not a method)
+
+Fidelity tags:
+    L  = language companion (prose; refined every stage - not a fidelity)
+    Mu = modules       (thin terms, one-way deps, build order - markdown / module-context)
+    Md = model         (empty public props/ops directly on Class by default; I{Class} - and
+                       optional I{Class}ExampleFactory in factory file - only when requested)
+    C  = code          (Class extends I{Class} when one exists, else stands alone; public filled;
+                       privates filled; {Class}ExampleFactory modes in sibling factory file)
+"""
+
+from __future__ import annotations
+from abc import ABC, abstractmethod
+
+
+# =============================================================================
+# FILE: {family_slug}.py - production family only (cohesive-file)
+# =============================================================================
+
+
+# OPTIONAL - omit this whole class by default. Only add I{ClassName} when the
+# user requested an interface, or {ClassName} has multiple layers/implementations
+# behind one seam. Otherwise skip straight to `class {ClassName}:` below with the
+# same empty (# Md) bodies, and drop `(I{ClassName})` from its base list.
+class I{ClassName}(ABC):                                                # Md
+    """*{ClassName}* is - one sentence: what it is, its unique role.
+    Identity only. No relationship or behavior sentences here."""     # L
+
+    # -- Public properties (empty interfaces) --------------------------------
+
+    @property                                                           # Md
+    @abstractmethod                                                     # Md
+    def {owned_property}(self) -> {Type}: ...                           # Md
+
+    @property                                                           # Md
+    @abstractmethod                                                     # Md
+    def {plain_property}(self) -> {Type}: ...                           # Md
+
+    # -- Public operations (empty interfaces) --------------------------------
+
+    @abstractmethod                                                     # Md
+    def __init__(self, {param}: {Type}) -> None: ...                    # Md
+
+    @abstractmethod                                                     # Md
+    def {operation_name}(self, {param}: {Type}) -> {ReturnType}: ...    # Md
+
+    @abstractmethod                                                     # Md
+    def {another_operation}(self) -> {ReturnType}: ...                  # Md
+
+
+class {ClassName}(I{ClassName}):                                        # C
+    # Drop "(I{ClassName})" above when no interface exists - {ClassName} then
+    # carries the # Md empty-body members itself instead of inheriting them.
+    """*{ClassName}* is - one sentence: what it is, its unique role."""  # L
+
+    # -- Public properties (filled at code) ----------------------------------
+
+    """{sentence about this property - what it holds and why.}
+    @composition"""                                                     # C
+    @property                                                           # C
+    def {owned_property}(self) -> {Type}:                               # C
+        ...                                                             # C
+
+    """{sentence about this plain property.}"""                         # L
+    # Invariant: {constraint sentence - the rule in plain English.}    # C
+    @property                                                           # C
+    def {plain_property}(self) -> {Type}:                               # C
+        ...                                                             # C
+
+    # -- Constructor / public operations (filled at code) --------------------
+
+    def __init__(self, {param}: {Type}) -> None:                        # C
+        self._{plain_property} = {param}                                # C
+
+    """{language bullet for this operation}"""                          # L
+    # Invariant: {constraint sentence applicable to this operation.}   # C
+    def {operation_name}(self, {param}: {Type}) -> {ReturnType}:        # C
+        ...                                                             # C
+
+    def {another_operation}(self) -> {ReturnType}:                      # C
+        """{language bullet for this operation}"""                      # L
+        ...                                                             # C
+
+    # -- Private operations (filled at code) ---------------------------------
+
+    def _{private_helper}(self, {param}: {Type}) -> {ReturnType}:       # C
+        """{what this helper does}"""                                   # L
+        ...                                                             # C
+
+
+# Subtype - delta only; parent members are inherited, not repeated     # Md
+class I{ChildClass}(ABC):                                               # Md
+    """{delta - what {ChildClass} adds}"""                              # L
+
+    @abstractmethod                                                     # Md
+    def {delta_operation}(self, {param}: {Type}) -> {ReturnType}: ...   # Md
+
+
+class {ChildClass}({ClassName}, I{ChildClass}):                         # C
+    """{delta - what {ChildClass} adds or overrides}"""                 # L
+
+    def {delta_operation}(self, {param}: {Type}) -> {ReturnType}:       # C
+        ...                                                             # C
+
+
+# =============================================================================
+# FILE: {type_slug}_example_factory.py - Stories factory (separate file)
+# from .{family_slug} import {ClassName}, I{ClassName}
+# Pattern only - no ExampleLoader base. examples[{example_key}] is a
+# multi-type bundle (not examples[{Type}][...]).
+# Fake / Isolated / Production are modes - not Fake{ClassName} subclasses.
+# =============================================================================
+
+
+# OPTIONAL - same opt-in rule as I{ClassName} above; omit by default and go
+# straight to `class {ClassName}ExampleFactory:` below.
+class I{ClassName}ExampleFactory(ABC):                                  # Md
+    """Loads examples[{example_key}] as Fake | Isolated | Production modes."""  # L
+
+    @abstractmethod                                                     # Md
+    def load_{example_key}(self, *, mode: str = "fake") -> I{ClassName}: ...  # Md
+
+
+class {ClassName}ExampleFactory(I{ClassName}ExampleFactory):            # C
+    # Drop "(I{ClassName}ExampleFactory)" above when no interface exists.
+    """Fake: mock framework + examples; Isolated: {ClassName}(injected mocks);
+    Production: {ClassName}(real collaborators)."""                     # L
+
+    def load_{example_key}(self, *, mode: str = "fake") -> I{ClassName}:  # C
+        # examples[{example_key}] -> I{ClassName} (+ peer types if needed)  # C
+        ...                                                             # C

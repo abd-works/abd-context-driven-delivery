@@ -27,11 +27,12 @@ with description("Stories scanner discovery"):
         self.discovered = ScannerCollection(_STORIES, _SCANNERS).discover()
 
     with it("should discover every ported rule scanner"):
-        expect(len(self.discovered) >= 31).to(be_true)
+        expect(len(self.discovered) >= 32).to(be_true)
 
-    with it("should include verb-noun-format and four-to-nine-children"):
+    with it("should include verb-noun-format, four-to-nine-children, and kebab-case-paths"):
         expect("verb-noun-format" in self.discovered).to(be_true)
         expect("four-to-nine-children" in self.discovered).to(be_true)
+        expect("kebab-case-paths" in self.discovered).to(be_true)
 
 
 with description("Stories scanners against discovery fixtures"):

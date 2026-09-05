@@ -167,9 +167,9 @@ signature:
   generate:
     kind: action
     tools: []
-    instructions: "Generate story artifacts at the current fidelity.\n        At scaffold\
-      \ fidelity: write epic, sub-epic, and story names only.\n        At story_map\
-      \ fidelity: write the story map and thin-slice only.\n        At scenarios fidelity:\
+    instructions: "Generate story artifacts at the current fidelity.\n        At story_map\
+      \ fidelity: write the story map (names-only partition outline lives under ###\
+      \ Scaffold in guidance). At scenarios fidelity:\
       \ write main-flow scenarios (single or multiple per story) with optional variations;\
       \ fixtures live in examples/ and givens.ts at the lowest shared epic/sub-epic/story\
       \ folder.\n        At acceptance_tests fidelity: write tests/{epic}/{sub-epic}/{story}.{tier}.ts\

@@ -6,7 +6,6 @@ section: body
 ---
 
 <!-- Discovery fidelity — every sub-epic decomposed to named stories.
-     Shaping outline maps use templates/md/story-map-outline.md instead.
      Do not wrap epic, sub-epic, story, or actor names in backticks. -->
 
 # Story Map — Product / Feature Name
@@ -28,15 +27,3 @@ section: body
 
 **In scope:** what is included
 **Out of scope:** what is explicitly excluded
-
----
-
-## Thin slices
-
-### Increment 1: Marketable outcome
-
-**Outcome:** What users or the business can do after this ships
-
-**Stories:**
-- Story Verb–Noun
-- Story Verb–Noun

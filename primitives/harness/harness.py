@@ -24,6 +24,8 @@ from harness.harness_tool import operation_writes, required_init_params
 from harness.hook import Hook
 from harness.instruction import Instruction
 from harness.prompt import Prompt, prompt
+from harness.returned_guidance import _DEFAULT_CODE_LANGUAGE, compound_guidance
+from harness.context_tool_rules import all_context_tool_rule_specs
 from harness.rule import Rule
 from harness.skill import Skill
 
@@ -34,13 +36,9 @@ _COMPOSER_CLASSES = frozenset({"BaseContextTool", "LifecycleAction"})
 _WALK_TREES = ("context_tools", "utilities")
 _FORMATS = (
     "markdown",
-    "json",
+    "code",
     "drawio",
     "miro",
-    "python",
-    "typescript",
-    "java",
-    "javascript",
 )
 
 
@@ -55,6 +53,13 @@ def _deco_id(node: ast.expr) -> str | None:
     if isinstance(target, ast.Attribute):
         return target.attr
     return None
+
+
+def _is_dev_only_class(tree: ast.AST, class_name: str) -> bool:
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name == class_name:
+            return any(_deco_id(dec) == "dev_only" for dec in node.decorator_list)
+    return False
 
 
 def _class_slug(name: str) -> str:
@@ -95,6 +100,9 @@ class Harness:
             raise TypeError("type is required")
         self.type = type
         self.repo_root = Path(repo_root) if repo_root is not None else _REPO_ROOT
+        self._extended = False
+        self._prod = False
+        self._code_language = _DEFAULT_CODE_LANGUAGE
         self.skills: list[Skill] = []
         self.prompts: list[Prompt] = []
         self.commands: list[Command] = []
@@ -342,6 +350,24 @@ class Harness:
                         names.extend(self._dict_values(item.value))
         return self._unique_names(names)
 
+    def _has_agent_instructions(self, path: Path, class_name: str) -> bool:
+        """True when the class at path has an @agent_instructions operation."""
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError):
+            return False
+        for node in tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if class_name and node.name != class_name:
+                continue
+            for item in node.body:
+                if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                if any(_deco_id(dec) == "agent_instructions" for dec in item.decorator_list):
+                    return True
+        return False
+
     def _action_option_names(self) -> list[str]:
         names: list[str] = []
         for entry in json.loads(self.walk()):
@@ -376,9 +402,13 @@ class Harness:
 
     def _drop_action_skill(self, slug: str, roots: list[Path]) -> None:
         for root in roots:
-            skill_dir = root / "skills" / slug
-            if skill_dir.is_dir():
-                shutil.rmtree(skill_dir)
+            for candidate in (
+                root / "skills" / slug,
+                root / "skills" / "context_tools" / slug,
+                root / "skills" / "actions" / slug,
+            ):
+                if candidate.is_dir():
+                    shutil.rmtree(candidate)
 
     def _drop_source_slug(self, slug: str, roots: list[Path]) -> None:
         self._drop_action_skill(slug, roots)
@@ -391,13 +421,33 @@ class Harness:
                     leftover.unlink()
 
     def _drop_unwritten_skills(self, roots: list[Path], written: set[str]) -> None:
+        """Remove skill folders not in ``written``.
+
+        ``written`` contains relative keys of the form ``"<folder...>/<name>"``
+        matching ``Skill.relative_path()`` minus the leading ``skills/`` and
+        trailing ``/SKILL.md``.  Works at any nesting depth.
+        """
         for root in roots:
             skills_root = root / "skills"
             if not skills_root.is_dir():
                 continue
-            for child in skills_root.iterdir():
-                if child.is_dir() and child.name not in written:
-                    shutil.rmtree(child)
+            # Collect all SKILL.md files and compute their key
+            for skill_md in list(skills_root.rglob("SKILL.md")):
+                rel = skill_md.relative_to(skills_root)
+                # key is everything except the trailing SKILL.md
+                key = "/".join(rel.parts[:-1])
+                if key not in written:
+                    try:
+                        shutil.rmtree(skill_md.parent)
+                    except OSError:
+                        pass
+            # Prune empty directories bottom-up
+            for dirpath in sorted(skills_root.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+                if dirpath.is_dir():
+                    try:
+                        dirpath.rmdir()
+                    except OSError:
+                        pass
 
     def _prompt_stem(self, path: Path) -> str | None:
         name = path.name
@@ -420,16 +470,61 @@ class Harness:
                     if stem is not None and stem not in written:
                         child.unlink()
 
+    def _drop_unwritten_rules(self, roots: list[Path], written: set[str]) -> None:
+        for root in roots:
+            rules_root = root / "rules"
+            if not rules_root.is_dir():
+                continue
+            for mdc in list(rules_root.rglob("*.mdc")):
+                key = mdc.relative_to(rules_root).as_posix()
+                key = key[: -len(".mdc")] if key.endswith(".mdc") else key
+                if key not in written:
+                    mdc.unlink()
+            for dirpath in sorted(rules_root.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+                if dirpath.is_dir():
+                    try:
+                        dirpath.rmdir()
+                    except OSError:
+                        pass
+
+    def _write_context_tool_rules(
+        self,
+        roots: list[Path],
+        wanted: str,
+        seen: set[tuple[str, str]],
+    ) -> list[str]:
+        """Write scoped `.mdc` rules under `rules/context_tools/{slug}/` (Cursor only)."""
+        if self.type != "Cursor":
+            return []
+        names: list[str] = []
+        for spec in all_context_tool_rule_specs(self.repo_root):
+            if wanted and wanted != spec.tool_slug and not wanted.startswith(f"{spec.tool_slug}-"):
+                continue
+            key = (f"{spec.tool_slug}-{spec.name}", "rule")
+            if key in seen:
+                continue
+            seen.add(key)
+            rule = Rule(self.type, spec.name)
+            rule.description = spec.description
+            rule.globs = spec.globs
+            rule.always_apply = False
+            rule.body = spec.body
+            rule.subfolder = f"context_tools/{spec.tool_slug}"
+            rule.write(roots)
+            self.rules.append(rule)
+            names.append(f"{spec.tool_slug}/{spec.name}")
+        return names
+
     def _wanted(self, wanted: str, name: str, source_slug: str, derived: str) -> bool:
         if not wanted:
             return True
         if name == wanted:
             return True
         if derived == "fidelity":
-            short = name.rsplit(".", 1)[-1]
+            short = name.rsplit("-", 1)[-1]
             if wanted == short:
                 return True
-        return source_slug == wanted and derived != "fidelity"
+        return source_slug == wanted
 
     def _emit(self, kind: str, source: dict, roots: list[Path], seen: set[tuple[str, str]]) -> str | None:
         name = source["name"]
@@ -452,7 +547,9 @@ class Harness:
         prompt_file = Prompt(self.type, name)
         written = prompt_file.generate(source, roots)
         self.prompts.append(prompt_file)
-        if isinstance(written, Command):
+        if isinstance(written, Skill):
+            self.skills.append(written)
+        elif isinstance(written, Command):
             self.commands.append(written)
         return name
 
@@ -470,10 +567,25 @@ class Harness:
             if self._wanted(wanted, slug, slug, "source"):
                 self._drop_source_slug(slug, roots)
             return []
+        if self._prod:
+            try:
+                tree_ast = ast.parse(path.read_text(encoding="utf-8"))
+                if _is_dev_only_class(tree_ast, class_name):
+                    return []
+            except (OSError, SyntaxError):
+                pass
         kind = self._classify_path(str(path))
         meta = self._read_meta(path, slug, class_name)
         toolset = entry.get("manifest_command", "").rsplit(" ", 1)[-1]
         names: list[str] = []
+
+        _BASE_FOLDER = {"context_tool": "context_tools", "action": "actions", "utility": "utilities"}
+
+        def _folder_for(k: str, s: str) -> str:
+            base = _BASE_FOLDER.get(k, "")
+            if k == "context_tool":
+                return f"{base}/{s}"
+            return base
 
         def source_for(name: str, guidance: str, *, operation: str = "", invoke: str = "action") -> dict:
             payload = {
@@ -484,7 +596,10 @@ class Harness:
                 "source_kind": kind,
                 "operation": operation,
                 "invoke": invoke,
+                "folder": _folder_for(kind, slug),
             }
+            if self._extended:
+                payload["extended"] = True
             if kind == "action":
                 payload["action"] = True
                 payload["context_tools"] = (
@@ -528,13 +643,34 @@ class Harness:
                 written = self._emit("skill", source_for(slug, meta["guidance"]), roots, seen)
                 if written:
                     names.append(written)
+        elif kind == "utility":
+            default_name = toolset.rsplit(":", 1)[0].rsplit(".", 1)[-1] or slug
+            if self._wanted(wanted, default_name, slug, "source") and self._has_agent_instructions(
+                path, class_name
+            ):
+                payload = source_for(default_name, meta["guidance"])
+                if cc:
+                    payload["constructor_context"] = cc
+                written = self._emit("prompt", payload, roots, seen)
+                if written:
+                    names.append(written)
         if kind != "action":
             for fidelity_name in self._fidelity_option_names(path, class_name):
-                deploy_name = f"{slug}.{fidelity_name}"
+                deploy_name = f"{slug}-{fidelity_name}"
                 if not self._wanted(wanted, deploy_name, slug, "fidelity"):
                     continue
-                guidance = f"Run at fidelity {fidelity_name}."
-                payload = source_for(deploy_name, guidance)
+                payload = source_for(deploy_name, meta["guidance"])
+                payload["extended"] = True
+                if cc:
+                    payload["constructor_context"] = cc
+                payload["returned"] = compound_guidance(
+                    path,
+                    class_name,
+                    fidelity_name,
+                    cc or None,
+                    toolset=toolset,
+                    code_language=self._code_language,
+                )
                 payload["fidelity"] = True
                 payload["fidelity_slug"] = fidelity_name
                 written = self._emit("prompt", payload, roots, seen)
@@ -567,6 +703,7 @@ class Harness:
                 "guidance": doc or name,
                 "toolset": "harness.harness:Harness",
                 "source_kind": "utility",
+                "folder": "primitives",
                 "operation": cli_operation,
                 "invoke": cli_invoke,
             }
@@ -578,7 +715,8 @@ class Harness:
                     "With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring. "
                     "With no deploy path given, call suggested_deploy_path, then AskQuestion: "
                     "deploy to that suggested path (recommended) / enter another path. "
-                    "Set context.type to the chosen IDE before running."
+                    "With no code_language given, AskQuestion: Python (recommended) | TypeScript. "
+                    "Set context.type to the chosen IDE and code_language to the chosen language before running."
                 )
             emitted = self._emit(vehicle, payload, roots, seen)
             if emitted:
@@ -606,12 +744,43 @@ class Harness:
                     if leftover.is_file():
                         leftover.unlink()
 
+    def _deploy_agents(self, roots: list[Path]) -> None:
+        """Copy context_tools/*/agents/*.md → agents/{name}.md in each deploy root."""
+        agent_sources: list[Path] = []
+        for ct_dir in (self.repo_root / "context_tools").iterdir():
+            agents_dir = ct_dir / "agents"
+            if agents_dir.is_dir():
+                agent_sources.extend(agents_dir.glob("*.md"))
+        written_names = {src.name for src in agent_sources}
+        for root in roots:
+            agents_root = root / "agents"
+            agents_root.mkdir(parents=True, exist_ok=True)
+            # remove stale items (subdirectories or old .md files no longer in source)
+            for item in list(agents_root.iterdir()):
+                if item.is_dir():
+                    try:
+                        shutil.rmtree(item)
+                    except OSError:
+                        pass
+                elif item.name not in written_names:
+                    try:
+                        item.unlink()
+                    except OSError:
+                        pass
+            for src in agent_sources:
+                dest = agents_root / src.name
+                dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+
     def _save_ide(self, deploy_path: str = "") -> None:
         path = self._state_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = {"type": self.type}
         if deploy_path:
             payload["deploy_path"] = deploy_path
+        if self._extended:
+            payload["extended"] = True
+        if self._code_language != _DEFAULT_CODE_LANGUAGE:
+            payload["code_language"] = self._code_language
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     def walk(self, name_filter: str = "") -> str:
@@ -673,9 +842,31 @@ class Harness:
         return str(self._suggested_deploy_path())
 
     @agent_tool
-    def write_deploy(self, source: str = "", name_filter: str = "", deploy_path: str = "") -> str:
-        """Walk if needed, then write sources plus Harness prompts into the deploy area."""
+    def write_deploy(
+        self,
+        source: str = "",
+        name_filter: str = "",
+        deploy_path: str = "",
+        extended: bool = False,
+        prod: bool = False,
+        code_language: str = _DEFAULT_CODE_LANGUAGE,
+    ) -> str:
+        """Walk if needed, then write sources plus Harness prompts into the deploy area.
+
+        extended=True writes ct-fidelity skills ({context_tool}-{fidelity}) that
+        bake the guidance the tool returns at each fidelity.
+        prod=True skips any class decorated with @dev_only.
+        code_language selects python (default) or typescript for inlined code templates.
+        """
         self._require_implemented()
+        self._extended = bool(extended)
+        self._prod = bool(prod)
+        normalized = (code_language or _DEFAULT_CODE_LANGUAGE).strip().lower()
+        if normalized not in {"python", "typescript"}:
+            raise ValueError(
+                f"Unsupported code_language {code_language!r}. Choose from: python, typescript"
+            )
+        self._code_language = normalized
         self.skills = []
         self.prompts = []
         self.commands = []
@@ -692,21 +883,45 @@ class Harness:
         names: list[str] = []
         for entry in json.loads(self.walk(name_filter)):
             names.extend(self._generate_entry(entry, roots, wanted, seen))
+        if self.type == "Cursor":
+            if not wanted or any(
+                wanted == spec.tool_slug or wanted.startswith(f"{spec.tool_slug}-")
+                for spec in all_context_tool_rule_specs(self.repo_root)
+            ):
+                names.extend(self._write_context_tool_rules(roots, wanted, seen))
         for fmt in _FORMATS:
             if wanted and fmt != wanted:
                 continue
-            written = self._emit("prompt", {"name": fmt, "format": fmt}, roots, seen)
+            written = self._emit("prompt", {"name": fmt, "format": fmt, "folder": "formats"}, roots, seen)
             if written:
                 names.append(written)
         names.extend(self._write_harness_files(roots, seen))
-        skill_names = {item.name for item in self.skills}
+        if not wanted:
+            self._deploy_agents(roots)
+        skill_names = {
+            "/".join(item.relative_path().parts[1:-1])
+            for item in self.skills
+        }
+        skill_name_only = {item.name for item in self.skills}
         prompt_names = {item.name for item in self.prompts} | {item.name for item in self.commands}
+        rule_names = set()
+        for item in self.rules:
+            rel = item.relative_path()
+            try:
+                rel = rel.relative_to("rules")
+            except ValueError:
+                pass
+            key = rel.as_posix()
+            if key.endswith(".mdc"):
+                key = key[: -len(".mdc")]
+            rule_names.add(key)
         for prompt_file in self.prompts:
-            if prompt_file.name not in skill_names:
+            if prompt_file.name not in skill_name_only:
                 self._drop_action_skill(prompt_file.name, roots)
         if not wanted:
             self._drop_unwritten_skills(roots, skill_names)
             self._drop_unwritten_prompts(roots, prompt_names)
+            self._drop_unwritten_rules(roots, rule_names)
         self._remove_unprefixed_fidelity_files(roots)
         self._save_ide(str(roots[0]))
         return json.dumps(
@@ -723,11 +938,14 @@ class Harness:
         source: str | None = None,
         name_filter: str | None = None,
         deploy_path: str | None = None,
+        code_language: str | None = None,
     ) -> str:
         """With no IDE given, AskQuestion: Which IDE? Cursor | VS Code."""
+        """Set context.type to the chosen IDE before running."""
         self._require_implemented()
         """With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring."""
         """With no deploy path given, call suggested_deploy_path, then AskQuestion: deploy to that suggested path (recommended) / enter another path."""
+        """With no code_language given, AskQuestion: Python (recommended) | TypeScript."""
         self.suggested_deploy_path()
         """With no source: walk context_tools/ and utilities/, generate each source into the deploy area, also write Harness prompts (/deploy-harness, /clean-harness). Generate is the deploy — no separate deploy. Do not confirm the scanned list. Overwrite generated files. Remove files this generate did not write. Save the IDE."""
         """With a source: write that source into the deploy area."""
@@ -745,13 +963,21 @@ class Harness:
             state = json.loads(path.read_text(encoding="utf-8"))
             saved = state.get("type")
             deploy_path = state.get("deploy_path") or ""
+            extended = bool(state.get("extended"))
+            code_language = state.get("code_language") or _DEFAULT_CODE_LANGUAGE
         except (OSError, json.JSONDecodeError):
             saved = None
             deploy_path = ""
+            extended = False
+            code_language = _DEFAULT_CODE_LANGUAGE
         if not saved:
             raise RuntimeError("no saved IDE")
         self.type = saved
-        return self.write_deploy(deploy_path=deploy_path)
+        return self.write_deploy(
+            deploy_path=deploy_path,
+            extended=extended,
+            code_language=code_language,
+        )
 
     @prompt(name="clean-harness")
     @agent_tool

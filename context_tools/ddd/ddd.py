@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     from utilities.diagnose.diagnose import Diagnose
 
 _FIDELITY_FORMAT_DEFAULTS = {
-    "scaffold": "markdown",
     "bounded_context": "markdown",
     "building_blocks": "markdown",
     "tactics": "python",
@@ -29,7 +28,6 @@ _FIDELITY_FORMAT_DEFAULTS = {
 
 # DDD fidelity -> clean_engineering fidelity (CE owns OO ladder; DDD overlays domain/strategic).
 _CE_FIDELITY = {
-    "scaffold": "modules",
     "bounded_context": "modules",
     "building_blocks": "model",
     "tactics": "code",
@@ -58,7 +56,7 @@ class Ddd(BaseContextTool):
     supported_formats = _SUPPORTED_FORMATS
 
     fidelities = {
-        BaseContextTool.SHAPING:   "scaffold",
+        BaseContextTool.SHAPING:   "bounded_context",
         BaseContextTool.DISCOVERY: "bounded_context",
         BaseContextTool.SPEC:      "building_blocks",
         BaseContextTool.ENGINEER:  "tactics",

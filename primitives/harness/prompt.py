@@ -9,21 +9,27 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from harness.bodies import ActionBody, FormatBody, UtilityBody
-from harness.command import Command
+from harness.bodies import ActionBody, ContextToolFidelityBody, FormatBody, UtilityBody
 from harness.harness_tool import HarnessTool, _frontmatter, prompt as prompt_decorator
+from harness.skill import Skill
 
 prompt = prompt_decorator
 
 
 class Prompt(HarnessTool):
+    def _vs_code_name(self) -> str:
+        if self.type == "VS Code" and self.is_fidelity:
+            return self.name.replace("-", ".")
+        return self.name
+
     def relative_path(self) -> Path:
-        return Path("prompts") / f"{self.name}.prompt.md"
+        return Path("prompts") / f"{self._vs_code_name()}.prompt.md"
 
     def render(self) -> str:
         if self.type == "VS Code":
+            name = self._vs_code_name()
             return _frontmatter(
-                self.name, self.description or self.name, self.model
+                name, self.description or name, self.model
             ) + str(self.body)
         return str(self.body)
 
@@ -36,15 +42,27 @@ class Prompt(HarnessTool):
                 self.description = self.description or name
             elif source.get("fidelity"):
                 fidelity_name = source.get("fidelity_slug") or name
-                self.body = ActionBody.from_source(
-                    name=fidelity_name,
-                    class_string=source.get("class_string", name),
-                    operation_instructions=source.get("guidance", ""),
-                    toolset=source.get("toolset", ""),
-                    kind="fidelity",
-                    fidelities=source.get("fidelities") or (),
-                    constructor_context=source.get("constructor_context") or None,
-                )
+                if source.get("extended"):
+                    self.body = ContextToolFidelityBody.from_source(
+                        overview=source.get("overview", name),
+                        toolset=source.get("toolset", ""),
+                        guidance=source.get("guidance", ""),
+                        instructions=source.get("returned", ""),
+                        fidelities=source.get("fidelities") or (),
+                        actions=source.get("actions") or (),
+                        fidelity=fidelity_name,
+                        constructor_context=source.get("constructor_context") or None,
+                    )
+                else:
+                    self.body = ActionBody.from_source(
+                        name=fidelity_name,
+                        class_string=source.get("class_string", name),
+                        operation_instructions=source.get("guidance", ""),
+                        toolset=source.get("toolset", ""),
+                        kind="fidelity",
+                        fidelities=source.get("fidelities") or (),
+                        constructor_context=source.get("constructor_context") or None,
+                    )
             elif source.get("action") or source.get("source_kind") == "action":
                 self.body = ActionBody.from_source(
                     name=name,
@@ -57,6 +75,7 @@ class Prompt(HarnessTool):
                     invoke=source.get("invoke") or "action",
                     operation=source.get("operation") or "",
                     constructor_context=source.get("constructor_context") or None,
+                    extended=source.get("extended") or False,
                 )
             else:
                 self.body = UtilityBody.from_source(
@@ -71,9 +90,15 @@ class Prompt(HarnessTool):
             if source.get("overview"):
                 self.description = source["overview"]
         if self.type == "Cursor":
-            command = Command(self.type, self.name)
-            command.description = self.description
-            command.model = self.model
-            command.body = self.body
-            return command.generate(source, roots)
+            skill = Skill(self.type, self.name)
+            skill.model = self.model
+            skill.body = self.body
+            skill.folder = self.folder
+            skill.disable_model_invocation = True
+            if isinstance(source, dict):
+                op_guidance = ((source.get("guidance") or "").splitlines() or [""])[0]
+                skill_source = {**source, "overview": op_guidance} if op_guidance else source
+            else:
+                skill_source = source
+            return skill.generate(skill_source, roots)
         return super().generate(source, roots)

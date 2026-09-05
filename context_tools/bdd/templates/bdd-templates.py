@@ -1,43 +1,24 @@
 """
-# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
-# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
-# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
-"""
+# Conceptual BDD Reference (Python/Mamba style)
+# Refer to context_tools/language-tools.md for tool recommendations.
 # =============================================================================
-# BDD Development Template - Mamba/Python Test Implementation
-# =============================================================================
-# Instructions (for skill maintainers - delete this block when generating):
-#
+# Instructions:
 #   1. Replace {DomainEntity} with the class or module under test.
-#   2. Import only the entity under test.
-#   3. Add a factory function for shared test-data objects.
-#   4. Use `with before.each:` for shared object setup when 3+ siblings need it.
-#   5. Each `with it():` body uses # Arrange / # Act / # Assert comments.
-#   6. One assertion per behavior.
-#   7. Replace `# BDD: SIGNATURE` markers - do not leave any in the final file.
-#   8. Delete this instruction block before committing the file.
-#   9. Keep the edit/check manifest header above - do not strip it.
+#   2. Use Arrange / Act / Assert comments in test bodies.
+#   3. One assertion per behavior.
 # =============================================================================
+"""
 from mamba import description, context, it, before
-from expects import equal, be_none, be_true, expect
+from expects import equal, expect
 from {domain_module} import {DomainEntity}
-
-
-def default_{related_data}() -> dict:
-    """Minimal valid test data - populate only fields tests assert on."""
-    return {
-        # field: value
-    }
-
 
 with description('{DomainEntity}'):
     with context('that has been created'):
         with it('should have {initial property} assigned'):
             # Arrange / Act
-            entity = {DomainEntity}(**default_{related_data}())
+            entity = {DomainEntity}(**default_data())
             # Assert
-            expect(entity.{property}).to(equal({expected_value}))
+            expect(entity.property).to(equal(expected_value))
 
     with context('that is {active state}'):
         with before.each:

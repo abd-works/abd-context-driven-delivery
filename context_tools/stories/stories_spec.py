@@ -33,15 +33,15 @@ def _expanded(stories, action_name):
 
 
 with description("Stories"):
-    with context("that is constructed with fidelity scaffold"):
+    with context("that resolves shaping to the first fidelity"):
         with before.each:
             self.stories = Stories(fidelity="scaffold")
 
         with it("should default format to markdown"):
             expect(self.stories.format).to(equal("markdown"))
 
-        with it("should retain fidelity scaffold"):
-            expect(self.stories.fidelity).to(equal("scaffold"))
+        with it("should map scaffold to story_map"):
+            expect(self.stories.fidelity).to(equal("story_map"))
 
     with context("that is constructed with fidelity story_map"):
         with before.each:
@@ -57,15 +57,15 @@ with description("Stories"):
         with before.each:
             self.stories = Stories(fidelity="scenarios")
 
-        with it("should default format to typescript"):
-            expect(self.stories.format).to(equal("typescript"))
+        with it("should default format to python"):
+            expect(self.stories.format).to(equal("python"))
 
         with it("should retain fidelity scenarios"):
             expect(self.stories.fidelity).to(equal("scenarios"))
 
     with context("that is constructed with fidelity acceptance_tests"):
-        with it("should default format to typescript"):
-            expect(Stories(fidelity="acceptance_tests").format).to(equal("typescript"))
+        with it("should default format to python"):
+            expect(Stories(fidelity="acceptance_tests").format).to(equal("python"))
 
     with context("that is constructed with an unsupported fidelity"):
         with it("should raise ValueError"):
@@ -112,13 +112,16 @@ with description("Stories"):
                 expect(name in host.actions).to(equal(False))
 
     with context("whose guidance action is expanded"):
-        with it("should name `{story}.{tier}.ts` at acceptance_tests"):
+        with it("should name `{story}.{tier}.py` at acceptance_tests"):
             prose = _expanded(Stories(fidelity="acceptance_tests"), "guidance")
-            expect("{story}.{tier}.ts" in prose).to(be_true)
+            expect("{story}.{tier}.py" in prose).to(be_true)
 
-        with it("should tell the agent to write epic/sub-epic/story names only at scaffold"):
-            prose = _expanded(Stories(fidelity="scaffold"), "guidance")
+        with it("should tell the agent to use Scaffold under story_map for names only"):
+            prose = _expanded(Stories(fidelity="story_map"), "guidance")
             expect("names only" in prose).to(be_true)
+            expect("When scaffolding only" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
+            expect("Stop reading this skill when scaffolding" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
+            expect("### Scaffold" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
 
         with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):
             prose = _expanded(Stories(), "guidance")
@@ -223,6 +226,7 @@ with description("Stories"):
         with it("should include Shared rules and the story_map heading"):
             expect("## Shared rules" in self.contexts).to(be_true)
             expect("## story_map" in self.contexts).to(be_true)
+            expect("### Scaffold" in self.contexts).to(be_true)
 
         with it("should include the verb-noun-format rule slug"):
             expect("verb-noun-format" in self.contexts).to(be_true)
@@ -281,12 +285,12 @@ with description("Stories"):
             expect("/py/" in text).to(equal(False))
             expect("/md/" in text).to(be_true)
 
-        with it("should keep story-map and thin-slice and omit scenario examples"):
+        with it("should keep story-map and omit scenario examples"):
             text = Stories(fidelity="story_map", format="markdown").examples().expand()
             expect("story-map.md" in text).to(be_true)
-            expect("thin-slice.md" in text).to(be_true)
+            expect("thin-slice.md" in text).to(equal(False))
             expect("scenario-main-flow.md" in text).to(equal(False))
-            expect("scenario-outline.md" in text).to(equal(False))
+            expect("scenario-template.md" in text).to(equal(False))
 
     with context("whose templates slot is expanded at story_map markdown"):
         with before.each:
@@ -294,11 +298,16 @@ with description("Stories"):
                 fidelity="story_map", format="markdown", session=None
             ).templates().expand()
 
-        with it("should inline the markdown story-map and thin-slice templates"):
+        with it("should inline the markdown story-map template only"):
             expect("Story Map" in self.templates).to(be_true)
-            expect("Thin slicing" in self.templates).to(be_true)
+            expect("Thin slicing" in self.templates).to(equal(False))
+            expect("## Thin slices" in self.templates).to(equal(False))
+            expect("story-context.md" in self.templates).to(equal(False))
 
         with it("should omit scenario templates, sketch, and other-format story classes"):
+            expect("scenario-template" in self.templates).to(equal(False))
+            expect("scenario-inline" in self.templates).to(equal(False))
+            expect("scenario-main-flow" in self.templates).to(equal(False))
             expect("scenario-outline" in self.templates).to(equal(False))
             expect("Stories sketch — match active fidelity" in self.templates).to(
                 equal(False)
@@ -306,3 +315,100 @@ with description("Stories"):
             expect("StoryVerbNoun" in self.templates).to(equal(False))
             expect("_story.ts" in self.templates).to(equal(False))
             expect("_story.py" in self.templates).to(equal(False))
+
+    with context("whose templates slot is expanded at story_map markdown"):
+        with it("should inline story-map template only"):
+            templates = Stories(
+                fidelity="story_map", format="markdown", session=None
+            ).templates().expand()
+            expect("Story Map" in templates).to(be_true)
+            expect("Thin slicing" in templates).to(equal(False))
+            expect("thin-slice.md" in templates).to(equal(False))
+
+    with context("whose templates slot is expanded at scenarios python"):
+        with before.each:
+            self.templates = Stories(
+                fidelity="scenarios", format="python", session=None
+            ).templates().expand()
+
+        with it("should inline the flat scenario-template without helpers"):
+            expect("scenario-template.py" in self.templates).to(be_true)
+            expect("class StoryNodeTransformer" in self.templates).to(equal(False))
+            expect("copy once per tests/ tree if missing" in self.templates).to(be_true)
+            expect("templates/py/story_test.py" in self.templates).to(be_true)
+            expect('with story("' in self.templates).to(be_true)
+            expect("def story(" in self.templates).to(equal(False))
+            expect("from story_test import" in self.templates).to(be_true)
+            expect("with background.each" in self.templates).to(be_true)
+            expect("with background()" in self.templates).to(equal(False))
+            expect("with scenario(" in self.templates).to(be_true)
+            expect("with before.all" in self.templates).to(be_true)
+            expect("with after.all" in self.templates).to(be_true)
+            expect("with given(" in self.templates).to(be_true)
+            expect("with when(" in self.templates).to(be_true)
+            expect("with then(" in self.templates).to(be_true)
+            expect("with and_(" in self.templates).to(be_true)
+            expect("pass  # test code goes here" in self.templates).to(be_true)
+            expect("from expects import" in self.templates).to(equal(False))
+            expect("self.{app_camel}" in self.templates).to(equal(False))
+            expect("{primary_when_operation}" in self.templates).to(equal(False))
+            expect("def primary_when" in self.templates).to(equal(False))
+            expect(").and_(" in self.templates).to(equal(False))
+            expect("lambda" in self.templates).to(equal(False))
+            expect("@story" in self.templates).to(equal(False))
+            expect("@background" in self.templates).to(equal(False))
+            expect("@scenario" in self.templates).to(equal(False))
+            expect("_primary_when" in self.templates).to(equal(False))
+            expect("_invalid_input" in self.templates).to(equal(False))
+            expect("from givens import" in self.templates).to(equal(False))
+            expect("from whens import" in self.templates).to(equal(False))
+            expect('from "./givens"' in self.templates).to(equal(False))
+            expect('from "./whens"' in self.templates).to(equal(False))
+            expect("artifacts-mirror-story-hierarchy" in self.templates).to(be_true)
+            expect("_test_helper.py" in self.templates).to(equal(False))
+            expect("_test_helper.ts" in self.templates).to(equal(False))
+            expect("Protocol" in self.templates).to(equal(False))
+            expect("scenario-inline.md" in self.templates).to(equal(False))
+            expect("scenario-main-flow.md" in self.templates).to(equal(False))
+            expect("scenario-outline.md" in self.templates).to(equal(False))
+            expect("scenario-template.md" in self.templates).to(equal(False))
+
+    with context("whose templates slot is expanded at scenarios markdown"):
+        with before.each:
+            self.templates = Stories(
+                fidelity="scenarios", format="markdown", session=None
+            ).templates().expand()
+
+        with it("should inline the merged scenario-template with outline default and inline alternate"):
+            expect("scenario-template.md" in self.templates).to(be_true)
+            expect("Default — Scenario Outline" in self.templates).to(be_true)
+            expect("Alternate — inline scenarios" in self.templates).to(be_true)
+            expect("scenario-inline.md" in self.templates).to(equal(False))
+            expect("scenario-main-flow.md" in self.templates).to(equal(False))
+            expect("scenario-outline.md" in self.templates).to(equal(False))
+
+    with context("whose templates slot is expanded at scenarios typescript"):
+        with it("should inline sign-up-style scenario-template.ts"):
+            text = Stories(
+                fidelity="scenarios", format="typescript", session=None
+            ).templates().expand()
+            expect("scenario-template.ts" in text).to(be_true)
+            expect("templates/ts/story-test.ts" in text).to(be_true)
+            expect("export function story" in text).to(equal(False))
+            expect("copy once per tests/ tree if missing" in text).to(be_true)
+            expect("tests/story-test.ts" in text).to(be_true)
+            expect("export function background" in text).to(equal(False))
+            expect("Naming rules" in text).to(be_true)
+            expect("background(({ given })" in text).to(be_true)
+            expect("beforeAll" in text).to(be_true)
+            expect("afterAll" in text).to(be_true)
+            expect(".and(" in text).to(be_true)
+            expect("// test code goes here" in text).to(be_true)
+            expect("expect(" in text).to(equal(False))
+            expect("{primary_when_operation}" in text).to(equal(False))
+            expect('from "../../domain/' in text).to(equal(False))
+            expect('from "vitest"' in text).to(be_true)
+            expect('from "./givens"' in text).to(equal(False))
+            expect('from "./whens"' in text).to(equal(False))
+            expect("_test_helper.ts" in text).to(equal(False))
+            expect("_test_helper.py" in text).to(equal(False))

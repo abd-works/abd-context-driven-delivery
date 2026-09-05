@@ -1,0 +1,132 @@
+## {epic-verb-noun}/story-context.md
+
+# `<Epic / Sub-Epic Verb-Noun>`
+
+**Status:** not yet expanded
+
+**Stories in scope:**
+- `<Story Verb-Noun>`
+- `<Story Verb-Noun>`
+
+
+
+## {epic-verb-noun}/{sub-epic-verb-noun}/story-context.md
+
+# `<Epic / Sub-Epic Verb-Noun>`
+
+**Status:** not yet expanded
+
+**Stories in scope:**
+- `<Story Verb-Noun>`
+- `<Story Verb-Noun>`
+
+
+
+## {epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_story.py
+
+# ---
+# fidelity: [exploration, specification]
+# artifact: [story-file]
+# format: py
+# section: leaf-story-file
+# ---
+#
+# Runnable story (scenario fidelity - tier-neutral). Calls helper-protocol
+# methods only - no assertions, no tier mechanism here.
+#
+#   Folder tree   -> {epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/
+#   Story file    -> {story_verb_noun}_story.py
+#   Tier files    -> {story_verb_noun}_test_helper.{tier}.py
+#                    (tier in domain | client | server | e2e | project-specific)
+
+"""Story: {Story Name} (scenario fidelity - tier-neutral)."""
+
+from __future__ import annotations
+
+from typing import Protocol
+
+
+class {EpicVerbNoun}Helper(Protocol):
+    def given_precondition(self) -> None: ...
+    def when_action(self) -> None: ...
+    def then_outcome(self) -> None: ...
+
+
+def create_{story_verb_noun}_story(h: "{EpicVerbNoun}Helper") -> dict:
+    """Build one pytest test function per scenario. Returns {test_name: fn}
+    for the tier file to bind at module scope.
+    """
+    tests = {}
+
+    def test_main_flow_observable_outcome() -> None:
+        """SCENARIO: {main-flow outcome}"""
+        h.given_precondition()
+        h.when_action()
+        h.then_outcome()
+
+    tests["test_main_flow_observable_outcome"] = test_main_flow_observable_outcome
+    return tests
+
+
+## {epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_test_helper.domain.py
+
+# ---
+# fidelity: [engineering]
+# artifact: [test-helper]
+# format: py
+# ---
+#
+# Tier: domain - {EpicVerbNoun}Helper backed by direct domain-class calls.
+# Real: domain-core class. Stubbed: nothing.
+
+"""Domain tier test-helper for `{Story Name}`."""
+
+from __future__ import annotations
+
+from {story_verb_noun}_story import create_{story_verb_noun}_story
+
+
+class DomainHelper:
+    def given_precondition(self) -> None:
+        raise NotImplementedError("not implemented: given_precondition")
+
+    def when_action(self) -> None:
+        raise NotImplementedError("not implemented: when_action")
+
+    def then_outcome(self) -> None:
+        raise NotImplementedError("not implemented: then_outcome")
+
+
+globals().update(create_{story_verb_noun}_story(DomainHelper()))
+
+
+## {epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/{story_verb_noun}_test_helper.server.py
+
+# ---
+# fidelity: [engineering]
+# artifact: [test-helper]
+# format: py
+# ---
+#
+# Tier: server - {EpicVerbNoun}Helper backed by the real HTTP route + test DB.
+# Real: domain + repository + test DB. Stubbed: nothing.
+
+"""Server tier test-helper for `{Story Name}`."""
+
+from __future__ import annotations
+
+from {story_verb_noun}_story import create_{story_verb_noun}_story
+
+
+class ServerHelper:
+    def given_precondition(self) -> None:
+        raise NotImplementedError("not implemented: given_precondition")
+
+    def when_action(self) -> None:
+        raise NotImplementedError("not implemented: when_action")
+
+    def then_outcome(self) -> None:
+        raise NotImplementedError("not implemented: then_outcome")
+
+
+globals().update(create_{story_verb_noun}_story(ServerHelper()))
