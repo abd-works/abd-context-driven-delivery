@@ -239,14 +239,32 @@ section: body
 # Scenario template — refer to context_tools/language-tools.md for tooling.
 #
 # ```
-# epic:      {epic-verb-noun}
-# sub_epic:  {sub-epic-verb-noun}
-# story:     {story-verb-noun}
-# file:      tests/{epic-verb-noun}/{sub-epic-verb-noun}/{story_verb_noun}.{tier}.py
-# tier:      front-end | back-end | external-system
-# examples:  tests/{epic-verb-noun}/{sub-epic-verb-noun}/examples/{story_verb_noun}_examples.py
-# givens:    tests/{epic-verb-noun}/{sub-epic-verb-noun}/givens.py
-# whens:     tests/{epic-verb-noun}/{sub-epic-verb-noun}/whens.py
+# # Params — fill before writing code
+# epic:       {epic-verb-noun}           # kebab folder under tests/
+# sub_epic:   {sub-epic-verb-noun}       # kebab folder under epic/ (omit level if story hangs off epic)
+# story:      {story-verb-noun}          # Verb Noun title from the story map
+# story_file: {story_snake_slug}         # snake file slug, e.g. sign_up_create_account
+# tier:       e2e | front-end | back-end | {system}
+#
+# # Artifact layout (artifacts-mirror-story-hierarchy)
+# tests/
+#   {epic-verb-noun}/
+#     examples/                          # epic-shared ExampleFactory values (when shared)
+#     givens.py                          # epic-shared background Given helpers
+#     whens.py                           # epic-shared When helpers (when shared)
+#     {sub-epic-verb-noun}/              # omit this level when the story file lives under epic/
+#       examples/{topic}_examples.py     # lowest shared folder for this story's fixtures
+#       givens.py                        # background Given helpers for this sub-epic/story
+#       whens.py                         # When helpers for this sub-epic/story
+#       {story_snake_slug}.{tier}.py     # THIS FILE — one GWT file per story per tier
+#
+# # Naming rules
+# - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
+# - Story test file        → {story_snake_slug}.{tier}.py at epic or sub-epic — NO {story}/ folder
+# - Tier                   → file extension segment (.e2e.py, .front-end.py, .back-end.py)
+# - Examples module        → examples/{topic}_examples.py (concrete values, not inline in GWT)
+# - Epic helper (py only)  → {epic_snake}_helper.py — sole snake_case naming exception
+# - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
 # Pattern: mirror sign-up-create-account.e2e.ts (Mamba/RSpec via story_test).

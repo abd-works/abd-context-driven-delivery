@@ -2,14 +2,31 @@
  * Scenario template — refer to context_tools/language-tools.md for tooling.
  *
  * ```
- * epic:      {epic-verb-noun}
- * sub_epic:  {sub-epic-verb-noun}
- * story:     {story-verb-noun}
- * file:      tests/{epic-verb-noun}/{sub-epic-verb-noun}/{story_verb_noun}.{tier}.ts
- * tier:      front-end | back-end | external-system
- * examples:  tests/{epic-verb-noun}/{sub-epic-verb-noun}/examples/{story_verb_noun}.examples.ts
- * givens:    tests/{epic-verb-noun}/{sub-epic-verb-noun}/givens.ts
- * whens:     tests/{epic-verb-noun}/{sub-epic-verb-noun}/whens.ts
+ * # Params — fill before writing code
+ * epic:       {epic-verb-noun}           # kebab folder under tests/
+ * sub_epic:   {sub-epic-verb-noun}       # kebab folder under epic/ (omit level if story hangs off epic)
+ * story:      {story-verb-noun}          # Verb Noun title from the story map
+ * story_file: {story-kebab-slug}         # kebab file slug, e.g. sign-up-create-account
+ * tier:       e2e | front-end | back-end | {system}
+ *
+ * # Artifact layout (artifacts-mirror-story-hierarchy)
+ * tests/
+ *   {epic-verb-noun}/
+ *     examples/                          # epic-shared ExampleFactory values (when shared)
+ *     givens.ts                          # epic-shared background Given helpers
+ *     whens.ts                           # epic-shared When helpers (when shared)
+ *     {sub-epic-verb-noun}/              # omit this level when the story file lives under epic/
+ *       examples/{topic}.examples.ts     # lowest shared folder for this story's fixtures
+ *       givens.ts                        # background Given helpers for this sub-epic/story
+ *       whens.ts                         # When helpers for this sub-epic/story
+ *       {story-kebab-slug}.{tier}.ts     # THIS FILE — one GWT file per story per tier
+ *
+ * # Naming rules
+ * - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
+ * - Story test file        → {story-kebab-slug}.{tier}.ts at epic or sub-epic — NO {story}/ folder
+ * - Tier                   → file extension segment (.e2e.ts, .front-end.ts, .back-end.ts)
+ * - Examples module        → examples/{topic}.examples.ts (concrete values, not inline in GWT)
+ * - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
  * ```
  *
  * Pattern: sign-up-create-account.e2e.ts — vitest lifecycle, background() wrapping scenarios,

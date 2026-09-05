@@ -261,9 +261,9 @@ with description("Stories"):
 
         with it("should inline the flat scenario-template without helpers"):
             expect("scenario-template.py" in self.templates).to(be_true)
+            expect("artifacts-mirror-story-hierarchy" in self.templates).to(be_true)
+            expect("Naming rules" in self.templates).to(be_true)
             expect("background" in self.templates).to(be_true)
-            expect("story_test" in self.templates).to(be_true)
-            expect("epic:" in self.templates).to(be_true)
             expect("test_helper" in self.templates).to(equal(False))
             expect("Protocol" in self.templates).to(equal(False))
 
@@ -273,6 +273,8 @@ with description("Stories"):
                 fidelity="scenarios", format="typescript", session=None
             ).templates().expand()
             expect("scenario-template.ts" in text).to(be_true)
+            expect("artifacts-mirror-story-hierarchy" in text).to(be_true)
+            expect("Naming rules" in text).to(be_true)
             expect("background(({ given })" in text).to(be_true)
             expect("beforeAll" in text).to(be_true)
             expect("afterAll" in text).to(be_true)
