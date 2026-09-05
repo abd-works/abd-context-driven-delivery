@@ -1,12 +1,24 @@
 {
   "version": 1,
   "hooks": {
-    "beforeSubmitPrompt": [
+    "preToolUse": [
       {
-        "command": "python primitives/hooks/prompt_echo.py",
+        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_echo.py",
         "timeout": 10,
-        "failClosed": false,
-        "matcher": "UserPromptSubmit"
+        "failClosed": false
+      },
+      {
+        "command": ".venv/Scripts/python.exe primitives/hooks/skill_inject.py",
+        "matcher": "Write|StrReplace",
+        "timeout": 10,
+        "failClosed": false
+      }
+    ],
+    "preCompact": [
+      {
+        "command": ".venv/Scripts/python.exe primitives/hooks/skill_inject.py",
+        "timeout": 10,
+        "failClosed": false
       }
     ]
   }
