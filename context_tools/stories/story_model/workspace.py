@@ -50,11 +50,26 @@ class Workspace:
 
         root = Path(root).resolve()
 
-        story_map: StoryMap = (
-            JsonStoryMap.from_workspace(root)
-            or MarkdownStoryMap.from_workspace(root)
-            or StoryMap()
-        )
+        # If root is a file, find the story map by searching upwards from its parent directory
+        story_map_root = root.parent if root.is_file() else root
+        story_map_dir = story_map_root
+        story_map_file = None
+        while story_map_dir and story_map_dir != story_map_dir.parent:
+            if (story_map_dir / "story-map.md").exists():
+                story_map_file = story_map_dir / "story-map.md"
+                break
+            story_map_dir = story_map_dir.parent
+
+        story_map: StoryMap = None
+        if story_map_file:
+            story_map = MarkdownStoryMap.from_workspace(story_map_file)
+
+        if not story_map:
+            story_map = (
+                JsonStoryMap.from_workspace(story_map_root)
+                or MarkdownStoryMap.from_workspace(story_map_root)
+                or StoryMap()
+            )
 
         scenarios = MarkdownScenario.from_workspace(root)
         story_map.attach_scenarios(scenarios)

@@ -5,18 +5,44 @@ import tempfile
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+_foreign = str(
+    Path.home()
+    / "OneDrive - abd.works"
+    / "personal"
+    / "paradise-mobile"
+    / "abd-context-driven-delivery"
+)
+_root = str(_REPO_ROOT)
+sys.path[:] = [
+    p
+    for p in sys.path
+    if not (
+        p.replace("/", "\\").lower().startswith(_foreign.lower())
+        and ".venv" not in p.lower()
+    )
+]
+if _root in sys.path:
+    sys.path.remove(_root)
+sys.path.insert(0, _root)
 for _cat in ("primitives", "utilities", "context_tools", "context_tools/actions"):
     _p = str(_REPO_ROOT / _cat)
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+    if _p in sys.path:
+        sys.path.remove(_p)
+    sys.path.insert(0, _p)
+sys.path.insert(0, _root)
+for _name in list(sys.modules):
+    if (
+        _name in {"primitives", "scan", "lifecycle", "workspace", "context_tools", "tools"}
+        or _name.startswith("primitives.")
+        or _name.startswith("scan.")
+        or _name.startswith("context_tools.")
+        or _name.startswith("tools.")
+        or _name.startswith("workspace.")
+    ):
+        del sys.modules[_name]
 
-from expects import contain, equal, expect
+from expects import equal, expect
 from mamba import description, it
-
-from workspace.git_repo import NullGitRepo
-from workspace.workspace import SessionModel
 
 
 with description("LifecycleAction"):

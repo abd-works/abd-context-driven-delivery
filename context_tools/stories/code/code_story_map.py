@@ -81,14 +81,26 @@ def to_camel(name: str) -> str:
     return first + rest
 
 
+def strip_tests_root_prefix(parts: list[str], tests_root: str) -> list[str] | None:
+    """Drop the workspace-relative deploy prefix from a rendered file path."""
+    if not tests_root:
+        return parts
+    root_parts = [p for p in tests_root.split("/") if p]
+    if not root_parts:
+        return parts
+    if len(parts) < len(root_parts) or parts[: len(root_parts)] != root_parts:
+        return None
+    return parts[len(root_parts) :]
+
+
 class CodeStoryMap:
     """Abstract base for source-tree backends of a Story Map."""
 
     LEAF_EXTENSION: str = ""
     LANGUAGE_LINE_COMMENT: str = "//"
 
-    def __init__(self, tests_root: str = "tests"):
-        self._tests_root = tests_root.strip("/") or "tests"
+    def __init__(self, tests_root: str | None = None):
+        self._tests_root = ("tests" if tests_root is None else tests_root).strip("/")
 
     @property
     def tests_root(self) -> str:

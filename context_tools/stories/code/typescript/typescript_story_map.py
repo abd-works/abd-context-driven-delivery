@@ -5,7 +5,12 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional
 
-from context_tools.stories.code.code_story_map import CodeStoryMap, CodeStoryMapError, to_kebab
+from context_tools.stories.code.code_story_map import (
+    CodeStoryMap,
+    CodeStoryMapError,
+    strip_tests_root_prefix,
+    to_kebab,
+)
 from context_tools.stories.code.typescript.nodes import (
     TypeScriptEpic,
     TypeScriptStoryMap as _TypeScriptStoryMap,
@@ -25,23 +30,22 @@ def _is_gwt_leaf(path: str) -> bool:
         return False
     if "/examples/" in path.replace("\\", "/"):
         return False
-    if not name.endswith(".ts"):
-        return False
-    return "." in name[:-3]
+    return name.endswith("_story.ts")
 
 
 def _story_slug_from_filename(name: str) -> str | None:
-    if not name.endswith(".ts"):
+    if not name.endswith("_story.ts"):
         return None
-    stem = name[:-3]
-    if "." not in stem:
-        return None
-    return stem.rsplit(".", 1)[0]
+    stem = name[:-9]  # strip "_story.ts"
+    return stem.replace("_", "-")
 
 
 class TypeScriptStoryMap(CodeStoryMap):
     LEAF_EXTENSION = ".ts"
     LANGUAGE_LINE_COMMENT = "//"
+
+    def __init__(self, tests_root: str | None = None) -> None:
+        super().__init__(tests_root=tests_root)
 
     def _make_story_map(self) -> _TypeScriptStoryMap:
         return _TypeScriptStoryMap()
@@ -77,8 +81,10 @@ class TypeScriptStoryMap(CodeStoryMap):
             if not _is_gwt_leaf(path):
                 continue
             parts = path.strip("/").replace("\\", "/").split("/")
-            if parts and parts[0] == self.tests_root:
-                parts = parts[1:]
+            stripped = strip_tests_root_prefix(parts, self.tests_root)
+            if stripped is None:
+                continue
+            parts = stripped
             if len(parts) < 3:
                 continue
             filename = parts[-1]
@@ -86,6 +92,8 @@ class TypeScriptStoryMap(CodeStoryMap):
             if not story_slug:
                 continue
             epic_slug, sub_slugs = parts[0], parts[1:-1]
+            if sub_slugs and sub_slugs[-1] == story_slug:
+                sub_slugs = sub_slugs[:-1]
             if not sub_slugs:
                 continue
             key = (epic_slug, *sub_slugs, story_slug)

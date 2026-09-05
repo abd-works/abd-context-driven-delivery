@@ -8,6 +8,7 @@ from context_tools.stories.code.code_story_map import to_kebab
 from context_tools.stories.code.typescript.story_file import (
     render_story_file,
     render_test_helper_file,
+    story_test_import_path,
 )
 from context_tools.stories.code.typescript.tree import DEFAULT_TIERS
 from context_tools.stories.story_model.nodes import SubEpic
@@ -31,7 +32,7 @@ def scaffold_ts_tier_tree(
                 sub,
                 tiers=seam_tiers,
                 parent=f"{root}/{to_kebab(epic.name)}",
-                depth=2,
+                deploy_root=root,
                 tree=tree,
             )
     return {p: b for p, b in tree.items() if p not in existing}
@@ -42,20 +43,21 @@ def _scaffold_sub(
     *,
     tiers: Sequence[str],
     parent: str,
-    depth: int,
+    deploy_root: str,
     tree: Dict[str, str],
 ) -> None:
     folder = f"{parent}/{to_kebab(sub.name)}"
     for nested in getattr(sub, "sub_epics", []) or []:
         _scaffold_sub(
-            nested, tiers=tiers, parent=folder, depth=depth + 1, tree=tree
+            nested, tiers=tiers, parent=folder, deploy_root=deploy_root, tree=tree
         )
     for story in getattr(sub, "stories", []) or []:
         if not story.scenarios:
             continue
         slug = to_kebab(story.name)
-        relative_test = "../" * depth + "story-test"
-        gwt = render_story_file(story, relative_story_test_path=relative_test)
+        gwt = render_story_file(
+            story, story_test_import_path=story_test_import_path(deploy_root)
+        )
         for tier in tiers:
             path = f"{folder}/{slug}.{tier}.ts"
             tree[path] = gwt + render_test_helper_file(story, tier=tier, same_file=True)

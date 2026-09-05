@@ -1,0 +1,55 @@
+The command ran as requested (with `PYTHONIOENCODING=utf-8` per repo rules):
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+Exit code was 1. With `-`, the CLI reads the invoke request from stdin; here stdin was empty (no YAML), so the run failed because no toolset was specified.
+
+To invoke something, pipe a request document, for example:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: context_tools.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven
+action: read_manifest
+"@ | python -m tools run -
+```
+
+If you share the YAML you want, I can run that exact pipe for you.The command ran as requested (with `PYTHONIOENCODING=utf-8` per repo rules):
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+Exit code was 1. With `-`, the CLI reads the invoke request from stdin; here stdin was empty (no YAML), so the run failed because no toolset was specified.
+
+To invoke something, pipe a request document, for example:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: context_tools.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven
+action: read_manifest
+"@ | python -m tools run -
+```
+
+If you share the YAML you want, I can run that exact pipe for you.The command ran as requested (with `PYTHONIOENCODING=utf-8` per repo rules):
+
+```yaml
+ok: false
+error: request missing toolset
+```
+
+Exit code was 1. With `-`, the CLI reads the invoke request from stdin; here stdin was empty (no YAML), so the run failed because no toolset was specified.
+
+To invoke something, pipe a request document, for example:
+
+```powershell
+$env:PYTHONIOENCODING="utf-8"; @"
+toolset: context_tools.engineering_specification.mern_domain_driven.mern_domain_driven:MernDomainDriven
+action: read_manifest
+"@ | python -m tools run -
+```
+
+If you share the YAML you want, I can run that exact pipe for you.

@@ -26,6 +26,8 @@ _SCENARIO = re.compile(r"\bscenario\s*\(\s*[\"'`](?P<title>[^\"'`]+)[\"'`]")
 _TIER_TEST = re.compile(r"-(?P<tier>[a-z][a-z0-9-]{0,20})\.(?:test|spec)\.(?:ts|tsx)$")
 _TIER_SEAM = re.compile(r"\.(?P<tier>[a-z][a-z0-9-]{0,20})\.(?:ts|tsx)$")
 _GLOBS = (
+    "**/tests/**/*_story.ts",
+    "tests/**/*_story.ts",
     "**/tests/**/*.test.ts",
     "**/tests/**/*.test.tsx",
     "**/tests/**/*.spec.ts",
@@ -78,6 +80,10 @@ class TypeScriptStoryMap(StoryMap):
     def from_workspace(cls, root: Path) -> List[TestSuite]:
         """Find and parse all TypeScript test files under *root*."""
         root = Path(root).resolve()
+        if root.is_file():
+            if root.suffix in (".ts", ".tsx"):
+                return [cls._parse_file(root, root.parent)]
+            return []
         seen: set = set()
         suites: List[TestSuite] = []
         for pattern in _GLOBS:

@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SCREENS
+         Blue  = standard app screen
+         Orange = invitee deep-link (external entry point)
+         ═══════════════════════════════════════════════════════════ -->
+
+    <!-- SCREEN: My Vacations (col 1, row 1) -->
+    <mxCell id="s1" value="My Vacations" style="swimlane;fontStyle=1;align=center;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="20" y="20" width="220" height="158" as="geometry" />
+    </mxCell>
+    <mxCell id="s1r0" value="Nav" style="text;strokeColor=#c4d9f0;fillColor=#f0f7ff;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontStyle=1;fontSize=10;" vertex="1" parent="s1">
+      <mxGeometry x="0" y="28" width="220" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="s1r1" value="Vacation List" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s1">
+      <mxGeometry x="0" y="54" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s1r2" value="Add Vacation CTA" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s1">
+      <mxGeometry x="0" y="86" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s1t" value="↳ View Vacation List" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=9;fontStyle=2;fontColor=#888;" vertex="1" parent="s1">
+      <mxGeometry x="0" y="124" width="220" height="26" as="geometry" />
+    </mxCell>
+
+    <!-- SCREEN: Add Vacation (col 1, row 2) -->
+    <mxCell id="s2" value="Add Vacation" style="swimlane;fontStyle=1;align=center;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="20" y="250" width="220" height="148" as="geometry" />
+    </mxCell>
+    <mxCell id="s2r0" value="Nav" style="text;strokeColor=#c4d9f0;fillColor=#f0f7ff;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontStyle=1;fontSize=10;" vertex="1" parent="s2">
+      <mxGeometry x="0" y="28" width="220" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="s2r1" value="Add Vacation Form" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s2">
+      <mxGeometry x="0" y="54" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s2r2" value="Submit / Cancel" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s2">
+      <mxGeometry x="0" y="86" width="220" height="28" as="geometry" />
+    </mxCell>
+    <mxCell id="s2t" value="↳ Add Vacation" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=9;fontStyle=2;fontColor=#888;" vertex="1" parent="s2">
+      <mxGeometry x="0" y="120" width="220" height="20" as="geometry" />
+    </mxCell>
+
+    <!-- SCREEN: Vacation Overview — tab: Overview (col 2, row 1) -->
+    <mxCell id="s3" value="Vacation Overview" style="swimlane;fontStyle=1;align=center;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="300" y="20" width="220" height="196" as="geometry" />
+    </mxCell>
+    <mxCell id="s3r0" value="Nav" style="text;strokeColor=#c4d9f0;fillColor=#f0f7ff;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontStyle=1;fontSize=10;" vertex="1" parent="s3">
+      <mxGeometry x="0" y="28" width="220" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="s3r1" value="Vacation Header + Tab Nav" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s3">
+      <mxGeometry x="0" y="54" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s3r2" value="Details Panel" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s3">
+      <mxGeometry x="0" y="86" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s3r3" value="Edit / Cancel Actions" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s3">
+      <mxGeometry x="0" y="118" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s3t" value="↳ Edit Vacation Details · Cancel Vacation" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=9;fontStyle=2;fontColor=#888;" vertex="1" parent="s3">
+      <mxGeometry x="0" y="158" width="220" height="30" as="geometry" />
+    </mxCell>
+
+    <!-- SCREEN: Accept Invite — invitee entry point (col 2, row 2) -->
+    <mxCell id="s6" value="Accept Invite" style="swimlane;fontStyle=1;align=center;startSize=28;fillColor=#ffe6cc;strokeColor=#d6a35c;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="300" y="288" width="220" height="138" as="geometry" />
+    </mxCell>
+    <mxCell id="s6r1" value="Invite Detail" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s6">
+      <mxGeometry x="0" y="28" width="220" height="38" as="geometry" />
+    </mxCell>
+    <mxCell id="s6r2" value="Response Actions" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s6">
+      <mxGeometry x="0" y="66" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s6t" value="↳ Respond to Vacation Invite" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=9;fontStyle=2;fontColor=#888;" vertex="1" parent="s6">
+      <mxGeometry x="0" y="104" width="220" height="26" as="geometry" />
+    </mxCell>
+
+    <!-- SCREEN: Vacation Travellers — tab: Travellers (col 3, row 1) -->
+    <mxCell id="s4" value="Vacation Travellers" style="swimlane;fontStyle=1;align=center;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="580" y="20" width="220" height="196" as="geometry" />
+    </mxCell>
+    <mxCell id="s4r0" value="Nav" style="text;strokeColor=#c4d9f0;fillColor=#f0f7ff;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontStyle=1;fontSize=10;" vertex="1" parent="s4">
+      <mxGeometry x="0" y="28" width="220" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="s4r1" value="Vacation Header + Tab Nav" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s4">
+      <mxGeometry x="0" y="54" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s4r2" value="Traveller List" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s4">
+      <mxGeometry x="0" y="86" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s4r3" value="Invite Traveller Action" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s4">
+      <mxGeometry x="0" y="118" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s4t" value="↳ View Travellers · Send Invite · Remove Traveller" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=9;fontStyle=2;fontColor=#888;" vertex="1" parent="s4">
+      <mxGeometry x="0" y="158" width="220" height="30" as="geometry" />
+    </mxCell>
+
+    <!-- SCREEN: Vacation Itinerary — tab: Itinerary (col 3, row 2) -->
+    <mxCell id="s5" value="Vacation Itinerary" style="swimlane;fontStyle=1;align=center;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="580" y="288" width="220" height="196" as="geometry" />
+    </mxCell>
+    <mxCell id="s5r0" value="Nav" style="text;strokeColor=#c4d9f0;fillColor=#f0f7ff;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontStyle=1;fontSize=10;" vertex="1" parent="s5">
+      <mxGeometry x="0" y="28" width="220" height="26" as="geometry" />
+    </mxCell>
+    <mxCell id="s5r1" value="Vacation Header + Tab Nav" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s5">
+      <mxGeometry x="0" y="54" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s5r2" value="Request Itinerary / Items Panel" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s5">
+      <mxGeometry x="0" y="86" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s5r3" value="Saved Items Panel" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontSize=11;" vertex="1" parent="s5">
+      <mxGeometry x="0" y="118" width="220" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="s5t" value="↳ Request Itinerary · Browse · Save · View Saved" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=6;fontSize=9;fontStyle=2;fontColor=#888;" vertex="1" parent="s5">
+      <mxGeometry x="0" y="158" width="220" height="30" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         TRANSITIONS
+         Solid  = primary user navigation
+         Dashed = return / back flow
+         Orange = invitee deep-link entry
+         ═══════════════════════════════════════════════════════════ -->
+
+    <!-- My Vacations → Add Vacation (Add Vacation CTA) -->
+    <mxCell id="t1" value="Add Vacation CTA" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;fontSize=10;" edge="1" source="s1" target="s2" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Add Vacation → My Vacations (on submit / cancel) -->
+    <mxCell id="t2" value="on submit / cancel" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;fontSize=10;dashed=1;endArrow=open;endFill=0;" edge="1" source="s2" target="s1" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- My Vacations → Vacation Overview (select vacation) -->
+    <mxCell id="t3" value="select vacation" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;fontSize=10;" edge="1" source="s1" target="s3" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Vacation Overview → Vacation Travellers (Travellers tab) -->
+    <mxCell id="t4a" value="Travellers tab" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;fontSize=10;" edge="1" source="s3" target="s4" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Vacation Travellers → Vacation Overview (Overview tab) -->
+    <mxCell id="t4b" value="Overview tab" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;fontSize=10;dashed=1;endArrow=open;endFill=0;" edge="1" source="s4" target="s3" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Vacation Overview → Vacation Itinerary (Itinerary tab) -->
+    <mxCell id="t5a" value="Itinerary tab" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;fontSize=10;strokeColor=#82b366;fontColor=#82b366;" edge="1" source="s3" target="s5" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Vacation Travellers → Vacation Itinerary (Itinerary tab) -->
+    <mxCell id="t5b" value="Itinerary tab" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;fontSize=10;strokeColor=#82b366;fontColor=#82b366;" edge="1" source="s4" target="s5" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Vacation Itinerary → Vacation Overview (Overview tab) -->
+    <mxCell id="t5c" value="Overview tab" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;fontSize=10;dashed=1;endArrow=open;endFill=0;strokeColor=#82b366;fontColor=#82b366;" edge="1" source="s5" target="s3" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Vacation Travellers → Accept Invite (invite deep-link to invitee) -->
+    <mxCell id="t6" value="invite deep-link" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;fontSize=10;strokeColor=#d6a35c;fontColor=#d6a35c;" edge="1" source="s4" target="s6" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- Accept Invite → My Vacations (on accept — invitee lands) -->
+    <mxCell id="t7" value="on accept → home" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;fontSize=10;dashed=1;endArrow=open;endFill=0;strokeColor=#d6a35c;fontColor=#d6a35c;" edge="1" source="s6" target="s1" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+  </root>
+</mxGraphModel>
