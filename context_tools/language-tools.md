@@ -16,7 +16,7 @@ Use this guidance to adapt conceptual templates (e.g., in TypeScript or Python) 
 ## Python
 
 - **Test Runner (BDD unit specs)**: [Mamba](https://github.com/nestorsalceda/mamba) with `description` / `context` / `it` / `before`.
-- **Test Runner (story acceptance)**: Same Mamba stack via `story_test.py` — wraps Mamba the same way `story-test.ts` wraps Vitest.
+- **Test Runner (story acceptance)**: Same Mamba stack via **`story_test.py`** — extends Mamba like **`story-test.ts`** extends Vitest (`story`, `background`, `scenario`, `given`, `when`, `then`).
 - **Assertion Library**: [Expects](https://github.com/jaimegildesagredo/expects).
 - **Story file shape**: `story(name, body)`, `background(given)`, `scenario(name, ({ when, then }) => …)` from `story_test.py`; `before_all()` / `after_all()` for boot/teardown; inline step bodies in `given` / `when` / `then` callbacks.
 - **Style**: `when(…).and_(…)` and `then(…).and_(…)` — mirrors TS `when().and()` / `then().and()`.

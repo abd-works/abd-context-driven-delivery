@@ -1,4 +1,8 @@
-"""Given / When / Then helpers (Mamba). Copy to tests/story_test.py."""
+"""Story acceptance on Mamba — same API as story-test.ts (Vitest).
+
+story() / background() / scenario() / given / when().and_() / then().and_() map to Mamba
+description/context/it at import time. No pytest, no separate GWT framework.
+"""
 
 from __future__ import annotations
 

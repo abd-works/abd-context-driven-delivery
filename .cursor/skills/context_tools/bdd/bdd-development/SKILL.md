@@ -146,7 +146,7 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 
 ## Story acceptance (Python)
 
-Python story files use **`story_test.py`** — same role as **`story-test.ts`**: thin helpers (`story`, `background`, `scenario`, `given`, `when`, `then`) that register **Mamba** example groups at import. Unit BDD specs keep `description` / `context` / `it`; story acceptance keeps the Vitest-shaped API on Mamba instead of pytest or a separate GWT doc layer.
+Story files import **`story_test.py`** — it extends **Mamba** the same way **`story-test.ts`** extends **Vitest**: `story`, `background`, `scenario`, `given`, `when`, `then` (and `.and_()` chains). Unit BDD specs keep plain `description` / `context` / `it`.
 
 ---
 

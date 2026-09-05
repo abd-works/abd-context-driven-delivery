@@ -10,7 +10,7 @@
 # file: tests/story_test.py
 # ```
 #
-# Same surface as story-test.ts: story(), background(), scenario(), when().and_() / then().and_().
+# Same surface as story-test.ts — extends Mamba (story → description, scenario → nested group, then → it).
 
 from __future__ import annotations
 
