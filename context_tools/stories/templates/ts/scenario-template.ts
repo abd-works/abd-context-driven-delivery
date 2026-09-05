@@ -19,7 +19,10 @@
  *       examples/{topic}.examples.ts     # lowest shared folder for this story's fixtures
  *       givens.ts                        # background Given helpers for this sub-epic/story
  *       whens.ts                         # When helpers for this sub-epic/story
- *       {story-kebab-slug}.{tier}.ts     # THIS FILE — one GWT file per story per tier
+ *       {story-kebab-slug}.{tier}.ts     # story file — one GWT file per story per tier
+ *
+ * # Shared helper (copy once per tests/ tree — full source inlined below)
+ * story-test: tests/story-test.ts
  *
  * # Naming rules
  * - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)

@@ -24,7 +24,10 @@
 #       examples/{topic}_examples.py     # lowest shared folder for this story's fixtures
 #       givens.py                        # background Given helpers for this sub-epic/story
 #       whens.py                         # When helpers for this sub-epic/story
-#       {story_snake_slug}.{tier}.py     # THIS FILE — one GWT file per story per tier
+#       {story_snake_slug}.{tier}.py     # story file — one GWT file per story per tier
+#
+# # Shared helper (copy once per tests/ tree — full source inlined below)
+# story_test: tests/story_test.py
 #
 # # Naming rules
 # - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
