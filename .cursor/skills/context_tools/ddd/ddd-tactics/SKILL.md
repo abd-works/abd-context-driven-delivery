@@ -11,7 +11,6 @@ Use ddd guidance at `tactics` fidelity only.
 Refer to these skills in order to fill in details from previous fidelities if not present:
 @ddd-building_blocks
 @ddd-bounded_context
-@ddd-scaffold
 
 # Contexts
 

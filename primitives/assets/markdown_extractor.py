@@ -168,7 +168,6 @@ def _contexts_preamble(text: str) -> str:
 # Language companion / Hierarchy shape stay. Same rule for Stories, CE, DDD, UX, BDD.
 _FIDELITY_H2_NAMES = frozenset(
     {
-        "scaffold",
         "story_map",
         "scenarios",
         "acceptance_tests",

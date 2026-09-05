@@ -570,8 +570,8 @@ with description("BaseContextTool.resolve_fidelity"):
         with it("should leave a concrete fidelity unchanged"):
             expect(Stories.resolve_fidelity("story_map")).to(equal("story_map"))
 
-        with it("should map scaffold to scaffold"):
-            expect(Stories.resolve_fidelity("scaffold")).to(equal("scaffold"))
+        with it("should map scaffold to story_map"):
+            expect(Stories.resolve_fidelity("scaffold")).to(equal("story_map"))
 
     with context("on CleanEngineering"):
         with it("should map discovery to modules"):
@@ -600,8 +600,8 @@ with description("BaseContextTool.resolve_fidelity"):
 
 with description("BaseContextTool.fidelities class variable"):
     with context("on Stories"):
-        with it("should map SHAPING to scaffold"):
-            expect(Stories.fidelities[BaseContextTool.SHAPING]).to(equal("scaffold"))
+        with it("should map SHAPING to story_map"):
+            expect(Stories.fidelities[BaseContextTool.SHAPING]).to(equal("story_map"))
 
         with it("should map DISCOVERY to story_map"):
             expect(Stories.fidelities[BaseContextTool.DISCOVERY]).to(equal("story_map"))
@@ -623,8 +623,8 @@ with description("BaseContextTool.fidelities class variable"):
             expect(Bdd.fidelities[BaseContextTool.ENGINEER]).to(equal("development"))
 
     with context("on Ddd"):
-        with it("should map SHAPING to scaffold"):
-            expect(Ddd.fidelities[BaseContextTool.SHAPING]).to(equal("scaffold"))
+        with it("should map SHAPING to bounded_context"):
+            expect(Ddd.fidelities[BaseContextTool.SHAPING]).to(equal("bounded_context"))
 
         with it("should map DISCOVERY to bounded_context"):
             expect(Ddd.fidelities[BaseContextTool.DISCOVERY]).to(equal("bounded_context"))

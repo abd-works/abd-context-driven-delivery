@@ -33,6 +33,12 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 **Produce:** Story map.
 
+### Scaffold
+
+Rough story-map outline for a **partition** pass or first cut — **names only**: verb–noun epics + story names (`StoryMap` → `Epic` → `SubEpic` → `Story`). No scenarios, no thin-slice increments, no scope prose yet.
+
+Key rules: `branch-on-mechanical-uniqueness` — split on distinct mechanics, not catalog/requirements rows; `read-all-source-context-in-full` — read segments in full before grouping.
+
 ### Rules
 
 - **`verb-noun-format`** — Name Epic / SubEpic / Story verb–noun; actor is metadata; base verb form.
@@ -97,9 +103,3 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 - **`reuse-owning-aggregate-stubs`** — same rule as **scenarios**.
 
 ---
-
-# Scaffold
-
-A scaffold produces a thin epic index — **names only**: verb–noun epics + story names (`StoryMap` → `Epic` → `SubEpic` → `Story`). No Scenario at scaffold.
-
-Key rules: `branch-on-mechanical-uniqueness` — split on distinct mechanics, not catalog/requirements rows; `read-all-source-context-in-full` — read segments in full before grouping.

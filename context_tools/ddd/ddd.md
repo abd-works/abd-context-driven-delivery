@@ -23,6 +23,12 @@ Each fidelity below is the whole story for that level. Call clean_engineering at
 
 **Goal:** Draw context boundaries, dependency arcs, and the aggregates that protect invariants — naming everything in the experts' vocabulary.
 
+### Scaffold
+
+Rough bounded-context map for a **partition** pass or first cut — **names only**: context name + candidate aggregates + short ubiquitous-language note (`DomainMap` → `BoundedContext` → `Aggregate`). No building blocks, no tactics, no dependency arcs yet.
+
+Key rules: `language-is-context-scoped` — a term's meaning is only valid inside the context that defines it; the same word in two contexts is two different concepts.
+
 A **bounded context** is the boundary of **one model and one ubiquitous language**. Inside it, every term has one meaning. Across it, the same word may mean different things.
 
 An **aggregate** is not a context. It is a **consistency** cluster *inside* a context: one root, a boundary, the invariants that boundary protects. Several aggregates that share the same language live in the **same** context (Catalog can hold Plan, Offer, …). Do **not** mint a bounded context per aggregate — that is a class with a fence around it, not a model boundary.
@@ -116,14 +122,6 @@ Honour aggregate boundaries from bounded_context; do not redraw by relatedness. 
 - Domain model free of UI/transport; persistence and messaging behind ports.
 - **`load-with-identity-in-hand`** — When wrapping live, `load` takes the identity already in hand. Do not assume a browser session. Load once and reuse the variable. A cart has no identity outside its prospect — reach it through the owner, not `cartRepository().current()`.
 - Call clean_engineering at **code**.
-
----
-
-# Scaffold
-
-**Produce:** thin bounded context index — **names only**: context name + candidate aggregates + short ubiquitous-language note (`DomainMap` → `BoundedContext` → `Aggregate`). No BuildingBlock at scaffold.
-
-Key rules: `language-is-context-scoped` — a term’s meaning is only valid inside the context that defines it; the same word in two contexts is two different concepts.
 
 ---
 

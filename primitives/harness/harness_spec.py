@@ -93,7 +93,7 @@ def _sandbox() -> Path:
         root / "context_tools" / "stories" / "stories.py",
         "context_tools.stories.stories",
         "Stories",
-        {"discovery": "story_map", "shaping": "scaffold"},
+        {"discovery": "story_map", "shaping": "story_map"},
     )
     _write_context_tool(
         root / "context_tools" / "clean_engineering" / "clean_engineering.py",
@@ -420,7 +420,7 @@ with description("a harness"):
                     name="stories",
                     overview="Stories.",
                     toolset="context_tools.stories.stories:Stories",
-                    fidelities=("story_map", "scaffold"),
+                    fidelities=("story_map",),
                     actions=tuple(harness._action_option_names()),
                 )
                 expect(skill.body).to(equal(expected))
@@ -921,38 +921,47 @@ with description("a harness"):
                 )
 
         with context("with scaffold"):
-            with it("should write the stories scaffold fidelity as a hyphenated skill"):
-                root = _sandbox()
-                harness = Harness("Cursor", repo_root=root)
-                harness.write_deploy(source="scaffold")
-                body = (root / ".cursor" / "skills" / "context_tools" / "stories-scaffold" / "SKILL.md").read_text(encoding="utf-8")
-                expect(body).to(contain("# stories-scaffold"))
-                expect(body).to(contain("Use stories guidance at `scaffold` fidelity only"))
-                expect((root / ".cursor" / "skills" / "context_tools" / "scaffold").exists()).to(equal(False))
-                expect(body).not_to(contain("Then run:"))
-                expect(body).not_to(contain("Run at fidelity scaffold"))
-                expect(body).not_to(contain("If the fidelity does not belong"))
-
-        with context("with an extended deploy"):
-            with it("should write the scaffold composite as a hyphenated ct-fidelity skill"):
+            with it("should not write a separate stories-scaffold skill"):
                 root = _sandbox()
                 harness = Harness("Cursor", repo_root=root)
                 harness.write_deploy(source="scaffold", extended=True)
-                body = (root / ".cursor" / "skills" / "context_tools" / "stories-scaffold" / "SKILL.md").read_text(encoding="utf-8")
-                expect(body).to(contain("# stories-scaffold"))
-                expect(body).to(contain("Use stories guidance at `scaffold` fidelity only"))
-                expect(body).to(contain("Refer to these skills in order to fill in details from previous fidelities if not present:"))
-                expect(body).to(contain("@stories-story_map"))
-                expect(body).not_to(contain("do not inline"))
-                expect(body).not_to(contain("Reference these"))
-                expect(body).to(contain("Stories."))
-                expect(body).not_to(contain("Then run:"))
-                expect(body).not_to(contain("action: generate"))
-                expect(body).not_to(contain("Every tool call uses this shape"))
-                expect(body).not_to(contain("python -m tools run"))
-                expect(body).not_to(contain("tools.ps1 run"))
-                expect((root / ".cursor" / "skills" / "context_tools" / "scaffold").exists()).to(equal(False))
+                expect(
+                    (
+                        root
+                        / ".cursor"
+                        / "skills"
+                        / "context_tools"
+                        / "stories"
+                        / "stories-scaffold"
+                        / "SKILL.md"
+                    ).exists()
+                ).to(equal(False))
+                expect((root / ".cursor" / "skills" / "context_tools" / "scaffold").exists()).to(
+                    equal(False)
+                )
 
+            with it("should embed Scaffold prose in stories-story_map instead"):
+                deploy_root = Path(tempfile.mkdtemp())
+                Harness("Cursor", repo_root=_REPO_ROOT).write_deploy(
+                    deploy_path=str(deploy_root),
+                    source="stories-story_map",
+                    extended=True,
+                )
+                body = (
+                    deploy_root
+                    / ".cursor"
+                    / "skills"
+                    / "context_tools"
+                    / "stories"
+                    / "stories-story_map"
+                    / "SKILL.md"
+                ).read_text(encoding="utf-8")
+                expect(body).to(contain("# stories-story_map"))
+                expect(body).to(contain("### Scaffold"))
+                expect(body).not_to(contain("@stories-scaffold"))
+                expect(body).not_to(contain("Refer to these skills"))
+
+        with context("with an extended deploy"):
             with it("should swap the confirm lines for straight prompt passed vs ct"):
                 root = _sandbox()
                 harness = Harness("Cursor", repo_root=root)

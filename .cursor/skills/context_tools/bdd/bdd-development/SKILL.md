@@ -84,6 +84,7 @@ This skill operates at **multiple levels of fidelity**. Start from an agreed ske
 
 | Fidelity | Output |
 |---|---|
+| **modules** | Thin subject index — top-level `describe`s with candidate `that`/`with` + TODOs (partition pass) |
 | **behavior** | describe/it hierarchy with `BDD: SIGNATURE` markers in each `it` |
 | **development** | Implemented tests + production code |
 
@@ -147,12 +148,6 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 ## Story acceptance (Python)
 
 Story files import **`story_test.py`** — it extends **Mamba** with **`with given`**, **`with when`**, **`with then`**, **`with and_`**, and **`with background.all` / `with background.each`** (like **`with before.all` / `with before.each`**). Run with **`python -m story_test`**. Unit BDD specs keep plain `description` / `context` / `it`.
-
----
-
-A scaffold produces thin subject index — domain things, states, or observable conditions (top-level `describe`s); subject + candidate `that`/`with` + TODOs. Not full `it should` suites.
-
-Key rules: `state-not-when` — nest by the state or condition that enables an observation, never by a `when` trigger; `nest-by-enabling-events` — sub-groupings are conditions that unlock further behavior, not implementation steps.
 
 ## Templates
 

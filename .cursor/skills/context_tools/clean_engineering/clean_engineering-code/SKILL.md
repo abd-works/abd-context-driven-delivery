@@ -16,7 +16,7 @@ Refer to these skills in order to fill in details from previous fidelities if no
 
 Deepen OO design from modules toward production code. Each fidelity **adds** artifacts — do not invent detail from a deeper level.
 
-**Progression:** `partition` (action) → **scaffold** → **modules** → **model** → **code**.
+**Progression:** `partition` (action) → **modules** (scaffold → full map) → **model** → **code**.
 
 | Fidelity | Default format | Produce |
 |---|---|---|

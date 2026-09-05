@@ -80,106 +80,25 @@ This skill operates at **multiple levels of fidelity**. Start from an agreed ske
 
 | Fidelity | Output |
 |---|---|
+| **modules** | Thin subject index — top-level `describe`s with candidate `that`/`with` + TODOs (partition pass) |
 | **behavior** | describe/it hierarchy with `BDD: SIGNATURE` markers in each `it` |
 | **development** | Implemented tests + production code |
 
-## behavior
+## modules
 
-**Default format:** Python
+**Default format:** markdown
 
-**Goal:** map observation to a real test before implementation. Lock the sketched hierarchy as framework `describe` / `it` nesting. Every `it` body is exactly one `BDD: SIGNATURE` marker — nothing else.
+**Goal:** Name the BDD subject tree before behavior signatures — delegates module structure to Clean Engineering at the same depth.
 
-- Sketch nesting (subjects → `with`/`that`/events → `it should`) is agreed 
-- **Confirm framework** — ask if not stated. Default: Mamba/Python; Jest/TypeScript or JUnit 5/Java when the project uses those.
-- Convert every sketch hierarchy line to its framework equivalent (see Framework syntax).
-- Process in batches of ~18 describe blocks when the hierarchy is large.
+### Scaffold
 
-Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
+Rough subject index for a **partition** pass or first cut — domain things, states, or observable conditions (top-level `describe`s); subject + candidate `that`/`with` + TODOs. Not full `it should` suites.
 
-### Rules
-
-- **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count.
-- **`signature-markers`** — Every `it` body is exactly `// BDD: SIGNATURE` or `# BDD: SIGNATURE`.
-- **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
-- **`framework-syntax`** — Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
-
-**Pass:**
-```typescript
-it('should apply a percentage discount to eligible items', () => {
-  // BDD: SIGNATURE
-});
-```
-
-**Fail:** any assertion, mock, import of production code, or helper inside the body.
-
----
-
-## development
-
-**Default format:** Python
-
-**Goal:** Replace `BDD: SIGNATURE` markers one at a time with it shgould /expect bodies, then minimum production code until green. Inherit the framework from the **behavior** artifactif already completed.
-
-**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
-
-1. **Confirm framework** — inherit from the behavior file.
-2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report count.
-3. **Identify shared setup** — extract to `beforeEach` / `with before.each:` or a factory when three or more siblings share arrangement.
-4. Pick **one** marker. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
-5. Run the test — confirm RED for the right reason.
-6. Write the **minimum** production code until GREEN (PRODUCTION CODE section of the same template).
-7. Refactor only while green. Move to the next marker.
-8. Repeat until zero markers remain, then run **validate**.
-
-### Coverage scan (existing code)
-
-When generating or satisfying against a module that already exists, read the production source before touching the spec:
-
-1. List every public method, property, class, and constant (exclude `_`-prefixed members unless publicly documented).
-2. Compare against the existing spec to find members with no `it should` entry.
-3. Add `it should` entries (at behavior fidelity) or full test bodies (at development fidelity) for every gap — do not skip any public member.
-4. Only then proceed with RED-GREEN-REFACTOR for the new or updated tests.
-
-### The RED-GREEN-REFACTOR cycle
-
-**RED** — fail for the right reason before production code exists.  
-**GREEN** — least production code that makes this assertion pass.  
-**REFACTOR** — clean up while green. One test, one production change, one green — do not batch all bodies first.
-
-### Arrange-Act-Assert
-
-Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behavior` above). Split unrelated expects. Shared construction → `beforeEach` / factory at three sibling dupes.
-
-### Rules
-
-- **`red-then-green`** — Fail for the right reason before production code changes.
-- **`minimum-green`** / **`code-minimalism`** — Least production code that makes this assertion pass.
-- **`refactor-only-when-green`** — Refactor only while green.
-- **`one-signature-at-a-time`** — One marker → green → next. Do not batch all bodies first.
-- **`one-assertion-per-test`** —  one outcome per `it`. tighly connects `expects`
-- **`layer-isolation`** — Mock only at architecture boundaries; never the subject under test.
-- **`no-remaining-signatures`** — Zero `BDD: SIGNATURE` markers when done.
-- **`full-surface-coverage`** — Before generating or satisfying, scan the production source for all public members. Add `it should` entries for every uncovered public method, property, or class. Complete coverage is required; no public surface may be left untested.
-- **`context-sharing`** — Shared construction in `beforeEach` / factory at three sibling dupes.
-- **`oo-api-design`** — Ask-don't-tell: construct fully; own state on the object; operations on the closest domain concept.
-- **`honors-documented-surface-contracts`** — Public API must match documented surface contracts; if a spec fights the contract, fix the spec.
-- **`roundtrip-parity-is-required`** — Adapter parse/render seams assert `counts(parse(render(canonical))) == counts(canonical)`.
-- **`code-source-of-truth-guard`** — Tests reject unsafe regeneration when generation can overwrite hand-edited code.
-- **`impl-must-carry-bdd-manifest`** — Impl paired with `*_spec.py` carries `# @toolset-manifest … context_tools.bdd.bdd:Bdd`.
-- **`observable-behavior`** — Assert public outcomes only.
-- **`scan-fixture-pair`** — A mechanical mistake spec passes the fail file to `expect_scan_fails` and the pass file to `expect_scan_passes` (`context_tools.bdd.spec_helpers`). Do not invent a parallel eval spec harness.
-
----
+Key rules: `state-not-when` — nest by the state or condition that enables an observation, never by a `when` trigger; `nest-by-enabling-events` — sub-groupings are conditions that unlock further behavior, not implementation steps.
 
 ## Story acceptance (Python)
 
 Story files import **`story_test.py`** — it extends **Mamba** with **`with given`**, **`with when`**, **`with then`**, **`with and_`**, and **`with background.all` / `with background.each`** (like **`with before.all` / `with before.each`**). Run with **`python -m story_test`**. Unit BDD specs keep plain `description` / `context` / `it`.
-
----
-
-A scaffold produces thin subject index — domain things, states, or observable conditions (top-level `describe`s); subject + candidate `that`/`with` + TODOs. Not full `it should` suites.
-
-Key rules: `state-not-when` — nest by the state or condition that enables an observation, never by a `when` trigger; `nest-by-enabling-events` — sub-groupings are conditions that unlock further behavior, not implementation steps.
 
 ## Templates
 

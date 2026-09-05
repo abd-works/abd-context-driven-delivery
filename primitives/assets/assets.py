@@ -33,7 +33,6 @@ _FORMAT_DIR_ALIAS = {
 
 # Filename stems kept when host.format is set and templates/{alias}/ is a folder pack.
 _FIDELITY_TEMPLATE_STEMS: dict[str, frozenset[str]] = {
-    "scaffold": frozenset({"story-map", "thin-slice"}),
     "story_map": frozenset({"story-map"}),
     "scenarios": frozenset({"scenario-template"}),
     "acceptance_tests": frozenset({"scenario-template"}),
@@ -361,8 +360,7 @@ def keep_template_file(rel: str, content: str, fidelity: str | None) -> bool:
     """Whether a templates/ file belongs in the merged blob for this fidelity.
 
     No fidelity → keep everything (same as a whole-folder merge). Never keep
-    stories-sketch on a format-filtered pack. story_map keeps story-map only;
-    scaffold keeps story-map and thin-slice.
+    stories-sketch on a format-filtered pack. story_map keeps story-map only.
     """
     if not fidelity:
         return True

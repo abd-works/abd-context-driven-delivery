@@ -33,15 +33,15 @@ def _expanded(stories, action_name):
 
 
 with description("Stories"):
-    with context("that is constructed with fidelity scaffold"):
+    with context("that resolves shaping to the first fidelity"):
         with before.each:
             self.stories = Stories(fidelity="scaffold")
 
         with it("should default format to markdown"):
             expect(self.stories.format).to(equal("markdown"))
 
-        with it("should retain fidelity scaffold"):
-            expect(self.stories.fidelity).to(equal("scaffold"))
+        with it("should map scaffold to story_map"):
+            expect(self.stories.fidelity).to(equal("story_map"))
 
     with context("that is constructed with fidelity story_map"):
         with before.each:
@@ -116,9 +116,10 @@ with description("Stories"):
             prose = _expanded(Stories(fidelity="acceptance_tests"), "guidance")
             expect("{story}.{tier}.py" in prose).to(be_true)
 
-        with it("should tell the agent to write epic/sub-epic/story names only at scaffold"):
-            prose = _expanded(Stories(fidelity="scaffold"), "guidance")
+        with it("should tell the agent to use Scaffold under story_map for names only"):
+            prose = _expanded(Stories(fidelity="story_map"), "guidance")
             expect("names only" in prose).to(be_true)
+            expect("### Scaffold" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
 
         with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):
             prose = _expanded(Stories(), "guidance")
@@ -168,6 +169,7 @@ with description("Stories"):
         with it("should include Shared rules and the story_map heading"):
             expect("## Shared rules" in self.contexts).to(be_true)
             expect("## story_map" in self.contexts).to(be_true)
+            expect("### Scaffold" in self.contexts).to(be_true)
 
         with it("should include the verb-noun-format rule slug"):
             expect("verb-noun-format" in self.contexts).to(be_true)
@@ -257,20 +259,14 @@ with description("Stories"):
             expect("_story.ts" in self.templates).to(equal(False))
             expect("_story.py" in self.templates).to(equal(False))
 
-    with context("whose templates slot is expanded at scaffold markdown"):
-        with before.each:
-            self.templates = Stories(
-                fidelity="scaffold", format="markdown", session=None
+    with context("whose templates slot is expanded at story_map markdown"):
+        with it("should inline story-map template only"):
+            templates = Stories(
+                fidelity="story_map", format="markdown", session=None
             ).templates().expand()
-
-        with it("should inline story-map and thin-slice only"):
-            expect("Story Map" in self.templates).to(be_true)
-            expect("Thin slicing" in self.templates).to(be_true)
-            expect("scenario-inline.md" in self.templates).to(equal(False))
-            expect("scenario-main-flow.md" in self.templates).to(equal(False))
-            expect("scenario-outline.md" in self.templates).to(equal(False))
-            expect("scenario-template.md" in self.templates).to(equal(False))
-            expect("components/" in self.templates).to(equal(False))
+            expect("Story Map" in templates).to(be_true)
+            expect("Thin slicing" in templates).to(equal(False))
+            expect("thin-slice.md" in templates).to(equal(False))
 
     with context("whose templates slot is expanded at scenarios python"):
         with before.each:

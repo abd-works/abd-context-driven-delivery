@@ -90,7 +90,9 @@ with description("Scrape Fidelity Keys, Format Defaults, And Guidance Sections")
 
         with it("resolves each fidelity to its key and default format"):
             keys = [g.key for g in self.guidances]
-            expect(keys).to(equal(["scaffold", "bounded_context", "building_blocks", "tactics"]))
+            expect(keys).to(
+                equal(["bounded_context", "bounded_context", "building_blocks", "tactics"])
+            )
             formats = {g.key: g.default_format for g in self.guidances}
             expect(formats["bounded_context"]).to(equal("markdown"))
             expect(formats["tactics"]).to(equal("python"))

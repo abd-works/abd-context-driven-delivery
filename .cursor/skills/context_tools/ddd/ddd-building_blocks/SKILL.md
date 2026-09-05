@@ -10,7 +10,6 @@ Use ddd guidance at `building_blocks` fidelity only.
 
 Refer to these skills in order to fill in details from previous fidelities if not present:
 @ddd-bounded_context
-@ddd-scaffold
 
 # Contexts
 

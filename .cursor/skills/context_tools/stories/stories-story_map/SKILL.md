@@ -8,9 +8,6 @@ disable-model-invocation: true
 
 Use stories guidance at `story_map` fidelity only.
 
-Refer to these skills in order to fill in details from previous fidelities if not present:
-@stories-scaffold
-
 # Contexts
 
 Map stakeholder and system interactions as behaviours that deliver a solution.
@@ -45,6 +42,12 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 **Goal:** Shape the hierarchy — `Epic` → nestable `SubEpic` → `Story` — decomposed on real mechanical variation, not requirement-row bookkeeping.
 
 **Produce:** Story map.
+
+### Scaffold
+
+Rough story-map outline for a **partition** pass or first cut — **names only**: verb–noun epics + story names (`StoryMap` → `Epic` → `SubEpic` → `Story`). No scenarios, no thin-slice increments, no scope prose yet.
+
+Key rules: `branch-on-mechanical-uniqueness` — split on distinct mechanics, not catalog/requirements rows; `read-all-source-context-in-full` — read segments in full before grouping.
 
 ### Rules
 

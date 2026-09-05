@@ -86,6 +86,12 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 
 **Goal:** What screens exist and how users move between them — missing coverage shows as absent nodes.
 
+### Scaffold
+
+Rough screen index for a **partition** pass or first cut — screen names in domain/user language plus interactions and transitions (**list only**). No drawio regions, no mockup controls, no brand.
+
+Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate state is its own screen entry; `screen-names-use-domain-terms` — name screens in user/domain language, never technical or chapter labels; `screen-story-budget` — one screen per coherent user goal.
+
 - Screens, layouts, named regions, transitions, nav components, content types.
 - Story names and domain terms attached as traces (from story/domain JS or sources).
 - Optional `ux-context.md` for invariants / notes not on the canvas.

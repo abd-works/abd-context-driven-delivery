@@ -8,9 +8,6 @@ disable-model-invocation: true
 
 Use ddd guidance at `bounded_context` fidelity only.
 
-Refer to these skills in order to fill in details from previous fidelities if not present:
-@ddd-scaffold
-
 # Contexts
 
 ## bounded_context
@@ -18,6 +15,12 @@ Refer to these skills in order to fill in details from previous fidelities if no
 **Default format:** markdown
 
 **Goal:** Draw context boundaries, dependency arcs, and the aggregates that protect invariants — naming everything in the experts' vocabulary.
+
+### Scaffold
+
+Rough bounded-context map for a **partition** pass or first cut — **names only**: context name + candidate aggregates + short ubiquitous-language note (`DomainMap` → `BoundedContext` → `Aggregate`). No building blocks, no tactics, no dependency arcs yet.
+
+Key rules: `language-is-context-scoped` — a term's meaning is only valid inside the context that defines it; the same word in two contexts is two different concepts.
 
 A **bounded context** is the boundary of **one model and one ubiquitous language**. Inside it, every term has one meaning. Across it, the same word may mean different things.
 
