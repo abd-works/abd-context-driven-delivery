@@ -262,85 +262,65 @@ section: body
 # - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
-# Pattern: normal code inline under each with — same steps as scenario-template.ts.
+# Pattern: GWT structure only — replace pass with real code under each with.
 
 from __future__ import annotations
 
-from expects import be_above, be_none, equal, expect
 from mamba import after, before
 
-from domain.{bounded_context}.runtime import {AppPascal}E2e, config
-from domain.{bounded_context}.{aggregate_snake} import (
-    {AggregatePascal},
-    {ERROR_CONSTANT}_MESSAGE,
-)
 from story_test import and_, background, given, scenario, story, then, when
 
 
 with story("{Story Verb-Noun}"):
     with before.all:
-        self.{app_camel} = {AppPascal}E2e.initialize(config)
+        pass  # boot — test code goes here
 
     with after.all:
-        if self.{app_camel}:
-            self.{app_camel}.close()
+        pass  # teardown — test code goes here
 
     with background.each:
         with given("{background given step}"):
-            self.{app_camel}.{background_operation}()
+            pass  # test code goes here
 
         with scenario("{surface check — e.g. rules visible}"):
             with when("{primary when step}"):
-                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
+                pass  # test code goes here
 
             with then("{observable surface outcome}"):
-                self.{aggregate_camel}.{field} = ""
-                self.{aggregate_camel}.validate()
-                expect(len(self.{aggregate_camel}.errors.{field})).to(be_above(0))
+                pass  # test code goes here
 
         with scenario("{validation branch while typing}"):
             with when("{primary when step}"):
-                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
+                pass  # test code goes here
 
             with and_("{follow-on when step}"):
-                self.{aggregate_camel}.{field} = {invalid_value}
-                self.{aggregate_camel}.validate()
+                pass  # test code goes here
 
             with then("{validation message on domain object}"):
-                expect(self.{aggregate_camel}.errors.{field}).to(
-                    equal({ERROR_CONSTANT}_MESSAGE)
-                )
+                pass  # test code goes here
 
         with scenario("{validation clears when input conforms}"):
             with when("{primary when step}"):
-                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
+                pass  # test code goes here
 
             with and_("{prior invalid state}"):
-                self.{aggregate_camel}.{field} = {invalid_value}
-                self.{aggregate_camel}.validate()
+                pass  # test code goes here
 
             with when("{corrective action}"):
-                self.{aggregate_camel}.{field} = {valid_value}
-                self.{aggregate_camel}.validate()
+                pass  # test code goes here
 
             with then("{error cleared on domain object}"):
-                expect(self.{aggregate_camel}.errors.{field}).to(be_none)
+                pass  # test code goes here
 
         with scenario("{main-flow outcome}"):
             with when("{primary when step}"):
-                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
+                pass  # test code goes here
 
             with when("{submit operation on domain object}"):
-                self.{aggregate_camel}.{field} = {valid_aggregate_value}
-                self.{aggregate_camel}.{operation}()
+                pass  # test code goes here
 
             with then("{post-condition on loaded aggregate}"):
-                loaded = (
-                    self.{app_camel}
-                    .{repository}()
-                    .load(self.{aggregate_camel})
-                )
-                expect(loaded.is_at_{state}("{StateName}")).to(equal(True))
+                pass  # test code goes here
 
 
 ## story_test.py
