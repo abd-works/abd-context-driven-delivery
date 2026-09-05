@@ -79,6 +79,8 @@ This skill operates at **multiple levels of fidelity**. Start from grill + sketc
 
 ### Scaffold
 
+**When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
+
 Rough screen index for a **partition** pass or first cut — screen names in domain/user language plus interactions and transitions (**list only**). No drawio regions, no mockup controls, no brand.
 
 Key rules: `tab-states-are-separate-screens` — each distinct tab or alternate state is its own screen entry; `screen-names-use-domain-terms` — name screens in user/domain language, never technical or chapter labels; `screen-story-budget` — one screen per coherent user goal.

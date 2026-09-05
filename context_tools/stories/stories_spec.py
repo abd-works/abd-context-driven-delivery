@@ -119,6 +119,8 @@ with description("Stories"):
         with it("should tell the agent to use Scaffold under story_map for names only"):
             prose = _expanded(Stories(fidelity="story_map"), "guidance")
             expect("names only" in prose).to(be_true)
+            expect("When scaffolding only" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
+            expect("Stop reading this skill when scaffolding" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
             expect("### Scaffold" in Stories(fidelity="story_map").contexts().expand()).to(be_true)
 
         with it("should tell the agent to call diagnostic().diagnose() when a scenario keeps failing"):

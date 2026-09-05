@@ -25,6 +25,8 @@ Each fidelity below is the whole story for that level. Call clean_engineering at
 
 ### Scaffold
 
+**When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
+
 Rough bounded-context map for a **partition** pass or first cut — **names only**: context name + candidate aggregates + short ubiquitous-language note (`DomainMap` → `BoundedContext` → `Aggregate`). No building blocks, no tactics, no dependency arcs yet.
 
 Key rules: `language-is-context-scoped` — a term's meaning is only valid inside the context that defines it; the same word in two contexts is two different concepts.
