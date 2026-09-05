@@ -941,7 +941,7 @@ with description("a harness"):
                 body = (root / ".cursor" / "skills" / "context_tools" / "stories-scaffold" / "SKILL.md").read_text(encoding="utf-8")
                 expect(body).to(contain("# stories-scaffold"))
                 expect(body).to(contain("Use stories guidance at `scaffold` fidelity only"))
-                expect(body).to(contain("Refer to these skills in order to obtain missing context:"))
+                expect(body).to(contain("Refer to these skills in order to fill in details from previous fidelities if not present:"))
                 expect(body).to(contain("@stories-story_map"))
                 expect(body).not_to(contain("do not inline"))
                 expect(body).not_to(contain("Reference these"))

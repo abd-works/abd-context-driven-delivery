@@ -228,8 +228,8 @@ class ContextToolFidelityBody(ContextToolBody):
                 f"@{tool_name}-{higher}" for higher in reversed(previous)
             )
             references = (
-                "\n\nRefer to these skills in order to obtain missing context:\n"
-                f"{mentions}"
+                "\n\nRefer to these skills in order to fill in details from previous "
+                f"fidelities if not present:\n{mentions}"
             )
         text = (
             f"# {tool_name}-{fidelity}\n\n"
