@@ -21,9 +21,13 @@ LocationKind = Literal["file", "folder", "section"]
 
 _FORMAT_DIR_ALIAS = {
     "markdown": "md",
+    "md": "md",
     "python": "py",
+    "py": "py",
     "typescript": "ts",
+    "ts": "ts",
     "javascript": "js",
+    "js": "js",
     "java": "java",
 }
 
@@ -291,6 +295,59 @@ def _frontmatter_values(content: str, key: str) -> list[str]:
     return []
 
 
+# Inline fidelity tag order used in code template files.
+# S (specification) is retired — lines tagged // S or // S / C are treated as // C.
+_INLINE_FIDELITY_ORDER: list[str] = ["L", "Mu", "Md", "C"]
+
+# Map from fidelity name → inline tag abbreviation.
+_FIDELITY_NAME_TO_TAG: dict[str, str] = {
+    "language": "L",
+    "modules": "Mu",
+    "model": "Md",
+    "specification": "C",  # retired — treated as code
+    "code": "C",
+}
+
+import re as _re
+
+_INLINE_TAG_RE = _re.compile(
+    # code-comment style:  // Md   /* C */   # L
+    r"(?:[\s/*#]+(?P<code_tags>(?:S|L|Mu|Md|C)(?:\s*/\s*(?:S|L|Mu|Md|C))*)\s*$)"
+    r"|"
+    # HTML-comment style:  <!-- Md -->   <!-- Md, optional -->
+    r"(?:<!--\s*(?P<html_tags>(?:S|L|Mu|Md|C)(?:\s*/\s*(?:S|L|Mu|Md|C))*)[^-]*-->)\s*$"
+)
+
+
+def filter_template_lines(content: str, fidelity: str) -> str:
+    """Strip lines whose inline fidelity tag is above *fidelity*.
+
+    Tags recognised: ``L``, ``Mu``, ``Md``, ``C`` (and the retired ``S``,
+    which is treated as ``C``).  A line with no tag is always kept.
+    Lines whose tag is at or below the requested fidelity level are kept;
+    lines above it are dropped.
+    """
+    tag = _FIDELITY_NAME_TO_TAG.get(fidelity)
+    if not tag:
+        return content
+    max_level = _INLINE_FIDELITY_ORDER.index(tag)
+    kept: list[str] = []
+    for line in content.splitlines():
+        m = _INLINE_TAG_RE.search(line)
+        if not m:
+            kept.append(line)
+            continue
+        tag_str = m.group("code_tags") or m.group("html_tags") or ""
+        raw_tags = [t.strip() for t in tag_str.split("/")]
+        # Normalise: S → C
+        norm = ["C" if t == "S" else t for t in raw_tags]
+        # Keep line if any of its tags fall within the allowed level
+        levels = [_INLINE_FIDELITY_ORDER.index(t) for t in norm if t in _INLINE_FIDELITY_ORDER]
+        if levels and min(levels) <= max_level:
+            kept.append(line)
+    return "\n".join(kept)
+
+
 def keep_template_file(rel: str, content: str, fidelity: str | None) -> bool:
     """Whether a templates/ file belongs in the merged blob for this fidelity.
 
@@ -309,6 +366,10 @@ def keep_template_file(rel: str, content: str, fidelity: str | None) -> bool:
     if stem in stems:
         return True
     artifacts = _frontmatter_values(content, "artifact")
+    if not artifacts:
+        # No YAML frontmatter artifact → file is a code template or untagged file;
+        # fidelity filtering cannot be applied so keep it.
+        return True
     allowed = _FIDELITY_TEMPLATE_ARTIFACTS.get(fidelity, frozenset())
     for art in artifacts:
         if art.replace("_", "-") in allowed:

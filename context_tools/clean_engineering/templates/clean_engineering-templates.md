@@ -1,32 +1,33 @@
+---
+format: markdown
+fidelity: all
+---
 <!--
   clean_engineering markdown template — unified across all fidelities.
 
   INTERFACES ARE OPTIONAL (see clean_engineering.md § Interfaces). This template shows
   the `I{ClassName}` form because it is the richer case to document. Default to
   skipping `## I{ClassName}` entirely and starting straight at `## {ClassName}` (empty,
-  untagged-S members at model) unless the user asked for an interface, or the module
-  genuinely has multiple layers/implementations behind one seam. When skipped, the S/C
-  tags below still apply to `## {ClassName}` — there is just no separate Md section.
+  untagged Md members at model) unless the user asked for an interface, or the module
+  genuinely has multiple layers/implementations behind one seam.
 
   Fidelity tags on section headings (as HTML comments — informational only):
     L  = language companion (prose identity; refined at every stage — not a fidelity)
     Mu = modules        (thin terms, one-way deps, build order; no I{Class} yet)
     Md = model          (I{ClassName} — typed compact block — ONLY when an interface is
                          requested; otherwise model is the empty `## {ClassName}` block)
-    S  = specification  ({ClassName}: public filled with + prefix, relationship kinds,
-                         invariant sentences, interactions)
-    C  = code           (fill {ClassName}; drop interactions; keep invariant comments)
+    C  = code           (fill {ClassName}; public filled, privates filled; drop interactions)
 
-  Class member format (model & specification):
+  Class member format (model):
     ------  (six dashes)   constructor / properties separator
     ----    (four dashes)  properties / operations separator
     -       (dash prefix)  private operation
-    +       (plus prefix)  public — specification fidelity only
+    +       (plus prefix)  public — code fidelity only
 
   Document structure: H1 = module, H2 = class within that module.
   Interface (I{ClassName}) and implementation ({ClassName}) both sit under the
   same module H1 — interface first, then implementation. No fidelity section
-  headers (## Model fidelity / ## Specification fidelity) in the output.
+  headers (## Model fidelity / ## Code fidelity) in the output.
   Language companion and modules overview go as prose BEFORE the first H1.
 
   Subtypes use ## {ChildClass} : {ClassName} notation; deltas only.
@@ -75,7 +76,7 @@ I{ClassName}({param}: {Type})
 {operation_name}({param}: {Type}): {ReturnType}
 {another_operation}(): {ReturnType}
 
-## {ClassName}                                                    <!-- Md (default, no interface) / S -->
+## {ClassName}                                                    <!-- Md -->
 
 + {ClassName}({param}: {Type})
 ------
@@ -98,7 +99,7 @@ I{ChildClass}({param}: {Type})
 ----
 {delta_operation}({param}: {Type}): {ReturnType}
 
-## {ChildClass}                                                   <!-- Md (default, no interface) / S -->
+## {ChildClass}                                                   <!-- Md -->
 
 + {ChildClass}({param}: {Type})
 ------
@@ -123,7 +124,7 @@ I{NextClassName}({param}: {Type})
 ----
 {operation_name}({param}: {Type}): {ReturnType}
 
-## {NextClassName}                                                <!-- Md (default, no interface) / S -->
+## {NextClassName}                                                <!-- Md -->
 
 + {NextClassName}({param}: {Type})
 ------
@@ -133,7 +134,7 @@ I{NextClassName}({param}: {Type})
 
 ---
 
-### Example factory (when Stories-bound) — separate file           <!-- Md/S -->
+### Example factory (when Stories-bound) — separate file           <!-- Md -->
 
 Write factories in `{type_slug}_example_factory.md` (or code sibling), **not** in the production family file.
 Do not sketch Fake{ClassName} / Isolated{ClassName} / Production{ClassName} types.
@@ -145,7 +146,7 @@ I{ClassName}ExampleFactory()
 ----
 load_{example_key}(mode): I{ClassName}
 
-## {ClassName}ExampleFactory                                      <!-- Md (default, no interface) / S -->
+## {ClassName}ExampleFactory                                      <!-- Md -->
 
 + {ClassName}ExampleFactory()
 ------

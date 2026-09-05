@@ -425,38 +425,29 @@ class Harness:
     def _drop_unwritten_skills(self, roots: list[Path], written: set[str]) -> None:
         """Remove skill folders not in ``written``.
 
-        ``written`` contains either plain skill names (for flat skills) or
-        ``"<subfolder>/<name>"`` strings (for skills nested inside a category
-        subfolder like ``context_tools/`` or ``actions/``).
+        ``written`` contains relative keys of the form ``"<folder...>/<name>"``
+        matching ``Skill.relative_path()`` minus the leading ``skills/`` and
+        trailing ``/SKILL.md``.  Works at any nesting depth.
         """
         for root in roots:
             skills_root = root / "skills"
             if not skills_root.is_dir():
                 continue
-            for child in list(skills_root.iterdir()):
-                if not child.is_dir():
-                    continue
-                skill_md = child / "SKILL.md"
-                if skill_md.exists():
-                    # flat skill folder (no category subfolder)
-                    if child.name not in written:
-                        try:
-                            shutil.rmtree(child)
-                        except OSError:
-                            pass
-                else:
-                    # category subfolder (e.g. context_tools/, actions/)
-                    for grandchild in list(child.iterdir()):
-                        if grandchild.is_dir():
-                            key = f"{child.name}/{grandchild.name}"
-                            if key not in written:
-                                try:
-                                    shutil.rmtree(grandchild)
-                                except OSError:
-                                    pass
-                    # remove the category subfolder itself if now empty
+            # Collect all SKILL.md files and compute their key
+            for skill_md in list(skills_root.rglob("SKILL.md")):
+                rel = skill_md.relative_to(skills_root)
+                # key is everything except the trailing SKILL.md
+                key = "/".join(rel.parts[:-1])
+                if key not in written:
                     try:
-                        child.rmdir()
+                        shutil.rmtree(skill_md.parent)
+                    except OSError:
+                        pass
+            # Prune empty directories bottom-up
+            for dirpath in sorted(skills_root.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+                if dirpath.is_dir():
+                    try:
+                        dirpath.rmdir()
                     except OSError:
                         pass
 
@@ -630,7 +621,7 @@ class Harness:
                 if cc:
                     payload["constructor_context"] = cc
                 payload["returned"] = compound_guidance(
-                    path, class_name, fidelity_name, cc or None
+                    path, class_name, fidelity_name, cc or None, toolset=toolset
                 )
                 payload["fidelity"] = True
                 payload["fidelity_slug"] = fidelity_name
@@ -843,7 +834,7 @@ class Harness:
         if not wanted:
             self._deploy_agents(roots)
         skill_names = {
-            f"{item.folder}/{item.name}" if item.folder else item.name
+            "/".join(item.relative_path().parts[1:-1])
             for item in self.skills
         }
         skill_name_only = {item.name for item in self.skills}

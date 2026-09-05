@@ -150,37 +150,160 @@ def compound_guidance(
     class_name: str,
     fidelity: str,
     constructor_context: dict[str, str] | None = None,
+    *,
+    toolset: str = "",
 ) -> str:
-    """Compile fidelity-only guidance without any run-time invocation prose."""
-    source_path = Path(path)
-    loaded = _load_class(source_path, class_name)
-    if loaded is None:
-        return ""
-    guidance_func = _guidance_function(loaded)
-    if guidance_func is None:
-        return ""
-    context: dict[str, Any] = {"fidelity": fidelity}
-    for param, value in (constructor_context or {}).items():
-        context.setdefault(param, value)
+    """Compile fidelity guidance by running the tool via the CLI and returning instructions."""
+    import subprocess
+    import yaml as _yaml
+
+    ts = toolset.strip()
+    if not ts:
+        # Derive toolset from path + class_name
+        source_path = Path(path)
+        parts = list(source_path.with_suffix("").parts)
+        ts = ".".join(parts) + ":" + class_name
+
+    ctx_lines = f"  fidelity: {fidelity}"
+    for k, v in (constructor_context or {}).items():
+        if k != "fidelity":
+            ctx_lines += f"\n  {k}: {v}"
+
+    yaml_input = f"toolset: {ts}\ncontext:\n{ctx_lines}\naction: guidance\n"
+
+    env = {**__import__("os").environ, "PYTHONIOENCODING": "utf-8"}
     try:
-        instance = loaded(**context)
-        parts = list(
-            _ActionExpander.instance().parse_body(guidance_func, instance).prose_parts
+        result = subprocess.run(
+            [__import__("sys").executable, "-m", "tools", "run", "-"],
+            input=yaml_input,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=env,
         )
+        output = result.stdout.strip()
     except Exception:
         return ""
-    if len(parts) < 3:
+
+    # Strip fenced yaml block markers
+    if output.startswith("```yaml"):
+        output = output[len("```yaml"):].lstrip("\n")
+    if output.endswith("```"):
+        output = output[:-3].rstrip()
+
+    try:
+        data = _yaml.safe_load(output)
+    except Exception:
         return ""
 
-    selected_context = _fidelity_section(parts[2], fidelity) or parts[2].strip()
+    if not isinstance(data, dict) or not data.get("ok"):
+        return ""
 
-    selected = [selected_context]
-    for part in parts[3:]:
-        if part.lstrip().startswith("Separate tools run"):
-            continue
-        filtered = _strip_invocation_prose(
-            _filter_annotated_template(part, fidelity)
+    instructions = (data.get("instructions") or "").strip()
+    instructions = _strip_invocation_prose(instructions)
+
+    # Strip the leading agent-instructions preamble (method docstring +
+    # "Provide guidance from contexts, examples, and templates.") so only
+    # the actual domain content (# Contexts, examples, templates) remains.
+    _BASE_MARKER = "Provide guidance from contexts, examples, and templates."
+    idx = instructions.find(_BASE_MARKER)
+    if idx >= 0:
+        instructions = instructions[idx + len(_BASE_MARKER):].lstrip("\n")
+
+    # Strip trailing tool-manifest boilerplate ("Separate tools run…" onwards).
+    _SEP = "Separate tools run"
+    sep_idx = instructions.find(_SEP)
+    if sep_idx >= 0:
+        instructions = instructions[:sep_idx].rstrip()
+
+    # Cut off everything from the first file-path heading (examples + inlined
+    # templates from the CLI).  We replace them with path references instead.
+    import re as _re
+    source_path = Path(path)
+    module_dir = source_path.parent
+
+    file_heading = _re.compile(
+        r"(^## (?:[^\n]*/[^\n]*|[^\n]+\.[a-zA-Z]{2,4})$)", _re.MULTILINE
+    )
+    first_file = file_heading.search(instructions)
+    contexts = instructions[:first_file.start()].rstrip() if first_file else instructions.rstrip()
+
+    result = contexts
+
+    # Templates — inline a direct Python call (no manifest/YAML).
+    templates_dir = module_dir / "templates"
+    if templates_dir.is_dir():
+        # Derive short class import path from toolset string
+        module_import = ts.rsplit(":", 1)[0] if ":" in ts else ts
+        class_import = ts.rsplit(":", 1)[1] if ":" in ts else class_name
+        ctx_args = f'fidelity="{fidelity}"'
+        if constructor_context:
+            extra = ", ".join(f'{k}="{v}"' for k, v in constructor_context.items() if k != "fidelity")
+            if extra:
+                ctx_args += f", {extra}"
+        result += (
+            f"\n\n## Templates\n\n"
+            f"Call `load_template` directly with your active format and fidelity:\n\n"
+            f"```python\n"
+            f"from {module_import} import {class_import}\n"
+            f"{class_import}({ctx_args}).load_template(format=\"<your_format>\", fidelity=\"{fidelity}\")\n"
+            f"```"
         )
-        if filtered:
-            selected.append(filtered)
-    return "\n\n".join(part for part in selected if part).strip()
+
+    # Examples — reference only.
+    examples_dir = module_dir / "examples"
+    if examples_dir.is_dir():
+        try:
+            rel_ex = examples_dir.relative_to(Path(__file__).resolve().parents[2])
+        except ValueError:
+            rel_ex = examples_dir
+        result += f"\n\nSee examples in `{rel_ex.as_posix()}/` if needed."
+
+    return result
+
+
+def _inline_templates(
+    source_path: Path,
+    class_name: str,
+    fidelity: str,
+    constructor_context: dict[str, str] | None,
+) -> list[str]:
+    """Directly call load_template on the class for every supported format."""
+    import sys as _sys
+
+    repo_root = source_path.resolve().parents[2]
+    for extra in ("context_tools/actions", "context_tools", "utilities", "primitives"):
+        p = str(repo_root / extra)
+        if p not in _sys.path:
+            _sys.path.insert(0, p)
+
+    cls = _load_class(source_path, class_name)
+    if cls is None:
+        return []
+
+    supported: list[str] = sorted(
+        str(f) for f in getattr(cls, "supported_formats", None) or []
+    )
+    fidelity_defaults: dict[str, str] = getattr(cls, "_fidelity_format_defaults", {}) or {}
+    default_fmt = fidelity_defaults.get(fidelity, "")
+    if not supported:
+        supported = [default_fmt] if default_fmt else []
+
+    base_ctx: dict[str, Any] = {"fidelity": fidelity}
+    for k, v in (constructor_context or {}).items():
+        base_ctx.setdefault(k, v)
+
+    blocks: list[str] = []
+    seen: set[str] = set()
+    for fmt in supported:
+        try:
+            instance = cls(**{**base_ctx, "format": fmt})
+            content = instance.load_template(format=fmt)
+        except Exception:
+            continue
+        if not content or "No template found" in content or content in seen:
+            continue
+        seen.add(content)
+        blocks.append(f"### {fmt}\n\n{content}")
+
+    return blocks

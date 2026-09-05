@@ -58,9 +58,13 @@ def _slug_variants(domain_slug: str) -> list[str]:
 
 _FORMAT_TEMPLATE_EXT = {
     "python": ".py",
+    "py": ".py",
     "javascript": ".js",
+    "js": ".js",
     "markdown": ".md",
+    "md": ".md",
     "typescript": ".ts",
+    "ts": ".ts",
     "java": ".java",
 }
 

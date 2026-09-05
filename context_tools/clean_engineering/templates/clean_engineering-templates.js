@@ -1,4 +1,8 @@
 /**
+ * ---
+ * format: javascript
+ * fidelity: all
+ * ---
  * # @toolset-manifest python -m tools manifest context_tools.clean_engineering.clean_engineering:CleanEngineering
  * # Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
  * # invoke-edit: action satisfy | toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
@@ -50,17 +54,17 @@ class I{ClassName} {
   {anotherOperation}() { }                                             // Md
 }
 
-// implements I{ClassName} — omit this comment when no interface exists     // S
+// implements I{ClassName} — omit this comment when no interface exists     // C
 class {ClassName} {
   /** *{ClassName}* is — one sentence: what it is, its unique role. */  // L
-  constructor({param}) {                                               // S
-    this.{plainProperty} = {param};                                    // S
+  constructor({param}) {                                               // C
+    this.{plainProperty} = {param};                                    // C
   }
-  get {ownedProperty}() { }                                            // S
-  get {plainProperty}() { }                                            // S
-  {operationName}({param}) { }                                         // S / C
-  {anotherOperation}() { }                                             // S / C
-  #{privateHelper}({param}) { }                                        // S / C
+  get {ownedProperty}() { }                                            // C
+  get {plainProperty}() { }                                            // C
+  {operationName}({param}) { }                                         // C
+  {anotherOperation}() { }                                             // C
+  #{privateHelper}({param}) { }                                        // C
 }
 
 // interface I{ChildClass} — delta only                                // Md
@@ -68,9 +72,9 @@ class I{ChildClass} {
   {deltaOperation}({param}) { }                                        // Md
 }
 
-// implements I{ChildClass}                                            // S
+// implements I{ChildClass}                                            // C
 class {ChildClass} extends {ClassName} {
-  {deltaOperation}({param}) { }                                        // S / C
+  {deltaOperation}({param}) { }                                        // C
 }
 
 // =============================================================================
@@ -96,14 +100,14 @@ class I{ClassName}ExampleFactory {
   load{ExampleKey}() { }                                               // Md
 }
 
-// implements I{ClassName}ExampleFactory                               // S
+// implements I{ClassName}ExampleFactory                               // C
 class {ClassName}ExampleFactory {
   /**
    * Fake: mocking framework creates I{ClassName}; feed examples[{example_key}].
    * Isolated: new {ClassName}(...constructor-injected mocks/stubs...).
    * Production: new {ClassName}(...real collaborators...).
    */                                                                  // L
-  load{ExampleKey}({ mode } = { mode: "fake" }) {                      // S
-    // examples[{example_key}] -> I{ClassName} (+ peers)               // S
+  load{ExampleKey}({ mode } = { mode: "fake" }) {                      // C
+    // examples[{example_key}] -> I{ClassName} (+ peers)               // C
   }
 }
