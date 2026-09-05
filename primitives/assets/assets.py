@@ -376,14 +376,13 @@ def keep_template_file(rel: str, content: str, fidelity: str | None) -> bool:
     if stem in stems:
         return True
     artifacts = _frontmatter_values(content, "artifact")
-    if not artifacts:
-        # No YAML frontmatter artifact → file is a code template or untagged file;
-        # fidelity filtering cannot be applied so keep it.
-        return True
-    allowed = _FIDELITY_TEMPLATE_ARTIFACTS.get(fidelity, frozenset())
-    for art in artifacts:
-        if art.replace("_", "-") in allowed:
-            return True
+    if artifacts:
+        allowed = _FIDELITY_TEMPLATE_ARTIFACTS.get(fidelity, frozenset())
+        for art in artifacts:
+            if art.replace("_", "-") in allowed:
+                return True
+        return False
+    # Fidelity has an explicit template stem pack — drop untagged files.
     return False
 
 

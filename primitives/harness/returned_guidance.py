@@ -279,14 +279,20 @@ def _formats_for_deploy(
     fidelity: str,
     code_language: str,
 ) -> list[str]:
-    """Pick template formats for one fidelity — one code language, non-code defaults."""
+    """Pick template formats for deploy — markdown first when supported, then code language."""
     default_fmt = fidelity_defaults.get(fidelity, "")
+    supported_set = set(supported)
     if default_fmt in _CODE_FORMATS:
-        if code_language in supported:
-            return [code_language]
-        if default_fmt in supported:
-            return [default_fmt]
-        return [code_language]
+        formats: list[str] = []
+        if "markdown" in supported_set:
+            formats.append("markdown")
+        if code_language in supported_set:
+            formats.append(code_language)
+        elif default_fmt in supported_set:
+            formats.append(default_fmt)
+        elif not formats:
+            formats.append(code_language)
+        return formats
     if default_fmt:
         return [default_fmt]
     if not supported:
