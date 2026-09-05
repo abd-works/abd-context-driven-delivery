@@ -12,28 +12,20 @@
  * # Artifact layout (artifacts-mirror-story-hierarchy)
  * tests/
  *   {epic-verb-noun}/
- *     examples/                          # epic-shared ExampleFactory values (when shared)
- *     givens.ts                          # epic-shared background Given helpers
- *     whens.ts                           # epic-shared When helpers (when shared)
- *     {sub-epic-verb-noun}/              # omit this level when the story file lives under epic/
- *       examples/{topic}.examples.ts     # lowest shared folder for this story's fixtures
- *       givens.ts                        # background Given helpers for this sub-epic/story
- *       whens.ts                         # When helpers for this sub-epic/story
- *       {story-kebab-slug}.{tier}.ts     # story file — one GWT file per story per tier
+ *     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
+ *       {story-kebab-slug}.{tier}.ts     # one GWT file per story per tier
  *
- * # Shared helper (copy once per tests/ tree — full source inlined below)
+ * # Machinery (copy once per tests/ tree — full source inlined below)
  * story-test: tests/story-test.ts
  *
  * # Naming rules
  * - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
  * - Story test file        → {story-kebab-slug}.{tier}.ts at epic or sub-epic — NO {story}/ folder
  * - Tier                   → file extension segment (.e2e.ts, .front-end.ts, .back-end.ts)
- * - Examples module        → examples/{topic}.examples.ts (concrete values, not inline in GWT)
  * - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
  * ```
  *
- * Pattern: sign-up-create-account.e2e.ts — vitest lifecycle, background() wrapping scenarios,
- * givens/whens/examples modules, when().and() chains, domain assertions in then().
+ * Pattern: story-test machinery only — lifecycle, background(), scenario(), inline step bodies.
  */
 
 import { afterAll, beforeAll, expect } from "vitest";
@@ -41,13 +33,6 @@ import { {AppPascal}E2e, config, type {AppPascal} } from "../../domain/{bounded-
 import type { {AggregatePascal} } from "../../domain/{bounded-context}/{aggregate_snake}";
 import { {ErrorConstant}_MESSAGE } from "../../domain/{bounded-context}/{aggregate_snake}";
 import { background, scenario, story } from "../../story-test";
-import {
-  invalid{Field}Example,
-  valid{Field}Example,
-  valid{Aggregate}Example,
-} from "./examples/{story_verb_noun}.examples";
-import { {backgroundGivenFn} } from "./givens";
-import { {primaryWhenFn} } from "./whens";
 
 story("{Story Verb-Noun}", () => {
   let {app_camel}: {AppPascal};
@@ -63,12 +48,12 @@ story("{Story Verb-Noun}", () => {
 
   background(({ given }) => {
     given("{background given step}", async () => {
-      await {backgroundGivenFn}({app_camel});
+      await {app_camel}.{background_operation}();
     });
 
     scenario("{surface check — e.g. rules visible}", ({ when, then }) => {
       when("{primary when step}", async () => {
-        {aggregate_camel} = await {primaryWhenFn}({app_camel});
+        {aggregate_camel} = await {app_camel}.{primary_when_operation}();
       });
       then("{observable surface outcome}", async () => {
         await expect
@@ -83,9 +68,9 @@ story("{Story Verb-Noun}", () => {
 
     scenario("{validation branch while typing}", ({ when, then }) => {
       when("{primary when step}", async () => {
-        {aggregate_camel} = await {primaryWhenFn}({app_camel});
+        {aggregate_camel} = await {app_camel}.{primary_when_operation}();
       }).and("{follow-on when step}", async () => {
-        {aggregate_camel}.{field} = invalid{Field}Example;
+        {aggregate_camel}.{field} = {invalid_value};
         await {aggregate_camel}.validate();
       });
       then("{validation message on domain object}", () => {
@@ -95,13 +80,13 @@ story("{Story Verb-Noun}", () => {
 
     scenario("{validation clears when input conforms}", ({ when, then }) => {
       when("{primary when step}", async () => {
-        {aggregate_camel} = await {primaryWhenFn}({app_camel});
+        {aggregate_camel} = await {app_camel}.{primary_when_operation}();
       }).and("{prior invalid state}", async () => {
-        {aggregate_camel}.{field} = invalid{Field}Example;
+        {aggregate_camel}.{field} = {invalid_value};
         await {aggregate_camel}.validate();
       });
       when("{corrective action}", async () => {
-        {aggregate_camel}.{field} = valid{Field}Example;
+        {aggregate_camel}.{field} = {valid_value};
         await {aggregate_camel}.validate();
       });
       then("{error cleared on domain object}", () => {
@@ -111,10 +96,10 @@ story("{Story Verb-Noun}", () => {
 
     scenario("{main-flow outcome}", ({ when, then }) => {
       when("{primary when step}", async () => {
-        {aggregate_camel} = await {primaryWhenFn}({app_camel});
+        {aggregate_camel} = await {app_camel}.{primary_when_operation}();
       });
       when("{submit operation on domain object}", async () => {
-        {aggregate_camel}.{field} = valid{Aggregate}Example.{field};
+        {aggregate_camel}.{field} = {valid_aggregate_value};
         await {aggregate_camel}.{operation}();
       });
       then("{post-condition on loaded aggregate}", async () => {

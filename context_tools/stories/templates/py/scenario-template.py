@@ -17,28 +17,20 @@
 # # Artifact layout (artifacts-mirror-story-hierarchy)
 # tests/
 #   {epic-verb-noun}/
-#     examples/                          # epic-shared ExampleFactory values (when shared)
-#     givens.py                          # epic-shared background Given helpers
-#     whens.py                           # epic-shared When helpers (when shared)
-#     {sub-epic-verb-noun}/              # omit this level when the story file lives under epic/
-#       examples/{topic}_examples.py     # lowest shared folder for this story's fixtures
-#       givens.py                        # background Given helpers for this sub-epic/story
-#       whens.py                         # When helpers for this sub-epic/story
-#       {story_snake_slug}.{tier}.py     # story file — one GWT file per story per tier
+#     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
+#       {story_snake_slug}.{tier}.py     # one GWT file per story per tier
 #
-# # Shared helper (copy once per tests/ tree — full source inlined below)
+# # Machinery (copy once per tests/ tree — full source inlined below)
 # story_test: tests/story_test.py
 #
 # # Naming rules
 # - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
 # - Story test file        → {story_snake_slug}.{tier}.py at epic or sub-epic — NO {story}/ folder
 # - Tier                   → file extension segment (.e2e.py, .front-end.py, .back-end.py)
-# - Examples module        → examples/{topic}_examples.py (concrete values, not inline in GWT)
-# - Epic helper (py only)  → {epic_snake}_helper.py — sole snake_case naming exception
 # - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
-# Pattern: sign-up-create-account.e2e.ts — inline step bodies in when/then (no story-level helpers).
+# Pattern: story_test machinery only — lifecycle, background(), scenario(), inline step bodies.
 
 from __future__ import annotations
 
@@ -49,14 +41,7 @@ from domain.{bounded_context}.{aggregate_snake} import (
     {AggregatePascal},
     {ERROR_CONSTANT}_MESSAGE,
 )
-from examples.{story_verb_noun}_examples import (
-    invalid_{field}_example,
-    valid_{aggregate}_example,
-    valid_{field}_example,
-)
-from givens import {background_given_fn}
 from story_test import after_all, background, before_all, scenario, story
-from whens import {primary_when_fn}
 
 
 def _{story_snake_slug}_story() -> None:
@@ -76,12 +61,15 @@ def _{story_snake_slug}_story() -> None:
     after_all(shutdown)
 
     def shared(given) -> None:
-        given("{background given step}", lambda: {background_given_fn}({app_camel}))
+        given(
+            "{background given step}",
+            lambda: {app_camel}.{background_operation}(),
+        )
 
         def surface_check(steps) -> None:
             def when_primary() -> None:
                 nonlocal {aggregate_camel}
-                {aggregate_camel} = {primary_when_fn}({app_camel})
+                {aggregate_camel} = {app_camel}.{primary_when_operation}()
 
             def surface_then() -> None:
                 assert {aggregate_camel} is not None
@@ -97,10 +85,10 @@ def _{story_snake_slug}_story() -> None:
         def validation_branch(steps) -> None:
             def when_primary() -> None:
                 nonlocal {aggregate_camel}
-                {aggregate_camel} = {primary_when_fn}({app_camel})
+                {aggregate_camel} = {app_camel}.{primary_when_operation}()
 
             def when_invalid() -> None:
-                {aggregate_camel}.{field} = invalid_{field}_example
+                {aggregate_camel}.{field} = {invalid_value}
                 {aggregate_camel}.validate()
 
             steps.when("{primary when step}", when_primary).and_(
@@ -119,14 +107,14 @@ def _{story_snake_slug}_story() -> None:
         def validation_clears(steps) -> None:
             def when_primary() -> None:
                 nonlocal {aggregate_camel}
-                {aggregate_camel} = {primary_when_fn}({app_camel})
+                {aggregate_camel} = {app_camel}.{primary_when_operation}()
 
             def when_invalid() -> None:
-                {aggregate_camel}.{field} = invalid_{field}_example
+                {aggregate_camel}.{field} = {invalid_value}
                 {aggregate_camel}.validate()
 
             def when_valid() -> None:
-                {aggregate_camel}.{field} = valid_{field}_example
+                {aggregate_camel}.{field} = {valid_value}
                 {aggregate_camel}.validate()
 
             steps.when("{primary when step}", when_primary).and_(
@@ -144,10 +132,10 @@ def _{story_snake_slug}_story() -> None:
         def main_flow(steps) -> None:
             def when_primary() -> None:
                 nonlocal {aggregate_camel}
-                {aggregate_camel} = {primary_when_fn}({app_camel})
+                {aggregate_camel} = {app_camel}.{primary_when_operation}()
 
             def when_submit() -> None:
-                {aggregate_camel}.{field} = valid_{aggregate}_example.{field}
+                {aggregate_camel}.{field} = {valid_aggregate_value}
                 {aggregate_camel}.{operation}()
 
             steps.when("{primary when step}", when_primary)
