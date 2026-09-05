@@ -136,12 +136,12 @@ def resolve_text(
         if fidelities:
             skill_options = " | ".join(f"@{source}-{fidelity}" for fidelity in fidelities)
             return (
-                "If you cannot tell which skill to run from the context, "
+                f"Determine which {source} skill to run from context; if you cannot, "
                 f"AskQuestion: {skill_options}.\n"
                 "Run the appropriate skill.\n"
             )
         return (
-            "If you cannot tell which skill to run from the context, "
+            f"Determine which {source} skill to run from context; if you cannot, "
             "AskQuestion to choose the appropriate fidelity skill.\n"
             "Run the appropriate skill.\n"
         )

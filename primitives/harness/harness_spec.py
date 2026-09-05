@@ -1196,6 +1196,7 @@ with description("a generated harness tool"):
                 expect(text).not_to(contain("toolset:"))
                 expect(text).not_to(contain("_req.yaml"))
                 expect(text).not_to(contain("python -m tools manifest "))
+                expect(text).to(contain("Determine which stories skill to run from context"))
                 expect(text).to(contain("AskQuestion: @stories-story_map"))
                 expect(text).not_to(contain("@stories-scaffold"))
                 expect(text).to(contain("Run the appropriate skill."))
