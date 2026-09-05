@@ -40,7 +40,7 @@ _FIDELITY_TEMPLATE_STEMS: dict[str, frozenset[str]] = {
 }
 
 # Frontmatter `artifact:` values that mark a file as belonging to a fidelity
-# (e.g. components/story-header.md is scenarios).
+# (e.g. story-map.md is story_map).
 _FIDELITY_TEMPLATE_ARTIFACTS: dict[str, frozenset[str]] = {
     "story_map": frozenset({"story-map", "thin-slice"}),
 }

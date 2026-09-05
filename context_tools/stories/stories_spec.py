@@ -269,7 +269,7 @@ with description("Stories"):
             expect("scenario-main-flow.md" in self.templates).to(equal(False))
             expect("scenario-outline.md" in self.templates).to(equal(False))
             expect("scenario-template.md" in self.templates).to(equal(False))
-            expect("components/story-header.md" in self.templates).to(equal(False))
+            expect("components/" in self.templates).to(equal(False))
 
     with context("whose templates slot is expanded at scenarios python"):
         with before.each:
