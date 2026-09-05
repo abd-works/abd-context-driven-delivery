@@ -15,10 +15,10 @@ Use this guidance to adapt conceptual templates (e.g., in TypeScript or Python) 
 
 ## Python
 
-- **Test Runner**: [Mamba](https://github.com/nestorsalceda/mamba) (RSpec-style `description` / `context` / `it`).
+- **Test Runner**: [Pytest](https://docs.pytest.org/) with `@story` / `@scenario` decorators from `story_test.py` (Vitest-style registration at import).
 - **Assertion Library**: [Expects](https://github.com/jaimegildesagredo/expects).
-- **Story file shape**: Same layout as TypeScript — `story_test.background` wrapping scenarios, `before.all`/`after.all` for boot/teardown, sibling `givens.py`, `whens.py`, `examples/*` modules.
-- **Style**: `story` / `background` / `scenario` from `story_test.py`; `when(…).and_(…)` chains; separate `it` blocks emitted for Then/And steps.
+- **Story file shape**: Same layout as TypeScript — `@story` / `@background` / `@scenario`; `@before_all` / `@after_all` for boot/teardown; sibling `givens.py`, `whens.py`, `examples/*` modules.
+- **Style**: `steps.when(…).and_(…)` and `steps.then(…).and_(…)` on `ScenarioSteps` — mirrors TS `when().and()` / `then().and()`.
 
 ## Java
 

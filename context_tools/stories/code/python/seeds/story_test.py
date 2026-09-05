@@ -1,77 +1,205 @@
-"""Given / When / Then helpers (Mamba/RSpec). Copy to tests/story_test.py."""
+"""Given / When / Then helpers (pytest/RSpec-style). Copy to tests/story_test.py."""
 
 from __future__ import annotations
 
+import re
+from contextvars import ContextVar
+from dataclasses import dataclass, field
 from typing import Callable
 
-from mamba import before, context, description, it
+import pytest
 
-BackgroundGiven = Callable[[], None]
 StepFn = Callable[[], None]
 
-_active_background: list[BackgroundGiven] = []
+
+class WhenChain:
+    def __init__(self, whens: list[StepFn]) -> None:
+        self._whens = whens
+
+    def and_(self, _text: str, fn: StepFn) -> WhenChain:
+        self._whens.append(fn)
+        return self
 
 
-def story(name: str, body: Callable[[], None]) -> None:
-    with description(name):
-        body()
+class ThenChain:
+    def __init__(self, thens: list[tuple[str, StepFn]]) -> None:
+        self._thens = thens
+
+    def and_(self, text: str, fn: StepFn) -> ThenChain:
+        self._thens.append((text, fn))
+        return self
 
 
-def background(
-    body: Callable[[dict[str, Callable[[str, StepFn], None]]], None],
-) -> None:
-    givens: list[BackgroundGiven] = []
+class ScenarioSteps:
+    """Step registrar for @scenario bodies — mirrors TS scenario(({ when, then }) => …)."""
 
-    def given(_text: str, fn: StepFn) -> None:
-        givens.append(fn)
+    def __init__(self) -> None:
+        self._givens: list[StepFn] = []
+        self._whens: list[StepFn] = []
+        self._thens: list[tuple[str, StepFn]] = []
 
-    body({"given": given})
-    global _active_background
-    _active_background = givens
+    def given(self, _text: str, fn: StepFn) -> None:
+        self._givens.append(fn)
+
+    def when(self, _text: str, fn: StepFn) -> WhenChain:
+        self._whens.append(fn)
+        return WhenChain(self._whens)
+
+    def then(self, text: str, fn: StepFn) -> ThenChain:
+        self._thens.append((text, fn))
+        return ThenChain(self._thens)
 
 
-def scenario(name: str, body: Callable[[dict[str, Callable[..., object]]], None]) -> None:
-    givens: list[StepFn] = []
-    whens: list[StepFn] = []
-    thens: list[tuple[str, StepFn]] = []
+class GivenRegistrar:
+    def __init__(self, givens: list[StepFn]) -> None:
+        self._givens = givens
 
-    class WhenChain:
-        def and_(self, _text: str, fn: StepFn) -> WhenChain:
-            whens.append(fn)
-            return self
+    def __call__(self, _text: str, fn: StepFn) -> None:
+        self._givens.append(fn)
 
-    class ThenChain:
-        def and_(self, text: str, fn: StepFn) -> ThenChain:
-            thens.append((text, fn))
-            return self
 
-    when_chain = WhenChain()
-    then_chain = ThenChain()
+@dataclass
+class _ScenarioDef:
+    name: str
+    build: Callable[[ScenarioSteps], None]
 
-    def given(_text: str, fn: StepFn) -> None:
-        givens.append(fn)
 
-    def when(_text: str, fn: StepFn) -> WhenChain:
-        whens.append(fn)
-        return when_chain
+@dataclass
+class _StoryBuilder:
+    name: str
+    before_all_hooks: list[StepFn] = field(default_factory=list)
+    after_all_hooks: list[StepFn] = field(default_factory=list)
+    background_givens: list[StepFn] = field(default_factory=list)
+    scenarios: list[_ScenarioDef] = field(default_factory=list)
 
-    def then(text: str, fn: StepFn) -> ThenChain:
-        thens.append((text, fn))
-        return then_chain
 
-    with context(name):
-        body({"given": given, "when": when, "then": then})
+_builder_ctx: ContextVar[_StoryBuilder | None] = ContextVar("_story_builder", default=None)
+_background_ctx: ContextVar[list[_ScenarioDef] | None] = ContextVar("_background_scenarios", default=None)
 
-        @before.all
-        def _run_background_given_and_when() -> None:
-            for fn in _active_background + givens + whens:
-                fn()
 
-        for index, (text, fn) in enumerate(thens):
-            label = f"Then {text}" if index == 0 else text
+def _slug(value: str) -> str:
+    slug = re.sub(r"[^0-9a-z]+", "_", value.strip().lower()).strip("_")
+    return slug or "story"
 
-            def _example(step: StepFn = fn) -> None:
-                step()
 
-            with it(label):
-                _example()
+def story(name: str):
+    """@story('Story title') — registers pytest examples at import (Vitest-style)."""
+
+    def decorator(body: Callable[[], None]) -> Callable[[], None]:
+        builder = _StoryBuilder(name=name)
+        token = _builder_ctx.set(builder)
+        try:
+            body()
+        finally:
+            _builder_ctx.reset(token)
+        _install_pytest(builder, body.__module__)
+        return body
+
+    return decorator
+
+
+def before_all(fn: StepFn) -> StepFn:
+    builder = _builder_ctx.get()
+    if builder is None:
+        raise RuntimeError("@before_all must be used inside @story")
+    builder.before_all_hooks.append(fn)
+    return fn
+
+
+def after_all(fn: StepFn) -> StepFn:
+    builder = _builder_ctx.get()
+    if builder is None:
+        raise RuntimeError("@after_all must be used inside @story")
+    builder.after_all_hooks.append(fn)
+    return fn
+
+
+def background(fn: Callable[[GivenRegistrar], None]) -> Callable[[GivenRegistrar], None]:
+    """@background — nest @scenario definitions inside; pass shared Given steps."""
+
+    builder = _builder_ctx.get()
+    if builder is None:
+        raise RuntimeError("@background must be used inside @story")
+
+    registrar = GivenRegistrar([])
+    scenarios: list[_ScenarioDef] = []
+    bg_token = _background_ctx.set(scenarios)
+    try:
+        fn(registrar)
+    finally:
+        _background_ctx.reset(bg_token)
+
+    builder.background_givens.extend(registrar._givens)
+    builder.scenarios.extend(scenarios)
+    return fn
+
+
+def scenario(name: str):
+    """@scenario('Outcome title') — body receives ScenarioSteps."""
+
+    def decorator(build: Callable[[ScenarioSteps], None]) -> Callable[[ScenarioSteps], None]:
+        scenarios = _background_ctx.get()
+        if scenarios is None:
+            raise RuntimeError("@scenario must be used inside @background")
+        scenarios.append(_ScenarioDef(name=name, build=build))
+        return build
+
+    return decorator
+
+
+def _install_pytest(builder: _StoryBuilder, module_name: str) -> None:
+    import sys
+
+    module = sys.modules.get(module_name)
+    if module is None:
+        return
+
+    story_slug = _slug(builder.name)
+    fixture_name = f"_story_{story_slug}_lifecycle"
+
+    @pytest.fixture(scope="module", name=fixture_name)
+    def _lifecycle() -> None:
+        for hook in builder.before_all_hooks:
+            hook()
+        yield
+        for hook in builder.after_all_hooks:
+            hook()
+
+    setattr(module, fixture_name, _lifecycle)
+
+    for scenario_index, scenario_def in enumerate(builder.scenarios):
+        steps = ScenarioSteps()
+        scenario_def.build(steps)
+        scenario_slug = _slug(scenario_def.name)
+
+        for then_index, (label, then_fn) in enumerate(steps._thens):
+            step_label = f"Then {label}" if then_index == 0 else label
+            test_name = f"test_{story_slug}_{scenario_slug}_{then_index}"
+
+            def _make_test(
+                then: StepFn,
+                bg: tuple[StepFn, ...],
+                given: tuple[StepFn, ...],
+                when: tuple[StepFn, ...],
+                fix: str,
+                doc: str,
+            ) -> Callable[[], None]:
+                @pytest.mark.usefixtures(fix)
+                def _test() -> None:
+                    for fn in (*bg, *given, *when):
+                        fn()
+                    then()
+
+                _test.__doc__ = doc
+                return _test
+
+            test_fn = _make_test(
+                then_fn,
+                tuple(builder.background_givens),
+                tuple(steps._givens),
+                tuple(steps._whens),
+                fixture_name,
+                f"{scenario_def.name} — {step_label}",
+            )
+            test_fn.__name__ = test_name
+            setattr(module, test_name, test_fn)

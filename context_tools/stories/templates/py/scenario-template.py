@@ -35,12 +35,11 @@
 # - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
-# Pattern: mirror sign-up-create-account.e2e.ts (Mamba/RSpec via story_test).
+# Pattern: mirror sign-up-create-account.e2e.ts — @story / @background / @scenario (pytest via story_test).
 
 from __future__ import annotations
 
 from expects import be_none, equal, expect
-from mamba import after, before, description
 
 from domain.{bounded_context}.runtime import {AppPascal}E2e, config
 from domain.{bounded_context}.{aggregate_snake} import (
@@ -53,83 +52,79 @@ from examples.{story_verb_noun}_examples import (
     valid_{field}_example,
 )
 from givens import {background_given_fn}
-from story_test import background, scenario, story
+from story_test import ScenarioSteps, after_all, background, before_all, scenario, story
 from whens import {primary_when_fn}
 
 
-with description("{Story Verb-Noun}") as story_ctx:
-    story_ctx.{app_camel}: {AppPascal} | None = None
-    story_ctx.{aggregate_camel}: {AggregatePascal} | None = None
+@story("{Story Verb-Noun}")
+def {story_snake_slug}_story() -> None:
+    {app_camel}: {AppPascal} | None = None
+    {aggregate_camel}: {AggregatePascal} | None = None
 
-    with before.all:
-        def _boot() -> None:
-            story_ctx.{app_camel} = {AppPascal}E2e.initialize(config)
+    @before_all
+    def boot() -> None:
+        nonlocal {app_camel}
+        {app_camel} = {AppPascal}E2e.initialize(config)
 
-    with after.all:
-        def _shutdown() -> None:
-            if story_ctx.{app_camel} is not None:
-                story_ctx.{app_camel}.close()
-
-    def _story_body() -> None:
-        def _background(given):  # type: ignore[no-untyped-def]
-            given("{background given step}", lambda: {background_given_fn}(story_ctx.{app_camel}))
-
-            def _validation_branch(steps):  # type: ignore[no-untyped-def]
-                when, then = steps["when"], steps["then"]
-
-                when("{primary when step}", lambda: _primary_when())
-                when("{follow-on when step}", lambda: _invalid_input())
-                then("{validation message on domain object}", lambda: expect(
-                    story_ctx.{aggregate_camel}.errors.{field}
-                ).to(equal({ERROR_CONSTANT}_MESSAGE)))
-
-            scenario("{validation branch while typing}", _validation_branch)
-
-            def _clears_when_valid(steps):  # type: ignore[no-untyped-def]
-                when, then = steps["when"], steps["then"]
-
-                (
-                    when("{primary when step}", lambda: _primary_when())
-                    .and_("{prior invalid state}", lambda: _invalid_input())
-                )
-                when("{corrective action}", lambda: _valid_input())
-                then("{error cleared on domain object}", lambda: expect(
-                    story_ctx.{aggregate_camel}.errors.{field}
-                ).to(be_none))
-
-            scenario("{validation clears when input conforms}", _clears_when_valid)
-
-            def _main_flow(steps):  # type: ignore[no-untyped-def]
-                when, then = steps["when"], steps["then"]
-
-                when("{primary when step}", lambda: _primary_when())
-                when("{submit operation on domain object}", lambda: _submit())
-                then("{post-condition on loaded aggregate}", lambda: _expect_state())
-
-            scenario("{main-flow outcome}", _main_flow)
-
-        background(_background)
+    @after_all
+    def shutdown() -> None:
+        nonlocal {app_camel}
+        if {app_camel} is not None:
+            {app_camel}.close()
 
     def _primary_when() -> None:
-        story_ctx.{aggregate_camel} = {primary_when_fn}(story_ctx.{app_camel})
+        nonlocal {aggregate_camel}
+        {aggregate_camel} = {primary_when_fn}({app_camel})
 
     def _invalid_input() -> None:
-        creds = story_ctx.{aggregate_camel}
-        creds.{field} = invalid_{field}_example
-        creds.validate()
+        assert {aggregate_camel} is not None
+        {aggregate_camel}.{field} = invalid_{field}_example
+        {aggregate_camel}.validate()
 
     def _valid_input() -> None:
-        creds = story_ctx.{aggregate_camel}
-        creds.{field} = valid_{field}_example
-        creds.validate()
+        assert {aggregate_camel} is not None
+        {aggregate_camel}.{field} = valid_{field}_example
+        {aggregate_camel}.validate()
 
     def _submit() -> None:
-        creds = story_ctx.{aggregate_camel}
-        creds.{field} = valid_{aggregate}_example.{field}
-        creds.{operation}()
+        assert {aggregate_camel} is not None
+        {aggregate_camel}.{field} = valid_{aggregate}_example.{field}
+        {aggregate_camel}.{operation}()
+
+    def _expect_error() -> None:
+        assert {aggregate_camel} is not None
+        expect({aggregate_camel}.errors.{field}).to(equal({ERROR_CONSTANT}_MESSAGE))
 
     def _expect_state() -> None:
-        {entity_camel} = story_ctx.{app_camel}.{repository}().load(story_ctx.{aggregate_camel})
+        assert {app_camel} is not None and {aggregate_camel} is not None
+        {entity_camel} = {app_camel}.{repository}().load({aggregate_camel})
         expect({entity_camel}.is_at_{state}("{StateName}")).to(equal(True))
 
-    story("{Story Verb-Noun}", _story_body)
+    @background
+    def shared_background(given) -> None:
+        given("{background given step}", lambda: {background_given_fn}({app_camel}))
+
+        @scenario("{validation branch while typing}")
+        def validation_branch(steps: ScenarioSteps) -> None:
+            steps.when("{primary when step}", _primary_when).and_(
+                "{follow-on when step}",
+                _invalid_input,
+            )
+            steps.then("{validation message on domain object}", _expect_error)
+
+        @scenario("{validation clears when input conforms}")
+        def validation_clears(steps: ScenarioSteps) -> None:
+            steps.when("{primary when step}", _primary_when).and_(
+                "{prior invalid state}",
+                _invalid_input,
+            )
+            steps.when("{corrective action}", _valid_input)
+            steps.then("{error cleared on domain object}", lambda: expect(
+                {aggregate_camel}.errors.{field}
+            ).to(be_none))
+
+        @scenario("{main-flow outcome}")
+        def main_flow(steps: ScenarioSteps) -> None:
+            steps.when("{primary when step}", _primary_when)
+            steps.when("{submit operation on domain object}", _submit)
+            steps.then("{post-condition on loaded aggregate}", _expect_state)

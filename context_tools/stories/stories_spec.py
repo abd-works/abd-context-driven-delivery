@@ -261,9 +261,10 @@ with description("Stories"):
 
         with it("should inline the flat scenario-template without helpers"):
             expect("scenario-template.py" in self.templates).to(be_true)
+            expect("@story" in self.templates).to(be_true)
+            expect("@background" in self.templates).to(be_true)
+            expect("@scenario" in self.templates).to(be_true)
             expect("artifacts-mirror-story-hierarchy" in self.templates).to(be_true)
-            expect("Naming rules" in self.templates).to(be_true)
-            expect("background" in self.templates).to(be_true)
             expect("test_helper" in self.templates).to(equal(False))
             expect("Protocol" in self.templates).to(equal(False))
 
