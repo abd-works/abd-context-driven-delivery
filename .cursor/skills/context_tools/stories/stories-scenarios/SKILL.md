@@ -262,17 +262,12 @@ section: body
 # - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
-# Pattern: story_test.py extends Mamba — nested defs + nonlocal, same steps as scenario-template.ts.
+# Pattern: story_test.py extends Mamba with given / when / then — boot in before_all / after_all.
 
 from __future__ import annotations
 
-from expects import be_above, be_none, equal, expect
-
 from domain.{bounded_context}.runtime import {AppPascal}E2e, config
-from domain.{bounded_context}.{aggregate_snake} import (
-    {AggregatePascal},
-    {ERROR_CONSTANT}_MESSAGE,
-)
+from domain.{bounded_context}.{aggregate_snake} import {AggregatePascal}
 from story_test import after_all, background, before_all, scenario, story
 
 
@@ -296,28 +291,25 @@ def _story() -> None:
     after_all(teardown)
 
     def build_background(given) -> None:
-        def run_background() -> None:
+        def background_given() -> None:
             {app_camel}.{background_operation}()
 
-        given("{background given step}", run_background)
+        given("{background given step}", background_given)
 
-        def surface_check(when, then) -> None:
+        def surface_check(given, when, then) -> None:
             def primary_when() -> None:
                 nonlocal {aggregate_camel}
                 {aggregate_camel} = {app_camel}.{primary_when_operation}()
 
-            when("{primary when step}", primary_when)
-
             def observable_outcome() -> None:
-                {aggregate_camel}.{field} = ""
-                {aggregate_camel}.validate()
-                expect(len({aggregate_camel}.errors.{field})).to(be_above(0))
+                pass  # Assert {observable surface outcome}
 
+            when("{primary when step}", primary_when)
             then("{observable surface outcome}", observable_outcome)
 
         scenario("{surface check — e.g. rules visible}", surface_check)
 
-        def validation_branch(when, then) -> None:
+        def validation_branch(given, when, then) -> None:
             def primary_when() -> None:
                 nonlocal {aggregate_camel}
                 {aggregate_camel} = {app_camel}.{primary_when_operation}()
@@ -326,21 +318,16 @@ def _story() -> None:
                 {aggregate_camel}.{field} = {invalid_value}
                 {aggregate_camel}.validate()
 
-            when("{primary when step}", primary_when).and_(
-                "{follow-on when step}",
-                follow_on_when,
-            )
-
             def validation_message() -> None:
-                expect({aggregate_camel}.errors.{field}).to(
-                    equal({ERROR_CONSTANT}_MESSAGE)
-                )
+                pass  # Assert {validation message on domain object}
 
+            when("{primary when step}", primary_when)
+            when("{follow-on when step}", follow_on_when)
             then("{validation message on domain object}", validation_message)
 
         scenario("{validation branch while typing}", validation_branch)
 
-        def validation_clears(when, then) -> None:
+        def validation_clears(given, when, then) -> None:
             def primary_when() -> None:
                 nonlocal {aggregate_camel}
                 {aggregate_camel} = {app_camel}.{primary_when_operation}()
@@ -349,45 +336,34 @@ def _story() -> None:
                 {aggregate_camel}.{field} = {invalid_value}
                 {aggregate_camel}.validate()
 
-            when("{primary when step}", primary_when).and_(
-                "{prior invalid state}",
-                prior_invalid_state,
-            )
-
             def corrective_action() -> None:
                 {aggregate_camel}.{field} = {valid_value}
                 {aggregate_camel}.validate()
 
-            when("{corrective action}", corrective_action)
-
             def error_cleared() -> None:
-                expect({aggregate_camel}.errors.{field}).to(be_none)
+                pass  # Assert {error cleared on domain object}
 
+            when("{primary when step}", primary_when)
+            when("{prior invalid state}", prior_invalid_state)
+            when("{corrective action}", corrective_action)
             then("{error cleared on domain object}", error_cleared)
 
         scenario("{validation clears when input conforms}", validation_clears)
 
-        def main_flow(when, then) -> None:
+        def main_flow(given, when, then) -> None:
             def primary_when() -> None:
                 nonlocal {aggregate_camel}
                 {aggregate_camel} = {app_camel}.{primary_when_operation}()
-
-            when("{primary when step}", primary_when)
 
             def submit_operation() -> None:
                 {aggregate_camel}.{field} = {valid_aggregate_value}
                 {aggregate_camel}.{operation}()
 
-            when("{submit operation on domain object}", submit_operation)
-
             def post_condition() -> None:
-                expect(
-                    {app_camel}
-                    .{repository}()
-                    .load({aggregate_camel})
-                    .is_at_{state}("{StateName}")
-                ).to(equal(True))
+                pass  # Assert {post-condition on loaded aggregate}
 
+            when("{primary when step}", primary_when)
+            when("{submit operation on domain object}", submit_operation)
             then("{post-condition on loaded aggregate}", post_condition)
 
         scenario("{main-flow outcome}", main_flow)
@@ -403,13 +379,13 @@ def _story() -> None:
 # format: py
 # ---
 #
-# Given / When / Then helpers (Mamba). Copy to tests/story_test.py once per tests/ tree.
+# Given / When / Then on Mamba. Copy to tests/story_test.py once per tests/ tree.
 #
 # ```
 # file: tests/story_test.py
 # ```
 #
-# Same surface as story-test.ts — extends Mamba (story → description, scenario → nested group, then → it).
+# Extends Mamba: story → description, background given → shared setup, scenario when → before, then → it.
 
 from __future__ import annotations
 
@@ -422,24 +398,6 @@ from typing import Callable
 StepFn = Callable[[], None]
 
 
-class WhenChain:
-    def __init__(self, whens: list[StepFn]) -> None:
-        self._whens = whens
-
-    def and_(self, _text: str, fn: StepFn) -> WhenChain:
-        self._whens.append(fn)
-        return self
-
-
-class ThenChain:
-    def __init__(self, thens: list[tuple[str, StepFn]]) -> None:
-        self._thens = thens
-
-    def and_(self, text: str, fn: StepFn) -> ThenChain:
-        self._thens.append((text, fn))
-        return self
-
-
 class ScenarioSteps:
     def __init__(self) -> None:
         self._givens: list[StepFn] = []
@@ -449,13 +407,11 @@ class ScenarioSteps:
     def given(self, _text: str, fn: StepFn) -> None:
         self._givens.append(fn)
 
-    def when(self, _text: str, fn: StepFn) -> WhenChain:
+    def when(self, _text: str, fn: StepFn) -> None:
         self._whens.append(fn)
-        return WhenChain(self._whens)
 
-    def then(self, text: str, fn: StepFn) -> ThenChain:
+    def then(self, text: str, fn: StepFn) -> None:
         self._thens.append((text, fn))
-        return ThenChain(self._thens)
 
 
 class GivenRegistrar:
@@ -494,7 +450,7 @@ def _slug(value: str) -> str:
 
 
 def story(name: str, body: Callable[[], None]) -> None:
-    """Register one story — same role as story() in story-test.ts (Mamba description group)."""
+    """Register one story — Mamba description group."""
     frame = inspect.currentframe()
     if frame is None or frame.f_back is None:
         raise RuntimeError("story() must be called at module scope")
@@ -550,12 +506,12 @@ def scenario(name: str, build: Callable[..., None]) -> None:
     steps = ScenarioSteps()
     params = inspect.signature(build).parameters
     kwargs: dict[str, object] = {}
+    if "given" in params:
+        kwargs["given"] = steps.given
     if "when" in params:
         kwargs["when"] = steps.when
     if "then" in params:
         kwargs["then"] = steps.then
-    if "given" in params:
-        kwargs["given"] = steps.given
     build(**kwargs)
     scenarios.append(
         _ScenarioDef(

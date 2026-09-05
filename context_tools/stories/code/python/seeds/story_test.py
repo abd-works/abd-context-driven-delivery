@@ -1,8 +1,4 @@
-"""Story acceptance on Mamba — same API as story-test.ts (Vitest).
-
-story() / background() / scenario() / given / when().and_() / then().and_() map to Mamba
-description/context/it at import time. No pytest, no separate GWT framework.
-"""
+"""Given / When / Then on Mamba. Copy to tests/story_test.py."""
 
 from __future__ import annotations
 
@@ -15,24 +11,6 @@ from typing import Callable
 StepFn = Callable[[], None]
 
 
-class WhenChain:
-    def __init__(self, whens: list[StepFn]) -> None:
-        self._whens = whens
-
-    def and_(self, _text: str, fn: StepFn) -> WhenChain:
-        self._whens.append(fn)
-        return self
-
-
-class ThenChain:
-    def __init__(self, thens: list[tuple[str, StepFn]]) -> None:
-        self._thens = thens
-
-    def and_(self, text: str, fn: StepFn) -> ThenChain:
-        self._thens.append((text, fn))
-        return self
-
-
 class ScenarioSteps:
     def __init__(self) -> None:
         self._givens: list[StepFn] = []
@@ -42,13 +20,11 @@ class ScenarioSteps:
     def given(self, _text: str, fn: StepFn) -> None:
         self._givens.append(fn)
 
-    def when(self, _text: str, fn: StepFn) -> WhenChain:
+    def when(self, _text: str, fn: StepFn) -> None:
         self._whens.append(fn)
-        return WhenChain(self._whens)
 
-    def then(self, text: str, fn: StepFn) -> ThenChain:
+    def then(self, text: str, fn: StepFn) -> None:
         self._thens.append((text, fn))
-        return ThenChain(self._thens)
 
 
 class GivenRegistrar:
@@ -87,7 +63,7 @@ def _slug(value: str) -> str:
 
 
 def story(name: str, body: Callable[[], None]) -> None:
-    """Register one story — same role as story() in story-test.ts (Mamba description group)."""
+    """Register one story — Mamba description group."""
     frame = inspect.currentframe()
     if frame is None or frame.f_back is None:
         raise RuntimeError("story() must be called at module scope")
@@ -143,12 +119,12 @@ def scenario(name: str, build: Callable[..., None]) -> None:
     steps = ScenarioSteps()
     params = inspect.signature(build).parameters
     kwargs: dict[str, object] = {}
+    if "given" in params:
+        kwargs["given"] = steps.given
     if "when" in params:
         kwargs["when"] = steps.when
     if "then" in params:
         kwargs["then"] = steps.then
-    if "given" in params:
-        kwargs["given"] = steps.given
     build(**kwargs)
     scenarios.append(
         _ScenarioDef(

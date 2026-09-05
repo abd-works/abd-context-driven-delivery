@@ -173,7 +173,7 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 
 ## Story acceptance (Python)
 
-Story files import **`story_test.py`** — it extends **Mamba** the same way **`story-test.ts`** extends **Vitest**: `story`, `background`, `scenario`, `given`, `when`, `then` (and `.and_()` chains). Unit BDD specs keep plain `description` / `context` / `it`.
+Story files import **`story_test.py`** — it extends **Mamba** with **`given`**, **`when`**, **`then`**: background **given** → shared setup; scenario **when** → runs before examples; **then** → each becomes an `it`. Unit BDD specs keep plain `description` / `context` / `it`.
 
 ---
 
