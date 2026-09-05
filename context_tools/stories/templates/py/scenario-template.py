@@ -30,110 +30,69 @@
 # - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
-# Pattern: story_test.py extends Mamba with given / when / then — boot in before_all / after_all.
+# Pattern: with story / with given / with when / with then / with and_ — Mamba blocks via story_test.py.
 
 from __future__ import annotations
 
+from mamba import after, before
+
 from domain.{bounded_context}.runtime import {AppPascal}E2e, config
 from domain.{bounded_context}.{aggregate_snake} import {AggregatePascal}
-from story_test import after_all, background, before_all, scenario, story
+from story_test import and_, background, given, scenario, story, then, when
 
 
-story("{Story Verb-Noun}", _story)
+with story("{Story Verb-Noun}"):
+    with before.all:
+        self.{app_camel} = {AppPascal}E2e.initialize(config)
 
+    with after.all:
+        if self.{app_camel}:
+            self.{app_camel}.close()
 
-def _story() -> None:
-    {app_camel}: {AppPascal} | None = None
-    {aggregate_camel}: {AggregatePascal} | None = None
+    with background():
+        with given("{background given step}"):
+            self.{app_camel}.{background_operation}()
 
-    def boot() -> None:
-        nonlocal {app_camel}
-        {app_camel} = {AppPascal}E2e.initialize(config)
+        with scenario("{surface check — e.g. rules visible}"):
+            with when("{primary when step}"):
+                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
 
-    before_all(boot)
-
-    def teardown() -> None:
-        if {app_camel}:
-            {app_camel}.close()
-
-    after_all(teardown)
-
-    def build_background(given) -> None:
-        def background_given() -> None:
-            {app_camel}.{background_operation}()
-
-        given("{background given step}", background_given)
-
-        def surface_check(given, when, then) -> None:
-            def primary_when() -> None:
-                nonlocal {aggregate_camel}
-                {aggregate_camel} = {app_camel}.{primary_when_operation}()
-
-            def observable_outcome() -> None:
+            with then("{observable surface outcome}"):
                 pass  # Assert {observable surface outcome}
 
-            when("{primary when step}", primary_when)
-            then("{observable surface outcome}", observable_outcome)
+        with scenario("{validation branch while typing}"):
+            with when("{primary when step}"):
+                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
 
-        scenario("{surface check — e.g. rules visible}", surface_check)
+            with and_("{follow-on when step}"):
+                self.{aggregate_camel}.{field} = {invalid_value}
+                self.{aggregate_camel}.validate()
 
-        def validation_branch(given, when, then) -> None:
-            def primary_when() -> None:
-                nonlocal {aggregate_camel}
-                {aggregate_camel} = {app_camel}.{primary_when_operation}()
-
-            def follow_on_when() -> None:
-                {aggregate_camel}.{field} = {invalid_value}
-                {aggregate_camel}.validate()
-
-            def validation_message() -> None:
+            with then("{validation message on domain object}"):
                 pass  # Assert {validation message on domain object}
 
-            when("{primary when step}", primary_when)
-            when("{follow-on when step}", follow_on_when)
-            then("{validation message on domain object}", validation_message)
+        with scenario("{validation clears when input conforms}"):
+            with when("{primary when step}"):
+                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
 
-        scenario("{validation branch while typing}", validation_branch)
+            with and_("{prior invalid state}"):
+                self.{aggregate_camel}.{field} = {invalid_value}
+                self.{aggregate_camel}.validate()
 
-        def validation_clears(given, when, then) -> None:
-            def primary_when() -> None:
-                nonlocal {aggregate_camel}
-                {aggregate_camel} = {app_camel}.{primary_when_operation}()
+            with when("{corrective action}"):
+                self.{aggregate_camel}.{field} = {valid_value}
+                self.{aggregate_camel}.validate()
 
-            def prior_invalid_state() -> None:
-                {aggregate_camel}.{field} = {invalid_value}
-                {aggregate_camel}.validate()
-
-            def corrective_action() -> None:
-                {aggregate_camel}.{field} = {valid_value}
-                {aggregate_camel}.validate()
-
-            def error_cleared() -> None:
+            with then("{error cleared on domain object}"):
                 pass  # Assert {error cleared on domain object}
 
-            when("{primary when step}", primary_when)
-            when("{prior invalid state}", prior_invalid_state)
-            when("{corrective action}", corrective_action)
-            then("{error cleared on domain object}", error_cleared)
+        with scenario("{main-flow outcome}"):
+            with when("{primary when step}"):
+                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
 
-        scenario("{validation clears when input conforms}", validation_clears)
+            with when("{submit operation on domain object}"):
+                self.{aggregate_camel}.{field} = {valid_aggregate_value}
+                self.{aggregate_camel}.{operation}()
 
-        def main_flow(given, when, then) -> None:
-            def primary_when() -> None:
-                nonlocal {aggregate_camel}
-                {aggregate_camel} = {app_camel}.{primary_when_operation}()
-
-            def submit_operation() -> None:
-                {aggregate_camel}.{field} = {valid_aggregate_value}
-                {aggregate_camel}.{operation}()
-
-            def post_condition() -> None:
+            with then("{post-condition on loaded aggregate}"):
                 pass  # Assert {post-condition on loaded aggregate}
-
-            when("{primary when step}", primary_when)
-            when("{submit operation on domain object}", submit_operation)
-            then("{post-condition on loaded aggregate}", post_condition)
-
-        scenario("{main-flow outcome}", main_flow)
-
-    background(build_background)

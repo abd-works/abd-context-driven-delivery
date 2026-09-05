@@ -106,113 +106,72 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 # - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
-# Pattern: story_test.py extends Mamba with given / when / then — boot in before_all / after_all.
+# Pattern: with story / with given / with when / with then / with and_ — Mamba blocks via story_test.py.
 
 from __future__ import annotations
 
+from mamba import after, before
+
 from domain.{bounded_context}.runtime import {AppPascal}E2e, config
 from domain.{bounded_context}.{aggregate_snake} import {AggregatePascal}
-from story_test import after_all, background, before_all, scenario, story
+from story_test import and_, background, given, scenario, story, then, when
 
 
-story("{Story Verb-Noun}", _story)
+with story("{Story Verb-Noun}"):
+    with before.all:
+        self.{app_camel} = {AppPascal}E2e.initialize(config)
 
+    with after.all:
+        if self.{app_camel}:
+            self.{app_camel}.close()
 
-def _story() -> None:
-    {app_camel}: {AppPascal} | None = None
-    {aggregate_camel}: {AggregatePascal} | None = None
+    with background():
+        with given("{background given step}"):
+            self.{app_camel}.{background_operation}()
 
-    def boot() -> None:
-        nonlocal {app_camel}
-        {app_camel} = {AppPascal}E2e.initialize(config)
+        with scenario("{surface check — e.g. rules visible}"):
+            with when("{primary when step}"):
+                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
 
-    before_all(boot)
-
-    def teardown() -> None:
-        if {app_camel}:
-            {app_camel}.close()
-
-    after_all(teardown)
-
-    def build_background(given) -> None:
-        def background_given() -> None:
-            {app_camel}.{background_operation}()
-
-        given("{background given step}", background_given)
-
-        def surface_check(given, when, then) -> None:
-            def primary_when() -> None:
-                nonlocal {aggregate_camel}
-                {aggregate_camel} = {app_camel}.{primary_when_operation}()
-
-            def observable_outcome() -> None:
+            with then("{observable surface outcome}"):
                 pass  # Assert {observable surface outcome}
 
-            when("{primary when step}", primary_when)
-            then("{observable surface outcome}", observable_outcome)
+        with scenario("{validation branch while typing}"):
+            with when("{primary when step}"):
+                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
 
-        scenario("{surface check — e.g. rules visible}", surface_check)
+            with and_("{follow-on when step}"):
+                self.{aggregate_camel}.{field} = {invalid_value}
+                self.{aggregate_camel}.validate()
 
-        def validation_branch(given, when, then) -> None:
-            def primary_when() -> None:
-                nonlocal {aggregate_camel}
-                {aggregate_camel} = {app_camel}.{primary_when_operation}()
-
-            def follow_on_when() -> None:
-                {aggregate_camel}.{field} = {invalid_value}
-                {aggregate_camel}.validate()
-
-            def validation_message() -> None:
+            with then("{validation message on domain object}"):
                 pass  # Assert {validation message on domain object}
 
-            when("{primary when step}", primary_when)
-            when("{follow-on when step}", follow_on_when)
-            then("{validation message on domain object}", validation_message)
+        with scenario("{validation clears when input conforms}"):
+            with when("{primary when step}"):
+                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
 
-        scenario("{validation branch while typing}", validation_branch)
+            with and_("{prior invalid state}"):
+                self.{aggregate_camel}.{field} = {invalid_value}
+                self.{aggregate_camel}.validate()
 
-        def validation_clears(given, when, then) -> None:
-            def primary_when() -> None:
-                nonlocal {aggregate_camel}
-                {aggregate_camel} = {app_camel}.{primary_when_operation}()
+            with when("{corrective action}"):
+                self.{aggregate_camel}.{field} = {valid_value}
+                self.{aggregate_camel}.validate()
 
-            def prior_invalid_state() -> None:
-                {aggregate_camel}.{field} = {invalid_value}
-                {aggregate_camel}.validate()
-
-            def corrective_action() -> None:
-                {aggregate_camel}.{field} = {valid_value}
-                {aggregate_camel}.validate()
-
-            def error_cleared() -> None:
+            with then("{error cleared on domain object}"):
                 pass  # Assert {error cleared on domain object}
 
-            when("{primary when step}", primary_when)
-            when("{prior invalid state}", prior_invalid_state)
-            when("{corrective action}", corrective_action)
-            then("{error cleared on domain object}", error_cleared)
+        with scenario("{main-flow outcome}"):
+            with when("{primary when step}"):
+                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
 
-        scenario("{validation clears when input conforms}", validation_clears)
+            with when("{submit operation on domain object}"):
+                self.{aggregate_camel}.{field} = {valid_aggregate_value}
+                self.{aggregate_camel}.{operation}()
 
-        def main_flow(given, when, then) -> None:
-            def primary_when() -> None:
-                nonlocal {aggregate_camel}
-                {aggregate_camel} = {app_camel}.{primary_when_operation}()
-
-            def submit_operation() -> None:
-                {aggregate_camel}.{field} = {valid_aggregate_value}
-                {aggregate_camel}.{operation}()
-
-            def post_condition() -> None:
+            with then("{post-condition on loaded aggregate}"):
                 pass  # Assert {post-condition on loaded aggregate}
-
-            when("{primary when step}", primary_when)
-            when("{submit operation on domain object}", submit_operation)
-            then("{post-condition on loaded aggregate}", post_condition)
-
-        scenario("{main-flow outcome}", main_flow)
-
-    background(build_background)
 
 
 ## story_test.py
@@ -223,234 +182,312 @@ def _story() -> None:
 # format: py
 # ---
 #
-# Given / When / Then on Mamba. Copy to tests/story_test.py once per tests/ tree.
+# Given / When / Then on Mamba — copy to tests/story_test.py once per tests/ tree.
 #
 # ```
 # file: tests/story_test.py
 # ```
 #
-# Extends Mamba: story → description, background given → shared setup, scenario when → before, then → it.
+# Stubs for `with story / background / scenario / given / when / then / and_` blocks.
+# StoryNodeTransformer (below) compiles them into Mamba example groups at load time.
 
 from __future__ import annotations
 
-import inspect
+import ast
+import os
 import re
-from contextvars import ContextVar
-from dataclasses import dataclass, field
-from typing import Callable
+import sys
+import types
+from typing import Iterator
 
-StepFn = Callable[[], None]
+from mamba import nodetransformers
+from mamba.example_collector import ExampleCollector
 
-
-class ScenarioSteps:
-    def __init__(self) -> None:
-        self._givens: list[StepFn] = []
-        self._whens: list[StepFn] = []
-        self._thens: list[tuple[str, StepFn]] = []
-
-    def given(self, _text: str, fn: StepFn) -> None:
-        self._givens.append(fn)
-
-    def when(self, _text: str, fn: StepFn) -> None:
-        self._whens.append(fn)
-
-    def then(self, text: str, fn: StepFn) -> None:
-        self._thens.append((text, fn))
+# Stubs — replaced by AST transform when Mamba loads the spec (same as mamba.description / mamba.it).
+def story(_name: str) -> None:
+    pass
 
 
-class GivenRegistrar:
-    def __init__(self, givens: list[StepFn]) -> None:
-        self._givens = givens
-
-    def __call__(self, _text: str, fn: StepFn) -> None:
-        self._givens.append(fn)
+def background() -> None:
+    pass
 
 
-@dataclass
-class _ScenarioDef:
-    name: str
-    givens: tuple[StepFn, ...]
-    whens: tuple[StepFn, ...]
-    thens: tuple[tuple[str, StepFn], ...]
+def scenario(_name: str) -> None:
+    pass
 
 
-@dataclass
-class _StoryBuilder:
-    name: str
-    module_name: str
-    before_all_hooks: list[StepFn] = field(default_factory=list)
-    after_all_hooks: list[StepFn] = field(default_factory=list)
-    background_givens: list[StepFn] = field(default_factory=list)
-    scenarios: list[_ScenarioDef] = field(default_factory=list)
+def given(_name: str) -> None:
+    pass
 
 
-_builder_ctx: ContextVar[_StoryBuilder | None] = ContextVar("_story_builder", default=None)
-_background_ctx: ContextVar[list[_ScenarioDef] | None] = ContextVar("_background_scenarios", default=None)
+def when(_name: str) -> None:
+    pass
+
+
+def then(_name: str) -> None:
+    pass
+
+
+def and_(_name: str) -> None:
+    pass
 
 
 def _slug(value: str) -> str:
     slug = re.sub(r"[^0-9a-z]+", "_", value.strip().lower()).strip("_")
-    return slug or "story"
+    return slug or "step"
 
 
-def story(name: str, body: Callable[[], None]) -> None:
-    """Register one story — Mamba description group."""
-    frame = inspect.currentframe()
-    if frame is None or frame.f_back is None:
-        raise RuntimeError("story() must be called at module scope")
-    module_globals = frame.f_back.f_globals
-    module_name = str(module_globals.get("__name__", "__main__"))
-    builder = _StoryBuilder(name=name, module_name=module_name)
-    token = _builder_ctx.set(builder)
-    try:
-        body()
-    finally:
-        _builder_ctx.reset(token)
-    _install_mamba(builder, module_globals)
+class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
+    STORY = frozenset({"story"})
+    STRUCTURE = frozenset({"background", "scenario"})
+    STEPS = frozenset({"given", "when", "then", "and_"})
 
+    def visit_With(self, node: ast.With) -> ast.AST:
+        name = self._get_name(node)
+        if name in self.STORY:
+            return self._transform_story(node)
+        if name in self.STRUCTURE or name in self.STEPS:
+            return node
+        node = super(StoryNodeTransformer, self).generic_visit(node)  # type: ignore[attr-defined]
+        return super().visit_With(node)
 
-def before_all(fn: StepFn) -> StepFn:
-    builder = _builder_ctx.get()
-    if builder is None:
-        raise RuntimeError("before_all() must be called inside story()")
-    builder.before_all_hooks.append(fn)
-    return fn
+    def visit_Module(self, node: ast.Module) -> ast.Module:
+        node = super().visit_Module(node)
+        expanded: list[ast.stmt] = []
+        for stmt in node.body:
+            if isinstance(stmt, ast.With):
+                name = self._get_name(stmt)
+                if name == "background":
+                    expanded.extend(self._expand_background(stmt))
+                    continue
+                if name == "scenario":
+                    expanded.append(self._transform_scenario(stmt, []))
+                    continue
+            expanded.append(stmt)
+        node.body = expanded
+        return node
 
+    def _transform_story(self, node: ast.With) -> ast.ClassDef:
+        context_expr = self._context_expr_for(node)
+        story_name = self._human_readable_context_expr(context_expr)
+        body: list[ast.stmt] = []
 
-def after_all(fn: StepFn) -> StepFn:
-    builder = _builder_ctx.get()
-    if builder is None:
-        raise RuntimeError("after_all() must be called inside story()")
-    builder.after_all_hooks.append(fn)
-    return fn
+        for stmt in node.body:
+            if isinstance(stmt, ast.With) and self._get_name(stmt) == "background":
+                body.extend(self._expand_background(stmt))
+            else:
+                transformed = self.visit(stmt)
+                if isinstance(transformed, ast.stmt):
+                    body.append(transformed)
 
-
-def background(build: Callable[[GivenRegistrar], None]) -> None:
-    builder = _builder_ctx.get()
-    if builder is None:
-        raise RuntimeError("background() must be called inside story()")
-
-    registrar = GivenRegistrar([])
-    scenarios: list[_ScenarioDef] = []
-    bg_token = _background_ctx.set(scenarios)
-    try:
-        build(registrar)
-    finally:
-        _background_ctx.reset(bg_token)
-
-    builder.background_givens.extend(registrar._givens)
-    builder.scenarios.extend(scenarios)
-
-
-def scenario(name: str, build: Callable[..., None]) -> None:
-    scenarios = _background_ctx.get()
-    if scenarios is None:
-        raise RuntimeError("scenario() must be called inside background()")
-
-    steps = ScenarioSteps()
-    params = inspect.signature(build).parameters
-    kwargs: dict[str, object] = {}
-    if "given" in params:
-        kwargs["given"] = steps.given
-    if "when" in params:
-        kwargs["when"] = steps.when
-    if "then" in params:
-        kwargs["then"] = steps.then
-    build(**kwargs)
-    scenarios.append(
-        _ScenarioDef(
-            name=name,
-            givens=tuple(steps._givens),
-            whens=tuple(steps._whens),
-            thens=tuple(steps._thens),
+        return ast.copy_location(
+            ast.ClassDef(
+                name=self._prefix_with_sequence(f"Story_{_slug(story_name)}"),
+                bases=[],
+                keywords=[],
+                body=body,
+                decorator_list=[
+                    self._set_attribute("_example_group", True),
+                    self._set_attribute("_example_name", story_name),
+                    self._set_attribute("_tags", []),
+                    self._set_attribute("_pending", False),
+                    self._set_attribute("_shared", False),
+                ],
+            ),
+            node,
         )
-    )
+
+    def _expand_background(self, node: ast.With) -> list[ast.ClassDef]:
+        background_givens: list[list[ast.stmt]] = []
+        scenarios: list[ast.ClassDef] = []
+
+        for stmt in node.body:
+            if not isinstance(stmt, ast.With):
+                continue
+            step = self._get_name(stmt)
+            if step == "given":
+                background_givens.append(stmt.body)
+            elif step == "scenario":
+                scenarios.append(
+                    self._transform_scenario(stmt, background_givens)
+                )
+
+        return scenarios
+
+    def _transform_scenario(
+        self,
+        node: ast.With,
+        background_givens: list[list[ast.stmt]],
+    ) -> ast.ClassDef:
+        context_expr = self._context_expr_for(node)
+        scenario_name = self._human_readable_context_expr(context_expr)
+
+        scenario_givens: list[list[ast.stmt]] = []
+        whens: list[list[ast.stmt]] = []
+        thens: list[tuple[str, list[ast.stmt]]] = []
+        last_kind: str | None = None
+
+        for stmt in node.body:
+            if not isinstance(stmt, ast.With):
+                continue
+            step = self._get_name(stmt)
+            label = self._human_readable_context_expr(self._context_expr_for(stmt))
+            if step == "given":
+                scenario_givens.append(stmt.body)
+                last_kind = "given"
+            elif step == "when":
+                whens.append(stmt.body)
+                last_kind = "when"
+            elif step == "and_":
+                if last_kind in ("when", "and_when"):
+                    whens.append(stmt.body)
+                    last_kind = "and_when"
+                elif last_kind in ("then", "and_then"):
+                    thens.append((label, stmt.body))
+                    last_kind = "and_then"
+                else:
+                    whens.append(stmt.body)
+                    last_kind = "when"
+            elif step == "then":
+                thens.append((label, stmt.body))
+                last_kind = "then"
+
+        setup_body: list[ast.stmt] = []
+        for block in (*background_givens, *scenario_givens, *whens):
+            setup_body.extend(block)
+
+        class_body: list[ast.stmt] = []
+        if setup_body:
+            class_body.append(
+                ast.copy_location(
+                    ast.FunctionDef(
+                        name="before_all",
+                        args=self._generate_argument("self"),
+                        body=setup_body,
+                        decorator_list=[],
+                    ),
+                    node,
+                )
+            )
+
+        for index, (label, body) in enumerate(thens):
+            example_name = f"Then {label}" if index == 0 else label
+            display_name = f"it Then {label}" if index == 0 else f"it {label}"
+            class_body.append(
+                self._make_example_function(example_name, display_name, body, node)
+            )
+
+        return ast.copy_location(
+            ast.ClassDef(
+                name=self._prefix_with_sequence(f"Scenario_{_slug(scenario_name)}"),
+                bases=[],
+                keywords=[],
+                body=class_body,
+                decorator_list=[
+                    self._set_attribute("_example_group", True),
+                    self._set_attribute("_example_name", scenario_name),
+                    self._set_attribute("_tags", []),
+                    self._set_attribute("_pending", False),
+                    self._set_attribute("_shared", False),
+                ],
+            ),
+            node,
+        )
+
+    def _make_example_function(
+        self,
+        function_name: str,
+        example_name: str,
+        body: list[ast.stmt],
+        node: ast.AST,
+    ) -> ast.FunctionDef:
+        return ast.copy_location(
+            ast.FunctionDef(
+                name=self._prefix_with_sequence(function_name),
+                args=self._generate_argument("self"),
+                body=body,
+                decorator_list=[
+                    self._set_attribute("_example", True),
+                    self._set_attribute("_example_name", example_name),
+                    self._set_attribute("_tags", []),
+                    self._set_attribute("_pending", False),
+                ],
+            ),
+            node,
+        )
 
 
-def _example_name(prefix: str, label: str) -> str:
-    return f"{prefix} {label}"
+class StoryExampleCollector(ExampleCollector):
+    STORY_SUFFIXES = (".e2e.py", ".front-end.py", ".back-end.py")
+
+    def __init__(self, paths: list[str]) -> None:
+        super().__init__(paths)
+        self._node_transformer = StoryNodeTransformer()
+
+    def _collect_files_containing_examples(self) -> list[str]:
+        collected: list[str] = []
+        for path in self.paths:
+            if not os.path.exists(path):
+                continue
+            if os.path.isdir(path):
+                collected.extend(self._collect_story_files_in_directory(path))
+            elif self._is_story_file(path):
+                collected.append(path)
+        collected.sort()
+        return collected
+
+    def _collect_story_files_in_directory(self, directory: str) -> list[str]:
+        found: list[str] = []
+        for root, _dirs, files in os.walk(directory):
+            for name in files:
+                if self._is_story_file(name):
+                    found.append(os.path.join(self._normalize_path(root), name))
+        return found
+
+    def _is_story_file(self, path: str) -> bool:
+        return path.endswith("_spec.py") or any(
+            path.endswith(suffix) for suffix in self.STORY_SUFFIXES
+        )
 
 
-def _make_example(label: str, prefix: str, body: StepFn) -> Callable[[object], None]:
-    name = _example_name(prefix, label)
-
-    def _test(_ctx: object) -> None:
-        body()
-
-    _test.__name__ = name.replace(" ", "_")
-    _test._example = True  # type: ignore[attr-defined]
-    _test._example_name = name  # type: ignore[attr-defined]
-    _test._tags = []  # type: ignore[attr-defined]
-    _test._pending = False  # type: ignore[attr-defined]
-    return _test
+def load_story_module(path: str) -> types.ModuleType:
+    collector = StoryExampleCollector([path])
+    modules = collector.modules()
+    if not modules:
+        raise RuntimeError(f"No story examples found in {path}")
+    return modules[0]
 
 
-def _make_scenario_class(
-    scenario_def: _ScenarioDef,
-    background_givens: tuple[StepFn, ...],
-) -> type:
-    bg = background_givens
-    given = scenario_def.givens
-    when = scenario_def.whens
-
-    def before_all(_ctx: object) -> None:
-        for fn in (*bg, *given, *when):
-            fn()
-
-    before_all.__name__ = "before_all"
-
-    attrs: dict[str, object] = {
-        "_example_group": True,
-        "_example_name": scenario_def.name,
-        "_tags": [],
-        "_pending": False,
-        "_shared": False,
-        "before_all": before_all,
-    }
-
-    for index, (label, then_fn) in enumerate(scenario_def.thens):
-        prefix = "it Then" if index == 0 else "it"
-        test = _make_example(label, prefix, then_fn)
-        attrs[test.__name__] = test
-
-    return type(f"Scenario_{_slug(scenario_def.name)}", (), attrs)
+def iter_story_modules(paths: list[str]) -> Iterator[types.ModuleType]:
+    collector = StoryExampleCollector(paths)
+    yield from collector.modules()
 
 
-def _install_mamba(builder: _StoryBuilder, module_globals: dict[str, object]) -> None:
-    story_slug = _slug(builder.name)
-    bg = tuple(builder.background_givens)
+def patch_mamba_collector() -> None:
+    """Use StoryNodeTransformer for all Mamba loads in this process."""
+    nodetransformers.TransformToSpecsNodeTransformer = StoryNodeTransformer  # type: ignore[misc]
 
-    story_attrs: dict[str, object] = {
-        "_example_group": True,
-        "_example_name": builder.name,
-        "_tags": [],
-        "_pending": False,
-        "_shared": False,
-    }
+    original_init = ExampleCollector.__init__
 
-    if builder.before_all_hooks:
+    def _init(collector, paths):  # type: ignore[no-untyped-def]
+        original_init(collector, paths)
+        collector._node_transformer = StoryNodeTransformer()
 
-        def story_before_all(_ctx: object) -> None:
-            for hook in builder.before_all_hooks:
-                hook()
+    ExampleCollector.__init__ = _init  # type: ignore[method-assign]
 
-        story_before_all.__name__ = "before_all"
-        story_attrs["before_all"] = story_before_all
+    if "story_test" not in sys.modules:
+        sys.modules["story_test"] = sys.modules[__name__]
 
-    if builder.after_all_hooks:
 
-        def story_after_all(_ctx: object) -> None:
-            for hook in builder.after_all_hooks:
-                hook()
+def main() -> None:
+    """Run Mamba with story AST transforms enabled."""
+    patch_mamba_collector()
+    from mamba.cli import main as mamba_main
 
-        story_after_all.__name__ = "after_all"
-        story_attrs["after_all"] = story_after_all
+    mamba_main()
 
-    for scenario_def in builder.scenarios:
-        nested = _make_scenario_class(scenario_def, bg)
-        story_attrs[nested.__name__] = nested
 
-    story_class = type(f"Story_{story_slug}", (), story_attrs)
-    module_globals[story_class.__name__] = story_class
+if __name__ == "__main__":
+    main()
 
 See examples in `context_tools/stories/examples/` if needed.
