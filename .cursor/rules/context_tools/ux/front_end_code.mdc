@@ -1,6 +1,6 @@
 ---
 description: "ux front end code rules"
-globs: **/sandbox/**/*.html,**/src/**/*.{html,tsx,jsx,vue}
+globs: **/*.{html,tsx,jsx,vue,js,ts}
 alwaysApply: false
 ---
 

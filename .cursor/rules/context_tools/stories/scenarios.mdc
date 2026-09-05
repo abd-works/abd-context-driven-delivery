@@ -1,6 +1,6 @@
 ---
 description: "stories scenarios rules"
-globs: **/sandbox/**/*.{py,js,ts,java}
+globs: **/*.{py,js,ts,java}
 alwaysApply: false
 ---
 

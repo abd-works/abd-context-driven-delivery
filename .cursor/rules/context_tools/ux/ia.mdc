@@ -1,6 +1,6 @@
 ---
 description: "ux ia rules"
-globs: **/sandbox/**/.context/**/*.{drawio,md},**/*information-architecture*
+globs: **/*.{drawio,md},**/*information-architecture*
 alwaysApply: false
 ---
 

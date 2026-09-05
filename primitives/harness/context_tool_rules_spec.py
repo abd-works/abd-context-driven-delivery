@@ -37,7 +37,7 @@ with description("context tool rules"):
         expect(by_name["stories"].body).to(contain("kebab-case-paths"))
         expect(by_name["story_map"].body).to(contain("When story map, follow these rules"))
         expect(by_name["scenarios"].body).to(contain("@stories-scenarios"))
-        expect(by_name["scenarios"].globs).to(contain("sandbox"))
+        expect(by_name["scenarios"].globs).to(contain("**/*.py"))
 
     with it("should extract modules model and code rules from clean_engineering.md"):
         specs = rules_for_context_tool(
@@ -51,7 +51,9 @@ with description("context tool rules"):
         expect("code" in by_name).to(be_true)
         expect(by_name["modules"].body).to(contain("high-cohesion"))
         expect(by_name["model"].body).to(contain("keep-classes-single-responsibility"))
+        expect(by_name["model"].globs).to(equal("**/*.{py,md}"))
         expect(by_name["code"].body).to(contain("keep-operations-small-focused"))
+        expect(by_name["code"].globs).to(equal("**/*.py"))
 
     with it("should place rules under context_tools/{slug}/"):
         rule = Rule("Cursor", "stories")

@@ -1,6 +1,6 @@
 ---
 description: "clean_engineering code rules"
-globs: **/domain/**/*.py,**/src/**/*.py
+globs: **/*.py
 alwaysApply: false
 ---
 

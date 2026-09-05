@@ -1,6 +1,6 @@
 ---
 description: "stories story map rules"
-globs: **/*story-map*.md,**/sandbox/**/.context/**/*.{md,drawio}
+globs: **/*story-map*.md,**/.context/**/*.{md,drawio}
 alwaysApply: false
 ---
 

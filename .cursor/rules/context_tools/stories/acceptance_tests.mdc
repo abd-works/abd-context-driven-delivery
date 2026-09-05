@@ -1,6 +1,6 @@
 ---
 description: "stories acceptance tests rules"
-globs: **/tests/**/*.{py,js,ts,java}
+globs: **/*.{py,js,ts,java}
 alwaysApply: false
 ---
 

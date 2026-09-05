@@ -1,6 +1,6 @@
 ---
 description: "bdd shared rules — apply across all fidelities"
-globs: **/tests/**/*.{py,js,ts,java},**/primitives/**/*.py,**/context_tools/**/*.py
+globs: **/*.{py,js,ts,java},**/*modules*.md
 alwaysApply: false
 ---
 

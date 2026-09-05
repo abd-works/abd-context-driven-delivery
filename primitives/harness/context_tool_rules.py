@@ -14,44 +14,50 @@ _CONTEXT_TOOLS = _REPO_ROOT / "context_tools"
 _SKIP_SLUGS = frozenset({"base", "create_context_tool", "agent_bdd", "car"})
 
 # Glob patterns for Auto Attached rules (alwaysApply: false). Comma-separated per Cursor docs.
+# Prefer extension-based patterns — code and artifacts can live outside fixed folder names.
+_PY = "**/*.py"
+_MD = "**/*.md"
+_PY_MD = "**/*.{py,md}"
+_PY_JS_TS_JAVA = "**/*.{py,js,ts,java}"
+
 CONTEXT_TOOL_RULE_GLOBS: dict[str, dict[str, str]] = {
     "stories": {
-        "shared": "**/sandbox/**/*.{py,md,js,ts,java},**/tests/**/*.{py,js,ts,java},**/*story-map*.md",
-        "story_map": "**/*story-map*.md,**/sandbox/**/.context/**/*.{md,drawio}",
-        "scenarios": "**/sandbox/**/*.{py,js,ts,java}",
-        "acceptance_tests": "**/tests/**/*.{py,js,ts,java}",
+        "shared": f"{_PY_MD},{_PY_JS_TS_JAVA},**/*story-map*.md",
+        "story_map": "**/*story-map*.md,**/.context/**/*.{md,drawio}",
+        "scenarios": _PY_JS_TS_JAVA,
+        "acceptance_tests": _PY_JS_TS_JAVA,
     },
     "ux": {
-        "shared": "**/sandbox/**/*.{html,drawio,json,md},**/.context/**/*ux*.{md,drawio}",
-        "ia": "**/sandbox/**/.context/**/*.{drawio,md},**/*information-architecture*",
-        "mockup": "**/sandbox/**/*.html,**/sandbox/**/.context/**",
-        "front_end_code": "**/sandbox/**/*.html,**/src/**/*.{html,tsx,jsx,vue}",
+        "shared": "**/*.{html,drawio,json,md}",
+        "ia": "**/*.{drawio,md},**/*information-architecture*",
+        "mockup": "**/*.html,**/.context/**",
+        "front_end_code": "**/*.{html,tsx,jsx,vue,js,ts}",
     },
     "bdd": {
-        "shared": "**/tests/**/*.{py,js,ts,java},**/primitives/**/*.py,**/context_tools/**/*.py",
+        "shared": f"{_PY_JS_TS_JAVA},**/*modules*.md",
         "modules": "**/*modules*.md,**/.context/**/*",
-        "behavior": "**/tests/**/*.{py,js,ts,java}",
-        "development": "**/tests/**/*.{py,js,ts,java},**/*.{py,js,ts,java}",
+        "behavior": _PY_JS_TS_JAVA,
+        "development": _PY_JS_TS_JAVA,
     },
     "ddd": {
-        "shared": "**/domain/**/*.{md,py},**/*bounded-context*.md",
-        "bounded_context": "**/*bounded-context*.md,**/domain/**/*.md",
-        "building_blocks": "**/*bounded-context*.md,**/domain/**/*.md",
-        "tactics": "**/domain/**/*.py,**/src/**/*.py",
+        "shared": f"{_PY_MD},**/*bounded-context*.md",
+        "bounded_context": "**/*bounded-context*.md,**/*.md",
+        "building_blocks": "**/*bounded-context*.md,**/*.md",
+        "tactics": _PY,
     },
     "clean_engineering": {
-        "shared": "**/domain/**/*,**/sandbox/**/modules/**",
-        "modules": "**/sandbox/**/modules/**/*.{md,py},**/domain/**/modules/**",
-        "model": "**/domain/**/*.md,**/sandbox/**/*.md",
-        "code": "**/domain/**/*.py,**/src/**/*.py",
-        "specification": "**/domain/**/*.md",
+        "shared": _PY_MD,
+        "modules": _PY_MD,
+        "model": _PY_MD,
+        "code": _PY,
+        "specification": _MD,
     },
     "cdd": {
         "shared": "**/.context/**/cdd-sketch.md,**/.context/sessions/**",
-        "discovery": "**/.context/**/cdd-sketch.md,**/sandbox/**",
-        "explore": "**/.context/**/cdd-sketch.md,**/sandbox/**",
-        "spec": "**/.context/**/cdd-sketch.md,**/sandbox/**,**/tests/**",
-        "engineer": "**/sandbox/**,**/tests/**,**/domain/**",
+        "discovery": "**/.context/**/cdd-sketch.md,**/*.{md,py}",
+        "explore": "**/.context/**/cdd-sketch.md,**/*.{md,py}",
+        "spec": "**/.context/**/cdd-sketch.md,**/*.{md,py,js,ts,java}",
+        "engineer": "**/*.{py,md,js,ts,java}",
     },
 }
 

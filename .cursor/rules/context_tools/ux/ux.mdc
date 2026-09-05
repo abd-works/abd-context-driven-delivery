@@ -1,6 +1,6 @@
 ---
 description: "ux shared rules — apply across all fidelities"
-globs: **/sandbox/**/*.{html,drawio,json,md},**/.context/**/*ux*.{md,drawio}
+globs: **/*.{html,drawio,json,md}
 alwaysApply: false
 ---
 

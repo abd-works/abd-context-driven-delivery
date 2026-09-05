@@ -1,6 +1,6 @@
 ---
 description: "bdd development rules"
-globs: **/tests/**/*.{py,js,ts,java},**/*.{py,js,ts,java}
+globs: **/*.{py,js,ts,java}
 alwaysApply: false
 ---
 

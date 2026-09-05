@@ -1,6 +1,6 @@
 ---
 description: "ddd bounded context rules"
-globs: **/*bounded-context*.md,**/domain/**/*.md
+globs: **/*bounded-context*.md,**/*.md
 alwaysApply: false
 ---
 

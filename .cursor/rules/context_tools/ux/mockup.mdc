@@ -1,6 +1,6 @@
 ---
 description: "ux mockup rules"
-globs: **/sandbox/**/*.html,**/sandbox/**/.context/**
+globs: **/*.html,**/.context/**
 alwaysApply: false
 ---
 
