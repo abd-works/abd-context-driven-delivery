@@ -15,10 +15,10 @@ Use this guidance to adapt conceptual templates (e.g., in TypeScript or Python) 
 
 ## Python
 
-- **Test Runner**: [Pytest](https://docs.pytest.org/) with `@story` / `@scenario` decorators from `story_test.py` (Vitest-style registration at import).
+- **Test Runner**: [Pytest](https://docs.pytest.org/) with `story()` / `scenario()` from `story_test.py` (same functional API as `story-test.ts`; tests register at import).
 - **Assertion Library**: [Expects](https://github.com/jaimegildesagredo/expects).
-- **Story file shape**: Same layout as TypeScript — `@story` / `@background` / `@scenario`; `@before_all` / `@after_all` for boot/teardown; sibling `givens.py`, `whens.py`, `examples/*` modules.
-- **Style**: `steps.when(…).and_(…)` and `steps.then(…).and_(…)` on `ScenarioSteps` — mirrors TS `when().and()` / `then().and()`.
+- **Story file shape**: Same layout as TypeScript — `story(name, body)`, `background(build)`, `scenario(name, build)`; `before_all()` / `after_all()` inside the story body for boot/teardown; sibling `givens.py`, `whens.py`, `examples/*` modules.
+- **Style**: `story()` / `background()` / `scenario()` from `story_test.py`; `steps.when(…).and_(…)` and `steps.then(…).and_(…)` on `ScenarioSteps` — mirrors TS `when().and()` / `then().and()`.
 
 ## Java
 

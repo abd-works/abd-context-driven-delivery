@@ -1,4 +1,4 @@
-"""Given / When / Then helpers (pytest/RSpec-style). Copy to tests/story_test.py."""
+"""Given / When / Then helpers (pytest). Copy to tests/story_test.py."""
 
 from __future__ import annotations
 
@@ -31,8 +31,6 @@ class ThenChain:
 
 
 class ScenarioSteps:
-    """Step registrar for @scenario bodies — mirrors TS scenario(({ when, then }) => …)."""
-
     def __init__(self) -> None:
         self._givens: list[StepFn] = []
         self._whens: list[StepFn] = []
@@ -67,6 +65,7 @@ class _ScenarioDef:
 @dataclass
 class _StoryBuilder:
     name: str
+    module_name: str
     before_all_hooks: list[StepFn] = field(default_factory=list)
     after_all_hooks: list[StepFn] = field(default_factory=list)
     background_givens: list[StepFn] = field(default_factory=list)
@@ -82,26 +81,23 @@ def _slug(value: str) -> str:
     return slug or "story"
 
 
-def story(name: str):
-    """@story('Story title') — registers pytest examples at import (Vitest-style)."""
+def story(name: str, body: Callable[[], None]) -> None:
+    import inspect
 
-    def decorator(body: Callable[[], None]) -> Callable[[], None]:
-        builder = _StoryBuilder(name=name)
-        token = _builder_ctx.set(builder)
-        try:
-            body()
-        finally:
-            _builder_ctx.reset(token)
-        _install_pytest(builder, body.__module__)
-        return body
-
-    return decorator
+    module_name = inspect.getmodule(body).__name__ if inspect.getmodule(body) else "__main__"
+    builder = _StoryBuilder(name=name, module_name=module_name)
+    token = _builder_ctx.set(builder)
+    try:
+        body()
+    finally:
+        _builder_ctx.reset(token)
+    _install_pytest(builder)
 
 
 def before_all(fn: StepFn) -> StepFn:
     builder = _builder_ctx.get()
     if builder is None:
-        raise RuntimeError("@before_all must be used inside @story")
+        raise RuntimeError("before_all() must be called inside story()")
     builder.before_all_hooks.append(fn)
     return fn
 
@@ -109,48 +105,39 @@ def before_all(fn: StepFn) -> StepFn:
 def after_all(fn: StepFn) -> StepFn:
     builder = _builder_ctx.get()
     if builder is None:
-        raise RuntimeError("@after_all must be used inside @story")
+        raise RuntimeError("after_all() must be called inside story()")
     builder.after_all_hooks.append(fn)
     return fn
 
 
-def background(fn: Callable[[GivenRegistrar], None]) -> Callable[[GivenRegistrar], None]:
-    """@background — nest @scenario definitions inside; pass shared Given steps."""
-
+def background(build: Callable[[GivenRegistrar], None]) -> None:
     builder = _builder_ctx.get()
     if builder is None:
-        raise RuntimeError("@background must be used inside @story")
+        raise RuntimeError("background() must be called inside story()")
 
     registrar = GivenRegistrar([])
     scenarios: list[_ScenarioDef] = []
     bg_token = _background_ctx.set(scenarios)
     try:
-        fn(registrar)
+        build(registrar)
     finally:
         _background_ctx.reset(bg_token)
 
     builder.background_givens.extend(registrar._givens)
     builder.scenarios.extend(scenarios)
-    return fn
 
 
-def scenario(name: str):
-    """@scenario('Outcome title') — body receives ScenarioSteps."""
-
-    def decorator(build: Callable[[ScenarioSteps], None]) -> Callable[[ScenarioSteps], None]:
-        scenarios = _background_ctx.get()
-        if scenarios is None:
-            raise RuntimeError("@scenario must be used inside @background")
-        scenarios.append(_ScenarioDef(name=name, build=build))
-        return build
-
-    return decorator
+def scenario(name: str, build: Callable[[ScenarioSteps], None]) -> None:
+    scenarios = _background_ctx.get()
+    if scenarios is None:
+        raise RuntimeError("scenario() must be called inside background()")
+    scenarios.append(_ScenarioDef(name=name, build=build))
 
 
-def _install_pytest(builder: _StoryBuilder, module_name: str) -> None:
+def _install_pytest(builder: _StoryBuilder) -> None:
     import sys
 
-    module = sys.modules.get(module_name)
+    module = sys.modules.get(builder.module_name)
     if module is None:
         return
 
@@ -167,7 +154,7 @@ def _install_pytest(builder: _StoryBuilder, module_name: str) -> None:
 
     setattr(module, fixture_name, _lifecycle)
 
-    for scenario_index, scenario_def in enumerate(builder.scenarios):
+    for scenario_def in builder.scenarios:
         steps = ScenarioSteps()
         scenario_def.build(steps)
         scenario_slug = _slug(scenario_def.name)
