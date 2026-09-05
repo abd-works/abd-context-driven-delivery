@@ -10,8 +10,8 @@ Use this guidance to adapt conceptual templates (e.g., in TypeScript or Python) 
 
 - **Test Runner**: [Vitest](https://vitest.dev/) (or Jest).
 - **Assertion Library**: Vitest `expect` (including `expect.poll` for async UI state).
-- **Story file shape**: One `{story}.{tier}.ts` per story — `beforeAll`/`afterAll` for `{App}E2e.initialize(config)` / `.close()`; `background(({ given }) => { … scenario() … })` for shared Given + all scenarios; step bodies inline in `given` / `when` / `then`.
-- **Style**: `story` / `background` / `scenario` from `story-test.ts`; chain `when(…).and(…)`; first `then(…)` then `.and(…)` for additional outcomes; domain operations in When, observable assertions in Then.
+- **Story file shape**: One `{story}.{tier}.ts` per story — `beforeAll` / `afterAll`, `background(({ given }) => { … scenario() … })`. Template is **structure only** (`// test code goes here` in each step); replace when implementing.
+- **Style**: `story` / `background` / `scenario` from `story-test.ts`; chain `when(…).and(…)`; first `then(…)` then `.and(…)` for additional outcomes.
 
 ## Python
 

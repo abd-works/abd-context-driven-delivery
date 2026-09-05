@@ -226,485 +226,193 @@ section: body
 *When* …  
 *Then* …
 
-### python
-
-## scenario-template.py
-
-# ---
-# fidelity: [specification, engineering]
-# artifact: [story-scenarios]
-# format: py
-# ---
-#
-# Scenario template — refer to context_tools/language-tools.md for tooling.
-#
-# ```
-# # Params — fill before writing code
-# epic:       {epic-verb-noun}           # kebab folder under tests/
-# sub_epic:   {sub-epic-verb-noun}       # kebab folder under epic/ (omit level if story hangs off epic)
-# story:      {story-verb-noun}          # Verb Noun title from the story map
-# story_file: {story_snake_slug}         # snake file slug, e.g. sign_up_create_account
-# tier:       e2e | front-end | back-end | {system}
-#
-# # Artifact layout (artifacts-mirror-story-hierarchy)
-# tests/
-#   {epic-verb-noun}/
-#     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
-#       {story_snake_slug}.{tier}.py     # one GWT file per story per tier
-#
-# # Machinery (copy once per tests/ tree — full source inlined below)
-# story_test: tests/story_test.py
-#
-# # Naming rules
-# - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
-# - Story test file        → {story_snake_slug}.{tier}.py at epic or sub-epic — NO {story}/ folder
-# - Tier                   → file extension segment (.e2e.py, .front-end.py, .back-end.py)
-# - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
-# ```
-#
-# Pattern: GWT structure only — replace pass with real code under each with.
-
-from __future__ import annotations
-
-from mamba import after, before
-
-from story_test import and_, background, given, scenario, story, then, when
-
-
-with story("{Story Verb-Noun}"):
-    with before.all:
-        pass  # boot — test code goes here
-
-    with after.all:
-        pass  # teardown — test code goes here
-
-    with background.each:
-        with given("{background given step}"):
-            pass  # test code goes here
-
-        with scenario("{surface check — e.g. rules visible}"):
-            with when("{primary when step}"):
-                pass  # test code goes here
-
-            with then("{observable surface outcome}"):
-                pass  # test code goes here
-
-        with scenario("{validation branch while typing}"):
-            with when("{primary when step}"):
-                pass  # test code goes here
-
-            with and_("{follow-on when step}"):
-                pass  # test code goes here
-
-            with then("{validation message on domain object}"):
-                pass  # test code goes here
-
-        with scenario("{validation clears when input conforms}"):
-            with when("{primary when step}"):
-                pass  # test code goes here
-
-            with and_("{prior invalid state}"):
-                pass  # test code goes here
-
-            with when("{corrective action}"):
-                pass  # test code goes here
-
-            with then("{error cleared on domain object}"):
-                pass  # test code goes here
-
-        with scenario("{main-flow outcome}"):
-            with when("{primary when step}"):
-                pass  # test code goes here
-
-            with when("{submit operation on domain object}"):
-                pass  # test code goes here
-
-            with then("{post-condition on loaded aggregate}"):
-                pass  # test code goes here
-
-
-## story_test.py
-
-# ---
-# fidelity: [specification, engineering]
-# artifact: [story-scenarios]
-# format: py
-# ---
-#
-# Given / When / Then on Mamba — copy to tests/story_test.py once per tests/ tree.
-#
-# ```
-# file: tests/story_test.py
-# ```
-#
-# Stubs for `with story / background / scenario / given / when / then / and_` blocks.
-# StoryNodeTransformer (below) compiles them into Mamba example groups at load time.
-
-from __future__ import annotations
-
-import ast
-import os
-import re
-import sys
-import types
-from typing import Iterator
-
-from mamba import nodetransformers
-from mamba.example_collector import ExampleCollector
-
-# Stubs — replaced by AST transform when Mamba loads the spec (same as mamba.description / mamba.it).
-def story(_name: str) -> None:
-    pass
-
-
-class _Background:
-    all = None
-    each = None
-
-
-background = _Background()
-
-
-def scenario(_name: str) -> None:
-    pass
-
-
-def given(_name: str) -> None:
-    pass
-
-
-def when(_name: str) -> None:
-    pass
-
-
-def then(_name: str) -> None:
-    pass
-
-
-def and_(_name: str) -> None:
-    pass
-
-
-def _slug(value: str) -> str:
-    slug = re.sub(r"[^0-9a-z]+", "_", value.strip().lower()).strip("_")
-    return slug or "step"
-
-
-class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
-    STORY = frozenset({"story"})
-    STRUCTURE = frozenset({"background", "scenario"})
-    STEPS = frozenset({"given", "when", "then", "and_"})
-
-    def visit_With(self, node: ast.With) -> ast.AST:
-        name = self._get_name(node)
-        if name in self.STORY:
-            return self._transform_story(node)
-        if name in self.STRUCTURE or name in self.STEPS:
-            return node
-        node = super(StoryNodeTransformer, self).generic_visit(node)  # type: ignore[attr-defined]
-        return super().visit_With(node)
-
-    def _background_scope(self, node: ast.With) -> str:
-        context_expr = self._context_expr_for(node)
-        if isinstance(context_expr, ast.Attribute) and isinstance(
-            context_expr.value, ast.Name
-        ):
-            if context_expr.value.id == "background" and context_expr.attr in (
-                "all",
-                "each",
-            ):
-                return context_expr.attr
-        return "each"
-
-    def _is_background_with(self, node: ast.With) -> bool:
-        return self._get_name(node) == "background"
-
-    def visit_Module(self, node: ast.Module) -> ast.Module:
-        node = super().visit_Module(node)
-        expanded: list[ast.stmt] = []
-        for stmt in node.body:
-            if isinstance(stmt, ast.With) and self._is_background_with(stmt):
-                _story_givens, scenarios = self._expand_background(stmt)
-                expanded.extend(scenarios)
-                continue
-            if isinstance(stmt, ast.With) and self._get_name(stmt) == "scenario":
-                expanded.append(self._transform_scenario(stmt, []))
-                continue
-            expanded.append(stmt)
-        node.body = expanded
-        return node
-
-    def _transform_story(self, node: ast.With) -> ast.ClassDef:
-        context_expr = self._context_expr_for(node)
-        story_name = self._human_readable_context_expr(context_expr)
-        body: list[ast.stmt] = []
-        story_givens: list[list[ast.stmt]] = []
-
-        for stmt in node.body:
-            if isinstance(stmt, ast.With) and self._is_background_with(stmt):
-                scope = self._background_scope(stmt)
-                bg_story_givens, scenarios = self._expand_background(stmt)
-                if scope == "all":
-                    story_givens.extend(bg_story_givens)
-                body.extend(scenarios)
-            else:
-                transformed = self.visit(stmt)
-                if isinstance(transformed, ast.stmt):
-                    body.append(transformed)
-
-        if story_givens:
-            body = self._inject_story_givens(body, story_givens, node)
-
-        return ast.copy_location(
-            ast.ClassDef(
-                name=self._prefix_with_sequence(f"Story_{_slug(story_name)}"),
-                bases=[],
-                keywords=[],
-                body=body,
-                decorator_list=[
-                    self._set_attribute("_example_group", True),
-                    self._set_attribute("_example_name", story_name),
-                    self._set_attribute("_tags", []),
-                    self._set_attribute("_pending", False),
-                    self._set_attribute("_shared", False),
-                ],
-            ),
-            node,
-        )
-
-    def _expand_background(
-        self, node: ast.With
-    ) -> tuple[list[list[ast.stmt]], list[ast.ClassDef]]:
-        scope = self._background_scope(node)
-        background_givens: list[list[ast.stmt]] = []
-        scenarios: list[ast.ClassDef] = []
-
-        for stmt in node.body:
-            if not isinstance(stmt, ast.With):
-                continue
-            step = self._get_name(stmt)
-            if step == "given":
-                background_givens.append(stmt.body)
-            elif step == "scenario":
-                per_scenario_givens = (
-                    background_givens if scope == "each" else []
-                )
-                scenarios.append(
-                    self._transform_scenario(stmt, per_scenario_givens)
-                )
-
-        story_givens = background_givens if scope == "all" else []
-        return story_givens, scenarios
-
-    def _inject_story_givens(
-        self,
-        body: list[ast.stmt],
-        givens: list[list[ast.stmt]],
-        node: ast.AST,
-    ) -> list[ast.stmt]:
-        extra: list[ast.stmt] = [stmt for block in givens for stmt in block]
-        for index, stmt in enumerate(body):
-            if isinstance(stmt, ast.FunctionDef) and stmt.name == "before_all":
-                merged = list(stmt.body) + extra
-                body[index] = ast.copy_location(
-                    ast.FunctionDef(
-                        name="before_all",
-                        args=stmt.args,
-                        body=merged,
-                        decorator_list=stmt.decorator_list,
-                    ),
-                    stmt,
-                )
-                return body
-
-        body.insert(
-            0,
-            ast.copy_location(
-                ast.FunctionDef(
-                    name="before_all",
-                    args=self._generate_argument("self"),
-                    body=extra,
-                    decorator_list=[],
-                ),
-                node,
-            ),
-        )
-        return body
-
-    def _transform_scenario(
-        self,
-        node: ast.With,
-        background_givens: list[list[ast.stmt]],
-    ) -> ast.ClassDef:
-        context_expr = self._context_expr_for(node)
-        scenario_name = self._human_readable_context_expr(context_expr)
-
-        scenario_givens: list[list[ast.stmt]] = []
-        whens: list[list[ast.stmt]] = []
-        thens: list[tuple[str, list[ast.stmt]]] = []
-        last_kind: str | None = None
-
-        for stmt in node.body:
-            if not isinstance(stmt, ast.With):
-                continue
-            step = self._get_name(stmt)
-            label = self._human_readable_context_expr(self._context_expr_for(stmt))
-            if step == "given":
-                scenario_givens.append(stmt.body)
-                last_kind = "given"
-            elif step == "when":
-                whens.append(stmt.body)
-                last_kind = "when"
-            elif step == "and_":
-                if last_kind in ("when", "and_when"):
-                    whens.append(stmt.body)
-                    last_kind = "and_when"
-                elif last_kind in ("then", "and_then"):
-                    thens.append((label, stmt.body))
-                    last_kind = "and_then"
-                else:
-                    whens.append(stmt.body)
-                    last_kind = "when"
-            elif step == "then":
-                thens.append((label, stmt.body))
-                last_kind = "then"
-
-        setup_body: list[ast.stmt] = []
-        for block in (*background_givens, *scenario_givens, *whens):
-            setup_body.extend(block)
-
-        class_body: list[ast.stmt] = []
-        if setup_body:
-            class_body.append(
-                ast.copy_location(
-                    ast.FunctionDef(
-                        name="before_all",
-                        args=self._generate_argument("self"),
-                        body=setup_body,
-                        decorator_list=[],
-                    ),
-                    node,
-                )
-            )
-
-        for index, (label, body) in enumerate(thens):
-            example_name = f"Then {label}" if index == 0 else label
-            display_name = f"it Then {label}" if index == 0 else f"it {label}"
-            class_body.append(
-                self._make_example_function(example_name, display_name, body, node)
-            )
-
-        return ast.copy_location(
-            ast.ClassDef(
-                name=self._prefix_with_sequence(f"Scenario_{_slug(scenario_name)}"),
-                bases=[],
-                keywords=[],
-                body=class_body,
-                decorator_list=[
-                    self._set_attribute("_example_group", True),
-                    self._set_attribute("_example_name", scenario_name),
-                    self._set_attribute("_tags", []),
-                    self._set_attribute("_pending", False),
-                    self._set_attribute("_shared", False),
-                ],
-            ),
-            node,
-        )
-
-    def _make_example_function(
-        self,
-        function_name: str,
-        example_name: str,
-        body: list[ast.stmt],
-        node: ast.AST,
-    ) -> ast.FunctionDef:
-        return ast.copy_location(
-            ast.FunctionDef(
-                name=self._prefix_with_sequence(function_name),
-                args=self._generate_argument("self"),
-                body=body,
-                decorator_list=[
-                    self._set_attribute("_example", True),
-                    self._set_attribute("_example_name", example_name),
-                    self._set_attribute("_tags", []),
-                    self._set_attribute("_pending", False),
-                ],
-            ),
-            node,
-        )
-
-
-class StoryExampleCollector(ExampleCollector):
-    STORY_SUFFIXES = (".e2e.py", ".front-end.py", ".back-end.py")
-
-    def __init__(self, paths: list[str]) -> None:
-        super().__init__(paths)
-        self._node_transformer = StoryNodeTransformer()
-
-    def _collect_files_containing_examples(self) -> list[str]:
-        collected: list[str] = []
-        for path in self.paths:
-            if not os.path.exists(path):
-                continue
-            if os.path.isdir(path):
-                collected.extend(self._collect_story_files_in_directory(path))
-            elif self._is_story_file(path):
-                collected.append(path)
-        collected.sort()
-        return collected
-
-    def _collect_story_files_in_directory(self, directory: str) -> list[str]:
-        found: list[str] = []
-        for root, _dirs, files in os.walk(directory):
-            for name in files:
-                if self._is_story_file(name):
-                    found.append(os.path.join(self._normalize_path(root), name))
-        return found
-
-    def _is_story_file(self, path: str) -> bool:
-        return path.endswith("_spec.py") or any(
-            path.endswith(suffix) for suffix in self.STORY_SUFFIXES
-        )
-
-
-def load_story_module(path: str) -> types.ModuleType:
-    collector = StoryExampleCollector([path])
-    modules = collector.modules()
-    if not modules:
-        raise RuntimeError(f"No story examples found in {path}")
-    return modules[0]
-
-
-def iter_story_modules(paths: list[str]) -> Iterator[types.ModuleType]:
-    collector = StoryExampleCollector(paths)
-    yield from collector.modules()
-
-
-def patch_mamba_collector() -> None:
-    """Use StoryNodeTransformer for all Mamba loads in this process."""
-    nodetransformers.TransformToSpecsNodeTransformer = StoryNodeTransformer  # type: ignore[misc]
-
-    original_init = ExampleCollector.__init__
-
-    def _init(collector, paths):  # type: ignore[no-untyped-def]
-        original_init(collector, paths)
-        collector._node_transformer = StoryNodeTransformer()
-
-    ExampleCollector.__init__ = _init  # type: ignore[method-assign]
-
-    if "story_test" not in sys.modules:
-        sys.modules["story_test"] = sys.modules[__name__]
-
-
-def main() -> None:
-    """Run Mamba with story AST transforms enabled."""
-    patch_mamba_collector()
-    from mamba.cli import main as mamba_main
-
-    mamba_main()
-
-
-if __name__ == "__main__":
-    main()
+### typescript
+
+## scenario-template.ts
+
+/**
+ * Scenario template — refer to context_tools/language-tools.md for tooling.
+ *
+ * ```
+ * # Params — fill before writing code
+ * epic:       {epic-verb-noun}           # kebab folder under tests/
+ * sub_epic:   {sub-epic-verb-noun}       # kebab folder under epic/ (omit level if story hangs off epic)
+ * story:      {story-verb-noun}          # Verb Noun title from the story map
+ * story_file: {story-kebab-slug}         # kebab file slug, e.g. sign-up-create-account
+ * tier:       e2e | front-end | back-end | {system}
+ *
+ * # Artifact layout (artifacts-mirror-story-hierarchy)
+ * tests/
+ *   {epic-verb-noun}/
+ *     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
+ *       {story-kebab-slug}.{tier}.ts     # one GWT file per story per tier
+ *
+ * # Machinery (copy once per tests/ tree — full source inlined below)
+ * story-test: tests/story-test.ts
+ *
+ * # Naming rules
+ * - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
+ * - Story test file        → {story-kebab-slug}.{tier}.ts at epic or sub-epic — NO {story}/ folder
+ * - Tier                   → file extension segment (.e2e.ts, .front-end.ts, .back-end.ts)
+ * - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
+ * ```
+ *
+ * Pattern: GWT structure only — // test code goes here in each step callback.
+ */
+
+import { afterAll, beforeAll } from "vitest";
+import { background, scenario, story } from "../../story-test";
+
+story("{Story Verb-Noun}", () => {
+  beforeAll(async () => {
+    // boot — test code goes here
+  });
+
+  afterAll(async () => {
+    // teardown — test code goes here
+  });
+
+  background(({ given }) => {
+    given("{background given step}", async () => {
+      // test code goes here
+    });
+
+    scenario("{surface check — e.g. rules visible}", ({ when, then }) => {
+      when("{primary when step}", async () => {
+        // test code goes here
+      });
+      then("{observable surface outcome}", async () => {
+        // test code goes here
+      });
+    });
+
+    scenario("{validation branch while typing}", ({ when, then }) => {
+      when("{primary when step}", async () => {
+        // test code goes here
+      }).and("{follow-on when step}", async () => {
+        // test code goes here
+      });
+      then("{validation message on domain object}", () => {
+        // test code goes here
+      });
+    });
+
+    scenario("{validation clears when input conforms}", ({ when, then }) => {
+      when("{primary when step}", async () => {
+        // test code goes here
+      }).and("{prior invalid state}", async () => {
+        // test code goes here
+      });
+      when("{corrective action}", async () => {
+        // test code goes here
+      });
+      then("{error cleared on domain object}", () => {
+        // test code goes here
+      });
+    });
+
+    scenario("{main-flow outcome}", ({ when, then }) => {
+      when("{primary when step}", async () => {
+        // test code goes here
+      });
+      when("{submit operation on domain object}", async () => {
+        // test code goes here
+      });
+      then("{post-condition on loaded aggregate}", async () => {
+        // test code goes here
+      });
+    });
+  });
+});
+
+
+## story-test.ts
+
+/**
+ * Given / When / Then helpers (Vitest). Copy to tests/story-test.ts once per tests/ tree.
+ *
+ * ```
+ * file: tests/story-test.ts
+ * ```
+ */
+
+type WhenChain = {
+  and: (s: string, fn: () => void | Promise<void>) => WhenChain;
+};
+
+type ThenChain = {
+  and: (s: string, fn: () => void | Promise<void>) => ThenChain;
+};
+
+let activeBackgroundGivens: Array<() => void | Promise<void>> = [];
+
+export function story(name: string, build: () => void): void {
+  describe(name, build);
+}
+
+export function background(
+  build: (steps: { given: (s: string, fn: () => void | Promise<void>) => void }) => void,
+): void {
+  const givens: Array<() => void | Promise<void>> = [];
+  build({
+    given: (_s, fn) => givens.push(fn),
+  });
+  activeBackgroundGivens = givens;
+}
+
+export function scenario(
+  name: string,
+  build: (steps: {
+    given: (s: string, fn: () => void | Promise<void>) => void;
+    when: (s: string, fn: () => void | Promise<void>) => WhenChain;
+    then: (s: string, fn: () => void | Promise<void>) => ThenChain;
+  }) => void,
+): void {
+  describe(name, () => {
+    const givens: Array<() => void | Promise<void>> = [];
+    const whens: Array<() => void | Promise<void>> = [];
+    const thens: Array<{ step: string; fn: () => void | Promise<void> }> = [];
+    const pushThen = (s: string, fn: () => void | Promise<void>) => {
+      thens.push({ step: s, fn });
+    };
+    const thenChain: ThenChain = {
+      and: (s, fn) => {
+        pushThen(s, fn);
+        return thenChain;
+      },
+    };
+    const whenChain: WhenChain = {
+      and: (s, fn) => {
+        whens.push(fn);
+        return whenChain;
+      },
+    };
+
+    build({
+      given: (_s, fn) => givens.push(fn),
+      when: (_s, fn) => {
+        whens.push(fn);
+        return whenChain;
+      },
+      then: (s, fn) => {
+        pushThen(s, fn);
+        return thenChain;
+      },
+    });
+
+    beforeAll(async () => {
+      for (const g of [...activeBackgroundGivens, ...givens]) {
+        await g();
+      }
+      for (const w of whens) {
+        await w();
+      }
+    });
+
+    thens.forEach(({ step, fn }, i) => {
+      it(i === 0 ? `Then ${step}` : step, fn);
+    });
+  });
+}
 
 See examples in `context_tools/stories/examples/` if needed.
