@@ -55,7 +55,10 @@ CONTEXT_TOOL_RULE_GLOBS: dict[str, dict[str, str]] = {
     },
 }
 
-_RULES_HEADING = re.compile(r"^(?:###\s+Rules|\*\*Rules:\*\*)\s*$", re.MULTILINE)
+_RULES_HEADING = re.compile(
+    r"^(?:###\s+(?:Module\s+rules|Class\s+[Rr]ules|Rules)|\*\*Rules:\*\*)\s*$",
+    re.MULTILINE | re.IGNORECASE,
+)
 _SHARED_HEADING = re.compile(
     r"^(?:##\s+Shared\s+rules|\*\*Shared\s+Rules:\*\*)\s*$",
     re.MULTILINE | re.IGNORECASE,

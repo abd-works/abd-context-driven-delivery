@@ -39,6 +39,20 @@ with description("context tool rules"):
         expect(by_name["scenarios"].body).to(contain("@stories-scenarios"))
         expect(by_name["scenarios"].globs).to(contain("sandbox"))
 
+    with it("should extract modules model and code rules from clean_engineering.md"):
+        specs = rules_for_context_tool(
+            _REPO_ROOT / "context_tools" / "clean_engineering",
+            slug="clean_engineering",
+            class_name="CleanEngineering",
+        )
+        by_name = {s.name: s for s in specs}
+        expect("modules" in by_name).to(be_true)
+        expect("model" in by_name).to(be_true)
+        expect("code" in by_name).to(be_true)
+        expect(by_name["modules"].body).to(contain("high-cohesion"))
+        expect(by_name["model"].body).to(contain("keep-classes-single-responsibility"))
+        expect(by_name["code"].body).to(contain("keep-operations-small-focused"))
+
     with it("should place rules under context_tools/{slug}/"):
         rule = Rule("Cursor", "stories")
         rule.subfolder = "context_tools/stories"
