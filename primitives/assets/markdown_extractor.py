@@ -283,7 +283,7 @@ def thin_examples_by_format(items: dict[str, str], format_name: str | None) -> d
     return by_ext if by_ext else items
 
 
-_STORY_MAP_EXAMPLE_STEMS = frozenset({"story-map", "thin-slice"})
+_STORY_MAP_EXAMPLE_STEMS = frozenset({"story-map"})
 _CE_GENERATE_FIDELITIES = frozenset({"modules", "model", "code", "specification"})
 
 
@@ -292,7 +292,7 @@ def thin_examples_by_fidelity(
 ) -> dict[str, str]:
     """Keep example files whose stem matches the active fidelity.
 
-    ``story_map`` → ``story-map`` / ``thin-slice``. ``scenarios`` → ``scenario-*``.
+    ``story_map`` → ``story-map`` only. ``scenarios`` → ``scenario-*``.
     CE generate fidelities (``modules`` / ``model`` / ``code``) drop ``evals/``
     (repair fixtures) and keep shopping-cart. Unset fidelity, or no matching
     names, leaves ``items`` unchanged so we never empty the slot.

@@ -291,7 +291,7 @@ with description("thinning examples by format"):
 
 with description("thinning examples by fidelity"):
     with context("when fidelity is story_map"):
-        with it("should keep story-map and thin-slice and drop scenario files"):
+        with it("should keep story-map and drop scenario files"):
             from primitives.assets.markdown_extractor import thin_examples_by_fidelity
 
             items = {
@@ -300,14 +300,7 @@ with description("thinning examples by fidelity"):
                 "orders/md/scenario-main-flow.md": "scenario",
             }
             result = thin_examples_by_fidelity(items, "story_map")
-            expect(result).to(
-                equal(
-                    {
-                        "orders/md/story-map.md": "map",
-                        "orders/md/thin-slice.md": "slice",
-                    }
-                )
-            )
+            expect(result).to(equal({"orders/md/story-map.md": "map"}))
 
     with context("when fidelity is scenarios"):
         with it("should keep scenario-* files only"):

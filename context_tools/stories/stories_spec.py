@@ -226,10 +226,10 @@ with description("Stories"):
             expect("/py/" in text).to(equal(False))
             expect("/md/" in text).to(be_true)
 
-        with it("should keep story-map and thin-slice and omit scenario examples"):
+        with it("should keep story-map and omit scenario examples"):
             text = Stories(fidelity="story_map", format="markdown").examples().expand()
             expect("story-map.md" in text).to(be_true)
-            expect("thin-slice.md" in text).to(be_true)
+            expect("thin-slice.md" in text).to(equal(False))
             expect("scenario-main-flow.md" in text).to(equal(False))
             expect("scenario-template.md" in text).to(equal(False))
 
@@ -239,9 +239,10 @@ with description("Stories"):
                 fidelity="story_map", format="markdown", session=None
             ).templates().expand()
 
-        with it("should inline the markdown story-map and thin-slice templates"):
+        with it("should inline the markdown story-map template only"):
             expect("Story Map" in self.templates).to(be_true)
-            expect("Thin slicing" in self.templates).to(be_true)
+            expect("Thin slicing" in self.templates).to(equal(False))
+            expect("## Thin slices" in self.templates).to(be_true)
             expect("story-context.md" in self.templates).to(equal(False))
 
         with it("should omit scenario templates, sketch, and other-format story classes"):
