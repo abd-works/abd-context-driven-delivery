@@ -4,7 +4,7 @@ globs: **/sandbox/**/*.html,**/src/**/*.{html,tsx,jsx,vue}
 alwaysApply: false
 ---
 
-When writing front-end code, follow these rules. See @ux-front_end_code for the full skill.
+When front end code, follow these rules. See @ux-front_end_code for the full skill.
 
 
 - **`real-frontend-not-mockup`** — Shipping UI is production frontend code, not the greybox Story Demo frame.

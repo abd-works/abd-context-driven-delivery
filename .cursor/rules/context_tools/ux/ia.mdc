@@ -4,7 +4,7 @@ globs: **/sandbox/**/.context/**/*.{drawio,md},**/*information-architecture*
 alwaysApply: false
 ---
 
-When designing information architecture, follow these rules. See @ux-ia for the full skill.
+When ia, follow these rules. See @ux-ia for the full skill.
 
 
 - **`tab-states-are-separate-screens`** / **`screen-story-budget`** / **`ia-named-regions-only`** — as above.

@@ -4,7 +4,7 @@ globs: **/sandbox/**/*.{html,drawio,json,md},**/.context/**/*ux*.{md,drawio}
 alwaysApply: false
 ---
 
-When designing UX, follow these rules. For full generate guidance see @ux-front_end_code, @ux-ia, @ux-mockup.
+When front end code, ia, or mockup, also follow these rules on top of the fidelity-specific ones. See @ux-front_end_code, @ux-ia, @ux-mockup for full generate guidance.
 
 
 - **`tab-states-are-separate-screens`** — N tabs → N screens; chrome shared via `chrome_of` / inactive tabs.

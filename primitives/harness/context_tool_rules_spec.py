@@ -31,9 +31,11 @@ with description("context tool rules"):
         expect("stories" in by_name).to(be_true)
         expect("story_map" in by_name).to(be_true)
         expect("scenarios" in by_name).to(be_true)
-        expect(by_name["stories"].body).to(contain("When shaping stories, follow these rules"))
+        expect(by_name["stories"].body).to(
+            contain("When acceptance tests, scenarios, or story map, also follow these rules on top of the fidelity-specific ones")
+        )
         expect(by_name["stories"].body).to(contain("kebab-case-paths"))
-        expect(by_name["story_map"].body).to(contain("When editing story maps, follow these rules"))
+        expect(by_name["story_map"].body).to(contain("When story map, follow these rules"))
         expect(by_name["scenarios"].body).to(contain("@stories-scenarios"))
         expect(by_name["scenarios"].globs).to(contain("sandbox"))
 

@@ -4,7 +4,7 @@ globs: **/domain/**/*.py,**/src/**/*.py
 alwaysApply: false
 ---
 
-When writing domain code, follow these rules. See @clean_engineering-code for the full skill.
+When code, follow these rules. See @clean_engineering-code for the full skill.
 
 
 - **`keep-operations-small-focused`** — Under **20 lines**; extract named helpers.

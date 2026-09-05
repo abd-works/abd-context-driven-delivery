@@ -177,43 +177,12 @@ def _glob_for(tool_slug: str, fidelity: str) -> str:
     return cfg.get(fidelity, cfg.get("shared", _shared_globs(tool_slug)))
 
 
-# Thematic opener phrases — "When {phrase}, follow these rules."
-_TOOL_WHEN_PHRASE: dict[str, str] = {
-    "stories": "shaping stories",
-    "ux": "designing UX",
-    "bdd": "practicing BDD",
-    "ddd": "modeling the domain (DDD)",
-    "clean_engineering": "practicing clean engineering",
-    "cdd": "practicing context-driven delivery",
-}
-
-_FIDELITY_WHEN_PHRASE: dict[str, str] = {
-    "story_map": "editing story maps",
-    "scenarios": "writing scenarios",
-    "acceptance_tests": "writing acceptance tests",
-    "ia": "designing information architecture",
-    "mockup": "building mockups",
-    "front_end_code": "writing front-end code",
-    "modules": "partitioning BDD modules",
-    "behavior": "sketching BDD behavior",
-    "development": "implementing BDD tests",
-    "bounded_context": "modeling bounded contexts",
-    "building_blocks": "defining building blocks",
-    "tactics": "applying DDD tactics",
-    "model": "modeling the domain",
-    "code": "writing domain code",
-    "specification": "writing specifications",
-    "discovery": "running CDD discovery",
-    "explore": "running CDD explore",
-    "spec": "running CDD spec",
-    "engineer": "running CDD engineer",
-}
-
-
-def _when_phrase(tool_slug: str, fidelity: str, *, shared: bool) -> str:
-    if shared:
-        return _TOOL_WHEN_PHRASE.get(tool_slug, f"working with {tool_slug.replace('_', ' ')}")
-    return _FIDELITY_WHEN_PHRASE.get(fidelity, f"working on {fidelity.replace('_', ' ')}")
+def _oxford_or(items: list[str]) -> str:
+    if len(items) <= 1:
+        return items[0] if items else ""
+    if len(items) == 2:
+        return f"{items[0]} or {items[1]}"
+    return ", ".join(items[:-1]) + f", or {items[-1]}"
 
 
 def _rule_opener(
@@ -222,16 +191,18 @@ def _rule_opener(
     shared: bool,
     fidelity: str = "",
     skill_refs: list[str],
+    fidelity_names: frozenset[str] = frozenset(),
 ) -> str:
-    when = _when_phrase(tool_slug, fidelity, shared=shared)
+    refs = ", ".join(f"@{ref}" for ref in skill_refs)
     if shared:
-        refs = ", ".join(f"@{ref}" for ref in skill_refs)
+        activities = _oxford_or([name.replace("_", " ") for name in sorted(fidelity_names)])
         return (
-            f"When {when}, follow these rules. "
-            f"For full generate guidance see {refs}.\n\n"
+            f"When {activities}, also follow these rules on top of the fidelity-specific ones. "
+            f"See {refs} for full generate guidance.\n\n"
         )
+    activity = fidelity.replace("_", " ")
     return (
-        f"When {when}, follow these rules. "
+        f"When {activity}, follow these rules. "
         f"See @{_skill_ref(tool_slug, fidelity)} for the full skill.\n\n"
     )
 
@@ -270,7 +241,12 @@ def rules_for_context_tool(
                 name=slug,
                 description=f"{slug} shared rules — apply across all fidelities",
                 globs=globs,
-                body=_rule_opener(slug, shared=True, skill_refs=skill_refs)
+                body=_rule_opener(
+                    slug,
+                    shared=True,
+                    skill_refs=skill_refs,
+                    fidelity_names=fidelity_names,
+                )
                 + "\n"
                 + shared_body,
             )

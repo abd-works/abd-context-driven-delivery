@@ -4,7 +4,7 @@ globs: **/*story-map*.md,**/sandbox/**/.context/**/*.{md,drawio}
 alwaysApply: false
 ---
 
-When editing story maps, follow these rules. See @stories-story_map for the full skill.
+When story map, follow these rules. See @stories-story_map for the full skill.
 
 
 - **`verb-noun-format`** — Name Epic / SubEpic / Story verb–noun; actor is metadata; base verb form.

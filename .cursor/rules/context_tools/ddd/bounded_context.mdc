@@ -4,7 +4,7 @@ globs: **/*bounded-context*.md,**/domain/**/*.md
 alwaysApply: false
 ---
 
-When modeling bounded contexts, follow these rules. See @ddd-bounded_context for the full skill.
+When bounded context, follow these rules. See @ddd-bounded_context for the full skill.
 
 
 - **`experts-words-preferred`** — Prefer the words domain experts use; do not invent technical synonyms when a domain word already exists. A ported telephone number is `TelephoneNumber` with `PortingInformation`, not `PortabilityRequest`; the operation is `port()`, not `requestPortability()`.

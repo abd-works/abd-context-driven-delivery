@@ -4,7 +4,7 @@ globs: **/tests/**/*.{py,js,ts,java}
 alwaysApply: false
 ---
 
-When sketching BDD behavior, follow these rules. See @bdd-behavior for the full skill.
+When behavior, follow these rules. See @bdd-behavior for the full skill.
 
 
 - **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count.
