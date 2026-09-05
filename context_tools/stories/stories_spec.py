@@ -231,7 +231,7 @@ with description("Stories"):
             expect("story-map.md" in text).to(be_true)
             expect("thin-slice.md" in text).to(be_true)
             expect("scenario-main-flow.md" in text).to(equal(False))
-            expect("scenario-outline.md" in text).to(equal(False))
+            expect("scenario-template.md" in text).to(equal(False))
 
     with context("whose templates slot is expanded at story_map markdown"):
         with before.each:
@@ -245,6 +245,9 @@ with description("Stories"):
             expect("story-context.md" in self.templates).to(equal(False))
 
         with it("should omit scenario templates, sketch, and other-format story classes"):
+            expect("scenario-template" in self.templates).to(equal(False))
+            expect("scenario-inline" in self.templates).to(equal(False))
+            expect("scenario-main-flow" in self.templates).to(equal(False))
             expect("scenario-outline" in self.templates).to(equal(False))
             expect("Stories sketch — match active fidelity" in self.templates).to(
                 equal(False)
@@ -265,6 +268,7 @@ with description("Stories"):
             expect("scenario-inline.md" in self.templates).to(equal(False))
             expect("scenario-main-flow.md" in self.templates).to(equal(False))
             expect("scenario-outline.md" in self.templates).to(equal(False))
+            expect("scenario-template.md" in self.templates).to(equal(False))
             expect("components/story-header.md" in self.templates).to(equal(False))
 
     with context("whose templates slot is expanded at scenarios python"):
@@ -312,6 +316,22 @@ with description("Stories"):
             expect("Protocol" in self.templates).to(equal(False))
             expect("scenario-inline.md" in self.templates).to(equal(False))
             expect("scenario-main-flow.md" in self.templates).to(equal(False))
+            expect("scenario-outline.md" in self.templates).to(equal(False))
+            expect("scenario-template.md" in self.templates).to(equal(False))
+
+    with context("whose templates slot is expanded at scenarios markdown"):
+        with before.each:
+            self.templates = Stories(
+                fidelity="scenarios", format="markdown", session=None
+            ).templates().expand()
+
+        with it("should inline the merged scenario-template with outline default and inline alternate"):
+            expect("scenario-template.md" in self.templates).to(be_true)
+            expect("Default — Scenario Outline" in self.templates).to(be_true)
+            expect("Alternate — inline scenarios" in self.templates).to(be_true)
+            expect("scenario-inline.md" in self.templates).to(equal(False))
+            expect("scenario-main-flow.md" in self.templates).to(equal(False))
+            expect("scenario-outline.md" in self.templates).to(equal(False))
 
     with context("whose templates slot is expanded at scenarios typescript"):
         with it("should inline sign-up-style scenario-template.ts"):

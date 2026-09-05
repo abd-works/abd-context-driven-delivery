@@ -81,7 +81,7 @@
 <p><strong>Templates</strong> live under <code>templates/</code> per format. <strong>Scanners</strong> read the canonical model only — never language syntax.</p>
 <hr>
 <h2>scenarios</h2>
-<p><strong>Default format:</strong> markdown</p>
+<p><strong>Default format:</strong> python</p>
 <p><strong>Goal:</strong> Main-flow scenarios per story (single or multiple) with optional variations, backed by a fake + public seam.</p>
 <p><strong>Produce:</strong> Main-flow scenarios per story (single or multiple); optional variations; fake + public seam.</p>
 <h3>Rules</h3>
@@ -90,36 +90,36 @@
 <li><strong><code>explore-full-interaction-surface</code></strong> — Scenarios are not complete when only the main-flow GWT from the sketch is written. Before locking scenarios (and again before acceptance_tests), walk the real UI and model <strong>every distinct user-visible behavior</strong>: inline rule checklists and how they change while typing, field-level validation errors clearing as input conforms, cross-field rules (confirm password, paste mismatch), submit-button gating, and server-side error surfaces. A story that only codifies the happy path when the screen has rich client-side validation is a <strong>defect</strong> — branch into additional scenarios (or scenario outlines with examples) per mechanical variation, not one paragraph that mentions &quot;validation&quot; in passing.</li>
 </ul>
 <hr></section>
-<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>markdown</code> — <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/4d01623dadcd0a757141f9f54c96dab611b3b557/context_tools/stories/templates/md/scenario-main-flow.md">templates/md/scenario-main-flow.md</a></p><pre class="code-fence"><code class="language-markdown">---
-fidelity: [exploration]
+<section class="install-block fidelity-template" aria-label="Default template"><h2>Default template</h2><p class="install-hint">Default format: <code>python</code> — pass <code>format markdown</code> for documentation view: <a href="https://github.com/abd-works/abd-context-driven-delivery/blob/main/context_tools/stories/templates/md/scenario-template.md">templates/md/scenario-template.md</a></p><pre class="code-fence"><code class="language-markdown">---
+fidelity: [specification]
 artifact: [story-scenarios]
 format: md
 section: body
 ---
 
-### Domain terms
+### Default — Scenario Outline
 
-- *`&lt;Concept&gt;`* — `&lt;plain-language gloss&gt;`
+#### Scenario Outline: `&lt;outcome-oriented name&gt;`
 
-&gt; In steps: bold domain concepts (`**&lt;Concept&gt;**`); italic concrete values (`*&lt;value&gt;*`).
+*Given* a ++`&lt;ConceptA&gt;`++ with {`&lt;field_1&gt;`}  
+*When* the **`&lt;Actor&gt;`** `&lt;action&gt;`  
+*Then* the ++`&lt;result concept&gt;`++ `&lt;outcome&gt;` is visible on the public interface
 
-## Behaviors
+#### Examples
 
-### Scenario Outline: `&lt;main-flow outcome name&gt;`
+| scenario   | `&lt;field_1&gt;` | `&lt;field_2&gt;` |
+|------------|-------------|-------------|
+| ++Scenario 1++ | `&lt;value&gt;`   | `&lt;value&gt;`   |
 
-*Given* a **`&lt;Concept&gt;`** from `helper.given&lt;Concept…&gt;({ mode: &quot;fake&quot; })`  
-  *And* that **`&lt;Concept&gt;`** {`&lt;concept_field&gt;`}  
-*When* the **`&lt;Actor&gt;`** `&lt;triggering action&gt;`  
-*Then* `&lt;observable outcome on the public interface of I{Concept}&gt;`  
-  *And* `&lt;additional observable outcome&gt;`
+---
 
-### Examples
+### Alternate — inline scenarios
 
-| scenario   | `&lt;concept_field&gt;` | `&lt;result_field&gt;` |
-|------------|-------------------|------------------|
-| Scenario 1 | `&lt;value&gt;`         | `&lt;value&gt;`        |
+#### Scenario 1: `&lt;outcome-oriented scenario name&gt;`
 
-&gt; Examples table documents the representative row. Code loads the same values from ExampleFactory (AI fills stubs).
+*Given* a ++`&lt;ConceptA&gt;`++ *`&lt;value&gt;`*  
+*When* the ++`&lt;ConceptA&gt;`++ *`&lt;value&gt;`* `&lt;triggering action&gt;`  
+*Then* the ++`&lt;observed concept&gt;`++ is `&lt;observable outcome&gt;`
 </code></pre></section>
 <section class="skill-cr-single illustrated-example"><h2>Illustrated example</h2><p>No illustrated example configured yet.</p></section>
 

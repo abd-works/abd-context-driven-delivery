@@ -228,7 +228,7 @@ Each Fidelity page gets one **Illustrated example** panel (see Fidelity page sha
 | Tool | Fidelity | Source | Anchor |
 |---|---|---|---|
 | Stories | `story_map` | `[md/story-map.md](c:\dev\abd-works-repo\abd-context-driven-delivery\context_tools\stories\examples\md\story-map.md)` | whole-file |
-| Stories | `scenarios` | `[md/scenario-outline.md](c:\dev\abd-works-repo\abd-context-driven-delivery\context_tools\stories\examples\md\scenario-outline.md)` | whole-file |
+| Stories | `scenarios` | `[md/scenario-outline.md](context_tools/stories/examples/manage-customer-orders/md/scenario-outline.md)` | whole-file |
 | Stories | `acceptance_tests` | `[py/manage-customer-orders/story_runner.py](c:\dev\abd-works-repo\abd-context-driven-delivery\context_tools\stories\examples\py\manage-customer-orders\story_runner.py)` | whole-file |
 | Domain-Driven Design | `bounded_context` | `[examples.md](c:\dev\abd-works-repo\abd-context-driven-delivery\context_tools\ddd\examples\examples.md)` | `## Bounded Context Map — Shop` |
 | Domain-Driven Design | `building_blocks` | same file | `#### **ShoppingCart** <<Aggregate Root>>` block |

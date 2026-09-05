@@ -315,10 +315,10 @@ with description("thinning examples by fidelity"):
 
             items = {
                 "orders/md/story-map.md": "map",
-                "orders/md/scenario-outline.md": "outline",
+                "orders/md/scenario-template.md": "template",
             }
             result = thin_examples_by_fidelity(items, "scenarios")
-            expect(result).to(equal({"orders/md/scenario-outline.md": "outline"}))
+            expect(result).to(equal({"orders/md/scenario-template.md": "template"}))
 
     with context("when no stem matches"):
         with it("should leave the collection unchanged"):

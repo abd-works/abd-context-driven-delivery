@@ -10,9 +10,8 @@ these verbatim when the hybrid layout differs.
 |---|---|
 | `md/story-map.md` | Discovery story map (verb–noun + actor before `-->`) |
 | `md/thin-slice.md` | Vertical increments referencing map story names |
-| `md/scenario-main-flow.md` | Main-flow scenario narrative |
-| `md/scenario-outline.md` | Scenario outline + examples table |
-| `md/scenario-inline.md` | Inline-examples scenario style |
+| `md/scenario-outline.md` | Worked example — default Scenario Outline + Examples table |
+| `md/scenario-inline.md` | Worked example — alternate inline sibling scenarios |
 
 ## Python (`py/`) — exploration / specification / engineering layout
 

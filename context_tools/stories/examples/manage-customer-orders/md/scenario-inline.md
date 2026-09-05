@@ -2,11 +2,11 @@
 fidelity: [specification]
 artifact: [story-scenarios]
 format: md
-example-of: scenario-inline
+example-of: scenario-template-inline
 ---
 
 <!-- Worked example — plain scenario with real domain values inline. -->
-<!-- Shows the shape templates/md/scenario-inline.md produces once filled in. -->
+<!-- Shows the alternate inline section of templates/md/scenario-template.md once filled in. -->
 
 ## Story: Apply For a Payment Product Agreement
 

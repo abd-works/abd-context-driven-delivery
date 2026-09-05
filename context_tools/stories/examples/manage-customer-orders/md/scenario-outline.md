@@ -2,11 +2,11 @@
 fidelity: [specification]
 artifact: [story-scenarios]
 format: md
-example-of: scenario-outline
+example-of: scenario-template-outline
 ---
 
 <!-- Worked example — Scenario Outline with normalized Examples tables. -->
-<!-- Shows the shape templates/md/scenario-outline.md produces once filled in. -->
+<!-- Shows the default outline section of templates/md/scenario-template.md once filled in. -->
 
 ## Story: Submit Payment and Validate Against Account Limit
 
