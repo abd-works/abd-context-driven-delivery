@@ -228,8 +228,8 @@ class ContextToolFidelityBody(ContextToolBody):
                 f"@{tool_name}-{higher}" for higher in reversed(previous)
             )
             references = (
-                "\n\nUse higher-level fidelity guidance only when required information "
-                f"is missing. Reference these commands with `@`:\n{mentions}"
+                "\n\nRefer to these skills in order to obtain missing context:\n"
+                f"{mentions}"
             )
         text = (
             f"# {tool_name}-{fidelity}\n\n"
