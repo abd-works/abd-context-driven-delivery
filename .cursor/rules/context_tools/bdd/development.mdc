@@ -4,7 +4,7 @@ globs: **/tests/**/*.{py,js,ts,java},**/*.{py,js,ts,java}
 alwaysApply: false
 ---
 
-Rules below are listed from the **development** ### Rules section. Please see @bdd-development for the full skill.
+When implementing BDD tests, follow these rules. See @bdd-development for the full skill.
 
 
 - **`red-then-green`** — Fail for the right reason before production code changes.

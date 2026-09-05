@@ -4,7 +4,7 @@ globs: **/tests/**/*.{py,js,ts,java}
 alwaysApply: false
 ---
 
-Rules below are listed from the **acceptance_tests** ### Rules section. Please see @stories-acceptance_tests for the full skill.
+When writing acceptance tests, follow these rules. See @stories-acceptance_tests for the full skill.
 
 
 - **`behavioral-observable-outcomes`** — same rule as **scenarios**: assertions stay in domain-observable terms, never internals.

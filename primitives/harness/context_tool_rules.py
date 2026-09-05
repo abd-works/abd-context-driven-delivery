@@ -177,6 +177,45 @@ def _glob_for(tool_slug: str, fidelity: str) -> str:
     return cfg.get(fidelity, cfg.get("shared", _shared_globs(tool_slug)))
 
 
+# Thematic opener phrases — "When {phrase}, follow these rules."
+_TOOL_WHEN_PHRASE: dict[str, str] = {
+    "stories": "shaping stories",
+    "ux": "designing UX",
+    "bdd": "practicing BDD",
+    "ddd": "modeling the domain (DDD)",
+    "clean_engineering": "practicing clean engineering",
+    "cdd": "practicing context-driven delivery",
+}
+
+_FIDELITY_WHEN_PHRASE: dict[str, str] = {
+    "story_map": "editing story maps",
+    "scenarios": "writing scenarios",
+    "acceptance_tests": "writing acceptance tests",
+    "ia": "designing information architecture",
+    "mockup": "building mockups",
+    "front_end_code": "writing front-end code",
+    "modules": "partitioning BDD modules",
+    "behavior": "sketching BDD behavior",
+    "development": "implementing BDD tests",
+    "bounded_context": "modeling bounded contexts",
+    "building_blocks": "defining building blocks",
+    "tactics": "applying DDD tactics",
+    "model": "modeling the domain",
+    "code": "writing domain code",
+    "specification": "writing specifications",
+    "discovery": "running CDD discovery",
+    "explore": "running CDD explore",
+    "spec": "running CDD spec",
+    "engineer": "running CDD engineer",
+}
+
+
+def _when_phrase(tool_slug: str, fidelity: str, *, shared: bool) -> str:
+    if shared:
+        return _TOOL_WHEN_PHRASE.get(tool_slug, f"working with {tool_slug.replace('_', ' ')}")
+    return _FIDELITY_WHEN_PHRASE.get(fidelity, f"working on {fidelity.replace('_', ' ')}")
+
+
 def _rule_opener(
     tool_slug: str,
     *,
@@ -184,15 +223,16 @@ def _rule_opener(
     fidelity: str = "",
     skill_refs: list[str],
 ) -> str:
-    refs = ", ".join(f"@{ref}" for ref in skill_refs)
+    when = _when_phrase(tool_slug, fidelity, shared=shared)
     if shared:
+        refs = ", ".join(f"@{ref}" for ref in skill_refs)
         return (
-            "Rules below are listed from the **Shared rules** section. "
+            f"When {when}, follow these rules. "
             f"For full generate guidance see {refs}.\n\n"
         )
     return (
-        f"Rules below are listed from the **{fidelity}** ### Rules section. "
-        f"Please see @{_skill_ref(tool_slug, fidelity)} for the full skill.\n\n"
+        f"When {when}, follow these rules. "
+        f"See @{_skill_ref(tool_slug, fidelity)} for the full skill.\n\n"
     )
 
 

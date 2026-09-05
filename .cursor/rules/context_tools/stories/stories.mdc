@@ -4,7 +4,7 @@ globs: **/sandbox/**/*.{py,md,js,ts,java},**/tests/**/*.{py,js,ts,java},**/*stor
 alwaysApply: false
 ---
 
-Rules below are listed from the **Shared rules** section. For full generate guidance see @stories-acceptance_tests, @stories-scenarios, @stories-story_map.
+When shaping stories, follow these rules. For full generate guidance see @stories-acceptance_tests, @stories-scenarios, @stories-story_map.
 
 
 - **`vocabulary-traces-to-domain-source`** — Trace terms to domain language / model when present.

@@ -4,7 +4,7 @@ globs: **/tests/**/*.{py,js,ts,java},**/primitives/**/*.py,**/context_tools/**/*
 alwaysApply: false
 ---
 
-Rules below are listed from the **Shared rules** section. For full generate guidance see .
+When practicing BDD, follow these rules. For full generate guidance see .
 
 
 - **`observable-behavior`** — Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals.

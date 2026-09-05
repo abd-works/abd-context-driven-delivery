@@ -4,7 +4,7 @@ globs: **/sandbox/**/*.{py,js,ts,java}
 alwaysApply: false
 ---
 
-Rules below are listed from the **scenarios** ### Rules section. Please see @stories-scenarios for the full skill.
+When writing scenarios, follow these rules. See @stories-scenarios for the full skill.
 
 
 - **`behavioral-observable-outcomes`** — Name and Then in domain-observable terms; never internals.

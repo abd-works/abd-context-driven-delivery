@@ -4,7 +4,7 @@ globs: **/*bounded-context*.md,**/domain/**/*.md
 alwaysApply: false
 ---
 
-Rules below are listed from the **building_blocks** ### Rules section. Please see @ddd-building_blocks for the full skill.
+When defining building blocks, follow these rules. See @ddd-building_blocks for the full skill.
 
 
 - **`identity-test-entity-vs-vo`** — Entity vs VO by identity that transcends attributes; prefer Value Object. A type that holds collection state and is the access boundary for that cluster is **Aggregate Root + Entity**, not a Domain Service (`Catalog` is not `<<Service>>` because it "does" selection). Invoice you chase over time is an Entity; an immutable money amount is a Value Object.

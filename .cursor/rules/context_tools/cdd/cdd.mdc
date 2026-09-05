@@ -4,7 +4,7 @@ globs: **/.context/**/cdd-sketch.md,**/.context/sessions/**
 alwaysApply: false
 ---
 
-Rules below are listed from the **Shared rules** section. For full generate guidance see @cdd-discovery, @cdd-engineer, @cdd-spec.
+When practicing context-driven delivery, follow these rules. For full generate guidance see @cdd-discovery, @cdd-engineer, @cdd-spec.
 
 
 - **`stage-from-context`** — Infer CDD fidelity from workspace artifacts, sketch, and user intent; confirm when ambiguous.

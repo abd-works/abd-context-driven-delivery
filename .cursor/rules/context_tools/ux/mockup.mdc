@@ -4,7 +4,7 @@ globs: **/sandbox/**/*.html,**/sandbox/**/.context/**
 alwaysApply: false
 ---
 
-Rules below are listed from the **mockup** ### Rules section. Please see @ux-mockup for the full skill.
+When building mockups, follow these rules. See @ux-mockup for the full skill.
 
 
 - **`controls-match-interaction-decisions`** — Exact control types; no invented affordances.
