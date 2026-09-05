@@ -15,10 +15,11 @@ Use this guidance to adapt conceptual templates (e.g., in TypeScript or Python) 
 
 ## Python
 
-- **Test Runner**: [Pytest](https://docs.pytest.org/) with `story()` / `scenario()` from `story_test.py` (same functional API as `story-test.ts`; tests register at import).
+- **Test Runner (BDD unit specs)**: [Mamba](https://github.com/nestorsalceda/mamba) with `description` / `context` / `it` / `before`.
+- **Test Runner (story acceptance)**: Same — Mamba + `expects`; map Given/When/Then via `context_tools/bdd/gwt.py` (no separate `story_test.py`).
 - **Assertion Library**: [Expects](https://github.com/jaimegildesagredo/expects).
-- **Story file shape**: Same layout as TypeScript — `story(name, body)`, `background(build)`, `scenario(name, build)`; `before_all()` / `after_all()` inside the story body for boot/teardown; step bodies inline in `given` / `when` / `then`.
-- **Style**: `story()` / `background()` / `scenario()` from `story_test.py`; `steps.when(…).and_(…)` and `steps.then(…).and_(…)` on `ScenarioSteps` — mirrors TS `when().and()` / `then().and()`.
+- **Story file shape**: `with description('{Story}')` for the story; `with before.all` / `with after.all` for app boot/teardown; `with context('given …')` + `with before.each` for background Given; `with context('{scenario}')` + `with before.each` for When; `with it('should …')` for Then.
+- **Style**: Chain When steps as sequential lines in one `before.each`; chain Then outcomes as sibling `it` blocks — mirrors TS `when().and()` / `then().and()`.
 
 ## Java
 

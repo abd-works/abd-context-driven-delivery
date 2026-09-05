@@ -1,49 +1,24 @@
-# ---
-# fidelity: [specification, engineering]
-# artifact: [story-scenarios]
-# format: py
-# ---
-#
-# Scenario template — refer to context_tools/language-tools.md and context_tools/bdd/gwt.py.
-#
-# ```
-# # Params — fill before writing code
-# epic:       {epic-verb-noun}           # kebab folder under tests/
-# sub_epic:   {sub-epic-verb-noun}       # kebab folder under epic/ (omit level if story hangs off epic)
-# story:      {story-verb-noun}          # Verb Noun title from the story map
-# story_file: {story_snake_slug}         # snake file slug, e.g. sign_up_create_account
-# tier:       e2e | front-end | back-end | {system}
-#
-# # Artifact layout (artifacts-mirror-story-hierarchy)
-# tests/
-#   {epic-verb-noun}/
-#     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
-#       {story_snake_slug}.{tier}.py     # one GWT file per story per tier
-#
-# # Machinery — Mamba + expects (same as BDD development specs; see context_tools/bdd/gwt.py)
-#
-# # Naming rules
-# - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
-# - Story test file        → {story_snake_slug}.{tier}.py at epic or sub-epic — NO {story}/ folder
-# - Tier                   → file extension segment (.e2e.py, .front-end.py, .back-end.py)
-# - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
-# ```
-#
-# Pattern: description / context / it / before — Given in context+before.each, When in scenario before.each, Then in it.
-
+"""
+# Story acceptance GWT (Python/Mamba) — same runner as BDD development specs.
+# Refer to context_tools/bdd/gwt.py for the story-test.ts → Mamba mapping.
+# =============================================================================
+# Instructions:
+#   1. Top level: with description('{Story Verb-Noun}')
+#   2. Boot/teardown: with before.all / with after.all (not in given contexts)
+#   3. Shared Given: with context('given …') + with before.each
+#   4. Each outcome branch: with context('{scenario}') + when in before.each + it for Then
+#   5. Chain When steps in one before.each; chain Then as sibling it blocks
+# =============================================================================
+"""
 from expects import be_above, be_none, equal, expect
 from mamba import after, before, context, description, it
 
-from domain.{bounded_context}.runtime import {AppPascal}E2e, config
-from domain.{bounded_context}.{aggregate_snake} import (
-    {AggregatePascal},
-    {ERROR_CONSTANT}_MESSAGE,
-)
+from {domain_module} import {DomainEntity}
 
 
 with description('{Story Verb-Noun}'):
     with before.all:
-        self.{app_camel} = {AppPascal}E2e.initialize(config)
+        self.{app_camel} = {AppFactory}.initialize({config})
 
     with after.all:
         if getattr(self, '{app_camel}', None) is not None:
@@ -58,7 +33,7 @@ with description('{Story Verb-Noun}'):
                 self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
 
             with it('should {observable surface outcome}'):
-                self.{aggregate_camel}.{field} = ''
+                self.{aggregate_camel}.{field} = {invalid_value}
                 self.{aggregate_camel}.validate()
                 expect(len(self.{aggregate_camel}.errors.{field})).to(be_above(0))
 

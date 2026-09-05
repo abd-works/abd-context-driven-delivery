@@ -72,6 +72,40 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ### python
 
+## bdd-gwt-templates.py
+
+# ---
+# fidelity: [specification, engineering]
+# artifact: [story-scenarios]
+# format: py
+# ---
+#
+# Story acceptance GWT on Mamba — machinery reference (copy pattern into each story file).
+#
+# ```
+# file: (inline — no separate tests/story_test.py)
+# ```
+#
+# Same runner as BDD: mamba + expects. Mapping (see context_tools/bdd/gwt.py):
+#
+# | story-test.ts | Mamba |
+# |---------------|-------|
+# | story         | with description |
+# | beforeAll     | with before.all |
+# | afterAll      | with after.all |
+# | background Given | with context('given …') + with before.each |
+# | scenario      | with context |
+# | When          | with before.each on scenario |
+# | Then          | with it('should …') |
+# | when().and()  | sequential lines in before.each |
+# | then().and()  | sibling with it blocks |
+
+from mamba import after, before, context, description, it
+
+story = description
+scenario = context
+
+
 ## scenario-template.py
 
 # ---
@@ -80,7 +114,7 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 # format: py
 # ---
 #
-# Scenario template — refer to context_tools/language-tools.md for tooling.
+# Scenario template — refer to context_tools/language-tools.md and context_tools/bdd/gwt.py.
 #
 # ```
 # # Params — fill before writing code
@@ -96,8 +130,7 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 #     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
 #       {story_snake_slug}.{tier}.py     # one GWT file per story per tier
 #
-# # Machinery (copy once per tests/ tree — full source inlined below)
-# story_test: tests/story_test.py
+# # Machinery — Mamba + expects (same as BDD development specs; see context_tools/bdd/gwt.py)
 #
 # # Naming rules
 # - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
@@ -106,358 +139,67 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 # - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
-# Pattern: story_test machinery only — inline lambdas in given/when/then (same as story-test.ts).
-
-from __future__ import annotations
+# Pattern: description / context / it / before — Given in context+before.each, When in scenario before.each, Then in it.
 
 from expects import be_above, be_none, equal, expect
+from mamba import after, before, context, description, it
 
 from domain.{bounded_context}.runtime import {AppPascal}E2e, config
 from domain.{bounded_context}.{aggregate_snake} import (
     {AggregatePascal},
     {ERROR_CONSTANT}_MESSAGE,
 )
-from story_test import after_all, background, before_all, scenario, story
 
 
-def _{story_snake_slug}_story() -> None:
-    {app_camel}: list[{AppPascal} | None] = [None]
-    {aggregate_camel}: list[{AggregatePascal} | None] = [None]
+with description('{Story Verb-Noun}'):
+    with before.all:
+        self.{app_camel} = {AppPascal}E2e.initialize(config)
 
-    before_all(lambda: {app_camel}.__setitem__(0, {AppPascal}E2e.initialize(config)))
-    after_all(lambda: {app_camel}[0] and {app_camel}[0].close())
+    with after.all:
+        if getattr(self, '{app_camel}', None) is not None:
+            self.{app_camel}.close()
 
-    background(
-        lambda given: (
-            given(
-                "{background given step}",
-                lambda: {app_camel}[0].{background_operation}(),
-            ),
-            scenario(
-                "{surface check — e.g. rules visible}",
-                lambda when, then: (
-                    when(
-                        "{primary when step}",
-                        lambda: {aggregate_camel}.__setitem__(
-                            0, {app_camel}[0].{primary_when_operation}()
-                        ),
-                    ),
-                    then(
-                        "{observable surface outcome}",
-                        lambda: (
-                            setattr({aggregate_camel}[0], "{field}", ""),
-                            {aggregate_camel}[0].validate(),
-                            expect(len({aggregate_camel}[0].errors.{field})).to(be_above(0)),
-                        )[2],
-                    ),
-                ),
-            ),
-            scenario(
-                "{validation branch while typing}",
-                lambda when, then: (
-                    when(
-                        "{primary when step}",
-                        lambda: {aggregate_camel}.__setitem__(
-                            0, {app_camel}[0].{primary_when_operation}()
-                        ),
-                    ).and_(
-                        "{follow-on when step}",
-                        lambda: (
-                            setattr({aggregate_camel}[0], "{field}", {invalid_value}),
-                            {aggregate_camel}[0].validate(),
-                        )
-                        and None,
-                    ),
-                    then(
-                        "{validation message on domain object}",
-                        lambda: expect({aggregate_camel}[0].errors.{field}).to(
-                            equal({ERROR_CONSTANT}_MESSAGE)
-                        ),
-                    ),
-                ),
-            ),
-            scenario(
-                "{validation clears when input conforms}",
-                lambda when, then: (
-                    when(
-                        "{primary when step}",
-                        lambda: {aggregate_camel}.__setitem__(
-                            0, {app_camel}[0].{primary_when_operation}()
-                        ),
-                    ).and_(
-                        "{prior invalid state}",
-                        lambda: (
-                            setattr({aggregate_camel}[0], "{field}", {invalid_value}),
-                            {aggregate_camel}[0].validate(),
-                        )
-                        and None,
-                    ),
-                    when(
-                        "{corrective action}",
-                        lambda: (
-                            setattr({aggregate_camel}[0], "{field}", {valid_value}),
-                            {aggregate_camel}[0].validate(),
-                        )
-                        and None,
-                    ),
-                    then(
-                        "{error cleared on domain object}",
-                        lambda: expect({aggregate_camel}[0].errors.{field}).to(be_none),
-                    ),
-                ),
-            ),
-            scenario(
-                "{main-flow outcome}",
-                lambda when, then: (
-                    when(
-                        "{primary when step}",
-                        lambda: {aggregate_camel}.__setitem__(
-                            0, {app_camel}[0].{primary_when_operation}()
-                        ),
-                    ),
-                    when(
-                        "{submit operation on domain object}",
-                        lambda: (
-                            setattr({aggregate_camel}[0], "{field}", {valid_aggregate_value}),
-                            {aggregate_camel}[0].{operation}(),
-                        )
-                        and None,
-                    ),
-                    then(
-                        "{post-condition on loaded aggregate}",
-                        lambda: expect(
-                            {app_camel}[0]
-                            .{repository}()
-                            .load({aggregate_camel}[0])
-                            .is_at_{state}("{StateName}")
-                        ).to(equal(True)),
-                    ),
-                ),
-            ),
-        )
-        or None,
-    )
+    with context('given {background given step}'):
+        with before.each:
+            self.{app_camel}.{background_operation}()
 
+        with context('{surface check — e.g. rules visible}'):
+            with before.each:
+                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
 
-story("{Story Verb-Noun}", _{story_snake_slug}_story)
+            with it('should {observable surface outcome}'):
+                self.{aggregate_camel}.{field} = ''
+                self.{aggregate_camel}.validate()
+                expect(len(self.{aggregate_camel}.errors.{field})).to(be_above(0))
 
+        with context('{validation branch while typing}'):
+            with before.each:
+                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
+                self.{aggregate_camel}.{field} = {invalid_value}
+                self.{aggregate_camel}.validate()
 
-## story_test.py
+            with it('should {validation message on domain object}'):
+                expect(self.{aggregate_camel}.errors.{field}).to(equal({ERROR_CONSTANT}_MESSAGE))
 
-# ---
-# fidelity: [specification, engineering]
-# artifact: [story-scenarios]
-# format: py
-# ---
-#
-# Given / When / Then helpers (pytest). Copy to tests/story_test.py once per tests/ tree.
-#
-# ```
-# file: tests/story_test.py
-# ```
-#
-# Same surface as story-test.ts: story(), before_all(), after_all(), background(), scenario().
+        with context('{validation clears when input conforms}'):
+            with before.each:
+                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
+                self.{aggregate_camel}.{field} = {invalid_value}
+                self.{aggregate_camel}.validate()
+                self.{aggregate_camel}.{field} = {valid_value}
+                self.{aggregate_camel}.validate()
 
-from __future__ import annotations
+            with it('should {error cleared on domain object}'):
+                expect(self.{aggregate_camel}.errors.{field}).to(be_none)
 
-import re
-from contextvars import ContextVar
-from dataclasses import dataclass, field
-from typing import Callable
+        with context('{main-flow outcome}'):
+            with before.each:
+                self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
+                self.{aggregate_camel}.{field} = {valid_aggregate_value}
+                self.{aggregate_camel}.{operation}()
 
-import pytest
-
-StepFn = Callable[[], None]
-
-
-class WhenChain:
-    def __init__(self, whens: list[StepFn]) -> None:
-        self._whens = whens
-
-    def and_(self, _text: str, fn: StepFn) -> WhenChain:
-        self._whens.append(fn)
-        return self
-
-
-class ThenChain:
-    def __init__(self, thens: list[tuple[str, StepFn]]) -> None:
-        self._thens = thens
-
-    def and_(self, text: str, fn: StepFn) -> ThenChain:
-        self._thens.append((text, fn))
-        return self
-
-
-class ScenarioSteps:
-    """Passed to scenario() — mirrors TS ({ when, then }) => …."""
-
-    def __init__(self) -> None:
-        self._givens: list[StepFn] = []
-        self._whens: list[StepFn] = []
-        self._thens: list[tuple[str, StepFn]] = []
-
-    def given(self, _text: str, fn: StepFn) -> None:
-        self._givens.append(fn)
-
-    def when(self, _text: str, fn: StepFn) -> WhenChain:
-        self._whens.append(fn)
-        return WhenChain(self._whens)
-
-    def then(self, text: str, fn: StepFn) -> ThenChain:
-        self._thens.append((text, fn))
-        return ThenChain(self._thens)
-
-
-class GivenRegistrar:
-    def __init__(self, givens: list[StepFn]) -> None:
-        self._givens = givens
-
-    def __call__(self, _text: str, fn: StepFn) -> None:
-        self._givens.append(fn)
-
-
-@dataclass
-class _ScenarioDef:
-    name: str
-    build: Callable[[ScenarioSteps], None]
-
-
-@dataclass
-class _StoryBuilder:
-    name: str
-    module_name: str
-    before_all_hooks: list[StepFn] = field(default_factory=list)
-    after_all_hooks: list[StepFn] = field(default_factory=list)
-    background_givens: list[StepFn] = field(default_factory=list)
-    scenarios: list[_ScenarioDef] = field(default_factory=list)
-
-
-_builder_ctx: ContextVar[_StoryBuilder | None] = ContextVar("_story_builder", default=None)
-_background_ctx: ContextVar[list[_ScenarioDef] | None] = ContextVar("_background_scenarios", default=None)
-
-
-def _slug(value: str) -> str:
-    slug = re.sub(r"[^0-9a-z]+", "_", value.strip().lower()).strip("_")
-    return slug or "story"
-
-
-def story(name: str, body: Callable[[], None]) -> None:
-    """Register one story — same role as story() in story-test.ts."""
-    import inspect
-
-    module_name = inspect.getmodule(body).__name__ if inspect.getmodule(body) else "__main__"
-    builder = _StoryBuilder(name=name, module_name=module_name)
-    token = _builder_ctx.set(builder)
-    try:
-        body()
-    finally:
-        _builder_ctx.reset(token)
-    _install_pytest(builder)
-
-
-def before_all(fn: StepFn) -> StepFn:
-    """Call inside story() — same role as beforeAll() in Vitest."""
-    builder = _builder_ctx.get()
-    if builder is None:
-        raise RuntimeError("before_all() must be called inside story()")
-    builder.before_all_hooks.append(fn)
-    return fn
-
-
-def after_all(fn: StepFn) -> StepFn:
-    """Call inside story() — same role as afterAll() in Vitest."""
-    builder = _builder_ctx.get()
-    if builder is None:
-        raise RuntimeError("after_all() must be called inside story()")
-    builder.after_all_hooks.append(fn)
-    return fn
-
-
-def background(build: Callable[[GivenRegistrar], None]) -> None:
-    """Call inside story() — register shared Given steps and nested scenario() calls."""
-    builder = _builder_ctx.get()
-    if builder is None:
-        raise RuntimeError("background() must be called inside story()")
-
-    registrar = GivenRegistrar([])
-    scenarios: list[_ScenarioDef] = []
-    bg_token = _background_ctx.set(scenarios)
-    try:
-        build(registrar)
-    finally:
-        _background_ctx.reset(bg_token)
-
-    builder.background_givens.extend(registrar._givens)
-    builder.scenarios.extend(scenarios)
-
-
-def scenario(name: str, build: Callable[..., None]) -> None:
-    """Call inside background() — build receives when/then/given like TS scenario(({ when, then }) => …)."""
-    scenarios = _background_ctx.get()
-    if scenarios is None:
-        raise RuntimeError("scenario() must be called inside background()")
-
-    def _build(steps: ScenarioSteps) -> None:
-        build(when=steps.when, then=steps.then, given=steps.given)
-
-    scenarios.append(_ScenarioDef(name=name, build=_build))
-
-
-def _install_pytest(builder: _StoryBuilder) -> None:
-    import sys
-
-    module = sys.modules.get(builder.module_name)
-    if module is None:
-        return
-
-    story_slug = _slug(builder.name)
-    fixture_name = f"_story_{story_slug}_lifecycle"
-
-    @pytest.fixture(scope="module", name=fixture_name)
-    def _lifecycle() -> None:
-        for hook in builder.before_all_hooks:
-            hook()
-        yield
-        for hook in builder.after_all_hooks:
-            hook()
-
-    setattr(module, fixture_name, _lifecycle)
-
-    for scenario_def in builder.scenarios:
-        steps = ScenarioSteps()
-        scenario_def.build(steps)
-        scenario_slug = _slug(scenario_def.name)
-
-        for then_index, (label, then_fn) in enumerate(steps._thens):
-            step_label = f"Then {label}" if then_index == 0 else label
-            test_name = f"test_{story_slug}_{scenario_slug}_{then_index}"
-
-            def _make_test(
-                then: StepFn,
-                bg: tuple[StepFn, ...],
-                given: tuple[StepFn, ...],
-                when: tuple[StepFn, ...],
-                fix: str,
-                doc: str,
-            ) -> Callable[[], None]:
-                @pytest.mark.usefixtures(fix)
-                def _test() -> None:
-                    for fn in (*bg, *given, *when):
-                        fn()
-                    then()
-
-                _test.__doc__ = doc
-                return _test
-
-            test_fn = _make_test(
-                then_fn,
-                tuple(builder.background_givens),
-                tuple(steps._givens),
-                tuple(steps._whens),
-                fixture_name,
-                f"{scenario_def.name} — {step_label}",
-            )
-            test_fn.__name__ = test_name
-            setattr(module, test_name, test_fn)
+            with it('should {post-condition on loaded aggregate}'):
+                {entity_camel} = self.{app_camel}.{repository}().load(self.{aggregate_camel})
+                expect({entity_camel}.is_at_{state}('{StateName}')).to(equal(True))
 
 See examples in `context_tools/stories/examples/` if needed.

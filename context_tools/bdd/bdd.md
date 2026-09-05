@@ -161,9 +161,22 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 
 ---
 
+## Story acceptance (GWT on Mamba)
 
+Stories **acceptance_tests** / **scenarios** Python format uses the same Mamba stack as BDD **development** specs. Map Gherkin to `description` / `context` / `it` / `before` — see `context_tools/bdd/gwt.py` and `templates/bdd-gwt-templates.py`.
 
-# Scaffold
+| GWT / Vitest story-test | Mamba |
+|-------------------------|-------|
+| `story` | `with description` |
+| `beforeAll` / `afterAll` | `with before.all` / `with after.all` |
+| background Given | `with context('given …')` + `with before.each` |
+| `scenario` | `with context` |
+| When | `with before.each` on the scenario context |
+| Then | `with it('should …')` |
+
+Infrastructure stays in `before.all`; Given contexts hold domain preconditions only (same rule as **`infrastructure-in-lifecycle-hooks`** on the Stories side).
+
+---
 
 A scaffold produces thin subject index — domain things, states, or observable conditions (top-level `describe`s); subject + candidate `that`/`with` + TODOs. Not full `it should` suites.
 
