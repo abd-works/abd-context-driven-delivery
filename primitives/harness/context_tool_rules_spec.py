@@ -28,18 +28,18 @@ with description("context tool rules"):
             class_name="Stories",
         )
         by_name = {s.name: s for s in specs}
-        expect("shared" in by_name).to(be_true)
+        expect("stories" in by_name).to(be_true)
         expect("story_map" in by_name).to(be_true)
         expect("scenarios" in by_name).to(be_true)
-        expect(by_name["shared"].body).to(contain("kebab-case-paths"))
+        expect(by_name["stories"].body).to(contain("kebab-case-paths"))
         expect(by_name["scenarios"].body).to(contain("@stories-scenarios"))
         expect(by_name["scenarios"].globs).to(contain("sandbox"))
 
     with it("should place rules under context_tools/{slug}/"):
-        rule = Rule("Cursor", "shared")
+        rule = Rule("Cursor", "stories")
         rule.subfolder = "context_tools/stories"
         expect(rule.relative_path().as_posix()).to(
-            equal("rules/context_tools/stories/shared.mdc")
+            equal("rules/context_tools/stories/stories.mdc")
         )
 
     with it("should render mdc frontmatter with globs and alwaysApply false"):
@@ -61,11 +61,11 @@ with description("Harness deploy context tool rules"):
             deploy_path=str(root / ".cursor"),
             source="stories",
         )
-        shared = root / ".cursor" / "rules" / "context_tools" / "stories" / "shared.mdc"
+        kit = root / ".cursor" / "rules" / "context_tools" / "stories" / "stories.mdc"
         scenarios = root / ".cursor" / "rules" / "context_tools" / "stories" / "scenarios.mdc"
-        expect(shared.is_file()).to(be_true)
+        expect(kit.is_file()).to(be_true)
         expect(scenarios.is_file()).to(be_true)
-        expect(shared.read_text(encoding="utf-8")).to(contain("alwaysApply: false"))
+        expect(kit.read_text(encoding="utf-8")).to(contain("alwaysApply: false"))
         expect(scenarios.read_text(encoding="utf-8")).to(contain("@stories-scenarios"))
 
     with it("should not write context tool rules for VS Code deploy"):

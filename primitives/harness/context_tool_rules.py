@@ -227,7 +227,7 @@ def rules_for_context_tool(
         specs.append(
             ContextToolRuleSpec(
                 tool_slug=slug,
-                name="shared",
+                name=slug,
                 description=f"{slug} shared rules — apply across all fidelities",
                 globs=globs,
                 body=_rule_opener(slug, shared=True, skill_refs=skill_refs)
