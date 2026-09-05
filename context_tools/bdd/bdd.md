@@ -161,20 +161,9 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 
 ---
 
-## Story acceptance (GWT on Mamba)
+## Story acceptance (Python)
 
-Stories **acceptance_tests** / **scenarios** Python format uses the same Mamba stack as BDD **development** specs. Map Gherkin to `description` / `context` / `it` / `before` — see `context_tools/bdd/gwt.py` and `templates/bdd-gwt-templates.py`.
-
-| GWT / Vitest story-test | Mamba |
-|-------------------------|-------|
-| `story` | `with description` |
-| `beforeAll` / `afterAll` | `with before.all` / `with after.all` |
-| background Given | `with context('given …')` + `with before.each` |
-| `scenario` | `with context` |
-| When | `with before.each` on the scenario context |
-| Then | `with it('should …')` |
-
-Infrastructure stays in `before.all`; Given contexts hold domain preconditions only (same rule as **`infrastructure-in-lifecycle-hooks`** on the Stories side).
+Python story files use **`story_test.py`** — same role as **`story-test.ts`**: thin helpers (`story`, `background`, `scenario`, `given`, `when`, `then`) that register **Mamba** example groups at import. Unit BDD specs keep `description` / `context` / `it`; story acceptance keeps the Vitest-shaped API on Mamba instead of pytest or a separate GWT doc layer.
 
 ---
 
