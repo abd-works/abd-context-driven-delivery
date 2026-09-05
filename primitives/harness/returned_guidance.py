@@ -18,7 +18,6 @@ _LOADED_CLASSES: dict[tuple[str, str], type] = {}
 
 _TEMPLATE_TAGS = ("Mu", "Md", "L", "S", "C")
 _CODE_FORMATS = frozenset({"python", "typescript", "java", "javascript"})
-_CODE_FIDELITY_NO_MARKDOWN_TEMPLATES = frozenset({"scenarios", "acceptance_tests"})
 _DEPLOY_CODE_LANGUAGES = frozenset({"python", "typescript"})
 _DEFAULT_CODE_LANGUAGE = "python"
 
@@ -285,10 +284,7 @@ def _formats_for_deploy(
     supported_set = set(supported)
     if default_fmt in _CODE_FORMATS:
         formats: list[str] = []
-        if (
-            "markdown" in supported_set
-            and fidelity not in _CODE_FIDELITY_NO_MARKDOWN_TEMPLATES
-        ):
+        if "markdown" in supported_set:
             formats.append("markdown")
         if code_language in supported_set:
             formats.append(code_language)
