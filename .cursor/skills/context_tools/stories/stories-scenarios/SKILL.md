@@ -262,7 +262,7 @@ section: body
 # - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
-# Pattern: story_test machinery only — lifecycle, background(), scenario(), inline step bodies.
+# Pattern: story_test machinery only — inline lambdas in given/when/then (same as story-test.ts).
 
 from __future__ import annotations
 
@@ -277,113 +277,122 @@ from story_test import after_all, background, before_all, scenario, story
 
 
 def _{story_snake_slug}_story() -> None:
-    {app_camel}: {AppPascal} | None = None
-    {aggregate_camel}: {AggregatePascal} | None = None
+    {app_camel}: list[{AppPascal} | None] = [None]
+    {aggregate_camel}: list[{AggregatePascal} | None] = [None]
 
-    def boot() -> None:
-        nonlocal {app_camel}
-        {app_camel} = {AppPascal}E2e.initialize(config)
+    before_all(lambda: {app_camel}.__setitem__(0, {AppPascal}E2e.initialize(config)))
+    after_all(lambda: {app_camel}[0] and {app_camel}[0].close())
 
-    def shutdown() -> None:
-        nonlocal {app_camel}
-        if {app_camel} is not None:
-            {app_camel}.close()
-
-    before_all(boot)
-    after_all(shutdown)
-
-    def shared(given) -> None:
-        given(
-            "{background given step}",
-            lambda: {app_camel}.{background_operation}(),
-        )
-
-        def surface_check(steps) -> None:
-            def when_primary() -> None:
-                nonlocal {aggregate_camel}
-                {aggregate_camel} = {app_camel}.{primary_when_operation}()
-
-            def surface_then() -> None:
-                assert {aggregate_camel} is not None
-                {aggregate_camel}.{field} = ""
-                {aggregate_camel}.validate()
-                expect(len({aggregate_camel}.errors.{field})).to(be_above(0))
-
-            steps.when("{primary when step}", when_primary)
-            steps.then("{observable surface outcome}", surface_then)
-
-        scenario("{surface check — e.g. rules visible}", surface_check)
-
-        def validation_branch(steps) -> None:
-            def when_primary() -> None:
-                nonlocal {aggregate_camel}
-                {aggregate_camel} = {app_camel}.{primary_when_operation}()
-
-            def when_invalid() -> None:
-                {aggregate_camel}.{field} = {invalid_value}
-                {aggregate_camel}.validate()
-
-            steps.when("{primary when step}", when_primary).and_(
-                "{follow-on when step}",
-                when_invalid,
-            )
-            steps.then(
-                "{validation message on domain object}",
-                lambda: expect({aggregate_camel}.errors.{field}).to(
-                    equal({ERROR_CONSTANT}_MESSAGE)
+    background(
+        lambda given: (
+            given(
+                "{background given step}",
+                lambda: {app_camel}[0].{background_operation}(),
+            ),
+            scenario(
+                "{surface check — e.g. rules visible}",
+                lambda when, then: (
+                    when(
+                        "{primary when step}",
+                        lambda: {aggregate_camel}.__setitem__(
+                            0, {app_camel}[0].{primary_when_operation}()
+                        ),
+                    ),
+                    then(
+                        "{observable surface outcome}",
+                        lambda: (
+                            setattr({aggregate_camel}[0], "{field}", ""),
+                            {aggregate_camel}[0].validate(),
+                            expect(len({aggregate_camel}[0].errors.{field})).to(be_above(0)),
+                        )[2],
+                    ),
                 ),
-            )
-
-        scenario("{validation branch while typing}", validation_branch)
-
-        def validation_clears(steps) -> None:
-            def when_primary() -> None:
-                nonlocal {aggregate_camel}
-                {aggregate_camel} = {app_camel}.{primary_when_operation}()
-
-            def when_invalid() -> None:
-                {aggregate_camel}.{field} = {invalid_value}
-                {aggregate_camel}.validate()
-
-            def when_valid() -> None:
-                {aggregate_camel}.{field} = {valid_value}
-                {aggregate_camel}.validate()
-
-            steps.when("{primary when step}", when_primary).and_(
-                "{prior invalid state}",
-                when_invalid,
-            )
-            steps.when("{corrective action}", when_valid)
-            steps.then(
-                "{error cleared on domain object}",
-                lambda: expect({aggregate_camel}.errors.{field}).to(be_none),
-            )
-
-        scenario("{validation clears when input conforms}", validation_clears)
-
-        def main_flow(steps) -> None:
-            def when_primary() -> None:
-                nonlocal {aggregate_camel}
-                {aggregate_camel} = {app_camel}.{primary_when_operation}()
-
-            def when_submit() -> None:
-                {aggregate_camel}.{field} = {valid_aggregate_value}
-                {aggregate_camel}.{operation}()
-
-            steps.when("{primary when step}", when_primary)
-            steps.when("{submit operation on domain object}", when_submit)
-            steps.then(
-                "{post-condition on loaded aggregate}",
-                lambda: expect(
-                    {app_camel}.{repository}().load({aggregate_camel}).is_at_{state}(
-                        "{StateName}"
-                    )
-                ).to(equal(True)),
-            )
-
-        scenario("{main-flow outcome}", main_flow)
-
-    background(shared)
+            ),
+            scenario(
+                "{validation branch while typing}",
+                lambda when, then: (
+                    when(
+                        "{primary when step}",
+                        lambda: {aggregate_camel}.__setitem__(
+                            0, {app_camel}[0].{primary_when_operation}()
+                        ),
+                    ).and_(
+                        "{follow-on when step}",
+                        lambda: (
+                            setattr({aggregate_camel}[0], "{field}", {invalid_value}),
+                            {aggregate_camel}[0].validate(),
+                        )
+                        and None,
+                    ),
+                    then(
+                        "{validation message on domain object}",
+                        lambda: expect({aggregate_camel}[0].errors.{field}).to(
+                            equal({ERROR_CONSTANT}_MESSAGE)
+                        ),
+                    ),
+                ),
+            ),
+            scenario(
+                "{validation clears when input conforms}",
+                lambda when, then: (
+                    when(
+                        "{primary when step}",
+                        lambda: {aggregate_camel}.__setitem__(
+                            0, {app_camel}[0].{primary_when_operation}()
+                        ),
+                    ).and_(
+                        "{prior invalid state}",
+                        lambda: (
+                            setattr({aggregate_camel}[0], "{field}", {invalid_value}),
+                            {aggregate_camel}[0].validate(),
+                        )
+                        and None,
+                    ),
+                    when(
+                        "{corrective action}",
+                        lambda: (
+                            setattr({aggregate_camel}[0], "{field}", {valid_value}),
+                            {aggregate_camel}[0].validate(),
+                        )
+                        and None,
+                    ),
+                    then(
+                        "{error cleared on domain object}",
+                        lambda: expect({aggregate_camel}[0].errors.{field}).to(be_none),
+                    ),
+                ),
+            ),
+            scenario(
+                "{main-flow outcome}",
+                lambda when, then: (
+                    when(
+                        "{primary when step}",
+                        lambda: {aggregate_camel}.__setitem__(
+                            0, {app_camel}[0].{primary_when_operation}()
+                        ),
+                    ),
+                    when(
+                        "{submit operation on domain object}",
+                        lambda: (
+                            setattr({aggregate_camel}[0], "{field}", {valid_aggregate_value}),
+                            {aggregate_camel}[0].{operation}(),
+                        )
+                        and None,
+                    ),
+                    then(
+                        "{post-condition on loaded aggregate}",
+                        lambda: expect(
+                            {app_camel}[0]
+                            .{repository}()
+                            .load({aggregate_camel}[0])
+                            .is_at_{state}("{StateName}")
+                        ).to(equal(True)),
+                    ),
+                ),
+            ),
+        )
+        or None,
+    )
 
 
 story("{Story Verb-Noun}", _{story_snake_slug}_story)
@@ -538,12 +547,16 @@ def background(build: Callable[[GivenRegistrar], None]) -> None:
     builder.scenarios.extend(scenarios)
 
 
-def scenario(name: str, build: Callable[[ScenarioSteps], None]) -> None:
-    """Call inside background() — same role as scenario() in story-test.ts."""
+def scenario(name: str, build: Callable[..., None]) -> None:
+    """Call inside background() — build receives when/then/given like TS scenario(({ when, then }) => …)."""
     scenarios = _background_ctx.get()
     if scenarios is None:
         raise RuntimeError("scenario() must be called inside background()")
-    scenarios.append(_ScenarioDef(name=name, build=build))
+
+    def _build(steps: ScenarioSteps) -> None:
+        build(when=steps.when, then=steps.then, given=steps.given)
+
+    scenarios.append(_ScenarioDef(name=name, build=_build))
 
 
 def _install_pytest(builder: _StoryBuilder) -> None:

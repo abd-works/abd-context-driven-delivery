@@ -145,12 +145,16 @@ def background(build: Callable[[GivenRegistrar], None]) -> None:
     builder.scenarios.extend(scenarios)
 
 
-def scenario(name: str, build: Callable[[ScenarioSteps], None]) -> None:
-    """Call inside background() — same role as scenario() in story-test.ts."""
+def scenario(name: str, build: Callable[..., None]) -> None:
+    """Call inside background() — build receives when/then/given like TS scenario(({ when, then }) => …)."""
     scenarios = _background_ctx.get()
     if scenarios is None:
         raise RuntimeError("scenario() must be called inside background()")
-    scenarios.append(_ScenarioDef(name=name, build=build))
+
+    def _build(steps: ScenarioSteps) -> None:
+        build(when=steps.when, then=steps.then, given=steps.given)
+
+    scenarios.append(_ScenarioDef(name=name, build=_build))
 
 
 def _install_pytest(builder: _StoryBuilder) -> None:
