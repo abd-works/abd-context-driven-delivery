@@ -4,6 +4,8 @@ Map stakeholder and system interactions as behaviours that deliver a solution.
 
 Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic` → `Story`. Each story is `Scenario`s with discrete steps; backgrounds and scenarios carry examples.
 
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
+
 | Fidelity | Default Format | Produce |
 |---|---|---|
 | **story_map** | markdown | Story map + thin-slice |

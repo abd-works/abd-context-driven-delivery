@@ -2,6 +2,8 @@
 
 Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`templates/bdd-sketch.md`).
 
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
+
 ## Hierarchy shape (required)
 
 ```
@@ -84,21 +86,12 @@ This skill operates at **multiple levels of fidelity**. Start from an agreed ske
 
 Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
 
-### Framework syntax
-
-| Construct | Jest (TypeScript) | Mamba (Python) | JUnit 5 (Java) |
-| --- | --- | --- | --- |
-| Top-level concept | `describe('Context', () => {` | `with description('Context'):` | `@Nested class Context` |
-| Nested state/context | `describe('that has…', () => {` | `with context('that has…'):` | `@Nested class ThatHas…` |
-| Behavior | `it('should …', () => {` | `with it('should …'):` | `@Test void should…()` |
-| Marker | `// BDD: SIGNATURE` | `# BDD: SIGNATURE` | `// BDD: SIGNATURE` |
-
 ### Rules
 
 - **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count.
 - **`signature-markers`** — Every `it` body is exactly `// BDD: SIGNATURE` or `# BDD: SIGNATURE`.
 - **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
-- **`framework-syntax`** — One confirmed framework throughout. Do not mix Jest and Mamba constructs.
+- **`framework-syntax`** — Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
 
 **Pass:**
 ```typescript

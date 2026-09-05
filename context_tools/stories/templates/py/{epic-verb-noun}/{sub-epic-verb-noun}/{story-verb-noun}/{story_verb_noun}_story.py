@@ -5,18 +5,14 @@
 # section: leaf-story-file
 # ---
 #
-# Runnable story (scenario fidelity - tier-neutral). Calls helper-protocol
-# methods only - no assertions, no tier mechanism here.
+# Conceptual story reference. Refer to context_tools/language-tools.md for tooling.
 #
 #   Folder tree   -> {epic-verb-noun}/{sub-epic-verb-noun}/{story-verb-noun}/
 #   Story file    -> {story_verb_noun}_story.py
-#   Tier files    -> {story_verb_noun}_test_helper.{tier}.py
-#                    (tier in domain | client | server | e2e | project-specific)
 
-"""Story: {Story Name} (scenario fidelity - tier-neutral)."""
+"""Story: {Story Name} (conceptual reference)."""
 
 from __future__ import annotations
-
 from typing import Protocol
 
 
@@ -27,16 +23,15 @@ class {EpicVerbNoun}Helper(Protocol):
 
 
 def create_{story_verb_noun}_story(h: "{EpicVerbNoun}Helper") -> dict:
-    """Build one pytest test function per scenario. Returns {test_name: fn}
-    for the tier file to bind at module scope.
+    """Build one pytest test function per scenario.
     """
     tests = {}
 
-    def test_main_flow_observable_outcome() -> None:
+    def test_main_flow() -> None:
         """SCENARIO: {main-flow outcome}"""
         h.given_precondition()
         h.when_action()
         h.then_outcome()
 
-    tests["test_main_flow_observable_outcome"] = test_main_flow_observable_outcome
+    tests["test_main_flow"] = test_main_flow
     return tests

@@ -2,6 +2,8 @@
 
 Deepen OO design from modules toward production code. Each fidelity **adds** artifacts — do not invent detail from a deeper level.
 
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
+
 **Progression:** `partition` (action) → **scaffold** → **modules** → **model** → **code**.
 
 | Fidelity | Default format | Produce |
