@@ -134,6 +134,19 @@ def resolve_text(
             + _CATALOG_LINE
             + _invoke_block(toolset, action="generate", fidelity=source, constructor_context=cc)
         )
+    if kind == "guidance":
+        if fidelities:
+            skill_options = " | ".join(f"{source}-{fidelity}" for fidelity in fidelities)
+            fidelity_ask = (
+                f"AskQuestion constrained to these fidelity skills: {skill_options}. "
+                f"Run the chosen skill (@{source}-<fidelity>); do not pipe YAML from this skill.\n"
+            )
+        else:
+            fidelity_ask = (
+                "AskQuestion to choose the appropriate fidelity skill for this context tool. "
+                "Run the chosen skill; do not pipe YAML from this skill.\n"
+            )
+        return taken + fidelity_ask
     fidelity_ask = (
         "If the fidelity does not belong to the in-scope tool or has not been provided, "
         "guess the correct fidelity and confirm with AskQuestion constrained to the other fidelities"

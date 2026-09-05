@@ -426,7 +426,8 @@ with description("a harness"):
                 expect(skill.body).to(equal(expected))
                 text = (root / ".cursor" / "skills" / "context_tools" / "stories" / "SKILL.md").read_text(encoding="utf-8")
                 expect(text).not_to(contain("disable-model-invocation"))
-                expect(text).to(contain("tools.ps1 run -"))
+                expect(text).not_to(contain("tools.ps1 run -"))
+                expect(text).to(contain("AskQuestion constrained to these fidelity skills:"))
 
         with context("with a toolset that has required constructor params"):
             with it("should include those params in the context block of the generated body"):
@@ -957,10 +958,10 @@ with description("a harness"):
                 text = (root / ".cursor" / "skills" / "context_tools" / "stories" / "SKILL.md").read_text(encoding="utf-8")
                 expect(text).to(contain("With a straight prompt passed, take the action from the prompt"))
                 expect(text).to(contain("If you took an action from the context versus being given a straight prompt"))
-                expect(text).to(contain("or has not been provided"))
                 expect(text).not_to(contain("versus being given an explicit one"))
-                expect(text).to(contain("tools.ps1 run -"))
-                expect((root / ".cursor" / "skills" / "context_tools" / "stories-story_map" / "SKILL.md").is_file()).to(equal(True))
+                expect(text).to(contain("AskQuestion constrained to these fidelity skills:"))
+                expect(text).not_to(contain("tools.ps1 run -"))
+                expect((root / ".cursor" / "skills" / "context_tools" / "stories" / "stories-story_map" / "SKILL.md").is_file()).to(equal(True))
 
             with it("should swap the action confirm line for straight prompt passed vs ct"):
                 root = _sandbox()
@@ -1192,12 +1193,12 @@ with description("a generated harness tool"):
                 expect(text).not_to(contain("context_tools/actions"))
                 expect(text).not_to(contain("cannot get guidance and cannot get the action"))
                 expect(text).not_to(contain("constrained to this source: stories"))
-                expect(text).to(contain("tools.ps1 run -"))
-                expect(text).to(contain("Follow response.instructions"))
+                expect(text).not_to(contain("tools.ps1 run -"))
+                expect(text).not_to(contain("```yaml"))
                 expect(text).not_to(contain("_req.yaml"))
                 expect(text).not_to(contain("python -m tools manifest "))
-                expect(text).to(contain("or has not been provided"))
-                expect(text).to(contain("AskQuestion constrained to the other fidelities: story_map | scaffold"))
+                expect(text).to(contain("AskQuestion constrained to these fidelity skills:"))
+                expect(text).to(contain("stories-story_map | stories-scaffold"))
                 expect(text).not_to(contain("Guidance:"))
                 expect(text).not_to(contain("# Instructions"))
 
@@ -1437,8 +1438,10 @@ with description("harness bodies for manifest-alone invoke (#45)"):
             )
             expect(text).to(contain("AskQuestion constrained to these actions:"))
             expect(text).not_to(contain("context_tools/actions"))
-            expect(text).to(contain("tools.ps1 run -"))
-            expect(text).to(contain("Follow response.instructions"))
+            expect(text).to(contain("AskQuestion constrained to these fidelity skills: stories-story_map"))
+            expect(text).not_to(contain("tools.ps1 run -"))
+            expect(text).not_to(contain("```yaml"))
+            expect(text).to(contain("do not pipe YAML from this skill"))
 
     with context("when resolving a utility body"):
         with it("should use tools.ps1 as the only stdin invoke"):
