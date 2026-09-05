@@ -1,6 +1,6 @@
 ---
 description: "clean_engineering code rules"
-globs: **/*.py
+globs: **/*.py,**/*.js,**/*.ts,**/*.java,**/*.c,**/*.cs
 alwaysApply: false
 ---
 

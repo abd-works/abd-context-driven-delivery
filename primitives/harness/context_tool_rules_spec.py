@@ -55,7 +55,7 @@ with description("context tool rules"):
         expect(by_name["code"].body).to(contain("on top of the model rules"))
         expect(by_name["code"].body).to(contain("keep-classes-single-responsibility"))
         expect(by_name["code"].body).to(contain("keep-operations-small-focused"))
-        expect(by_name["code"].globs).to(equal("**/*.py"))
+        expect(by_name["code"].globs).to(equal("**/*.py,**/*.js,**/*.ts,**/*.java,**/*.c,**/*.cs"))
 
     with it("should place rules under context_tools/{slug}/"):
         rule = Rule("Cursor", "stories")

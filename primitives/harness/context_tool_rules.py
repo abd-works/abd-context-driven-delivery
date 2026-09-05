@@ -18,6 +18,7 @@ _SKIP_SLUGS = frozenset({"base", "create_context_tool", "agent_bdd", "car"})
 _PY = "**/*.py"
 _MD = "**/*.md"
 _PY_MD = "**/*.py,**/*.md"
+_CODE = "**/*.py,**/*.js,**/*.ts,**/*.java,**/*.c,**/*.cs"
 _PY_JS_TS_JAVA = "**/*.{py,js,ts,java}"
 
 # Later fidelity Cursor rules include earlier fidelity rule bullets (same kit).
@@ -48,13 +49,13 @@ CONTEXT_TOOL_RULE_GLOBS: dict[str, dict[str, str]] = {
         "shared": f"{_PY_MD},**/*bounded-context*.md",
         "bounded_context": "**/*bounded-context*.md,**/*.md",
         "building_blocks": "**/*bounded-context*.md,**/*.md",
-        "tactics": _PY,
+        "tactics": _CODE,
     },
     "clean_engineering": {
         "shared": _PY_MD,
         "modules": _PY_MD,
         "model": _PY_MD,
-        "code": _PY,
+        "code": _CODE,
         "specification": _MD,
     },
     "cdd": {
@@ -62,7 +63,7 @@ CONTEXT_TOOL_RULE_GLOBS: dict[str, dict[str, str]] = {
         "discovery": "**/.context/**/cdd-sketch.md,**/*.{md,py}",
         "explore": "**/.context/**/cdd-sketch.md,**/*.{md,py}",
         "spec": "**/.context/**/cdd-sketch.md,**/*.{md,py,js,ts,java}",
-        "engineer": "**/*.{py,md,js,ts,java}",
+        "engineer": f"{_CODE},**/*.md",
     },
 }
 
