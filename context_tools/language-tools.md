@@ -10,6 +10,7 @@ Use this guidance to adapt conceptual templates (e.g., in TypeScript or Python) 
 
 - **Test Runner**: [Vitest](https://vitest.dev/) (or Jest).
 - **Assertion Library**: Vitest `expect` (including `expect.poll` for async UI state).
+- **Machinery**: Copy `context_tools/stories/templates/ts/story-test.ts` → `tests/story-test.ts` once per tests tree if missing — not inlined in deploy templates.
 - **Story file shape**: One `{story}.{tier}.ts` per story — `beforeAll` / `afterAll`, `background(({ given }) => { … scenario() … })`. Template is **structure only** (`// test code goes here` in each step); replace when implementing.
 - **Style**: `story` / `background` / `scenario` from `story-test.ts`; chain `when(…).and(…)`; first `then(…)` then `.and(…)` for additional outcomes.
 
@@ -18,6 +19,7 @@ Use this guidance to adapt conceptual templates (e.g., in TypeScript or Python) 
 - **Test Runner (BDD unit specs)**: [Mamba](https://github.com/nestorsalceda/mamba) with `description` / `context` / `it` / `before`.
 - **Test Runner (story acceptance)**: Same Mamba stack via **`story_test.py`** — extends Mamba like **`story-test.ts`** extends Vitest (`story`, `background`, `scenario`, `given`, `when`, `then`).
 - **Assertion Library**: [Expects](https://github.com/jaimegildesagredo/expects).
+- **Machinery**: Copy `context_tools/stories/templates/py/story_test.py` → `tests/story_test.py` once per tests tree if missing — not inlined in deploy templates. Run stories with `python -m story_test`.
 - **Story file shape**: `with story`, `with background.all` / `with background.each`, `with given` / `when` / `then` / `and_`. Template is **structure only** (`pass  # test code goes here` under each block); you replace with real code when implementing. Boot/teardown in `with before.all` / `with after.all`.
 - **Runner**: `python -m story_test tests/...` (patches Mamba AST loader). Assertions use `expects` inside **then** bodies like unit specs.
 

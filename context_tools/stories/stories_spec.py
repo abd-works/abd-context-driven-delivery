@@ -57,15 +57,15 @@ with description("Stories"):
         with before.each:
             self.stories = Stories(fidelity="scenarios")
 
-        with it("should default format to typescript"):
-            expect(self.stories.format).to(equal("typescript"))
+        with it("should default format to python"):
+            expect(self.stories.format).to(equal("python"))
 
         with it("should retain fidelity scenarios"):
             expect(self.stories.fidelity).to(equal("scenarios"))
 
     with context("that is constructed with fidelity acceptance_tests"):
-        with it("should default format to typescript"):
-            expect(Stories(fidelity="acceptance_tests").format).to(equal("typescript"))
+        with it("should default format to python"):
+            expect(Stories(fidelity="acceptance_tests").format).to(equal("python"))
 
     with context("that is constructed with an unsupported fidelity"):
         with it("should raise ValueError"):
@@ -261,9 +261,11 @@ with description("Stories"):
 
         with it("should inline the flat scenario-template without helpers"):
             expect("scenario-template.py" in self.templates).to(be_true)
-            expect("story_test.py" in self.templates).to(be_true)
+            expect("class StoryNodeTransformer" in self.templates).to(equal(False))
+            expect("copy once per tests/ tree if missing" in self.templates).to(be_true)
+            expect("templates/py/story_test.py" in self.templates).to(be_true)
             expect('with story("' in self.templates).to(be_true)
-            expect("def story(" in self.templates).to(be_true)
+            expect("def story(" in self.templates).to(equal(False))
             expect("from story_test import" in self.templates).to(be_true)
             expect("with background.each" in self.templates).to(be_true)
             expect("with background()" in self.templates).to(equal(False))
@@ -294,6 +296,8 @@ with description("Stories"):
             expect("_test_helper.py" in self.templates).to(equal(False))
             expect("_test_helper.ts" in self.templates).to(equal(False))
             expect("Protocol" in self.templates).to(equal(False))
+            expect("scenario-inline.md" in self.templates).to(equal(False))
+            expect("scenario-main-flow.md" in self.templates).to(equal(False))
 
     with context("whose templates slot is expanded at scenarios typescript"):
         with it("should inline sign-up-style scenario-template.ts"):
@@ -301,9 +305,11 @@ with description("Stories"):
                 fidelity="scenarios", format="typescript", session=None
             ).templates().expand()
             expect("scenario-template.ts" in text).to(be_true)
-            expect("story-test.ts" in text).to(be_true)
-            expect("export function story" in text).to(be_true)
-            expect("export function background" in text).to(be_true)
+            expect("templates/ts/story-test.ts" in text).to(be_true)
+            expect("export function story" in text).to(equal(False))
+            expect("copy once per tests/ tree if missing" in text).to(be_true)
+            expect("tests/story-test.ts" in text).to(be_true)
+            expect("export function background" in text).to(equal(False))
             expect("Naming rules" in text).to(be_true)
             expect("background(({ given })" in text).to(be_true)
             expect("beforeAll" in text).to(be_true)

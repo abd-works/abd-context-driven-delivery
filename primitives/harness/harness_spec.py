@@ -1023,7 +1023,7 @@ with description("a harness"):
                     expect(code).not_to(contain("python -m tools run"))
                     expect(code).not_to(contain("tools.ps1 run"))
 
-            with it("should inline markdown before the deploy code language"):
+            with it("should inline code templates only for scenarios deploy"):
                 from harness.returned_guidance import _formats_for_deploy
 
                 supported = ["markdown", "json", "python", "typescript", "java", "javascript", "drawio"]
@@ -1032,8 +1032,8 @@ with description("a harness"):
                     "model": "python",
                     "specification": "python",
                     "code": "python",
-                    "scenarios": "typescript",
-                    "acceptance_tests": "typescript",
+                    "scenarios": "python",
+                    "acceptance_tests": "python",
                 }
                 expect(_formats_for_deploy(supported, defaults, "code", "python")).to(
                     equal(["markdown", "python"])
@@ -1042,7 +1042,10 @@ with description("a harness"):
                     equal(["markdown", "typescript"])
                 )
                 expect(_formats_for_deploy(supported, defaults, "scenarios", "python")).to(
-                    equal(["markdown", "python"])
+                    equal(["python"])
+                )
+                expect(_formats_for_deploy(supported, defaults, "acceptance_tests", "python")).to(
+                    equal(["python"])
                 )
                 expect(_formats_for_deploy(supported, defaults, "modules", "python")).to(
                     equal(["markdown"])

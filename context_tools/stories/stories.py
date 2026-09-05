@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 _FIDELITY_FORMAT_DEFAULTS = {
     "scaffold": "markdown",
     "story_map": "markdown",
-    "scenarios": "typescript",
-    "acceptance_tests": "typescript",
+    "scenarios": "python",
+    "acceptance_tests": "python",
 }
 
 # Adapter class path per format - peer channels, same CLI surface.

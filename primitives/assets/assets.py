@@ -40,11 +40,9 @@ _FIDELITY_TEMPLATE_STEMS: dict[str, frozenset[str]] = {
             "scenario-main-flow",
             "scenario-outline",
             "scenario-template",
-            "story-test",
-            "story_test",
         }
     ),
-    "acceptance_tests": frozenset({"scenario-template", "story-test", "story_test"}),
+    "acceptance_tests": frozenset({"scenario-template"}),
 }
 
 # Frontmatter `artifact:` values that mark a file as belonging to a fidelity

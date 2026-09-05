@@ -22,8 +22,8 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 | Fidelity | Default Format | Produce |
 |---|---|---|
 | **story_map** | markdown | Story map + thin-slice |
-| **scenarios** | typescript | Main-flow scenarios per story (single or multiple); optional variations; `examples/` + `givens.ts`. Pass `format markdown` when the strategy asks for a markdown view. |
-| **acceptance_tests** | typescript | `tests/{epic}/{sub-epic}/{story}.{tier}.ts` — one GWT file per story per seam (`front-end`, `back-end`, or another system name). No story folder. Fixtures: `examples/` + `givens.ts`. CE runs alongside for wrap classes. |
+| **scenarios** | python | Main-flow scenarios per story — `{story}.{tier}.py` GWT files. Pass `format markdown` only when the strategy asks for a markdown view. |
+| **acceptance_tests** | python | Same `{story}.{tier}.py` tree as scenarios. CE runs alongside for wrap classes. |
 
 **Templates** live under `templates/` per format. **Scanners** read the canonical model only — never language syntax.
 
@@ -32,7 +32,7 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 ## Shared rules
 
 - **`vocabulary-traces-to-domain-source`** — Trace terms to domain language / model when present.
-- **`artifacts-mirror-story-hierarchy`** — Mirror Epic → SubEpic → Story on disk as folders for epic and sub-epic, and as `{story}.{tier}.ts` files (no per-story directory).
+- **`artifacts-mirror-story-hierarchy`** — Mirror Epic → SubEpic → Story on disk as folders for epic and sub-epic, and as `{story}.{tier}.py` files (no per-story directory).
 - **`read-all-source-context-in-full`** — Before locking hierarchy **and before any grill/iterate question about a seam**, prove-read **every relevant referenced context** for that decision: owning `*-segment.md`, `module-context.md`, session sketches / grill-answers / handoff, peer story-context, build-order, and any path the plan or prior answers cite. Index / mid-epic stub columns are structure hints only — **not** story inventory. Grep or primer-only skims do not count; cite concrete terms from the files read in the question turn. Also re-read these rules. Do not thin from titles or memory!
 - **`do-not-invent-requirements`** — Only model behaviours present in source context or an explicit ask. Never invent:
   - status concepts, maintenance signals, warning badges, or config columns (e.g. `Status (ok/stale)`) the source does not require — unconfigured / not-yet-current = **no row** + the existing fallback, never a new invented state to render;
@@ -42,13 +42,13 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ## acceptance_tests
 
-**Default format:** typescript
+**Default format:** python
 
 **Goal:** Turn locked scenarios into runnable acceptance coverage; CE runs alongside to produce matching wrap classes under `domain/`.
 
 **Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
 
-**Produce:** `tests/{epic}/{sub-epic}/{story}.{tier}.ts` — one GWT file per story per seam. `{tier}` is `front-end`, `back-end`, or any other system name you are proving. No `{story}/` folder and no `*_story` / `*_test_helper` split. Fixtures live in `examples/` and `givens.ts` at the lowest shared epic / sub-epic / story folder.
+**Produce:** `tests/{epic}/{sub-epic}/{story}.{tier}.py` — one GWT file per story per seam. `{tier}` is `front-end`, `back-end`, or any other system name you are proving. No `{story}/` folder and no `*_story` / `*_test_helper` split.
 
 ### Rules
 
@@ -70,193 +70,101 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ## Templates
 
-### typescript
+### python
 
-## scenario-template.ts
+## scenario-template.py
 
-/**
- * Scenario template — refer to context_tools/language-tools.md for tooling.
- *
- * ```
- * # Params — fill before writing code
- * epic:       {epic-verb-noun}           # kebab folder under tests/
- * sub_epic:   {sub-epic-verb-noun}       # kebab folder under epic/ (omit level if story hangs off epic)
- * story:      {story-verb-noun}          # Verb Noun title from the story map
- * story_file: {story-kebab-slug}         # kebab file slug, e.g. sign-up-create-account
- * tier:       e2e | front-end | back-end | {system}
- *
- * # Artifact layout (artifacts-mirror-story-hierarchy)
- * tests/
- *   {epic-verb-noun}/
- *     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
- *       {story-kebab-slug}.{tier}.ts     # one GWT file per story per tier
- *
- * # Machinery (copy once per tests/ tree — full source inlined below)
- * story-test: tests/story-test.ts
- *
- * # Naming rules
- * - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
- * - Story test file        → {story-kebab-slug}.{tier}.ts at epic or sub-epic — NO {story}/ folder
- * - Tier                   → file extension segment (.e2e.ts, .front-end.ts, .back-end.ts)
- * - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
- * ```
- *
- * Pattern: GWT structure only — // test code goes here in each step callback.
- */
+# ---
+# fidelity: [specification, engineering]
+# artifact: [story-scenarios]
+# format: py
+# ---
+#
+# Scenario template — refer to context_tools/language-tools.md for tooling.
+#
+# ```
+# # Params — fill before writing code
+# epic:       {epic-verb-noun}           # kebab folder under tests/
+# sub_epic:   {sub-epic-verb-noun}       # kebab folder under epic/ (omit level if story hangs off epic)
+# story:      {story-verb-noun}          # Verb Noun title from the story map
+# story_file: {story_snake_slug}         # snake file slug, e.g. sign_up_create_account
+# tier:       e2e | front-end | back-end | {system}
+#
+# # Artifact layout (artifacts-mirror-story-hierarchy)
+# tests/
+#   {epic-verb-noun}/
+#     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
+#       {story_snake_slug}.{tier}.py     # one GWT file per story per tier
+#
+# # Machinery — copy once per tests/ tree if missing (do not inline in skills):
+#   context_tools/stories/templates/py/story_test.py → tests/story_test.py
+# story_test: tests/story_test.py
+#
+# # Naming rules
+# - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
+# - Story test file        → {story_snake_slug}.{tier}.py at epic or sub-epic — NO {story}/ folder
+# - Tier                   → file extension segment (.e2e.py, .front-end.py, .back-end.py)
+# - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
+# ```
+#
+# Pattern: GWT structure only — replace pass with real code under each with.
 
-import { afterAll, beforeAll } from "vitest";
-import { background, scenario, story } from "../../story-test";
+from __future__ import annotations
 
-story("{Story Verb-Noun}", () => {
-  beforeAll(async () => {
-    // boot — test code goes here
-  });
+from mamba import after, before
 
-  afterAll(async () => {
-    // teardown — test code goes here
-  });
-
-  background(({ given }) => {
-    given("{background given step}", async () => {
-      // test code goes here
-    });
-
-    scenario("{surface check — e.g. rules visible}", ({ when, then }) => {
-      when("{primary when step}", async () => {
-        // test code goes here
-      });
-      then("{observable surface outcome}", async () => {
-        // test code goes here
-      });
-    });
-
-    scenario("{validation branch while typing}", ({ when, then }) => {
-      when("{primary when step}", async () => {
-        // test code goes here
-      }).and("{follow-on when step}", async () => {
-        // test code goes here
-      });
-      then("{validation message on domain object}", () => {
-        // test code goes here
-      });
-    });
-
-    scenario("{validation clears when input conforms}", ({ when, then }) => {
-      when("{primary when step}", async () => {
-        // test code goes here
-      }).and("{prior invalid state}", async () => {
-        // test code goes here
-      });
-      when("{corrective action}", async () => {
-        // test code goes here
-      });
-      then("{error cleared on domain object}", () => {
-        // test code goes here
-      });
-    });
-
-    scenario("{main-flow outcome}", ({ when, then }) => {
-      when("{primary when step}", async () => {
-        // test code goes here
-      });
-      when("{submit operation on domain object}", async () => {
-        // test code goes here
-      });
-      then("{post-condition on loaded aggregate}", async () => {
-        // test code goes here
-      });
-    });
-  });
-});
+from story_test import and_, background, given, scenario, story, then, when
 
 
-## story-test.ts
+with story("{Story Verb-Noun}"):
+    with before.all:
+        pass  # boot — test code goes here
 
-/**
- * Given / When / Then helpers (Vitest). Copy to tests/story-test.ts once per tests/ tree.
- *
- * ```
- * file: tests/story-test.ts
- * ```
- */
+    with after.all:
+        pass  # teardown — test code goes here
 
-type WhenChain = {
-  and: (s: string, fn: () => void | Promise<void>) => WhenChain;
-};
+    with background.each:
+        with given("{background given step}"):
+            pass  # test code goes here
 
-type ThenChain = {
-  and: (s: string, fn: () => void | Promise<void>) => ThenChain;
-};
+        with scenario("{surface check — e.g. rules visible}"):
+            with when("{primary when step}"):
+                pass  # test code goes here
 
-let activeBackgroundGivens: Array<() => void | Promise<void>> = [];
+            with then("{observable surface outcome}"):
+                pass  # test code goes here
 
-export function story(name: string, build: () => void): void {
-  describe(name, build);
-}
+        with scenario("{validation branch while typing}"):
+            with when("{primary when step}"):
+                pass  # test code goes here
 
-export function background(
-  build: (steps: { given: (s: string, fn: () => void | Promise<void>) => void }) => void,
-): void {
-  const givens: Array<() => void | Promise<void>> = [];
-  build({
-    given: (_s, fn) => givens.push(fn),
-  });
-  activeBackgroundGivens = givens;
-}
+            with and_("{follow-on when step}"):
+                pass  # test code goes here
 
-export function scenario(
-  name: string,
-  build: (steps: {
-    given: (s: string, fn: () => void | Promise<void>) => void;
-    when: (s: string, fn: () => void | Promise<void>) => WhenChain;
-    then: (s: string, fn: () => void | Promise<void>) => ThenChain;
-  }) => void,
-): void {
-  describe(name, () => {
-    const givens: Array<() => void | Promise<void>> = [];
-    const whens: Array<() => void | Promise<void>> = [];
-    const thens: Array<{ step: string; fn: () => void | Promise<void> }> = [];
-    const pushThen = (s: string, fn: () => void | Promise<void>) => {
-      thens.push({ step: s, fn });
-    };
-    const thenChain: ThenChain = {
-      and: (s, fn) => {
-        pushThen(s, fn);
-        return thenChain;
-      },
-    };
-    const whenChain: WhenChain = {
-      and: (s, fn) => {
-        whens.push(fn);
-        return whenChain;
-      },
-    };
+            with then("{validation message on domain object}"):
+                pass  # test code goes here
 
-    build({
-      given: (_s, fn) => givens.push(fn),
-      when: (_s, fn) => {
-        whens.push(fn);
-        return whenChain;
-      },
-      then: (s, fn) => {
-        pushThen(s, fn);
-        return thenChain;
-      },
-    });
+        with scenario("{validation clears when input conforms}"):
+            with when("{primary when step}"):
+                pass  # test code goes here
 
-    beforeAll(async () => {
-      for (const g of [...activeBackgroundGivens, ...givens]) {
-        await g();
-      }
-      for (const w of whens) {
-        await w();
-      }
-    });
+            with and_("{prior invalid state}"):
+                pass  # test code goes here
 
-    thens.forEach(({ step, fn }, i) => {
-      it(i === 0 ? `Then ${step}` : step, fn);
-    });
-  });
-}
+            with when("{corrective action}"):
+                pass  # test code goes here
+
+            with then("{error cleared on domain object}"):
+                pass  # test code goes here
+
+        with scenario("{main-flow outcome}"):
+            with when("{primary when step}"):
+                pass  # test code goes here
+
+            with when("{submit operation on domain object}"):
+                pass  # test code goes here
+
+            with then("{post-condition on loaded aggregate}"):
+                pass  # test code goes here
 
 See examples in `context_tools/stories/examples/` if needed.
