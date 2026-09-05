@@ -1,6 +1,6 @@
 ---
 description: "stories shared rules — apply across all fidelities"
-globs: **/*.{py,md},**/*.{py,js,ts,java},**/*story-map*.md
+globs: **/*.py,**/*.md,**/*.{py,js,ts,java},**/*story-map*.md
 alwaysApply: false
 ---
 

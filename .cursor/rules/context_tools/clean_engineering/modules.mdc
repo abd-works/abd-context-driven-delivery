@@ -1,6 +1,6 @@
 ---
 description: "clean_engineering modules rules"
-globs: **/*.{py,md}
+globs: **/*.py,**/*.md
 alwaysApply: false
 ---
 

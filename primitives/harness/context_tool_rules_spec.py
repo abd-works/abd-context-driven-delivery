@@ -51,7 +51,9 @@ with description("context tool rules"):
         expect("code" in by_name).to(be_true)
         expect(by_name["modules"].body).to(contain("high-cohesion"))
         expect(by_name["model"].body).to(contain("keep-classes-single-responsibility"))
-        expect(by_name["model"].globs).to(equal("**/*.{py,md}"))
+        expect(by_name["model"].globs).to(equal("**/*.py,**/*.md"))
+        expect(by_name["code"].body).to(contain("on top of the model rules"))
+        expect(by_name["code"].body).to(contain("keep-classes-single-responsibility"))
         expect(by_name["code"].body).to(contain("keep-operations-small-focused"))
         expect(by_name["code"].globs).to(equal("**/*.py"))
 

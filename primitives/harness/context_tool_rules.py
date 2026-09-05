@@ -17,8 +17,13 @@ _SKIP_SLUGS = frozenset({"base", "create_context_tool", "agent_bdd", "car"})
 # Prefer extension-based patterns — code and artifacts can live outside fixed folder names.
 _PY = "**/*.py"
 _MD = "**/*.md"
-_PY_MD = "**/*.{py,md}"
+_PY_MD = "**/*.py,**/*.md"
 _PY_JS_TS_JAVA = "**/*.{py,js,ts,java}"
+
+# Later fidelity Cursor rules include earlier fidelity rule bullets (same kit).
+_FIDELITY_RULE_STACK: dict[str, dict[str, str]] = {
+    "clean_engineering": {"code": "model"},
+}
 
 CONTEXT_TOOL_RULE_GLOBS: dict[str, dict[str, str]] = {
     "stories": {
@@ -220,6 +225,49 @@ def _fidelity_skill_refs(tool_slug: str, fidelity_names: frozenset[str]) -> list
     return [_skill_ref(tool_slug, name) for name in sorted(fidelity_names)]
 
 
+def _rule_bullets(body: str) -> str:
+    lines = body.splitlines()
+    for index, line in enumerate(lines):
+        if line.strip().startswith("- **`"):
+            return "\n".join(lines[index:]).strip()
+    return body.strip()
+
+
+def _apply_fidelity_rule_stacks(
+    tool_slug: str, specs: list[ContextToolRuleSpec]
+) -> list[ContextToolRuleSpec]:
+    stacks = _FIDELITY_RULE_STACK.get(tool_slug, {})
+    if not stacks:
+        return specs
+    by_name = {spec.name: spec for spec in specs}
+    merged: list[ContextToolRuleSpec] = []
+    for spec in specs:
+        base_name = stacks.get(spec.name)
+        if not base_name or base_name not in by_name:
+            merged.append(spec)
+            continue
+        base_label = base_name.replace("_", " ")
+        fidelity_label = spec.name.replace("_", " ")
+        merged.append(
+            ContextToolRuleSpec(
+                tool_slug=spec.tool_slug,
+                name=spec.name,
+                description=spec.description,
+                globs=spec.globs,
+                body=(
+                    f"When {fidelity_label}, follow these rules on top of the "
+                    f"{base_label} rules. "
+                    f"See @{_skill_ref(tool_slug, spec.name)} for the full skill.\n\n"
+                    + _rule_bullets(by_name[base_name].body)
+                    + "\n\n"
+                    + _rule_bullets(spec.body)
+                ),
+                folder=spec.folder,
+            )
+        )
+    return merged
+
+
 def rules_for_context_tool(
     tool_dir: Path,
     *,
@@ -285,7 +333,7 @@ def rules_for_context_tool(
             )
         )
 
-    return specs
+    return _apply_fidelity_rule_stacks(slug, specs)
 
 
 def iter_context_tool_dirs(repo_root: Path | None = None) -> list[tuple[str, Path, str]]:
