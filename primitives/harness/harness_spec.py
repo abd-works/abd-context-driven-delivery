@@ -1193,7 +1193,7 @@ with description("a generated harness tool"):
                 expect(text).not_to(contain("cannot get guidance and cannot get the action"))
                 expect(text).not_to(contain("constrained to this source: stories"))
                 expect(text).not_to(contain("tools.ps1 run -"))
-                expect(text).not_to(contain("```yaml"))
+                expect(text).not_to(contain("toolset:"))
                 expect(text).not_to(contain("_req.yaml"))
                 expect(text).not_to(contain("python -m tools manifest "))
                 expect(text).to(contain("AskQuestion: stories-story_map"))
@@ -1441,7 +1441,7 @@ with description("harness bodies for manifest-alone invoke (#45)"):
             expect(text).to(contain("AskQuestion: stories-story_map"))
             expect(text).to(contain("Run the appropriate skill."))
             expect(text).not_to(contain("tools.ps1 run -"))
-            expect(text).not_to(contain("```yaml"))
+            expect(text).not_to(contain("toolset:"))
 
     with context("when resolving a utility body"):
         with it("should use tools.ps1 as the only stdin invoke"):

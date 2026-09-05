@@ -22,7 +22,7 @@ def _context_tool_name(toolset: str) -> str:
 
 
 _CATALOG_LINE = (
-    "Pipe the fence to stdin from the repo root. Do not write a request file. "
+    "Pipe the block to stdin from the repo root. Do not write a request file. "
     "Do not remanifest — this skill is the catalog. "
     "Follow response.instructions only.\n"
 )
@@ -37,7 +37,7 @@ def _invoke_block(
     constructor_context: dict[str, str] | None = None,
 ) -> str:
     """Filled invoke fence plus one ``tools.ps1 run -`` (manifest-alone path, #45)."""
-    lines = ["```yaml", f"toolset: {toolset}"]
+    lines = ["```", f"toolset: {toolset}"]
     ctx: dict[str, str] = dict(constructor_context or {})
     if fidelity:
         ctx["fidelity"] = fidelity
@@ -202,7 +202,7 @@ class ContextToolFidelityBody(ContextToolBody):
     """Composite — all context-tool content plus the pinned fidelity.
 
     One ``{context_tool}-{fidelity}`` command: guidance expanded through
-    the same ActionExpander as the YAML contract, projected to this fidelity,
+    the same ActionExpander as the tool contract, projected to this fidelity,
     with higher-abstraction fidelity commands referenced rather than inlined.
     """
 
