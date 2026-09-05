@@ -30,7 +30,7 @@
 # - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
-# Pattern: with story / with given / with when / with then / with and_ — Mamba blocks via story_test.py.
+# Pattern: with story / with background.all|each / with given / when / then / and_ — Mamba blocks.
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ with story("{Story Verb-Noun}"):
         if self.{app_camel}:
             self.{app_camel}.close()
 
-    with background():
+    with background.each:
         with given("{background given step}"):
             self.{app_camel}.{background_operation}()
 

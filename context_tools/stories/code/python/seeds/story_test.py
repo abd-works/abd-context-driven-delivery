@@ -17,8 +17,12 @@ def story(_name: str) -> None:
     pass
 
 
-def background() -> None:
-    pass
+class _Background:
+    all = None
+    each = None
+
+
+background = _Background()
 
 
 def scenario(_name: str) -> None:
@@ -60,18 +64,32 @@ class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
         node = super(StoryNodeTransformer, self).generic_visit(node)  # type: ignore[attr-defined]
         return super().visit_With(node)
 
+    def _background_scope(self, node: ast.With) -> str:
+        context_expr = self._context_expr_for(node)
+        if isinstance(context_expr, ast.Attribute) and isinstance(
+            context_expr.value, ast.Name
+        ):
+            if context_expr.value.id == "background" and context_expr.attr in (
+                "all",
+                "each",
+            ):
+                return context_expr.attr
+        return "each"
+
+    def _is_background_with(self, node: ast.With) -> bool:
+        return self._get_name(node) == "background"
+
     def visit_Module(self, node: ast.Module) -> ast.Module:
         node = super().visit_Module(node)
         expanded: list[ast.stmt] = []
         for stmt in node.body:
-            if isinstance(stmt, ast.With):
-                name = self._get_name(stmt)
-                if name == "background":
-                    expanded.extend(self._expand_background(stmt))
-                    continue
-                if name == "scenario":
-                    expanded.append(self._transform_scenario(stmt, []))
-                    continue
+            if isinstance(stmt, ast.With) and self._is_background_with(stmt):
+                _story_givens, scenarios = self._expand_background(stmt)
+                expanded.extend(scenarios)
+                continue
+            if isinstance(stmt, ast.With) and self._get_name(stmt) == "scenario":
+                expanded.append(self._transform_scenario(stmt, []))
+                continue
             expanded.append(stmt)
         node.body = expanded
         return node
@@ -80,14 +98,22 @@ class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
         context_expr = self._context_expr_for(node)
         story_name = self._human_readable_context_expr(context_expr)
         body: list[ast.stmt] = []
+        story_givens: list[list[ast.stmt]] = []
 
         for stmt in node.body:
-            if isinstance(stmt, ast.With) and self._get_name(stmt) == "background":
-                body.extend(self._expand_background(stmt))
+            if isinstance(stmt, ast.With) and self._is_background_with(stmt):
+                scope = self._background_scope(stmt)
+                bg_story_givens, scenarios = self._expand_background(stmt)
+                if scope == "all":
+                    story_givens.extend(bg_story_givens)
+                body.extend(scenarios)
             else:
                 transformed = self.visit(stmt)
                 if isinstance(transformed, ast.stmt):
                     body.append(transformed)
+
+        if story_givens:
+            body = self._inject_story_givens(body, story_givens, node)
 
         return ast.copy_location(
             ast.ClassDef(
@@ -106,7 +132,10 @@ class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
             node,
         )
 
-    def _expand_background(self, node: ast.With) -> list[ast.ClassDef]:
+    def _expand_background(
+        self, node: ast.With
+    ) -> tuple[list[list[ast.stmt]], list[ast.ClassDef]]:
+        scope = self._background_scope(node)
         background_givens: list[list[ast.stmt]] = []
         scenarios: list[ast.ClassDef] = []
 
@@ -117,11 +146,50 @@ class StoryNodeTransformer(nodetransformers.TransformToSpecsNodeTransformer):
             if step == "given":
                 background_givens.append(stmt.body)
             elif step == "scenario":
+                per_scenario_givens = (
+                    background_givens if scope == "each" else []
+                )
                 scenarios.append(
-                    self._transform_scenario(stmt, background_givens)
+                    self._transform_scenario(stmt, per_scenario_givens)
                 )
 
-        return scenarios
+        story_givens = background_givens if scope == "all" else []
+        return story_givens, scenarios
+
+    def _inject_story_givens(
+        self,
+        body: list[ast.stmt],
+        givens: list[list[ast.stmt]],
+        node: ast.AST,
+    ) -> list[ast.stmt]:
+        extra: list[ast.stmt] = [stmt for block in givens for stmt in block]
+        for index, stmt in enumerate(body):
+            if isinstance(stmt, ast.FunctionDef) and stmt.name == "before_all":
+                merged = list(stmt.body) + extra
+                body[index] = ast.copy_location(
+                    ast.FunctionDef(
+                        name="before_all",
+                        args=stmt.args,
+                        body=merged,
+                        decorator_list=stmt.decorator_list,
+                    ),
+                    stmt,
+                )
+                return body
+
+        body.insert(
+            0,
+            ast.copy_location(
+                ast.FunctionDef(
+                    name="before_all",
+                    args=self._generate_argument("self"),
+                    body=extra,
+                    decorator_list=[],
+                ),
+                node,
+            ),
+        )
+        return body
 
     def _transform_scenario(
         self,
