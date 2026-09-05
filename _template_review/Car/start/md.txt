@@ -1,0 +1,1 @@
+ERROR: Unsupported fidelity 'start'. Choose from: ['full_journey', 'road_story', 'trip_outline']

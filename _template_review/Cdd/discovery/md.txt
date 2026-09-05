@@ -1,0 +1,1 @@
+No template found for format 'md' / fidelity 'discovery' in C:\dev\abd-cdd-harness-experimantation\context_tools\cdd\templates
