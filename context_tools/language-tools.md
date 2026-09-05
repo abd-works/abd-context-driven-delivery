@@ -18,7 +18,7 @@ Use this guidance to adapt conceptual templates (e.g., in TypeScript or Python) 
 - **Test Runner (BDD unit specs)**: [Mamba](https://github.com/nestorsalceda/mamba) with `description` / `context` / `it` / `before`.
 - **Test Runner (story acceptance)**: Same Mamba stack via **`story_test.py`** — extends Mamba like **`story-test.ts`** extends Vitest (`story`, `background`, `scenario`, `given`, `when`, `then`).
 - **Assertion Library**: [Expects](https://github.com/jaimegildesagredo/expects).
-- **Story file shape**: `with story(...)`, `with background.all` / `with background.each`, `with given(...)`, `with scenario(...)`, `with when(...)`, `with then(...)`, `with and_(...)` — same block style as Mamba `with description` / `with it`. Boot/teardown: `with before.all` / `with after.all` from Mamba. **`background.all`** givens run once on the story; **`background.each`** givens run before every scenario (same shared-Given role as Vitest `background`).
+- **Story file shape**: `with story`, `with background.all` / `with background.each`, `with given` / `when` / `then` / `and_` — **normal code inline under each block** (multi-line when needed). Boot/teardown in `with before.all` / `with after.all`. No step helper defs.
 - **Runner**: `python -m story_test tests/...` (patches Mamba AST loader). Assertions use `expects` inside **then** bodies like unit specs.
 
 ## Java

@@ -262,14 +262,18 @@ section: body
 # - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
-# Pattern: with story / with background.all|each / with given / when / then / and_ — Mamba blocks.
+# Pattern: normal code inline under each with — same steps as scenario-template.ts.
 
 from __future__ import annotations
 
+from expects import be_above, be_none, equal, expect
 from mamba import after, before
 
 from domain.{bounded_context}.runtime import {AppPascal}E2e, config
-from domain.{bounded_context}.{aggregate_snake} import {AggregatePascal}
+from domain.{bounded_context}.{aggregate_snake} import (
+    {AggregatePascal},
+    {ERROR_CONSTANT}_MESSAGE,
+)
 from story_test import and_, background, given, scenario, story, then, when
 
 
@@ -290,7 +294,9 @@ with story("{Story Verb-Noun}"):
                 self.{aggregate_camel} = self.{app_camel}.{primary_when_operation}()
 
             with then("{observable surface outcome}"):
-                pass  # Assert {observable surface outcome}
+                self.{aggregate_camel}.{field} = ""
+                self.{aggregate_camel}.validate()
+                expect(len(self.{aggregate_camel}.errors.{field})).to(be_above(0))
 
         with scenario("{validation branch while typing}"):
             with when("{primary when step}"):
@@ -301,7 +307,9 @@ with story("{Story Verb-Noun}"):
                 self.{aggregate_camel}.validate()
 
             with then("{validation message on domain object}"):
-                pass  # Assert {validation message on domain object}
+                expect(self.{aggregate_camel}.errors.{field}).to(
+                    equal({ERROR_CONSTANT}_MESSAGE)
+                )
 
         with scenario("{validation clears when input conforms}"):
             with when("{primary when step}"):
@@ -316,7 +324,7 @@ with story("{Story Verb-Noun}"):
                 self.{aggregate_camel}.validate()
 
             with then("{error cleared on domain object}"):
-                pass  # Assert {error cleared on domain object}
+                expect(self.{aggregate_camel}.errors.{field}).to(be_none)
 
         with scenario("{main-flow outcome}"):
             with when("{primary when step}"):
@@ -327,7 +335,12 @@ with story("{Story Verb-Noun}"):
                 self.{aggregate_camel}.{operation}()
 
             with then("{post-condition on loaded aggregate}"):
-                pass  # Assert {post-condition on loaded aggregate}
+                loaded = (
+                    self.{app_camel}
+                    .{repository}()
+                    .load(self.{aggregate_camel})
+                )
+                expect(loaded.is_at_{state}("{StateName}")).to(equal(True))
 
 
 ## story_test.py
