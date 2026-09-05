@@ -8,25 +8,17 @@ Use this guidance to adapt conceptual templates (e.g., in TypeScript or Python) 
 
 ## TypeScript / JavaScript
 
-- **Test Runner**: [Jest](https://jestjs.io/) or [Vitest](https://vitest.dev/).
-- **Assertion Library**: Built-in `expect`.
-- **Style**: Jasmine-style `describe` / `it` / `beforeEach` blocks.
-- **Mocking**: `jest.mock()` or `vi.mock()`.
-- **Idioms**: 
-    - Use `camelCase` for properties and operations.
-    - Favour `interface` for seams.
-    - Use `async/await` for I/O and interaction points.
+- **Test Runner**: [Vitest](https://vitest.dev/) (or Jest).
+- **Assertion Library**: Vitest `expect` (including `expect.poll` for async UI state).
+- **Story file shape**: One `{story}.{tier}.ts` per story — `beforeAll`/`afterAll` for `{App}E2e.initialize(config)` / `.close()`; `background(({ given }) => { … scenario() … })` for shared Given + all scenarios; `./givens`, `./whens`, `./examples/*` modules for step bodies.
+- **Style**: `story` / `background` / `scenario` from `story-test.ts`; chain `when(…).and(…)`; first `then(…)` then `.and(…)` for additional outcomes; domain operations in When, observable assertions in Then.
 
 ## Python
 
-- **Test Runner**: [Pytest](https://docs.pytest.org/) or [Mamba](https://github.com/nestorsalceda/mamba) (RSpec-style `description` / `context` / `it`).
-- **Assertion Library**: `pytest` assertions or [Expects](https://github.com/jaimegildesagredo/expects).
-- **Story scenarios**: Subclass `StoryScenario` from `tests/story_test.py` for `boot()` (infrastructure) and `background()` (shared Given). Use Mamba `before.all` for boot, `before.each` for Given+When, separate `it` blocks for Then/And outcomes.
-- **Mocking**: `unittest.mock`.
-- **Idioms**:
-    - Use `snake_case` for properties and operations.
-    - Use `typing.Protocol` for structural typing/interfaces.
-    - Use `@property` for simple accessors.
+- **Test Runner**: [Mamba](https://github.com/nestorsalceda/mamba) (RSpec-style `description` / `context` / `it`).
+- **Assertion Library**: [Expects](https://github.com/jaimegildesagredo/expects).
+- **Story file shape**: Same layout as TypeScript — `story_test.background` wrapping scenarios, `before.all`/`after.all` for boot/teardown, sibling `givens.py`, `whens.py`, `examples/*` modules.
+- **Style**: `story` / `background` / `scenario` from `story_test.py`; `when(…).and_(…)` chains; separate `it` blocks emitted for Then/And steps.
 
 ## Java
 
