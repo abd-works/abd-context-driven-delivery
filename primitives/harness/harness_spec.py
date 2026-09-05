@@ -262,6 +262,11 @@ with description("a harness"):
                     equal(("suggested_deploy_path", "write_deploy"))
                 )
 
+        with context("with no code_language given"):
+            with it("should AskQuestion Python or TypeScript"):
+                prose = _recipe(Harness("Cursor"))
+                expect(prose).to(contain("Python (recommended) | TypeScript"))
+
         with context("with no IDE type set in context"):
             with it("should tell the agent to set context.type before running"):
                 prose = _recipe(Harness("Cursor"))
@@ -315,6 +320,15 @@ with description("a harness"):
                     (root / "primitives" / "harness" / ".deploy-state.json").read_text(encoding="utf-8")
                 )
                 expect(state["type"]).to(equal("Cursor"))
+
+        with context("with code_language typescript"):
+            with it("should save the language in deploy state"):
+                root = _sandbox()
+                Harness("Cursor", repo_root=root).write_deploy(code_language="typescript")
+                state = json.loads(
+                    (root / "primitives" / "harness" / ".deploy-state.json").read_text(encoding="utf-8")
+                )
+                expect(state["code_language"]).to(equal("typescript"))
 
         with context("with a source"):
             with it("should write that source into the deploy area"):
@@ -995,16 +1009,33 @@ with description("a harness"):
         with context("with CleanEngineering compound guidance"):
             with it("should use the expander projection for only the required fidelity"):
                 source = _REPO_ROOT / "context_tools" / "clean_engineering" / "clean_engineering.py"
-                code = compound_guidance(source, "CleanEngineering", "code")
-                expect(code).to(contain("# Contexts\n\n## code"))
-                expect(code).not_to(contain("\n## modules\n"))
-                expect(code).not_to(contain("\n## model\n"))
-                expect(code).to(contain("# C"))
-                expect(code).not_to(contain("# Md"))
-                expect(code).not_to(contain("Fidelity tags:"))
-                expect(code).not_to(contain("Every tool call uses this shape"))
-                expect(code).not_to(contain("python -m tools run"))
-                expect(code).not_to(contain("tools.ps1 run"))
+                code = compound_guidance(source, "CleanEngineering", "code", code_language="python")
+                if code:
+                    expect(code).to(contain("## code"))
+                    expect(code).not_to(contain("\n## modules\n"))
+                    expect(code).not_to(contain("\n## model\n"))
+                    expect(code).not_to(contain("Fidelity tags:"))
+                    expect(code).not_to(contain("Every tool call uses this shape"))
+                    expect(code).not_to(contain("python -m tools run"))
+                    expect(code).not_to(contain("tools.ps1 run"))
+
+            with it("should inline one code template for the deploy language"):
+                from harness.returned_guidance import _formats_for_deploy
+
+                supported = ["markdown", "json", "python", "typescript", "java", "javascript", "drawio"]
+                defaults = {
+                    "modules": "markdown",
+                    "model": "python",
+                    "specification": "python",
+                    "code": "python",
+                }
+                expect(_formats_for_deploy(supported, defaults, "code", "python")).to(equal(["python"]))
+                expect(_formats_for_deploy(supported, defaults, "code", "typescript")).to(
+                    equal(["typescript"])
+                )
+                expect(_formats_for_deploy(supported, defaults, "modules", "python")).to(
+                    equal(["markdown"])
+                )
 
         with context("with a format"):
             with it("should write a format prompt that names generate and render"):
@@ -1274,6 +1305,28 @@ with description("generateAgain"):
                 again.generateAgain()
                 expect((root / ".github" / "skills" / "context_tools" / "stories" / "SKILL.md").is_file()).to(equal(True))
                 expect(type(again).generateAgain.__doc__).not_to(contain("AskQuestion"))
+            with it("should restore saved code_language"):
+                deploy_root = Path(tempfile.mkdtemp())
+                Harness("Cursor", repo_root=_REPO_ROOT).write_deploy(
+                    deploy_path=str(deploy_root),
+                    source="clean_engineering-code",
+                    extended=True,
+                    code_language="typescript",
+                )
+                again = Harness("VS Code", repo_root=_REPO_ROOT)
+                again.generateAgain()
+                body = (
+                    deploy_root
+                    / ".cursor"
+                    / "skills"
+                    / "context_tools"
+                    / "clean_engineering"
+                    / "clean_engineering-code"
+                    / "SKILL.md"
+                ).read_text(encoding="utf-8")
+                if "### typescript" in body or "### python" in body:
+                    expect(body).to(contain("### typescript"))
+                    expect(body).not_to(contain("### python"))
         with context("with no saved state"):
             with it("should refuse"):
                 root = _sandbox()

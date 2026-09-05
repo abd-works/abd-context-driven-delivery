@@ -302,10 +302,20 @@ _INLINE_FIDELITY_ORDER: list[str] = ["L", "Mu", "Md", "C"]
 # Map from fidelity name → inline tag abbreviation.
 _FIDELITY_NAME_TO_TAG: dict[str, str] = {
     "language": "L",
+    "shaping": "Mu",
+    "scaffold": "Mu",
     "modules": "Mu",
+    "discovery": "Mu",
+    "story_map": "Mu",
     "model": "Md",
-    "specification": "C",  # retired — treated as code
+    "behavior": "Md",
+    "spec": "C",
+    "specification": "C",
+    "scenarios": "C",
     "code": "C",
+    "engineer": "C",
+    "acceptance_tests": "C",
+    "development": "C",
 }
 
 import re as _re

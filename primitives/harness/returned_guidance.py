@@ -17,11 +17,25 @@ from primitives.actions.action import _ActionExpander
 _LOADED_CLASSES: dict[tuple[str, str], type] = {}
 
 _TEMPLATE_TAGS = ("Mu", "Md", "L", "S", "C")
+_CODE_FORMATS = frozenset({"python", "typescript", "java", "javascript"})
+_DEPLOY_CODE_LANGUAGES = frozenset({"python", "typescript"})
+_DEFAULT_CODE_LANGUAGE = "python"
+
 _FIDELITY_TAG = {
+    "shaping": "Mu",
+    "scaffold": "Mu",
     "modules": "Mu",
+    "discovery": "Mu",
+    "story_map": "Mu",
     "model": "Md",
-    "specification": "S",
+    "behavior": "Md",
+    "spec": "C",
+    "specification": "C",
+    "scenarios": "C",
     "code": "C",
+    "engineer": "C",
+    "acceptance_tests": "C",
+    "development": "C",
 }
 
 
@@ -152,6 +166,7 @@ def compound_guidance(
     constructor_context: dict[str, str] | None = None,
     *,
     toolset: str = "",
+    code_language: str = _DEFAULT_CODE_LANGUAGE,
 ) -> str:
     """Compile fidelity guidance by running the tool via the CLI and returning instructions."""
     import subprocess
@@ -230,25 +245,12 @@ def compound_guidance(
 
     result = contexts
 
-    # Templates — inline a direct Python call (no manifest/YAML).
-    templates_dir = module_dir / "templates"
-    if templates_dir.is_dir():
-        # Derive short class import path from toolset string
-        module_import = ts.rsplit(":", 1)[0] if ":" in ts else ts
-        class_import = ts.rsplit(":", 1)[1] if ":" in ts else class_name
-        ctx_args = f'fidelity="{fidelity}"'
-        if constructor_context:
-            extra = ", ".join(f'{k}="{v}"' for k, v in constructor_context.items() if k != "fidelity")
-            if extra:
-                ctx_args += f", {extra}"
-        result += (
-            f"\n\n## Templates\n\n"
-            f"Call `load_template` directly with your active format and fidelity:\n\n"
-            f"```python\n"
-            f"from {module_import} import {class_import}\n"
-            f"{class_import}({ctx_args}).load_template(format=\"<your_format>\", fidelity=\"{fidelity}\")\n"
-            f"```"
-        )
+    # Templates — inline the actual content for each supported format.
+    blocks = _inline_templates(
+        source_path, class_name, fidelity, constructor_context, code_language=code_language
+    )
+    if blocks:
+        result += "\n\n## Templates\n\n" + "\n\n".join(blocks)
 
     # Examples — reference only.
     examples_dir = module_dir / "examples"
@@ -262,14 +264,51 @@ def compound_guidance(
     return result
 
 
+def _normalize_code_language(code_language: str) -> str:
+    normalized = (code_language or _DEFAULT_CODE_LANGUAGE).strip().lower()
+    if normalized not in _DEPLOY_CODE_LANGUAGES:
+        raise ValueError(
+            f"Unsupported code_language {code_language!r}. Choose from: {sorted(_DEPLOY_CODE_LANGUAGES)}"
+        )
+    return normalized
+
+
+def _formats_for_deploy(
+    supported: list[str],
+    fidelity_defaults: dict[str, str],
+    fidelity: str,
+    code_language: str,
+) -> list[str]:
+    """Pick template formats for one fidelity — one code language, non-code defaults."""
+    default_fmt = fidelity_defaults.get(fidelity, "")
+    if default_fmt in _CODE_FORMATS:
+        if code_language in supported:
+            return [code_language]
+        if default_fmt in supported:
+            return [default_fmt]
+        return [code_language]
+    if default_fmt:
+        return [default_fmt]
+    if not supported:
+        return []
+    non_code = [fmt for fmt in supported if fmt not in _CODE_FORMATS]
+    if non_code:
+        return [non_code[0]]
+    return [code_language] if code_language in supported else [supported[0]]
+
+
 def _inline_templates(
     source_path: Path,
     class_name: str,
     fidelity: str,
     constructor_context: dict[str, str] | None,
+    *,
+    code_language: str = _DEFAULT_CODE_LANGUAGE,
 ) -> list[str]:
-    """Directly call load_template on the class for every supported format."""
+    """Inline the deploy-time template for this fidelity (one code language only)."""
     import sys as _sys
+
+    code_language = _normalize_code_language(code_language)
 
     repo_root = source_path.resolve().parents[2]
     for extra in ("context_tools/actions", "context_tools", "utilities", "primitives"):
@@ -285,9 +324,7 @@ def _inline_templates(
         str(f) for f in getattr(cls, "supported_formats", None) or []
     )
     fidelity_defaults: dict[str, str] = getattr(cls, "_fidelity_format_defaults", {}) or {}
-    default_fmt = fidelity_defaults.get(fidelity, "")
-    if not supported:
-        supported = [default_fmt] if default_fmt else []
+    formats = _formats_for_deploy(supported, fidelity_defaults, fidelity, code_language)
 
     base_ctx: dict[str, Any] = {"fidelity": fidelity}
     for k, v in (constructor_context or {}).items():
@@ -295,7 +332,7 @@ def _inline_templates(
 
     blocks: list[str] = []
     seen: set[str] = set()
-    for fmt in supported:
+    for fmt in formats:
         try:
             instance = cls(**{**base_ctx, "format": fmt})
             content = instance.load_template(format=fmt)

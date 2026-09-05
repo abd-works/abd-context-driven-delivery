@@ -2,8 +2,6 @@
 
 Deepen OO design from modules toward production code. Each fidelity **adds** artifacts — do not invent detail from a deeper level.
 
-**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
-
 **Progression:** `partition` (action) → **scaffold** → **modules** → **model** → **code**.
 
 | Fidelity | Default format | Produce |
@@ -315,6 +313,7 @@ A vertical is not at **code** fidelity while it still depends on a mockup / Stor
 
 ### Phase 1 — typed contracts
 
+- **Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific recommendations for coding.
 - **When an `I{Class}` interface was requested at model** (interfaces are optional — see `## model` § Interfaces): add `Class(I{Class})` (Java: `implements I{Class}`) in the **same file** as `I{Class}`. Do **not** fill out `I{Class}` or add private members to it.
 - **When no interface was requested:** skip that step — the empty `Class` stub already exists from **model** fidelity in its own family file; continue directly onto it.
 - On `Class`: implement public properties and operations; add private properties/operations as **empty interfaces** (`...` / `@abstractmethod`); add each relationship with its **kind** (composition / aggregation / association) and **cardinality** (e.g. `1..*`, `0..1`); invariants as **comments** (not methods) — formalizing any named at `## model` § Invariants, or newly introduced here.

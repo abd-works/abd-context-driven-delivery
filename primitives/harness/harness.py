@@ -24,7 +24,7 @@ from harness.harness_tool import operation_writes, required_init_params
 from harness.hook import Hook
 from harness.instruction import Instruction
 from harness.prompt import Prompt, prompt
-from harness.returned_guidance import compound_guidance
+from harness.returned_guidance import _DEFAULT_CODE_LANGUAGE, compound_guidance
 from harness.rule import Rule
 from harness.skill import Skill
 
@@ -35,13 +35,9 @@ _COMPOSER_CLASSES = frozenset({"BaseContextTool", "LifecycleAction"})
 _WALK_TREES = ("context_tools", "utilities")
 _FORMATS = (
     "markdown",
-    "json",
+    "code",
     "drawio",
     "miro",
-    "python",
-    "typescript",
-    "java",
-    "javascript",
 )
 
 
@@ -105,6 +101,7 @@ class Harness:
         self.repo_root = Path(repo_root) if repo_root is not None else _REPO_ROOT
         self._extended = False
         self._prod = False
+        self._code_language = _DEFAULT_CODE_LANGUAGE
         self.skills: list[Skill] = []
         self.prompts: list[Prompt] = []
         self.commands: list[Command] = []
@@ -621,7 +618,12 @@ class Harness:
                 if cc:
                     payload["constructor_context"] = cc
                 payload["returned"] = compound_guidance(
-                    path, class_name, fidelity_name, cc or None, toolset=toolset
+                    path,
+                    class_name,
+                    fidelity_name,
+                    cc or None,
+                    toolset=toolset,
+                    code_language=self._code_language,
                 )
                 payload["fidelity"] = True
                 payload["fidelity_slug"] = fidelity_name
@@ -667,7 +669,8 @@ class Harness:
                     "With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring. "
                     "With no deploy path given, call suggested_deploy_path, then AskQuestion: "
                     "deploy to that suggested path (recommended) / enter another path. "
-                    "Set context.type to the chosen IDE before running."
+                    "With no code_language given, AskQuestion: Python (recommended) | TypeScript. "
+                    "Set context.type to the chosen IDE and code_language to the chosen language before running."
                 )
             emitted = self._emit(vehicle, payload, roots, seen)
             if emitted:
@@ -730,6 +733,8 @@ class Harness:
             payload["deploy_path"] = deploy_path
         if self._extended:
             payload["extended"] = True
+        if self._code_language != _DEFAULT_CODE_LANGUAGE:
+            payload["code_language"] = self._code_language
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     def walk(self, name_filter: str = "") -> str:
@@ -798,16 +803,24 @@ class Harness:
         deploy_path: str = "",
         extended: bool = False,
         prod: bool = False,
+        code_language: str = _DEFAULT_CODE_LANGUAGE,
     ) -> str:
         """Walk if needed, then write sources plus Harness prompts into the deploy area.
 
         extended=True writes ct-fidelity skills ({context_tool}-{fidelity}) that
         bake the guidance the tool returns at each fidelity.
         prod=True skips any class decorated with @dev_only.
+        code_language selects python (default) or typescript for inlined code templates.
         """
         self._require_implemented()
         self._extended = bool(extended)
         self._prod = bool(prod)
+        normalized = (code_language or _DEFAULT_CODE_LANGUAGE).strip().lower()
+        if normalized not in {"python", "typescript"}:
+            raise ValueError(
+                f"Unsupported code_language {code_language!r}. Choose from: python, typescript"
+            )
+        self._code_language = normalized
         self.skills = []
         self.prompts = []
         self.commands = []
@@ -861,12 +874,14 @@ class Harness:
         source: str | None = None,
         name_filter: str | None = None,
         deploy_path: str | None = None,
+        code_language: str | None = None,
     ) -> str:
         """With no IDE given, AskQuestion: Which IDE? Cursor | VS Code."""
         """Set context.type to the chosen IDE before running."""
         self._require_implemented()
         """With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring."""
         """With no deploy path given, call suggested_deploy_path, then AskQuestion: deploy to that suggested path (recommended) / enter another path."""
+        """With no code_language given, AskQuestion: Python (recommended) | TypeScript."""
         self.suggested_deploy_path()
         """With no source: walk context_tools/ and utilities/, generate each source into the deploy area, also write Harness prompts (/deploy-harness, /clean-harness). Generate is the deploy — no separate deploy. Do not confirm the scanned list. Overwrite generated files. Remove files this generate did not write. Save the IDE."""
         """With a source: write that source into the deploy area."""
@@ -885,14 +900,20 @@ class Harness:
             saved = state.get("type")
             deploy_path = state.get("deploy_path") or ""
             extended = bool(state.get("extended"))
+            code_language = state.get("code_language") or _DEFAULT_CODE_LANGUAGE
         except (OSError, json.JSONDecodeError):
             saved = None
             deploy_path = ""
             extended = False
+            code_language = _DEFAULT_CODE_LANGUAGE
         if not saved:
             raise RuntimeError("no saved IDE")
         self.type = saved
-        return self.write_deploy(deploy_path=deploy_path, extended=extended)
+        return self.write_deploy(
+            deploy_path=deploy_path,
+            extended=extended,
+            code_language=code_language,
+        )
 
     @prompt(name="clean-harness")
     @agent_tool

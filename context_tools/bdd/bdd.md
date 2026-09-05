@@ -110,6 +110,8 @@ it('should apply a percentage discount to eligible items', () => {
 
 **Goal:** Replace `BDD: SIGNATURE` markers one at a time with it shgould /expect bodies, then minimum production code until green. Inherit the framework from the **behavior** artifactif already completed.
 
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
+
 1. **Confirm framework** — inherit from the behavior file.
 2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report count.
 3. **Identify shared setup** — extract to `beforeEach` / `with before.each:` or a factory when three or more siblings share arrangement.
