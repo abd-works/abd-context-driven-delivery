@@ -242,7 +242,7 @@ with description("Stories"):
         with it("should inline the markdown story-map template only"):
             expect("Story Map" in self.templates).to(be_true)
             expect("Thin slicing" in self.templates).to(equal(False))
-            expect("## Thin slices" in self.templates).to(be_true)
+            expect("## Thin slices" in self.templates).to(equal(False))
             expect("story-context.md" in self.templates).to(equal(False))
 
         with it("should omit scenario templates, sketch, and other-format story classes"):

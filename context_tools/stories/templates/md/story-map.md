@@ -27,15 +27,3 @@ section: body
 
 **In scope:** what is included
 **Out of scope:** what is explicitly excluded
-
----
-
-## Thin slices
-
-### Increment 1: Marketable outcome
-
-**Outcome:** What users or the business can do after this ships
-
-**Stories:**
-- Story Verb–Noun
-- Story Verb–Noun

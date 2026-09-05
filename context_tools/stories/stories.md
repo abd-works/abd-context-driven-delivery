@@ -6,7 +6,7 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 | Fidelity | Default Format | Produce |
 |---|---|---|
-| **story_map** | markdown | Story map + thin-slice |
+| **story_map** | markdown | Story map |
 | **scenarios** | python | Main-flow scenarios per story — `{story}.{tier}.py` GWT files. Pass `format markdown` only when the strategy asks for a markdown view. |
 | **acceptance_tests** | python | Same `{story}.{tier}.py` tree as scenarios. CE runs alongside for wrap classes. |
 
@@ -31,7 +31,7 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 **Goal:** Shape the hierarchy — `Epic` → nestable `SubEpic` → `Story` — decomposed on real mechanical variation, not requirement-row bookkeeping.
 
-**Produce:** Story map + thin-slice.
+**Produce:** Story map.
 
 ### Rules
 
