@@ -1301,7 +1301,9 @@ with description("an instruction"):
             written.body = "guide-body"
             result = written.generate({"name": "guide", "body": "guide-body"}, [root / ".cursor"])
             expect(isinstance(result, Rule)).to(equal(True))
-            expect((root / ".cursor" / "rules" / "guide.mdc").read_text(encoding="utf-8")).to(equal("guide-body"))
+            text = (root / ".cursor" / "rules" / "guide.mdc").read_text(encoding="utf-8")
+            expect(text).to(contain("guide-body"))
+            expect(text).to(contain("alwaysApply: false"))
 
 
 with description("a rule"):

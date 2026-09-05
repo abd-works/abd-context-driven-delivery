@@ -25,6 +25,7 @@ from harness.hook import Hook
 from harness.instruction import Instruction
 from harness.prompt import Prompt, prompt
 from harness.returned_guidance import _DEFAULT_CODE_LANGUAGE, compound_guidance
+from harness.context_tool_rules import all_context_tool_rule_specs
 from harness.rule import Rule
 from harness.skill import Skill
 
@@ -469,6 +470,51 @@ class Harness:
                     if stem is not None and stem not in written:
                         child.unlink()
 
+    def _drop_unwritten_rules(self, roots: list[Path], written: set[str]) -> None:
+        for root in roots:
+            rules_root = root / "rules"
+            if not rules_root.is_dir():
+                continue
+            for mdc in list(rules_root.rglob("*.mdc")):
+                key = mdc.relative_to(rules_root).as_posix()
+                key = key[: -len(".mdc")] if key.endswith(".mdc") else key
+                if key not in written:
+                    mdc.unlink()
+            for dirpath in sorted(rules_root.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+                if dirpath.is_dir():
+                    try:
+                        dirpath.rmdir()
+                    except OSError:
+                        pass
+
+    def _write_context_tool_rules(
+        self,
+        roots: list[Path],
+        wanted: str,
+        seen: set[tuple[str, str]],
+    ) -> list[str]:
+        """Write scoped `.mdc` rules under `rules/context_tools/{slug}/` (Cursor only)."""
+        if self.type != "Cursor":
+            return []
+        names: list[str] = []
+        for spec in all_context_tool_rule_specs(self.repo_root):
+            if wanted and wanted != spec.tool_slug and not wanted.startswith(f"{spec.tool_slug}-"):
+                continue
+            key = (f"{spec.tool_slug}-{spec.name}", "rule")
+            if key in seen:
+                continue
+            seen.add(key)
+            rule = Rule(self.type, spec.name)
+            rule.description = spec.description
+            rule.globs = spec.globs
+            rule.always_apply = False
+            rule.body = spec.body
+            rule.subfolder = f"context_tools/{spec.tool_slug}"
+            rule.write(roots)
+            self.rules.append(rule)
+            names.append(f"{spec.tool_slug}/{spec.name}")
+        return names
+
     def _wanted(self, wanted: str, name: str, source_slug: str, derived: str) -> bool:
         if not wanted:
             return True
@@ -837,6 +883,12 @@ class Harness:
         names: list[str] = []
         for entry in json.loads(self.walk(name_filter)):
             names.extend(self._generate_entry(entry, roots, wanted, seen))
+        if self.type == "Cursor":
+            if not wanted or any(
+                wanted == spec.tool_slug or wanted.startswith(f"{spec.tool_slug}-")
+                for spec in all_context_tool_rule_specs(self.repo_root)
+            ):
+                names.extend(self._write_context_tool_rules(roots, wanted, seen))
         for fmt in _FORMATS:
             if wanted and fmt != wanted:
                 continue
@@ -852,12 +904,24 @@ class Harness:
         }
         skill_name_only = {item.name for item in self.skills}
         prompt_names = {item.name for item in self.prompts} | {item.name for item in self.commands}
+        rule_names = set()
+        for item in self.rules:
+            rel = item.relative_path()
+            try:
+                rel = rel.relative_to("rules")
+            except ValueError:
+                pass
+            key = rel.as_posix()
+            if key.endswith(".mdc"):
+                key = key[: -len(".mdc")]
+            rule_names.add(key)
         for prompt_file in self.prompts:
             if prompt_file.name not in skill_name_only:
                 self._drop_action_skill(prompt_file.name, roots)
         if not wanted:
             self._drop_unwritten_skills(roots, skill_names)
             self._drop_unwritten_prompts(roots, prompt_names)
+            self._drop_unwritten_rules(roots, rule_names)
         self._remove_unprefixed_fidelity_files(roots)
         self._save_ide(str(roots[0]))
         return json.dumps(
