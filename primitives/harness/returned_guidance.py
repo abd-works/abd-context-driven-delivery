@@ -21,6 +21,11 @@ _CODE_FORMATS = frozenset({"python", "typescript", "java", "javascript"})
 _DEPLOY_CODE_LANGUAGES = frozenset({"python", "typescript"})
 _DEFAULT_CODE_LANGUAGE = "python"
 
+_SKETCHING_PREAMBLE = (
+    "When sketching, use the following sketch template. "
+    "Do not use the produce templates below — stop reading this skill when sketching."
+)
+
 _FIDELITY_TAG = {
     "shaping": "Mu",
     "scaffold": "Mu",
@@ -147,6 +152,25 @@ def _filter_annotated_template(text: str, fidelity: str) -> str:
     return "\n".join(compact).strip()
 
 
+def _find_sketch_template(module_dir: Path) -> str | None:
+    """Return domain sketch template text from ``templates/*-sketch.*`` if present."""
+    templates_dir = module_dir / "templates"
+    if not templates_dir.is_dir():
+        return None
+    for path in sorted(templates_dir.glob("*-sketch.*")):
+        if path.is_file():
+            return path.read_text(encoding="utf-8").strip()
+    return None
+
+
+def _inline_sketch_section(module_dir: Path) -> str | None:
+    """Sketching block for fidelity skills — preamble plus domain sketch template."""
+    content = _find_sketch_template(module_dir)
+    if not content:
+        return None
+    return f"{_SKETCHING_PREAMBLE}\n\n{content}"
+
+
 def _strip_invocation_prose(text: str) -> str:
     """Drop run-time invocation text from already-expanded guidance assets."""
     omitted = (
@@ -244,6 +268,10 @@ def compound_guidance(
     contexts = instructions[:first_file.start()].rstrip() if first_file else instructions.rstrip()
 
     result = contexts
+
+    sketch_block = _inline_sketch_section(module_dir)
+    if sketch_block:
+        result += "\n\n## Sketching\n\n" + sketch_block
 
     # Templates — inline the actual content for each supported format.
     blocks = _inline_templates(

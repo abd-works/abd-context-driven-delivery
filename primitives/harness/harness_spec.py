@@ -17,7 +17,7 @@ for _cat in ("primitives", "utilities", "context_tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import contain, equal, expect, raise_error
+from expects import be_true, contain, equal, expect, raise_error
 from mamba import context, description, it
 
 from harness.agent import Agent
@@ -1031,6 +1031,17 @@ with description("a harness"):
                     expect(code).not_to(contain("Every tool call uses this shape"))
                     expect(code).not_to(contain("python -m tools run"))
                     expect(code).not_to(contain("tools.ps1 run"))
+
+            with it("should place sketching before produce templates"):
+                source = _REPO_ROOT / "context_tools" / "clean_engineering" / "clean_engineering.py"
+                body = compound_guidance(source, "CleanEngineering", "code", code_language="python")
+                if body:
+                    expect(body).to(contain("## Sketching"))
+                    expect(body).to(contain("stop reading this skill when sketching"))
+                    expect(body).to(contain("clean_engineering sketch template"))
+                    sketch_idx = body.index("## Sketching")
+                    templates_idx = body.index("## Templates")
+                    expect(sketch_idx < templates_idx).to(be_true)
 
             with it("should inline markdown and code templates for scenarios deploy"):
                 from harness.returned_guidance import _formats_for_deploy
