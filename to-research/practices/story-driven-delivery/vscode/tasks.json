@@ -1,0 +1,66 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "abd: watch story artifacts",
+      "type": "shell",
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "${workspaceFolder}/.cursor/scripts/pipeline_watch.py",
+        "--root", "${workspaceFolder}",
+        "--mode", "${input:syncMode}"
+      ],
+      "runOptions": { "runOn": "folderOpen" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "label": "abd: story sync watcher"
+      }
+    },
+    {
+      "label": "abd: render drawio from graph",
+      "type": "shell",
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "${workspaceFolder}/.cursor/scripts/pipeline.py",
+        "render",
+        "--graph", "${input:graphFile}"
+      ],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "abd: sync drawio back to graph",
+      "type": "shell",
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "${workspaceFolder}/.cursor/scripts/pipeline.py",
+        "sync-back",
+        "--drawio", "${input:drawioFile}"
+      ],
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "syncMode",
+      "type": "pickString",
+      "description": "Story ↔ Drawio auto-sync mode",
+      "options": ["prompt", "on", "off"],
+      "default": "prompt"
+    },
+    {
+      "id": "graphFile",
+      "type": "promptString",
+      "description": "Path to story-graph.json"
+    },
+    {
+      "id": "drawioFile",
+      "type": "promptString",
+      "description": "Path to .drawio file"
+    }
+  ]
+}

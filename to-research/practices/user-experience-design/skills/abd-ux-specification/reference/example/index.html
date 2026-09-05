@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PawPlace — Shop pet supplies &amp; collect in store</title>
+  <meta name="description" content="PawPlace — supplies, adoption visits, and click-and-collect at stores near you.">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="click-and-collect.css">
+</head>
+<body>
+  <header class="site-header" role="banner">
+    <div class="site-header__inner">
+      <a href="#" class="site-logo" data-nav="screen-product-page" aria-label="PawPlace home">
+        <img src="assets/logo.svg" alt="" width="160" height="36">
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="#" data-nav="screen-product-page">Find stores</a>
+        <a href="#" data-nav="screen-product-page" class="is-active">Shop supplies</a>
+        <a href="#" class="cart-link" data-nav="screen-shopping-cart" data-cart-badge>
+          <span aria-hidden="true">🛒</span>
+          <span>Cart</span>
+          <span class="cart-badge" id="nav-cart-count">0</span>
+        </a>
+      </nav>
+      <a href="#" class="staff-link" data-nav="screen-staff-queue">Staff portal</a>
+    </div>
+  </header>
+
+  <div class="promo-strip" id="promo-strip" role="note">
+    <strong>Free click-and-collect</strong> on all orders — collect in as little as 2 hours at your nearest PawPlace store.
+  </div>
+
+  <!-- Product detail -->
+  <main id="screen-product-page" class="screen">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="#" data-nav="screen-product-page">Shop supplies</a> › <span id="product-name">Premium Dog Harness</span>
+    </nav>
+
+    <div class="pdp">
+      <div class="pdp-gallery">
+        <div class="gallery-main" id="gallery-main">
+          <img id="gallery-main-img" src="" alt="">
+        </div>
+        <div class="gallery-thumbs" id="gallery-thumbs" role="listbox" aria-label="Product images"></div>
+      </div>
+
+      <div class="pdp-buybox">
+        <p class="pdp-category" id="product-category">Walking gear</p>
+        <h1 class="pdp-title" id="product-name-2">Premium Dog Harness</h1>
+        <p class="pdp-price" id="product-price">£34.99</p>
+        <p class="pdp-desc" id="product-description"></p>
+        <div class="pdp-meta">
+          <span><strong>Weight</strong> <span id="product-weight"></span></span>
+          <span><strong>Size</strong> <span id="product-dimensions"></span></span>
+        </div>
+        <p id="unavailability-message" class="message-error" hidden role="alert"></p>
+        <button type="button" id="btn-add-to-cart" class="btn btn-primary">Add to cart</button>
+        <ul class="trust-badges" aria-label="Shopping guarantees">
+          <li>✓ Free click-and-collect</li>
+          <li>✓ Secure checkout</li>
+          <li>✓ 30-day returns</li>
+        </ul>
+      </div>
+    </div>
+
+    <section class="stock-panel" aria-labelledby="stock-title">
+      <h2 id="stock-title">Stock availability by store</h2>
+      <div class="stock-grid" id="stock-by-store-body"></div>
+    </section>
+  </main>
+
+  <!-- Shopping cart -->
+  <main id="screen-shopping-cart" class="screen" hidden>
+    <div class="page-hero">
+      <h1>Your shopping cart</h1>
+      <p>Review items before checkout — guest checkout available.</p>
+    </div>
+
+    <div class="checkout-stepper" role="tablist" aria-label="Checkout progress">
+      <div class="step active" role="tab" aria-selected="true">1. Cart</div>
+      <div class="step" role="tab">2. Pickup store</div>
+      <div class="step" role="tab">3. Details</div>
+      <div class="step" role="tab">4. Payment</div>
+    </div>
+
+    <div id="cart-empty" class="empty-state" hidden>
+      <h2>Your cart is empty</h2>
+      <p>Add something your pet will love — we&apos;ll hold it at your local store.</p>
+      <button type="button" class="btn btn-primary" style="max-width:240px;margin:1rem auto 0" data-nav="screen-product-page">Continue shopping</button>
+    </div>
+
+    <div id="cart-list-wrap" class="split">
+      <div>
+        <div class="cart-lines" id="cart-items-body"></div>
+        <p id="cart-validation" class="validation" role="alert" style="margin-top:1rem"></p>
+      </div>
+      <aside class="card card--summary">
+        <h2>Order summary</h2>
+        <div class="summary-line"><span>Items</span><span id="cart-item-count">0</span></div>
+        <div class="summary-line"><span>Subtotal</span><strong id="cart-subtotal">£0.00</strong></div>
+        <div class="summary-line"><span>Click-and-collect</span><span style="color:var(--success);font-weight:600">Free</span></div>
+        <button type="button" class="btn btn-ghost btn-block" data-nav="screen-product-page" style="margin-top:0.5rem">Continue shopping</button>
+        <button type="button" id="btn-proceed-checkout" class="btn btn-primary" style="margin-top:1rem">Proceed to checkout</button>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Pickup store -->
+  <main id="screen-pickup-store" class="screen" hidden>
+    <div class="page-hero">
+      <h1>Choose pickup store</h1>
+      <p>Click-and-collect is the only delivery option for this order.</p>
+    </div>
+
+    <div class="checkout-stepper">
+      <div class="step done" data-nav="screen-shopping-cart" style="cursor:pointer">1. Cart</div>
+      <div class="step active">2. Pickup store</div>
+      <div class="step">3. Details</div>
+      <div class="step">4. Payment</div>
+    </div>
+
+    <div class="split">
+      <div>
+        <div class="delivery-pill">✓ Click-and-collect — collect in store, no shipping</div>
+
+        <div class="form-stack" style="margin-bottom:1.5rem">
+          <div class="field">
+            <label for="pickup-postcode">Postcode</label>
+            <input id="pickup-postcode" type="text" placeholder="e.g. NW1 8QP" autocomplete="postal-code">
+          </div>
+          <p id="distance-prompt" class="message-info" hidden></p>
+          <div style="display:flex;gap:0.5rem">
+            <button type="button" class="btn">Share location</button>
+            <button type="button" class="btn btn-ghost">Clear</button>
+          </div>
+        </div>
+
+        <h2 style="font-size:1rem;margin-bottom:0.75rem">Pickup store list</h2>
+        <div class="store-cards" id="pickup-stores-body"></div>
+      </div>
+
+      <aside class="card card--summary">
+        <h2>Checkout summary</h2>
+        <p id="summary-collecting" style="font-weight:600;color:var(--success);margin:0 0 1rem"></p>
+        <div class="summary-line"><span>Pickup store</span><span id="summary-pickup-name">—</span></div>
+        <div class="summary-line" style="flex-direction:column;align-items:flex-start;gap:0.25rem">
+          <span style="color:var(--brand-muted)">Address</span>
+          <span id="summary-pickup-address">—</span>
+        </div>
+        <div class="summary-line"><span>Total</span><strong id="summary-cart-total">£0.00</strong></div>
+        <button type="button" class="btn btn-ghost btn-block" data-nav="screen-shopping-cart">Back to cart</button>
+        <button type="button" id="btn-continue-billing" class="btn btn-primary" style="margin-top:1rem">Continue to details</button>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Guest checkout -->
+  <main id="screen-billing" class="screen" hidden>
+    <div class="page-hero">
+      <h1>Guest checkout</h1>
+      <p>No account needed — we&apos;ll email your confirmation.</p>
+    </div>
+
+    <div class="checkout-stepper">
+      <div class="step done">1. Cart</div>
+      <div class="step done">2. Pickup store</div>
+      <div class="step active">3. Details</div>
+      <div class="step">4. Payment</div>
+    </div>
+
+    <div class="split">
+      <div class="card">
+        <h2>Your details</h2>
+        <div class="form-stack">
+          <div class="field">
+            <label for="guest-email">Guest Email</label>
+            <input id="guest-email" type="email" value="sarah.jones@example.com" autocomplete="email">
+          </div>
+          <p id="guest-email-error" class="validation" hidden role="alert"></p>
+          <div class="field-row-2">
+            <div class="field">
+              <label for="guest-first">First name</label>
+              <input id="guest-first" type="text" value="Sarah" autocomplete="given-name">
+            </div>
+            <div class="field">
+              <label for="guest-last">Last name</label>
+              <input id="guest-last" type="text" value="Jones" autocomplete="family-name">
+            </div>
+          </div>
+        </div>
+
+        <h2 style="margin-top:1.5rem">Billing Address</h2>
+        <div class="form-stack">
+          <div class="field">
+            <label for="bill-line1">Address line 1 *</label>
+            <input id="bill-line1" type="text" value="10 Elm Avenue" autocomplete="address-line1">
+          </div>
+          <p id="bill-line1-error" class="validation" hidden role="alert"></p>
+          <div class="field">
+            <label for="bill-line2">Address line 2</label>
+            <input id="bill-line2" type="text" value="Flat 3" autocomplete="address-line2">
+          </div>
+          <div class="field-row-2">
+            <div class="field">
+              <label for="bill-city">City *</label>
+              <input id="bill-city" type="text" value="London" autocomplete="address-level2">
+            </div>
+            <div class="field">
+              <label for="bill-county">County</label>
+              <input id="bill-county" type="text" value="Greater London">
+            </div>
+          </div>
+          <div class="field-row-2">
+            <div class="field">
+              <label for="bill-postcode">Postcode *</label>
+              <input id="bill-postcode" type="text" value="SW1A 2AA" autocomplete="postal-code">
+            </div>
+            <div class="field">
+              <label for="bill-country">Country *</label>
+              <input id="bill-country" type="text" value="United Kingdom" autocomplete="country-name">
+            </div>
+          </div>
+          <p id="bill-postcode-error" class="validation" hidden role="alert"></p>
+        </div>
+      </div>
+
+      <aside class="card card--summary">
+        <h2>Checkout summary</h2>
+        <p id="billing-pickup-summary" style="font-size:0.9rem;margin-bottom:1rem"></p>
+        <div class="summary-line"><span>Total</span><strong id="billing-cart-total">£0.00</strong></div>
+        <button type="button" class="btn btn-ghost btn-block" data-nav="screen-pickup-store">Back</button>
+        <button type="button" id="btn-continue-payment" class="btn btn-primary" style="margin-top:1rem">Continue to payment</button>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Payment -->
+  <main id="screen-payment" class="screen" hidden>
+    <div class="page-hero">
+      <h1>Payment</h1>
+      <p>Pay securely with StripeWave — your card details are encrypted.</p>
+    </div>
+
+    <div class="checkout-stepper">
+      <div class="step done">1. Cart</div>
+      <div class="step done">2. Pickup store</div>
+      <div class="step done">3. Details</div>
+      <div class="step active">4. Payment</div>
+    </div>
+
+    <div class="split">
+      <div class="payment-card">
+        <div class="payment-card__header">🔒 StripeWave (Credit/Debit Card)</div>
+        <div class="payment-card__body">
+          <div class="form-stack">
+            <div class="field">
+              <label for="card-number">Card number</label>
+              <input id="card-number" type="text" inputmode="numeric" value="4242 4242 4242 4242" autocomplete="cc-number" placeholder="4242 4242 4242 4242">
+            </div>
+            <div class="field-row-2">
+              <div class="field">
+                <label for="card-expiry">Expiry</label>
+                <input id="card-expiry" type="text" value="12/27" autocomplete="cc-exp" placeholder="MM/YY">
+              </div>
+              <div class="field">
+                <label for="card-cvv">CVV</label>
+                <input id="card-cvv" type="text" inputmode="numeric" value="123" autocomplete="cc-csc">
+              </div>
+            </div>
+          </div>
+          <p id="payment-error" class="message-error" hidden role="alert" style="margin-top:1rem"></p>
+          <p id="payment-unavailable" class="message-error" hidden role="alert" style="margin-top:1rem"></p>
+          <button type="button" id="btn-place-order" class="btn btn-primary" style="margin-top:1.25rem">Confirm order — pay now</button>
+        </div>
+      </div>
+
+      <aside class="card card--summary">
+        <h2>Order review</h2>
+        <div class="summary-line" style="flex-direction:column;align-items:flex-start"><span style="color:var(--brand-muted)">Guest</span><span id="review-guest">—</span></div>
+        <div class="summary-line" style="flex-direction:column;align-items:flex-start"><span style="color:var(--brand-muted)">Billing</span><span id="review-billing">—</span></div>
+        <div class="summary-line"><span>Total</span><strong id="review-total">£0.00</strong></div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Order confirmation -->
+  <main id="screen-order-confirmation" class="screen" hidden>
+    <div class="confirm-hero">
+      <div class="confirm-icon" aria-hidden="true">✓</div>
+      <h1 style="margin:0 0 0.5rem;font-size:1.75rem">Order confirmed</h1>
+      <p style="margin:0;color:var(--brand-muted)">Order <strong id="confirm-order-number">ORD-2001</strong> · <strong id="confirm-total">£0.00</strong></p>
+    </div>
+
+    <div class="card">
+      <h2>Collect from</h2>
+      <p id="confirm-pickup" style="font-size:1.05rem;margin:0 0 1.5rem"></p>
+      <h2>Your items</h2>
+      <div class="confirm-lines" id="confirm-lines"></div>
+    </div>
+
+    <div id="account-prompt" class="account-prompt" role="dialog" aria-label="Create account">
+      <p style="margin:0"><strong>Create an account</strong> for order history, saved addresses, and reorder.</p>
+      <button type="button" id="dismiss-account-prompt" class="btn">Maybe later</button>
+    </div>
+  </main>
+
+  <!-- Staff queue -->
+  <main id="screen-staff-queue" class="screen staff-shell" hidden>
+    <div class="staff-header">
+      <img src="assets/logo.svg" alt="">
+      <span>PawPlace Camden · <strong>Click-and-collect queue</strong></span>
+    </div>
+    <h1 style="color:#fff;margin:0 0 1rem;font-size:1.35rem" id="queue-heading">Click-and-collect queue</h1>
+    <div id="queue-empty" class="empty-state" hidden style="background:#263238;color:#fff;border-color:#455a64">
+      <h2>All orders fulfilled</h2>
+      <p>No pending orders — check back later</p>
+    </div>
+    <div id="queue-table-wrap">
+      <table class="data">
+        <thead><tr><th>#</th><th>Order</th><th>Items</th><th>Guest Email</th><th>Status</th></tr></thead>
+        <tbody id="queue-body"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Staff order detail -->
+  <main id="screen-staff-order" class="screen staff-shell" hidden>
+    <div class="staff-header">
+      <img src="assets/logo.svg" alt="">
+      <span>Order detail · PawPlace staff</span>
+    </div>
+    <div id="staff-order-panel" class="card"></div>
+  </main>
+
+  <footer class="site-footer" id="site-footer">
+    <div class="site-footer__inner">
+      <div>
+        <img src="assets/logo.svg" alt="PawPlace" style="height:28px;filter:brightness(0) invert(1);margin-bottom:0.5rem">
+        <p style="margin:0">Supplies, adoption visits &amp; click-and-collect at stores near you.</p>
+      </div>
+      <div>
+        <a href="#">Privacy</a> · <a href="#">Terms</a> · <a href="#" data-nav="screen-staff-queue">Staff</a>
+      </div>
+    </div>
+  </footer>
+
+  <div id="processing-overlay" class="processing-overlay" hidden aria-live="polite">
+    <div class="processing-box">
+      <div class="spinner" aria-hidden="true"></div>
+      <p style="margin:0;font-weight:600">Processing payment with StripeWave…</p>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden role="status"></div>
+
+  <aside class="demo-panel" id="demo-panel" data-collapsed="true" aria-label="Prototype controls">
+    <button type="button" class="demo-panel__toggle" id="demo-panel-toggle">▸ Prototype demo controls</button>
+    <div class="demo-panel__body">
+      <label>Product
+        <select id="demo-product">
+          <option value="PET-HAR-001">Premium Dog Harness</option>
+          <option value="PET-TRT-042">Salmon Cat Treats</option>
+          <option value="PET-FLT-099">Exotic Fish Filter (out of stock)</option>
+        </select>
+      </label>
+      <button type="button" class="btn" id="demo-seed-cart">Seed cart</button>
+      <button type="button" class="btn" id="demo-reset-session">Reset session</button>
+      <label><input type="checkbox" id="demo-payment-unavail"> Payment unavailable</label>
+      <label><input type="checkbox" id="demo-collection-elapsed"> Collection window elapsed</label>
+    </div>
+  </aside>
+
+  <script src="click-and-collect.js"></script>
+</body>
+</html>

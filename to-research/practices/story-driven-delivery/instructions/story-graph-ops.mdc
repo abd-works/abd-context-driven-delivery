@@ -1,0 +1,51 @@
+---
+description: Keep story-graph.json in sync when story-skill markdown changes
+globs:
+  - "**/story-map.md"
+  - "**/*-story-map.md"
+  - "**/thin-slicing.md"
+  - "**/*-thin-slicing.md"
+  - "**/acceptance-criteria.md"
+  - "**/*-acceptance-criteria.md"
+alwaysApply: false
+---
+
+# story-graph-ops — keep the graph in sync
+
+## NON-NEGOTIABLE — you may NOT declare a turn done without completing this
+
+**STOP after every edit to a matching file.** Before responding to the user or moving to any next step, you MUST have asked:
+
+> "Save to `story-graph.json`? (yes / auto / no)"
+
+There are NO exceptions. Finishing the markdown edit is not done. The turn is not done. Do not summarise, do not suggest next steps, do not move on — until the prompt has been issued and the user has responded.
+
+## Golden rule
+
+**NEVER hand-edit `story-graph.json` directly.** Always use the **story-graph-ops** skill's CLI or Python modules (`scripts/story_graph_cli.py`, `story_map` package). Read the skill: **`skills/story-graph-ops/SKILL.md`** (or **`~/.cursor/skills/story-graph-ops/SKILL.md`**).
+
+## When a matching Markdown file is written or changed
+
+1. **Prompt immediately** — "Save to `story-graph.json`? (yes / auto / no)"
+   - If the user has previously said **"auto"** in this session → save without asking.
+   - If the user has previously said **"no"** or **"don't"** → skip.
+2. Use **story-graph-ops** tooling to persist the changes (CLI `write` / `read`, or Python `story_map` modules).
+3. **Validate** with `story_graph_cli.py read --file <path>` — do not declare done without validation.
+
+## Reordering epics, sub-epics, or increments
+
+**Never hand-edit array order in `story-graph.json` directly and never try to use a `reorder` CLI command — it does not exist.**
+
+The correct pattern:
+1. Write a Python script that loads the graph JSON, moves the item in the array, renumbers `priority` fields, and writes modified JSON to a temp file.
+2. Commit via CLI: `python story_graph_cli.py write --file story-graph.json --input <temp> --no-lock`
+3. Validate: `python story_graph_cli.py read --file story-graph.json`
+
+See **`SKILL.md` → "Reordering epics, sub-epics, or increments"** for a copy-paste example.
+
+## When `story-graph.json` is updated
+
+After any successful update to `story-graph.json`, check whether companion **Draw.io diagrams** already exist alongside it (e.g. `story-graph.drawio`, `story-graph-exploration.drawio`, `story-graph-increments.drawio`).
+
+- If diagrams exist → **ask the user** whether to re-render them. Same prompt/auto/no convention.
+- Use the **drawio-story-sync** skill for rendering — read **`skills/drawio-story-sync/SKILL.md`** (or **`~/.cursor/skills/drawio-story-sync/SKILL.md`**).

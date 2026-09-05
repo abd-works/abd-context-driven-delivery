@@ -1,0 +1,73 @@
+{
+  "description": "Decision making criteria for code behavior",
+  "criteria": [
+    {
+      "description": "Architecture and layering",
+      "question": "How should the code be organized into layers or architectural components?",
+      "outcome": "Determines code structure, separation of concerns, and module organization",
+      "options": [
+        "Layered architecture - Domain, Service, Presentation, Data layers",
+        "Hexagonal/Ports and Adapters - Core domain with adapters for external concerns",
+        "Clean Architecture - Entities, Use Cases, Interface Adapters, Frameworks",
+        "Domain-Driven Design - Services, Aggregates, Context Boundaries, Entities, Value objects, Repositories, Factories, Events, Rules, UI",
+        "Simple module structure - Functions and classes organized by feature",
+        "MVC/MVP/MVVM - Model-View separation patterns",
+        "Microservices structure - Independent services with clear boundaries",
+        "Monolithic structure - Single module with clear internal organization",
+        "Business Logic Only- pure business logic classes focused on modeling both properties and behavior"
+      ]
+    },
+    {
+      "description": "Dependency management",
+      "question": "How should dependencies be managed and injected?",
+      "outcome": "Determines how components depend on each other and external systems",
+      "options": [
+        "Constructor injection - All dependencies passed through constructors",
+        "Dependency injection container - Use DI framework for dependency management",
+        "Factory pattern - Use factories to create dependencies",
+        "Service locator - Central registry for dependencies",
+        "Minimal dependencies - Keep dependencies explicit and minimal",
+        "Interface-based - Depend on interfaces/abstractions, not concrete types"
+      ]
+    },
+    {
+      "description": "Error handling strategy",
+      "question": "What error handling and exception strategy should be used?",
+      "outcome": "Determines how errors are handled and propagated",
+      "options": [
+        "Exception-based - Use exceptions for error conditions",
+        "Result/Either types - Return success/failure results explicitly",
+        "Error codes - Return error codes with results",
+        "Fail-fast - Throw exceptions immediately on errors",
+        "Graceful degradation - Handle errors gracefully with fallbacks",
+        "Language-specific patterns - Use language idioms (Python exceptions, JS promises, etc.)"
+      ]
+    },
+    {
+      "description": "Programming paradigm",
+      "question": "What programming paradigm should be used?",
+      "outcome": "Determines whether code follows functional, object-oriented, or hybrid patterns",
+      "options": [
+        "Functional programming - Pure functions, immutability, higher-order functions, no side effects",
+        "Object-oriented programming - Classes, objects, inheritance, polymorphism, encapsulation",
+        "Hybrid approach - Combine functional and OOP patterns as appropriate",
+        "Procedural - Functions organized by feature, minimal object orientation",
+        "Data-oriented - Focus on data structures and transformations",
+        "Language-idiomatic - Follow the primary paradigm of the chosen language"
+      ]
+    },
+    {
+      "description": "Properties vs methods",
+      "question": "When should properties be used versus methods?",
+      "outcome": "Determines how to expose object state and behavior",
+      "options": [
+        "Properties for all cases - Use properties for both data access and computed values",
+        "Properties only for data - Use properties for simple data access, methods for behavior/computation",
+        "Methods preferred - Use methods for most access, properties only for simple field access",
+        "Computed properties - Use properties for computed values that are cheap and have no side effects",
+        "Language conventions - Follow language-specific conventions (Python @property, C# properties, etc.)",
+        "No properties - Use methods exclusively, no property accessors"
+      ]
+    }
+  ]
+}

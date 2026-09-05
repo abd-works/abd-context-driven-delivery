@@ -1,0 +1,78 @@
+<mxfile host="65bd71144e">
+    <diagram id="system-context" name="System Context">
+        <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1000" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="PawPlace Pet Store — System Context" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="20" width="1320" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="subtitle" value="C4 Level 1 — Owned system with functions and platform technology, persons, external systems, and protocols on every relationship." style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="55" width="1320" height="20" as="geometry"/>
+                </mxCell>
+
+                <!-- PawPlace system — expanded: functions + platform technology -->
+                <mxCell id="pawplace" value="&lt;b style=&quot;font-size:14px;&quot;&gt;PawPlace Pet Store&lt;/b&gt;&#xa;&lt;i&gt;(Software System)&lt;/i&gt;&#xa;Online pet supplies retailer with click-and-collect fulfilment.&#xa;&#xa;&lt;b&gt;Functions:&lt;/b&gt;&#xa;• Browse and search product catalogue&#xa;• Shopping cart and checkout&#xa;• Click-and-collect order tracking and pick-up&#xa;• Store locator (proximity search)&#xa;• Inventory management (staff)&#xa;• Inventory sync from supplier&#xa;&#xa;&lt;b&gt;Platform:&lt;/b&gt; Node.js 20 · Express 4 · React 18 · React Router 6 · TanStack Query 5 · Vite 5&#xa;&lt;b&gt;Persistence:&lt;/b&gt; MongoDB 7 via Atlas&#xa;&lt;b&gt;Libs / tools:&lt;/b&gt; TypeScript 5 · Zod 3 · Vitest 1 · Playwright 1 · GitHub Actions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=11;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="460" y="280" width="440" height="340" as="geometry"/>
+                </mxCell>
+
+                <!-- Customer -->
+                <mxCell id="customer" value="&lt;b style=&quot;font-size:14px;&quot;&gt;Customer&lt;/b&gt;&#xa;&lt;i&gt;(Person)&lt;/i&gt;&#xa;Pet owner who browses products,&#xa;manages a cart, and places&#xa;click-and-collect orders." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=2;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="230" width="270" height="160" as="geometry"/>
+                </mxCell>
+
+                <!-- Store Employee -->
+                <mxCell id="employee" value="&lt;b style=&quot;font-size:14px;&quot;&gt;Store Employee&lt;/b&gt;&#xa;&lt;i&gt;(Person)&lt;/i&gt;&#xa;PawPlace staff who updates stock,&#xa;processes click-and-collect&#xa;pick-ups and manages listings." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=2;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="490" width="270" height="160" as="geometry"/>
+                </mxCell>
+
+                <!-- Store Locator API -->
+                <mxCell id="storeLocatorApi" value="&lt;b style=&quot;font-size:14px;&quot;&gt;Store Locator API&lt;/b&gt;&#xa;&lt;i&gt;(External System)&lt;/i&gt;&#xa;Third-party geolocation service;&#xa;returns store proximity results&#xa;for a postcode or coordinates." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#000000;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=2;" parent="1" vertex="1">
+                    <mxGeometry x="1030" y="230" width="290" height="160" as="geometry"/>
+                </mxCell>
+
+                <!-- Pet Supplier B2B Feed -->
+                <mxCell id="supplierFeed" value="&lt;b style=&quot;font-size:14px;&quot;&gt;Pet Supplier B2B Feed&lt;/b&gt;&#xa;&lt;i&gt;(External System)&lt;/i&gt;&#xa;Authoritative source for stock;&#xa;sends inventory update webhooks;&#xa;receives fulfilment confirmations." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#000000;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=2;" parent="1" vertex="1">
+                    <mxGeometry x="1030" y="490" width="290" height="160" as="geometry"/>
+                </mxCell>
+
+                <!-- Relationships with protocols -->
+                <mxCell id="customerEdge" value="Browse, cart, and checkout&#xa;HTTPS / REST + JSON" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=2;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" parent="1" source="customer" target="pawplace" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="employeeEdge" value="Manage stock and orders&#xa;HTTPS / REST + JSON" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=2;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" parent="1" source="employee" target="pawplace" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="locatorEdge" value="Proximity query&#xa;HTTPS / REST + JSON (outbound, read-only)" style="endArrow=classic;html=1;strokeWidth=2;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.3;entryDx=0;entryDy=0;" parent="1" source="storeLocatorApi" target="pawplace" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="supplierWebhookEdge" value="Inventory update webhook (inbound)&#xa;HTTPS / JSON POST" style="endArrow=classic;html=1;strokeWidth=2;fontSize=10;exitX=0;exitY=0.4;exitDx=0;exitDy=0;entryX=1;entryY=0.65;entryDx=0;entryDy=0;" parent="1" source="supplierFeed" target="pawplace" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="supplierConfirmEdge" value="Fulfilment order confirmation (outbound)&#xa;HTTPS / REST + JSON" style="endArrow=classic;html=1;strokeWidth=2;fontSize=10;dashed=1;exitX=1;exitY=0.8;exitDx=0;exitDy=0;entryX=0;entryY=0.6;entryDx=0;entryDy=0;" parent="1" source="pawplace" target="supplierFeed" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- Legend -->
+                <mxCell id="legendBox" value="&lt;b&gt;Legend&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="710" width="120" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="legendSystem" value="Software system in scope" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="735" width="180" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="legendPerson" value="Person / actor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="260" y="735" width="160" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="legendExternal" value="External system" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="735" width="160" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="legendSync" value="Solid arrow = synchronous (with protocol label)" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="620" y="735" width="320" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="legendAsync" value="Dashed arrow = async / event-driven (with protocol label)" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="960" y="735" width="360" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

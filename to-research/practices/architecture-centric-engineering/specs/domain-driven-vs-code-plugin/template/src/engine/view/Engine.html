@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-{{nonce}}'; style-src https://*.vscode-cdn.net 'unsafe-inline'; connect-src https://*.vscode-cdn.net;">
+  <link rel="stylesheet" href="{{themeCssUri}}">
+  <link rel="stylesheet" href="{{engineCssUri}}">
+</head>
+<body>
+  <div class="engine-view">{{content}}</div>  
+  <script nonce="{{nonce}}" src="{{counterClientUri}}"></script>
+  <script nonce="{{nonce}}" src="{{contextFolderClientUri}}"></script>
+  <script nonce="{{nonce}}" src="{{botClientUri}}"></script>
+  <script nonce="{{nonce}}" src="{{behaviorClientUri}}"></script>
+  <script nonce="{{nonce}}" src="{{instructionsClientUri}}"></script>
+  <script nonce="{{nonce}}" src="{{engineClientUri}}"></script>
+</body>
+</html>

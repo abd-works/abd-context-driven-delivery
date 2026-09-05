@@ -1,0 +1,207 @@
+2026-04-20T11:06:30.781337 [move_to] Story 'Move Straight Toward Target' is being moved
+2026-04-20T11:06:30.781337 [move_to] Source SubEpic: 'Miove Towrd Target'
+2026-04-20T11:06:30.782327 [move_to] Target SubEpic: 'Move Toward Target'
+2026-04-20T11:06:30.782327 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 0
+2026-04-20T11:06:30.783327 [move_to] APPENDING to children (no position specified)
+2026-04-20T11:06:30.783327 [move_to] AFTER MOVE - actual_target children count: 1
+2026-04-20T11:06:30.783327 [move_to] Story moving between different SubEpics
+2026-04-20T11:06:30.785326 [move_to] Story test_class: None
+2026-04-20T11:06:30.785326 [move_to] No test class to move
+2026-04-20T11:06:30.785326 [move_to] Story 'Move Around Obstacles' is being moved
+2026-04-20T11:06:30.786327 [move_to] Source SubEpic: 'Miove Towrd Target'
+2026-04-20T11:06:30.786327 [move_to] Target SubEpic: 'Move Toward Target'
+2026-04-20T11:06:30.787441 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-20T11:06:30.787441 [move_to] APPENDING to children (no position specified)
+2026-04-20T11:06:30.787441 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-20T11:06:30.787441 [move_to] Story moving between different SubEpics
+2026-04-20T11:06:30.788445 [move_to] Story test_class: None
+2026-04-20T11:06:30.788445 [move_to] No test class to move
+2026-04-20T11:06:30.788445 [move_to] Story 'Navigate Cover' is being moved
+2026-04-20T11:06:30.788445 [move_to] Source SubEpic: 'Miove Towrd Target'
+2026-04-20T11:06:30.789444 [move_to] Target SubEpic: 'Move Toward Target'
+2026-04-20T11:06:30.789444 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 2
+2026-04-20T11:06:30.789444 [move_to] APPENDING to children (no position specified)
+2026-04-20T11:06:30.789444 [move_to] AFTER MOVE - actual_target children count: 3
+2026-04-20T11:06:30.789444 [move_to] Story moving between different SubEpics
+2026-04-20T11:06:30.789444 [move_to] Story test_class: None
+2026-04-20T11:06:30.790869 [move_to] No test class to move
+2026-04-20T20:59:48.472543 [move_to] Story 'Traveler' is being moved
+2026-04-20T20:59:48.472543 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-20T20:59:48.473542 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-20T20:59:48.473542 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-20T20:59:48.473542 [move_to] APPENDING to children (no position specified)
+2026-04-20T20:59:48.473542 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-20T20:59:48.474535 [move_to] Story moving between different SubEpics
+2026-04-20T20:59:48.474535 [move_to] Story test_class: None
+2026-04-20T20:59:48.475536 [move_to] No test class to move
+2026-04-20T21:02:32.074446 [move_to] Story 'Traveler' is being moved
+2026-04-20T21:02:32.075440 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-20T21:02:32.075440 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-20T21:02:32.075440 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-20T21:02:32.075440 [move_to] APPENDING to children (no position specified)
+2026-04-20T21:02:32.076899 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-20T21:02:32.076899 [move_to] Story moving between different SubEpics
+2026-04-20T21:02:32.077903 [move_to] Story test_class: None
+2026-04-20T21:02:32.077903 [move_to] No test class to move
+2026-04-20T23:06:59.325543 [move_to] Story 'Traveler' is being moved
+2026-04-20T23:06:59.325543 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-20T23:06:59.325543 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-20T23:06:59.326543 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-20T23:06:59.326543 [move_to] APPENDING to children (no position specified)
+2026-04-20T23:06:59.326543 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-20T23:06:59.327547 [move_to] Story moving between different SubEpics
+2026-04-20T23:06:59.327547 [move_to] Story test_class: None
+2026-04-20T23:06:59.327547 [move_to] No test class to move
+2026-04-20T23:07:40.803568 [move_to] Story 'Traveler' is being moved
+2026-04-20T23:07:40.803568 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-20T23:07:40.803568 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-20T23:07:40.803568 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-20T23:07:40.804929 [move_to] APPENDING to children (no position specified)
+2026-04-20T23:07:40.804929 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-20T23:07:40.804929 [move_to] Story moving between different SubEpics
+2026-04-20T23:07:40.804929 [move_to] Story test_class: None
+2026-04-20T23:07:40.805941 [move_to] No test class to move
+2026-04-20T23:08:06.186613 [move_to] Story 'Traveler' is being moved
+2026-04-20T23:08:06.187612 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-20T23:08:06.187612 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-20T23:08:06.187612 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-20T23:08:06.187612 [move_to] APPENDING to children (no position specified)
+2026-04-20T23:08:06.189118 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-20T23:08:06.189118 [move_to] Story moving between different SubEpics
+2026-04-20T23:08:06.190123 [move_to] Story test_class: None
+2026-04-20T23:08:06.190123 [move_to] No test class to move
+2026-04-20T23:10:15.967611 [move_to] Story 'Traveler' is being moved
+2026-04-20T23:10:15.969118 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-20T23:10:15.970124 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-20T23:10:15.970124 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-20T23:10:15.970124 [move_to] APPENDING to children (no position specified)
+2026-04-20T23:10:15.971124 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-20T23:10:15.971124 [move_to] Story moving between different SubEpics
+2026-04-20T23:10:15.971124 [move_to] Story test_class: None
+2026-04-20T23:10:15.971124 [move_to] No test class to move
+2026-04-21T00:21:11.840310 [move_to] Story 'Record Mob Template' is being moved
+2026-04-21T00:21:11.841309 [move_to] Source SubEpic: 'Author Mob Templates'
+2026-04-21T00:21:11.841309 [move_to] Target SubEpic: 'Manage Mobs'
+2026-04-21T00:21:11.841309 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-21T00:21:11.841309 [move_to] APPENDING to children (no position specified)
+2026-04-21T00:21:11.842308 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-21T00:21:11.842308 [move_to] Story moving between different SubEpics
+2026-04-21T00:21:11.842308 [move_to] Story test_class: None
+2026-04-21T00:21:11.842308 [move_to] No test class to move
+2026-04-21T00:21:11.843308 [move_to] Story 'Spawn Mob From Actors' is being moved
+2026-04-21T00:21:11.843308 [move_to] Source SubEpic: 'Spawn Mobs From Actors'
+2026-04-21T00:21:11.844312 [move_to] Target SubEpic: 'Manage Mobs'
+2026-04-21T00:21:11.844312 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 2
+2026-04-21T00:21:11.845309 [move_to] APPENDING to children (no position specified)
+2026-04-21T00:21:11.845309 [move_to] AFTER MOVE - actual_target children count: 3
+2026-04-21T00:21:11.845309 [move_to] Story moving between different SubEpics
+2026-04-21T00:21:11.845309 [move_to] Story test_class: None
+2026-04-21T00:21:11.846308 [move_to] No test class to move
+2026-04-21T00:21:11.846308 [move_to] Story 'Select Any Mob Member Token' is being moved
+2026-04-21T00:21:11.846308 [move_to] Source SubEpic: 'Issue Shared Mob Command'
+2026-04-21T00:21:11.846308 [move_to] Target SubEpic: 'Command Mob Actions'
+2026-04-21T00:21:11.847308 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 0
+2026-04-21T00:21:11.847308 [move_to] APPENDING to children (no position specified)
+2026-04-21T00:21:11.848438 [move_to] AFTER MOVE - actual_target children count: 1
+2026-04-21T00:21:11.848438 [move_to] Story moving between different SubEpics
+2026-04-21T00:21:11.849436 [move_to] Story test_class: None
+2026-04-21T00:21:11.849436 [move_to] No test class to move
+2026-04-24T19:54:34.371810 [move_to] Story 'Traveler' is being moved
+2026-04-24T19:54:34.372810 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-24T19:54:34.372810 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-24T19:54:34.372810 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-24T19:54:34.373816 [move_to] APPENDING to children (no position specified)
+2026-04-24T19:54:34.373816 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-24T19:54:34.373816 [move_to] Story moving between different SubEpics
+2026-04-24T19:54:34.374815 [move_to] Story test_class: None
+2026-04-24T19:54:34.374815 [move_to] No test class to move
+2026-04-24T20:02:23.343620 [move_to] Story 'Traveler' is being moved
+2026-04-24T20:02:23.344159 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-24T20:02:23.344159 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-24T20:02:23.344706 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-24T20:02:23.345253 [move_to] APPENDING to children (no position specified)
+2026-04-24T20:02:23.345253 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-24T20:02:23.345253 [move_to] Story moving between different SubEpics
+2026-04-24T20:02:23.345821 [move_to] Story test_class: None
+2026-04-24T20:02:23.346378 [move_to] No test class to move
+2026-04-24T20:03:07.145878 [move_to] Story 'Traveler' is being moved
+2026-04-24T20:03:07.146475 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-24T20:03:07.146981 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-24T20:03:07.146981 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-24T20:03:07.146981 [move_to] APPENDING to children (no position specified)
+2026-04-24T20:03:07.146981 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-24T20:03:07.147989 [move_to] Story moving between different SubEpics
+2026-04-24T20:03:07.147989 [move_to] Story test_class: None
+2026-04-24T20:03:07.147989 [move_to] No test class to move
+2026-04-24T20:03:56.698981 [move_to] Story 'Traveler' is being moved
+2026-04-24T20:03:56.699982 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-24T20:03:56.700982 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-24T20:03:56.702047 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-24T20:03:56.702047 [move_to] APPENDING to children (no position specified)
+2026-04-24T20:03:56.703045 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-24T20:03:56.704046 [move_to] Story moving between different SubEpics
+2026-04-24T20:03:56.705045 [move_to] Story test_class: None
+2026-04-24T20:03:56.706046 [move_to] No test class to move
+2026-04-24T20:06:17.054148 [move_to] Story 'Traveler' is being moved
+2026-04-24T20:06:17.054148 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-24T20:06:17.055148 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-24T20:06:17.055148 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-24T20:06:17.055148 [move_to] APPENDING to children (no position specified)
+2026-04-24T20:06:17.056202 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-24T20:06:17.056202 [move_to] Story moving between different SubEpics
+2026-04-24T20:06:17.057207 [move_to] Story test_class: None
+2026-04-24T20:06:17.057207 [move_to] No test class to move
+2026-04-24T20:08:00.739297 [move_to] Story 'Traveler' is being moved
+2026-04-24T20:08:00.740808 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-24T20:08:00.740808 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-24T20:08:00.740808 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-24T20:08:00.742497 [move_to] APPENDING to children (no position specified)
+2026-04-24T20:08:00.742497 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-24T20:08:00.743505 [move_to] Story moving between different SubEpics
+2026-04-24T20:08:00.743505 [move_to] Story test_class: None
+2026-04-24T20:08:00.743505 [move_to] No test class to move
+2026-04-24T20:31:47.356416 [move_to] Story 'Traveler' is being moved
+2026-04-24T20:31:47.357417 [move_to] Source SubEpic: 'Sub Alpha'
+2026-04-24T20:31:47.357417 [move_to] Target SubEpic: 'Sub Beta'
+2026-04-24T20:31:47.357417 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 1
+2026-04-24T20:31:47.358420 [move_to] APPENDING to children (no position specified)
+2026-04-24T20:31:47.358420 [move_to] AFTER MOVE - actual_target children count: 2
+2026-04-24T20:31:47.358420 [move_to] Story moving between different SubEpics
+2026-04-24T20:31:47.359417 [move_to] Story test_class: None
+2026-04-24T20:31:47.359417 [move_to] No test class to move
+2026-06-23T00:45:13.954923 [move_to] Story 'Extract Content from Code Repository using GitHub API' is being moved
+2026-06-23T00:45:13.955935 [move_to] Source SubEpic: 'Stage Context'
+2026-06-23T00:45:13.955935 [move_to] Target SubEpic: 'Extract Source Content'
+2026-06-23T00:45:13.956936 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 3
+2026-06-23T00:45:13.956936 [move_to] APPENDING to children (no position specified)
+2026-06-23T00:45:13.956936 [move_to] AFTER MOVE - actual_target children count: 4
+2026-06-23T00:45:13.957937 [move_to] Story moving between different SubEpics
+2026-06-23T00:45:13.957937 [move_to] Story test_class: None
+2026-06-23T00:45:13.957937 [move_to] No test class to move
+2026-06-23T00:45:13.958938 [move_to] Story 'Extract Content from Confluence using REST API' is being moved
+2026-06-23T00:45:13.958938 [move_to] Source SubEpic: 'Stage Context'
+2026-06-23T00:45:13.958938 [move_to] Target SubEpic: 'Extract Source Content'
+2026-06-23T00:45:13.959936 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 4
+2026-06-23T00:45:13.959936 [move_to] APPENDING to children (no position specified)
+2026-06-23T00:45:13.959936 [move_to] AFTER MOVE - actual_target children count: 5
+2026-06-23T00:45:13.959936 [move_to] Story moving between different SubEpics
+2026-06-23T00:45:13.961198 [move_to] Story test_class: None
+2026-06-23T00:45:13.961198 [move_to] No test class to move
+2026-06-23T00:45:13.961198 [move_to] Story 'Guide Extraction with System Knowledge' is being moved
+2026-06-23T00:45:13.962196 [move_to] Source SubEpic: 'Stage Context'
+2026-06-23T00:45:13.962196 [move_to] Target SubEpic: 'Extract Source Content'
+2026-06-23T00:45:13.962196 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: , children count: 5
+2026-06-23T00:45:13.963200 [move_to] APPENDING to children (no position specified)
+2026-06-23T00:45:13.963200 [move_to] AFTER MOVE - actual_target children count: 6
+2026-06-23T00:45:13.963200 [move_to] Story moving between different SubEpics
+2026-06-23T00:45:13.963200 [move_to] Story test_class: None
+2026-06-23T00:45:13.964198 [move_to] No test class to move
+2026-06-23T00:45:13.964198 [move_to] Story 'Store Embeddings in Vector Index' is being moved
+2026-06-23T00:45:13.964198 [move_to] Source SubEpic: 'Validate and Publish Context'
+2026-06-23T00:45:13.965197 [move_to] Target SubEpic: 'Publish Context to DB'
+2026-06-23T00:45:13.965197 [move_to] BEFORE MOVE - actual_target type: StoryGroup, name: Publish Context to DB Stories, children count: 2
+2026-06-23T00:45:13.965197 [move_to] APPENDING to children (no position specified)
+2026-06-23T00:45:13.966199 [move_to] AFTER MOVE - actual_target children count: 3
+2026-06-23T00:45:13.966199 [move_to] Story moving between different SubEpics
+2026-06-23T00:45:13.967220 [move_to] Story test_class: None
+2026-06-23T00:45:13.967220 [move_to] No test class to move

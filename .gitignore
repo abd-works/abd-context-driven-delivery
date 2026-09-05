@@ -23,6 +23,9 @@ primitives/harness/.deploy-state.json
 /_req.yaml
 /_req*.yaml
 
+# Local abd-skills clone (source for to-research snapshots; not tracked)
+abd-skills/
+
 # Virtualenv & Secrets
 .venv/
 conf/

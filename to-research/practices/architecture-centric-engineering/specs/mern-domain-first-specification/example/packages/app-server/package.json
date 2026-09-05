@@ -1,0 +1,13 @@
+{
+  "name": "@channelone/app-server",
+  "private": true,
+  "dependencies": {
+    "@channelone/recipients-server": "file:../recipients/server",
+    "cors": "^2.8.5",
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "tsx": "^4.19.0"
+  }
+}
