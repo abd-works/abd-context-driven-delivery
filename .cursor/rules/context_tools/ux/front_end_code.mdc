@@ -1,0 +1,12 @@
+---
+description: "ux front end code rules"
+globs: **/sandbox/**/*.html,**/src/**/*.{html,tsx,jsx,vue}
+alwaysApply: false
+---
+
+Rules below are listed from the **front_end_code** ### Rules section. Please see @ux-front_end_code for the full skill.
+
+
+- **`real-frontend-not-mockup`** — Shipping UI is production frontend code, not the greybox Story Demo frame.
+- **`real-backend-wired`** — Client talks to real services/persistence (CE **code**); no silent Fake path as the only path.
+- **`upstream-decisions-carried`** — Layout and domain terms from earlier fidelities stay authoritative.

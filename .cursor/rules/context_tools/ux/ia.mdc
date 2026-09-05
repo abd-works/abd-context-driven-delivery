@@ -1,0 +1,11 @@
+---
+description: "ux ia rules"
+globs: **/sandbox/**/.context/**/*.{drawio,md},**/*information-architecture*
+alwaysApply: false
+---
+
+Rules below are listed from the **ia** ### Rules section. Please see @ux-ia for the full skill.
+
+
+- **`tab-states-are-separate-screens`** / **`screen-story-budget`** / **`ia-named-regions-only`** — as above.
+- **`system-stories-group-with-visible-trigger`** — System stories group with the closest user-visible screen.

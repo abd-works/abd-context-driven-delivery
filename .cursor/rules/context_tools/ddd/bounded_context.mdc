@@ -1,0 +1,20 @@
+---
+description: "ddd bounded context rules"
+globs: **/*bounded-context*.md,**/domain/**/*.md
+alwaysApply: false
+---
+
+Rules below are listed from the **bounded_context** ### Rules section. Please see @ddd-bounded_context for the full skill.
+
+
+- **`experts-words-preferred`** — Prefer the words domain experts use; do not invent technical synonyms when a domain word already exists. A ported telephone number is `TelephoneNumber` with `PortingInformation`, not `PortabilityRequest`; the operation is `port()`, not `requestPortability()`.
+- **`domain-concepts-not-technical-names`** — Every class/module names a domain concept (or honest boundary collaborator). Reject `Manager`, `Helper`, `Processor`, `*Result`, `*Response`, `*Dto`, `*Request`. Do not invent a type for fields that already belong on a concept (`OrderResult` → fields on `Order`). Do not invent a concept the experts and the running system do not name.
+- **`bc-by-lifecycle-not-ui-themes`** — Partition bounded contexts by ubiquitous language and by how fast the model changes, not by UI themes, pages, or journey stages. Do not mint Selfcare / Onboarding / Acquisition contexts that duplicate Customer, Catalog, and Subscription. Put purchase, cart, and billing with the faster-changing lifecycle they serve, not under slow-changing identity.
+- **`one-meaning-per-context`** — Inside a context, one definition per term; false cognates across contexts are named and translated. The context is that language boundary. Aggregates are consistency clusters inside it — several per context is normal. Do not wrap each aggregate in its own bounded context. On the map, every context is a peer card — not a parent-box bullet.
+- **`dependency-fields-tracked`** — Every arc states direction (named sides or mutual), what crosses, how they integrate (concrete mechanism), and catalogue relationship pattern — or a dated follow-up with owner.
+- **`no-orphan-contexts`** — Every inventoried context appears in a dependency arc or is declared standalone with rationale.
+- **`vendor-not-implementation`** — BC title carries vendor after `|` — `custom`, `bespoke`, or vendor name. No owning team or implementation stack on the card.
+- **`context-tree-bc-aggregate-concept`** — Three levels only: BC → Aggregate → concept. No Root, Boundary members, Refs, Protected invariants, or #### Dependencies blocks on the bounded_context card.
+- **`link-arrow-target`** — Outbound links use `→` with `BC · Aggregate · Entity` or `System · Entity`. Omit leading BC/Aggregate segments when the target is in the same context or aggregate.
+- **`hang-deps-on-owning-bc`** — Put each outbound link on the **concept or aggregate that has the dependency**, not in a global `## Dependencies` section. External-system links sit on the aggregate that owns the integration (e.g. Inventory → Mavenir DEP).
+- **`user-facing-system-first`** — On the context map, the system you are wrapping — the consumer app — sits first (left / upstream). External systems of record sit downstream. Do not start the layout at Mavenir / AWS / a vendor column.

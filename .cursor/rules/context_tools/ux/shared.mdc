@@ -1,0 +1,14 @@
+---
+description: "ux shared rules — apply across all fidelities"
+globs: **/sandbox/**/*.{html,drawio,json,md},**/.context/**/*ux*.{md,drawio}
+alwaysApply: false
+---
+
+Rules below are listed from the **Shared rules** section. For full generate guidance see @ux-front_end_code, @ux-ia, @ux-mockup.
+
+
+- **`tab-states-are-separate-screens`** — N tabs → N screens; chrome shared via `chrome_of` / inactive tabs.
+- **`screen-story-budget`** — ~4 user stories per screen; more signals missed decomposition.
+- **`screen-names-use-domain-terms`** — Screen labels trace to domain language when it exists.
+- **`ia-named-regions-only`** — At IA, regions are named slots; no control detail yet.
+- **`story-domain-js-imported`** — At mockup+, when context_tools/stories/domain exist, JS modules are present (transform if needed) and imported by the html surface.

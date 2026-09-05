@@ -1,0 +1,25 @@
+---
+description: "bdd development rules"
+globs: **/tests/**/*.{py,js,ts,java},**/*.{py,js,ts,java}
+alwaysApply: false
+---
+
+Rules below are listed from the **development** ### Rules section. Please see @bdd-development for the full skill.
+
+
+- **`red-then-green`** — Fail for the right reason before production code changes.
+- **`minimum-green`** / **`code-minimalism`** — Least production code that makes this assertion pass.
+- **`refactor-only-when-green`** — Refactor only while green.
+- **`one-signature-at-a-time`** — One marker → green → next. Do not batch all bodies first.
+- **`one-assertion-per-test`** —  one outcome per `it`. tighly connects `expects`
+- **`layer-isolation`** — Mock only at architecture boundaries; never the subject under test.
+- **`no-remaining-signatures`** — Zero `BDD: SIGNATURE` markers when done.
+- **`full-surface-coverage`** — Before generating or satisfying, scan the production source for all public members. Add `it should` entries for every uncovered public method, property, or class. Complete coverage is required; no public surface may be left untested.
+- **`context-sharing`** — Shared construction in `beforeEach` / factory at three sibling dupes.
+- **`oo-api-design`** — Ask-don't-tell: construct fully; own state on the object; operations on the closest domain concept.
+- **`honors-documented-surface-contracts`** — Public API must match documented surface contracts; if a spec fights the contract, fix the spec.
+- **`roundtrip-parity-is-required`** — Adapter parse/render seams assert `counts(parse(render(canonical))) == counts(canonical)`.
+- **`code-source-of-truth-guard`** — Tests reject unsafe regeneration when generation can overwrite hand-edited code.
+- **`impl-must-carry-bdd-manifest`** — Impl paired with `*_spec.py` carries `# @toolset-manifest … context_tools.bdd.bdd:Bdd`.
+- **`observable-behavior`** — Assert public outcomes only.
+- **`scan-fixture-pair`** — A mechanical mistake spec passes the fail file to `expect_scan_fails` and the pass file to `expect_scan_passes` (`context_tools.bdd.spec_helpers`). Do not invent a parallel eval spec harness.

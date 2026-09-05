@@ -1,0 +1,16 @@
+---
+description: "ux mockup rules"
+globs: **/sandbox/**/*.html,**/sandbox/**/.context/**
+alwaysApply: false
+---
+
+Rules below are listed from the **mockup** ### Rules section. Please see @ux-mockup for the full skill.
+
+
+- **`controls-match-interaction-decisions`** — Exact control types; no invented affordances.
+- **`story-domain-js-imported`** — Import real modules; do not invent a UX-only adapter shape.
+- **`key-interactions-wired`** — Nav/tabs via `data-goto` / interactions; story tracing via Story Demo mount (not bespoke product stubs).
+- **`story-demo-control-for-gwt`** — GWT-bound controls are `StoryDemoControl` in the model so HTML gets `data-story-steps`.
+- **`shell-from-template`** — Use `mockup_shell.html` / render channel; do not drop the explorer when generating screens.
+- **`brand-is-opt-in`** — Do not add css / design tokens / brand unless asked or pre-existing. Greybox is the default output.
+- **`stub-catalogue-honest`** — Every faked behaviour is listed in the html or a companion context note.

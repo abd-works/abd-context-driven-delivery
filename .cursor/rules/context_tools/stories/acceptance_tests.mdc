@@ -1,0 +1,22 @@
+---
+description: "stories acceptance tests rules"
+globs: **/tests/**/*.{py,js,ts,java}
+alwaysApply: false
+---
+
+Rules below are listed from the **acceptance_tests** ### Rules section. Please see @stories-acceptance_tests for the full skill.
+
+
+- **`behavioral-observable-outcomes`** — same rule as **scenarios**: assertions stay in domain-observable terms, never internals.
+- **`explore-full-interaction-surface`** — same rule as **scenarios**: acceptance_tests must cover the explored interaction surface, not just translate the first main-flow scenario into Playwright. Trace react-hook-form rules, shared validation components, and stubbed failure modes during the sandbox walk-through; add a `scenario()` per distinct behavior.
+- **`gwt-steps-trace-to-domain-operations`** — same rule as **scenarios**: each step in the test traces to a named domain operation or property. A hop to the next step is a named operation on the arriving aggregate, not a route or `waitForCompletion()`.
+- **`reconcile-live-immediately`** — same rule as **scenarios**: live disagreement updates the sketch before the test is locked.
+- **`explain-deep-link-arrival`** — same rule as **scenarios**.
+- **`given-only-what-the-system-checks`** — same rule as **scenarios**.
+- **`when-holds-the-operation`** — same rule as **scenarios**.
+- **`then-and-chaining`** — same rule as **scenarios**.
+- **`extract-assertion-helper`** — same rule as **scenarios**.
+- **`infrastructure-in-lifecycle-hooks`** — same rule as **scenarios**.
+- **`load-with-identity-in-hand`** — same rule as **scenarios**.
+- **`seed-prior-story-as-given`** — same rule as **scenarios**.
+- **`reuse-owning-aggregate-stubs`** — same rule as **scenarios**.
