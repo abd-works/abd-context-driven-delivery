@@ -271,6 +271,8 @@ with description("Stories"):
             expect("@story" in self.templates).to(equal(False))
             expect("@background" in self.templates).to(equal(False))
             expect("@scenario" in self.templates).to(equal(False))
+            expect("_primary_when" in self.templates).to(equal(False))
+            expect("_invalid_input" in self.templates).to(equal(False))
             expect("artifacts-mirror-story-hierarchy" in self.templates).to(be_true)
             expect("_test_helper.py" in self.templates).to(equal(False))
             expect("_test_helper.ts" in self.templates).to(equal(False))
