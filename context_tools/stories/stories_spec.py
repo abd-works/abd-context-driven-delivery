@@ -261,17 +261,22 @@ with description("Stories"):
 
         with it("should inline the flat scenario-template without helpers"):
             expect("scenario-template.py" in self.templates).to(be_true)
-            expect("Scenario template" in self.templates).to(be_true)
+            expect("StoryScenario" in self.templates).to(be_true)
+            expect("background" in self.templates).to(be_true)
             expect("epic:" in self.templates).to(be_true)
             expect("test_helper" in self.templates).to(equal(False))
-            expect("create_" in self.templates).to(equal(False))
             expect("Protocol" in self.templates).to(equal(False))
+            expect("_story.py" in self.templates).to(equal(False))
 
     with context("whose templates slot is expanded at scenarios typescript"):
-        with it("should inline scenario-template.ts without helper interfaces"):
+        with it("should inline scenario-template.ts with StoryScenario and GWT steps"):
             text = Stories(
                 fidelity="scenarios", format="typescript", session=None
             ).templates().expand()
             expect("scenario-template.ts" in text).to(be_true)
+            expect("{StoryPascal}Story" in text).to(be_true)
+            expect("background" in text).to(be_true)
+            expect("beforeAll" in text).to(be_true)
+            expect(".and(" in text).to(be_true)
             expect("Helper" in text).to(equal(False))
-            expect("create{StoryVerbNoun}Story" in text).to(equal(False))
+            expect("test_helper" in text).to(equal(False))

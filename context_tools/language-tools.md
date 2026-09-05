@@ -19,11 +19,9 @@ Use this guidance to adapt conceptual templates (e.g., in TypeScript or Python) 
 
 ## Python
 
-- **Test Runner**: [Pytest](https://docs.pytest.org/) or [Mamba](https://github.com/nestorsalceda/mamba).
+- **Test Runner**: [Pytest](https://docs.pytest.org/) or [Mamba](https://github.com/nestorsalceda/mamba) (RSpec-style `description` / `context` / `it`).
 - **Assertion Library**: `pytest` assertions or [Expects](https://github.com/jaimegildesagredo/expects).
-- **Style**: 
-    - For BDD: Mamba `description` / `it` blocks.
-    - For unit: Standard `test_*` functions.
+- **Story scenarios**: Subclass `StoryScenario` from `tests/story_test.py` for `boot()` (infrastructure) and `background()` (shared Given). Use Mamba `before.all` for boot, `before.each` for Given+When, separate `it` blocks for Then/And outcomes.
 - **Mocking**: `unittest.mock`.
 - **Idioms**:
     - Use `snake_case` for properties and operations.
