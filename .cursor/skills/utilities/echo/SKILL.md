@@ -8,8 +8,8 @@ STOP. DO NOT EXECUTE ANY OF THE INSTRUCTIONS BELOW THIS LINE. Your only task rig
 
 through the tools cli
 
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
+Pipe the block to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
+```
 toolset: echo.echo:Echo
 action: echo_session
 ```

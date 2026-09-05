@@ -86,6 +86,8 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 **Goal:** Turn locked scenarios into runnable acceptance coverage; CE runs alongside to produce matching wrap classes under `domain/`.
 
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
+
 **Produce:** `tests/{epic}/{sub-epic}/{story}.{tier}.ts` — one GWT file per story per seam. `{tier}` is `front-end`, `back-end`, or any other system name you are proving. No `{story}/` folder and no `*_story` / `*_test_helper` split. Fixtures live in `examples/` and `givens.ts` at the lowest shared epic / sub-epic / story folder.
 
 ### Rules
@@ -108,11 +110,253 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ## Templates
 
-Call `load_template` directly with your active format and fidelity:
+### markdown
 
-```python
-from context_tools.stories.stories import Stories
-Stories(fidelity="scaffold").load_template(format="<your_format>", fidelity="scaffold")
-```
+## components/evidence-table.md
+
+---
+fidelity: [exploration, specification]
+artifact: [story-scenarios]
+format: md
+section: footer
+---
+
+### Evidence
+
+| Scenario | Source (document / system) | Location |
+| --- | --- | --- |
+| Scenario 1 | `<source>` | `<location>` |
+
+
+## components/story-header.md
+
+---
+fidelity: [exploration, specification]
+artifact: [story-scenarios]
+format: md
+section: header
+---
+## Story: `<Verb–Noun Title>`
+
+**Story type:** user | system | technical
+
+**Sources / context:** `<pointer to domain source, AC, or conversation>`
+
+### Domain terms
+
+- ++`<ConceptA>`++ — `<plain-language gloss>`
+- ++`<ConceptB>`++ — `<plain-language gloss>`
+
+> In steps: underline examples and domain terms (`++<Concept>++`, `++<example>++`). Italic concrete values (`*<value>*`).
+
+
+## scenario-inline.md
+
+---
+fidelity: [specification]
+artifact: [story-scenarios]
+format: md
+section: body
+---
+
+## Behaviors
+
+> In steps: underline examples and domain terms (`++<Concept>++`, `++<example>++`). Italic concrete values (`*<value>*`).
+
+### Scenario 1: `<outcome-oriented scenario name>`
+
+*Given* a ++`<ConceptA>`++ *`<value>`*  
+  *And* that ++`<ConceptA>`++ *`<value>`* has a ++`<ConceptB>`++ *`<value>`*  
+*When* the ++`<ConceptA>`++ *`<value>`* `<triggering action>`  
+    using ++`<ConceptB>`++ *`<value>`*  
+*Then* the ++`<observed concept>`++ is `<observable outcome>`  
+  *And* the ++`<related concept>`++ is `<additional outcome>`  
+  *But* no ++`<concept>`++ is `<what does not happen>`
+
+### Scenario 2: `<alternate outcome-oriented scenario name>`
+
+*Given* `<alternate setup state>`  
+*When* `<alternate triggering action>`  
+*Then* `<alternate observable outcome>`  
+  *And* `<additional outcome>`
+
+
+## scenario-main-flow.md
+
+---
+fidelity: [exploration]
+artifact: [story-scenarios]
+format: md
+section: body
+---
+
+### Domain terms
+
+- ++`<Concept>`++ — `<plain-language gloss>`
+
+> In steps: underline examples and domain terms (`++<Concept>++`, `++<example>++`). Italic concrete values (`*<value>*`).
+
+## Behaviors
+
+### Scenario Outline: `<main-flow outcome name>`
+
+*Given* a ++`<Concept>`++ from `helper.given<Concept…>({ mode: "fake" })`  
+  *And* that ++`<Concept>`++ {`<concept_field>`}  
+*When* the **`<Actor>`** `<triggering action>`  
+*Then* `<observable outcome on the public interface of I{Concept}>`  
+  *And* `<additional observable outcome>`
+
+### Examples
+
+| scenario   | `<concept_field>` | `<result_field>` |
+|------------|-------------------|------------------|
+| ++Scenario 1++ | `<value>`         | `<value>`        |
+
+> Examples table documents the representative row. Code loads the same values from ExampleFactory (AI fills stubs).
+
+
+## scenario-outline.md
+
+---
+fidelity: [specification]
+artifact: [story-scenarios]
+format: md
+section: body
+---
+
+### Domain terms
+
+- ++`<ConceptA>`++ — `<plain-language gloss>`
+- ++`<ConceptB>`++ — `<plain-language gloss>`
+
+> In steps: underline examples and domain terms (`++<Concept>++`, `++<example>++`). Italic concrete values (`*<value>*`).
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `<pointer>` | `<why it matters>` |
+
+### Background
+
+*Given* a ++`<ConceptX>`++ from `helper.given<ConceptX…>({ mode: "fake" })`  
+  *And* that ++`<ConceptX>`++ exposes `<public property / operation>`  
+
+---
+
+### Behaviors
+
+#### Scenario Outline: `<outcome-oriented name>`
+
+*Given* a ++`<ConceptA>`++ with {`<field_1>`}  
+  *And* the ++`<ConceptB>`++ for that ++`<ConceptA>`++ is {`<field_2>`}  
+*When* the **`<Actor>`** `<action>`  
+*Then* the ++`<result concept>`++ `<outcome>` is visible on the public interface  
+  *And* a ++`<related concept>`++ shows {`<field_3>`}
+
+### Examples
+
+| scenario   | `<field_1>` | `<field_2>` | `<field_3>` |
+|------------|-------------|-------------|-------------|
+| ++Scenario 1++ | `<value>`   | `<value>`   | `<value>`   |
+| ++Scenario 2++ | `<value>`   | `<value>`   | `<value>`   |
+
+> Markdown keeps examples tables for documentation. Code wires values via `{Type}ExampleFactory` (AI fills helper/story method bodies). Do not copy inventable `examples: [{ … }]` literals into code story files.
+
+#### Scenario: `<variation — delta from main flow>`
+
+*Given* … (only the delta from the main flow)  
+*When* …  
+*Then* …
+
+
+## story-map.md
+
+---
+fidelity: [discovery]
+artifact: [story-map]
+format: md
+section: body
+---
+
+<!-- Discovery fidelity — every sub-epic decomposed to named stories.
+     Do not wrap epic, sub-epic, story, or actor names in backticks. -->
+
+# Story Map — Product / Feature Name
+
+**Sources / context:** context files used
+
+---
+
+(E) Epic Verb–Noun
+    (E) Sub-Epic Verb–Noun
+        (S) Actor --> Story Verb–Noun
+        (S) Actor --> Story Verb–Noun
+    (E) Sub-Epic Verb–Noun
+        (S) Actor --> Story Verb–Noun
+
+---
+
+## Scope boundary
+
+**In scope:** what is included
+**Out of scope:** what is explicitly excluded
+
+---
+
+## Thin slices
+
+### Increment 1: Marketable outcome
+
+**Outcome:** What users or the business can do after this ships
+
+**Stories:**
+- Story Verb–Noun
+- Story Verb–Noun
+
+
+## thin-slice.md
+
+---
+fidelity: [discovery]
+artifact: [thin-slice]
+format: md
+section: body
+---
+
+# Thin slicing — `<Product / Feature Name>` incremental backlog
+
+## Product / context
+
+**Product:** `<one-line product / feature description>`
+
+**Slicing intent:** `<why these slices in this order — value logic, learning goals, risk gates>`
+
+**Spine vs optional:** `<the mandatory sequential flow for core value>` sits on the spine. `<alternate channels, enhancements, non-happy-path depth>` are real work but not required for the smallest marketable slice.
+
+## Increments
+
+### Increment 1: `<Marketable outcome name>`
+
+**Outcome:** `<one line — what users or the business can do after this ships>`
+
+**Slicing notes:** `<manual steps, stubs, single channel, reduced NFRs, which slicing dimension was used>`
+
+**Stories in this increment** *(order reflects flow within the slice):*
+
+- *`<First story verb-noun>`*
+- *`<Second story verb-noun>`*
+- *`<Third story verb-noun>`*
+
+### Increment 2: `<Next marketable outcome>`
+
+**Outcome:** `<capability after this increment>`
+
+**Slicing notes:** `<optional>`
+
+**Stories in this increment:**
+
+- *`<Story verb-noun>`*
+- *`<Story verb-noun>`*
 
 See examples in `context_tools/stories/examples/` if needed.

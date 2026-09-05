@@ -16,8 +16,8 @@ Then call finish so merge and worktree removal can proceed on a clean tree.
 
 through the tools cli
 
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
+Pipe the block to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
+```
 toolset: workflow.workflow:Workflow
 tool: finish
 ```

@@ -30,8 +30,8 @@ the closest match via AskQuestion before building a queue from scratch.
 
 through the tools cli
 
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
+Pipe the block to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
+```
 toolset: cli_agent.cli_agent:CliAgent
 tool: add_template
 ```

@@ -8,8 +8,8 @@ Compact the current session into a handoff document under the session working fo
 
 through the tools cli
 
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
+Pipe the block to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
+```
 toolset: handoff.handoff:Handoff
 action: handoff_session
 ```

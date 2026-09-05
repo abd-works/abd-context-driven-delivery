@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Use car guidance at `full_journey` fidelity only.
 
-Use higher-level fidelity guidance only when required information is missing. Reference these commands with `@`; do not inline their content:
+Refer to these skills in order to fill in details from previous fidelities if not present:
 @car-road_story
 @car-trip_outline
 
@@ -86,3 +86,22 @@ arguments:
 Suggested flow (repeat and reorder as the story needs):
 
 Read `resources` from each response before choosing the next tool.
+
+## Templates
+
+### markdown
+
+# Trip outline template
+
+```markdown
+# {make} {model} → {destination}
+
+**Conditions:** {conditions}
+
+1. start
+2. accelerate / decelerate as the road demands
+3. speak — one line in character
+4. stop
+```
+
+Use at **trip_outline** fidelity. Expand into prose at **road_story**.

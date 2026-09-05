@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Use ddd guidance at `tactics` fidelity only.
 
-Use higher-level fidelity guidance only when required information is missing. Reference these commands with `@`; do not inline their content:
+Refer to these skills in order to fill in details from previous fidelities if not present:
 @ddd-building_blocks
 @ddd-bounded_context
 @ddd-scaffold
@@ -32,11 +32,108 @@ Use higher-level fidelity guidance only when required information is missing. Re
 
 ## Templates
 
-Call `load_template` directly with your active format and fidelity:
+### markdown
 
-```python
-from context_tools.ddd.ddd import Ddd
-Ddd(fidelity="tactics").load_template(format="<your_format>", fidelity="tactics")
-```
+## bounded-context-template.md
+
+<!--
+
+  Bounded Context Map — tree format
+
+
+
+  BC → Aggregate → concept. Links on any level:
+
+  → BC · Aggregate · Entity   (another context; omit leading segments when same BC/aggregate)
+
+  → System · Entity           (external vendor / system of record)
+
+
+
+  building_blocks fidelity adds CE compact classes under each aggregate (not shown here).
+
+-->
+
+
+
+# Bounded Context Map — {{project_name}}
+
+
+
+## Map format
+
+
+
+Three levels: **BC** → **Aggregate** → **concept**.
+
+
+
+`→ BC · Aggregate · Entity` — cross-context (drop segments when same BC or aggregate).
+
+
+
+`→ System · Entity` — external system (e.g. `→ Mavenir DEP · engagedParty`).
+
+
+
+---
+
+
+
+## {{ContextName}} | {{custom | bespoke | vendor name}}
+
+
+
+{{One-line scope.}}
+
+
+
+### {{AggregateRoot}}
+
+
+
+- {{concept}}
+
+- {{concept}} → {{BC | System}} · {{Aggregate}} · {{Entity}}
+
+→ {{BC | System}} · {{Aggregate}} · {{Entity}}
+
+
+
+### {{AnotherAggregate}}
+
+
+
+- {{concept}}
+
+→ {{upstream}}
+
+
+
+---
+
+
+
+## {{AnotherContext}} | {{vendor}}
+
+
+
+{{Scope note.}}
+
+
+
+### {{AggregateRoot}}
+
+
+
+- {{concept}}
+
+→ {{System}} · {{Entity}}
+
+
+
+<!-- building_blocks: under each ### aggregate, add #### CE compact + stereotypes per bounded-context-template-building-blocks.md -->
+
+
 
 See examples in `context_tools/ddd/examples/` if needed.

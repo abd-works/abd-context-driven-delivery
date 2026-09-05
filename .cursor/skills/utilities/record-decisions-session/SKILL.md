@@ -8,8 +8,8 @@ Offer and write Context Decision Records (CDRs) sparingly as decisions crystalli
 
 through the tools cli
 
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
+Pipe the block to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
+```
 toolset: record_decisions.record_decisions:RecordDecisions
 action: record_decisions_session
 ```

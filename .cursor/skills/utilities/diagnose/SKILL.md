@@ -104,8 +104,8 @@ skill with the specifics - after the fix is in, not before.
 
 through the tools cli
 
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
+Pipe the block to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
+```
 toolset: diagnose.diagnose:Diagnose
 tool: diagnose
 ```

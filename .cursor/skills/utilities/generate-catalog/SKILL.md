@@ -11,8 +11,8 @@ Required context params with no value: repo_url, ref, out_root, catalog_context_
 
 through the tools cli
 
-Pipe the fence to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```yaml
+Pipe the block to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
+```
 toolset: catalog_generator.catalog_generator:Catalog
 context:
   repo_url: 

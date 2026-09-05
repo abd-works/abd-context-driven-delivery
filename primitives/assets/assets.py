@@ -35,8 +35,14 @@ _FORMAT_DIR_ALIAS = {
 _FIDELITY_TEMPLATE_STEMS: dict[str, frozenset[str]] = {
     "story_map": frozenset({"story-map", "thin-slice"}),
     "scenarios": frozenset(
-        {"scenario-inline", "scenario-main-flow", "scenario-outline"}
+        {
+            "scenario-inline",
+            "scenario-main-flow",
+            "scenario-outline",
+            "scenario-template",
+        }
     ),
+    "acceptance_tests": frozenset({"scenario-template"}),
 }
 
 # Frontmatter `artifact:` values that mark a file as belonging to a fidelity

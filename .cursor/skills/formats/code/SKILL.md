@@ -1,16 +1,18 @@
 ---
-name: plan
-description: "Create a Plan based on a reusable Workflow name, or a new Workflow named here."
+name: code
 disable-model-invocation: true
 ---
 
-Create a Plan based on a reusable Workflow name, or a new Workflow named here.
+# code
+
+Run the context tool / actions using the following format: code.
+Used mostly with generate and render.
+Do not set a fidelity from this prompt.
 
 through the tools cli
 
 Pipe the block to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
 ```
-toolset: plan.plan:Plan
-tool: plan
+toolset: the in-scope context tool
 ```
 .\tools.ps1 run -

@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Use stories guidance at `acceptance_tests` fidelity only.
 
-Use higher-level fidelity guidance only when required information is missing. Reference these commands with `@`; do not inline their content:
+Refer to these skills in order to fill in details from previous fidelities if not present:
 @stories-scenarios
 @stories-story_map
 @stories-scaffold
@@ -46,6 +46,8 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 **Goal:** Turn locked scenarios into runnable acceptance coverage; CE runs alongside to produce matching wrap classes under `domain/`.
 
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
+
 **Produce:** `tests/{epic}/{sub-epic}/{story}.{tier}.ts` — one GWT file per story per seam. `{tier}` is `front-end`, `back-end`, or any other system name you are proving. No `{story}/` folder and no `*_story` / `*_test_helper` split. Fixtures live in `examples/` and `givens.ts` at the lowest shared epic / sub-epic / story folder.
 
 ### Rules
@@ -68,11 +70,38 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ## Templates
 
-Call `load_template` directly with your active format and fidelity:
+### python
 
-```python
-from context_tools.stories.stories import Stories
-Stories(fidelity="acceptance_tests").load_template(format="<your_format>", fidelity="acceptance_tests")
-```
+## scenario-template.py
+
+# ---
+# fidelity: [specification, engineering]
+# artifact: [story-scenarios]
+# format: py
+# ---
+#
+# Scenario template — refer to context_tools/language-tools.md for tooling.
+#
+# ```
+# epic:      {epic-verb-noun}
+# sub_epic:  {sub-epic-verb-noun}
+# story:     {story-verb-noun}
+# file:      tests/{epic-verb-noun}/{sub-epic-verb-noun}/{story_verb_noun}.{tier}.py
+# tier:      front-end | back-end | external-system
+# ```
+#
+"""Story: {Story Verb-Noun}"""
+
+from __future__ import annotations
+
+
+def test_main_flow() -> None:
+    """SCENARIO: {main-flow outcome}"""
+    # Given {given step text}
+    ...
+    # When {when step text}
+    ...
+    # Then {then step text}
+    ...
 
 See examples in `context_tools/stories/examples/` if needed.

@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Use clean_engineering guidance at `code` fidelity only.
 
-Use higher-level fidelity guidance only when required information is missing. Reference these commands with `@`; do not inline their content:
+Refer to these skills in order to fill in details from previous fidelities if not present:
 @clean_engineering-model
 @clean_engineering-modules
 
@@ -49,6 +49,7 @@ A vertical is not at **code** fidelity while it still depends on a mockup / Stor
 
 ### Phase 1 — typed contracts
 
+- **Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific recommendations for coding.
 - **When an `I{Class}` interface was requested at model** (interfaces are optional — see `## model` § Interfaces): add `Class(I{Class})` (Java: `implements I{Class}`) in the **same file** as `I{Class}`. Do **not** fill out `I{Class}` or add private members to it.
 - **When no interface was requested:** skip that step — the empty `Class` stub already exists from **model** fidelity in its own family file; continue directly onto it.
 - On `Class`: implement public properties and operations; add private properties/operations as **empty interfaces** (`...` / `@abstractmethod`); add each relationship with its **kind** (composition / aggregation / association) and **cardinality** (e.g. `1..*`, `0..1`); invariants as **comments** (not methods) — formalizing any named at `## model` § Invariants, or newly introduced here.
@@ -92,11 +93,195 @@ State which side **navigates** to the other — direction is explicit.
 
 ## Templates
 
-Call `load_template` directly with your active format and fidelity:
+### markdown
 
-```python
-from context_tools.clean_engineering.clean_engineering import CleanEngineering
-CleanEngineering(fidelity="code").load_template(format="<your_format>", fidelity="code")
-```
+---
+format: markdown
+fidelity: all
+---
+<!--
+  clean_engineering markdown template — unified across all fidelities.
+
+  INTERFACES ARE OPTIONAL (see clean_engineering.md § Interfaces). This template shows
+  the `I{ClassName}` form because it is the richer case to document. Default to
+  skipping `## I{ClassName}` entirely and starting straight at `## {ClassName}` (empty,
+  untagged Md members at model) unless the user asked for an interface, or the module
+  genuinely has multiple layers/implementations behind one seam.
+
+  Fidelity tags on section headings (as HTML comments — informational only):
+    L  = language companion (prose identity; refined at every stage — not a fidelity)
+    Mu = modules        (thin terms, one-way deps, build order; no I{Class} yet)
+    Md = model          (I{ClassName} — typed compact block — ONLY when an interface is
+                         requested; otherwise model is the empty `## {ClassName}` block)
+    C  = code           (fill {ClassName}; public filled, privates filled; drop interactions)
+
+  Class member format (model):
+    ------  (six dashes)   constructor / properties separator
+    ----    (four dashes)  properties / operations separator
+    -       (dash prefix)  private operation
+    +       (plus prefix)  public — code fidelity only
+
+  Document structure: H1 = module, H2 = class within that module.
+  Interface (I{ClassName}) and implementation ({ClassName}) both sit under the
+  same module H1 — interface first, then implementation. No fidelity section
+  headers (## Model fidelity / ## Code fidelity) in the output.
+  Language companion and modules overview go as prose BEFORE the first H1.
+
+  Subtypes use ## {ChildClass} : {ClassName} notation; deltas only.
+  Substitute {ClassName} / {owned_property} / {param} / {Type} / ... when generating.
+-->
+
+**Sources / context:** {source_files}                             <!-- L -->
+
+## Language companion                                             <!-- L -->
+
+*{ClassName}* is {intent — what role it plays, what it holds, what it does.
+This paragraph IS the class definition. Identity only.}           <!-- L -->
+
+### {class_name_as_a_concept}                                     <!-- L -->
+
+- {bullet: what it holds, what it does, how it relates to *another class*} <!-- L -->
+- {as many bullets as the concept warrants}                       <!-- L -->
+- **Invariant:** {rule that must always hold — only when one exists} <!-- L -->
+
+### {ChildClass} *is a type of* {ClassName}                       <!-- L -->
+
+- {delta behavior only — what this subtype adds or overrides}     <!-- L -->
+
+## Modules                                                        <!-- Mu -->
+
+Build order: `{first}` → `{second}` → `{third}`
+
+---
+
+# {module_path}                                                   <!-- Mu -->
+
+- **Purpose:** {one paragraph}                                    <!-- Mu -->
+- **Seam (terms):** {ClassName}, {ChildClass}, ...                <!-- Mu -->
+- **Dependencies (one-way):** {other_module}, ...                 <!-- Mu -->
+
+## I{ClassName}                                                   <!-- Md, optional -->
+<!-- Omit this section entirely by default — see note at top of file.
+     Include it only when an interface was requested, or the module has
+     multiple layers/implementations that need abstracting apart. -->
+
+I{ClassName}({param}: {Type})
+------
+{owned_property}: {Type}
+{plain_property}: {Type}
+----
+{operation_name}({param}: {Type}): {ReturnType}
+{another_operation}(): {ReturnType}
+
+## {ClassName}                                                    <!-- Md -->
+
++ {ClassName}({param}: {Type})
+------
++ << composition >> {owned_property}: {Type}
+	Invariant: {constraint sentence.}
++ << aggregation >> {collected_property}: list[{Type}]
++ << association >> {referenced_property}: {Type}
+----
++ {operation_name}({param}: {Type}): {ReturnType}
+	Invariant: {constraint sentence applicable to this operation.}
+	Interaction:
+		{variable}: {Type} = {other}.{call}({args})
+		return {variable}
+- _{private_helper}({param}: {Type}): {Type}
+
+## I{ChildClass}                                                  <!-- Md, optional -->
+
+I{ChildClass}({param}: {Type})
+------
+----
+{delta_operation}({param}: {Type}): {ReturnType}
+
+## {ChildClass}                                                   <!-- Md -->
+
++ {ChildClass}({param}: {Type})
+------
++ {child_specific_property}: {Type}
+	Invariant: {constraint sentence.}
+----
++ {delta_operation}({param}: {Type}): {ReturnType}
+
+---
+
+# {next_module_path}                                              <!-- Mu -->
+
+- **Purpose:** {one paragraph}
+- **Seam (terms):** {ClassName}, ...
+- **Dependencies (one-way):** *(none)*
+
+## I{NextClassName}                                               <!-- Md, optional -->
+
+I{NextClassName}({param}: {Type})
+------
+{property}: {Type}
+----
+{operation_name}({param}: {Type}): {ReturnType}
+
+## {NextClassName}                                                <!-- Md -->
+
++ {NextClassName}({param}: {Type})
+------
++ {property}: {Type}
+----
++ {operation_name}({param}: {Type}): {ReturnType}
+
+---
+
+### Example factory (when Stories-bound) — separate file           <!-- Md -->
+
+Write factories in `{type_slug}_example_factory.md` (or code sibling), **not** in the production family file.
+Do not sketch Fake{ClassName} / Isolated{ClassName} / Production{ClassName} types.
+
+## I{ClassName}ExampleFactory                                     <!-- Md, optional — same opt-in rule -->
+
+I{ClassName}ExampleFactory()
+------
+----
+load_{example_key}(mode): I{ClassName}
+
+## {ClassName}ExampleFactory                                      <!-- Md -->
+
++ {ClassName}ExampleFactory()
+------
+----
++ load_{example_key}(mode): I{ClassName}
+	// examples[{example_key}] multi-type bundle
+	// Fake: mock/stub framework + feed examples
+	// Isolated: new {ClassName}(ctor-injected mocks/stubs)
+	// Production: new {ClassName}(real collaborators)
+
+### python
+
+"""
+# Conceptual Clean Engineering Reference (Python style)
+# Refer to context_tools/language-tools.md for tool recommendations.
+# =============================================================================
+# A production file holds the public seam (I{Class} when one exists), the 
+# production Class, subtypes, and tightly connected peers. 
+# Example factories are ALWAYS in a separate sibling file.
+# =============================================================================
+"""
+from __future__ import annotations
+from abc import ABC, abstractmethod
+
+# FILE: {family_slug}.py
+class {ClassName}:
+    """*{ClassName}* unique role."""
+    
+    @property
+    def {property}(self) -> {Type}:
+        ...
+
+    def {operation}(self, {param}: {Type}) -> {ReturnType}:
+        ...
+
+# FILE: {type_slug}_example_factory.py
+class {ClassName}ExampleFactory:
+    def load_{example_key}(self, *, mode: str = "fake") -> {ClassName}:
+        ...
 
 See examples in `context_tools/clean_engineering/examples/` if needed.

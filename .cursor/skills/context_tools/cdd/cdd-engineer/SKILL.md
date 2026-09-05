@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Use cdd guidance at `engineer` fidelity only.
 
-Use higher-level fidelity guidance only when required information is missing. Reference these commands with `@`; do not inline their content:
+Refer to these skills in order to fill in details from previous fidelities if not present:
 @cdd-spec
 @cdd-discovery
 
@@ -57,14 +57,5 @@ Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 - **`order-themes-by-journey`** — When the theme is the customer journey / epic, order themes by the story map / customer experience (Onboarding before Selfcare), not by UX IA.
 
 ---
-
-## Templates
-
-Call `load_template` directly with your active format and fidelity:
-
-```python
-from context_tools.cdd.cdd import Cdd
-Cdd(fidelity="engineer").load_template(format="<your_format>", fidelity="engineer")
-```
 
 See examples in `context_tools/cdd/examples/` if needed.

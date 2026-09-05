@@ -12,6 +12,8 @@ Use bdd guidance at `modules` fidelity only.
 
 Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`templates/bdd-sketch.md`).
 
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
+
 ## Hierarchy shape (required)
 
 ```
@@ -94,21 +96,12 @@ This skill operates at **multiple levels of fidelity**. Start from an agreed ske
 
 Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
 
-### Framework syntax
-
-| Construct | Jest (TypeScript) | Mamba (Python) | JUnit 5 (Java) |
-| --- | --- | --- | --- |
-| Top-level concept | `describe('Context', () => {` | `with description('Context'):` | `@Nested class Context` |
-| Nested state/context | `describe('that has…', () => {` | `with context('that has…'):` | `@Nested class ThatHas…` |
-| Behavior | `it('should …', () => {` | `with it('should …'):` | `@Test void should…()` |
-| Marker | `// BDD: SIGNATURE` | `# BDD: SIGNATURE` | `// BDD: SIGNATURE` |
-
 ### Rules
 
 - **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count.
 - **`signature-markers`** — Every `it` body is exactly `// BDD: SIGNATURE` or `# BDD: SIGNATURE`.
 - **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
-- **`framework-syntax`** — One confirmed framework throughout. Do not mix Jest and Mamba constructs.
+- **`framework-syntax`** — Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
 
 **Pass:**
 ```typescript
@@ -126,6 +119,8 @@ it('should apply a percentage discount to eligible items', () => {
 **Default format:** Python
 
 **Goal:** Replace `BDD: SIGNATURE` markers one at a time with it shgould /expect bodies, then minimum production code until green. Inherit the framework from the **behavior** artifactif already completed.
+
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
 
 1. **Confirm framework** — inherit from the behavior file.
 2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report count.
@@ -178,11 +173,59 @@ Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behav
 
 ## Templates
 
-Call `load_template` directly with your active format and fidelity:
+### markdown
 
-```python
-from context_tools.bdd.bdd import Bdd
-Bdd(fidelity="modules").load_template(format="<your_format>", fidelity="modules")
-```
+"""
+# Conceptual BDD Reference (Python/Mamba style)
+# Refer to context_tools/language-tools.md for tool recommendations.
+# =============================================================================
+# Instructions:
+#   1. Replace {DomainEntity} with the class or module under test.
+#   2. Use Arrange / Act / Assert comments in test bodies.
+#   3. One assertion per behavior.
+# =============================================================================
+"""
+from mamba import description, context, it, before
+from expects import equal, expect
+from {domain_module} import {DomainEntity}
+
+with description('{DomainEntity}'):
+    with context('that has been created'):
+        with it('should have {initial property} assigned'):
+            # Arrange / Act
+            entity = {DomainEntity}(**default_data())
+            # Assert
+            expect(entity.property).to(equal(expected_value))
+
+    with context('that is {active state}'):
+        with before.each:
+            self.entity = {DomainEntity}(**default_{related_data}())
+
+        with it('should {behavior description}'):
+            # Act
+            self.entity.{action}({input})
+            # Assert
+            expect(self.entity.{property}).to(equal({expected_value}))
+
+        with it('should {second behavior}'):
+            # Arrange
+            {local_setup} = {value}
+            # Act
+            self.entity.{action}({local_setup})
+            # Assert
+            expect(self.entity.{property}).to(equal({expected_value}))
+
+
+# Scan fixture pair — mechanical mistake specs use these helpers, not an eval harness.
+from context_tools.bdd.spec_helpers import expect_scan_fails, expect_scan_passes
+
+with description('a scan fixture pair'):
+    with context('a file that violates the rule'):
+        with it('should fail scan'):
+            expect_scan_fails({scan}, '{FailFixturePath}', rule='{Rule}')
+
+    with context('a file that satisfies the rule'):
+        with it('should pass scan'):
+            expect_scan_passes({scan}, '{PassFixturePath}', rule='{Rule}')
 
 See examples in `context_tools/bdd/examples/` if needed.

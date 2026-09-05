@@ -54,13 +54,4 @@ Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 
 ---
 
-## Templates
-
-Call `load_template` directly with your active format and fidelity:
-
-```python
-from context_tools.cdd.cdd import Cdd
-Cdd(fidelity="discovery").load_template(format="<your_format>", fidelity="discovery")
-```
-
 See examples in `context_tools/cdd/examples/` if needed.
