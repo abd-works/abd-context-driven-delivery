@@ -134,7 +134,7 @@ def resolve_text(
         )
     if kind == "guidance":
         if fidelities:
-            skill_options = " | ".join(f"{source}-{fidelity}" for fidelity in fidelities)
+            skill_options = " | ".join(f"@{source}-{fidelity}" for fidelity in fidelities)
             return (
                 "If you cannot tell which skill to run from the context, "
                 f"AskQuestion: {skill_options}.\n"
