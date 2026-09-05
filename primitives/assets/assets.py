@@ -33,15 +33,9 @@ _FORMAT_DIR_ALIAS = {
 
 # Filename stems kept when host.format is set and templates/{alias}/ is a folder pack.
 _FIDELITY_TEMPLATE_STEMS: dict[str, frozenset[str]] = {
+    "scaffold": frozenset({"story-map", "thin-slice"}),
     "story_map": frozenset({"story-map", "thin-slice"}),
-    "scenarios": frozenset(
-        {
-            "scenario-inline",
-            "scenario-main-flow",
-            "scenario-outline",
-            "scenario-template",
-        }
-    ),
+    "scenarios": frozenset({"scenario-template"}),
     "acceptance_tests": frozenset({"scenario-template"}),
 }
 
@@ -49,7 +43,6 @@ _FIDELITY_TEMPLATE_STEMS: dict[str, frozenset[str]] = {
 # (e.g. components/story-header.md is scenarios).
 _FIDELITY_TEMPLATE_ARTIFACTS: dict[str, frozenset[str]] = {
     "story_map": frozenset({"story-map", "thin-slice"}),
-    "scenarios": frozenset({"story-scenarios"}),
 }
 
 

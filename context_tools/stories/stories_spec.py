@@ -112,9 +112,9 @@ with description("Stories"):
                 expect(name in host.actions).to(equal(False))
 
     with context("whose guidance action is expanded"):
-        with it("should name `{story}.{tier}.ts` at acceptance_tests"):
+        with it("should name `{story}.{tier}.py` at acceptance_tests"):
             prose = _expanded(Stories(fidelity="acceptance_tests"), "guidance")
-            expect("{story}.{tier}.ts" in prose).to(be_true)
+            expect("{story}.{tier}.py" in prose).to(be_true)
 
         with it("should tell the agent to write epic/sub-epic/story names only at scaffold"):
             prose = _expanded(Stories(fidelity="scaffold"), "guidance")
@@ -252,6 +252,20 @@ with description("Stories"):
             expect("StoryVerbNoun" in self.templates).to(equal(False))
             expect("_story.ts" in self.templates).to(equal(False))
             expect("_story.py" in self.templates).to(equal(False))
+
+    with context("whose templates slot is expanded at scaffold markdown"):
+        with before.each:
+            self.templates = Stories(
+                fidelity="scaffold", format="markdown", session=None
+            ).templates().expand()
+
+        with it("should inline story-map and thin-slice only"):
+            expect("Story Map" in self.templates).to(be_true)
+            expect("Thin slicing" in self.templates).to(be_true)
+            expect("scenario-inline.md" in self.templates).to(equal(False))
+            expect("scenario-main-flow.md" in self.templates).to(equal(False))
+            expect("scenario-outline.md" in self.templates).to(equal(False))
+            expect("components/story-header.md" in self.templates).to(equal(False))
 
     with context("whose templates slot is expanded at scenarios python"):
         with before.each:

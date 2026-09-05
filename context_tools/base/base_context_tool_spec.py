@@ -669,9 +669,9 @@ with description("BaseContextTool._set_fidelity"):
             self.stories._set_fidelity("scenarios")
             expect(self.stories.fidelity).to(equal("scenarios"))
 
-        with it("should update format to typescript when set to scenarios"):
+        with it("should update format to python when set to scenarios"):
             self.stories._set_fidelity("scenarios")
-            expect(self.stories.format).to(equal("typescript"))
+            expect(self.stories.format).to(equal("python"))
 
         with it("should update fidelity to acceptance_tests"):
             self.stories._set_fidelity("acceptance_tests")
