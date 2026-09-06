@@ -1194,6 +1194,7 @@ class WorkSession:
         parent = Workspace(path)
         session = cls(parent, name, path=path, workspace_root=path)
         session._attach_existing_session_worktree()
+        session._restore_closed_session_if_needed()
         md = session.session_md
         if not md.is_file():
             return session
@@ -1369,6 +1370,93 @@ class WorkSession:
         closed.mkdir(parents=True, exist_ok=True)
         return closed
 
+    def _closed_archive_search_roots(self) -> list[Path]:
+        """Repo checkouts that may hold ``.sessions/closed/{name}/`` from a prior close."""
+        roots: list[Path] = []
+        seen: set[str] = set()
+
+        def add(root: Path) -> None:
+            try:
+                key = str(root.resolve())
+            except OSError:
+                key = str(root)
+            if key in seen:
+                return
+            seen.add(key)
+            closed = root / ".sessions" / "closed"
+            if closed.is_dir():
+                roots.append(closed)
+
+        add(self._repository_root())
+        add(Path(self.path or self.workspace.path))
+        git = self.git
+        if git is not None and not getattr(git, "_memory", False):
+            try:
+                add(Path(git.primary_root()))
+            except (AttributeError, TypeError, ValueError):
+                pass
+        return roots
+
+    @staticmethod
+    def _closed_archive_content_root(closed_dir: Path, name: str) -> Path | None:
+        if (closed_dir / "session.md").is_file():
+            return closed_dir
+        nested = closed_dir / name
+        if (nested / "session.md").is_file():
+            return nested
+        return None
+
+    def _find_closed_session_archive(self) -> tuple[Path, Path] | None:
+        """Return ``(closed_entry, content_root)`` for the best closed archive match."""
+        name = (self.name or "").strip()
+        if not name:
+            return None
+        candidates: list[Path] = []
+        for closed_root in self._closed_archive_search_roots():
+            exact = closed_root / name
+            if exact.is_dir():
+                candidates.append(exact)
+            prefix = f"{name}-"
+            try:
+                for item in closed_root.iterdir():
+                    if item.is_dir() and item.name.startswith(prefix):
+                        candidates.append(item)
+            except OSError:
+                continue
+        if not candidates:
+            return None
+        exact_matches = [path for path in candidates if path.name == name]
+        pool = exact_matches or candidates
+        pool.sort(
+            key=lambda path: path.stat().st_mtime if path.exists() else 0,
+            reverse=True,
+        )
+        for closed_dir in pool:
+            content = self._closed_archive_content_root(closed_dir, name)
+            if content is not None:
+                return closed_dir, content
+        return None
+
+    def _restore_closed_session_if_needed(self) -> None:
+        """Move ``.sessions/closed/{name}/`` back to ``.context/sessions/{name}/`` on reopen."""
+        if self.session_md.is_file():
+            return
+        found = self._find_closed_session_archive()
+        if found is None:
+            return
+        closed_dir, content = found
+        dest = self.folder
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if content == closed_dir:
+            shutil.move(str(closed_dir), str(dest))
+            return
+        shutil.move(str(content), str(dest))
+        try:
+            if closed_dir.is_dir() and not any(closed_dir.iterdir()):
+                closed_dir.rmdir()
+        except OSError:
+            pass
+
     def _archive_root(self) -> Path:
         """Checkout that owns closed-session archives (worktree when isolated)."""
         if self.isolate and not getattr(self.git, "_memory", False):
@@ -1439,8 +1527,12 @@ class WorkSession:
         if not self.name:
             raise ValueError("session name is required to create a sprint folder")
         self._ensure_session_worktree()
+        self._restore_closed_session_if_needed()
         self.folder.mkdir(parents=True, exist_ok=True)
         creating = not self.session_md.is_file()
+        if not creating:
+            loaded = type(self).load(self.path, self.name)
+            self._take_from(loaded)
         if creating:
             if goal:
                 self.goal = goal

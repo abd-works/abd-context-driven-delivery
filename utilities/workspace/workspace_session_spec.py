@@ -1,5 +1,6 @@
 """BDD spec for WorkSession - kit prose + tools on BaseContextTool hosts."""
 
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -655,6 +656,46 @@ with description("a WorkSession that is closed in a git worktree"):
         expect((archived / "model").read_text(encoding="utf-8")).to(equal("composer-2.5"))
         expect((tmp / ".context" / "sessions" / "archive-me").exists()).to(equal(False))
         expect(durable.is_file()).to(be_true)
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    with it("should restore a closed session folder when the session is reopened"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_reopen_closed_"))
+        git = NullGitRepo(tmp)
+        session = Workspace(str(tmp)).open_work_session("reopen-me", git=git)
+        session.ensure_started(goal="first pass")
+        (session.folder / "notes.txt").write_text("keep me\n", encoding="utf-8")
+        session.close_session(outcome="paused", handoff="")
+        archived = tmp / ".sessions" / "closed" / "reopen-me"
+        expect(archived.is_dir()).to(be_true)
+        expect((tmp / ".context" / "sessions" / "reopen-me").exists()).to(equal(False))
+        reopened = Workspace(str(tmp)).open_work_session("reopen-me", git=git)
+        expect(reopened.folder.is_dir()).to(be_true)
+        expect((reopened.folder / "session.md").is_file()).to(be_true)
+        expect((reopened.folder / "notes.txt").read_text(encoding="utf-8")).to(
+            equal("keep me\n")
+        )
+        expect(archived.exists()).to(equal(False))
+        expect(reopened.outcome).to(equal("paused"))
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    with it("should restore a dated closed archive folder on reopen"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_reopen_dated_"))
+        git = NullGitRepo(tmp)
+        session = Workspace(str(tmp)).open_work_session("dated-me", git=git)
+        session.ensure_started()
+        closed_root = tmp / ".sessions" / "closed"
+        closed_root.mkdir(parents=True, exist_ok=True)
+        dated = closed_root / "dated-me-2026-09-06"
+        shutil.move(str(session.folder), str(dated))
+        reopened = Workspace(str(tmp)).open_work_session("dated-me", git=git)
+        expect((reopened.folder / "session.md").is_file()).to(be_true)
+        expect(dated.exists()).to(equal(False))
         shutil.rmtree(tmp, ignore_errors=True)
 
     with it("should close a forgotten turn before session close"):
