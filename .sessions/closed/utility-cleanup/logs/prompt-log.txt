@@ -1,0 +1,88 @@
+
+==============================================================================
+2026-09-06T17:28:19Z  preToolUse:Shell  conv=9258f444  gen=432b4599  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Get-ChildItem "C:\dev\abd-context-driven-delivery\.sessions\closed\utility-cleanup-2026-09-06" -Recurse -ErrorAction SilentlyContinue | Select-Object FullName
+
+==============================================================================
+2026-09-06T17:28:22Z  preToolUse:Shell  conv=9258f444  gen=432b4599  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Test-Path "C:\dev\abd-context-driven-delivery\.sessions\closed\utility-cleanup-2026-09-06"; (Get-ChildItem "C:\dev\abd-context-driven-delivery\.sessions\closed\utility-cleanup-2026-09-06" -Force | Measure-Object).Count
+
+==============================================================================
+2026-09-06T17:28:26Z  preToolUse:Shell  conv=9258f444  gen=432b4599  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Copy-Item "C:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py" "C:\dev\abd-context-driven-delivery\utilities\workspace\workspace.py" -Force; cd C:\dev\abd-context-driven-delivery; git add utilities/workspace/workspace.py; git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -m "$( @'
+Merge sibling files from dated closed archive shells on session reopen.
+'@ )"; git push origin main
+
+==============================================================================
+2026-09-06T17:28:26Z  preToolUse:Write  conv=9258f444  gen=432b4599  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T17:28:35Z  afterAgentResponse  conv=9258f444  gen=432b4599  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+text: **Fixed and pushed to main** (`e4448a3d`).
+
+### What was wrong
+`start_work_session` created a fresh `.context/sessions/{name}/` on reopen but **never moved** the archived folder back from `.sessions/closed/{name}/`. A stale active folder also blocked restore.
+
+### What it does now
+On `open` / `ensure_started`:
+
+... [25 lines, 1146 chars total]
+
+==============================================================================
+2026-09-06T17:30:01Z  beforeSubmitPrompt  conv=9258f444  gen=2f971419  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+lets /finish-work-session first then ill do this from scratch
+
+==============================================================================
+2026-09-06T17:30:05Z  preToolUse:Shell  conv=9258f444  gen=2f971419  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git worktree list; Test-Path "C:\dev\abd-cdd-utility-cleanup"; Test-Path "C:\dev\abd-context-driven-delivery"
+
+==============================================================================
+2026-09-06T17:30:05Z  preToolUse:Shell  conv=9258f444  gen=2f971419  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-context-driven-delivery; git status --short; git branch --show-current
+
+==============================================================================
+2026-09-06T17:30:09Z  preToolUse:Grep  conv=9258f444  gen=2f971419  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: C:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T17:30:09Z  preToolUse:Grep  conv=9258f444  gen=2f971419  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: C:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T17:30:09Z  preToolUse:Shell  conv=9258f444  gen=2f971419  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; git status --short; git log -2 --oneline
+
+==============================================================================
+2026-09-06T17:30:13Z  preToolUse:Shell  conv=9258f444  gen=2f971419  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; @'
+toolset: workspace.workspace:WorkSession
+tool: finish_work_session
+'@ | .\tools.ps1 run -
