@@ -658,6 +658,22 @@ with description("a WorkSession that is closed in a git worktree"):
         expect(durable.is_file()).to(be_true)
         shutil.rmtree(tmp, ignore_errors=True)
 
+    with it("should leave git clean after archive when session.md was tracked"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_close_git_clean_"))
+        git = NullGitRepo(tmp)
+        git.set_dirty(False)
+        session = Workspace(str(tmp)).open_work_session("tracked-close", git=git)
+        session.ensure_started()
+        session_md = session.folder / "session.md"
+        git.commit([str(session_md)], "track session.md")
+        git.set_dirty(False)
+        session.close(outcome="done", handoff="")
+        expect(git.is_dirty(untracked=False)).to(be_false)
+        shutil.rmtree(tmp, ignore_errors=True)
+
     with it("should restore a closed session folder when the session is reopened"):
         from workspace.git_repo import NullGitRepo
         from workspace.workspace import Workspace

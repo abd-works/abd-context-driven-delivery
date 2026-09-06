@@ -1523,6 +1523,23 @@ class WorkSession:
         except (GitConnectError, ValueError):
             pass
 
+    def _commit_active_session_removal(self) -> None:
+        """Stage tracked deletions under ``.context/sessions/{name}/`` after archive move."""
+        slug = (self.name or "").strip()
+        if not slug:
+            return
+        root = Path(self.path or self.git.root)
+        session_path = SessionPaths.sessions_root(root) / slug
+        if session_path.is_dir():
+            return
+        try:
+            self.git.commit(
+                [str(session_path)],
+                f"remove active session {slug}",
+            )
+        except (GitConnectError, ValueError):
+            pass
+
     def _bind_active_session_logs(self) -> None:
         root = Path(self.path or self.git.root)
         write_active_session(root, self.name or SessionModel.DEFAULT_SESSION)
@@ -1839,6 +1856,7 @@ class WorkSession:
             self.save_chat(path)
         archived = self._archive_session_folder()
         self._commit_closed_archive(archived)
+        self._commit_active_session_removal()
         clear_active_session(Path(self.path or self.git.root))
         if not self.sync_only_close:
             self._land_on_default_branch()
