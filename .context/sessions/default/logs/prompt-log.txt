@@ -1,141 +1,64 @@
 
 ==============================================================================
-2026-09-06T16:56:38Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+2026-09-06T16:57:44Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
 ------------------------------------------------------------------------------
 
-command: cd C:\dev\abd-cdd-utility-cleanup; git status; git log -3 --oneline
+command: cd C:\dev\abd-cdd-utility-cleanup; git status; git log -3 --oneline; git branch -vv
 
 ==============================================================================
-2026-09-06T16:56:38Z  preToolUse:Grep  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+2026-09-06T16:57:44Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
 ------------------------------------------------------------------------------
 
-pattern: consolidate|archive|default.*logs|rmdir
+command: git worktree list
+
+==============================================================================
+2026-09-06T16:57:44Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-context-driven-delivery; git log -3 --oneline; git status --short
+
+==============================================================================
+2026-09-06T16:57:50Z  preToolUse:Grep  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: _remove_session_worktree|_land_on_default
 path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
 
 ==============================================================================
-2026-09-06T16:56:38Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+2026-09-06T16:57:50Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
 ------------------------------------------------------------------------------
 
-read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\session_logs.py
+command: cd C:\dev\abd-context-driven-delivery; git status --short
 
 ==============================================================================
-2026-09-06T16:56:38Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
-------------------------------------------------------------------------------
-
-READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\session_logs.py
-size: 4426 chars
-preview:
-"""Session-scoped hook log paths â€” always under ``.context/sessions/{name}/logs/``."""
-
-from __future__ import annotations
-
-import shutil
-from datetime import date
-from pathlib import Path
-
-... [134 lines, 4426 chars total]
-
-==============================================================================
-2026-09-06T16:56:41Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
-------------------------------------------------------------------------------
-
-read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
-
-==============================================================================
-2026-09-06T16:56:41Z  preToolUse:Grep  conv=9258f444  gen=08d3b5b8  model=composer-2.5
-------------------------------------------------------------------------------
-
-pattern: finish_work_session
-path [file]: c:\dev\abd-cdd-utility-cleanup
-
-==============================================================================
-2026-09-06T16:56:42Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
-------------------------------------------------------------------------------
-
-READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
-size: 3354 chars
-preview:
-
-    @staticmethod
-    def _closed_sessions_dir(repo_root: Path) -> Path:
-        closed = repo_root / ".sessions" / "closed"
-        closed.mkdir(parents=True, exist_ok=True)
-        return closed
-
-    def _archive_root(self) -> Path:
-... [100 lines, 3354 chars total]
-
-==============================================================================
-2026-09-06T16:56:46Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
-------------------------------------------------------------------------------
-
-read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
-
-==============================================================================
-2026-09-06T16:56:46Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
-------------------------------------------------------------------------------
-
-read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
-
-==============================================================================
-2026-09-06T16:56:46Z  preToolUse:Grep  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+2026-09-06T16:57:54Z  preToolUse:Grep  conv=9258f444  gen=08d3b5b8  model=composer-2.5
 ------------------------------------------------------------------------------
 
 pattern: 
 path [file]: c:\dev\abd-cdd-utility-cleanup
 
 ==============================================================================
-2026-09-06T16:56:47Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+2026-09-06T16:57:54Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
 ------------------------------------------------------------------------------
 
-READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
-size: 3413 chars
-preview:
-        except GitConnectError:
-            pass
-        return "finished without work session"
-
-    @prompt(name="finish-work-session")
-    @agent_tool
-    def finish_work_session(
-        self,
-... [80 lines, 3413 chars total]
+command: cd C:\dev\abd-cdd-utility-cleanup; git show HEAD:primitives/hooks/session_logs.py | Select-String -Pattern "OSError" -Context 0,2
 
 ==============================================================================
-2026-09-06T16:56:47Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+2026-09-06T16:57:57Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
 ------------------------------------------------------------------------------
 
-READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
-size: 4450 chars
-preview:
-        seen: set[str] = set()
-
-        def _add(path: str) -> None:
-            if path and path not in seen:
-                seen.add(path)
-                paths.append(path)
-
-        current = self.current_cursor_chat_file()
-... [120 lines, 4450 chars total]
+command: cd C:\dev\abd-cdd-utility-cleanup; $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities;c:\dev\abd-cdd-utility-cleanup\context_tools;c:\dev\abd-cdd-utility-cleanup\context_tools\actions"; .\.venv\Scripts\python.exe -m mamba.cli utilities/workspace/workspace_session_spec.py 2>&1 | Select-Object -Last 15
 
 ==============================================================================
-2026-09-06T16:56:50Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+2026-09-06T16:58:31Z  afterAgentResponse  conv=9258f444  gen=08d3b5b8  model=composer-2.5-fast
 ------------------------------------------------------------------------------
 
-read [file]: c:\dev\abd-cdd-utility-cleanup\.context\sessions\_active
+text: **`/finish-work-session` completed successfully.**
 
-==============================================================================
-2026-09-06T16:56:50Z  preToolUse:Grep  conv=9258f444  gen=08d3b5b8  model=composer-2.5
-------------------------------------------------------------------------------
+### Landed
+- Session closed and archived to `.sessions/closed/utility-cleanup-2026-09-06/` (includes `session.md` and logs: `prompt-log.txt`, `dispatch.debug`)
+- Merged to **main** at `8bd4894a` (`archive session utility-cleanup`)
+- Primary clone `C:\dev\abd-context-driven-delivery` is clean and on main
 
-pattern: 
-path [file]: c:\dev\abd-cdd-utility-cleanup
-
-==============================================================================
-2026-09-06T16:56:50Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
-------------------------------------------------------------------------------
-
-command: cd C:\dev\abd-cdd-utility-cleanup; @'
-toolset: workspace.workspace:WorkSession
-tool: finish_work_session
-'@ | .\tools.ps1 run -
+### Worktree still present
+... [16 lines, 1092 chars total]
