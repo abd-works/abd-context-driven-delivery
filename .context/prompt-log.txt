@@ -20204,3 +20204,104 @@ text: Shims removed. Everything lives in **`primitives/hooks/dispatch.py`** only
 - `skill_inject.py`
 
 ... [15 lines, 559 chars total]
+
+==============================================================================
+2026-09-06T16:30:37Z  beforeSubmitPrompt  conv=9258f444  gen=68d2b8ce  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+/finish-work-session 
+
+==============================================================================
+2026-09-06T16:30:40Z  preToolUse:Shell  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git status --short; Write-Output "---"; git branch -v; Write-Output "---"; if (Test-Path .context/sessions) { Get-ChildItem .context/sessions -Recurse -Filter session.md | Select-Object -ExpandProperty FullName }
+
+==============================================================================
+2026-09-06T16:30:40Z  preToolUse:Read  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\finish-work-session\SKILL.md
+
+==============================================================================
+2026-09-06T16:30:41Z  beforeReadFile  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\finish-work-session\SKILL.md
+size: 1503 chars
+preview:
+---
+name: finish-work-session
+description: "finish_work_session â€” close the current work session."
+disable-model-invocation: true
+---
+
+finish_work_session â€” close the current work session.
+
+... [33 lines, 1503 chars total]
+
+==============================================================================
+2026-09-06T16:30:45Z  preToolUse:Read  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\.context\sessions\utility-cleanup\session.md
+
+==============================================================================
+2026-09-06T16:30:45Z  preToolUse:Shell  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git log -3 --oneline; git worktree list
+
+==============================================================================
+2026-09-06T16:30:45Z  beforeReadFile  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\.context\sessions\utility-cleanup\session.md
+size: 182 chars
+preview:
+# Session: utility-cleanup
+
+## Start
+
+- **date:** 2026-09-06
+- **path:** C:\dev\abd-cdd-utility-cleanup
+- **goal:** utility cleanup
+- **fidelities:** (unset)
+... [9 lines, 182 chars total]
+
+==============================================================================
+2026-09-06T16:30:50Z  preToolUse:Grep  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn
+
+==============================================================================
+2026-09-06T16:30:50Z  preToolUse:Grep  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T16:30:50Z  preToolUse:Grep  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T16:30:54Z  preToolUse:Shell  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Remove-Item -Force -ErrorAction SilentlyContinue ".context/hooks/turn/hook-spec-probe.txt", ".context/hooks/turn/live-probe.txt", ".context/hooks/turn/subagent-agent-probe.txt", ".context/hooks/turn/final-reality-probe.txt", ".context/hooks/turn/agent-reality-probe2.txt", ".context/hooks/turn/agent-reality-probe.txt", ".context/hooks/turn/subagent-probe.txt", ".context/hooks/turn/_hook_spec_probe.txt", ".context/hooks/turn/_auto_turn_probe.txt"; Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "tmp_wrong_cwd"; git status --short
+
+==============================================================================
+2026-09-06T16:30:57Z  preToolUse:Shell  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: @'
+toolset: workspace.workspace:WorkSession
+tool: finish_work_session
+'@ | .\tools.ps1 run -
