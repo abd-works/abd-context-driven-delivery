@@ -18920,3 +18920,29 @@ cd c:\dev\abd-cdd-utility-cleanup
 ==============================================================================
 2026-09-06T07:23:30Z  afterAgentResponse  conv=hook-spe  gen=spec1  model=
 ------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T07:23:31Z  preToolUse:Shell  conv=ce7fb82b  gen=3125a411  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; Write-Host "STEP1:"; if (Test-Path ".context/hooks/turn/auto_turn_after_agent_response.enabled") { Write-Host "PASS - flag exists" } else { Write-Host "FAIL - flag missing" }; Write-Host "STEP2:"; .\.venv\Scripts\python.exe primitives/hooks/install_dispatch.py; if ($LASTEXITCODE -eq 0) { Write-Host "PASS - install exit 0" } else { Write-Host "FAIL - install exit $LASTEXITCODE" }
+
+==============================================================================
+2026-09-06T07:23:32Z  preToolUse:Shell  conv=ce7fb82b  gen=3125a411  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; Write-Host "STEP3 probe:"; if (Test-Path ".context/hooks/turn/agent-reality-probe.txt") { Write-Host "PASS - probe exists" } else { Write-Host "FAIL - probe missing" }; $before = git rev-parse HEAD; Write-Host "BEFORE_SHA=$before"; $ls = git ls-files agent-reality-probe; if ([string]::IsNullOrWhiteSpace($ls)) { Write-Host "PASS - probe not tracked" } else { Write-Host "FAIL - probe tracked: $ls" }
+
+==============================================================================
+2026-09-06T07:23:34Z  afterAgentResponse  conv=no-pytho  gen=  model=
+------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T07:23:34Z  preToolUse:Shell  conv=ce7fb82b  gen=3125a411  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; $payload = '{"hook_event_name":"afterAgentResponse","conversation_id":"reality-e2e","generation_id":"g1"}'; $out = $payload | .\.venv\Scripts\python.exe primitives\hooks\dispatch.py; Write-Host "STEP4 exit=$LASTEXITCODE"; Write-Host "stdout=$out"; if ($LASTEXITCODE -eq 0 -and $out.Trim() -eq '{"permission": "allow"}') { Write-Host "PASS" } else { Write-Host "FAIL" }
+
+==============================================================================
+2026-09-06T07:23:35Z  afterAgentResponse  conv=reality-  gen=g1  model=
+------------------------------------------------------------------------------
