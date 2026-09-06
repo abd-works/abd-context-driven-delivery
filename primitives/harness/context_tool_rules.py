@@ -1,4 +1,4 @@
-"""Deploy Cursor rules from context-tool markdown Shared rules and fidelity ### Rules."""
+"""Deploy Cursor rules and procedures from context-tool markdown kits."""
 
 from __future__ import annotations
 
@@ -76,6 +76,14 @@ _SHARED_HEADING = re.compile(
     r"^(?:##\s+Shared\s+rules|\*\*Shared\s+Rules:\*\*)\s*$",
     re.MULTILINE | re.IGNORECASE,
 )
+_SHARED_PROCEDURE_HEADING = re.compile(
+    r"^(?:##\s+Shared\s+procedure|\*\*Shared\s+Procedure:\*\*)\s*$",
+    re.MULTILINE | re.IGNORECASE,
+)
+_PROCEDURE_HEADING = re.compile(
+    r"^###\s+Procedure\s*$",
+    re.MULTILINE | re.IGNORECASE,
+)
 _CDD_STAGE_RULES = re.compile(
     r"^##\s+Stages\s+\(CDD\s+fidelity\)\s*$", re.MULTILINE | re.IGNORECASE
 )
@@ -97,6 +105,33 @@ def _escape_description(text: str) -> str:
 
 def _skill_ref(tool_slug: str, fidelity: str) -> str:
     return f"{tool_slug}-{fidelity}"
+
+
+def _section_until_heading(block: str, start: int, *, stop_levels: frozenset[int]) -> str:
+    lines: list[str] = []
+    for line in block[start:].splitlines():
+        heading = re.match(r"^(#{1,6})\s+\S", line)
+        if heading and len(heading.group(1)) in stop_levels:
+            break
+        lines.append(line)
+    return "\n".join(lines).strip()
+
+
+def _procedure_section_body(block: str) -> str:
+    match = _PROCEDURE_HEADING.search(block)
+    if not match:
+        return ""
+    return _section_until_heading(block, match.end(), stop_levels=frozenset({2, 3}))
+
+
+def _shared_procedure_body(text: str) -> str:
+    match = _SHARED_PROCEDURE_HEADING.search(text)
+    if not match:
+        return ""
+    rest = text[match.end() :]
+    end = re.search(r"^##\s+\S", rest, re.MULTILINE)
+    section = rest[: end.start()] if end else rest
+    return section.strip()
 
 
 def _rules_section_body(block: str) -> str:
@@ -201,6 +236,28 @@ def _oxford_or(items: list[str]) -> str:
     return ", ".join(items[:-1]) + f", or {items[-1]}"
 
 
+def _procedure_opener(
+    tool_slug: str,
+    *,
+    shared: bool,
+    fidelity: str = "",
+    skill_refs: list[str],
+    fidelity_names: frozenset[str] = frozenset(),
+) -> str:
+    refs = ", ".join(f"@{ref}" for ref in skill_refs)
+    if shared:
+        activities = _oxford_or([name.replace("_", " ") for name in sorted(fidelity_names)])
+        return (
+            f"When {activities}, follow this procedure on top of fidelity-specific ones. "
+            f"See {refs} for full generate guidance.\n\n"
+        )
+    activity = fidelity.replace("_", " ")
+    return (
+        f"When {activity}, follow this procedure. "
+        f"See @{_skill_ref(tool_slug, fidelity)} for the full skill.\n\n"
+    )
+
+
 def _rule_opener(
     tool_slug: str,
     *,
@@ -268,6 +325,75 @@ def _apply_fidelity_rule_stacks(
             )
         )
     return merged
+
+
+def procedures_for_context_tool(
+    tool_dir: Path,
+    *,
+    slug: str,
+    class_name: str = "",
+) -> list[ContextToolRuleSpec]:
+    md_path = _kit_markdown(tool_dir, slug)
+    if md_path is None:
+        return []
+    text = md_path.read_text(encoding="utf-8", errors="replace")
+    py_path = tool_dir / f"{slug}.py"
+    if not py_path.is_file():
+        py_files = list(tool_dir.glob("*.py"))
+        py_path = py_files[0] if len(py_files) == 1 else py_path
+    fidelity_names = _fidelity_names_from_py(py_path, class_name) if py_path.is_file() else frozenset()
+    router_fidelities = frozenset(
+        name for name in fidelity_names if name not in _ROUTER_SKIP_FIDELITIES
+    )
+    skill_refs = _fidelity_skill_refs(slug, router_fidelities)
+
+    specs: list[ContextToolRuleSpec] = []
+
+    shared_body = _shared_procedure_body(text)
+    if shared_body:
+        globs = _shared_globs(slug)
+        specs.append(
+            ContextToolRuleSpec(
+                tool_slug=slug,
+                name=f"{slug}-procedure",
+                description=f"{slug} shared procedure — apply across all fidelities",
+                globs=globs,
+                body=_procedure_opener(
+                    slug,
+                    shared=True,
+                    skill_refs=skill_refs,
+                    fidelity_names=router_fidelities,
+                )
+                + "\n"
+                + shared_body,
+            )
+        )
+
+    for heading, block in _iter_h2_blocks(text):
+        fidelity = _h2_slug(heading)
+        if fidelity not in _FIDELITY_H2_NAMES and fidelity not in fidelity_names:
+            continue
+        procedure_body = _procedure_section_body(block)
+        if not procedure_body:
+            continue
+        specs.append(
+            ContextToolRuleSpec(
+                tool_slug=slug,
+                name=f"{fidelity}-procedure",
+                description=f"{slug} {fidelity.replace('_', ' ')} procedure",
+                globs=_glob_for(slug, fidelity),
+                body=_procedure_opener(
+                    slug,
+                    shared=False,
+                    fidelity=fidelity,
+                    skill_refs=skill_refs,
+                )
+                + "\n"
+                + procedure_body,
+            )
+        )
+
+    return specs
 
 
 def rules_for_context_tool(
@@ -379,3 +505,14 @@ def all_context_tool_rule_specs(repo_root: Path | None = None) -> list[ContextTo
     for slug, tool_dir, class_name in iter_context_tool_dirs(repo_root):
         specs.extend(rules_for_context_tool(tool_dir, slug=slug, class_name=class_name))
     return specs
+
+
+def all_context_tool_procedure_specs(repo_root: Path | None = None) -> list[ContextToolRuleSpec]:
+    specs: list[ContextToolRuleSpec] = []
+    for slug, tool_dir, class_name in iter_context_tool_dirs(repo_root):
+        specs.extend(procedures_for_context_tool(tool_dir, slug=slug, class_name=class_name))
+    return specs
+
+
+def all_context_tool_mdc_specs(repo_root: Path | None = None) -> list[ContextToolRuleSpec]:
+    return all_context_tool_rule_specs(repo_root) + all_context_tool_procedure_specs(repo_root)
