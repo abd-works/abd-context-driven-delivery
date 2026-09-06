@@ -208,3 +208,11 @@
 2026-09-06T07:23:34Z EVENT 'afterAgentResponse' conversation_id='no-pythonpath' payload_keys=['conversation_id', 'hook_event_name']
 2026-09-06T07:23:35Z ENTRY raw_len=95 raw=b'{"hook_event_name":"afterAgentResponse","conversation_id":"reality-e2e","generation_id":"g1"}\r\n'
 2026-09-06T07:23:35Z EVENT 'afterAgentResponse' conversation_id='reality-e2e' payload_keys=['conversation_id', 'generation_id', 'hook_event_name']
+2026-09-06T07:23:37Z HANDLER Turn.auto_turn result_keys=[] result={}
+2026-09-06T07:23:37Z ENABLED ['Turn.auto_turn']
+2026-09-06T07:23:37Z MERGED {"permission": "allow"}
+2026-09-06T07:23:41Z HANDLER Turn.auto_turn result_keys=[] result={}
+2026-09-06T07:23:41Z ENABLED ['Turn.auto_turn']
+2026-09-06T07:23:41Z MERGED {"permission": "allow"}
+2026-09-06T07:24:02Z ENTRY raw_len=93 raw=b'{"hook_event_name":"afterAgentResponse","conversation_id":"debug-e2e","generation_id":"g1"}\r\n'
+2026-09-06T07:24:02Z EVENT 'afterAgentResponse' conversation_id='debug-e2e' payload_keys=['conversation_id', 'generation_id', 'hook_event_name']

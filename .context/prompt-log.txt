@@ -18946,3 +18946,43 @@ command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; $payload = 
 ==============================================================================
 2026-09-06T07:23:35Z  afterAgentResponse  conv=reality-  gen=g1  model=
 ------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T07:23:38Z  preToolUse:Shell  conv=ce7fb82b  gen=3125a411  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; $before = "f11d68db04e1d698cd0feefccb5516dc5c86ca33"; $after = git rev-parse HEAD; Write-Host "AFTER_SHA=$after"; if ($after -ne $before) { Write-Host "PASS - SHA changed" } else { Write-Host "FAIL - SHA unchanged" }; $tracked = git ls-files .context/hooks/turn/agent-reality-probe.txt; Write-Host "tracked=$tracked"; if ($tracked -eq ".context/hooks/turn/agent-reality-probe.txt") { Write-Host "PASS - file tracked" } else { Write-Host "FAIL - file not tracked" }; Get-Content .context/hooks/turn/auto_turn.last_run.json -Raw; Write-Host "
+... [1 lines, 671 chars total]
+
+==============================================================================
+2026-09-06T07:24:00Z  preToolUse:Shell  conv=9258f444  gen=2921ef90  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; New-Item -ItemType File -Force -Path ".context/hooks/turn/agent-reality-probe2.txt" -Value "probe2" | Out-Null; $before = git rev-parse HEAD; $payload = '{"hook_event_name":"afterAgentResponse","conversation_id":"debug-e2e","generation_id":"g1"}'; $payload | .\.venv\Scripts\python.exe primitives/hooks/dispatch.py; $after = git rev-parse HEAD; Write-Output "before=$before after=$after"; Get-Content .context/hooks/turn/auto_turn.last_run.json; git ls-files .context/hooks/turn/agent-reality-probe2.txt
+
+==============================================================================
+2026-09-06T07:24:01Z  preToolUse:Read  conv=9258f444  gen=2921ef90  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T07:24:01Z  beforeReadFile  conv=9258f444  gen=2921ef90  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 1524 chars
+preview:
+class TurnCommit:
+    """Git commit produced by ``Turn.turn`` â€” ``name`` is the commit subject line."""
+
+    name: str
+    branch: str
+    sha: str
+    context_tool: str = ""
+    action: str = ""
+... [50 lines, 1524 chars total]
+
+==============================================================================
+2026-09-06T07:24:02Z  afterAgentResponse  conv=debug-e2  gen=g1  model=
+------------------------------------------------------------------------------
