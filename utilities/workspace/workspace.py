@@ -1458,6 +1458,14 @@ class WorkSession:
         if dest.exists():
             shutil.rmtree(dest, ignore_errors=True)
         self._move_tree_contents(content, dest)
+        if closed_dir != content:
+            for item in closed_dir.iterdir():
+                if item.name == self.name:
+                    continue
+                target = dest / item.name
+                if target.exists():
+                    continue
+                shutil.move(str(item), str(target))
         if content != closed_dir:
             try:
                 if content.is_dir() and not any(content.iterdir()):
