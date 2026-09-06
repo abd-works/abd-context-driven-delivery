@@ -101,17 +101,27 @@ def consolidate_logs_for_close(repo_root: Path, session_name: str) -> None:
         if not file_path.is_file():
             return
         target = dest_logs / file_path.name
-        if target.exists():
-            target.unlink()
-        shutil.move(str(file_path), str(target))
+        try:
+            if target.exists():
+                target.unlink()
+            shutil.move(str(file_path), str(target))
+        except OSError:
+            try:
+                shutil.copy2(str(file_path), str(target))
+                file_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     default_logs = session_logs_dir_for(repo_root, DEFAULT_SESSION)
     if default_logs.is_dir() and default_logs != dest_logs:
         for item in list(default_logs.iterdir()):
             if item.is_file():
                 _move_into(item)
-        if not any(default_logs.iterdir()):
-            default_logs.rmdir()
+        try:
+            if default_logs.is_dir() and not any(default_logs.iterdir()):
+                default_logs.rmdir()
+        except OSError:
+            pass
 
     for rel in _LEGACY_LOG_PATHS:
         _move_into(repo_root / rel)
