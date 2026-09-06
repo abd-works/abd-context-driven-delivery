@@ -537,7 +537,7 @@ class Harness:
             self.skills.append(skill_file)
             return name
         if kind == "hook":
-            from hooks.deploy import hook_skill_sources
+            from hooks.dispatch import hook_skill_sources
 
             payloads, events = hook_skill_sources(source)
             for payload in payloads:
@@ -869,8 +869,7 @@ class Harness:
         Partial deploys that do not emit any ``@hook`` sources leave hooks.json
         unchanged so an earlier full deploy is not stripped.
         """
-        from hooks.bootstrap import load
-        from hooks.deploy import deploy_dispatch
+        from hooks.dispatch import deploy_dispatch, load
         from hooks.hook import Hook
 
         if wanted.strip() and not self._hook_events:
@@ -1047,7 +1046,7 @@ class Harness:
                     shutil.rmtree(target)
                     removed.append(str(target))
         if self.type == "Cursor":
-            from hooks.deploy import deploy_dispatch
+            from hooks.dispatch import deploy_dispatch
 
             hooks_json = self.repo_root / ".cursor" / "hooks.json"
             deploy_dispatch(self.repo_root, set())

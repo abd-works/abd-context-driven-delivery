@@ -301,3 +301,23 @@
 2026-09-06T16:28:44Z MERGED {"permission": "allow"}
 2026-09-06T16:29:01Z ENTRY raw_len=1847 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"8184fb29-ddc0-46a3-b1ec-724427e5432f","model":"composer-2.5-fast","model_id":"composer-2.5","model_params":[{"id":"fast","'
 2026-09-06T16:29:01Z EVENT 'afterAgentResponse' conversation_id='9258f444-8a88-4c20-8641-d5b916c9f19a' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T16:29:07Z HANDLER Turn.auto_turn result_keys=[] result={}
+2026-09-06T16:29:07Z ENABLED ['Turn.auto_turn']
+2026-09-06T16:29:07Z MERGED {"permission": "allow"}
+2026-09-06T16:29:24Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-06T16:29:24Z ENABLED ['(none)']
+2026-09-06T16:29:24Z MERGED {"permission": "allow"}
+2026-09-06T16:29:24Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-06T16:29:24Z HANDLER _DispatchFixture.on_after result_keys=['agent_message'] result={"agent_message": "ran"}
+2026-09-06T16:29:24Z ENABLED ['_DispatchFixture.on_after']
+2026-09-06T16:29:24Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-09-06T16:29:24Z EVENT 'stop' conversation_id=None payload_keys=['hook_event_name']
+2026-09-06T16:29:24Z HANDLER _StopFixture.on_stop result_keys=['followup_message'] result={"followup_message": "/turn"}
+2026-09-06T16:29:24Z ENABLED ['_StopFixture.on_stop']
+2026-09-06T16:29:24Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-09-06T16:29:24Z EVENT 'beforeSubmitPrompt' conversation_id=None payload_keys=['hook_event_name']
+2026-09-06T16:29:24Z HANDLER _MessageFixture.on_before result_keys=['agent_message', 'user_message'] result={"user_message": "for user", "agent_message": "for agent"}
+2026-09-06T16:29:24Z ENABLED ['_MessageFixture.on_before']
+2026-09-06T16:29:24Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-09-06T16:29:25Z ENTRY raw_len=103 raw=b'{"hook_event_name": "afterAgentResponse", "conversation_id": "hook-spec-e2e", "generation_id": "spec1"}'
+2026-09-06T16:29:25Z EVENT 'afterAgentResponse' conversation_id='hook-spec-e2e' payload_keys=['conversation_id', 'generation_id', 'hook_event_name']

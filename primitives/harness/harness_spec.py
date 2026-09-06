@@ -26,7 +26,7 @@ from harness.command import Command
 from harness.context_tool_rules import rules_for_context_tool
 from harness.harness import Harness
 from harness.harness_tool import required_init_params
-from hooks.deploy import HookBinding, hook_skill_sources
+from hooks.dispatch import HookBinding, hook_skill_sources
 from harness.instruction import Instruction
 from harness.prompt import Prompt
 from harness.returned_guidance import compound_guidance

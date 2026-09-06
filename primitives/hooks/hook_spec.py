@@ -24,7 +24,7 @@ from expects import be_true, contain, equal, expect, have_key, raise_error
 from mamba import context, description, it
 from tools.tool import toolset
 
-from hooks.deploy import HookBinding
+from hooks.dispatch import HookBinding
 from hooks.dispatch import dispatch, parse_payload
 from hooks.hook import Hook, HookHarness, hook
 

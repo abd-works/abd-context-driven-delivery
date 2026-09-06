@@ -45,8 +45,7 @@ def main():
     _HOOKS_JSON.parent.mkdir(parents=True, exist_ok=True)
     _HOOKS_JSON.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
     try:
-        from hooks.bootstrap import load
-        from hooks.deploy import deploy_dispatch
+        from hooks.dispatch import deploy_dispatch, load
         from hooks.hook import Hook
 
         load()
