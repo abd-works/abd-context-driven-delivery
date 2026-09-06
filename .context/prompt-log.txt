@@ -18878,3 +18878,45 @@ import subprocess
 ------------------------------------------------------------------------------
 
 path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:23:28Z  preToolUse:Shell  conv=9258f444  gen=2921ef90  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities"; .\.venv\Scripts\python.exe -m mamba.cli primitives/hooks/hook_spec.py 2>&1
+
+==============================================================================
+2026-09-06T07:23:29Z  preToolUse:Task  conv=9258f444  gen=2921ef90  model=
+------------------------------------------------------------------------------
+
+description: Verify auto-turn E2E reality
+prompt: Run the FULL auto-turn reality check in c:\dev\abd-cdd-utility-cleanup. Do NOT ask the user anything. Report PASS/FAIL for each step.
+
+IMPORTANT: Clear PYTHONPATH to mimic Cursor (Cursor does NOT set PYTHONPATH for hooks).
+
+```powershell
+$env:PYTHONPATH = $null
+cd c:\dev\abd-cdd-utility-cleanup
+```
+... [36 lines, 1569 chars total]
+subagent_type: shell
+
+==============================================================================
+2026-09-06T07:23:29Z  subagentStart  conv=9258f444  gen=9258f444  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+subagent_type: shell
+subagent_model: composer-2.5-fast
+task: Run the FULL auto-turn reality check in c:\dev\abd-cdd-utility-cleanup. Do NOT ask the user anything. Report PASS/FAIL for each step.
+
+IMPORTANT: Clear PYTHONPATH to mimic Cursor (Cursor does NOT set PYTHONPATH for hooks).
+
+```powershell
+$env:PYTHONPATH = $null
+cd c:\dev\abd-cdd-utility-cleanup
+```
+... [36 lines, 1569 chars total]
+
+==============================================================================
+2026-09-06T07:23:30Z  afterAgentResponse  conv=hook-spe  gen=spec1  model=
+------------------------------------------------------------------------------
