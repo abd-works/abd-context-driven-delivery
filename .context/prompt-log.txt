@@ -19401,3 +19401,394 @@ text: **It worked.** Live Cursor auto-turn ran and committed your change.
 | Commit message | `turn: auto turn after agent response` |
 | Live `conversation_id` | `9258f444-8a88-4c20-8641-d5b916c9f19a` (your real chat) |
 ... [15 lines, 653 chars total]
+
+==============================================================================
+2026-09-06T16:27:22Z  beforeSubmitPrompt  conv=9258f444  gen=ebe142e6  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+merge these all into one file
+
+==============================================================================
+2026-09-06T16:27:27Z  preToolUse:Grep  conv=9258f444  gen=ebe142e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: install_dispatch|_ensure_paths|dispatch\.py
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T16:27:27Z  preToolUse:Read  conv=9258f444  gen=ebe142e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\bootstrap.py
+
+==============================================================================
+2026-09-06T16:27:28Z  preToolUse:Read  conv=9258f444  gen=ebe142e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\install_dispatch.py
+
+==============================================================================
+2026-09-06T16:27:28Z  beforeReadFile  conv=9258f444  gen=ebe142e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\bootstrap.py
+size: 548 chars
+preview:
+"""Import toolsets that declare ``@hook`` handlers so the registry is populated."""
+
+from __future__ import annotations
+
+import importlib
+import sys
+from pathlib import Path
+
+... [23 lines, 548 chars total]
+
+==============================================================================
+2026-09-06T16:27:28Z  beforeReadFile  conv=9258f444  gen=ebe142e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\install_dispatch.py
+size: 912 chars
+preview:
+"""Merge dispatch.py hook entries into .cursor/hooks.json."""
+
+import importlib.util
+from pathlib import Path
+
+_spec = importlib.util.spec_from_file_location(
+    "_ensure_paths",
+    Path(__file__).with_name("_ensure_paths.py"),
+... [32 lines, 912 chars total]
+
+==============================================================================
+2026-09-06T16:27:32Z  preToolUse:Grep  conv=9258f444  gen=ebe142e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: install_dispatch|_ensure_paths
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T16:27:36Z  preToolUse:Grep  conv=9258f444  gen=ebe142e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: from hooks\.(deploy|bootstrap|dispatch)|import hooks\.(deploy|bootstrap)|install_dispatch|skill_inject|deploy_dispatch|hook_skill_sources
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T16:27:36Z  preToolUse:Read  conv=9258f444  gen=ebe142e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\deploy.py
+
+==============================================================================
+2026-09-06T16:27:36Z  preToolUse:Read  conv=9258f444  gen=ebe142e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\skill_inject.py
+
+==============================================================================
+2026-09-06T16:27:36Z  beforeReadFile  conv=9258f444  gen=ebe142e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\deploy.py
+size: 3712 chars
+preview:
+"""Hook deploy metadata â€” skill payloads for harness; dispatch wiring for hooks.json."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+
+from hooks.hook import Hook, HookHarness
+... [103 lines, 3712 chars total]
+
+==============================================================================
+2026-09-06T16:27:36Z  beforeReadFile  conv=9258f444  gen=ebe142e6  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\skill_inject.py
+size: 7806 chars
+preview:
+"""
+Skill-inject hook â€” fires before any file edit (preToolUse: Write / StrReplace).
+
+If the target file has a @skill-tag in its header, injects a digest of that
+skill's SKILL.md into agent_message so the agent reads the rules before editing.
+Only injects once per conversation per file.
+"""
+
+... [213 lines, 7806 chars total]
+
+==============================================================================
+2026-09-06T16:27:41Z  beforeSubmitPrompt  conv=9258f444  gen=8184fb29  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+@primitives/hooks/dispatch.py @primitives/hooks/deploy.py @primitives/hooks/bootstrap.py @primitives/hooks/install_dispatch.py @primitives/hooks/skill_inject.py 
+
+==============================================================================
+2026-09-06T16:27:45Z  preToolUse:Read  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\deploy.py
+
+==============================================================================
+2026-09-06T16:27:45Z  preToolUse:Read  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\skill_inject.py
+|bootstrap)|skill_inject|install_dispatch
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T16:27:45Z  beforeReadFile  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\deploy.py
+size: 3712 chars
+preview:
+"""Hook deploy metadata â€” skill payloads for harness; dispatch wiring for hooks.json."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+
+from hooks.hook import Hook, HookHarness
+... [103 lines, 3712 chars total]
+
+==============================================================================
+2026-09-06T16:27:45Z  beforeReadFile  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\skill_inject.py
+size: 7806 chars
+preview:
+"""
+Skill-inject hook â€” fires before any file edit (preToolUse: Write / StrReplace).
+
+If the target file has a @skill-tag in its header, injects a digest of that
+skill's SKILL.md into agent_message so the agent reads the rules before editing.
+Only injects once per conversation per file.
+"""
+
+... [213 lines, 7806 chars total]
+
+==============================================================================
+2026-09-06T16:27:54Z  preToolUse:Read  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\.cursor\hooks.json
+
+==============================================================================
+2026-09-06T16:27:54Z  preToolUse:Grep  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: hooks\.bootstrap|hooks\.deploy|skill_inject|install_dispatch
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T16:27:55Z  beforeReadFile  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\.cursor\hooks.json
+size: 1322 chars
+preview:
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": ".venv/Scripts/python.exe primitives/hooks/skill_inject.py",
+        "matcher": "Write|StrReplace",
+        "timeout": 10,
+... [53 lines, 1322 chars total]
+
+==============================================================================
+2026-09-06T16:28:02Z  preToolUse:Grep  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: from hooks\.dispatch|import hooks\.dispatch
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T16:28:15Z  preToolUse:Write  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.py
+
+==============================================================================
+2026-09-06T16:28:20Z  preToolUse:Read  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\bootstrap.py
+
+==============================================================================
+2026-09-06T16:28:20Z  preToolUse:Read  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\.cursor\hooks.json
+
+==============================================================================
+2026-09-06T16:28:20Z  preToolUse:Read  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\install_dispatch.py
+
+==============================================================================
+2026-09-06T16:28:20Z  preToolUse:Read  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\deploy.py
+
+==============================================================================
+2026-09-06T16:28:20Z  preToolUse:Read  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\skill_inject.py
+
+==============================================================================
+2026-09-06T16:28:20Z  preToolUse:Write  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\__init__.py
+
+==============================================================================
+2026-09-06T16:28:20Z  preToolUse:Delete  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\_ensure_paths.py
+
+==============================================================================
+2026-09-06T16:28:20Z  beforeReadFile  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\bootstrap.py
+size: 548 chars
+preview:
+"""Import toolsets that declare ``@hook`` handlers so the registry is populated."""
+
+from __future__ import annotations
+
+import importlib
+import sys
+from pathlib import Path
+
+... [23 lines, 548 chars total]
+
+==============================================================================
+2026-09-06T16:28:20Z  beforeReadFile  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\.cursor\hooks.json
+size: 1322 chars
+preview:
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": ".venv/Scripts/python.exe primitives/hooks/skill_inject.py",
+        "matcher": "Write|StrReplace",
+        "timeout": 10,
+... [53 lines, 1322 chars total]
+
+==============================================================================
+2026-09-06T16:28:20Z  beforeReadFile  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\install_dispatch.py
+size: 912 chars
+preview:
+"""Merge dispatch.py hook entries into .cursor/hooks.json."""
+
+import importlib.util
+from pathlib import Path
+
+_spec = importlib.util.spec_from_file_location(
+    "_ensure_paths",
+    Path(__file__).with_name("_ensure_paths.py"),
+... [32 lines, 912 chars total]
+
+==============================================================================
+2026-09-06T16:28:20Z  beforeReadFile  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\deploy.py
+size: 3712 chars
+preview:
+"""Hook deploy metadata â€” skill payloads for harness; dispatch wiring for hooks.json."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+
+from hooks.hook import Hook, HookHarness
+... [103 lines, 3712 chars total]
+
+==============================================================================
+2026-09-06T16:28:20Z  beforeReadFile  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\skill_inject.py
+size: 7806 chars
+preview:
+"""
+Skill-inject hook â€” fires before any file edit (preToolUse: Write / StrReplace).
+
+If the target file has a @skill-tag in its header, injects a digest of that
+skill's SKILL.md into agent_message so the agent reads the rules before editing.
+Only injects once per conversation per file.
+"""
+
+... [213 lines, 7806 chars total]
+
+==============================================================================
+2026-09-06T16:28:21Z  preToolUse:Write  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\bootstrap.py
+
+==============================================================================
+2026-09-06T16:28:21Z  preToolUse:Write  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\.cursor\hooks.json
+
+==============================================================================
+2026-09-06T16:28:21Z  preToolUse:Write  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\deploy.py
+
+==============================================================================
+2026-09-06T16:28:21Z  preToolUse:Write  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\install_dispatch.py
+
+==============================================================================
+2026-09-06T16:28:21Z  preToolUse:Write  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\skill_inject.py
+
+==============================================================================
+2026-09-06T16:28:22Z  preToolUse:Write  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\.cursor\hooks.json
+
+==============================================================================
+2026-09-06T16:28:26Z  preToolUse:Shell  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; .\.venv\Scripts\python.exe primitives/hooks/install_dispatch.py; .\.venv\Scripts\python.exe primitives/hooks/dispatch.py --install 2>&1; echo '{"hook_event_name":"afterAgentResponse","conversation_id":"merge-test"}' | .\.venv\Scripts\python.exe primitives/hooks/dispatch.py; $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities"; .\.venv\Scripts\python.exe -m mamba.cli primitives/hooks/hook_spec.py 2>&1
+
+==============================================================================
+2026-09-06T16:28:27Z  afterAgentResponse  conv=merge-te  gen=  model=
+------------------------------------------------------------------------------

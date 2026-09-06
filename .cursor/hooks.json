@@ -3,20 +3,7 @@
   "hooks": {
     "preToolUse": [
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/skill_inject.py",
-        "matcher": "Write|StrReplace",
-        "timeout": 10,
-        "failClosed": false
-      },
-      {
         "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
-        "timeout": 10,
-        "failClosed": false
-      }
-    ],
-    "preCompact": [
-      {
-        "command": ".venv/Scripts/python.exe primitives/hooks/skill_inject.py",
         "timeout": 10,
         "failClosed": false
       }
