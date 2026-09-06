@@ -42,9 +42,23 @@ class SessionPaths:
     """Where files go relative to a workspace path.
 
     Durable artifacts (sketches, generated markdown, grill-answers) live in
-    ``{path}/.context/``. Session temps (session.md, handoff, logs) live in
-    ``{path}/.context/sessions/{name}/``. Those two are never the same folder.
+    ``{working_path}/.context/``. Session temps (session.md, handoff, logs) live
+    at the **repository root** under ``{repo_root}/.context/sessions/{name}/``.
+    Those two are never the same folder and sessions do not follow the working path.
     """
+
+    @staticmethod
+    def repository_root(path: str | Path) -> Path:
+        """Git primary clone root for *path*, or *path* itself when not in a repo."""
+        found = Repo.find_root(path)
+        if found is not None:
+            return Path(found)
+        return Path(path)
+
+    @staticmethod
+    def sessions_root(repo_root: str | Path) -> Path:
+        """All session temps for a repo: ``{repo_root}/.context/sessions/``."""
+        return SessionPaths.repository_root(repo_root) / ".context" / "sessions"
 
     @staticmethod
     def is_session_folder(destination: str | Path) -> bool:
@@ -72,13 +86,14 @@ class SessionPaths:
         return dest / ".context"
 
     @staticmethod
-    def session_dir(destination: str | Path, name: str = "") -> Path:
-        """Session temp dir: ``{path}/.context/sessions/{name}/``.
+    def session_dir(repo_root: str | Path, name: str = "") -> Path:
+        """Session temp dir: ``{repo_root}/.context/sessions/{name}/``.
 
-        If *destination* is already a session folder, return it. Otherwise
-        *name* is required.
+        *repo_root* is the git repository root (not the working path / worktree).
+        If *repo_root* is already a session folder, return it. Otherwise *name*
+        is required.
         """
-        dest = Path(destination)
+        dest = Path(repo_root)
         if SessionPaths.is_session_folder(dest):
             return dest
         slug = (name or "").strip()
@@ -86,7 +101,7 @@ class SessionPaths:
             raise ValueError(
                 "session name is required when destination is not a session folder"
             )
-        return SessionPaths.docs_dir(dest) / "sessions" / slug
+        return SessionPaths.sessions_root(dest) / slug
 
 
 docs_dir = SessionPaths.docs_dir
@@ -94,7 +109,7 @@ session_dir = SessionPaths.session_dir
 
 
 class SessionModel:
-    """Persist the preferred Cursor/IDE model under ``.context/sessions/{name}/model``.
+    """Persist the preferred Cursor/IDE model under ``{repo_root}/.context/sessions/{name}/model``.
 
     When no work session is active, use the root-repo ``sessions/default`` folder.
     """
@@ -118,7 +133,8 @@ class SessionModel:
 
     @classmethod
     def file_path(cls, workspace: str | Path, session: str = "") -> Path:
-        return SessionPaths.session_dir(workspace, cls.session_slug(session)) / cls.FILENAME
+        root = SessionPaths.repository_root(workspace)
+        return SessionPaths.session_dir(root, cls.session_slug(session)) / cls.FILENAME
 
     @classmethod
     def read(cls, workspace: str | Path, session: str = "") -> str:
@@ -818,13 +834,13 @@ class WorkSession:
 
     @property
     def folder(self) -> Path:
-        """Session temps: session.md, handoff, logs."""
+        """Session temps at repo root: session.md, handoff, logs."""
         if not self.name:
             raise ValueError(
                 "session name is not set - confirm working path and session slug with the "
                 "user, then call open before grill/sketch/handoff"
             )
-        return SessionPaths.session_dir(self.path, self.name)
+        return SessionPaths.session_dir(self._repository_root(), self.name)
 
     @property
     def log(self) -> Path:
@@ -1233,6 +1249,44 @@ class WorkSession:
                 pass
         self._remove_empty_checkout_dir()
 
+    def _repository_root(self) -> Path:
+        git = self.git
+        if not getattr(git, "_memory", False):
+            try:
+                return SessionPaths.repository_root(git.primary_root())
+            except (AttributeError, TypeError, ValueError):
+                pass
+        return SessionPaths.repository_root(
+            self.workspace_root or self.path or self.workspace.path
+        )
+
+    @staticmethod
+    def _closed_sessions_dir(repo_root: Path) -> Path:
+        closed = repo_root / ".sessions" / "closed"
+        closed.mkdir(parents=True, exist_ok=True)
+        return closed
+
+    def _archive_session_folder(self) -> Path | None:
+        """Move session temps to ``{repo_root}/.sessions/closed/{name}/``.
+
+        Durable ``.context/`` artifacts stay put; only the session folder moves.
+        """
+        if not self.name:
+            return None
+        try:
+            source = self.folder
+        except ValueError:
+            return None
+        if not source.is_dir():
+            return None
+        closed_dir = self._closed_sessions_dir(self._repository_root())
+        dest = closed_dir / self.name
+        if dest.exists():
+            stamp = (self.ended or date.today().isoformat()).replace(":", "-")
+            dest = closed_dir / f"{self.name}-{stamp}"
+        shutil.move(str(source), str(dest))
+        return dest
+
     def _remove_empty_checkout_dir(self) -> None:
         root = Path(self.path)
         if not root.is_dir():
@@ -1528,9 +1582,12 @@ class WorkSession:
                 pass
         for path in running_chats:
             self.save_chat(path)
+        archived = self._archive_session_folder()
         if not self.sync_only_close:
             self._land_on_default_branch()
             self._remove_session_worktree_if_clean()
+        if archived is not None:
+            return archived / "session.md"
         return self.session_md
 
     def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:
@@ -1826,15 +1883,16 @@ class Workspace:
 
     def load(self) -> None:
         self.path_overrides = self._read_overrides()
-        sessions_root = Path(self.path) / ".context" / "sessions"
+        sessions_root = SessionPaths.sessions_root(self.path)
         if not sessions_root.is_dir():
             return
+        repo_root = str(SessionPaths.repository_root(self.path))
         known = {s.name for s in self.work_sessions}
         for folder in sorted(sessions_root.iterdir()):
             if not folder.is_dir() or folder.name in known:
                 continue
             self.work_sessions.append(
-                WorkSession(self, folder.name, workspace_root=self.path)
+                WorkSession(self, folder.name, workspace_root=repo_root)
             )
 
     def save(self) -> Path:

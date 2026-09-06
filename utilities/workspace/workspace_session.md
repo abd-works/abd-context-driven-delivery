@@ -6,14 +6,14 @@
 |------|---------|---------|
 | **path** | Durable tool root (`active.path`) | `…/sandbox` |
 | **docs_dir** | Sketches + generated artifacts (`active.docs_dir`) | `…/sandbox/.context/` |
-| **folder** | Session temps (`active.folder`) | `…/sandbox/.context/sessions/{name}/` |
+| **folder** | Session temps at repo root (`active.folder`) | `{repo}/.context/sessions/{name}/` |
 | **context_index** | `{workspace_root}/.context/context-index.md` when present | tool → root map |
 
 ## Constructor / run context
 
 - `workspace` — workspace root where `context-index.md` lives (default `"."`)
 - `path` — durable tool root
-- `session` — sprint slug under `{path}/.context/sessions/{name}/`
+- `session` — sprint slug; temps live under `{repo_root}/.context/sessions/{name}/` (not under `path`)
 
 ## One call to open
 
@@ -49,7 +49,7 @@ Two different folders. Do not invent `{path}/.context/{session-name}/` and do no
 
 - **path** — durable tool root; code/modules → `{path}/` (or `{path}/{default_workspace_folder}/` for code channels)
 - **docs_dir** — `{path}/.context/` — sketches, generated artifacts (`story-map.md`, `scenarios/`, models, module-context), and `grill-answers.md` (survives across sessions). `save_sketch` / `write_grill_answer` destination is `session.path` (or `session.docs_dir`).
-- **folder** — `{path}/.context/sessions/{name}/` — `session.md`, `mistakes.log`, `logs/`. A live `handoff-latest.md` exists only until the next `open`, which consumes and deletes it.
+- **folder** — `{repo_root}/.context/sessions/{name}/` — `session.md`, `model`, `logs/`. A live `handoff-latest.md` exists only until the next `open`, which consumes and deletes it. Session temps always sit at the **git repository root**, not under the working path / worktree.
 - **context-index** — `{workspace_root}/.context/context-index.md`
 
 ## Root when `path` omitted

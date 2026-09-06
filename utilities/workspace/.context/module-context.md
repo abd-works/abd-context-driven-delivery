@@ -2,74 +2,114 @@
 
 ## Purpose
 
-**Workspace** aggregate (`workspace.py`): parent of `.context/`, owns many **WorkSession**s,
-**currentWorkSession**, and **pathOverrides**. **GitRepo** is the git collaborator on
-`WorkSession.git`. Session git work for a non-default branch lives in a **sibling
-worktree** so the primary clone checkout stays put. **SessionLog** records
-expand|run trails explicitly (not via `@log`).
+Manage a **workspace root** and the **work sessions** under it: where durable artifacts live, where session temps live, how git isolation works, and how turns/commits are tracked.
 
-## Primary use case
+Two folders matter — never confuse them:
 
-`BaseContextTool.workspace` is a **Workspace**. Opening a sprint calls
-`Workspace.open_work_session(...)` → sets `currentWorkSession`. Turn/git go through
-`currentWorkSession` (`openTurn`, `git`).
+| Folder | Holds |
+|--------|--------|
+| `{working_path}/.context/` | Durable artifacts local to where you work — sketches, generated markdown, grill-answers, `context-index.md` |
+| `{repo_root}/.context/sessions/{name}/` | Session temps at **repository root** — `session.md`, `model`, `logs/` (not under the worktree) |
 
-Session paths callers depend on:
+Closed sessions archive to `{repo_root}/.sessions/closed/{name}/`.
 
-```
-{workspace.path}/                       # Workspace.path — parent of .context/
-  .context/                             # WorkSession.docs_dir — sketches, generated, grill-answers
-    story-map.md
-    scenarios/
-    grill-answers.md                    # durable across sessions
-    context-index.md                    # PathOverride persistence
-    sessions/{name}/                    # WorkSession.folder — session temps only
-      session.md
-      model                             # preferred IDE/CLI model id (/model); default session when none
-      handoff-latest.md                 # deleted on the next open (consume_handoff)
-      logs/events.log                   # gitignored + .cursorignore; not a dirty signal
-```
+Path helpers: `SessionPaths.docs_dir(working_path)`, `SessionPaths.session_dir(repo_root, name)`, `SessionPaths.repository_root(path)`.
 
-## Public API
+## Public surface
 
-- `Workspace` — `@agentic_toolset` (`workspace.workspace:Workspace`); `path`, `work_sessions`, `current_work_session`, `path_overrides`;
-  `load` / `save` / `lookup_path` / `upsert_path` / `open_work_session`. CLI context is `workspace` path. `open` starts or resumes a named work session.
-  Slash `/model` (`@prompt(name="model")`) sets the preferred IDE/CLI model: AskQuestion when unset (from `list_session_models`), persist via `set_session_model` under `.context/sessions/{session}/model` (root-repo `sessions/default` when no session), then change the IDE chat model. Never set disable-model-invocation. `SessionModel` is the seam; new worktrees / `ensure_started` copy the model from primary session or default when missing.
-- `WorkSession` — `@agentic_toolset` (`workspace.workspace:WorkSession`); back-ref `workspace`; owns `git`, `open_turn`, `turns`, `repairs`, trail;
-  session.md kit (`ensure_started`, `close`, `close_session`, context index helpers);
-  `start_work_session` / `finish_work_session` `@agent_tool` with `@prompt` names
-  `start-work-session` / `finish-work-session`. CLI context is `workspace` path + `session` name (session may come from the current `session/` git branch).
-  A `/cli-agent` parent does not call `start_work_session`; CliAgent opens the
-  session, switches to that path, and binds doer/judge. Resume does not rewrite Start.
-  **Open** (`ensure_started`): stay in the primary clone when the session branch is
-  main/default; otherwise create or reuse a sibling worktree, fetch/pull, and do
-  session work there — do not checkout the session branch in the primary folder.
-  Sibling path is `{abbrev}-{work-session-name}` next to `primary_root()`:
-  abbreviate the clone folder (first token, then first letter of each later
-  hyphen/underscore token; e.g. this repo `abd-context-driven-delivery` →
-  `abd-cdd-<slug>`). Never hardcode a repo prefix.
-  **Close** (`close` / `finish_work_session`): finish an open/forgotten turn,
-  write End, commit `session.md` if dirty, push, merge onto main without
-  checking main out in the session tree, then `git worktree remove` only when the
-  tree is clean (no dirty files, no stash). `events.log` is ignored (Cursor + git)
-  and does not count as dirty.
-- `SessionPaths` / `docs_dir` / `session_dir` — durable `{path}/.context/` vs temps `{path}/.context/sessions/{name}/`
-- `GitRepo` / `NullGitRepo` — `checkout_or_create`, `commit`, `push`, worktrees
-  (`list_worktrees` / `worktree_for` / `add_worktree` / `remove_worktree`),
-  `fetch` / `pull` / `fetch_pull`, `merge_from` / `push_to`, notes (`note` /
-  `read_notes` / `find_mistakes`). Session branch naming and sibling-path policy
-  are WorkSession's.
-- `Turn` — `@toolset` (`workspace.workspace:Turn`); CLI context is `workspace` path + `session` name (session may come from the current `session/` git branch). Owns `mistakes` and optional `correction`; `record_mistake` / `record_correction` attach to the open turn before `finish`. `finish_turn` closes the hanging turn when a work session is bound; if none is, it commits (and pushes when it can) on the current checkout so the work is still tracked. `state` is **TicketState** (Backlog / In Progress / Done), the same work states as **Ticket**. A Plan holds these Turns.
-- `Turn` / `Mistake` / `Correction` / `PathOverride` / `ToolCall` / `TurnCommit`
-  (`TurnCommit.name` = git commit subject from `Turn.name`, not a uuid slug)
-- `SessionLog` — `append` → events.log + openTurn.toolCalls; **delete `@log` as host primary**
-- `ContextToolHost` — OO host used by `workspace_spec` (production host is `BaseContextTool`)
+### `Workspace`
+
+Parent of `.context/`. Owns `work_sessions`, `current_work_session`, and `path_overrides`.
+
+| Operation | What it does | Impact |
+|-----------|--------------|--------|
+| `load()` | Scan `.context/sessions/*` and read path overrides from `context-index.md` | In-memory only — no writes |
+| `save()` | Write the path-override table to `.context/context-index.md` | Updates durable index |
+| `lookup_path(tool, fidelity)` | Resolve a stored path override | Read only |
+| `upsert_path(tool, fidelity, path, default_path)` | Add/update/remove a path override, then `save()` | Rewrites `context-index.md` |
+| `open(...)` / `open_work_session(...)` | Start or resume a named work session | Sets `current_work_session`; delegates to `WorkSession.open()` — see below |
+| `get_session_model(session)` | Read preferred model id from disk | Read `{session}/model` |
+| `set_session_model(model, session)` | Persist preferred model id | Write `{session}/model` |
+| `list_session_models()` | List known model ids | Read only |
+
+### `WorkSession`
+
+One named sprint under `.context/sessions/{name}/`. Owns `git`, `open_turn`, `turns`, `repairs`, and the session file kit.
+
+| Operation | What it does | Impact |
+|-----------|--------------|--------|
+| `open(name, goal, fidelities, contexts, path)` | **Start or resume** a session | See **Open impact** below |
+| `close(outcome, handoff)` / `close_session(...)` / `finish_work_session(...)` | **Stop** a session | See **Close impact** below |
+| `ensure_started(goal, ...)` | Create session folder + `session.md` if missing | Writes `session.md` **only on first create**; mkdir; may copy `model` from primary repo |
+| `load(path, name)` | Load an existing session from disk | Read `session.md`; attach existing git worktree if present |
+| `read_context_index()` | Load tool-root map | Read `.context/context-index.md` |
+| `record_context_root(root, note)` | Register this tool's durable root in the index | Upsert `context-index.md` |
+| `consume_handoff()` | Read then delete handoff files | Deletes `handoff-latest.md`, `handoff.md`, `handoffs/` under session folder or docs_dir |
+| `append_trail(call)` | Record a tool invocation | Appends `logs/events.log`; attaches to open turn if any |
+| `cleanup()` | Remove session logs | Deletes `logs/` directory |
+| `save_chat(path)` | Attach a chat transcript to the close commit | Git note on `refs/notes/chats` + tag `chat/session/{branch}` |
+| `chats()` / `worksession_chat(name)` | List saved chat paths for a session | Read git notes/tags |
+| `set_session_model(model)` / `session_model` | Read/write `{folder}/model` | Persist model preference for this session |
+
+### `Turn`
+
+Scoped unit of work inside a session. States: Backlog → In Progress → Done.
+
+| Operation | What it does | Impact |
+|-----------|--------------|--------|
+| `open(action)` / `open_turn` | Start a turn | Binds to current work session; turn state → In Progress |
+| `finish_turn(result)` | Close the hanging turn | Commits dirty scope via `git.commit()` when a session is bound; records outcome |
+| `record_mistake(...)` | Log a mistake on the open turn | Annotates git notes on the turn commit |
+| `record_correction(...)` | Link a fix to a mistake | Adds correction commit + git note link |
+
+### `SessionPaths` / `GitRepo`
+
+| Type | Role |
+|------|------|
+| `SessionPaths.docs_dir(dest)` | Resolve durable `.context/` dir |
+| `SessionPaths.session_dir(dest, name)` | Resolve session temp dir |
+| `GitRepo` | Checkout, commit, push, fetch/pull, worktrees, merge, git notes — collaborator on `WorkSession.git` |
+
+## Open impact (`WorkSession.open`)
+
+1. **Folder** — creates `.context/sessions/{name}/` if needed.
+2. **`session.md`** — written **only on first create** (goal, fidelities, contexts, start date). Resume does **not** rewrite Start.
+3. **Git worktree** — if session branch is not main/default: create or reuse a **sibling worktree** (`{abbrev}-{session-name}` next to the primary clone). Session work happens there; primary checkout is not stolen.
+4. **`model`** — copied from primary session or default when missing.
+5. **Context index** — read; tool root recorded when `context_index_key` is set.
+6. **Handoff** — if `handoff-latest.md` / `handoff.md` / `handoffs/` exists: read once, **delete**, return text to caller. Not durable state.
+7. **`cli-agent.json`** — read if present (resume CLI bindings).
+8. **Session log** — bound to `logs/events.log`.
+
+## Close impact (`WorkSession.close`)
+
+1. **Open turn** — finished first (commit if dirty).
+2. **`logs/`** — deleted (`cleanup`).
+3. **`cli-agent.json`** — deleted; CLI processes stopped.
+4. **`session.md`** — **always rewritten** with End date, outcome, handoff.
+5. **Git** — commit `session.md` + scope paths if dirty; push session branch.
+6. **Chats** — transcript paths saved to git notes before bindings cleared.
+7. **Archive** — move `{repo_root}/.context/sessions/{name}/` → `{repo_root}/.sessions/closed/{name}/` (creates `.sessions/closed/` when missing). Durable `{working_path}/.context/` artifacts are **not** moved.
+8. **Worktree** — merge session branch onto main **without** checking out main in the session tree; remove worktree **only when clean** (no dirty files, no stash). `events.log` does not count as dirty.
+
+## On disk after open vs close
+
+| Artifact | After open | After close |
+|----------|------------|-------------|
+| `session.md` | Start block (new) or unchanged (resume) | Start + **End** block — archived to `{repo}/.sessions/closed/{name}/` |
+| `model` | At `{repo}/.context/sessions/{name}/model` | Moved with session folder to `.sessions/closed/{name}/` |
+| `logs/events.log` | Grows during session | **Deleted** (before archive) |
+| `cli-agent.json` | Present if CLI was bound | **Deleted** (before archive) |
+| `handoff-*.md` | Deleted if consumed on open | — |
+| `.context/sessions/{name}/` | Session temps | **Removed** (folder archived) |
+| `.context/` durable files | Untouched by open/close | Untouched (only git-committed if in scope) |
 
 ## Constraint
 
-Work session isolation: opening a named session binds `session/<name>` with its own sibling worktree before jobs run. After `/start-ticket`, rebind the workspace root to that worktree. This holds for CliAgent, SubAgent, and no-agent flows.
+- Durable artifacts and session temps are **different folders** — never write sketches or generate output under `sessions/{name}/`.
+- Session git isolation: non-default branches get a sibling worktree; never checkout the session branch in the primary clone.
+- `events.log` is gitignored and is not a dirty signal for worktree removal.
 
 ## Dependencies
 
-stdlib (+ optional yaml); `tools.tool`;
-consumed by `context_tools.base.base_context_tool`
+stdlib (+ optional yaml); `tools.tool`; consumed by `context_tools.base.base_context_tool`.

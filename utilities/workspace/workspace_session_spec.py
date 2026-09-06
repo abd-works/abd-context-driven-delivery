@@ -161,8 +161,8 @@ with description("a WorkSession with a name and path"):
     with it("should expose docs_dir as path/.context"):
         expect(self.session.docs_dir).to(equal(self.tmp / ".context"))
 
-    with it("should expose folder under .context/sessions/{name}"):
-        # Act / Assert
+    with it("should expose folder under repo-root .context/sessions/{name}"):
+        # Act / Assert — session temps live at git repo root, not under working path
         expect(self.session.folder).to(
             equal(self.tmp / ".context" / "sessions" / "my-sprint")
         )
@@ -631,10 +631,31 @@ with description("a WorkSession that is closed in a git worktree"):
         expect(tree.exists()).to(be_false)
         expect(GitRepo(tmp).worktree_for("session/close-clean")).to(be_none)
         if started_on == "main":
-            landed = tmp / ".context" / "sessions" / "close-clean" / "session.md"
+            landed = tmp / ".sessions" / "closed" / "close-clean" / "session.md"
             expect(landed.is_file()).to(be_true)
             expect("## End" in landed.read_text(encoding="utf-8")).to(be_true)
+            expect(
+                (tmp / ".context" / "sessions" / "close-clean").exists()
+            ).to(equal(False))
         _purge_clone(tmp)
+
+    with it("should archive the session folder under .sessions/closed at the repo root"):
+        from workspace.workspace import WorkSession, Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_archive_close_"))
+        durable = tmp / ".context" / "story-map.md"
+        durable.write_text("# keep me\n", encoding="utf-8")
+        session = WorkSession(Workspace(str(tmp)), "archive-me", path=str(tmp))
+        session.ensure_started(goal="archive test")
+        (session.folder / "model").write_text("composer-2.5", encoding="utf-8")
+        session.close(outcome="archived", handoff="")
+        archived = tmp / ".sessions" / "closed" / "archive-me"
+        expect(archived.is_dir()).to(be_true)
+        expect((archived / "session.md").is_file()).to(be_true)
+        expect((archived / "model").read_text(encoding="utf-8")).to(equal("composer-2.5"))
+        expect((tmp / ".context" / "sessions" / "archive-me").exists()).to(equal(False))
+        expect(durable.is_file()).to(be_true)
+        shutil.rmtree(tmp, ignore_errors=True)
 
     with it("should close a forgotten turn before session close"):
         from workspace.git_repo import NullGitRepo
@@ -868,12 +889,33 @@ with description("session_dir"):
         sprint = Path("/work/.context/sessions/my-sprint")
         expect(SessionPaths.session_dir(sprint)).to(equal(sprint))
 
-    with it("should build sessions/{name} under docs_dir"):
+    with it("should build sessions/{name} under the repository root"):
         from workspace.workspace import SessionPaths
         working = Path("/work/sandbox")
         expect(SessionPaths.session_dir(working, "my-sprint")).to(
             equal(working / ".context" / "sessions" / "my-sprint")
         )
+
+    with it("should keep sessions at repo root when working path is a worktree"):
+        import shutil
+        import tempfile
+        from workspace.git_repo import GitRepo, _git
+        from workspace.workspace import SessionPaths, WorkSession, Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_decouple_"))
+        worktree = tmp.parent / "abd-cdd-decouple"
+        _git(tmp, "init")
+        _git(tmp, "config", "user.email", "test@example.com")
+        _git(tmp, "config", "user.name", "test")
+        _git(tmp, "commit", "--allow-empty", "-m", "init")
+        _git(tmp, "branch", "-M", "main")
+        _git(tmp, "checkout", "-b", "session/decouple-test")
+        GitRepo(tmp).add_worktree(worktree, "session/decouple-test")
+        session = WorkSession(Workspace(str(tmp)), "decouple-test", path=str(worktree))
+        expect(session.docs_dir).to(equal(worktree / ".context"))
+        expect(session.folder).to(equal(tmp / ".context" / "sessions" / "decouple-test"))
+        shutil.rmtree(tmp, ignore_errors=True)
+        shutil.rmtree(worktree, ignore_errors=True)
 
 with description("SessionModel"):
     with it("should persist under .context/sessions/{session}/model"):
