@@ -789,7 +789,7 @@ with description("a WorkSession tool"):
             expect(session.cli_agent).not_to(be_none)
             expect(hasattr(session.cli_agent, "cleanup")).to(be_true)
 
-        with it("should wipe its own logs and leave CliAgent temps when none was bound"):
+        with it("should archive session logs under .sessions/closed instead of deleting them"):
             from workspace.git_repo import NullGitRepo
             from workspace.workspace import Workspace
 
@@ -801,12 +801,13 @@ with description("a WorkSession tool"):
             leftover = session.folder / "wait_judge3.py"
             leftover.write_text("pass\n", encoding="utf-8")
             logs = session.folder / "logs"
-            logs.mkdir()
+            logs.mkdir(parents=True, exist_ok=True)
             (logs / "events.log").write_text("noise\n", encoding="utf-8")
             session.close_session(outcome="done")
             archived = self.tmp / ".sessions" / "closed" / "close-scratch"
             expect((archived / "session.md").is_file()).to(be_true)
             expect(logs.exists()).to(be_false)
+            expect((archived / "logs" / "events.log").is_file()).to(be_true)
             expect((archived / "wait_judge3.py").is_file()).to(be_true)
 
         with it("should call cleanup on cli_agent when that property is set"):

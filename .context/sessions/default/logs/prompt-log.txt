@@ -24,3 +24,402 @@ text: **Merged to main.** Finish ran successfully this time.
 | **finish_work_session** | Done â€” archived to `.sessions/closed/utility-cleanup/` |
 | **Merge to main** | **Yes** â€” `main` is now `aa44f9ef` (was `6b1cefdd`) |
 ... [20 lines, 749 chars total]
+
+==============================================================================
+2026-09-06T16:52:04Z  beforeSubmitPrompt  conv=9258f444  gen=41d5e82c  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+why? we want  it landing
+
+==============================================================================
+2026-09-06T16:52:10Z  preToolUse:Read  conv=9258f444  gen=41d5e82c  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:52:10Z  preToolUse:Read  conv=9258f444  gen=41d5e82c  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\session_logs.py
+
+==============================================================================
+2026-09-06T16:52:10Z  preToolUse:Shell  conv=9258f444  gen=41d5e82c  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; git status --short; git log -1 --oneline; git ls-files .sessions/closed/utility-cleanup 2>$null
+
+==============================================================================
+2026-09-06T16:52:13Z  beforeReadFile  conv=9258f444  gen=41d5e82c  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\session_logs.py
+size: 3393 chars
+preview:
+"""Session-scoped hook log paths â€” always under ``.context/sessions/{name}/logs/``."""
+
+from __future__ import annotations
+
+import shutil
+from datetime import date
+from pathlib import Path
+
+... [105 lines, 3393 chars total]
+
+==============================================================================
+2026-09-06T16:52:13Z  beforeReadFile  conv=9258f444  gen=41d5e82c  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 3778 chars
+preview:
+
+    def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
+        running_chats = self._running_chat_paths()
+        turn = self.open_turn or Turn(root=str(self.git.root))
+        turn.turn(
+            message=outcome or "session close",
+            utility="finish-work-session",
+            context_tool=turn.context_tool or self.context_index_key,
+... [100 lines, 3778 chars total]
+
+==============================================================================
+2026-09-06T16:52:58Z  beforeSubmitPrompt  conv=9258f444  gen=08d3b5b8  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+instead of deleting-- on close move all session to close ; then commit; then merge
+
+==============================================================================
+2026-09-06T16:53:08Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:53:09Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:53:09Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+
+==============================================================================
+2026-09-06T16:53:09Z  preToolUse:Grep  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: close|archive|wipe|logs
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+
+==============================================================================
+2026-09-06T16:53:09Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 2747 chars
+preview:
+            except (AttributeError, TypeError, ValueError):
+                pass
+        return SessionPaths.repository_root(
+            self.workspace_root or self.path or self.workspace.path
+        )
+
+    @staticmethod
+    def _closed_sessions_dir(repo_root: Path) -> Path:
+... [80 lines, 2747 chars total]
+
+==============================================================================
+2026-09-06T16:53:09Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 1839 chars
+preview:
+                self.workspace
+                if isinstance(self.workspace, Workspace)
+                else Workspace(str(self.path or "."))
+            )
+            default = parent.open_work_session(
+                SessionModel.DEFAULT_SESSION,
+                path=self.path or parent.path,
+                isolate=False,
+... [50 lines, 1839 chars total]
+
+==============================================================================
+2026-09-06T16:53:09Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+size: 1402 chars
+preview:
+        else:
+            self._git( "checkout", "-b", name)
+        return name
+
+    def commit(
+        self, paths: list[str], message: str, *, untracked: bool = False
+    ) -> str:
+        if not paths:
+... [40 lines, 1402 chars total]
+
+==============================================================================
+2026-09-06T16:53:18Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:53:18Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+
+==============================================================================
+2026-09-06T16:53:19Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 1775 chars
+preview:
+            other.merge_from(
+                self.session_branch,
+                message=f"merge {self.session_branch} into {default}",
+            )
+        except GitConnectError:
+            return
+
+    def _remove_session_worktree_if_clean(self) -> None:
+... [45 lines, 1775 chars total]
+
+==============================================================================
+2026-09-06T16:53:19Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+size: 1668 chars
+preview:
+            session.associate_cli("doer", "doer-1")
+            expect(session.cli_agent).not_to(be_none)
+            expect(hasattr(session.cli_agent, "cleanup")).to(be_true)
+
+        with it("should wipe its own logs and leave CliAgent temps when none was bound"):
+            from workspace.git_repo import NullGitRepo
+            from workspace.workspace import Workspace
+
+... [35 lines, 1668 chars total]
+
+==============================================================================
+2026-09-06T16:53:23Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:53:26Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; git status --short; git branch --show-current; git log -1 --oneline
+
+==============================================================================
+2026-09-06T16:53:26Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 1832 chars
+preview:
+
+    def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
+        running_chats = self._running_chat_paths()
+        turn = self.open_turn or Turn(root=str(self.git.root))
+        turn.turn(
+            message=outcome or "session close",
+            utility="finish-work-session",
+            context_tool=turn.context_tool or self.context_index_key,
+... [50 lines, 1832 chars total]
+
+==============================================================================
+2026-09-06T16:53:30Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\session_logs.py
+
+==============================================================================
+2026-09-06T16:53:30Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:53:30Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\session_logs.py
+size: 3393 chars
+preview:
+"""Session-scoped hook log paths â€” always under ``.context/sessions/{name}/logs/``."""
+
+from __future__ import annotations
+
+import shutil
+from datetime import date
+from pathlib import Path
+
+... [105 lines, 3393 chars total]
+
+==============================================================================
+2026-09-06T16:53:30Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 84896 chars
+preview:
+# @toolset-manifest python -m tools manifest workspace.workspace:Turn
+# @toolset-manifest python -m tools manifest workspace.workspace:WorkSession
+# @toolset-manifest python -m tools manifest workspace.workspace:Workspace
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# Do not author behavior from this Python source.
+"""Workspace domain â€” from workspace-eval-oo-sketch Â§2 / Â§4."""
+
+from __future__ import annotations
+... [2381 lines, 84896 chars total]
+
+==============================================================================
+2026-09-06T16:53:31Z  preToolUse:Write  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\session_logs.py
+
+==============================================================================
+2026-09-06T16:53:31Z  preToolUse:Write  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:53:33Z  preToolUse:Write  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:53:34Z  preToolUse:Read  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+
+==============================================================================
+2026-09-06T16:53:34Z  preToolUse:Write  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:53:34Z  beforeReadFile  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+size: 46687 chars
+preview:
+"""BDD spec for WorkSession - kit prose + tools on BaseContextTool hosts."""
+
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+... [1052 lines, 46687 chars total]
+
+==============================================================================
+2026-09-06T16:53:35Z  preToolUse:Write  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:53:35Z  preToolUse:Write  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+
+==============================================================================
+2026-09-06T16:53:38Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities;c:\dev\abd-cdd-utility-cleanup\context_tools;c:\dev\abd-cdd-utility-cleanup\context_tools\actions"; .\.venv\Scripts\python.exe -m mamba.cli utilities/workspace/workspace_session_spec.py --grep "archive session logs|archive the session folder|merge onto main" 2>&1
+
+==============================================================================
+2026-09-06T16:53:38Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-context-driven-delivery; git status --short
+
+==============================================================================
+2026-09-06T16:53:42Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities;c:\dev\abd-cdd-utility-cleanup\context_tools;c:\dev\abd-cdd-utility-cleanup\context_tools\actions"; .\.venv\Scripts\python.exe -m mamba.cli utilities/workspace/workspace_session_spec.py 2>&1 | Select-Object -Last 15
+
+==============================================================================
+2026-09-06T16:54:20Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities;c:\dev\abd-cdd-utility-cleanup\context_tools;c:\dev\abd-cdd-utility-cleanup\context_tools\actions"; .\.venv\Scripts\python.exe -m mamba.cli utilities/workspace/workspace_session_spec.py 2>&1 | Select-Object -Last 8
+
+==============================================================================
+2026-09-06T16:54:22Z  preToolUse:Write  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:54:23Z  preToolUse:Write  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:54:52Z  preToolUse:Grep  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def close_cli_sessions
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:54:54Z  preToolUse:Grep  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def cli_agent
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:55:01Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities;c:\dev\abd-cdd-utility-cleanup\context_tools;c:\dev\abd-cdd-utility-cleanup\context_tools\actions"; .\.venv\Scripts\python.exe -m mamba.cli utilities/workspace/workspace_session_spec.py 2>&1 | Select-Object -Last 5
+
+==============================================================================
+2026-09-06T16:55:01Z  preToolUse:Write  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:55:43Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; git status --short; @'
+toolset: workspace.workspace:WorkSession
+tool: finish_work_session
+'@ | .\tools.ps1 run -
+
+==============================================================================
+2026-09-06T16:55:43Z  preToolUse:Write  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py

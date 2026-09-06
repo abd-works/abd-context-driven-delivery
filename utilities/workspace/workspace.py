@@ -30,7 +30,7 @@ from harness.prompt import prompt
 from hooks.hook import hook
 from hooks.session_logs import (
     clear_active_session,
-    wipe_session_logs,
+    consolidate_logs_for_close,
     write_active_session,
 )
 
@@ -1393,6 +1393,12 @@ class WorkSession:
         shutil.move(str(source), str(dest))
         return dest
 
+    def _consolidate_session_for_archive(self) -> None:
+        root = Path(self.path or self.git.root)
+        consolidate_logs_for_close(root, self.name)
+        self.folder.mkdir(parents=True, exist_ok=True)
+        self.log.mkdir(parents=True, exist_ok=True)
+
     def _commit_closed_archive(self, archived: Path | None) -> None:
         if archived is None or not archived.is_dir():
             return
@@ -1400,7 +1406,11 @@ class WorkSession:
         if not closed_root.is_dir():
             return
         try:
-            self.git.commit([str(closed_root)], f"archive session {self.name}")
+            self.git.commit(
+                [str(closed_root)],
+                f"archive session {self.name}",
+                untracked=True,
+            )
         except (GitConnectError, ValueError):
             pass
 
@@ -1692,7 +1702,9 @@ class WorkSession:
             context_tool=turn.context_tool or self.context_index_key,
         )
         self.open_turn = None
-        self.cleanup()
+        agent = self.cli_agent
+        if agent is not None:
+            agent.cleanup()
         self.close_cli_sessions()
         if not self.session_md.is_file():
             self.ensure_started()
@@ -1704,6 +1716,7 @@ class WorkSession:
         if outcome:
             self.outcome = outcome
         self.session_md.write_text(self._render(), encoding="utf-8")
+        self._consolidate_session_for_archive()
         if self.git.is_dirty():
             try:
                 self.git.commit(self._commit_paths(), "close")
@@ -1713,6 +1726,7 @@ class WorkSession:
             self.save_chat(path)
         archived = self._archive_session_folder()
         self._commit_closed_archive(archived)
+        clear_active_session(Path(self.path or self.git.root))
         if not self.sync_only_close:
             self._land_on_default_branch()
             self._remove_session_worktree_if_clean()
@@ -1859,18 +1873,17 @@ class WorkSession:
         return self.close_session(outcome=outcome, handoff=handoff)
 
     def cleanup(self) -> None:
-        """Remove temps this session created. CliAgent temps go through CliAgent."""
-        self._wipe_session_logs()
-        wipe_session_logs(Path(self.path or self.git.root))
+        """Remove CliAgent temps; session logs are archived on close, not deleted."""
         agent = self.cli_agent
         if agent is not None:
             agent.cleanup()
 
     def _wipe_session_logs(self) -> None:
+        """Remove events.log only — hook logs move to closed archive on close."""
         log_dir = self.log
-        if not log_dir.is_dir():
-            return
-        shutil.rmtree(log_dir, ignore_errors=True)
+        events = log_dir / "events.log"
+        if events.is_file():
+            events.unlink()
 
     def _session_artifact_paths(self) -> list[str]:
         return [str(self.session_md)]

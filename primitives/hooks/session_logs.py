@@ -91,15 +91,34 @@ def session_log_path(repo_root: Path, filename: str) -> Path:
     return directory / filename
 
 
-def wipe_session_logs(repo_root: Path) -> None:
-    """Remove hook runtime logs for the active session before close commit."""
-    logs = session_logs_dir(repo_root)
-    if logs.is_dir():
-        shutil.rmtree(logs, ignore_errors=True)
-    clear_active_session(repo_root)
+def consolidate_logs_for_close(repo_root: Path, session_name: str) -> None:
+    """Move hook runtime logs into the session folder before archiving to closed."""
+    slug = (session_name or "").strip() or DEFAULT_SESSION
+    dest_logs = session_logs_dir_for(repo_root, slug)
+    dest_logs.mkdir(parents=True, exist_ok=True)
+
+    def _move_into(file_path: Path) -> None:
+        if not file_path.is_file():
+            return
+        target = dest_logs / file_path.name
+        if target.exists():
+            target.unlink()
+        shutil.move(str(file_path), str(target))
+
+    default_logs = session_logs_dir_for(repo_root, DEFAULT_SESSION)
+    if default_logs.is_dir() and default_logs != dest_logs:
+        for item in list(default_logs.iterdir()):
+            if item.is_file():
+                _move_into(item)
+        if not any(default_logs.iterdir()):
+            default_logs.rmdir()
+
     for rel in _LEGACY_LOG_PATHS:
-        legacy = repo_root / rel
-        if legacy.is_file():
-            legacy.unlink()
-        elif legacy.is_dir():
-            shutil.rmtree(legacy, ignore_errors=True)
+        _move_into(repo_root / rel)
+
+    clear_active_session(repo_root)
+
+
+def wipe_session_logs(repo_root: Path) -> None:
+    """Legacy name — close uses ``consolidate_logs_for_close`` instead."""
+    consolidate_logs_for_close(repo_root, active_session_name(repo_root))
