@@ -225,3 +225,99 @@ text: **No.** Finish ran once earlier, but **main was never merged**.
 | **Worktree** | Still exists (`abd-cdd-utility-cleanup`) |
 | **Merge to main** | **Did not happen** |
 ... [19 lines, 919 chars total]
+
+==============================================================================
+2026-09-06T16:46:32Z  beforeSubmitPrompt  conv=9258f444  gen=d7a9cbdc  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+/finish-work-session 
+
+==============================================================================
+2026-09-06T16:46:37Z  preToolUse:Grep  conv=9258f444  gen=d7a9cbdc  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-cdd-utility-cleanup\.context\sessions\utility-cleanup
+
+==============================================================================
+2026-09-06T16:46:37Z  preToolUse:Grep  conv=9258f444  gen=d7a9cbdc  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-context-driven-delivery\.sessions\closed\utility-cleanup
+
+==============================================================================
+2026-09-06T16:46:39Z  preToolUse:Shell  conv=9258f444  gen=d7a9cbdc  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; git status --short; Write-Output "---"; cd C:\dev\abd-context-driven-delivery; git status --short
+
+==============================================================================
+2026-09-06T16:46:45Z  preToolUse:Read  conv=9258f444  gen=d7a9cbdc  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:46:49Z  preToolUse:Shell  conv=9258f444  gen=d7a9cbdc  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Test-Path C:\dev\abd-cdd-utility-cleanup\.sessions\closed; Test-Path C:\dev\abd-cdd-utility-cleanup\.context\sessions\_active; Get-Content C:\dev\abd-cdd-utility-cleanup\.context\sessions\_active -ErrorAction SilentlyContinue
+
+==============================================================================
+2026-09-06T16:46:50Z  beforeReadFile  conv=9258f444  gen=d7a9cbdc  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 1154 chars
+preview:
+
+    def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
+        running_chats = self._running_chat_paths()
+        turn = self.open_turn or Turn(root=str(self.git.root))
+        turn.turn(
+            message=outcome or "session close",
+            utility="finish-work-session",
+            context_tool=turn.context_tool or self.context_index_key,
+... [30 lines, 1154 chars total]
+
+==============================================================================
+2026-09-06T16:46:56Z  preToolUse:Read  conv=9258f444  gen=d7a9cbdc  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\.context\sessions\utility-cleanup\session.md
+
+==============================================================================
+2026-09-06T16:46:56Z  preToolUse:Grep  conv=9258f444  gen=d7a9cbdc  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: utility-cleanup
+path [file]: c:\dev\abd-cdd-utility-cleanup\.context
+
+==============================================================================
+2026-09-06T16:47:02Z  preToolUse:Shell  conv=9258f444  gen=d7a9cbdc  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; Test-Path .context/prompt-log.txt; Test-Path .context/sessions/default/session.md; Get-ChildItem .sessions/closed -ErrorAction SilentlyContinue
+
+==============================================================================
+2026-09-06T16:47:07Z  preToolUse:Shell  conv=9258f444  gen=d7a9cbdc  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-context-driven-delivery; git restore .context/prompt-log.txt primitives/hooks/prompt_echo.debug 2>$null; Remove-Item -Recurse -Force .sessions/closed/utility-cleanup -ErrorAction SilentlyContinue; git status --short
+
+==============================================================================
+2026-09-06T16:47:07Z  preToolUse:Shell  conv=9258f444  gen=d7a9cbdc  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; Remove-Item -Force .context/prompt-log.txt -ErrorAction SilentlyContinue; git status --short
+
+==============================================================================
+2026-09-06T16:47:12Z  preToolUse:Shell  conv=9258f444  gen=d7a9cbdc  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; @'
+toolset: workspace.workspace:WorkSession
+tool: finish_work_session
+'@ | .\tools.ps1 run -
