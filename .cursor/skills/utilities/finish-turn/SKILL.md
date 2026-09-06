@@ -1,16 +1,22 @@
 ---
 name: finish-turn
-description: "finish_turn — close the hanging turn, or commit the current checkout if no work session."
+description: "Legacy alias — use /turn instead."
 disable-model-invocation: true
 ---
 
-finish_turn — close the hanging turn, or commit the current checkout if no work session.
+**Use `/turn` instead.** This skill remains for older recipes that still call `finish_turn`.
 
 through the tools cli
 
 Pipe the block to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
 ```
 toolset: workspace.workspace:Turn
-tool: finish_turn
+tool: turn
+arguments:
+  context_tool: <skill slug>
+  action: <skill slug>
+  utility: <optional skill slug>
+  subject: <few folders or files>
+  message: <what changed>
 ```
 .\tools.ps1 run -

@@ -1,16 +1,9 @@
 ---
 name: start-turn
-description: "guidance"
+description: "Removed — use /turn to commit when work is done. There is no open step."
 disable-model-invocation: true
 ---
 
-guidance
+**There is no open step.** When a slice of work is done, call **`/turn`** to commit with skill lineage metadata.
 
-through the tools cli
-
-Pipe the block to stdin from the repo root. Do not write a request file. Do not remanifest — this skill is the catalog. Follow response.instructions only.
-```
-toolset: workspace.workspace:Turn
-tool: open
-```
-.\tools.ps1 run -
+See the **turn** skill.

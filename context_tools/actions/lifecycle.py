@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from primitives.actions.action import agent_instructions, agentic_toolset
 from tools.tool import agent_tool
-from workspace.workspace import SessionModel, Workspace
+from workspace.workspace import SessionModel, Turn, Workspace
 
 
 @agentic_toolset
@@ -34,11 +34,7 @@ class LifecycleAction:
         session = self._session()
         if session is not None:
             return session.turn
-        from workspace.workspace import Turn
-
-        # Expand-only stand-in so ``self._turn().finish_turn()`` still lists the tool
-        # when no work session is open (Turn() would probe git for session/).
-        return Turn.__new__(Turn)
+        return Turn(root=str(self.workspace.path))
 
     def _open_session(self, name: str = "", *, path: str = "") -> str:
         session_name = SessionModel.session_slug(name or self._session_name)
@@ -81,6 +77,6 @@ class LifecycleAction:
 
     @agent_instructions
     def end(self) -> str:
-        """Finish the turn that hangs off the work session."""
-        self._turn().finish_turn()
+        """Commit the turn via ``/turn`` (``Turn.turn``)."""
+        self._turn().turn(utility="lifecycle")
         return ""

@@ -53,14 +53,16 @@ One named sprint under `.context/sessions/{name}/`. Owns `git`, `open_turn`, `tu
 
 ### `Turn`
 
-Scoped unit of work inside a session. States: Backlog → In Progress → Done.
+Self-sufficient commit kit — **no WorkSession or Workspace required**.
 
 | Operation | What it does | Impact |
 |-----------|--------------|--------|
-| `open(action)` / `open_turn` | Start a turn | Binds to current work session; turn state → In Progress |
-| `finish_turn(result)` | Close the hanging turn | Commits dirty scope via `git.commit()` when a session is bound; records outcome |
-| `record_mistake(...)` | Log a mistake on the open turn | Annotates git notes on the turn commit |
-| `record_correction(...)` | Link a fix to a mistake | Adds correction commit + git note link |
+| `turn(context_tool, action, utility, subject, message)` | **`/turn`** — commit dirty checkout | Subject + trailers (`Context-Tool`, `Action`, `Utility`, `Subject`); git note on `refs/notes/cdd-turns`; push |
+| `finish_turn(...)` | Legacy alias for `turn` | Same as `turn` |
+| `record_mistake(...)` | Log a mistake | Git note on introducing commit |
+| `record_correction(...)` | Link a fix | Correction commit + git note link |
+
+**Commit subject** looks like `stories/generate: story map for courier` with trailers for skill lineage. **Subject** is compact (a few folders, not every file). When metadata is missing, the agent's best-guess **message** still lands on the commit.
 
 ### `SessionPaths` / `GitRepo`
 

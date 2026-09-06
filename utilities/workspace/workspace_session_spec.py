@@ -666,11 +666,11 @@ with description("a WorkSession that is closed in a git worktree"):
         session = Workspace(str(tmp)).open_work_session("close-turn", git=git)
         session.ensure_started()
         git.set_dirty(True)
-        session.open_turn = Turn(work_session=session)
+        session.open_turn = Turn(root=str(git.root))
         session.open_turn.action = "forgotten-turn"
         session.close(outcome="done", handoff="")
         expect(session.open_turn).to(be_none)
-        expect(git.commits[0][1]).to(equal("forgotten-turn"))
+        expect(git.commits[0][1]).to(contain("forgotten-turn"))
         expect((session.folder / "session.yaml").is_file()).to(be_false)
         expect(
             any(str(path).endswith("session.yaml") for path in git.commits[0][0])

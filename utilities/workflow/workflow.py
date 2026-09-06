@@ -19,6 +19,7 @@ from tools.tool import agent_tool, toolset
 from workflow.work_ticket import WorkTicket
 from workspace import Workspace
 from workspace.git_repo import NullGitRepo
+from workspace.workspace import Turn
 
 
 _PROJECT_STATUSES = ("Backlog", "In Progress", "Done")
@@ -211,10 +212,11 @@ class Workflow:
                 f"backlog: {focus.strip()[:60]}" if focus.strip() else "backlog: close turn"
             )
             if session is not None:
-                session.turn.finish(
-                    prompt=focus,
-                    result=subject,
-                    context=session.name,
+                turn = session.open_turn or Turn(root=str(repo.root))
+                turn.turn(
+                    commit_message=subject,
+                    utility="backlog",
+                    subject=session.name,
                 )
             return repo.current_commit
         except Exception:
@@ -319,18 +321,15 @@ class Workflow:
             )
         ws = self._workspace(workspace)
         session = ws.current_work_session
-        if session is not None and session.open_turn is not None:
+        if session is not None and session.git.is_dirty(untracked=False):
             message = self.turn_commit_message(
                 subject=f"start {session.name}",
                 ticket=ticket,
                 workflow_state=workflow_state,
                 workspace=workspace,
             )
-            session.open_turn.finish(
-                prompt=instructions,
-                result=message,
-                context=session.name,
-            )
+            turn = session.open_turn or Turn(root=str(session.git.root))
+            turn.turn(commit_message=message, utility="start-ticket")
         if session is not None:
             session.git.checkout_or_create(session.session_branch)
         return {**viewed, **opened}
@@ -358,15 +357,13 @@ class Workflow:
         resolved_ticket = self._resolve_finish_ticket(ticket, session_name)
         ws = self._workspace(workspace)
         session = ws.current_work_session
-        if session is not None and (
-            session.open_turn is not None
-            or session.git.is_dirty(untracked=False)
-        ):
-            session.turn.finish(
-                prompt=outcome,
-                result="finish",
-                context=session_name,
+        if session is not None and session.git.is_dirty(untracked=False):
+            Turn(root=str(session.git.root)).turn(
+                message=outcome or "finish",
+                utility="finish-ticket",
+                subject=session_name,
             )
+            session.open_turn = None
         sha = self.merge_session_to_main(
             workspace=workspace, ticket=resolved_ticket, reviewed_by=reviewed_by
         )

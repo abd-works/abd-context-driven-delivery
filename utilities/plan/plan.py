@@ -194,7 +194,7 @@ class Plan:
 
     def add_turn(self, turn: Turn | None = None, **fields: Any) -> Turn:
         if turn is None:
-            turn = Turn(work_session=None)
+            turn = Turn()
         for field_name, field_value in fields.items():
             setattr(turn, field_name, field_value)
         if not hasattr(turn, "state") or turn.state is None:  # type: ignore[attr-defined]

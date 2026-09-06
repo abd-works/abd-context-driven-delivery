@@ -401,7 +401,7 @@ with description("a context tool"):
                         )
                         self.correction = self.session.open_turn.correction
                         self.git.set_dirty(True)
-                        self.session.open_turn.finish(result="fixed")
+                        self.session.open_turn.turn(message="fixed")
                         self.fix = self.git.current_commit
 
                     with it(
@@ -489,19 +489,12 @@ with description("a context tool"):
                     runs = [r for r in self.turn.tool_calls if r.role == "run"]
                     expect(len(runs)).to(equal(1))
 
-                with it("should commit its scoped changes on the session branch"):
+                with it("should commit dirty changes on the session branch"):
                     expect(len(self.git.commits)).to(equal(1))
                     expect(self.commit.sha).to(equal("commit-1"))
-                    expect(self.git.commits[0][1]).to(equal(self.turn.name))
-
-                with it("should include session.md in that commit"):
-                    expect(self.session.session_md.is_file()).to(be_true)
-                    expect(
-                        any(
-                            str(path).endswith("session.md")
-                            for path in self.git.commits[0][0]
-                        )
-                    ).to(be_true)
+                    expect(self.git.commits[0][1]).to(contain("bdd/run"))
+                    expect(self.git.commits[0][1]).to(contain("Context-Tool: bdd"))
+                    expect(self.git.commits[0][1]).to(contain("Action: run"))
 
                 with it("should not write session.yaml"):
                     expect((self.session.folder / "session.yaml").is_file()).to(
@@ -514,10 +507,9 @@ with description("a context tool"):
                         )
                     ).to(be_false)
 
-                with it("should name its turn from its context tool action fidelity and format"):
-                    expect(self.turn.name).to(
-                        equal("bdd-run-modules-python")
-                    )
+                with it("should describe the turn from context tool and action skills"):
+                    expect(self.turn.name).to(contain("bdd/run"))
+                    expect(self.turn.name).to(contain("shipped"))
 
                 with it("should push its session branch to origin"):
                     expect(self.git.pushes).to(equal(["session/sprint-a"]))
@@ -528,86 +520,40 @@ with description("Turn"):
         with it("should load as workspace.workspace:Turn"):
             loaded = _ToolsetLoader.instance().load("workspace.workspace:Turn")
             expect(getattr(loaded, "_is_toolset", False)).to(equal(True))
+            expect("turn" in loaded().tools).to(equal(True))
             expect("finish_turn" in loaded().tools).to(equal(True))
+            expect("open" in loaded().tools).to(equal(False))
 
-        with it("should finish the session hanging turn from workspace and session context"):
-            tmp = Path(tempfile.mkdtemp(prefix="ws-turn-cli-"))
-            git = NullGitRepo()
-            workspace = Workspace(str(tmp))
-            host = ContextToolHost(workspace, git=git)
-            session = host.run_action("sprint-cli", goal="close turn")
-            git.set_dirty(False)
-            kit = Turn(workspace=str(tmp), session="sprint-cli")
-            bound = kit.work_session
-            kit.finish_turn(result="done")
-            expect(bound).not_to(be_none)
-            expect(bound.open_turn).to(be_none)
-
-        with it("should commit the current checkout when no work session is bound"):
+        with it("should commit from the current checkout without a work session"):
             git = NullGitRepo()
             git.set_dirty(True)
-            kit = Turn()
-            kit.work_session = None
-            kit._checkout_git = git
-            payload = kit.finish_turn(result="tracked on current work")
-            expect(kit.work_session).to(be_none)
-            expect(payload["name"]).to(equal("finish"))
-            expect(payload["sha"]).to(equal("commit-1"))
-            expect(git.commits[0][1]).to(equal("finish"))
-            expect(git.pushes).to(equal([git.current_branch]))
+            kit = Turn(root=str(git.root))
+            commit = kit.turn(
+                context_tool="stories",
+                action="generate",
+                message="story map for courier",
+                subject="sandbox/courier/.context",
+            )
+            expect(commit).not_to(be_none)
+            expect(commit.sha).to(equal("commit-1"))
+            expect(git.commits[0][1]).to(contain("stories/generate"))
+            expect(git.commits[0][1]).to(contain("Context-Tool: stories"))
+            expect(git.commits[0][1]).to(contain("Subject: sandbox/courier"))
 
-        with it("should open the hanging turn from workspace and session context without a host"):
-            tmp = Path(tempfile.mkdtemp(prefix="ws-turn-open-cli-"))
+        with it("should compact long subject lists to a few folders"):
+            compact = Turn._compact_subject(
+                "sandbox/a/x.py sandbox/a/y.py sandbox/b/z.py sandbox/c/d/e/f.py"
+            )
+            expect("," in compact).to(be_true)
+            expect(len(compact.split(", ")) <= 3).to(be_true)
+
+        with it("should leave finish_turn as a legacy alias for turn"):
             git = NullGitRepo()
-            workspace = Workspace(str(tmp))
-            host = ContextToolHost(workspace, git=git)
-            host.run_action("sprint-open", goal="open turn")
-            kit = Turn(workspace=str(tmp), session="sprint-open")
-            opened = kit.open(action="start-turn")
-            expect(opened.action).to(equal("start-turn"))
-            expect(kit.work_session.open_turn).to(equal(opened))
-            expect("host" in kit.tools["open"].manifest["inputSchema"].get("required", [])).to(
-                equal(False)
-            )
-
-    with context("that performs a turn"):
-        with it("should keep open and finish_turn as tools and performTurn as an action"):
-            loaded = _ToolsetLoader.instance().load("workspace.workspace:Turn")
-            kit = loaded()
-            expect(getattr(loaded, "_is_toolset", False)).to(equal(True))
-            expect("open" in kit.tools).to(equal(True))
-            expect("finish_turn" in kit.tools).to(equal(True))
-            expect("performTurn" in kit.actions).to(equal(True))
-            expect("performTurn" in kit.tools).to(equal(False))
-
-        with it("should open then finish the hanging turn in the performTurn recipe"):
-            tools = Turn.manifest.signature["performTurn"]["tools"]
-            expect(tools).to(equal(["open", "finish_turn"]))
-            kit = Turn()
-            prose = "\n".join(
-                _ActionExpander.instance()
-                .parse_body(type(kit).performTurn, kit)
-                .prose_parts
-            )
-            expect(prose).to(contain("Do whatever was asked in context"))
-
-        with it("should not require a host to perform a turn"):
-            params = Turn.manifest.signature["performTurn"].get("parameters") or {}
-            expect("host" in params).to(equal(True))
-            expect("prompt" in params).to(equal(True))
-            expect("result" in params).to(equal(True))
-            expect("context" in params).to(equal(True))
-            host_param = inspect.signature(Turn.performTurn).parameters["host"]
-            expect(host_param.default).to(equal(None))
-
-        with it("should return a turn commit not a dict"):
-            expect(Turn.manifest.signature["performTurn"]["returns"]).to(
-                equal("TurnCommit | None")
-            )
-            expect(Turn.manifest.signature["finish_turn"]["returns"]).to(
-                equal("TurnCommit | None")
-            )
-            expect(Turn.manifest.signature["open"]["returns"]).to(equal("Turn"))
+            git.set_dirty(True)
+            kit = Turn(root=str(git.root))
+            commit = kit.finish_turn(result="legacy checkpoint")
+            expect(commit).not_to(be_none)
+            expect(git.commits[0][1]).to(contain("legacy checkpoint"))
 
 
 with description("WorkSession"):
@@ -649,7 +595,7 @@ with description("WorkSession"):
             path = kit.finish_work_session(outcome="landed on main")
             expect("default" in path).to(equal(True))
             expect(kit.name).to(equal(""))
-            expect(git.commits[0][1]).to(equal("finish"))
+            expect(git.commits[0][1]).to(contain("finish without session"))
             expect(git.pushes).to(equal([]))
 
         with it("should start from workspace and session context without a host"):

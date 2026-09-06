@@ -19,15 +19,11 @@ pass it as the sub-agent model (Task/tool model parameter). When unset, inherit
 the parent chat model. Never set disable-model-invocation.
 
 When actions is listed and non-empty: run each listed action with the listed
-context tools. Listed action kits already open the work session and turn.
-Do not wrap those in performTurn. This kit does not open a work session itself
-when actions are listed.
+context tools. Listed action kits manage their own session lifecycle.
 
-When actions is missing or empty: do not leave the worker on a bare context-tool
-tools run. Run performTurn (workspace.workspace:Turn, action: performTurn)
-around the work — open the hanging turn, run each listed context tool as its
-own tools run, then finish_turn. finish_turn commits/pushes; report branch
-and commit back to the parent.
+When actions is missing or empty: do the work, then call **/turn**
+(``workspace.workspace:Turn``, tool ``turn``) with context_tool, action, utility,
+subject, and message. Report branch and commit back to the parent.
 
 through the tools cli
 

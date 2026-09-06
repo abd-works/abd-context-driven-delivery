@@ -24,7 +24,7 @@ from primitives.instructions import Instruction
 from primitives.instructions import instruction
 from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
-from workspace.git_repo import GitConnectError, GitRepo, NullGitRepo, Repo
+from workspace.git_repo import Commit, GitConnectError, GitRepo, NullGitRepo, Repo
 from tools.tool import resource, agent_tool, toolset
 from harness.prompt import prompt
 
@@ -225,152 +225,209 @@ class ToolCall:
 
 @dataclass
 class TurnCommit:
-    """Session-branch commit for a finished Turn — name is the commit subject."""
+    """Git commit produced by ``Turn.turn`` — ``name`` is the commit subject line."""
 
     name: str
-    session_name: str
-    tool_names: list[str]
+    branch: str
     sha: str
+    context_tool: str = ""
+    action: str = ""
+    utility: str = ""
+    subject: str = ""
+
+    @property
+    def session_name(self) -> str:
+        """Legacy alias — branch name at commit time."""
+        return self.branch
 
 
 @toolset
 class Turn:
-    """Turn kit + openTurn state — finish commits/pushes via workSession.git."""
+    """Self-sufficient turn commit — no WorkSession or Workspace required."""
 
-    def __init__(
-        self,
-        work_session: WorkSession | None = None,
-        workspace: str = "",
-        session: str = "",
-    ) -> None:
-        if work_session is None:
-            work_session = type(self)._work_session_from_context(workspace, session)
-        self.work_session = work_session
-        self._workspace_root = workspace
-        self._checkout_git: GitRepo | None = None
+    TURN_NOTES_REF = "refs/notes/cdd-turns"
+
+    def __init__(self, root: str = "") -> None:
+        self._root = (root or "").strip()
         self.id = uuid.uuid4().hex[:8]
-        self.prompt = ""
-        self.result = ""
-        self.context = ""
+        self.context_tool = ""
+        self.action = ""
+        self.utility = ""
+        self.subject = ""
+        self.message = ""
         self.tool_calls: list[ToolCall] = []
         self.change_commit: TurnCommit | None = None
         self.tool_keys: list[str] = []
-        self.action = ""
         self.fidelity = ""
         self.format = ""
+        self.prompt = ""
+        self.result = ""
+        self.context = ""
+        self.state: Any = None
         self.mistakes: list[Mistake] = []
         self.correction: Correction | None = None
         self.artifact_path = ""
-
-    @classmethod
-    def hanging(cls) -> Turn:
-        """Turn fields only — do not open a WorkSession."""
-        hanging = object.__new__(cls)
-        hanging.work_session = None
-        hanging.tool_keys = []
-        hanging.tool_calls = []
-        hanging.action = ""
-        hanging.fidelity = ""
-        hanging.format = ""
-        hanging.prompt = ""
-        return hanging
+        self._commit_message_override = ""
 
     @staticmethod
-    def _work_session_from_context(workspace: str, session: str) -> WorkSession | None:
-        root = (workspace or "").strip()
-        name = (session or "").strip()
-        if not name:
-            git_root = Repo.find_root(root or ".")
-            if git_root is not None:
-                branch = GitRepo(git_root).current_branch
-                if isinstance(branch, str) and branch.startswith("session/"):
-                    name = branch[len("session/") :]
-                    root = root or str(git_root)
-        if not name:
-            name = SessionModel.DEFAULT_SESSION
-        loaded = Workspace(root or ".")
-        loaded.load()
-        loaded.open(
-            name=name,
-            path=root or loaded.path,
-            isolate=name != SessionModel.DEFAULT_SESSION,
-        )
-        return loaded.current_work_session
-
-    @property
-    def name(self) -> str:
-        parts: list[str] = []
-        if self.tool_keys:
-            parts.append("-".join(self.tool_keys))
-        if self.action:
-            parts.append(self.action)
-        if self.fidelity:
-            parts.append(self.fidelity)
-        if self.format:
-            parts.append(self.format)
-        if not parts:
-            raise ValueError(
-                "Turn.name unset — open with action via bind_from_host before finish"
-            )
-        return "-".join(parts)
+    def _compact_subject(raw: str, *, max_items: int = 3) -> str:
+        """Prefer a few folder paths — never enumerate every file."""
+        tokens = [t.strip() for t in re.split(r"[\s,]+", (raw or "").strip()) if t.strip()]
+        if not tokens:
+            return ""
+        folders: list[str] = []
+        seen: set[str] = set()
+        for token in tokens:
+            path = Path(token.replace("\\", "/"))
+            folder = path.parent.as_posix() if path.suffix else path.as_posix()
+            if not folder or folder == ".":
+                folder = path.as_posix()
+            parts = [p for p in folder.split("/") if p]
+            compact = "/".join(parts[:3]) if len(parts) > 3 else folder
+            if compact not in seen:
+                seen.add(compact)
+                folders.append(compact)
+            if len(folders) >= max_items:
+                break
+        return ", ".join(folders)
 
     def _ensure_named(self) -> None:
-        if self.tool_keys or self.action or self.fidelity or self.format:
+        if not self.context_tool and self.tool_keys:
+            self.context_tool = self.tool_keys[0]
+        if (self.message or "").strip():
             return
-        session = self.work_session
-        if session is not None:
-            if session.context_index_key:
-                self.tool_keys = [session.context_index_key]
-            if session.fidelities:
-                self.fidelity = session.fidelities
-            if session.format:
-                self.format = str(session.format)
-        if not (self.tool_keys or self.action or self.fidelity or self.format):
-            self.action = "finish"
+        if self.subject:
+            self.message = self._compact_subject(self.subject) or self.subject.strip()
+            return
+        parts = [p for p in (self.context_tool, self.action, self.utility) if p]
+        self.message = " ".join(parts) if parts else "checkpoint"
+
+    def _subject_line(self) -> str:
+        lineage: list[str] = []
+        if self.context_tool:
+            lineage.append(self.context_tool)
+        if self.action:
+            lineage.append(self.action)
+        prefix = "/".join(lineage) if lineage else "turn"
+        body = (self.message or "").strip() or "checkpoint"
+        line = f"{prefix}: {body}"
+        return line[:120]
+
+    def _trailers(self) -> dict[str, str]:
+        trailers: dict[str, str] = {}
+        if self.context_tool:
+            trailers["Context-Tool"] = self.context_tool
+        if self.action:
+            trailers["Action"] = self.action
+        if self.utility:
+            trailers["Utility"] = self.utility
+        compact = self._compact_subject(self.subject)
+        if compact:
+            trailers["Subject"] = compact
+        return trailers
 
     @property
     def commit_message(self) -> str:
-        return self.name
+        return Commit.format(self._subject_line(), self._trailers())
+
+    @property
+    def name(self) -> str:
+        """Legacy alias — first line of the commit message."""
+        return self.commit_message.splitlines()[0]
 
     def bind_from_host(self, host: Any, *, action: str = "") -> None:
         key = getattr(host, "context_index_key", "") or getattr(
             type(host), "context_index_key", ""
         )
-        if key and key not in self.tool_keys:
-            self.tool_keys.append(key)
+        if key:
+            self.context_tool = key
+            if key not in self.tool_keys:
+                self.tool_keys.append(key)
         if action:
             self.action = action
-        host_fidelity = getattr(host, "fidelity", "") or ""
-        if host_fidelity:
-            self.fidelity = host_fidelity
-        host_format = getattr(host, "format", None)
-        if host_format:
-            self.format = str(host_format)
-        else:
-            session = getattr(getattr(host, "workspace", None), "current_work_session", None)
-            session_format = getattr(session, "format", None) if session is not None else None
-            if session_format:
-                self.format = str(session_format)
+        artifact = getattr(host, "artifact_path", "") or ""
+        if artifact and not self.subject:
+            self.subject = str(artifact)
 
-    @prompt(name="start-turn")
+    def _git(self) -> GitRepo | None:
+        start = self._root or "."
+        root = Repo.find_root(start)
+        if root is None:
+            return None
+        return GitRepo(root)
+
+    def _commit_paths(self, git: GitRepo) -> list[str]:
+        """Commit all tracked changes under the repo root."""
+        return [str(git.root)]
+
+    def _note_turn(self, git: GitRepo, sha: str) -> None:
+        payload = {
+            "turn_id": self.id,
+            "context_tool": self.context_tool,
+            "action": self.action,
+            "utility": self.utility,
+            "subject": self._compact_subject(self.subject),
+            "message": self.message,
+        }
+        if self.tool_calls:
+            payload["tool_calls"] = "; ".join(
+                f"{c.toolset}.{c.name}" for c in self.tool_calls[:12]
+            )
+        git.note(sha, payload, ref=self.TURN_NOTES_REF)
+
+    @prompt(name="turn")
     @agent_tool
-    def open(self, host: ContextToolHost | None = None, *, action: str = "") -> Turn:
-        session = None
-        if host is not None:
-            session = host.workspace.current_work_session
-        if session is None:
-            session = self.work_session
-        if session is None:
-            raise RuntimeError("open turn requires currentWorkSession")
-        if session.open_turn is None:
-            session.open_turn = Turn(work_session=session)
-        if host is not None:
-            session.open_turn.bind_from_host(host, action=action)
-        elif action:
-            session.open_turn.action = action
-        return session.open_turn
+    def turn(
+        self,
+        *,
+        context_tool: str = "",
+        action: str = "",
+        utility: str = "",
+        subject: str = "",
+        message: str = "",
+        root: str = "",
+        commit_message: str = "",
+    ) -> TurnCommit | None:
+        """Commit the current checkout with skill lineage (/turn).
 
-    @prompt(name="finish-turn")
+        Fill context_tool, action, and utility from the skills/commands/prompts
+        you used (best guess when unknown). Subject: a few folders or files —
+        not an exhaustive list. Message: short description of what changed.
+        """
+        if root.strip():
+            self._root = root.strip()
+        if context_tool.strip():
+            self.context_tool = context_tool.strip()
+        if action.strip():
+            self.action = action.strip()
+        if utility.strip():
+            self.utility = utility.strip()
+        if subject.strip():
+            self.subject = subject.strip()
+        if message.strip():
+            self.message = message.strip()
+        self._ensure_named()
+        self._commit_message_override = commit_message.strip()
+        return self._commit()
+
+    def finish(
+        self, prompt: str = "", result: str = "", context: str = ""
+    ) -> TurnCommit | None:
+        """Legacy alias — prefer ``turn``."""
+        if prompt:
+            self.prompt = prompt
+        if result:
+            self.result = result
+        if context:
+            self.context = context
+        ct = self.context_tool or (self.tool_keys[0] if self.tool_keys else "")
+        return self.turn(
+            context_tool=ct,
+            action=self.action,
+            subject=context or self.context or self.subject,
+            message=result or prompt or self.message or self.result,
+        )
+
     @agent_tool
     def finish_turn(
         self,
@@ -378,24 +435,22 @@ class Turn:
         prompt: str = "",
         result: str = "",
         context: str = "",
+        *,
+        context_tool: str = "",
+        action: str = "",
+        utility: str = "",
+        subject: str = "",
     ) -> TurnCommit | None:
-        """finish_turn — close the hanging turn, or commit the current checkout if no work session."""
+        """Legacy alias — prefer ``turn``."""
         if tools:
             for host in tools:
-                workspace = getattr(host, "workspace", None)
-                current = getattr(workspace, "current_work_session", None)
-                open_turn = getattr(current, "open_turn", None)
-                if open_turn is not None:
-                    return self._commit_payload(
-                        open_turn.finish(prompt=prompt, result=result, context=context)
-                    )
-        session = self.work_session
-        if session is None:
-            return self._commit_payload(
-                self.finish(prompt=prompt, result=result, context=context)
-            )
-        return self._commit_payload(
-            session.turn.finish(prompt=prompt, result=result, context=context)
+                self.bind_from_host(host)
+        return self.turn(
+            context_tool=context_tool or self.context_tool,
+            action=action or self.action,
+            utility=utility or self.utility,
+            subject=subject or context or self.subject,
+            message=result or prompt or self.message,
         )
 
     @staticmethod
@@ -404,78 +459,45 @@ class Turn:
             return None
         return {
             "name": change.name,
-            "session_name": change.session_name,
-            "tool_names": list(change.tool_names),
+            "branch": change.branch,
+            "session_name": change.branch,
+            "context_tool": change.context_tool,
+            "action": change.action,
+            "utility": change.utility,
+            "subject": change.subject,
             "sha": change.sha,
         }
 
-    def _git_for_finish(self) -> GitRepo | None:
-        if self.work_session is not None:
-            return self.work_session.git
-        if self._checkout_git is not None:
-            return self._checkout_git
-        start = (self._workspace_root or "").strip() or "."
-        root = Repo.find_root(start)
-        if root is None:
-            return None
-        return GitRepo(root)
-
-    def finish(
-        self, prompt: str = "", result: str = "", context: str = ""
-    ) -> TurnCommit | None:
-        session = self.work_session
-        git = self._git_for_finish()
+    def _commit(self) -> TurnCommit | None:
+        git = self._git()
         if git is None:
             return None
-        self._ensure_named()
-        self.prompt = prompt
-        self.result = result
-        self.context = context
-        run = ToolCall(
-            toolset="action",
-            name="action_run",
-            summary=result or prompt or "action finished",
-            role="run",
-        )
-        if session is not None:
-            session.append_trail(run)
-        change: TurnCommit | None = None
-        dirty = (
-            session.dirty if session is not None else git.is_dirty(untracked=False)
-        )
-        if dirty:
-            message = self.name
-            if self.correction is not None:
-                message = self.correction.correction_commit_message(
-                    subject=self.name
-                )
-            paths = (
-                session._commit_paths() if session is not None else [str(git.root)]
+        if not git.is_dirty(untracked=False):
+            return None
+        override = getattr(self, "_commit_message_override", "")
+        message = override or self.commit_message
+        if self.correction is not None:
+            message = self.correction.correction_commit_message(
+                subject=self._subject_line()
             )
-            sha = git.commit(paths, message)
-            if self.correction is not None:
-                self.correction.link(git, sha)
-            change = TurnCommit(
-                name=self.name,
-                session_name=session.name if session is not None else git.current_branch,
-                tool_names=[c.name for c in self.tool_calls],
-                sha=sha,
-            )
-            self.change_commit = change
-            if session is not None:
-                session.turns.append(self)
-        if session is not None:
-            try:
-                if not session.sync_only_close:
-                    git.push()
-            except GitConnectError:
-                pass
-            session.open_turn = None
-        else:
-            try:
-                git.push()
-            except GitConnectError:
-                pass
+        sha = git.commit(self._commit_paths(git), message)
+        if self.correction is not None:
+            self.correction.link(git, sha)
+        self._note_turn(git, sha)
+        change = TurnCommit(
+            name=self._subject_line(),
+            branch=git.current_branch,
+            sha=sha,
+            context_tool=self.context_tool,
+            action=self.action,
+            utility=self.utility,
+            subject=self._compact_subject(self.subject),
+        )
+        self.change_commit = change
+        try:
+            git.push()
+        except GitConnectError:
+            pass
         return change
 
     @prompt(name="mistake")
@@ -492,9 +514,9 @@ class Turn:
         fidelity: str,
         introducing_commit: str,
     ) -> Mistake:
-        session = self.work_session
-        if session is None:
-            raise RuntimeError("record_mistake requires workSession")
+        git = self._git()
+        if git is None:
+            raise RuntimeError("record_mistake requires a git repository")
         mistake = Mistake(
             entry_id=entry_id,
             artifact=artifact,
@@ -505,7 +527,7 @@ class Turn:
             fidelity=fidelity,
             introducing_commit=introducing_commit,
         )
-        mistake.annotate(session.git)
+        mistake.annotate(git)
         self.mistakes.append(mistake)
         return mistake
 
@@ -519,10 +541,10 @@ class Turn:
         how: str = "",
         status: str = "fixed",
     ) -> Correction:
-        session = self.work_session
-        if session is None:
-            raise RuntimeError("record_correction requires workSession")
-        found = session.git.find_mistakes(entry_ids)
+        git = self._git()
+        if git is None:
+            raise RuntimeError("record_correction requires a git repository")
+        found = git.find_mistakes(entry_ids)
         if not found and self.mistakes:
             wanted = set(entry_ids)
             found = [
@@ -816,14 +838,11 @@ class WorkSession:
 
     @property
     def turn(self) -> Turn:
-        """Turn hangs off the session — present once the session is awake."""
+        """Optional in-memory turn for mistake/correction during a session."""
         if self.open_turn is None:
-            hanging = Turn(work_session=self)
+            hanging = Turn(root=str(self.git.root))
             if self.context_index_key:
-                hanging.tool_keys = [self.context_index_key]
-            hanging.fidelity = self.fidelities
-            if self.format:
-                hanging.format = str(self.format)
+                hanging.context_tool = self.context_index_key
             self.open_turn = hanging
         return self.open_turn
 
@@ -1562,7 +1581,13 @@ class WorkSession:
 
     def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
         running_chats = self._running_chat_paths()
-        self.turn.finish(result=outcome or "session close")
+        turn = self.open_turn or Turn(root=str(self.git.root))
+        turn.turn(
+            message=outcome or "session close",
+            utility="finish-work-session",
+            context_tool=turn.context_tool or self.context_index_key,
+        )
+        self.open_turn = None
         self.cleanup()
         self.close_cli_sessions()
         if not self.session_md.is_file():
@@ -1655,13 +1680,12 @@ class WorkSession:
         return self
 
     def _finish_without_session(self, *, outcome: str = "") -> str:
-        """No open session: finish turn, attach this chat, push — skip session/worktree."""
+        """No open session: commit via Turn, attach this chat, push."""
         git = self.git
-        turn = Turn(workspace=str(self.path or self.workspace.path), session="")
-        turn.work_session = None
-        turn._checkout_git = git
-        turn._workspace_root = str(getattr(git, "root", None) or self.path or ".")
-        turn.finish(result=outcome or "finish without session")
+        Turn(root=str(git.root)).turn(
+            message=outcome or "finish without session",
+            utility="finish-work-session",
+        )
 
         prior_name = self.name
         if not prior_name:
@@ -2197,9 +2221,10 @@ class ContextToolHost:
         )
         resolved = self.resolve_edit_path(explicit=path)
         self.artifact_path = resolved
-        open_turn = session.turn
-        open_turn.action = action
+        open_turn = Turn(root=str(self._git.root))
+        open_turn.bind_from_host(self, action=action)
         open_turn.artifact_path = resolved
+        session.open_turn = open_turn
         self.workspace.upsert_path(
             self.context_index_key,
             self.fidelity,
@@ -2224,9 +2249,26 @@ class ContextToolHost:
 
     def finish(self, result: str = "done") -> TurnCommit | None:
         session = self.workspace.current_work_session
-        if session is None or session.open_turn is None:
-            raise RuntimeError("no open turn")
-        return session.open_turn.finish(result=result)
+        turn = (
+            session.open_turn
+            if session is not None and session.open_turn is not None
+            else Turn(root=str(self._git.root))
+        )
+        turn.bind_from_host(self)
+        commit = turn.turn(message=result, action=turn.action or "run")
+        if session is not None:
+            session.open_turn = None
+            if commit is not None:
+                session.turns.append(turn)
+            run = ToolCall(
+                toolset="action",
+                name="action_run",
+                summary=result,
+                role="run",
+            )
+            session.append_trail(run)
+            turn.tool_calls.append(run)
+        return commit
 
 
 # Back-compat for specs that imported the stub name during generation.
