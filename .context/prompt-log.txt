@@ -18986,3 +18986,121 @@ class TurnCommit:
 ==============================================================================
 2026-09-06T07:24:02Z  afterAgentResponse  conv=debug-e2  gen=g1  model=
 ------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T07:24:16Z  preToolUse:Read  conv=9258f444  gen=2921ef90  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T07:24:16Z  beforeReadFile  conv=9258f444  gen=2921ef90  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 1072 chars
+preview:
+        )
+
+    @hook(event="afterAgentResponse")
+    def auto_turn(self, payload: dict) -> dict:
+        """Commit dirty checkout after each agent response when enabled."""
+        git = self._git()
+        if git is None or not git.is_dirty(untracked=True):
+            self._record_auto_turn_run(payload, None, skipped="clean")
+... [30 lines, 1072 chars total]
+
+==============================================================================
+2026-09-06T07:24:20Z  preToolUse:Read  conv=9258f444  gen=2921ef90  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T07:24:21Z  beforeReadFile  conv=9258f444  gen=2921ef90  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 83360 chars
+preview:
+# @toolset-manifest python -m tools manifest workspace.workspace:Turn
+# @toolset-manifest python -m tools manifest workspace.workspace:WorkSession
+# @toolset-manifest python -m tools manifest workspace.workspace:Workspace
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# Do not author behavior from this Python source.
+"""Workspace domain â€” from workspace-eval-oo-sketch Â§2 / Â§4."""
+
+from __future__ import annotations
+... [2342 lines, 83360 chars total]
+
+==============================================================================
+2026-09-06T07:24:21Z  preToolUse:Task  conv=9258f444  gen=2921ef90  model=
+------------------------------------------------------------------------------
+
+description: Full auto-turn reality E2E
+prompt: Full auto-turn E2E in c:\dev\abd-cdd-utility-cleanup â€” mimic Cursor exactly. NO PYTHONPATH. Do everything; report PASS/FAIL.
+
+```powershell
+$env:PYTHONPATH = $null
+cd c:\dev\abd-cdd-utility-cleanup
+```
+
+A) Enable: create empty `.context/hooks/turn/auto_turn_after_agent_response.enabled`
+... [30 lines, 1208 chars total]
+subagent_type: shell
+
+==============================================================================
+2026-09-06T07:24:21Z  preToolUse:Write  conv=9258f444  gen=2921ef90  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T07:24:22Z  subagentStart  conv=9258f444  gen=9258f444  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+subagent_type: shell
+subagent_model: composer-2.5-fast
+task: Full auto-turn E2E in c:\dev\abd-cdd-utility-cleanup â€” mimic Cursor exactly. NO PYTHONPATH. Do everything; report PASS/FAIL.
+
+```powershell
+$env:PYTHONPATH = $null
+cd c:\dev\abd-cdd-utility-cleanup
+```
+
+A) Enable: create empty `.context/hooks/turn/auto_turn_after_agent_response.enabled`
+... [30 lines, 1208 chars total]
+
+==============================================================================
+2026-09-06T07:24:24Z  preToolUse:Shell  conv=28833af8  gen=a5eac719  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; New-Item -ItemType File -Path ".context/hooks/turn/auto_turn_after_agent_response.enabled" -Force | Out-Null; if (-not (Test-Path ".context/hooks/turn/auto_turn_after_agent_response.enabled")) { exit 1 }; Write-Host "A) enabled file exists"
+
+==============================================================================
+2026-09-06T07:24:24Z  preToolUse:Shell  conv=28833af8  gen=a5eac719  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; .\.venv\Scripts\python.exe primitives/hooks/install_dispatch.py; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Write-Host "B) install exit $LASTEXITCODE"
+
+==============================================================================
+2026-09-06T07:24:27Z  preToolUse:Shell  conv=28833af8  gen=a5eac719  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; Set-Content -Path ".context/hooks/turn/final-reality-probe.txt" -Value "final-reality-probe 2026-09-06T07:25Z" -NoNewline; Get-Content ".context/hooks/turn/final-reality-probe.txt"; Write-Host "C) probe written"
+
+==============================================================================
+2026-09-06T07:24:27Z  preToolUse:Shell  conv=28833af8  gen=a5eac719  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; $BEFORE_SHA = git rev-parse HEAD; Write-Host "BEFORE_SHA=$BEFORE_SHA"; $ls = git ls-files ".context/hooks/turn/final-reality-probe.txt"; if ($ls) { Write-Host "D_FAIL: tracked already: $ls" } else { Write-Host "D) probe untracked (git ls-files empty)" }
+
+==============================================================================
+2026-09-06T07:24:30Z  preToolUse:Shell  conv=28833af8  gen=a5eac719  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; $BEFORE_SHA = "308ecbdc04c1827b9044d61cf24fea1076db4c54"; $out = '{"hook_event_name":"afterAgentResponse","conversation_id":"final-reality-e2e","generation_id":"g1"}' | .\.venv\Scripts\python.exe primitives/hooks/dispatch.py; Write-Host "E_stdout=$out"; Write-Host "E_exit=$LASTEXITCODE"; $AFTER_SHA = git rev-parse HEAD; Write-Host "AFTER_SHA=$AFTER_SHA"
+
+==============================================================================
+2026-09-06T07:24:31Z  afterAgentResponse  conv=final-re  gen=g1  model=
+------------------------------------------------------------------------------

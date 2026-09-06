@@ -461,6 +461,7 @@ class Turn:
         if git is None or not git.is_dirty(untracked=True):
             self._record_auto_turn_run(payload, None, skipped="clean")
             return {}
+        before_sha = git.current_commit
         self.utility = "auto_turn"
         self.subject = self._auto_turn_subject(git)
         self.message = "auto turn after agent response"
@@ -469,6 +470,17 @@ class Turn:
             commit = self._commit(stage_untracked=True)
         except Exception as exc:
             self._record_auto_turn_run(payload, None, error=str(exc))
+            return {}
+        if commit is None and git.current_commit != before_sha:
+            commit = TurnCommit(
+                name=self._subject_line(),
+                branch=git.current_branch,
+                sha=git.current_commit,
+                utility=self.utility,
+                subject=self._compact_subject(self.subject),
+            )
+        if commit is None:
+            self._record_auto_turn_run(payload, None, skipped="clean")
             return {}
         self._record_auto_turn_run(payload, commit)
         return {}

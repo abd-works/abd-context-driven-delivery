@@ -216,3 +216,8 @@
 2026-09-06T07:23:41Z MERGED {"permission": "allow"}
 2026-09-06T07:24:02Z ENTRY raw_len=93 raw=b'{"hook_event_name":"afterAgentResponse","conversation_id":"debug-e2e","generation_id":"g1"}\r\n'
 2026-09-06T07:24:02Z EVENT 'afterAgentResponse' conversation_id='debug-e2e' payload_keys=['conversation_id', 'generation_id', 'hook_event_name']
+2026-09-06T07:24:07Z HANDLER Turn.auto_turn result_keys=[] result={}
+2026-09-06T07:24:07Z ENABLED ['Turn.auto_turn']
+2026-09-06T07:24:07Z MERGED {"permission": "allow"}
+2026-09-06T07:24:31Z ENTRY raw_len=101 raw=b'{"hook_event_name":"afterAgentResponse","conversation_id":"final-reality-e2e","generation_id":"g1"}\r\n'
+2026-09-06T07:24:31Z EVENT 'afterAgentResponse' conversation_id='final-reality-e2e' payload_keys=['conversation_id', 'generation_id', 'hook_event_name']
