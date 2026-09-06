@@ -4,20 +4,20 @@ globs: **/*.py,**/*.js,**/*.ts,**/*.java,**/*.c,**/*.cs
 alwaysApply: false
 ---
 
-When code, follow this procedure. See @clean_engineering-code for the full skill.
+When code — seriously, whenever you are writing code and testing it — you MUST follow this procedure. See @clean_engineering-code for the full skill.
 
 
-**Test shape ladder** — applies to all code tests regardless of framework (unit BDD, agent BDD, story ATDD). `@bdd` and `@stories` sessions refer here instead of duplicating this workflow.
+**Mandatory.** Whenever you are writing or testing production code at this fidelity, you **MUST** follow the test shape ladder below — unit BDD, agent BDD, story ATDD, all the same. `@bdd` and `@stories` sessions refer here; do not duplicate or soften this workflow.
 
-Do the **opposite of the human default** and the **AI shortcut**: humans stub early for speed; agents stub to green. Discover real shape first, then lock fast regression tests, then offer a full-stack swap.
+Do the **opposite of the human default** and the **AI shortcut**: humans stub early for speed; agents stub to green. You **MUST** discover real shape first, then lock fast regression tests, then offer a full-stack swap.
 
-1. **Discover with real conditions** — First pass: no stub, no mock on the subject or the integration path you are proving. Call exactly as the user would.
+1. **Discover with real conditions (MUST run first)** — No stub, no mock on the subject or the integration path you are proving. Call exactly as the user would.
    - **AI utility** — real sub-agents pretending to type to the user (`@agent_bdd`); never mock the harness.
    - **Website** — real standup / running app; reconcile live before locking tests.
    - **Backend** — real backend or documented local integration endpoint.
    - **Goal** — learn the real shape of responses, files, and side effects before any mock knows what to return.
 
-2. **Stub TDD (fast suite)** — Once real shape is known, write two-pass tests with stubs/mocks only at **architecture boundaries** (never the subject under test). Stubs must match the observed real shape. These tests run on every change (regression TDD).
+2. **Stub TDD (fast suite)** — Only after step 1: write two-pass tests with stubs/mocks at **architecture boundaries** only (never the subject under test). Stubs **MUST** match the observed real shape. These tests run on every change (regression TDD).
 
 3. **E2E swap (on request)** — Separate test class or file: same behavior, same assertions, swap stubs for real collaborators. Extend or inherit from the fast suite where practical. Run only when the user asks for e2e / integration / full stack.
 

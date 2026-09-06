@@ -65,7 +65,7 @@ with description("context tool rules"):
         )
         by_name = {s.name: s for s in specs}
         expect("code-procedure" in by_name).to(be_true)
-        expect(by_name["code-procedure"].body).to(contain("When code, follow this procedure"))
+        expect(by_name["code-procedure"].body).to(contain("you MUST follow this procedure"))
         expect(by_name["code-procedure"].body).to(contain("Test shape ladder"))
         expect(by_name["code-procedure"].body).to(contain("Discover with real conditions"))
         expect(by_name["code-procedure"].globs).to(equal("**/*.py,**/*.js,**/*.ts,**/*.java,**/*.c,**/*.cs"))

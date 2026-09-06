@@ -252,8 +252,14 @@ def _procedure_opener(
             f"See {refs} for full generate guidance.\n\n"
         )
     activity = fidelity.replace("_", " ")
+    if fidelity == "code":
+        return (
+            f"When {activity} — seriously, whenever you are writing code and testing it — "
+            f"you MUST follow this procedure. "
+            f"See @{_skill_ref(tool_slug, fidelity)} for the full skill.\n\n"
+        )
     return (
-        f"When {activity}, follow this procedure. "
+        f"When {activity}, you MUST follow this procedure. "
         f"See @{_skill_ref(tool_slug, fidelity)} for the full skill.\n\n"
     )
 
