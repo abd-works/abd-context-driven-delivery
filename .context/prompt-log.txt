@@ -2944,3 +2944,1540 @@ EOF
 ------------------------------------------------------------------------------
 
 command: cd "c:\dev\abd-context-driven-delivery"; git add -A; git status --short | Measure-Object | ForEach-Object { "staged entries: $($_.Count)" }; git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -m "Add prompt audit hooks, closed session archive, and remaining local artifacts."; git push origin main
+
+==============================================================================
+2026-09-06T05:18:34Z  beforeSubmitPrompt  conv=9258f444  gen=541459da  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+we should have no dependency on the work session going forward or the workspace
+
+instead we need turn to be self sufficient There's no such thing as open anymore it's stupid it's simply slash turn
+
+which runs the commit action; and then we need to make sure we log the following most of which we're probably doing but just falling into the stupidest sure session bullshit
+
+context-tool skill , action skill, utility skill (everything that has a command line is going through skills now but it doesn't matter if we decide tomorrow to change that to commands or prompts or whatever it's skills commands
+... [7 lines, 1072 chars total]
+
+ATTACHMENTS:
+  [rule] openable-chat-links.mdc
+  [rule] character-driven-development.mdc
+
+==============================================================================
+2026-09-06T05:18:37Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+
+==============================================================================
+2026-09-06T05:18:37Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:18:38Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 3787 chars
+preview:
+                token = line.strip().split()[0] if line.strip() else ""
+                if not token or token.startswith("-") or ":" in token:
+                    continue
+                if token.lower() in {"model", "models", "name", "id"}:
+                    continue
+                if token not in found:
+                    found.append(token)
+        except (OSError, subprocess.SubprocessError, FileNotFoundError):
+... [120 lines, 3787 chars total]
+
+==============================================================================
+2026-09-06T05:18:40Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:18:40Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+
+==============================================================================
+2026-09-06T05:18:41Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 6938 chars
+preview:
+        return "-".join(parts)
+
+    def _ensure_named(self) -> None:
+        if self.tool_keys or self.action or self.fidelity or self.format:
+            return
+        session = self.work_session
+        if session is not None:
+            if session.context_index_key:
+... [200 lines, 6938 chars total]
+
+==============================================================================
+2026-09-06T05:18:43Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: performTurn|finish_turn|start-turn|finish-turn
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T05:18:43Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+
+==============================================================================
+2026-09-06T05:18:43Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+
+==============================================================================
+2026-09-06T05:18:45Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+
+==============================================================================
+2026-09-06T05:18:45Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\finish-turn\SKILL.md
+
+==============================================================================
+2026-09-06T05:18:46Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\finish-turn\SKILL.md
+size: 514 chars
+preview:
+---
+name: finish-turn
+description: "finish_turn â€” close the hanging turn, or commit the current checkout if no work session."
+disable-model-invocation: true
+---
+
+finish_turn â€” close the hanging turn, or commit the current checkout if no work session.
+
+... [16 lines, 514 chars total]
+
+==============================================================================
+2026-09-06T05:18:46Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\start-turn\SKILL.md
+size: 342 chars
+preview:
+---
+name: start-turn
+description: "guidance"
+disable-model-invocation: true
+---
+
+guidance
+
+... [16 lines, 342 chars total]
+
+==============================================================================
+2026-09-06T05:18:48Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T05:18:48Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: performTurn
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T05:18:48Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+size: 5644 chars
+preview:
+            tmp = Path(tempfile.mkdtemp(prefix="ws-turn-open-cli-"))
+            git = NullGitRepo()
+            workspace = Workspace(str(tmp))
+            host = ContextToolHost(workspace, git=git)
+            host.run_action("sprint-open", goal="open turn")
+            kit = Turn(workspace=str(tmp), session="sprint-open")
+            opened = kit.open(action="start-turn")
+            expect(opened.action).to(equal("start-turn"))
+... [120 lines, 5644 chars total]
+
+==============================================================================
+2026-09-06T05:18:50Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: performTurn|@agent_instructions|@action
+
+==============================================================================
+2026-09-06T05:18:50Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:18:50Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+
+==============================================================================
+2026-09-06T05:18:51Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 2597 chars
+preview:
+        return mistake
+
+    @prompt(name="correction")
+    @agent_tool
+    def record_correction(
+        self,
+        entry_ids: list[str],
+        *,
+... [80 lines, 2597 chars total]
+
+==============================================================================
+2026-09-06T05:18:53Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def performTurn|performTurn
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace
+
+==============================================================================
+2026-09-06T05:18:53Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:18:54Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 3594 chars
+preview:
+        """Persist {model} under ``.context/sessions/{session}/model`` (default session when none)."""
+        root = (workspace or "").strip() or self.path
+        slug = self._model_session_name(session)
+        path = SessionModel.write(root, model, slug)
+        current = self.current_work_session
+        if current is not None and current.name == slug:
+            current.path = current.path or root
+        return path.read_text(encoding="utf-8").strip()
+... [80 lines, 3594 chars total]
+
+==============================================================================
+2026-09-06T05:18:56Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: class Turn|agent_instructions|agent_tool|prompt\(
+
+==============================================================================
+2026-09-06T05:18:56Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness\harness_spec.py
+
+==============================================================================
+2026-09-06T05:18:56Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness\harness_spec.py
+size: 2636 chars
+preview:
+            with it("should write a prompt named from the class"):
+                root = _sandbox()
+                Harness("Cursor", repo_root=root).write_deploy(source="turn")
+                expect((root / ".cursor" / "skills" / "actions" / "turn" / "SKILL.md").is_file()).to(equal(True))
+
+        with context("with a utility performTurn prompt"):
+            with it("should invoke performTurn as an action on Turn"):
+                root = _sandbox()
+... [50 lines, 2636 chars total]
+
+==============================================================================
+2026-09-06T05:19:03Z  preToolUse:Shell  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd c:\dev\abd-cdd-utility-cleanup && .venv\Scripts\python.exe -m pytest utilities/workspace/workspace_spec.py -k "Turn" --no-header -q 2>&1 | Select-Object -Last 30
+
+==============================================================================
+2026-09-06T05:19:03Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\sub-agent\SKILL.md
+
+==============================================================================
+2026-09-06T05:19:03Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: agent_instructions|@action
+
+==============================================================================
+2026-09-06T05:19:03Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\sub-agent\SKILL.md
+size: 1799 chars
+preview:
+---
+name: sub-agent
+description: "Run the listed context tools and actions as one non-blocking sub-agent."
+disable-model-invocation: true
+---
+
+Run the listed context tools and actions as one non-blocking sub-agent.
+
+... [39 lines, 1799 chars total]
+
+==============================================================================
+2026-09-06T05:19:05Z  preToolUse:Shell  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: .venv\Scripts\python.exe -m pytest utilities/workspace/workspace_spec.py -k "Turn" --no-header -q 2>&1 | Select-Object -Last 30
+
+==============================================================================
+2026-09-06T05:19:05Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def performTurn
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T05:19:11Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def commit
+
+==============================================================================
+2026-09-06T05:19:11Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\context_tools\bdd\SKILL.md
+
+==============================================================================
+2026-09-06T05:19:11Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+
+==============================================================================
+2026-09-06T05:19:11Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\context_tools\bdd\SKILL.md
+size: 337 chars
+preview:
+---
+name: bdd
+description: "Provide guidance for creating behavior skeletons and development tests."
+---
+
+# bdd
+
+Provide guidance for creating behavior skeletons and development tests.
+... [11 lines, 337 chars total]
+
+==============================================================================
+2026-09-06T05:19:12Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+size: 1889 chars
+preview:
+        return name
+
+    def commit(self, paths: list[str], message: str) -> str:
+        if not paths:
+            raise ValueError("commit requires at least one path")
+        if self._memory:
+            self._commits.append((list(paths), message))
+            self._commit = f"commit-{len(self._commits)}"
+... [50 lines, 1889 chars total]
+
+==============================================================================
+2026-09-06T05:19:14Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: open_turn|finish_turn|\.turn\.|Turn\(
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities
+
+==============================================================================
+2026-09-06T05:19:14Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: finish_turn|open_turn|start-turn|finish-turn
+path [file]: c:\dev\abd-cdd-utility-cleanup\context_tools
+
+==============================================================================
+2026-09-06T05:19:20Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\context_tools\actions\lifecycle.py
+
+==============================================================================
+2026-09-06T05:19:20Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+
+==============================================================================
+2026-09-06T05:19:20Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\context_tools\actions\lifecycle.py
+size: 3357 chars
+preview:
+"""First-order action prelude â€” workspace, then the session's hanging turn and decisions."""
+
+from __future__ import annotations
+
+from primitives.actions.action import agent_instructions, agentic_toolset
+from tools.tool import agent_tool
+from workspace.workspace import SessionModel, Workspace
+
+... [86 lines, 3357 chars total]
+
+==============================================================================
+2026-09-06T05:19:20Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+size: 1889 chars
+preview:
+            return ""
+
+    def _commit_if_dirty(self, workspace: str = "", focus: str = "") -> str:
+        """Commit staged/tracked changes to close the current turn before staging the backlog."""
+        try:
+            ws = self._workspace(workspace)
+            session = ws.current_work_session
+            repo = self._repo(workspace)
+... [50 lines, 1889 chars total]
+
+==============================================================================
+2026-09-06T05:19:33Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: turn|finish-turn|start-turn
+
+==============================================================================
+2026-09-06T05:19:33Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T05:19:33Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+size: 3733 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""BDD â€” workspace usage story (workspace-bdd-sketch.md) at development."""
+
+import inspect
+import sys
+import tempfile
+... [80 lines, 3733 chars total]
+
+==============================================================================
+2026-09-06T05:19:45Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+
+==============================================================================
+2026-09-06T05:19:45Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def note
+
+==============================================================================
+2026-09-06T05:19:46Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+size: 1383 chars
+preview:
+        self._git(
+            "notes",
+            f"--ref={note_ref}",
+            "add",
+            "-f",
+            "-m",
+            text,
+            sha,
+... [40 lines, 1383 chars total]
+
+==============================================================================
+2026-09-06T05:19:48Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\__init__.py
+
+==============================================================================
+2026-09-06T05:19:49Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\__init__.py
+size: 747 chars
+preview:
+"""Git utility â€” repo, branch, commit, project, ticket."""
+
+from git.git import (
+    Branch,
+    CliAgentBinding,
+    Commit,
+    DirtyBranchSwitchError,
+    GhConnectError,
+... [42 lines, 747 chars total]
+
+==============================================================================
+2026-09-06T05:19:55Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:19:55Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T05:19:55Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 1255 chars
+preview:
+# @toolset-manifest python -m tools manifest workspace.workspace:Turn
+# @toolset-manifest python -m tools manifest workspace.workspace:WorkSession
+# @toolset-manifest python -m tools manifest workspace.workspace:Workspace
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# Do not author behavior from this Python source.
+"""Workspace domain â€” from workspace-eval-oo-sketch Â§2 / Â§4."""
+
+from __future__ import annotations
+... [29 lines, 1255 chars total]
+
+==============================================================================
+2026-09-06T05:19:55Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+size: 10197 chars
+preview:
+                        )
+                        expect(self.git.current_branch).to(equal("session/sprint-new"))
+                        expect("session/sprint-new" in self.git._branches).to(be_true)
+
+            with context("with a dirty working tree not on its session branch"):
+                with before.each:
+                    self.tmp = Path(tempfile.mkdtemp(prefix="ws-dirty-"))
+                    self.git = NullGitRepo()
+... [200 lines, 10197 chars total]
+
+==============================================================================
+2026-09-06T05:20:01Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\git_repo.py
+
+==============================================================================
+2026-09-06T05:20:01Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:20:02Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\git_repo.py
+size: 406 chars
+preview:
+"""Shim â€” canonical git model lives in utilities/git."""
+
+from git import (
+    DirtyBranchSwitchError,
+    GhConnectError,
+    GitConnectError,
+    GitRepo,
+    NullGitRepo,
+... [24 lines, 406 chars total]
+
+==============================================================================
+2026-09-06T05:20:03Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 79923 chars
+preview:
+# @toolset-manifest python -m tools manifest workspace.workspace:Turn
+# @toolset-manifest python -m tools manifest workspace.workspace:WorkSession
+# @toolset-manifest python -m tools manifest workspace.workspace:Workspace
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# Do not author behavior from this Python source.
+"""Workspace domain â€” from workspace-eval-oo-sketch Â§2 / Â§4."""
+
+from __future__ import annotations
+... [2233 lines, 79923 chars total]
+
+==============================================================================
+2026-09-06T05:20:03Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\git_repo.py
+
+==============================================================================
+2026-09-06T05:20:03Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:20:04Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\git_repo.py
+
+==============================================================================
+2026-09-06T05:20:18Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:20:20Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+
+==============================================================================
+2026-09-06T05:20:21Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+size: 679 chars
+preview:
+        else:
+            merge_git.git(merge_root, "merge", source, "--no-edit")
+        return merge_git.git(merge_root, "rev-parse", "HEAD")
+
+    def note(
+        self,
+        sha: str,
+        payload: dict[str, str],
+... [25 lines, 679 chars total]
+
+==============================================================================
+2026-09-06T05:20:23Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:20:31Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:20:32Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:20:33Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:20:34Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:20:36Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:20:39Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+
+==============================================================================
+2026-09-06T05:20:39Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\context_tools\actions\lifecycle.py
+
+==============================================================================
+2026-09-06T05:20:39Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+size: 4716 chars
+preview:
+            return ""
+
+    def _commit_if_dirty(self, workspace: str = "", focus: str = "") -> str:
+        """Commit staged/tracked changes to close the current turn before staging the backlog."""
+        try:
+            ws = self._workspace(workspace)
+            session = ws.current_work_session
+            repo = self._repo(workspace)
+... [130 lines, 4716 chars total]
+
+==============================================================================
+2026-09-06T05:20:39Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\context_tools\actions\lifecycle.py
+size: 3357 chars
+preview:
+"""First-order action prelude â€” workspace, then the session's hanging turn and decisions."""
+
+from __future__ import annotations
+
+from primitives.actions.action import agent_instructions, agentic_toolset
+from tools.tool import agent_tool
+from workspace.workspace import SessionModel, Workspace
+
+... [86 lines, 3357 chars total]
+
+==============================================================================
+2026-09-06T05:20:40Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\context_tools\actions\lifecycle.py
+
+==============================================================================
+2026-09-06T05:20:41Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\context_tools\actions\lifecycle.py
+
+==============================================================================
+2026-09-06T05:20:43Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+
+==============================================================================
+2026-09-06T05:20:43Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\context_tools\actions\lifecycle.py
+
+==============================================================================
+2026-09-06T05:20:44Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+size: 2075 chars
+preview:
+                ticket, str(opened["session_name"]), workspace=workspace
+            )
+        ws = self._workspace(workspace)
+        session = ws.current_work_session
+        if session is not None and session.open_turn is not None:
+            message = self.turn_commit_message(
+                subject=f"start {session.name}",
+                ticket=ticket,
+... [50 lines, 2075 chars total]
+
+==============================================================================
+2026-09-06T05:20:50Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+
+==============================================================================
+2026-09-06T05:20:50Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+size: 1604 chars
+preview:
+        Then call finish so merge and worktree removal can proceed on a clean tree.
+        """
+        session_name = self.require_open_session(workspace=workspace)
+        resolved_ticket = self._resolve_finish_ticket(ticket, session_name)
+        ws = self._workspace(workspace)
+        session = ws.current_work_session
+        if session is not None and (
+            session.open_turn is not None
+... [40 lines, 1604 chars total]
+
+==============================================================================
+2026-09-06T05:20:53Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:20:54Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+
+==============================================================================
+2026-09-06T05:20:55Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+size: 21532 chars
+preview:
+# @toolset-manifest python -m tools manifest workflow.workflow:Workflow
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# Do not author behavior from this Python source.
+"""Workflow â€” backlog, start, finish linking GitHub Issues, handoff, and WorkSession."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+... [572 lines, 21532 chars total]
+
+==============================================================================
+2026-09-06T05:20:55Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:20:55Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+
+==============================================================================
+2026-09-06T05:20:56Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+
+==============================================================================
+2026-09-06T05:20:56Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+
+==============================================================================
+2026-09-06T05:20:58Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: self.artifact_path = ""
+
+==============================================================================
+2026-09-06T05:21:01Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workflow\workflow.py
+
+==============================================================================
+2026-09-06T05:21:01Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:21:04Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T05:21:04Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T05:21:05Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+size: 4927 chars
+preview:
+
+                    with it(
+                        "should not note the mistake on its open turn's commit"
+                    ):
+                        expect(self.git.read_notes(self.open_turn_commit)).to(
+                            equal({})
+                        )
+
+... [100 lines, 4927 chars total]
+
+==============================================================================
+2026-09-06T05:21:05Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+size: 4798 chars
+preview:
+                    )
+
+                with it("should push its session branch to origin"):
+                    expect(self.git.pushes).to(equal(["session/sprint-a"]))
+
+
+with description("Turn"):
+    with context("that is a toolset"):
+... [100 lines, 4798 chars total]
+
+==============================================================================
+2026-09-06T05:21:10Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T05:21:10Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T05:21:10Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+size: 34433 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""BDD â€” workspace usage story (workspace-bdd-sketch.md) at development."""
+
+import inspect
+import sys
+import tempfile
+... [701 lines, 34433 chars total]
+
+==============================================================================
+2026-09-06T05:21:10Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+size: 2740 chars
+preview:
+            with context("that has finished its turn"):
+                with before.each:
+                    self.tmp = Path(tempfile.mkdtemp(prefix="ws-done-"))
+                    self.git = NullGitRepo()
+                    self.workspace = Workspace(str(self.tmp))
+                    self.host = ContextToolHost(
+                        self.workspace,
+                        git=self.git,
+... [60 lines, 2740 chars total]
+
+==============================================================================
+2026-09-06T05:21:11Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T05:21:16Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:21:16Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T05:21:20Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T05:21:21Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T05:21:24Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\turn\SKILL.md
+
+==============================================================================
+2026-09-06T05:21:24Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T05:21:25Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\turn\SKILL.md
+
+==============================================================================
+2026-09-06T05:21:25Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\.context\module-context.md
+
+==============================================================================
+2026-09-06T05:21:26Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\finish-turn\SKILL.md
+
+==============================================================================
+2026-09-06T05:21:27Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\start-turn\SKILL.md
+
+==============================================================================
+2026-09-06T05:21:27Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\finish-turn\SKILL.md
+size: 514 chars
+preview:
+---
+name: finish-turn
+description: "finish_turn â€” close the hanging turn, or commit the current checkout if no work session."
+disable-model-invocation: true
+---
+
+finish_turn â€” close the hanging turn, or commit the current checkout if no work session.
+
+... [16 lines, 514 chars total]
+
+==============================================================================
+2026-09-06T05:21:27Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\start-turn\SKILL.md
+size: 342 chars
+preview:
+---
+name: start-turn
+description: "guidance"
+disable-model-invocation: true
+---
+
+guidance
+
+... [16 lines, 342 chars total]
+
+==============================================================================
+2026-09-06T05:21:27Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\finish-turn\SKILL.md
+
+==============================================================================
+2026-09-06T05:21:28Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\start-turn\SKILL.md
+
+==============================================================================
+2026-09-06T05:21:31Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: \.open\(|performTurn|open_turn\.finish|Turn\(work_session|finish\(result
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities
+
+==============================================================================
+2026-09-06T05:21:31Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+
+==============================================================================
+2026-09-06T05:21:31Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+size: 1424 chars
+preview:
+        expect((archived / "model").read_text(encoding="utf-8")).to(equal("composer-2.5"))
+        expect((tmp / ".context" / "sessions" / "archive-me").exists()).to(equal(False))
+        expect(durable.is_file()).to(be_true)
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    with it("should close a forgotten turn before session close"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import Turn, Workspace
+... [30 lines, 1424 chars total]
+
+==============================================================================
+2026-09-06T05:21:34Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\plan\plan.py
+
+==============================================================================
+2026-09-06T05:21:34Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\sub_agent\sub_agent.py
+
+==============================================================================
+2026-09-06T05:21:34Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\plan\plan.py
+size: 1559 chars
+preview:
+    def _register_on_workspace(plan: Plan) -> None:
+        workspace = plan.workspace
+        if workspace is None:
+            return
+        plans = getattr(workspace, "plans", None)
+        if plans is None:
+            workspace.plans = []  # type: ignore[attr-defined]
+            plans = workspace.plans
+... [40 lines, 1559 chars total]
+
+==============================================================================
+2026-09-06T05:21:34Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\sub_agent\sub_agent.py
+size: 2691 chars
+preview:
+            discovered[name] = SubAgentTool(name=name, callable=getattr(instance, name))
+    return discovered
+
+
+@agentic_toolset
+class SubAgent:
+    """Slash ``/sub-agent`` runs this prompt, listed context tools, and listed actions as one non-blocking sub-agent.
+
+... [50 lines, 2691 chars total]
+
+==============================================================================
+2026-09-06T05:21:38Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\plan\plan.py
+
+==============================================================================
+2026-09-06T05:21:38Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: from workspace|Turn
+
+==============================================================================
+2026-09-06T05:21:39Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\plan\plan.py
+size: 1005 chars
+preview:
+# @toolset-manifest python -m tools manifest plan.plan:Plan
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+"""Plan â€” front-end to git; based on a reusable or named Workflow."""
+from __future__ import annotations
+
+import json
+import re
+from dataclasses import asdict, dataclass, field
+... [30 lines, 1005 chars total]
+
+==============================================================================
+2026-09-06T05:21:43Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\plan\plan.py
+
+==============================================================================
+2026-09-06T05:21:43Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\plan\plan.py
+size: 3095 chars
+preview:
+        if turns:
+            first = turns[0]
+            first.state = TicketState.in_progress()  # type: ignore[attr-defined]
+            session.open_turn = first
+        return session
+
+    def execute_turn(self) -> Turn | None:
+        turn = self._open_turn()
+... [84 lines, 3095 chars total]
+
+==============================================================================
+2026-09-06T05:21:48Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\plan\plan.py
+
+==============================================================================
+2026-09-06T05:21:48Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+
+==============================================================================
+2026-09-06T05:21:48Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:21:48Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\plan\plan.py
+size: 25614 chars
+preview:
+# @toolset-manifest python -m tools manifest plan.plan:Plan
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+"""Plan â€” front-end to git; based on a reusable or named Workflow."""
+from __future__ import annotations
+
+import json
+import re
+from dataclasses import asdict, dataclass, field
+... [773 lines, 25614 chars total]
+
+==============================================================================
+2026-09-06T05:21:48Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+size: 46687 chars
+preview:
+"""BDD spec for WorkSession - kit prose + tools on BaseContextTool hosts."""
+
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+... [1052 lines, 46687 chars total]
+
+==============================================================================
+2026-09-06T05:21:49Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\sub_agent\sub_agent.py
+
+==============================================================================
+2026-09-06T05:21:49Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:21:49Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\plan\plan.py
+
+==============================================================================
+2026-09-06T05:21:49Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+
+==============================================================================
+2026-09-06T05:21:50Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\sub_agent\sub_agent.py
+size: 6496 chars
+preview:
+# @toolset-manifest python -m tools manifest sub_agent.sub_agent:SubAgent
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""Sub-agent decorator - marks a tool as a non-blocking background sub-agent launch.
+
+Usage::
+... [141 lines, 6496 chars total]
+
+==============================================================================
+2026-09-06T05:21:50Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:21:50Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\sub_agent\sub_agent.py
+
+==============================================================================
+2026-09-06T05:21:53Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\sub_agent\sub_agent.py
+
+==============================================================================
+2026-09-06T05:21:53Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:21:56Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\sub_agent\sub_agent.py
+
+==============================================================================
+2026-09-06T05:21:57Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\sub-agent\SKILL.md
+
+==============================================================================
+2026-09-06T05:21:57Z  preToolUse:Shell  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: .venv\Scripts\python.exe -m mamba utilities/workspace/workspace_spec.py 2>&1 | Select-Object -Last 25
+
+==============================================================================
+2026-09-06T05:21:57Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\sub-agent\SKILL.md
+size: 1799 chars
+preview:
+---
+name: sub-agent
+description: "Run the listed context tools and actions as one non-blocking sub-agent."
+disable-model-invocation: true
+---
+
+Run the listed context tools and actions as one non-blocking sub-agent.
+
+... [39 lines, 1799 chars total]
+
+==============================================================================
+2026-09-06T05:21:58Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\sub-agent\SKILL.md
+
+==============================================================================
+2026-09-06T05:22:00Z  preToolUse:Grep  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+
+==============================================================================
+2026-09-06T05:22:04Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\sub_agent\sub_agent_spec.py
+
+==============================================================================
+2026-09-06T05:22:05Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\sub_agent\sub_agent_spec.py
+size: 1007 chars
+preview:
+            sig = SubAgent.manifest.signature
+            expect("begin" in sig).to(equal(False))
+            expect("end" in sig).to(equal(False))
+            expect("open_workspace" in sig).to(equal(False))
+
+    with context("when actions are listed"):
+        with it("should keep listed action kits unwrapped by performTurn"):
+            text = discover_sub_agent_tools(SubAgent())["run"].instructions
+... [20 lines, 1007 chars total]
+
+==============================================================================
+2026-09-06T05:22:08Z  preToolUse:Read  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\sub_agent\sub_agent_spec.py
+
+==============================================================================
+2026-09-06T05:22:09Z  beforeReadFile  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\sub_agent\sub_agent_spec.py
+size: 10041 chars
+preview:
+"""BDD spec for utilities/sub_agent/sub_agent.py â€” SubAgentTool + discover helpers.
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""
+import sys
+from pathlib import Path
+... [250 lines, 10041 chars total]
+
+==============================================================================
+2026-09-06T05:22:09Z  preToolUse:Write  conv=9258f444  gen=541459da  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\sub_agent\sub_agent_spec.py
+
+==============================================================================
+2026-09-06T05:26:12Z  beforeSubmitPrompt  conv=9258f444  gen=325b8059  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+/turn 
+
+ATTACHMENTS:
+  [rule] openable-chat-links.mdc
+  [rule] character-driven-development.mdc
+
+==============================================================================
+2026-09-06T05:26:18Z  preToolUse:Shell  conv=9258f444  gen=325b8059  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git status --porcelain
+
+==============================================================================
+2026-09-06T05:26:24Z  preToolUse:Shell  conv=9258f444  gen=325b8059  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: @'
+toolset: workspace.workspace:Turn
+tool: turn
+arguments:
+  context_tool: workspace
+  action: implement
+  utility: turn
+  subject: utilities/workspace, .cursor/skills/utilities
+... [10 lines, 304 chars total]
+
+==============================================================================
+2026-09-06T05:26:29Z  preToolUse:Read  conv=9258f444  gen=325b8059  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+
+==============================================================================
+2026-09-06T05:26:29Z  beforeReadFile  conv=9258f444  gen=325b8059  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+size: 669 chars
+preview:
+                return ""
+            return self._commits[-1][1]
+        return self._git("log", "-1", "--pretty=%B")
+
+    def _rel(self, path: str | Path) -> str:
+        resolved = Path(path).resolve()
+        try:
+            return str(resolved.relative_to(self.root)).replace("\\", "/")
+... [20 lines, 669 chars total]
+
+==============================================================================
+2026-09-06T05:26:34Z  preToolUse:Write  conv=9258f444  gen=325b8059  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:26:39Z  preToolUse:Shell  conv=9258f444  gen=325b8059  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git add utilities/workspace/ utilities/workflow/workflow.py utilities/sub_agent/ utilities/plan/plan.py context_tools/actions/lifecycle.py .cursor/skills/utilities/turn/ .cursor/skills/utilities/finish-turn/ .cursor/skills/utilities/start-turn/ .cursor/skills/utilities/sub-agent/SKILL.md
+
+==============================================================================
+2026-09-06T05:26:42Z  preToolUse:Shell  conv=9258f444  gen=325b8059  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git diff --cached --name-only
+
+==============================================================================
+2026-09-06T05:26:47Z  preToolUse:Shell  conv=9258f444  gen=325b8059  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -m "$( @'
+workspace/implement: Self-sufficient Turn with /turn commit and skill lineage metadata
+
+Context-Tool: workspace
+Action: implement
+Utility: turn
+Subject: utilities/workspace, .cursor/skills/utilities
+'@ )"
+
+==============================================================================
+2026-09-06T05:26:51Z  preToolUse:Shell  conv=9258f444  gen=325b8059  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git log -1 --format=fuller; git push -u origin HEAD 2>&1
+
+==============================================================================
+2026-09-06T05:27:12Z  beforeSubmitPrompt  conv=9258f444  gen=647ca413  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+no I want to commit all changes
+
+ATTACHMENTS:
+  [rule] openable-chat-links.mdc
+  [rule] character-driven-development.mdc
+
+==============================================================================
+2026-09-06T05:27:16Z  preToolUse:Shell  conv=9258f444  gen=647ca413  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git status --porcelain
+
+==============================================================================
+2026-09-06T05:27:19Z  preToolUse:Shell  conv=9258f444  gen=647ca413  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git diff utilities/workspace/workspace.py
+
+==============================================================================
+2026-09-06T05:27:23Z  preToolUse:Grep  conv=9258f444  gen=647ca413  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def _commit_paths
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T05:27:26Z  preToolUse:Shell  conv=9258f444  gen=647ca413  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git add -A; git status --short
