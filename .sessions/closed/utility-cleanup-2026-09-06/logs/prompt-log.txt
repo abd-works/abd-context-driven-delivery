@@ -1,0 +1,12 @@
+
+==============================================================================
+2026-09-06T16:56:08Z  preToolUse:Shell  conv=9258f444  gen=08d3b5b8  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities;c:\dev\abd-cdd-utility-cleanup\context_tools;c:\dev\abd-cdd-utility-cleanup\context_tools\actions"; .\.venv\Scripts\python.exe -c "
+from pathlib import Path
+from workspace.workspace import Workspace
+ws = Workspace('.')
+ws.open_work_session('utility-cleanup', isolate=True)
+ws.current_work_session.close_session(outcome='done', handoff='')
+" 2>&1
