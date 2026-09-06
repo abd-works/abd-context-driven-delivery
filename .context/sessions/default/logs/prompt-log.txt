@@ -1,0 +1,182 @@
+
+==============================================================================
+2026-09-06T16:36:20Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:36:21Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_echo\prompt_echo.py
+size: 3219 chars
+preview:
+"""
+Prompt echo hook â€” detects action skill references in prompts.
+
+Fires on preToolUse. Parses tool input for known action names, then echoes
+what was detected via user_message so the user sees it in the chat.
+
+Disabled when `.context/hooks/prompt_echo.disabled` exists (default: off).
+"""
+... [126 lines, 3219 chars total]
+
+==============================================================================
+2026-09-06T16:36:22Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_echo\prompt_echo.py
+
+==============================================================================
+2026-09-06T16:36:22Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_echo\prompt_echo.py
+
+==============================================================================
+2026-09-06T16:36:23Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:36:24Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:36:27Z  preToolUse:Grep  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: _bind_active|write_active|session_logs|ensure_started
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:36:42Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\session_logs.py
+
+==============================================================================
+2026-09-06T16:36:42Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.py
+
+==============================================================================
+2026-09-06T16:36:42Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:36:44Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:36:47Z  preToolUse:Grep  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def main
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\prompt_log.py
+
+==============================================================================
+2026-09-06T16:36:47Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T16:36:47Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\prompt_log.py
+
+==============================================================================
+2026-09-06T16:36:47Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+size: 1272 chars
+preview:
+                text=True,
+            ).strip()
+            expect(tracked).to(equal(probe.relative_to(repo_root).as_posix()))
+            expect(last_run.is_file()).to(be_true)
+            run_data = json.loads(last_run.read_text(encoding="utf-8"))
+            expect(run_data["conversation_id"]).to(equal("hook-spec-e2e"))
+            expect(run_data["committed_sha"]).to(equal(after_sha))
+            expect(run_data.get("error")).to(equal(None))
+... [25 lines, 1272 chars total]
+
+==============================================================================
+2026-09-06T16:36:50Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T16:36:50Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\prompt_log.py
+
+==============================================================================
+2026-09-06T16:36:50Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+size: 24471 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""BDD specs for @hook, HookHarness, and dispatch."""
+import json
+import os
+import subprocess
+... [579 lines, 24471 chars total]
+
+==============================================================================
+2026-09-06T16:36:54Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T16:36:54Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+size: 24471 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""BDD specs for @hook, HookHarness, and dispatch."""
+import json
+import os
+import subprocess
+... [579 lines, 24471 chars total]
+
+==============================================================================
+2026-09-06T16:36:54Z  preToolUse:Shell  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities"; .\.venv\Scripts\python.exe -m mamba.cli primitives/hooks/hook_spec.py 2>&1
+
+==============================================================================
+2026-09-06T16:36:55Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T16:36:55Z  afterAgentResponse  conv=hook-spe  gen=spec1  model=
+------------------------------------------------------------------------------

@@ -20596,3 +20596,363 @@ text: **Main wasnâ€™t merged because the primary clone (`abd-context-driven
 1. Updates the session branch from main
 2. Pushes `session/utility-cleanup`
 ... [59 lines, 1765 chars total]
+
+==============================================================================
+2026-09-06T16:35:15Z  beforeSubmitPrompt  conv=9258f444  gen=c28f7546  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+.sessions/closed/utility-cleanup/
+untracked (archive from close) commit this as soonm as you write ; change work session fuinnish;  
+
+.context/prompt-log.txt
+modified
+primitives/hooks/prompt_echo.debug
+modified
+
+... [11 lines, 328 chars total]
+
+==============================================================================
+2026-09-06T16:35:22Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace
+
+==============================================================================
+2026-09-06T16:35:22Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\prompt_log.py
+
+==============================================================================
+2026-09-06T16:35:23Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 4349 chars
+preview:
+
+    def close(self, *, outcome: str = "", handoff: str = "handoff.md") -> Path:
+        running_chats = self._running_chat_paths()
+        turn = self.open_turn or Turn(root=str(self.git.root))
+        turn.turn(
+            message=outcome or "session close",
+            utility="finish-work-session",
+            context_tool=turn.context_tool or self.context_index_key,
+... [120 lines, 4349 chars total]
+
+==============================================================================
+2026-09-06T16:35:23Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\prompt_log.py
+size: 832 chars
+preview:
+"""
+Read-only prompt audit hook â€” logs what crosses the wire to the model.
+
+Appends to .context/prompt-log.txt on:
+- beforeSubmitPrompt â€” user prompt + rule/file attachments
+- beforeReadFile â€” file content Cursor sends to the model
+- preToolUse â€” tool calls (Task prompts, Read paths, shell, etc.)
+- subagentStart â€” subagent task descriptions
+... [29 lines, 832 chars total]
+
+==============================================================================
+2026-09-06T16:35:27Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+
+==============================================================================
+2026-09-06T16:35:27Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:35:27Z  preToolUse:Grep  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: _archive|close|_land_on_default|prompt-log|runtime
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace
+
+==============================================================================
+2026-09-06T16:35:27Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+size: 3951 chars
+preview:
+            from workspace.workspace import Workspace
+
+            git = NullGitRepo(self.tmp)
+            session = Workspace(str(self.tmp)).open_work_session(
+                "cli-prop", git=git
+            )
+            session.ensure_started()
+            expect(session.cli_agent).to(be_none)
+... [80 lines, 3951 chars total]
+
+==============================================================================
+2026-09-06T16:35:27Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 3162 chars
+preview:
+
+    @staticmethod
+    def _closed_sessions_dir(repo_root: Path) -> Path:
+        closed = repo_root / ".sessions" / "closed"
+        closed.mkdir(parents=True, exist_ok=True)
+        return closed
+
+    def _archive_session_folder(self) -> Path | None:
+... [100 lines, 3162 chars total]
+
+==============================================================================
+2026-09-06T16:35:35Z  preToolUse:Grep  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: \.debug|prompt-log
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks
+
+==============================================================================
+2026-09-06T16:35:35Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:35:35Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+
+==============================================================================
+2026-09-06T16:35:36Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 1727 chars
+preview:
+    @property
+    def turn(self) -> Turn:
+        """Optional in-memory turn for mistake/correction during a session."""
+        if self.open_turn is None:
+            hanging = Turn(root=str(self.git.root))
+            if self.context_index_key:
+                hanging.context_tool = self.context_index_key
+            self.open_turn = hanging
+... [49 lines, 1727 chars total]
+
+==============================================================================
+2026-09-06T16:35:36Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py
+size: 2514 chars
+preview:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+with description("a WorkSession that is closed in a git worktree"):
+    with it("should merge onto main, keep the primary checkout, and remove a clean worktree"):
+        from workspace.git_repo import GitRepo
+        from workspace.workspace import Workspace
+
+... [50 lines, 2514 chars total]
+
+==============================================================================
+2026-09-06T16:35:40Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:35:40Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.py
+
+==============================================================================
+2026-09-06T16:35:40Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\prompt_log.py
+
+==============================================================================
+2026-09-06T16:35:40Z  preToolUse:Grep  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: class SessionPaths|session_dir
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace
+
+==============================================================================
+2026-09-06T16:35:40Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 1395 chars
+preview:
+# @toolset-manifest python -m tools manifest workspace.workspace:Turn
+# @toolset-manifest python -m tools manifest workspace.workspace:WorkSession
+# @toolset-manifest python -m tools manifest workspace.workspace:Workspace
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# Do not author behavior from this Python source.
+"""Workspace domain â€” from workspace-eval-oo-sketch Â§2 / Â§4."""
+
+from __future__ import annotations
+... [35 lines, 1395 chars total]
+
+==============================================================================
+2026-09-06T16:35:40Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\prompt_log.py
+size: 1039 chars
+preview:
+"""
+Read-only prompt audit hook â€” logs what crosses the wire to the model.
+
+Appends to .context/prompt-log.txt on:
+- beforeSubmitPrompt â€” user prompt + rule/file attachments
+- beforeReadFile â€” file content Cursor sends to the model
+- preToolUse â€” tool calls (Task prompts, Read paths, shell, etc.)
+- subagentStart â€” subagent task descriptions
+... [35 lines, 1039 chars total]
+
+==============================================================================
+2026-09-06T16:35:40Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.py
+size: 1123 chars
+preview:
+"""Cursor hook runtime â€” dispatch, skill inject, bootstrap, and deploy wiring."""
+
+from __future__ import annotations
+
+import importlib
+import json
+import os
+import re
+... [34 lines, 1123 chars total]
+
+==============================================================================
+2026-09-06T16:35:57Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_echo\prompt_echo.py
+
+==============================================================================
+2026-09-06T16:35:57Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:35:58Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_echo\prompt_echo.py
+size: 741 chars
+preview:
+        "permission": "allow",
+        "user_message": echo,
+    }
+
+
+_DEBUG_LOG = Path(__file__).with_suffix(".debug")
+
+
+... [30 lines, 741 chars total]
+
+==============================================================================
+2026-09-06T16:35:58Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 1630 chars
+preview:
+            return dest.parent.parent
+        if dest.parent.name == ".context" and dest.name != "sessions":
+            return dest.parent
+        return dest / ".context"
+
+    @staticmethod
+    def session_dir(working_path: str | Path, name: str = "") -> Path:
+        """Session temp dir: ``{working_path}/.context/sessions/{name}/``.
+... [50 lines, 1630 chars total]
+
+==============================================================================
+2026-09-06T16:36:06Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\session_logs.py
+
+==============================================================================
+2026-09-06T16:36:06Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.py
+
+==============================================================================
+2026-09-06T16:36:06Z  preToolUse:Read  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\prompt_log.py
+
+==============================================================================
+2026-09-06T16:36:07Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.py
+size: 17165 chars
+preview:
+"""Cursor hook runtime â€” dispatch, skill inject, bootstrap, and deploy wiring."""
+
+from __future__ import annotations
+
+import importlib
+import json
+import os
+import re
+... [501 lines, 17165 chars total]
+
+==============================================================================
+2026-09-06T16:36:07Z  beforeReadFile  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\prompt_log.py
+size: 6930 chars
+preview:
+"""
+Read-only prompt audit hook â€” logs what crosses the wire to the model.
+
+Appends to .context/prompt-log.txt on:
+- beforeSubmitPrompt â€” user prompt + rule/file attachments
+- beforeReadFile â€” file content Cursor sends to the model
+- preToolUse â€” tool calls (Task prompts, Read paths, shell, etc.)
+- subagentStart â€” subagent task descriptions
+... [218 lines, 6930 chars total]
+
+==============================================================================
+2026-09-06T16:36:07Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\session_logs.py
+
+==============================================================================
+2026-09-06T16:36:08Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.py
+
+==============================================================================
+2026-09-06T16:36:08Z  preToolUse:Write  conv=9258f444  gen=c28f7546  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\prompt_log.py

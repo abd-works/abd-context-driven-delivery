@@ -577,3 +577,23 @@ with description("auto turn end-to-end"):
             )
             expect(completed.returncode).to(equal(0))
             expect(json.loads(completed.stdout)).to(equal({"permission": "allow"}))
+
+
+with description("session hook logs"):
+
+    with context("when no work session is active"):
+
+        with it("should create default session logs under .context/sessions/default/logs"):
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                from hooks.session_logs import ensure_default_session, session_log_path
+
+                folder = ensure_default_session(root)
+                expect(folder.is_dir()).to(be_true)
+                log = session_log_path(root, "prompt-log.txt")
+                expect(log.parent.as_posix()).to(
+                    equal((root / ".context/sessions/default/logs").as_posix())
+                )
+                log.write_text("probe\n", encoding="utf-8")
+                expect(log.is_file()).to(be_true)
+                expect((folder / "session.md").is_file()).to(be_true)

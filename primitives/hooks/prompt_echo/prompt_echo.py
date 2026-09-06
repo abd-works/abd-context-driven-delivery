@@ -14,6 +14,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+for _category in ("primitives", "utilities", "primitives/hooks"):
+    _entry = str(_REPO_ROOT / _category)
+    if _entry not in sys.path:
+        sys.path.insert(0, _entry)
 _DISABLED_FLAG = _REPO_ROOT / ".context/hooks/prompt_echo.disabled"
 
 
@@ -87,11 +91,17 @@ def handle(data: dict) -> dict:
     }
 
 
-_DEBUG_LOG = Path(__file__).with_suffix(".debug")
+_DEBUG_LOG = None
+
+
+def _debug_log_path() -> Path:
+    from hooks.session_logs import session_log_path
+
+    return session_log_path(_REPO_ROOT, "prompt_echo.debug")
 
 
 def _debug(msg: str):
-    with open(_DEBUG_LOG, "a", encoding="utf-8") as f:
+    with open(_debug_log_path(), "a", encoding="utf-8") as f:
         ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         f.write(f"{ts} {msg}\n")
 

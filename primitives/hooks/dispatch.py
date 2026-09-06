@@ -19,9 +19,13 @@ from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _HOOKS_JSON = _REPO_ROOT / ".cursor" / "hooks.json"
-_DISPATCH_DEBUG = Path(__file__).with_suffix(".debug")
-_SKILL_INJECT_DEBUG = Path(__file__).with_name("skill_inject.debug")
 _NOTIFY_PS1 = Path(__file__).with_name("_notify_test.ps1")
+
+
+def _hook_debug_path(filename: str) -> Path:
+    from hooks.session_logs import session_log_path
+
+    return session_log_path(_REPO_ROOT, filename)
 
 for _category in ("primitives", "utilities", "primitives/hooks"):
     _entry = str(_REPO_ROOT / _category)
@@ -172,7 +176,7 @@ def parse_payload(raw: bytes) -> dict[str, Any]:
 
 
 def _dispatch_debug(msg: str) -> None:
-    with open(_DISPATCH_DEBUG, "a", encoding="utf-8") as f:
+    with open(_hook_debug_path("dispatch.debug"), "a", encoding="utf-8") as f:
         ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         f.write(f"{ts} {msg}\n")
 
@@ -327,7 +331,7 @@ def _skill_notify(title: str, body: str) -> None:
 
 def _skill_inject_log(msg: str) -> None:
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    with open(_SKILL_INJECT_DEBUG, "a", encoding="utf-8") as f:
+    with open(_hook_debug_path("skill_inject.debug"), "a", encoding="utf-8") as f:
         f.write(f"{ts} [skill-inject] {msg}\n")
 
 
@@ -473,6 +477,9 @@ def _run_skill_inject_hook(raw: bytes) -> None:
 
 def main() -> None:
     os.chdir(_REPO_ROOT)
+    from hooks.session_logs import ensure_default_session
+
+    ensure_default_session(_REPO_ROOT)
     if len(sys.argv) > 1 and sys.argv[1] in {"--install", "install"}:
         install_dispatch()
         return

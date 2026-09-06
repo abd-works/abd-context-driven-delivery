@@ -28,6 +28,11 @@ from workspace.git_repo import Commit, GitConnectError, GitRepo, NullGitRepo, Re
 from tools.tool import resource, agent_tool, toolset
 from harness.prompt import prompt
 from hooks.hook import hook
+from hooks.session_logs import (
+    clear_active_session,
+    wipe_session_logs,
+    write_active_session,
+)
 
 
 @dataclass
@@ -1364,11 +1369,14 @@ class WorkSession:
         closed.mkdir(parents=True, exist_ok=True)
         return closed
 
-    def _archive_session_folder(self) -> Path | None:
-        """Move session temps to ``{repo_root}/.sessions/closed/{name}/``.
+    def _archive_root(self) -> Path:
+        """Checkout that owns closed-session archives (worktree when isolated)."""
+        if self.isolate and not getattr(self.git, "_memory", False):
+            return Path(self.git.root)
+        return self._repository_root()
 
-        Durable ``.context/`` artifacts stay put; only the session folder moves.
-        """
+    def _archive_session_folder(self) -> Path | None:
+        """Move session temps to ``{checkout}/.sessions/closed/{name}/``."""
         if not self.name:
             return None
         try:
@@ -1377,13 +1385,28 @@ class WorkSession:
             return None
         if not source.is_dir():
             return None
-        closed_dir = self._closed_sessions_dir(self._repository_root())
+        closed_dir = self._closed_sessions_dir(self._archive_root())
         dest = closed_dir / self.name
         if dest.exists():
             stamp = (self.ended or date.today().isoformat()).replace(":", "-")
             dest = closed_dir / f"{self.name}-{stamp}"
         shutil.move(str(source), str(dest))
         return dest
+
+    def _commit_closed_archive(self, archived: Path | None) -> None:
+        if archived is None or not archived.is_dir():
+            return
+        closed_root = archived.parent
+        if not closed_root.is_dir():
+            return
+        try:
+            self.git.commit([str(closed_root)], f"archive session {self.name}")
+        except (GitConnectError, ValueError):
+            pass
+
+    def _bind_active_session_logs(self) -> None:
+        root = Path(self.path or self.git.root)
+        write_active_session(root, self.name or SessionModel.DEFAULT_SESSION)
 
     def _remove_empty_checkout_dir(self) -> None:
         root = Path(self.path)
@@ -1446,6 +1469,7 @@ class WorkSession:
             self.name = SessionModel.DEFAULT_SESSION
             self.isolate = False
         self.ensure_started(goal=goal, fidelities=fidelities, contexts=contexts)
+        self._bind_active_session_logs()
         self._bind_session_log()
         self.load_cli_sessions()
         self.read_context_index()
@@ -1528,6 +1552,7 @@ class WorkSession:
             self.handoff = ""
             self.started = date.today().isoformat()
         self.ensure_started(goal=goal, fidelities=fidelities, contexts=contexts)
+        self._bind_active_session_logs()
         self._bind_session_log()
         return str(self.session_md.resolve())
 
@@ -1687,6 +1712,7 @@ class WorkSession:
         for path in running_chats:
             self.save_chat(path)
         archived = self._archive_session_folder()
+        self._commit_closed_archive(archived)
         if not self.sync_only_close:
             self._land_on_default_branch()
             self._remove_session_worktree_if_clean()
@@ -1835,6 +1861,7 @@ class WorkSession:
     def cleanup(self) -> None:
         """Remove temps this session created. CliAgent temps go through CliAgent."""
         self._wipe_session_logs()
+        wipe_session_logs(Path(self.path or self.git.root))
         agent = self.cli_agent
         if agent is not None:
             agent.cleanup()

@@ -1,7 +1,7 @@
 """
 Read-only prompt audit hook — logs what crosses the wire to the model.
 
-Appends to .context/prompt-log.txt on:
+Appends to ``.context/sessions/{name}/logs/prompt-log.txt`` on:
 - beforeSubmitPrompt — user prompt + rule/file attachments
 - beforeReadFile — file content Cursor sends to the model
 - preToolUse — tool calls (Task prompts, Read paths, shell, etc.)
@@ -15,17 +15,22 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_DEFAULT_LOG = _REPO_ROOT / ".context" / "prompt-log.txt"
+for _category in ("primitives", "utilities", "primitives/hooks"):
+    _entry = str(_REPO_ROOT / _category)
+    if _entry not in sys.path:
+        sys.path.insert(0, _entry)
 _PREVIEW_LINES = 8
 _PREVIEW_CHARS = 600
 
 
 def log_path() -> Path:
-    """You will honor PROMPT_LOG_PATH when set. Otherwise the default stands."""
+    """Logs always live under the active session folder."""
     override = os.environ.get("PROMPT_LOG_PATH")
     if override:
         return Path(override)
-    return _DEFAULT_LOG
+    from hooks.session_logs import session_log_path
+
+    return session_log_path(_REPO_ROOT, "prompt-log.txt")
 
 
 def parse_hook_payload(raw: bytes) -> dict:
@@ -201,6 +206,9 @@ def handle(data: dict, *, target: Path | None = None) -> dict:
 
 
 def main():
+    from hooks.session_logs import ensure_default_session
+
+    ensure_default_session(_REPO_ROOT)
     raw = sys.stdin.buffer.read()
     if not raw.strip():
         print(json.dumps({"permission": "allow"}))
