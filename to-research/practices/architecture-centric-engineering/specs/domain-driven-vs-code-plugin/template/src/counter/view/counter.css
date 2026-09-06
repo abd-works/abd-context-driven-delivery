@@ -1,0 +1,26 @@
+/* counter/view/counter.css — Counter section positioning and styling */
+.counter-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.counter-section #total {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--accent-color);
+  padding: var(--spacing-sm) 0;
+}
+
+.counter-section label {
+  flex-wrap: wrap;
+}
+
+.counter-section input[type="number"] {
+  width: 100px;
+}
+
+.counter-section input[type="text"] {
+  flex: 1;
+  min-width: 150px;
+}

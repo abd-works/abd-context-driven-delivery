@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{SCOPE_NAME}} — UX specification</title>
+  <style>
+    :root {
+      --ink: #1b2b34;
+      --muted: #5c6b73;
+      --border: #e8e2dc;
+      --surface: #f7f5f2;
+      --accent: #2d6a6a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--surface);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .spec-header {
+      padding: 0.75rem 1.25rem;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem 1.25rem;
+    }
+    .spec-header h1 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .spec-header p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+      flex: 1;
+    }
+    .spec-header a {
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .spec-header a:hover { text-decoration: underline; }
+    .prototype-frame-wrap {
+      flex: 1;
+      min-height: 70vh;
+      padding: 1rem 1.25rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .prototype-frame {
+      flex: 1;
+      width: 100%;
+      min-height: 640px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+    }
+    .prototype-frame-note {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header class="spec-header">
+    <h1>{{SCOPE_NAME}}</h1>
+    <p>Clickable hi-fi prototype — stubbed logic. Read <code>ux-specification.md</code> for stub catalogue and AC demo paths.</p>
+    <a href="ux-specification.md">Open specification (Markdown)</a>
+    <a href="{{PROTOTYPE_INDEX}}" target="_blank" rel="noopener">Open prototype in new tab</a>
+  </header>
+  <div class="prototype-frame-wrap">
+    <iframe
+      class="prototype-frame"
+      src="{{PROTOTYPE_INDEX}}"
+      title="{{SCOPE_NAME}} clickable prototype"
+      loading="lazy"
+    ></iframe>
+    <p class="prototype-frame-note">Prototype entry: <code>{{PROTOTYPE_INDEX}}</code> — serve this folder with a static HTTP server if the frame is blank (e.g. <code>python -m http.server</code> from the specification directory).</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2020", "DOM"],
+    "strict": false,
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "@channelone/recipients-shared": ["./packages/recipients/shared/index.ts"],
+      "@channelone/recipients-server": ["./packages/recipients/server/index.ts"],
+      "@channelone/recipients-client": ["./packages/recipients/client/index.ts"],
+      "express": ["./typings/express.d.ts"],
+      "mongodb": ["./typings/mongodb.d.ts"],
+      "react": ["./typings/react.d.ts"],
+      "react-dom": ["./typings/react-dom.d.ts"],
+      "react-dom/client": ["./typings/react-dom.d.ts"],
+      "react-router-dom": ["./typings/react-router-dom.d.ts"],
+      "zod": ["./typings/zod.d.ts"],
+      "cors": ["./typings/cors.d.ts"],
+      "vitest": ["./typings/vitest.d.ts"]
+    }
+  },
+  "include": [
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "typings/**/*.d.ts"
+  ]
+}

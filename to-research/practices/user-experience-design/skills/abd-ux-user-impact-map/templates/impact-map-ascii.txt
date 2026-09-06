@@ -1,0 +1,76 @@
+# Impact map — ASCII wall sketch (plain text)
+
+## Instructions (for skill maintainers)
+
+Same as **impact-map-ascii.md**. **Four-column** training wall: **OBJECTIVE (Why?) | PERSONA (Who?) | IMPACT (How?) | INITIATIVE (What?)**, with **`#`** for goal and impact metrics; impact headline row, then **`#`**, then initiative rows. Stakeholder file: filled table only (no # section headers required if you paste into email).
+
+---
+
+## Template
+
+OBJECTIVE (Why?) | PERSONA (Who?) | IMPACT (How?) | INITIATIVE (What?)
+-----------------+----------------+---------------+--------------------
+{{ascii_goal_broad}} | | |
+  # {{ascii_metric_broad_optional}} | | |
+{{ascii_goal_mapped}} | | |
+  # {{ascii_metric_mapped_1}} | | |
+  # {{ascii_metric_mapped_2_optional}} | | |
+
+| {{ascii_actor_1}} | {{ascii_impact_1_1}} |
+| | | # {{ascii_impact_metric_1_1}}
+| {{ascii_actor_1}} | {{ascii_impact_1_1}} | {{ascii_init_1_1a}}
+| {{ascii_actor_1}} | {{ascii_impact_1_1}} | {{ascii_init_1_1b}}
+| {{ascii_actor_1}} | {{ascii_impact_1_2}} |
+| | | # {{ascii_impact_metric_1_2}}
+| {{ascii_actor_1}} | {{ascii_impact_1_2}} | {{ascii_init_1_2a}}
+| {{ascii_actor_2}} | {{ascii_impact_2_1}} |
+| | | # {{ascii_impact_metric_2_1}}
+| {{ascii_actor_2}} | {{ascii_impact_2_1}} | {{ascii_init_2_1a}}
+| {{ascii_actor_3}} | {{ascii_impact_3_1}} |
+| | | # {{ascii_impact_metric_3_1}}
+| {{ascii_actor_3}} | {{ascii_impact_3_1}} | {{ascii_init_3_1a}}
+
+{{ascii_note_optional}}
+
+---
+
+## Example (reference)
+
+**Audience:** Facilitators and agents — same engagement as **impact-map-ascii.md** Example (reference).
+
+OBJECTIVE (Why?) | PERSONA (Who?) | IMPACT (How?) | INITIATIVE (What?)
+-----------------+----------------+---------------+--------------------
+Strengthen recurring revenue and engagement in the flagship live-ops title | | |
+  # Net revenue from live ops +12% YoY; engagement targets for the title | | |
+Grow monthly active players | | |
+  # Verified MAU +20% vs last-quarter baseline this quarter (strategic adoption) | | |
+  # Net revenue from live ops +12% YoY (economic) | | |
+NOTE: M1-M4 below = calendar months in this example; use quarters if the brief says Q1-Q4 instead. | | |
+ASSUMPTION: Moderator SLA stays feasible at projected creator stream volume; re-check if partner hours watched doubles before M3. | | |
+
+| Existing players | Share run highlights to social |
+| | | # % of actives posting any share weekly; target 15%+
+| Existing players | Share run highlights to social | Share sheet with clip
+| Existing players | Share run highlights to social | Seasonal tournament badge (shareable moment)
+| Existing players | Share run highlights to social | Friend invite deep link
+| Existing players | Complete challenges on schedule |
+| | | # Challenge completion rate among MAU; target 40%+
+| Existing players | Complete challenges on schedule | Streak and progress widget
+| Existing players | Complete challenges on schedule | Push notification preferences (challenge nudges)
+| New players | Finish onboarding and first ranked run without dropping |
+| | | # D1 / D7 retention; targets 45% / 25%
+| New players | Finish onboarding and first ranked run without dropping | Skippable tutorial revamp
+| New players | Finish onboarding and first ranked run without dropping | First-win bot match lane
+| New players | Accept a friend or guild connection during onboarding |
+| | | # Social graph attach rate by D3; target 30%
+| New players | Accept a friend or guild connection during onboarding | Suggested friends (consent-based contacts)
+| Streamers and creators | Broadcast this title during the campaign window |
+| | | # Partner stream hours watched per week; target 50k+; broadcast cadence at least twice per week
+| Streamers and creators | Broadcast this title during the campaign window | OBS overlay and scene kit
+| Streamers and creators | Broadcast this title during the campaign window | Creator revenue-share tier
+| Platform moderators | Triage abuse and fraud reports |
+| | | # Median time to first moderator action; target under 12 hours (SLA)
+| Platform moderators | Triage abuse and fraud reports | Moderation queue dashboard
+| Platform moderators | Triage abuse and fraud reports | Assisted triage (auto-label suggestions)
+
+NOTE: M1-M4 phased rows for this engagement match the **Actor / impact** column in impact-map.md Example (reference); use the same **actor / impact** text there.

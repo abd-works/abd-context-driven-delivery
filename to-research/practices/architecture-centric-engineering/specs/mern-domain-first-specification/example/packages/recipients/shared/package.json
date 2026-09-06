@@ -1,0 +1,7 @@
+{
+  "name": "@channelone/recipients-shared",
+  "private": true,
+  "dependencies": {
+    "zod": "^3.22.0"
+  }
+}

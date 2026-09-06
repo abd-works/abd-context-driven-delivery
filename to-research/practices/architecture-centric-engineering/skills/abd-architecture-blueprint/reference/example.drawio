@@ -1,0 +1,123 @@
+<mxfile host="65bd71144e">
+    <diagram id="platform-architecture" name="Platform Architecture">
+        <mxGraphModel dx="379" dy="343" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="960" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="PawPlace Pet Store — Platform Architecture" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="20" width="1320" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="subtitle" value="Runtime components, technologies, and the connections between them. Deployment topology (environments, infra nodes, OS images) lives in deployment-architecture.drawio." style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="55" width="1320" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="browserLayer" value="Browser / Client" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;verticalAlign=top;fontColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="90" width="700" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="spa" value="&lt;b&gt;PawPlace React SPA&lt;/b&gt;&lt;br&gt;(Client Application)&lt;br&gt;&lt;br&gt;React 18 · React Router 6&lt;br&gt;TanStack Query 5 · Vite 5&lt;br&gt;TypeScript 5&lt;br&gt;Customer + employee UI." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="125" width="300" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="cdnBox" value="&lt;b&gt;Static Asset Host / CDN&lt;/b&gt;&#10;(CDN / Edge)&#10;&#10;Serves compiled SPA bundle&#10;(HTML, JS, CSS) from edge.&#10;Reduces origin load for&#10;SPA requests." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f0fa;strokeColor=#6c8ebf;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" parent="1" vertex="1">
+                    <mxGeometry x="430" y="125" width="290" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="serverLayer" value="Server Layer — Node.js 20" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;verticalAlign=top;fontColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="310" width="700" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="apiServer" value="&lt;b&gt;PawPlace API Server&lt;/b&gt;&#10;(Backend Service)&#10;&#10;Node.js 20 · Express 4 · Zod 3&#10;TypeScript 5&#10;&#10;Composition root; mounts all&#10;domain module routers.&#10;Handles all /api/* routes." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="350" width="310" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="syncWorker" value="&lt;b&gt;Inventory B2B Sync Worker&lt;/b&gt;&#10;(Background Worker)&#10;&#10;Node.js 20 · TypeScript 5 · Zod 3&#10;&#10;Receives inbound supplier&#10;inventory webhooks; sends&#10;outbound fulfilment confirmations.&#10;Separate process from API Server." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="350" width="290" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="dataLayer" value="Data Layer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;verticalAlign=top;fontColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="590" width="700" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="mongodb" value="&lt;b&gt;MongoDB Atlas&lt;/b&gt;&lt;br&gt;(Data Store — MongoDB 7)&lt;br&gt;&lt;br&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=20;fillColor=#ffffff;strokeColor=#b85450;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="625" width="300" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="extLayer" value="Third-Party Integrations" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1;verticalAlign=top;fontColor=#000000;" parent="1" vertex="1">
+                    <mxGeometry x="820" y="310" width="540" height="440" as="geometry"/>
+                </mxCell>
+                <mxCell id="storeLocator" value="&lt;b&gt;Store Locator API&lt;/b&gt;&#10;(Third-Party Integration)&#10;&#10;External geolocation service.&#10;Called read-only by API Server&#10;for store proximity queries.&#10;&#10;Protocol: HTTPS / REST + JSON" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" parent="1" vertex="1">
+                    <mxGeometry x="860" y="350" width="460" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="supplierFeed" value="&lt;b&gt;Pet Supplier B2B Feed&lt;/b&gt;&#10;(Third-Party Integration)&#10;&#10;Authoritative stock source.&#10;→ Sends inventory update webhooks&#10;   to Sync Worker (HTTPS POST)&#10;← Receives fulfilment confirmations&#10;   from Sync Worker (HTTPS REST)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;" parent="1" vertex="1">
+                    <mxGeometry x="860" y="530" width="460" height="190" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" value="HTTPS (SPA bundle)" style="endArrow=classic;html=1;strokeWidth=2;fontSize=10;exitX=0.538;exitY=0.983;entryX=0.75;entryY=0;entryDx=0;entryDy=0;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="cdnBox" target="serverLayer" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="HTTPS / REST + JSON (/api/*)" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=2;fontSize=10;exitX=0.5;exitY=1;" parent="1" source="spa" target="apiServer" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="MongoDB wire protocol (TLS)" style="endArrow=classic;html=1;strokeWidth=2;fontSize=10;exitX=0.613;exitY=0.969;entryX=0.3;entryY=0;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="apiServer" target="mongodb" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="MongoDB wire protocol (TLS)" style="endArrow=classic;html=1;strokeWidth=2;fontSize=10;exitX=0.471;exitY=0.991;entryX=0.7;entryY=0;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="syncWorker" target="mongodb" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="580" y="560"/>
+                            <mxPoint x="410" y="560"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e5" value="HTTPS / REST + JSON (outbound, read-only)" style="endArrow=classic;html=1;strokeWidth=2;fontSize=10;exitX=1;exitY=0.4;entryX=0;entryY=0.5;" parent="1" source="apiServer" target="storeLocator" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="430" y="414"/>
+                            <mxPoint x="430" y="340"/>
+                            <mxPoint x="790" y="340"/>
+                            <mxPoint x="790" y="420"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e6" value="Inventory webhook (HTTPS POST)" style="endArrow=classic;html=1;strokeWidth=2;fontSize=10;exitX=0.002;exitY=0.058;entryX=1;entryY=0.4;dashed=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="supplierFeed" target="syncWorker" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="800" y="541"/>
+                            <mxPoint x="800" y="460"/>
+                            <mxPoint x="750" y="460"/>
+                            <mxPoint x="750" y="420"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e7" value="Fulfilment confirmation (HTTPS REST)" style="endArrow=classic;html=1;strokeWidth=2;fontSize=10;exitX=0.75;exitY=1;entryX=0;entryY=0.7;exitDx=0;exitDy=0;" parent="1" source="syncWorker" target="supplierFeed" edge="1">
+                    <mxGeometry x="-0.4817" y="-10" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="658" y="550"/>
+                            <mxPoint x="780" y="550"/>
+                            <mxPoint x="780" y="663"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="legendTitle" value="&lt;b&gt;Legend&lt;/b&gt;" style="text;html=1;align=left;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="800" width="100" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg1" value="Client / browser" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="825" width="150" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg2" value="Server / backend service" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="225" y="825" width="180" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg3" value="Background worker" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="825" width="160" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg4" value="Data store" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="595" y="825" width="120" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg5" value="Third-party integration" style="rounded=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="730" y="825" width="180" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg6" value="Solid arrow = synchronous call" style="text;html=1;align=left;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="925" y="825" width="230" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="leg7" value="Dashed arrow = async / event-driven" style="text;html=1;align=left;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1170" y="825" width="270" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="&lt;span style=&quot;color: rgb(0, 0, 0); font-family: Helvetica; font-size: 11px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(251, 251, 251); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; float: none; display: inline !important;&quot;&gt;Managed cloud cluster.&lt;/span&gt;&lt;br style=&quot;border-color: rgb(218, 220, 224); color: rgb(0, 0, 0); font-family: Helvetica; font-size: 11px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(251, 251, 251); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;&lt;span style=&quot;color: rgb(0, 0, 0); font-family: Helvetica; font-size: 11px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(251, 251, 251); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; float: none; display: inline !important;&quot;&gt;All domain aggregates:&lt;/span&gt;&lt;br style=&quot;border-color: rgb(218, 220, 224); color: rgb(0, 0, 0); font-family: Helvetica; font-size: 11px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(251, 251, 251); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;&lt;span style=&quot;color: rgb(0, 0, 0); font-family: Helvetica; font-size: 11px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(251, 251, 251); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; float: none; display: inline !important;&quot;&gt;products, stores, orders,&lt;/span&gt;&lt;br style=&quot;border-color: rgb(218, 220, 224); color: rgb(0, 0, 0); font-family: Helvetica; font-size: 11px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(251, 251, 251); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;&lt;span style=&quot;color: rgb(0, 0, 0); font-family: Helvetica; font-size: 11px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; background-color: rgb(251, 251, 251); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; float: none; display: inline !important;&quot;&gt;customers (planned).&lt;/span&gt;" style="text;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="660" width="150" height="80" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

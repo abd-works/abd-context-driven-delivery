@@ -1,0 +1,11 @@
+<UserControl x:Class="Module.HeroVirtualTabletop.{{Feature}}.{{Feature}}View"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:prism="http://prismlibrary.com/"
+             prism:ViewModelLocator.AutoWireViewModel="True">
+    <StackPanel>
+        <TextBlock Text="{Binding {{Domain}}Name}" FontSize="16" Margin="4" />
+        <!-- Bound properties — direct domain references, no copy -->
+        <Button Content="{{Command1Label}}" Command="{Binding {{Command1}}}" Margin="4" />
+    </StackPanel>
+</UserControl>

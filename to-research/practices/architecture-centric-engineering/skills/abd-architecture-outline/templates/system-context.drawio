@@ -1,0 +1,102 @@
+<mxfile host="65bd71144e">
+    <diagram id="system-context" name="System Context">
+        <mxGraphModel dx="1823" dy="595" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="{SystemName} — System Context" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="20" width="1220" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="subtitle" value="People and external systems that interact with {SystemName}. Arrows show direction of call or data flow, labelled with protocol and integration nature." style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="55" width="1220" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" style="edgeStyle=none;html=1;" parent="1" source="centralSystem" target="13" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="666.3636363636365" y="990" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="centralSystem" value="&lt;b style=&quot;font-size: 14px;&quot;&gt;{SystemName}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{one-line purpose — what this system exists to do}&lt;/i&gt;&lt;hr&gt;• {responsibility 1}&lt;br&gt;• {responsibility 2}&lt;br&gt;• {responsibility 3}&lt;br&gt;• {responsibility 4}&lt;br&gt;• {responsibility 5}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="500" y="550" width="300" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="userEdge" value="operation/data, operation/data / protocol" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=2;fontSize=10;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="18" target="12" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="320.62015503875955" y="420" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="authEdge" value="operation/data, operation/data" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=2;fontSize=10;entryX=0.464;entryY=1.005;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="centralSystem" target="17" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="650" y="420" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="emailEdge" value="operation/data, operation/data" style="endArrow=classic;html=1;strokeWidth=2;fontSize=10;" parent="1" source="centralSystem" target="16" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1005" y="500" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="analyticsEdge" value="operation/data, operation/data" style="endArrow=classic;html=1;strokeWidth=2;fontSize=10;" parent="1" source="centralSystem" target="14" edge="1">
+                    <mxGeometry x="-1" y="-189" relative="1" as="geometry">
+                        <mxPoint x="943.6363636363637" y="899.9999999999998" as="targetPoint"/>
+                        <mxPoint x="-27" y="-24" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="11" value="" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=2;fontSize=10;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="14" target="15" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1480" y="500" as="targetPoint"/>
+                        <mxPoint x="1496.1904761904766" y="840" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="12" value="&lt;b style=&quot;font-size:14px;&quot;&gt;{SystemName}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{one-line purpose — what this system exists to do}&lt;/i&gt;&lt;hr/&gt;• {responsibility 1}&lt;br&gt;• {responsibility 2}&lt;br&gt;• {responsibility 3}&lt;br&gt;• {responsibility 4}&lt;br&gt;• {responsibility 5}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="-80" y="730" width="300" height="260" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" value="&lt;b style=&quot;font-size:14px;&quot;&gt;{SystemName}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{one-line purpose — what this system exists to do}&lt;/i&gt;&lt;hr/&gt;• {responsibility 1}&lt;br&gt;• {responsibility 2}&lt;br&gt;• {responsibility 3}&lt;br&gt;• {responsibility 4}&lt;br&gt;• {responsibility 5}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="1030" width="300" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" value="&lt;b style=&quot;font-size:14px;&quot;&gt;{SystemName}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{one-line purpose — what this system exists to do}&lt;/i&gt;&lt;hr/&gt;• {responsibility 1}&lt;br&gt;• {responsibility 2}&lt;br&gt;• {responsibility 3}&lt;br&gt;• {responsibility 4}&lt;br&gt;• {responsibility 5}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="960" y="770" width="300" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" value="&lt;b style=&quot;font-size:14px;&quot;&gt;{SystemName}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{one-line purpose — what this system exists to do}&lt;/i&gt;&lt;hr/&gt;• {responsibility 1}&lt;br&gt;• {responsibility 2}&lt;br&gt;• {responsibility 3}&lt;br&gt;• {responsibility 4}&lt;br&gt;• {responsibility 5}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="1370" y="680" width="300" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" value="&lt;b style=&quot;font-size:14px;&quot;&gt;{SystemName}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{one-line purpose — what this system exists to do}&lt;/i&gt;&lt;hr/&gt;• {responsibility 1}&lt;br&gt;• {responsibility 2}&lt;br&gt;• {responsibility 3}&lt;br&gt;• {responsibility 4}&lt;br&gt;• {responsibility 5}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="300" width="300" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" value="&lt;b style=&quot;font-size: 14px;&quot;&gt;{SystemName}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{one-line purpose — what this system exists to do}&lt;/i&gt;&lt;hr&gt;• {responsibility 1}&lt;br&gt;• {responsibility 2}&lt;br&gt;• {responsibility 3}&lt;br&gt;• {responsibility 4}&lt;br&gt;• {responsibility 5}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="210" width="300" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="18" value="&lt;b style=&quot;font-size: 14px;&quot;&gt;{SystemName}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{one-line purpose — what this system exists to do}&lt;/i&gt;&lt;hr&gt;• {responsibility 1}&lt;br&gt;• {responsibility 2}&lt;br&gt;• {responsibility 3}&lt;br&gt;• {responsibility 4}&lt;br&gt;• {responsibility 5}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a3a6e;strokeColor=#0e2547;fontColor=#ffffff;fontSize=12;align=left;verticalAlign=top;spacingLeft=10;spacingTop=10;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="10" y="240" width="300" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" value="&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" vertex="1" parent="1">
+                    <mxGeometry x="140" y="310" width="150" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" value="&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" vertex="1" parent="1">
+                    <mxGeometry x="610" y="280" width="150" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" value="operation/data, operation/data" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=2;fontSize=10;entryX=1;entryY=0;entryDx=0;entryDy=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="17" target="19">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="270" y="410" as="sourcePoint"/>
+                        <mxPoint x="80" y="740" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="22" value="&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" vertex="1" parent="1">
+                    <mxGeometry x="630" y="608" width="150" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="23" value="&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" vertex="1" parent="1">
+                    <mxGeometry x="50" y="800" width="150" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="24" value="&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" vertex="1" parent="1">
+                    <mxGeometry x="670" y="1090" width="150" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="25" value="&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" vertex="1" parent="1">
+                    <mxGeometry x="1120" y="360" width="150" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="26" value="&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" vertex="1" parent="1">
+                    <mxGeometry x="1080" y="825" width="150" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="27" value="&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;li&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;stack / tech&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;" vertex="1" parent="1">
+                    <mxGeometry x="1500" y="750" width="150" height="70" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

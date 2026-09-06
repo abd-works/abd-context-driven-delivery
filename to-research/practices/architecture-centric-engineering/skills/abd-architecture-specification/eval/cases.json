@@ -1,0 +1,162 @@
+{
+  "skill": "abd-architecture-specification",
+  "version": 2,
+  "notes": "Fixture registry. Pass fixture is a complete spec + the three context-file tiers. Each fail fixture isolates a single rule violation so a future scanner can be asserted independently.",
+  "rules": [
+    "opens-with-where-to-start-table",
+    "where-to-start-questions-are-requirements-not-technical",
+    "mechanisms-section-uses-one-liner-plus-link",
+    "package-context-lists-every-documented-folder",
+    "source-layout-tags-every-folder",
+    "internal-links-use-workspace-root-paths",
+    "links-not-wrapped-in-backticks",
+    "mechanism-context-file-has-required-sections",
+    "mechanism-opens-with-why-this-shape",
+    "package-context-file-stays-out-of-domain-details",
+    "testing-architecture-section-is-pointer-only",
+    "overview-is-short-and-principle-list-free",
+    "grounded-in-architecture-source-of-truth",
+    "code-examples-follow-project-coding-and-testing-standards"
+  ],
+  "cases": [
+    {
+      "id": "pass/golden-spec",
+      "kind": "pass",
+      "path": "pass/golden-spec",
+      "primary_artifact": "docs/architecture/specification/architecture-specification.md",
+      "supporting_artifacts": [
+        "src/entities/architecture-context.md",
+        "src/services/Zendesk/architecture-context.md",
+        "src/services/Logger/architecture-context.md",
+        "src/helpers/architecture-context.md"
+      ],
+      "description": "Golden pass: full architecture spec plus one example of each context-file tier (mechanism, package, miscellaneous tiny, miscellaneous grab-bag). Every rule MUST report clean.",
+      "expect": {
+        "opens-with-where-to-start-table": "clean",
+        "where-to-start-questions-are-requirements-not-technical": "clean",
+        "mechanisms-section-uses-one-liner-plus-link": "clean",
+        "package-context-lists-every-documented-folder": "clean",
+        "source-layout-tags-every-folder": "clean",
+        "internal-links-use-workspace-root-paths": "clean",
+        "links-not-wrapped-in-backticks": "clean",
+        "mechanism-context-file-has-required-sections": "clean",
+        "mechanism-opens-with-why-this-shape": "clean",
+        "package-context-file-stays-out-of-domain-details": "clean",
+        "testing-architecture-section-is-pointer-only": "clean",
+        "overview-is-short-and-principle-list-free": "clean",
+        "grounded-in-architecture-source-of-truth": "clean",
+        "code-examples-follow-project-coding-and-testing-standards": "clean"
+      }
+    },
+    {
+      "id": "fail/opens-with-where-to-start-table",
+      "kind": "fail",
+      "path": "fail/opens-with-where-to-start-table",
+      "primary_artifact": "architecture-specification.md",
+      "description": "Spec opens with `## Table of Contents` instead of `## Where to Start`.",
+      "expect": {
+        "opens-with-where-to-start-table": "violate"
+      }
+    },
+    {
+      "id": "fail/where-to-start-questions-are-requirements-not-technical",
+      "kind": "fail",
+      "path": "fail/where-to-start-questions-are-requirements-not-technical",
+      "primary_artifact": "architecture-specification.md",
+      "description": "Where to Start questions are framed around code artifacts (routes, env vars, Joi, middleware, error classes) instead of feature requirements.",
+      "expect": {
+        "where-to-start-questions-are-requirements-not-technical": "violate"
+      }
+    },
+    {
+      "id": "fail/mechanisms-section-uses-one-liner-plus-link",
+      "kind": "fail",
+      "path": "fail/mechanisms-section-uses-one-liner-plus-link",
+      "primary_artifact": "architecture-specification.md",
+      "description": "Mechanism is inlined with full Principles & Patterns, File Structure, Participants (mermaid), Flow (mermaid), Walkthrough Example, and code block. Main spec should be a one-liner with a link.",
+      "expect": {
+        "mechanisms-section-uses-one-liner-plus-link": "violate"
+      }
+    },
+    {
+      "id": "fail/package-context-lists-every-documented-folder",
+      "kind": "fail",
+      "path": "fail/package-context-lists-every-documented-folder",
+      "primary_artifact": "architecture-specification.md",
+      "description": "Package Context lists only the Mechanisms category. Services, Utilities & Legacy, and Testing folders that have context files are not listed.",
+      "expect": {
+        "package-context-lists-every-documented-folder": "violate"
+      }
+    },
+    {
+      "id": "fail/source-layout-tags-every-folder",
+      "kind": "fail",
+      "path": "fail/source-layout-tags-every-folder",
+      "primary_artifact": "architecture-specification.md",
+      "description": "Source Layout tree is a bare folder listing with no arrow descriptions and no mechanism tags; dead code is not flagged.",
+      "expect": {
+        "source-layout-tags-every-folder": "violate"
+      }
+    },
+    {
+      "id": "fail/internal-links-use-workspace-root-paths",
+      "kind": "fail",
+      "path": "fail/internal-links-use-workspace-root-paths",
+      "primary_artifact": "architecture-specification.md",
+      "description": "Links use relative-up traversal (`../../../`) and bare relative paths instead of workspace-root paths (`/src/...`).",
+      "expect": {
+        "internal-links-use-workspace-root-paths": "violate"
+      }
+    },
+    {
+      "id": "fail/links-not-wrapped-in-backticks",
+      "kind": "fail",
+      "path": "fail/links-not-wrapped-in-backticks",
+      "primary_artifact": "architecture-specification.md",
+      "description": "Every Markdown link is wrapped in outer backticks, turning the entire `[label](target)` expression into an inline code span that does not render as a link.",
+      "expect": {
+        "links-not-wrapped-in-backticks": "violate"
+      }
+    },
+    {
+      "id": "fail/mechanism-context-file-has-required-sections",
+      "kind": "fail",
+      "path": "fail/mechanism-context-file-has-required-sections",
+      "primary_artifact": "src/entities/architecture-context.md",
+      "description": "Mechanism-tier context file is missing required sections (Overview heading, Participants, Class Specification, Rules) and opens with `# <Name>` instead of `# Mechanism: <Name>`.",
+      "expect": {
+        "mechanism-context-file-has-required-sections": "violate"
+      }
+    },
+    {
+      "id": "fail/package-context-file-stays-out-of-domain-details",
+      "kind": "fail",
+      "path": "fail/package-context-file-stays-out-of-domain-details",
+      "primary_artifact": "src/services/Zendesk/architecture-context.md",
+      "description": "Package-tier context file drifts into domain business rules (14-day grace period, conversion / rollback rules, 24-hour SLA window, seven downstream cancellation actions, chargeback edge cases) that belong in the domain specification.",
+      "expect": {
+        "package-context-file-stays-out-of-domain-details": "violate"
+      }
+    },
+    {
+      "id": "fail/testing-architecture-section-is-pointer-only",
+      "kind": "fail",
+      "path": "fail/testing-architecture-section-is-pointer-only",
+      "primary_artifact": "architecture-specification.md",
+      "description": "Testing Architecture section inlines principles, module layout, sandbox example, and spec-alignment table that should live in the test-helpers context file.",
+      "expect": {
+        "testing-architecture-section-is-pointer-only": "violate"
+      }
+    },
+    {
+      "id": "fail/overview-is-short-and-principle-list-free",
+      "kind": "fail",
+      "path": "fail/overview-is-short-and-principle-list-free",
+      "primary_artifact": "architecture-specification.md",
+      "description": "Overview contains a numbered principle list, duplicates the mechanism list, and runs to six paragraphs with project history and future direction content.",
+      "expect": {
+        "overview-is-short-and-principle-list-free": "violate"
+      }
+    }
+  ]
+}

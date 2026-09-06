@@ -1,0 +1,84 @@
+<mxfile host="65bd71144e">
+    <diagram id="platform-architecture" name="Platform Architecture">
+        <mxGraphModel dx="2259" dy="933" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="819" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="{SystemName} — Platform Architecture" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="20" y="10" width="1060" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="clientBand" value="Client / Access Layer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="20" y="50" width="1060" height="155" as="geometry"/>
+                </mxCell>
+                <mxCell id="client1" value="&lt;b&gt;{ClientApp A — e.g. Web, Mobile, CLI}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{User-facing purpose}&lt;/i&gt;&lt;br&gt;&lt;br&gt;{Framework · Version}&lt;br&gt;{Build / delivery}" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=10;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="82" width="280" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="client2" value="&lt;b&gt;{ClientApp B — optional}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{User-facing purpose}&lt;/i&gt;&lt;br&gt;&lt;br&gt;{Framework · Version}&lt;br&gt;{Build / delivery}" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=10;align=center;verticalAlign=middle;strokeDashArray=4 4;" parent="1" vertex="1">
+                    <mxGeometry x="380" y="82" width="280" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="userNote" value="{Primary User Role(s)}" style="text;html=1;fontSize=10;fontStyle=2;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="720" y="115" width="240" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="userArrow1" value="{protocol}" style="endArrow=classic;startArrow=classic;html=1;fontSize=9;dashed=0;strokeWidth=1.5;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" parent="1" source="userNote" target="client1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="appBand" value="Application Layer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="20" y="225" width="1060" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="api" value="&lt;b&gt;{API / Backend Service name}&lt;/b&gt;&lt;br&gt;{Runtime} / {Framework} / {Language} / {Validation lib} / {Logger}" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=10;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="258" width="820" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="idMiddleware" value="Identity / Auth Middleware  ·  {token validation}  ·  Principal extraction  ·  role guards" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="298" width="780" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="domainRouters" value="Domain Routers  ·  {ModuleA}  ·  {ModuleB}  ·  {ModuleC}  ·  {ModuleD}  ·  {ModuleE}" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e8f5e8;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="336" width="780" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="extAdapters" value="External Adapters  ·  {IExternalServiceA} ({protocol})  ·  {IExternalServiceB} ({protocol})  ·  {IIdentityProvider} ({protocol})" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e8f5e8;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="374" width="780" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="dataBand" value="Data &amp; External Services Layer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="20" y="475" width="1060" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="data1" value="&lt;b&gt;{PrimaryStore}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{Technology + version}&lt;/i&gt;&lt;br&gt;{What is persisted}" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#ffffff;strokeColor=#b85450;fontSize=10;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="510" width="160" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="idp" value="&lt;b&gt;{Identity Provider}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{Auth protocol — e.g. OAuth 2.0, SAML, LDAP}&lt;/i&gt;&lt;br&gt;{Token / session issuance}" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5d6d4;strokeColor=#b85450;fontSize=10;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="260" y="510" width="160" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="ext1" value="&lt;b&gt;{ExternalService A}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{Provider / protocol}&lt;/i&gt;&lt;br&gt;{What is exchanged}" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5d6d4;strokeColor=#b85450;fontSize=10;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="510" width="160" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="ext2" value="&lt;b&gt;{ExternalService B}&lt;/b&gt;&lt;br&gt;&lt;i&gt;{Provider / protocol}&lt;/i&gt;&lt;br&gt;{What is exchanged}" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5d6d4;strokeColor=#b85450;fontSize=10;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="510" width="160" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="clientApi" value="{protocol} / {auth}" style="endArrow=classic;startArrow=classic;html=1;fontSize=9;strokeWidth=2;exitX=0.3;exitY=1;entryX=0.3;entryY=0;" parent="1" source="client1" target="api" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="apiData1" value="{driver / ORM}" style="endArrow=classic;startArrow=classic;html=1;fontSize=9;strokeWidth=2;exitX=0.1;exitY=1;entryX=0.5;entryY=0;" parent="1" source="api" target="data1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="apiIdp" value="{protocol}" style="endArrow=classic;html=1;fontSize=9;strokeWidth=1.5;exitX=0.32;exitY=1;entryX=0.5;entryY=0;" parent="1" source="api" target="idp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="clientIdp" value="{auth redirect / token}" style="endArrow=classic;html=1;fontSize=9;dashed=1;strokeWidth=1.5;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" source="client1" target="idp" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="190" y="460"/>
+                            <mxPoint x="340" y="460"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="apiExt1" value="{protocol}" style="endArrow=classic;startArrow=classic;html=1;fontSize=9;strokeWidth=1.5;exitX=0.56;exitY=1;entryX=0.5;entryY=0;" parent="1" source="api" target="ext1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="apiExt2" value="{protocol}" style="endArrow=classic;html=1;fontSize=9;dashed=1;strokeWidth=1.5;exitX=0.74;exitY=1;entryX=0.5;entryY=0;" parent="1" source="api" target="ext2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend" value="Solid arrow = sync call  ·  Dashed arrow = async / redirect  ·  Bidirectional = request + response  ·  Dashed client box = optional second client" style="text;html=1;fontSize=9;fontColor=#555555;fontStyle=2;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="20" y="720" width="1000" height="18" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
