@@ -17959,3 +17959,87 @@ import json
 ------------------------------------------------------------------------------
 
 path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\install_prompt_log.py
+
+==============================================================================
+2026-09-06T07:02:47Z  preToolUse:Grep  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: \.context|hooks/turn|_probe
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T07:02:47Z  preToolUse:Shell  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git check-ignore -v .context/hooks/turn/_hook_spec_probe.txt 2>&1; git status --short .context/hooks/turn/_hook_spec_probe.txt 2>&1
+
+==============================================================================
+2026-09-06T07:02:50Z  preToolUse:Read  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:02:50Z  preToolUse:Shell  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities;c:\dev\abd-cdd-utility-cleanup\context_tools;c:\dev\abd-cdd-utility-cleanup\context_tools\actions"; .\.venv\Scripts\python.exe -m mamba.cli primitives/hooks/hook_spec.py 2>&1
+
+==============================================================================
+2026-09-06T07:02:51Z  beforeReadFile  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+size: 23649 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""BDD specs for @hook, HookHarness, and dispatch."""
+import json
+import os
+import subprocess
+... [562 lines, 23649 chars total]
+
+==============================================================================
+2026-09-06T07:02:51Z  afterAgentResponse  conv=hook-spe  gen=spec1  model=
+------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T07:02:51Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:02:52Z  preToolUse:Task  conv=9258f444  gen=f9cb3b4d  model=
+------------------------------------------------------------------------------
+
+description: Subagent auto-turn E2E test
+prompt: Run auto-turn E2E verification in repo c:\dev\abd-cdd-utility-cleanup
+
+Steps (execute all, report PASS/FAIL with evidence):
+
+1. Set PYTHONPATH to repo root, primitives, utilities
+2. Enable auto-turn: create empty file `.context/hooks/turn/auto_turn_after_agent_response.enabled`
+3. Run `python primitives/hooks/install_dispatch.py` 
+4. Verify `.cursor/hooks.json` has exactly ONE hook on afterAgentResponse and it contains dispatch.py (not prompt_log)
+... [19 lines, 1187 chars total]
+subagent_type: shell
+
+==============================================================================
+2026-09-06T07:02:52Z  subagentStart  conv=9258f444  gen=9258f444  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+subagent_type: shell
+subagent_model: composer-2.5-fast
+task: Run auto-turn E2E verification in repo c:\dev\abd-cdd-utility-cleanup
+
+Steps (execute all, report PASS/FAIL with evidence):
+
+1. Set PYTHONPATH to repo root, primitives, utilities
+2. Enable auto-turn: create empty file `.context/hooks/turn/auto_turn_after_agent_response.enabled`
+3. Run `python primitives/hooks/install_dispatch.py` 
+4. Verify `.cursor/hooks.json` has exactly ONE hook on afterAgentResponse and it contains dispatch.py (not prompt_log)
+... [19 lines, 1187 chars total]

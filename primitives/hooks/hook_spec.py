@@ -509,7 +509,7 @@ with description("auto turn end-to-end"):
             last_run = repo_root / ".context" / "hooks" / "turn" / "auto_turn.last_run.json"
             flag.parent.mkdir(parents=True, exist_ok=True)
             flag.write_text("", encoding="utf-8")
-            probe = repo_root / ".context" / "hooks" / "turn" / "_hook_spec_probe.txt"
+            probe = repo_root / ".context" / "hooks" / "turn" / "hook-spec-probe.txt"
             probe.write_text("hook-spec-probe\n", encoding="utf-8")
             (repo_root / "tmp_wrong_cwd").mkdir(exist_ok=True)
             before_sha = subprocess.check_output(
