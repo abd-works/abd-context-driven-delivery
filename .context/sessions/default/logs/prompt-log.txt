@@ -62,3 +62,115 @@ text: **`/finish-work-session` completed successfully.**
 
 ### Worktree still present
 ... [16 lines, 1092 chars total]
+
+==============================================================================
+2026-09-06T17:03:16Z  beforeSubmitPrompt  conv=9258f444  gen=79e135ca  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+add to gitnore
+
+==============================================================================
+2026-09-06T17:03:19Z  preToolUse:Shell  conv=9258f444  gen=79e135ca  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; git ls-files ".context/sessions/**" "primitives/hooks/*.debug" ".context/**/*.debug" 2>$null
+
+==============================================================================
+2026-09-06T17:03:19Z  preToolUse:Grep  conv=9258f444  gen=79e135ca  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T17:03:19Z  preToolUse:Grep  conv=9258f444  gen=79e135ca  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: \.context/sessions|prompt-log|session.*logs
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T17:03:22Z  preToolUse:Read  conv=9258f444  gen=79e135ca  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\.gitignore
+
+==============================================================================
+2026-09-06T17:03:22Z  preToolUse:Grep  conv=9258f444  gen=79e135ca  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: gitignore|session.*log|prompt-log
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T17:03:23Z  beforeReadFile  conv=9258f444  gen=79e135ca  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\.gitignore
+size: 763 chars
+preview:
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Manifest gate local state
+primitives/tools/hooks/.manifest_gate_clearance.json
+... [39 lines, 763 chars total]
+
+==============================================================================
+2026-09-06T17:03:28Z  preToolUse:Read  conv=9258f444  gen=79e135ca  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\.gitignore
+
+==============================================================================
+2026-09-06T17:03:29Z  preToolUse:Shell  conv=9258f444  gen=79e135ca  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; git rm --cached -r --ignore-unmatch ".context/sessions/default/logs/dispatch.debug" ".context/sessions/default/logs/prompt-log.txt" 2>&1; git status --short
+
+==============================================================================
+2026-09-06T17:03:29Z  beforeReadFile  conv=9258f444  gen=79e135ca  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\.gitignore
+size: 763 chars
+preview:
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Manifest gate local state
+primitives/tools/hooks/.manifest_gate_clearance.json
+... [39 lines, 763 chars total]
+
+==============================================================================
+2026-09-06T17:03:30Z  preToolUse:Write  conv=9258f444  gen=79e135ca  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\.gitignore
+
+==============================================================================
+2026-09-06T17:03:33Z  preToolUse:Shell  conv=9258f444  gen=79e135ca  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; git check-ignore -v .context/sessions/default/logs/prompt-log.txt; git status --short -uno
+
+==============================================================================
+2026-09-06T17:03:37Z  afterAgentResponse  conv=9258f444  gen=79e135ca  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+text: Added hook runtime logs to `.gitignore`:
+
+```gitignore
+# Hook runtime logs under active session folders (archived to .sessions/closed/ on close)
+.context/sessions/*/logs/
+.context/prompt-log.txt
+primitives/hooks/dispatch.debug
+primitives/hooks/skill_inject.debug
+... [17 lines, 730 chars total]

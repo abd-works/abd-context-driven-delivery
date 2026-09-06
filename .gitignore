@@ -19,6 +19,14 @@ primitives/harness/.deploy-state.json
 # SessionLog append-only audit trails (runtime; not sprint artifacts)
 **/logs/events.log
 
+# Hook runtime logs under active session folders (archived to .sessions/closed/ on close)
+.context/sessions/*/logs/
+.context/prompt-log.txt
+primitives/hooks/dispatch.debug
+primitives/hooks/skill_inject.debug
+primitives/hooks/prompt_echo.debug
+primitives/hooks/prompt_echo/prompt_echo.debug
+
 # Ephemeral tool run requests (python -m tools run _req.yaml)
 /_req.yaml
 /_req*.yaml
