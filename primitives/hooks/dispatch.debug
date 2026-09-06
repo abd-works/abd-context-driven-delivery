@@ -1,0 +1,78 @@
+2026-09-06T06:33:43Z EVENT 'afterAgentResponse' payload_keys=['hook_event_name']
+2026-09-06T06:33:43Z ENABLED ['(none)']
+2026-09-06T06:33:43Z MERGED {"permission": "allow"}
+2026-09-06T06:33:43Z EVENT 'afterAgentResponse' payload_keys=['hook_event_name']
+2026-09-06T06:33:43Z HANDLER _DispatchFixture.on_after result_keys=['agent_message'] result={"agent_message": "ran"}
+2026-09-06T06:33:43Z ENABLED ['_DispatchFixture.on_after']
+2026-09-06T06:33:43Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-09-06T06:33:43Z EVENT 'stop' payload_keys=['hook_event_name']
+2026-09-06T06:33:43Z HANDLER _StopFixture.on_stop result_keys=['followup_message'] result={"followup_message": "/turn"}
+2026-09-06T06:33:43Z ENABLED ['_StopFixture.on_stop']
+2026-09-06T06:33:43Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-09-06T06:33:43Z EVENT 'beforeSubmitPrompt' payload_keys=['hook_event_name']
+2026-09-06T06:33:43Z HANDLER _MessageFixture.on_before result_keys=['agent_message', 'user_message'] result={"user_message": "for user", "agent_message": "for agent"}
+2026-09-06T06:33:43Z HANDLER _MessageFixture.on_before result_keys=['agent_message', 'user_message'] result={"user_message": "for user", "agent_message": "for agent"}
+2026-09-06T06:33:43Z ENABLED ['_MessageFixture.on_before', '_MessageFixture.on_before']
+2026-09-06T06:33:43Z MERGED {"permission": "allow", "user_message": "for user\nfor user", "agent_message": "for agent\nfor agent"}
+2026-09-06T06:33:48Z EVENT 'afterAgentResponse' payload_keys=['hook_event_name']
+2026-09-06T06:33:48Z ENABLED ['(none)']
+2026-09-06T06:33:48Z MERGED {"permission": "allow"}
+2026-09-06T06:33:48Z EVENT 'afterAgentResponse' payload_keys=['hook_event_name']
+2026-09-06T06:33:48Z HANDLER _DispatchFixture.on_after result_keys=['agent_message'] result={"agent_message": "ran"}
+2026-09-06T06:33:48Z ENABLED ['_DispatchFixture.on_after']
+2026-09-06T06:33:48Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-09-06T06:33:48Z EVENT 'stop' payload_keys=['hook_event_name']
+2026-09-06T06:33:48Z HANDLER _StopFixture.on_stop result_keys=['followup_message'] result={"followup_message": "/turn"}
+2026-09-06T06:33:48Z ENABLED ['_StopFixture.on_stop']
+2026-09-06T06:33:48Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-09-06T06:33:48Z EVENT 'beforeSubmitPrompt' payload_keys=['hook_event_name']
+2026-09-06T06:33:48Z HANDLER _MessageFixture.on_before result_keys=['agent_message', 'user_message'] result={"user_message": "for user", "agent_message": "for agent"}
+2026-09-06T06:33:48Z ENABLED ['_MessageFixture.on_before']
+2026-09-06T06:33:48Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-09-06T06:33:50Z EVENT 'afterAgentResponse' payload_keys=['hook_event_name']
+2026-09-06T06:33:50Z ENABLED ['(none)']
+2026-09-06T06:33:50Z MERGED {"permission": "allow"}
+2026-09-06T06:33:50Z EVENT 'afterAgentResponse' payload_keys=['hook_event_name']
+2026-09-06T06:33:50Z HANDLER _DispatchFixture.on_after result_keys=['agent_message'] result={"agent_message": "ran"}
+2026-09-06T06:33:50Z ENABLED ['_DispatchFixture.on_after']
+2026-09-06T06:33:50Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-09-06T06:33:50Z EVENT 'stop' payload_keys=['hook_event_name']
+2026-09-06T06:33:50Z HANDLER _StopFixture.on_stop result_keys=['followup_message'] result={"followup_message": "/turn"}
+2026-09-06T06:33:50Z ENABLED ['_StopFixture.on_stop']
+2026-09-06T06:33:50Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-09-06T06:33:50Z EVENT 'beforeSubmitPrompt' payload_keys=['hook_event_name']
+2026-09-06T06:33:50Z HANDLER _MessageFixture.on_before result_keys=['agent_message', 'user_message'] result={"user_message": "for user", "agent_message": "for agent"}
+2026-09-06T06:33:50Z ENABLED ['_MessageFixture.on_before']
+2026-09-06T06:33:50Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-09-06T06:33:57Z ENTRY raw_len=64 raw=b'{"hook_event_name":"stop","status":"completed","loop_count":0}\r\n'
+2026-09-06T06:33:57Z EVENT 'stop' payload_keys=['hook_event_name', 'loop_count', 'status']
+2026-09-06T06:34:02Z HANDLER Turn.auto_turn result_keys=[] result={}
+2026-09-06T06:34:02Z ENABLED ['Turn.auto_turn']
+2026-09-06T06:34:02Z MERGED {"permission": "allow"}
+2026-09-06T06:34:11Z EVENT 'afterAgentResponse' payload_keys=['hook_event_name']
+2026-09-06T06:34:11Z ENABLED ['(none)']
+2026-09-06T06:34:11Z MERGED {"permission": "allow"}
+2026-09-06T06:34:11Z EVENT 'afterAgentResponse' payload_keys=['hook_event_name']
+2026-09-06T06:34:11Z HANDLER _DispatchFixture.on_after result_keys=['agent_message'] result={"agent_message": "ran"}
+2026-09-06T06:34:11Z ENABLED ['_DispatchFixture.on_after']
+2026-09-06T06:34:11Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-09-06T06:34:11Z EVENT 'stop' payload_keys=['hook_event_name']
+2026-09-06T06:34:11Z HANDLER _StopFixture.on_stop result_keys=['followup_message'] result={"followup_message": "/turn"}
+2026-09-06T06:34:11Z ENABLED ['_StopFixture.on_stop']
+2026-09-06T06:34:11Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-09-06T06:34:11Z EVENT 'beforeSubmitPrompt' payload_keys=['hook_event_name']
+2026-09-06T06:34:11Z HANDLER _MessageFixture.on_before result_keys=['agent_message', 'user_message'] result={"user_message": "for user", "agent_message": "for agent"}
+2026-09-06T06:34:11Z ENABLED ['_MessageFixture.on_before']
+2026-09-06T06:34:11Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-09-06T06:35:46Z ENTRY raw_len=64 raw=b'{"hook_event_name":"stop","status":"completed","loop_count":0}\r\n'
+2026-09-06T06:35:46Z EVENT 'stop' payload_keys=['hook_event_name', 'loop_count', 'status']
+2026-09-06T06:35:51Z HANDLER Turn.auto_turn result_keys=[] result={}
+2026-09-06T06:35:51Z ENABLED ['Turn.auto_turn']
+2026-09-06T06:35:51Z MERGED {"permission": "allow"}
+2026-09-06T06:36:08Z ENTRY raw_len=64 raw=b'{"hook_event_name":"stop","status":"completed","loop_count":0}\r\n'
+2026-09-06T06:36:08Z EVENT 'stop' payload_keys=['hook_event_name', 'loop_count', 'status']
+2026-09-06T06:36:13Z HANDLER Turn.auto_turn result_keys=[] result={}
+2026-09-06T06:36:13Z ENABLED ['Turn.auto_turn']
+2026-09-06T06:36:13Z MERGED {"permission": "allow"}
+2026-09-06T06:38:00Z ENTRY raw_len=64 raw=b'{"hook_event_name":"stop","status":"completed","loop_count":0}\r\n'
+2026-09-06T06:38:00Z EVENT 'stop' payload_keys=['hook_event_name', 'loop_count', 'status']

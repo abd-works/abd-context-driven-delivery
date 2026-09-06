@@ -929,7 +929,9 @@ class Repo:
             self._git( "checkout", "-b", name)
         return name
 
-    def commit(self, paths: list[str], message: str) -> str:
+    def commit(
+        self, paths: list[str], message: str, *, untracked: bool = False
+    ) -> str:
         if not paths:
             raise ValueError("commit requires at least one path")
         if self._memory:
@@ -938,11 +940,12 @@ class Repo:
             self._dirty = False
             return self._commit
         rels = [self._rel(path) for path in paths]
-        self._git("add", "-u", "--", *rels)
-        staged = self._git( "diff", "--cached", "--name-only", "--", *rels)
+        add_flag = "-A" if untracked else "-u"
+        self._git("add", add_flag, "--", *rels)
+        staged = self._git("diff", "--cached", "--name-only", "--", *rels)
         if not staged:
             return self.current_commit
-        self._git( "commit", "-m", message, "--", *rels)
+        self._git("commit", "-m", message, "--", *rels)
         return self.current_commit
 
     def push(self) -> None:

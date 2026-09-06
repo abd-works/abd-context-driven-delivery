@@ -413,7 +413,11 @@ class Turn:
 
     def _auto_turn_subject(self, git: GitRepo) -> str:
         names: set[str] = set()
-        for args in (("diff", "--name-only"), ("diff", "--cached", "--name-only")):
+        for args in (
+            ("diff", "--name-only"),
+            ("diff", "--cached", "--name-only"),
+            ("ls-files", "--others", "--exclude-standard"),
+        ):
             text = git._git(*args).strip()
             if text:
                 names.update(line.strip() for line in text.splitlines() if line.strip())
@@ -425,15 +429,14 @@ class Turn:
     def auto_turn(self, payload: dict) -> dict:
         """Commit dirty checkout after the agent finishes when enabled."""
         git = self._git()
-        if git is None or not git.is_dirty(untracked=False):
+        if git is None or not git.is_dirty(untracked=True):
             return {}
-        subject = self._auto_turn_subject(git)
+        self.utility = "auto_turn"
+        self.subject = self._auto_turn_subject(git)
+        self.message = "auto turn after agent response"
+        self._ensure_named()
         try:
-            commit = self.turn(
-                utility="auto_turn",
-                subject=subject,
-                message="auto turn after agent response",
-            )
+            commit = self._commit(stage_untracked=True)
         except Exception:
             commit = None
         if commit is not None:
@@ -504,11 +507,11 @@ class Turn:
             "sha": change.sha,
         }
 
-    def _commit(self) -> TurnCommit | None:
+    def _commit(self, *, stage_untracked: bool = False) -> TurnCommit | None:
         git = self._git()
         if git is None:
             return None
-        if not git.is_dirty(untracked=False):
+        if not git.is_dirty(untracked=stage_untracked):
             return None
         override = getattr(self, "_commit_message_override", "")
         message = override or self.commit_message
@@ -516,7 +519,11 @@ class Turn:
             message = self.correction.correction_commit_message(
                 subject=self._subject_line()
             )
-        sha = git.commit(self._commit_paths(git), message)
+        sha = git.commit(
+            self._commit_paths(git),
+            message,
+            untracked=stage_untracked,
+        )
         if self.correction is not None:
             self.correction.link(git, sha)
         self._note_turn(git, sha)

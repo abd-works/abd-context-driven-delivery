@@ -65,6 +65,11 @@ class HookBinding:
                 "\nCreate the flag file (empty is fine). The hook dispatcher runs "
                 f"`{self.operation}` when this flag exists.\n"
             )
+            if self.operation == "auto_turn":
+                body += (
+                    "\nOn `stop`, auto-turn stages all changes under the repo root "
+                    "(including new untracked files) and commits in one step.\n"
+                )
         else:
             body += "\nRemove the flag file so the dispatcher skips this handler.\n"
         return body

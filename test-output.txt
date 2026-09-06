@@ -1,0 +1,774 @@
+﻿a harness
+  that is created
+    with no type given
+      Γ£ô it should refuse
+  that generates
+    with no IDE given
+      Γ£ô it should AskQuestion for the IDE
+    with no name filter given
+      Γ£ô it should AskQuestion all or a substring
+    with no deploy path given
+      Γ£ô it should AskQuestion using the suggested path or an override
+    with no code_language given
+      Γ£ô it should AskQuestion Python or TypeScript
+    with no IDE type set in context
+      Γ£ô it should tell the agent to set context.type before running
+    with no source
+      Γ£ù it should walk the workspace and deploy without a confirm list (4.8187 seconds)
+        
+        expected: False to equal True
+    with code_language typescript
+      Γ£ô it should save the language in deploy state (4.2382 seconds)
+    with a source
+      Γ£ô it should write that source into the deploy area (3.5852 seconds)
+    with type Cursor
+      Γ£ô it should write under .cursor including the covering workspace copy (3.3396 seconds)
+      Γ£ô it should write only to an overridden deploy path (0.3982 seconds)
+      Γ£ù it should never deploy outside the IDE folder when given a repo root path (0.4130 seconds)
+        
+        expected: False to equal True
+    with type VS Code
+      Γ£ô it should write under .github (4.5522 seconds)
+    with type Claude
+      Γ£ô it should not implement yet
+    with type Codex
+      Γ£ô it should not implement yet
+    with type ChatGPT
+      Γ£ô it should not implement yet
+    with a context toolset
+      Γ£ô it should add one skill with the context-tool body (3.4816 seconds)
+    with a toolset that has required constructor params
+      Γ£ù it should include those params in the context block of the generated body (3.1851 seconds)
+        [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmpwand5vrd\\.cursor\\skills\\requiredtool\\SKILL.md'
+    with LifecycleAction
+      Γ£ô it should not write a skill or command (4.2023 seconds)
+    with catalog generate_catalog
+      Γ£ù it should write a generate-catalog prompt and not a catalog_generator skill (3.0623 seconds)
+        
+        expected: False to equal True
+    with git
+      Γ£ô it should not write a skill (2.7301 seconds)
+    with workspace
+      Γ£ô it should not write a skill (4.0670 seconds)
+    with work session tools
+      Γ£ù it should invoke finish_work_session as a tool on WorkSession (3.0731 seconds)
+        [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmp30bhucsb\\.cursor\\skills\\finish-work-session\\SKILL.md'
+    with utility turn prompts
+      Γ£ù it should invoke the tool method name not the prompt slug (6.7733 seconds)
+        [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmp4mmv78dq\\.cursor\\skills\\start-turn\\SKILL.md'
+    with a utility sub-agent prompt
+      Γ£ù it should invoke run as a tool not the prompt slug (3.1724 seconds)
+        [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmp7w6ju213\\.cursor\\skills\\sub-agent\\SKILL.md'
+    with record_decisions
+      Γ£ù it should not write a skill (3.6659 seconds)
+        
+        expected: False to equal True
+    with a utility toolset
+      Γ£ô it should add a skill with the utility body (3.3758 seconds)
+    with a utility prompt
+      Γ£ù it should write the operation and CLI without action resolve (3.1880 seconds)
+        [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmp6y1wnwvc\\.cursor\\skills\\ask\\SKILL.md'
+    with an action
+      Γ£ô it should write a prompt named from the package using the action body (2.9338 seconds)
+    with an unmarked helper operation
+      Γ£ô it should not write a command for an unmarked agent_instructions (3.0201 seconds)
+    with @prompt(name) on backlog start-ticket and finish-ticket
+      Γ£ô it should write those commands and not a workflow command (3.0318 seconds)
+    with @prompt on two operations
+      Γ£ô it should write a command for each marked operation (5.1584 seconds)
+    with @prompt on one of several @agent_instructions
+      Γ£ô it should write only that marked command (3.2826 seconds)
+    with turn
+      Γ£ô it should write a prompt named from the class (3.1029 seconds)
+    with a utility performTurn prompt
+      Γ£ù it should invoke performTurn as an action on Turn (3.1735 seconds)
+        [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmpp5hiiu34\\.cursor\\skills\\turn\\SKILL.md'
+    with echo
+      Γ£ù it should write a utility prompt without action resolve (3.0608 seconds)
+        [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmp9pi8ptw6\\.cursor\\skills\\echo\\SKILL.md'
+    with handoff
+      Γ£ù it should write a utility prompt without action resolve (3.0639 seconds)
+        [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmpryhonwh1\\.cursor\\skills\\handoff\\SKILL.md'
+    with scaffold
+      Γ£ô it should not write a separate stories-scaffold skill (2.9079 seconds)
+      Γ£ù it should embed Scaffold prose in stories-story_map instead (2.1607 seconds)
+        
+        expected: '---\nname: stories-story_map\ndescription: "Provide guidance for creating story maps, scenarios, and acceptance tests."\ndisable-model-invocation: true\n---\n\n# stories-story_map\n\nUse stories guidance at `story_map` fidelity only.\n\nRefer to these skills in order to fill in details from previous fidelities if not present:\n@stories-scaffold\n\n# Contexts\n\nMap stakeholder and system interactions as behaviours that deliver a solution.\n\nInteractions fit into a hierarchy: a `StoryMap` of `Epic` ΓåÆ nestable `SubEpic` ΓåÆ `Story`. Each story is `Scenario`s with discrete steps; backgrounds and scenarios carry examples.\n\n| Fidelity | Default Format | Produce |\n|---|---|---|\n| **story_map** | markdown | Story map |\n| **scenarios** | python | Main-flow scenarios per story ΓÇö `{story}.{tier}.py` GWT files. Pass `format markdown` only when the strategy asks for a markdown view. |\n| **acceptance_tests** | python | Same `{story}.{tier}.py` tree as scenarios. CE runs alongside for wrap classes. |\n\n**Templates** live under `templates/` per format. **Scanners** read the canonical model only ΓÇö never language syntax.\n\n---\n\n## Shared rules\n\n- **`vocabulary-traces-to-domain-source`** ΓÇö Trace terms to domain language / model when present.\n- **`artifacts-mirror-story-hierarchy`** ΓÇö Mirror Epic ΓåÆ SubEpic ΓåÆ Story on disk as folders for epic and sub-epic, and as `{story}.{tier}.py` files (no per-story directory).\n- **`kebab-case-paths`** ΓÇö Epic and SubEpic **folder** names, story **file** stems, and tier segments use lowercase kebab-case (`sign-up`, `front-end`). No `snake_case` folders or `PascalCase` paths. **Exception:** Python epic helper only ΓÇö `{epic_slug}_helper.py` at the epic folder root; nothing else may use underscores.\n- **`read-all-source-context-in-full`** ΓÇö Before locking hierarchy **and before any grill/iterate question about a seam**, prove-read **every relevant referenced context** for that decision: owning `*-segment.md`, `module-context.md`, session sketches / grill-answers / handoff, peer story-context, build-order, and any path the plan or prior answers cite. Index / mid-epic stub columns are structure hints only ΓÇö **not** story inventory. Grep or primer-only skims do not count; cite concrete terms from the files read in the question turn. Also re-read these rules. Do not thin from titles or memory!\n- **`do-not-invent-requirements`** ΓÇö Only model behaviours present in source context or an explicit ask. Never invent:\n  - status concepts, maintenance signals, warning badges, or config columns (e.g. `Status (ok/stale)`) the source does not require ΓÇö unconfigured / not-yet-current = **no row** + the existing fallback, never a new invented state to render;\n  - a second, competing command / invoke surface beside one the user already specified (e.g. a raw YAML `toolset`/`fidelity`/`action` "Invoke" block given equal billing next to an already-locked `/{skill} <action> {fidelity}` line). Keep the specified surface primary; any secondary format is a subsidiary link at most ΓÇö never inlined, never a co-equal page element.\n\n---\n\n## story_map\n\n**Default format:** markdown\n\n**Goal:** Shape the hierarchy ΓÇö `Epic` ΓåÆ nestable `SubEpic` ΓåÆ `Story` ΓÇö decomposed on real mechanical variation, not requirement-row bookkeeping.\n\n**Produce:** Story map.\n\n### Scaffold\n\n**When scaffolding only** (`/partition` or a names-only first cut ΓÇö not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**\n\nRough story-map outline for a **partition** pass or first cut ΓÇö **names only**: verbΓÇônoun epics + story names (`StoryMap` ΓåÆ `Epic` ΓåÆ `SubEpic` ΓåÆ `Story`). No scenarios, no thin-slice increments, no scope prose yet.\n\nKey rules: `branch-on-mechanical-uniqueness` ΓÇö split on distinct mechanics, not catalog/requirements rows; `read-all-source-context-in-full` ΓÇö read segments in full before grouping.\n\n### Rules\n\n- **`verb-noun-format`** ΓÇö Name Epic / SubEpic / Story verbΓÇônoun; actor is metadata; base verb form.\n- **`four-to-nine-children`** ΓÇö 4ΓÇô9 direct children (warn at 3/10; error Γëñ2 or ΓëÑ11).\n- **`branch-on-mechanical-uniqueness`** ΓÇö Explore context relentlessly for distinct mechanics. Branch on mechanical uniqueness, dstinct mechanics in requirements require *distinct stories* for each mechanic. Different requirement entries with same mechanic is *one story only with different examples or scenarios*. Collapsing real mechanical variation, as well as mindlessly turning requirements into long lists of stories are **defect**\n- **`right-size-story-nodes`** ΓÇö One demonstrable interaction per story.\n- **`behaviours-not-one-time-tasks`** ΓÇö A Story is a repeatable stakeholder/system interaction you can specify Given/When/Then against more than once. One-time maintainer chores (rename X to Y, copy/migrate an asset once, one-off repo surgery) are not Stories ΓÇö keep them in the plan/todos. Once done, the result is ordinary inventory the remaining stories already cover.\n- **`do-not-invent-requirements`** ΓÇö same rule as Shared: no invented Status/stale/warning-badge concepts; no competing command/invoke surface beside one already specified; unconfigured = no row + existing fallback.\n\n---\n\n## Sketching\n\nWhen sketching, use the following sketch template. Do not use the produce templates below ΓÇö stop reading this skill when sketching.\n\n# Stories sketch ΓÇö match active fidelity\n\n**MUST:** Read all source context in full before drafting or refining. **MUST:** Branch on **mechanical uniqueness** only ΓÇö split distinct mechanics; do not mint one story per TOC / catalog / requirements row. **MUST:** Do not invent requirements ΓÇö no Status/stale/warning-badge stories or columns unless source already requires them; no second command/invoke surface beside one already specified (no co-equal YAML Invoke block next to a locked `/{skill} <action> {fidelity}` line ΓÇö secondary formats are a subsidiary link only). Unconfigured = no row + existing fallback. See `stories.md`: `read-all-source-context-in-full`, `branch-on-mechanical-uniqueness`, `do-not-invent-requirements`.\n\nSketch the story hierarchy first, then deepen only as far as the active fidelity needs. Confirm epics and sub-epics (the e2e journey), then drill into exact stories by risk or uncertainty ΓÇö unique **mechanical** flows first, then scaffold patterns already encountered.\n\nSketch increments next if there will be more than one.\n\nThen detail groups of related stories together ΓÇö e.g. stories for a sub-epic in a particular increment. Narrate in e2e flow order.\n\nWhen detailing stories, start with the main-flow scenario (including domain objects usable for examples); then other scenarios, real example data, etc. Given names only conditions the running system actually checks. When is the domain operation. Then asserts; further outcomes are `And` / `.and()`.\n\n**Unmapped areas** live here as `* approx NΓÇôM storiesΓÇª` lines ΓÇö not in a separate outline map. Discovery materializes named stories; drop approx lines once those stories are named on the real map.\n\n**Order:** epics ΓåÆ sub-epics ΓåÆ confirming stories + approx gaps ΓåÆ thin-slice order ΓåÆ main-flow scenario ΓåÆ variations / shared setup (`specification`) ΓåÆ tier notes (`engineering` only).\n\nDo **not** tag lines with fidelity markers. Depth is what you fill:\n\n| Fidelity | Fill |\n|---|---|\n| **discovery** | Epic / SubEpic / named stories + thin-slice; clear approx gaps as you name stories |\n| **exploration** | Main-flow Given / When / Then under each confirming story; objects from ExampleFactory fakes; assert public interface. No shared background yet. |\n| **specification** | Extra scenarios, shared setup / background; still fake + public interface; values from factories |\n| **engineering** | Which tier(s) (`domain` / `client` / `server` / `e2e` / project-specific); not full impl in the sketch |\n\n**Notation:** indent = nesting ┬╖ `{Actor} --> {Verb Noun}` story ┬╖ `* approx NΓÇôM ΓÇª` unmapped ┬╖ `~>` increment ┬╖ `//` note.\n\n---\n\n## Template\n\n```\n{Epic verb-noun}\n    * approx NΓÇôM total stories\n    {Sub-epic verb-noun}\n        {Actor} --> {Confirming story verb-noun}\n            given {shared setup}                    // specification only\n            {main scenario name}\n                given {precondition the running system actually checks}\n                    and {precondition with object.object.field}\n                    and ΓÇª\n                when {the domain operation}\n                    and ΓÇª\n                then {observable outcome {object.field=descriptive term}}\n                    and {next observable outcome}\n            {next scenario name}                    // specification only\n                ΓÇª\n        {Actor} --> {Confirming story verb-noun}\n        * approx NΓÇôM more stories (what unmapped work likely includes)\n    {Sub-epic verb-noun}\n        * approx NΓÇôM more stories (what unmapped work likely includes)\n~> Increment 1: {capability outcome}: {Story verb-noun}, {Story verb-noun}, ΓÇª\n```\n\n---\n\n## Example\n\n```\nManage Customer Orders\n    * approx 18-22 total stories\n    Place New Order\n        Customer --> Browse Product Catalog\n            browse catalog shows available products\n                given a Catalog with published Products\n                    and a Customer with an empty Cart\n                when the Customer browses the Catalog\n                then available Products are listed with price\n                    and Product.name and Product.price are shown\n        Customer --> Submit Order\n            given a Cart with line items and a Payment Method   // specification only\n            order accepted for valid cart and payment\n                given a Cart with Items totalling amount.currency\n                    and a Payment Method with status authorised\n                when the Customer submits the Order\n                then an Order is created with status placed\n                    and an Order.number is returned\n            order rejected when payment declined                // specification only\n                given a Cart with Items totalling amount.currency\n                    and a Payment Method with status declined\n                when the Customer submits the Order\n                then the Order is rejected with reason payment_declined\n                    and the Cart contents are preserved\n        * approx 4-5 more stories (cart, address, delivery, review)\n    Track Order Status\n        * approx 3-4 more stories (pending, shipped, delivered)\n    Cancel Order\n        Customer --> Request Order Cancellation\n        * approx 2-3 more stories (refund, partial cancel, policy)\n~> Increment 1: Customer can place a paid order: Browse Product Catalog, Submit Order\n```\n\nSee examples in `context_tools/stories/examples/` if needed.' not to contain '@stories-scaffold'
+             but: item '@stories-scaffold' found
+    with an extended deploy
+      Γ£ô it should swap the confirm lines for straight prompt passed vs ct (2.9510 seconds)
+      Γ£ô it should swap the action confirm line for straight prompt passed vs ct (2.5724 seconds)
+    with an expandable context tool fidelity
+      Γ£ù it should bake the returned guidance instructions into the extended ct-fidelity command (3.6788 seconds)
+        [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmpu9_qek7p\\.cursor\\skills\\context_tools\\bddish-behavior\\SKILL.md'
+    with CleanEngineering compound guidance
+      Γ£ô it should use the expander projection for only the required fidelity (0.1731 seconds)
+      Γ£ô it should place sketching before produce templates (0.4605 seconds)
+      Γ£ô it should inline markdown and code templates for scenarios deploy
+    with a format
+      Γ£ô it should write a format prompt that names generate and render (2.8305 seconds)
+    with a CDD stage fidelity
+      Γ£ù it should write a prefixed prompt from the fidelity value (3.4055 seconds)
+        [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmpveuzsj1t\\.cursor\\skills\\context_tools\\cdd-discovery\\SKILL.md'
+    with CleanEngineering model
+      Γ£ù it should write a model skill (5.3117 seconds)
+        
+        expected: False to equal True
+    with DDD bounded_context
+      Γ£ù it should write a bounded_context skill (10.1926 seconds)
+        
+        expected: False to equal True
+    with UX ia
+      Γ£ù it should write a prefixed ia prompt for Cursor and VS Code (3.1672 seconds)
+        [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmpfc_8g5gf\\.cursor\\skills\\context_tools\\ux-ia\\SKILL.md'
+    with @skill on a base class guidance
+      Γ£ù it should write the subclass skill and fidelities without repeating the annotation (4.4922 seconds)
+        
+        expected: False to equal True
+    with @skill, @prompt, or @instruction on the operation
+      Γ£ô it should write each named file kind (3.0480 seconds)
+    with @prompt(name) on the operation
+      Γ£ô it should write a Cursor command under that name (3.1534 seconds)
+    with @skill(name) on the operation
+      Γ£ô it should use that name (3.2429 seconds)
+
+a generated harness tool
+  that generates
+    with a context tool given
+      Γ£ô it should resolve without requiring an action (3.4450 seconds)
+    with an action given
+      Γ£ô it should use the action body on skill and command files (3.2773 seconds)
+
+a skill
+  that generates
+    Γ£ô it should write SKILL.md under the IDE skills folder (3.5058 seconds)
+
+a command
+  that generates
+    Γ£ô it should write .cursor/commands/{name}.md
+
+a prompt
+  that generates
+    Γ£ô it should write a VS Code prompt and a Cursor skill
+
+an instruction
+  that generates
+    Γ£ô it should write a VS Code instruction and a Cursor rule
+
+a rule
+  that generates
+    Γ£ô it should write .cursor/rules/{name}.mdc
+
+an agent
+  that generates
+    Γ£ô it should not implement yet
+
+hook deploy
+  that generates toggle skills
+    Γ£ô it should write auto_on and auto_off skill files via harness Skill
+
+agent guidance
+  that generates
+    Γ£ô it should not implement yet
+
+generateAgain
+  that runs
+    with saved state
+      Γ£ô it should write using the saved IDE without AskQuestion (5.4833 seconds)
+      Γ£ô it should restore saved code_language (11.0188 seconds)
+    with no saved state
+      Γ£ô it should refuse
+
+clean
+  that runs
+    Γ£ô it should write a prompt (4.8048 seconds)
+    with type Cursor
+      Γ£ô it should clean that Cursor deploy area and not VS Code (3.6097 seconds)
+      Γ£ù it should remove legacy dispatch hook entries from hooks.json (3.3170 seconds)
+        name 'have_key' is not defined
+
+required_init_params
+  for a class with required params
+    Γ£ô it should return the names of all required params excluding self
+  for a class with no required params
+    Γ£ô it should return an empty list
+  for a class that does not exist in the file
+    Γ£ô it should return an empty list
+  for a file that does not exist
+    Γ£ô it should return an empty list
+
+harness bodies for manifest-alone invoke (#45)
+  when resolving a fidelity body
+    Γ£ô it should name tools.ps1 and follow response.instructions without remanifest
+  when resolving a ct-fidelity composite body
+    Γ£ô it should pin the fidelity and follow response.instructions without remanifest
+  when resolving a guidance body
+    Γ£ô it should not point AskQuestion at a source tree path
+  when resolving a utility body
+    Γ£ô it should use tools.ps1 as the only stdin invoke
+
+_frontmatter model
+  Γ£ô it should include model when set and never disable-model-invocation
+  Γ£ô it should omit model from frontmatter when unset
+
+context tool rules
+  Γ£ù it should extract shared and fidelity rules from stories.md
+    
+    expected: 'When acceptance tests, scaffold, scenarios, or story map, also follow these rules on top of the fidelity-specific ones. See @stories-acceptance_tests, @stories-scaffold, @stories-scenarios, @stories-story_map for full generate guidance.\n\n\n- **`vocabulary-traces-to-domain-source`** ΓÇö Trace terms to domain language / model when present.\n- **`artifacts-mirror-story-hierarchy`** ΓÇö Mirror Epic ΓåÆ SubEpic ΓåÆ Story on disk as folders for epic and sub-epic, and as `{story}.{tier}.py` files (no per-story directory).\n- **`kebab-case-paths`** ΓÇö Epic and SubEpic **folder** names, story **file** stems, and tier segments use lowercase kebab-case (`sign-up`, `front-end`). No `snake_case` folders or `PascalCase` paths. **Exception:** Python epic helper only ΓÇö `{epic_slug}_helper.py` at the epic folder root; nothing else may use underscores.\n- **`read-all-source-context-in-full`** ΓÇö Before locking hierarchy **and before any grill/iterate question about a seam**, prove-read **every relevant referenced context** for that decision: owning `*-segment.md`, `module-context.md`, session sketches / grill-answers / handoff, peer story-context, build-order, and any path the plan or prior answers cite. Index / mid-epic stub columns are structure hints only ΓÇö **not** story inventory. Grep or primer-only skims do not count; cite concrete terms from the files read in the question turn. Also re-read these rules. Do not thin from titles or memory!\n- **`do-not-invent-requirements`** ΓÇö Only model behaviours present in source context or an explicit ask. Never invent:' to contain 'When acceptance tests, scenarios, or story map, also follow these rules on top of the fidelity-specific ones'
+         but: item 'When acceptance tests, scenarios, or story map, also follow these rules on top of the fidelity-specific ones' not found
+  Γ£ô it should extract modules model and code rules from clean_engineering.md
+  Γ£ô it should place rules under context_tools/{slug}/
+  Γ£ô it should render mdc frontmatter with globs and alwaysApply false
+
+Harness deploy context tool rules
+  Γ£ô it should write stories shared and fidelity rules on Cursor deploy (3.2162 seconds)
+  Γ£ô it should not write context tool rules for VS Code deploy (3.0599 seconds)
+
+harness deploy for car invoke BDD
+  after write_deploy
+    Γ£ù it should write the car context tool skill (10.1411 seconds)
+      
+      expected: False to be true
+    Γ£ù it should write fidelity and action command prompts (11.7663 seconds)
+      
+      expected: False to be true
+    Γ£ù it should parse car.road_story.md fence like bdd.behavior.md (10.7815 seconds)
+      Deployed command not found: C:\dev\abd-cdd-utility-cleanup\.cursor\commands\car.road_story.md
+    Γ£ù it should invoke each deployed fence via CLI (11.0350 seconds)
+      Deployed command not found: C:\dev\abd-cdd-utility-cleanup\.cursor\commands\car.road_story.md
+    Γ£ù it should preserve exact fence text for agent prompts (10.9035 seconds)
+      Deployed command not found: C:\dev\abd-cdd-utility-cleanup\.cursor\commands\car-start.md
+
+manifest-alone E2E (#45)
+  CLI overhead (no agent)
+    Γ£ù it invokes harness-deployed fences within CLI-only budget (10.6777 seconds)
+      Deployed command not found: C:\dev\abd-cdd-utility-cleanup\.cursor\commands\car.road_story.md
+  with strict agent shell (no harness replay)
+    Γ£ù it reads car skill and runs car.road_story.md (11.6574 seconds)
+      cursor-agent not authenticated - run `cursor-agent login` first
+    Γ£ù it reads car skill and runs car-start.md (11.9727 seconds)
+      cursor-agent not authenticated - run `cursor-agent login` first
+    Γ£ù it reads car skill and travel-to.md; names start in response.tools (16.9569 seconds)
+      cursor-agent not authenticated - run `cursor-agent login` first
+    Γ£ù it reads car skill and travel-to.md; lists many tools (11.7335 seconds)
+      cursor-agent not authenticated - run `cursor-agent login` first
+    Γ£ù it reads car skill and car-inspect.md; lists wrap_story (11.1762 seconds)
+      cursor-agent not authenticated - run `cursor-agent login` first
+    Γ£ù it invokes car-start.md reliably across three fresh sessions (11.7338 seconds)
+      cursor-agent not authenticated - run `cursor-agent login` first
+
+33 examples failed of 98 ran in 334.3487 seconds
+
+Failures:
+
+  1) a harness that generates with no source it should walk the workspace and deploy without a confirm list
+     Failure/Error: primitives/harness/harness_spec.py expect((root / ".cursor" / "skills" / "widget" / "SKILL.md").is_file()).to(equal(True))
+         AssertionError: expected: False to equal True
+             
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "primitives/harness/harness_spec.py", line 332, in 00000014__it should walk the workspace and deploy without a confirm list
+         expect((root / ".cursor" / "skills" / "widget" / "SKILL.md").is_file()).to(equal(True))
+     
+     
+  2) a harness that generates with type Cursor it should never deploy outside the IDE folder when given a repo root path
+     Failure/Error: primitives/harness/harness_spec.py expect((root / ".cursor" / "skills" / "context_tools" / "stories-story_map" / "SKILL.md").is_file()).to(
+         AssertionError: expected: False to equal True
+             
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "primitives/harness/harness_spec.py", line 418, in 00000022__it should never deploy outside the IDE folder when given a repo root path
+         expect((root / ".cursor" / "skills" / "context_tools" / "stories-story_map" / "SKILL.md").is_file()).to(
+     
+     
+  3) a harness that generates with a toolset that has required constructor params it should include those params in the context block of the generated body
+     Failure/Error: primitives/harness/harness_spec.py body = (root / ".cursor" / "skills" / "requiredtool" / "SKILL.md").read_text(encoding="utf-8")
+         FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmpwand5vrd\\.cursor\\skills\\requiredtool\\SKILL.md'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+         return io.open(self, mode, buffering, encoding, errors, newline)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+         with self.open(mode='r', encoding=encoding, errors=errors) as f:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 488, in 00000034__it should include those params in the context block of the generated body
+         body = (root / ".cursor" / "skills" / "requiredtool" / "SKILL.md").read_text(encoding="utf-8")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  4) a harness that generates with catalog generate_catalog it should write a generate-catalog prompt and not a catalog_generator skill
+     Failure/Error: primitives/harness/harness_spec.py expect((root / ".cursor" / "skills" / "generate-catalog" / "SKILL.md").is_file()).to(
+         AssertionError: expected: False to equal True
+             
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "primitives/harness/harness_spec.py", line 531, in 00000038__it should write a generate-catalog prompt and not a catalog_generator skill
+         expect((root / ".cursor" / "skills" / "generate-catalog" / "SKILL.md").is_file()).to(
+     
+     
+  5) a harness that generates with work session tools it should invoke finish_work_session as a tool on WorkSession
+     Failure/Error: primitives/harness/harness_spec.py ).read_text(encoding="utf-8")
+         FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmp30bhucsb\\.cursor\\skills\\finish-work-session\\SKILL.md'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+         return io.open(self, mode, buffering, encoding, errors, newline)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+         with self.open(mode='r', encoding=encoding, errors=errors) as f:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 606, in 00000044__it should invoke finish_work_session as a tool on WorkSession
+         ).read_text(encoding="utf-8")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  6) a harness that generates with utility turn prompts it should invoke the tool method name not the prompt slug
+     Failure/Error: primitives/harness/harness_spec.py start = (root / ".cursor" / "skills" / "start-turn" / "SKILL.md").read_text(
+         FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmp4mmv78dq\\.cursor\\skills\\start-turn\\SKILL.md'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+         return io.open(self, mode, buffering, encoding, errors, newline)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+         with self.open(mode='r', encoding=encoding, errors=errors) as f:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 637, in 00000046__it should invoke the tool method name not the prompt slug
+         start = (root / ".cursor" / "skills" / "start-turn" / "SKILL.md").read_text(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  7) a harness that generates with a utility sub-agent prompt it should invoke run as a tool not the prompt slug
+     Failure/Error: primitives/harness/harness_spec.py body = (root / ".cursor" / "skills" / "sub-agent" / "SKILL.md").read_text(
+         FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmp7w6ju213\\.cursor\\skills\\sub-agent\\SKILL.md'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+         return io.open(self, mode, buffering, encoding, errors, newline)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+         with self.open(mode='r', encoding=encoding, errors=errors) as f:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 673, in 00000048__it should invoke run as a tool not the prompt slug
+         body = (root / ".cursor" / "skills" / "sub-agent" / "SKILL.md").read_text(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  8) a harness that generates with record_decisions it should not write a skill
+     Failure/Error: primitives/harness/harness_spec.py ).to(equal(True))
+         AssertionError: expected: False to equal True
+             
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "primitives/harness/harness_spec.py", line 707, in 00000050__it should not write a skill
+         ).to(equal(True))
+           ^^^^^^^^^^^^^^^
+     
+     
+  9) a harness that generates with a utility prompt it should write the operation and CLI without action resolve
+     Failure/Error: primitives/harness/harness_spec.py body = (root / ".cursor" / "skills" / "ask" / "SKILL.md").read_text(encoding="utf-8")
+         FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmp6y1wnwvc\\.cursor\\skills\\ask\\SKILL.md'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+         return io.open(self, mode, buffering, encoding, errors, newline)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+         with self.open(mode='r', encoding=encoding, errors=errors) as f:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 747, in 00000054__it should write the operation and CLI without action resolve
+         body = (root / ".cursor" / "skills" / "ask" / "SKILL.md").read_text(encoding="utf-8")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  10) a harness that generates with a utility performTurn prompt it should invoke performTurn as an action on Turn
+     Failure/Error: primitives/harness/harness_spec.py body = (root / ".cursor" / "skills" / "turn" / "SKILL.md").read_text(
+         FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmpp5hiiu34\\.cursor\\skills\\turn\\SKILL.md'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+         return io.open(self, mode, buffering, encoding, errors, newline)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+         with self.open(mode='r', encoding=encoding, errors=errors) as f:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 923, in 00000068__it should invoke performTurn as an action on Turn
+         body = (root / ".cursor" / "skills" / "turn" / "SKILL.md").read_text(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  11) a harness that generates with echo it should write a utility prompt without action resolve
+     Failure/Error: primitives/harness/harness_spec.py body = (root / ".cursor" / "skills" / "echo" / "SKILL.md").read_text(encoding="utf-8")
+         FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmp9pi8ptw6\\.cursor\\skills\\echo\\SKILL.md'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+         return io.open(self, mode, buffering, encoding, errors, newline)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+         with self.open(mode='r', encoding=encoding, errors=errors) as f:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 937, in 00000070__it should write a utility prompt without action resolve
+         body = (root / ".cursor" / "skills" / "echo" / "SKILL.md").read_text(encoding="utf-8")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  12) a harness that generates with handoff it should write a utility prompt without action resolve
+     Failure/Error: primitives/harness/harness_spec.py body = (root / ".cursor" / "skills" / "handoff" / "SKILL.md").read_text(encoding="utf-8")
+         FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmpryhonwh1\\.cursor\\skills\\handoff\\SKILL.md'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+         return io.open(self, mode, buffering, encoding, errors, newline)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+         with self.open(mode='r', encoding=encoding, errors=errors) as f:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 953, in 00000072__it should write a utility prompt without action resolve
+         body = (root / ".cursor" / "skills" / "handoff" / "SKILL.md").read_text(encoding="utf-8")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  13) a harness that generates with scaffold it should embed Scaffold prose in stories-story_map instead
+     Failure/Error: primitives/harness/harness_spec.py expect(body).not_to(contain("@stories-scaffold"))
+         AssertionError: expected: '---\nname: stories-story_map\ndescription: "Provide guidance for creating story maps, scenarios, and acceptance tests."\ndisable-model-invocation: true\n---\n\n# stories-story_map\n\nUse stories guidance at `story_map` fidelity only.\n\nRefer to these skills in order to fill in details from previous fidelities if not present:\n@stories-scaffold\n\n# Contexts\n\nMap stakeholder and system interactions as behaviours that deliver a solution.\n\nInteractions fit into a hierarchy: a `StoryMap` of `Epic` ΓåÆ nestable `SubEpic` ΓåÆ `Story`. Each story is `Scenario`s with discrete steps; backgrounds and scenarios carry examples.\n\n| Fidelity | Default Format | Produce |\n|---|---|---|\n| **story_map** | markdown | Story map |\n| **scenarios** | python | Main-flow scenarios per story ΓÇö `{story}.{tier}.py` GWT files. Pass `format markdown` only when the strategy asks for a markdown view. |\n| **acceptance_tests** | python | Same `{story}.{tier}.py` tree as scenarios. CE runs alongside for wrap classes. |\n\n**Templates** live under `templates/` per format. **Scanners** read the canonical model only ΓÇö never language syntax.\n\n---\n\n## Shared rules\n\n- **`vocabulary-traces-to-domain-source`** ΓÇö Trace terms to domain language / model when present.\n- **`artifacts-mirror-story-hierarchy`** ΓÇö Mirror Epic ΓåÆ SubEpic ΓåÆ Story on disk as folders for epic and sub-epic, and as `{story}.{tier}.py` files (no per-story directory).\n- **`kebab-case-paths`** ΓÇö Epic and SubEpic **folder** names, story **file** stems, and tier segments use lowercase kebab-case (`sign-up`, `front-end`). No `snake_case` folders or `PascalCase` paths. **Exception:** Python epic helper only ΓÇö `{epic_slug}_helper.py` at the epic folder root; nothing else may use underscores.\n- **`read-all-source-context-in-full`** ΓÇö Before locking hierarchy **and before any grill/iterate question about a seam**, prove-read **every relevant referenced context** for that decision: owning `*-segment.md`, `module-context.md`, session sketches / grill-answers / handoff, peer story-context, build-order, and any path the plan or prior answers cite. Index / mid-epic stub columns are structure hints only ΓÇö **not** story inventory. Grep or primer-only skims do not count; cite concrete terms from the files read in the question turn. Also re-read these rules. Do not thin from titles or memory!\n- **`do-not-invent-requirements`** ΓÇö Only model behaviours present in source context or an explicit ask. Never invent:\n  - status concepts, maintenance signals, warning badges, or config columns (e.g. `Status (ok/stale)`) the source does not require ΓÇö unconfigured / not-yet-current = **no row** + the existing fallback, never a new invented state to render;\n  - a second, competing command / invoke surface beside one the user already specified (e.g. a raw YAML `toolset`/`fidelity`/`action` "Invoke" block given equal billing next to an already-locked `/{skill} <action> {fidelity}` line). Keep the specified surface primary; any secondary format is a subsidiary link at most ΓÇö never inlined, never a co-equal page element.\n\n---\n\n## story_map\n\n**Default format:** markdown\n\n**Goal:** Shape the hierarchy ΓÇö `Epic` ΓåÆ nestable `SubEpic` ΓåÆ `Story` ΓÇö decomposed on real mechanical variation, not requirement-row bookkeeping.\n\n**Produce:** Story map.\n\n### Scaffold\n\n**When scaffolding only** (`/partition` or a names-only first cut ΓÇö not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**\n\nRough story-map outline for a **partition** pass or first cut ΓÇö **names only**: verbΓÇônoun epics + story names (`StoryMap` ΓåÆ `Epic` ΓåÆ `SubEpic` ΓåÆ `Story`). No scenarios, no thin-slice increments, no scope prose yet.\n\nKey rules: `branch-on-mechanical-uniqueness` ΓÇö split on distinct mechanics, not catalog/requirements rows; `read-all-source-context-in-full` ΓÇö read segments in full before grouping.\n\n### Rules\n\n- **`verb-noun-format`** ΓÇö Name Epic / SubEpic / Story verbΓÇônoun; actor is metadata; base verb form.\n- **`four-to-nine-children`** ΓÇö 4ΓÇô9 direct children (warn at 3/10; error Γëñ2 or ΓëÑ11).\n- **`branch-on-mechanical-uniqueness`** ΓÇö Explore context relentlessly for distinct mechanics. Branch on mechanical uniqueness, dstinct mechanics in requirements require *distinct stories* for each mechanic. Different requirement entries with same mechanic is *one story only with different examples or scenarios*. Collapsing real mechanical variation, as well as mindlessly turning requirements into long lists of stories are **defect**\n- **`right-size-story-nodes`** ΓÇö One demonstrable interaction per story.\n- **`behaviours-not-one-time-tasks`** ΓÇö A Story is a repeatable stakeholder/system interaction you can specify Given/When/Then against more than once. One-time maintainer chores (rename X to Y, copy/migrate an asset once, one-off repo surgery) are not Stories ΓÇö keep them in the plan/todos. Once done, the result is ordinary inventory the remaining stories already cover.\n- **`do-not-invent-requirements`** ΓÇö same rule as Shared: no invented Status/stale/warning-badge concepts; no competing command/invoke surface beside one already specified; unconfigured = no row + existing fallback.\n\n---\n\n## Sketching\n\nWhen sketching, use the following sketch template. Do not use the produce templates below ΓÇö stop reading this skill when sketching.\n\n# Stories sketch ΓÇö match active fidelity\n\n**MUST:** Read all source context in full before drafting or refining. **MUST:** Branch on **mechanical uniqueness** only ΓÇö split distinct mechanics; do not mint one story per TOC / catalog / requirements row. **MUST:** Do not invent requirements ΓÇö no Status/stale/warning-badge stories or columns unless source already requires them; no second command/invoke surface beside one already specified (no co-equal YAML Invoke block next to a locked `/{skill} <action> {fidelity}` line ΓÇö secondary formats are a subsidiary link only). Unconfigured = no row + existing fallback. See `stories.md`: `read-all-source-context-in-full`, `branch-on-mechanical-uniqueness`, `do-not-invent-requirements`.\n\nSketch the story hierarchy first, then deepen only as far as the active fidelity needs. Confirm epics and sub-epics (the e2e journey), then drill into exact stories by risk or uncertainty ΓÇö unique **mechanical** flows first, then scaffold patterns already encountered.\n\nSketch increments next if there will be more than one.\n\nThen detail groups of related stories together ΓÇö e.g. stories for a sub-epic in a particular increment. Narrate in e2e flow order.\n\nWhen detailing stories, start with the main-flow scenario (including domain objects usable for examples); then other scenarios, real example data, etc. Given names only conditions the running system actually checks. When is the domain operation. Then asserts; further outcomes are `And` / `.and()`.\n\n**Unmapped areas** live here as `* approx NΓÇôM storiesΓÇª` lines ΓÇö not in a separate outline map. Discovery materializes named stories; drop approx lines once those stories are named on the real map.\n\n**Order:** epics ΓåÆ sub-epics ΓåÆ confirming stories + approx gaps ΓåÆ thin-slice order ΓåÆ main-flow scenario ΓåÆ variations / shared setup (`specification`) ΓåÆ tier notes (`engineering` only).\n\nDo **not** tag lines with fidelity markers. Depth is what you fill:\n\n| Fidelity | Fill |\n|---|---|\n| **discovery** | Epic / SubEpic / named stories + thin-slice; clear approx gaps as you name stories |\n| **exploration** | Main-flow Given / When / Then under each confirming story; objects from ExampleFactory fakes; assert public interface. No shared background yet. |\n| **specification** | Extra scenarios, shared setup / background; still fake + public interface; values from factories |\n| **engineering** | Which tier(s) (`domain` / `client` / `server` / `e2e` / project-specific); not full impl in the sketch |\n\n**Notation:** indent = nesting ┬╖ `{Actor} --> {Verb Noun}` story ┬╖ `* approx NΓÇôM ΓÇª` unmapped ┬╖ `~>` increment ┬╖ `//` note.\n\n---\n\n## Template\n\n```\n{Epic verb-noun}\n    * approx NΓÇôM total stories\n    {Sub-epic verb-noun}\n        {Actor} --> {Confirming story verb-noun}\n            given {shared setup}                    // specification only\n            {main scenario name}\n                given {precondition the running system actually checks}\n                    and {precondition with object.object.field}\n                    and ΓÇª\n                when {the domain operation}\n                    and ΓÇª\n                then {observable outcome {object.field=descriptive term}}\n                    and {next observable outcome}\n            {next scenario name}                    // specification only\n                ΓÇª\n        {Actor} --> {Confirming story verb-noun}\n        * approx NΓÇôM more stories (what unmapped work likely includes)\n    {Sub-epic verb-noun}\n        * approx NΓÇôM more stories (what unmapped work likely includes)\n~> Increment 1: {capability outcome}: {Story verb-noun}, {Story verb-noun}, ΓÇª\n```\n\n---\n\n## Example\n\n```\nManage Customer Orders\n    * approx 18-22 total stories\n    Place New Order\n        Customer --> Browse Product Catalog\n            browse catalog shows available products\n                given a Catalog with published Products\n                    and a Customer with an empty Cart\n                when the Customer browses the Catalog\n                then available Products are listed with price\n                    and Product.name and Product.price are shown\n        Customer --> Submit Order\n            given a Cart with line items and a Payment Method   // specification only\n            order accepted for valid cart and payment\n                given a Cart with Items totalling amount.currency\n                    and a Payment Method with status authorised\n                when the Customer submits the Order\n                then an Order is created with status placed\n                    and an Order.number is returned\n            order rejected when payment declined                // specification only\n                given a Cart with Items totalling amount.currency\n                    and a Payment Method with status declined\n                when the Customer submits the Order\n                then the Order is rejected with reason payment_declined\n                    and the Cart contents are preserved\n        * approx 4-5 more stories (cart, address, delivery, review)\n    Track Order Status\n        * approx 3-4 more stories (pending, shipped, delivered)\n    Cancel Order\n        Customer --> Request Order Cancellation\n        * approx 2-3 more stories (refund, partial cancel, policy)\n~> Increment 1: Customer can place a paid order: Browse Product Catalog, Submit Order\n```\n\nSee examples in `context_tools/stories/examples/` if needed.' not to contain '@stories-scaffold'
+          but: item '@stories-scaffold' found
+             
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "primitives/harness/harness_spec.py", line 999, in 00000075__it should embed Scaffold prose in stories-story_map instead
+         expect(body).not_to(contain("@stories-scaffold"))
+     
+     
+  14) a harness that generates with an expandable context tool fidelity it should bake the returned guidance instructions into the extended ct-fidelity command
+     Failure/Error: primitives/harness/harness_spec.py body = (root / ".cursor" / "skills" / "context_tools" / "bddish-behavior" / "SKILL.md").read_text(encoding="utf-8")
+         FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmpu9_qek7p\\.cursor\\skills\\context_tools\\bddish-behavior\\SKILL.md'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+         return io.open(self, mode, buffering, encoding, errors, newline)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+         with self.open(mode='r', encoding=encoding, errors=errors) as f:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1049, in 00000080__it should bake the returned guidance instructions into the extended ct-fidelity command
+         body = (root / ".cursor" / "skills" / "context_tools" / "bddish-behavior" / "SKILL.md").read_text(encoding="utf-8")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  15) a harness that generates with a CDD stage fidelity it should write a prefixed prompt from the fidelity value
+     Failure/Error: primitives/harness/harness_spec.py body = (root / ".cursor" / "skills" / "context_tools" / "cdd-discovery" / "SKILL.md").read_text(encoding="utf-8")
+         FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmpveuzsj1t\\.cursor\\skills\\context_tools\\cdd-discovery\\SKILL.md'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+         return io.open(self, mode, buffering, encoding, errors, newline)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+         with self.open(mode='r', encoding=encoding, errors=errors) as f:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1138, in 00000088__it should write a prefixed prompt from the fidelity value
+         body = (root / ".cursor" / "skills" / "context_tools" / "cdd-discovery" / "SKILL.md").read_text(encoding="utf-8")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  16) a harness that generates with CleanEngineering model it should write a model skill
+     Failure/Error: primitives/harness/harness_spec.py expect((root / ".cursor" / "skills" / "context_tools" / "clean_engineering-model" / "SKILL.md").is_file()).to(equal(True))
+         AssertionError: expected: False to equal True
+             
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "primitives/harness/harness_spec.py", line 1152, in 00000090__it should write a model skill
+         expect((root / ".cursor" / "skills" / "context_tools" / "clean_engineering-model" / "SKILL.md").is_file()).to(equal(True))
+     
+     
+  17) a harness that generates with DDD bounded_context it should write a bounded_context skill
+     Failure/Error: primitives/harness/harness_spec.py expect((root / ".cursor" / "skills" / "context_tools" / "ddd-bounded_context" / "SKILL.md").is_file()).to(equal(True))
+         AssertionError: expected: False to equal True
+             
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "primitives/harness/harness_spec.py", line 1158, in 00000092__it should write a bounded_context skill
+         expect((root / ".cursor" / "skills" / "context_tools" / "ddd-bounded_context" / "SKILL.md").is_file()).to(equal(True))
+     
+     
+  18) a harness that generates with UX ia it should write a prefixed ia prompt for Cursor and VS Code
+     Failure/Error: primitives/harness/harness_spec.py body = (root / ".cursor" / "skills" / "context_tools" / "ux-ia" / "SKILL.md").read_text(encoding="utf-8")
+         FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\jeffa\\AppData\\Local\\Temp\\tmpfc_8g5gf\\.cursor\\skills\\context_tools\\ux-ia\\SKILL.md'
+             
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+         return io.open(self, mode, buffering, encoding, errors, newline)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1027, in read_text
+         with self.open(mode='r', encoding=encoding, errors=errors) as f:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1164, in 00000094__it should write a prefixed ia prompt for Cursor and VS Code
+         body = (root / ".cursor" / "skills" / "context_tools" / "ux-ia" / "SKILL.md").read_text(encoding="utf-8")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  19) a harness that generates with @skill on a base class guidance it should write the subclass skill and fidelities without repeating the annotation
+     Failure/Error: primitives/harness/harness_spec.py expect((root / ".cursor" / "skills" / "context_tools" / "child-family_map" / "SKILL.md").is_file()).to(equal(True))
+         AssertionError: expected: False to equal True
+             
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "primitives/harness/harness_spec.py", line 1208, in 00000096__it should write the subclass skill and fidelities without repeating the annotation
+         expect((root / ".cursor" / "skills" / "context_tools" / "child-family_map" / "SKILL.md").is_file()).to(equal(True))
+     
+     
+  20) clean that runs with type Cursor it should remove legacy dispatch hook entries from hooks.json
+     Failure/Error: primitives/harness/harness_spec.py expect(data["hooks"]).to(have_key("beforeSubmitPrompt"))
+         NameError: name 'have_key' is not defined
+             
+     File "primitives/harness/harness_spec.py", line 1487, in 00000145__it should remove legacy dispatch hook entries from hooks.json
+         expect(data["hooks"]).to(have_key("beforeSubmitPrompt"))
+                                  ^^^^^^^^
+     
+     
+  21) context tool rules it should extract shared and fidelity rules from stories.md
+     Failure/Error: primitives/harness/harness_spec.py expect(by_name["stories"].body).to(
+         AssertionError: expected: 'When acceptance tests, scaffold, scenarios, or story map, also follow these rules on top of the fidelity-specific ones. See @stories-acceptance_tests, @stories-scaffold, @stories-scenarios, @stories-story_map for full generate guidance.\n\n\n- **`vocabulary-traces-to-domain-source`** ΓÇö Trace terms to domain language / model when present.\n- **`artifacts-mirror-story-hierarchy`** ΓÇö Mirror Epic ΓåÆ SubEpic ΓåÆ Story on disk as folders for epic and sub-epic, and as `{story}.{tier}.py` files (no per-story directory).\n- **`kebab-case-paths`** ΓÇö Epic and SubEpic **folder** names, story **file** stems, and tier segments use lowercase kebab-case (`sign-up`, `front-end`). No `snake_case` folders or `PascalCase` paths. **Exception:** Python epic helper only ΓÇö `{epic_slug}_helper.py` at the epic folder root; nothing else may use underscores.\n- **`read-all-source-context-in-full`** ΓÇö Before locking hierarchy **and before any grill/iterate question about a seam**, prove-read **every relevant referenced context** for that decision: owning `*-segment.md`, `module-context.md`, session sketches / grill-answers / handoff, peer story-context, build-order, and any path the plan or prior answers cite. Index / mid-epic stub columns are structure hints only ΓÇö **not** story inventory. Grep or primer-only skims do not count; cite concrete terms from the files read in the question turn. Also re-read these rules. Do not thin from titles or memory!\n- **`do-not-invent-requirements`** ΓÇö Only model behaviours present in source context or an explicit ask. Never invent:' to contain 'When acceptance tests, scenarios, or story map, also follow these rules on top of the fidelity-specific ones'
+          but: item 'When acceptance tests, scenarios, or story map, also follow these rules on top of the fidelity-specific ones' not found
+             
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "primitives/harness/harness_spec.py", line 1708, in 00000170__it should extract shared and fidelity rules from stories.md
+         expect(by_name["stories"].body).to(
+     
+     
+  22) harness deploy for car invoke BDD after write_deploy it should write the car context tool skill
+     Failure/Error: primitives/harness/harness_spec.py expect(skill.is_file()).to(be_true)
+         AssertionError: expected: False to be true
+             
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "primitives/harness/harness_spec.py", line 1781, in 00000178__it should write the car context tool skill
+         expect(skill.is_file()).to(be_true)
+     
+     
+  23) harness deploy for car invoke BDD after write_deploy it should write fidelity and action command prompts
+     Failure/Error: primitives/harness/harness_spec.py expect((_INVOKE_REPO / CAR_ROAD_STORY).is_file()).to(be_true)
+         AssertionError: expected: False to be true
+             
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 33, in _assert
+         raise AssertionError(self._failure_message(matcher, reasons))
+     File "C:\dev\abd-cdd-utility-cleanup\.venv\Lib\site-packages\expects\expectations.py", line 25, in to
+         self._assert(matcher)
+     File "primitives/harness/harness_spec.py", line 1788, in 00000179__it should write fidelity and action command prompts
+         expect((_INVOKE_REPO / CAR_ROAD_STORY).is_file()).to(be_true)
+     
+     
+  24) harness deploy for car invoke BDD after write_deploy it should parse car.road_story.md fence like bdd.behavior.md
+     Failure/Error: primitives/harness/harness_spec.py payload = parse_command_fence(CAR_ROAD_STORY, repo_root=_INVOKE_REPO)
+         FileNotFoundError: Deployed command not found: C:\dev\abd-cdd-utility-cleanup\.cursor\commands\car.road_story.md
+             
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 82, in command_path
+         raise FileNotFoundError(f"Deployed command not found: {resolved}")
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 88, in command_fence_yaml
+         path = command_path(repo_root, command)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 97, in parse_command_fence
+         payload = yaml.safe_load(command_fence_yaml(command, repo_root=repo_root))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1795, in 00000180__it should parse car.road_story.md fence like bdd.behavior.md
+         payload = parse_command_fence(CAR_ROAD_STORY, repo_root=_INVOKE_REPO)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  25) harness deploy for car invoke BDD after write_deploy it should invoke each deployed fence via CLI
+     Failure/Error: primitives/harness/harness_spec.py run_yaml_from_command(
+         FileNotFoundError: Deployed command not found: C:\dev\abd-cdd-utility-cleanup\.cursor\commands\car.road_story.md
+             
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 82, in command_path
+         raise FileNotFoundError(f"Deployed command not found: {resolved}")
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 88, in command_fence_yaml
+         path = command_path(repo_root, command)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 97, in parse_command_fence
+         payload = yaml.safe_load(command_fence_yaml(command, repo_root=repo_root))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 111, in run_yaml_from_command
+         payload = dict(parse_command_fence(command, repo_root=repo_root))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1803, in 00000181__it should invoke each deployed fence via CLI
+         run_yaml_from_command(
+     
+     
+  26) harness deploy for car invoke BDD after write_deploy it should preserve exact fence text for agent prompts
+     Failure/Error: primitives/harness/harness_spec.py fence = command_fence_yaml(CAR_START, repo_root=_INVOKE_REPO)
+         FileNotFoundError: Deployed command not found: C:\dev\abd-cdd-utility-cleanup\.cursor\commands\car-start.md
+             
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 82, in command_path
+         raise FileNotFoundError(f"Deployed command not found: {resolved}")
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 88, in command_fence_yaml
+         path = command_path(repo_root, command)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1842, in 00000182__it should preserve exact fence text for agent prompts
+         fence = command_fence_yaml(CAR_START, repo_root=_INVOKE_REPO)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  27) manifest-alone E2E (#45) CLI overhead (no agent) it invokes harness-deployed fences within CLI-only budget
+     Failure/Error: primitives/harness/harness_spec.py _cli_time(run_yaml_from_command(CAR_ROAD_STORY, repo_root=_INVOKE_REPO, context=CAR_CTX))
+         FileNotFoundError: Deployed command not found: C:\dev\abd-cdd-utility-cleanup\.cursor\commands\car.road_story.md
+             
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 82, in command_path
+         raise FileNotFoundError(f"Deployed command not found: {resolved}")
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 88, in command_fence_yaml
+         path = command_path(repo_root, command)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 97, in parse_command_fence
+         payload = yaml.safe_load(command_fence_yaml(command, repo_root=repo_root))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\spec_helpers.py", line 111, in run_yaml_from_command
+         payload = dict(parse_command_fence(command, repo_root=repo_root))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1851, in 00000185__it invokes harness-deployed fences within CLI-only budget
+         _cli_time(run_yaml_from_command(CAR_ROAD_STORY, repo_root=_INVOKE_REPO, context=CAR_CTX))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  28) manifest-alone E2E (#45) with strict agent shell (no harness replay) it reads car skill and runs car.road_story.md
+     Failure/Error: primitives/harness/harness_spec.py with agent(_INVOKE_REPO, _invoke_session("fidelity-generate")) as block:
+         RuntimeError: cursor-agent not authenticated - run `cursor-agent login` first
+             
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\agent_cli_bdd.py", line 82, in assert_authenticated
+         raise RuntimeError("cursor-agent not authenticated - run `cursor-agent login` first")
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\agent_cli_bdd.py", line 434, in _cli_agent
+         _ToolAgentBlock.assert_authenticated()
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 137, in __enter__
+         return next(self.gen)
+                ^^^^^^^^^^^^^^
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\__init__.py", line 108, in agent
+         with _cli_agent(workspace, session_file) as block:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 137, in __enter__
+         return next(self.gen)
+                ^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1868, in 00000187__it reads car skill and runs car.road_story.md
+         with agent(_INVOKE_REPO, _invoke_session("fidelity-generate")) as block:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  29) manifest-alone E2E (#45) with strict agent shell (no harness replay) it reads car skill and runs car-start.md
+     Failure/Error: primitives/harness/harness_spec.py with agent(_INVOKE_REPO, _invoke_session("one-tool")) as block:
+         RuntimeError: cursor-agent not authenticated - run `cursor-agent login` first
+             
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\agent_cli_bdd.py", line 82, in assert_authenticated
+         raise RuntimeError("cursor-agent not authenticated - run `cursor-agent login` first")
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\agent_cli_bdd.py", line 434, in _cli_agent
+         _ToolAgentBlock.assert_authenticated()
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 137, in __enter__
+         return next(self.gen)
+                ^^^^^^^^^^^^^^
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\__init__.py", line 108, in agent
+         with _cli_agent(workspace, session_file) as block:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 137, in __enter__
+         return next(self.gen)
+                ^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1880, in 00000188__it reads car skill and runs car-start.md
+         with agent(_INVOKE_REPO, _invoke_session("one-tool")) as block:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  30) manifest-alone E2E (#45) with strict agent shell (no harness replay) it reads car skill and travel-to.md; names start in response.tools
+     Failure/Error: primitives/harness/harness_spec.py with agent(_INVOKE_REPO, _invoke_session("action-one-tool")) as block:
+         RuntimeError: cursor-agent not authenticated - run `cursor-agent login` first
+             
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\agent_cli_bdd.py", line 82, in assert_authenticated
+         raise RuntimeError("cursor-agent not authenticated - run `cursor-agent login` first")
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\agent_cli_bdd.py", line 434, in _cli_agent
+         _ToolAgentBlock.assert_authenticated()
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 137, in __enter__
+         return next(self.gen)
+                ^^^^^^^^^^^^^^
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\__init__.py", line 108, in agent
+         with _cli_agent(workspace, session_file) as block:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 137, in __enter__
+         return next(self.gen)
+                ^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1891, in 00000189__it reads car skill and travel-to.md; names start in response.tools
+         with agent(_INVOKE_REPO, _invoke_session("action-one-tool")) as block:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  31) manifest-alone E2E (#45) with strict agent shell (no harness replay) it reads car skill and travel-to.md; lists many tools
+     Failure/Error: primitives/harness/harness_spec.py with agent(_INVOKE_REPO, _invoke_session("action-many-tools")) as block:
+         RuntimeError: cursor-agent not authenticated - run `cursor-agent login` first
+             
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\agent_cli_bdd.py", line 82, in assert_authenticated
+         raise RuntimeError("cursor-agent not authenticated - run `cursor-agent login` first")
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\agent_cli_bdd.py", line 434, in _cli_agent
+         _ToolAgentBlock.assert_authenticated()
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 137, in __enter__
+         return next(self.gen)
+                ^^^^^^^^^^^^^^
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\__init__.py", line 108, in agent
+         with _cli_agent(workspace, session_file) as block:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 137, in __enter__
+         return next(self.gen)
+                ^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1909, in 00000190__it reads car skill and travel-to.md; lists many tools
+         with agent(_INVOKE_REPO, _invoke_session("action-many-tools")) as block:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  32) manifest-alone E2E (#45) with strict agent shell (no harness replay) it reads car skill and car-inspect.md; lists wrap_story
+     Failure/Error: primitives/harness/harness_spec.py with agent(_INVOKE_REPO, _invoke_session("utility")) as block:
+         RuntimeError: cursor-agent not authenticated - run `cursor-agent login` first
+             
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\agent_cli_bdd.py", line 82, in assert_authenticated
+         raise RuntimeError("cursor-agent not authenticated - run `cursor-agent login` first")
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\agent_cli_bdd.py", line 434, in _cli_agent
+         _ToolAgentBlock.assert_authenticated()
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 137, in __enter__
+         return next(self.gen)
+                ^^^^^^^^^^^^^^
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\__init__.py", line 108, in agent
+         with _cli_agent(workspace, session_file) as block:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 137, in __enter__
+         return next(self.gen)
+                ^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1931, in 00000191__it reads car skill and car-inspect.md; lists wrap_story
+         with agent(_INVOKE_REPO, _invoke_session("utility")) as block:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
+  33) manifest-alone E2E (#45) with strict agent shell (no harness replay) it invokes car-start.md reliably across three fresh sessions
+     Failure/Error: primitives/harness/harness_spec.py with agent(_INVOKE_REPO, _invoke_session(f"stability-{attempt}")) as block:
+         RuntimeError: cursor-agent not authenticated - run `cursor-agent login` first
+             
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\agent_cli_bdd.py", line 82, in assert_authenticated
+         raise RuntimeError("cursor-agent not authenticated - run `cursor-agent login` first")
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\agent_cli_bdd.py", line 434, in _cli_agent
+         _ToolAgentBlock.assert_authenticated()
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 137, in __enter__
+         return next(self.gen)
+                ^^^^^^^^^^^^^^
+     File "C:\dev\abd-cdd-utility-cleanup\context_tools\agent_bdd\__init__.py", line 108, in agent
+         with _cli_agent(workspace, session_file) as block:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     File "C:\Users\jeffa\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 137, in __enter__
+         return next(self.gen)
+                ^^^^^^^^^^^^^^
+     File "primitives/harness/harness_spec.py", line 1951, in 00000192__it invokes car-start.md reliably across three fresh sessions
+         with agent(_INVOKE_REPO, _invoke_session(f"stability-{attempt}")) as block:
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     
+     
