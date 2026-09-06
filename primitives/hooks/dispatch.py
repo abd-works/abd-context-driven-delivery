@@ -67,7 +67,10 @@ def _matcher_ok(matcher: str | None, payload: dict[str, Any]) -> bool:
 
 def dispatch(payload: dict[str, Any]) -> dict[str, Any]:
     event = str(payload.get("hook_event_name") or "")
-    _debug(f"EVENT {event!r} payload_keys={sorted(payload.keys())}")
+    conv = payload.get("conversation_id")
+    _debug(
+        f"EVENT {event!r} conversation_id={conv!r} payload_keys={sorted(payload.keys())}"
+    )
     if not event:
         _debug("NO_EVENT merged={}")
         return {"permission": "allow"}
@@ -104,6 +107,14 @@ def main() -> None:
         print(json.dumps({"permission": "allow"}))
         return
     payload = parse_payload(raw)
+    event = str(payload.get("hook_event_name") or "")
+    if event == "afterAgentResponse":
+        try:
+            from hooks.prompt_log.prompt_log import append_log, format_after_agent_response
+
+            append_log(format_after_agent_response(payload))
+        except OSError:
+            pass
     out = dispatch(payload)
     print(json.dumps(out))
 

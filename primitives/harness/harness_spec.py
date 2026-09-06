@@ -1327,7 +1327,7 @@ with description("hook deploy"):
                 roots = [Path(tmp)]
                 payloads, _events = hook_skill_sources(
                     {
-                        "event": "stop",
+                        "event": "afterAgentResponse",
                         "operation": "auto_turn",
                         "slug": "turn",
                         "owner": "Turn",
@@ -1338,8 +1338,8 @@ with description("hook deploy"):
                     skill_file = Skill("Cursor", payload["name"])
                     skill_file.disable_model_invocation = True
                     skill_file.generate(payload, roots)
-                on_path = roots[0] / "skills/utilities/turn/auto_turn_stop_on/SKILL.md"
-                off_path = roots[0] / "skills/utilities/turn/auto_turn_stop_off/SKILL.md"
+                on_path = roots[0] / "skills/utilities/turn/auto_turn_after_agent_response_on/SKILL.md"
+                off_path = roots[0] / "skills/utilities/turn/auto_turn_after_agent_response_off/SKILL.md"
                 expect(on_path.is_file()).to(be_true)
                 expect(off_path.is_file()).to(be_true)
                 expect(on_path.read_text(encoding="utf-8")).to(contain("auto_turn"))
@@ -1349,8 +1349,8 @@ with description("hook deploy"):
             hooks_json = root / ".cursor" / "hooks.json"
             Harness("Cursor", repo_root=root).write_deploy()
             data = json.loads(hooks_json.read_text(encoding="utf-8"))
-            stop = data["hooks"]["stop"]
-            expect(any("dispatch.py" in item.get("command", "") for item in stop)).to(be_true)
+            after = data["hooks"]["afterAgentResponse"]
+            expect(any("dispatch.py" in item.get("command", "") for item in after)).to(be_true)
         with it("should keep dispatch after stage_invoke_commands partial deploys"):
             root = _sandbox()
             hooks_json = root / ".cursor" / "hooks.json"
@@ -1359,8 +1359,8 @@ with description("hook deploy"):
 
             stage_invoke_commands(root)
             data = json.loads(hooks_json.read_text(encoding="utf-8"))
-            stop = data["hooks"]["stop"]
-            expect(any("dispatch.py" in item.get("command", "") for item in stop)).to(be_true)
+            after = data["hooks"]["afterAgentResponse"]
+            expect(any("dispatch.py" in item.get("command", "") for item in after)).to(be_true)
 
 
 with description("agent guidance"):
@@ -1480,15 +1480,17 @@ with description("clean"):
                         {
                             "version": 1,
                             "hooks": {
+                                "afterAgentResponse": [
+                                    {
+                                        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
+                                        "timeout": 30,
+                                        "failClosed": False,
+                                    },
+                                ],
                                 "beforeSubmitPrompt": [
                                     {
                                         "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
                                         "timeout": 10,
-                                        "failClosed": False,
-                                    },
-                                    {
-                                        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
-                                        "timeout": 30,
                                         "failClosed": False,
                                     },
                                 ],
@@ -1500,8 +1502,8 @@ with description("clean"):
                 )
                 Harness("Cursor", repo_root=root).write_deploy(source="stories")
                 data = json.loads(hooks_json.read_text(encoding="utf-8"))
-                before = data["hooks"]["beforeSubmitPrompt"]
-                expect(any("dispatch.py" in item.get("command", "") for item in before)).to(be_true)
+                after = data["hooks"]["afterAgentResponse"]
+                expect(any("dispatch.py" in item.get("command", "") for item in after)).to(be_true)
 
 
 with description("required_init_params"):

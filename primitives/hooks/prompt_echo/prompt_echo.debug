@@ -4534,3 +4534,78 @@ a'
 2026-09-06T06:38:00Z ENTRY raw_len=773 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"68cd4f7e-3851-4981-b8f8-5b222d6c2f6d","model":"composer-2.5","tool_name":"Write","tool_input":{"file_path":"c:\\\\dev\\\\abd-c'
 2026-09-06T06:38:00Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-06T06:38:00Z OUTPUT {"permission": "allow"}
+2026-09-06T06:38:07Z ENTRY raw_len=839 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"68cd4f7e-3851-4981-b8f8-5b222d6c2f6d","model":"composer-2.5","tool_name":"Shell","tool_input":{"command":"cd c:\\\\dev\\\\abd-'
+2026-09-06T06:38:07Z PAYLOAD keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:38:07Z OUTPUT {"permission": "allow"}
+2026-09-06T06:38:13Z ENTRY raw_len=734 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"8b07a6a1-3aba-4c35-9044-10b69cc40c50","model":"composer-2.5","tool_name":"Read","tool_input":{"file_path":"C:\\\\Users\\\\jeff'
+2026-09-06T06:38:13Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:38:13Z OUTPUT {"permission": "allow"}
+2026-09-06T06:38:18Z ENTRY raw_len=1073 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"8b07a6a1-3aba-4c35-9044-10b69cc40c50","model":"composer-2.5","tool_name":"Shell","tool_input":{"command":"cd c:\\\\dev\\\\abd-'
+2026-09-06T06:38:18Z PAYLOAD keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:38:18Z OUTPUT {"permission": "allow"}
+2026-09-06T06:38:46Z ENTRY raw_len=798 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"eadfcc88-963a-4213-a360-63c1da0ceb98","model":"composer-2.5","tool_name":"Shell","tool_input":{"command":"cd c:\\\\dev\\\\abd-'
+2026-09-06T06:38:46Z PAYLOAD keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:38:46Z OUTPUT {"permission": "allow"}
+2026-09-06T06:38:46Z ENTRY raw_len=737 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"eadfcc88-963a-4213-a360-63c1da0ceb98","model":"composer-2.5","tool_name":"Grep","tool_input":{"pattern":"EVENT \'stop\'","fi'
+2026-09-06T06:38:46Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:38:46Z OUTPUT {"permission": "allow"}
+2026-09-06T06:38:51Z ENTRY raw_len=712 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"eadfcc88-963a-4213-a360-63c1da0ceb98","model":"composer-2.5","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev\\\\abd-cd'
+2026-09-06T06:38:51Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:38:51Z OUTPUT {"permission": "allow"}
+2026-09-06T06:38:51Z ENTRY raw_len=812 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"eadfcc88-963a-4213-a360-63c1da0ceb98","model":"composer-2.5","tool_name":"Shell","tool_input":{"command":"cd c:\\\\dev\\\\abd-'
+2026-09-06T06:38:51Z PAYLOAD keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:38:51Z OUTPUT {"permission": "allow"}
+2026-09-06T06:38:54Z ENTRY raw_len=794 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"eadfcc88-963a-4213-a360-63c1da0ceb98","model":"composer-2.5","tool_name":"Shell","tool_input":{"command":"cd c:\\\\dev\\\\abd-'
+2026-09-06T06:38:54Z PAYLOAD keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:38:54Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:13Z ENTRY raw_len=698 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev\\\\abd-cd'
+2026-09-06T06:40:13Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:13Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:13Z ENTRY raw_len=701 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Grep","tool_input":{"pattern":"prompt_echo","fil'
+2026-09-06T06:40:13Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:13Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:15Z ENTRY raw_len=727 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Grep","tool_input":{"pattern":"prompt_echo","fil'
+2026-09-06T06:40:15Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:15Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:16Z ENTRY raw_len=731 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev\\\\abd-cd'
+2026-09-06T06:40:16Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:16Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:19Z ENTRY raw_len=725 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev\\\\abd-cd'
+2026-09-06T06:40:19Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:19Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:19Z ENTRY raw_len=735 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Grep","tool_input":{"pattern":"prompt_echo|hooks'
+2026-09-06T06:40:19Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:19Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:27Z ENTRY raw_len=725 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev\\\\abd-cd'
+2026-09-06T06:40:27Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:27Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:27Z ENTRY raw_len=711 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Grep","tool_input":{"pattern":"","glob":"**/inst'
+2026-09-06T06:40:27Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:27Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:31Z ENTRY raw_len=725 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev\\\\abd-cd'
+2026-09-06T06:40:31Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:31Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:31Z ENTRY raw_len=698 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev\\\\abd-cd'
+2026-09-06T06:40:31Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:31Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:31Z ENTRY raw_len=716 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev\\\\abd-cd'
+2026-09-06T06:40:31Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:31Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:31Z ENTRY raw_len=725 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev\\\\abd-cd'
+2026-09-06T06:40:31Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:31Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:32Z ENTRY raw_len=730 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Write","tool_input":{"file_path":"c:\\\\dev\\\\abd-c'
+2026-09-06T06:40:32Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:32Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:32Z ENTRY raw_len=4126 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Write","tool_input":{"file_path":"c:\\\\dev\\\\abd-c'
+2026-09-06T06:40:32Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:32Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:32Z ENTRY raw_len=2149 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Write","tool_input":{"file_path":"c:\\\\dev\\\\abd-c'
+2026-09-06T06:40:32Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:32Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:32Z ENTRY raw_len=5924 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Write","tool_input":{"file_path":"c:\\\\dev\\\\abd-c'
+2026-09-06T06:40:32Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:32Z OUTPUT {"permission": "allow"}
+2026-09-06T06:40:32Z ENTRY raw_len=4226 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"d781fbd8-13ca-4309-967a-20a9922f14a5","model":"composer-2.5","tool_name":"Write","tool_input":{"file_path":"c:\\\\dev\\\\abd-c'
+2026-09-06T06:40:32Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:40:32Z OUTPUT {"permission": "allow"}

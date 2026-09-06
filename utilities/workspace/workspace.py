@@ -425,11 +425,41 @@ class Turn:
             return ""
         return self._compact_subject("\n".join(sorted(names)))
 
-    @hook(event="stop")
+    def _record_auto_turn_run(
+        self,
+        payload: dict,
+        commit: TurnCommit | None,
+        *,
+        skipped: str = "",
+        error: str = "",
+    ) -> None:
+        """Write last auto-turn outcome for live Cursor hook verification."""
+        root = Path(__file__).resolve().parents[2]
+        path = root / ".context" / "hooks" / "turn" / "auto_turn.last_run.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "at": datetime.now(timezone.utc).isoformat(),
+                    "event": payload.get("hook_event_name"),
+                    "conversation_id": payload.get("conversation_id"),
+                    "generation_id": payload.get("generation_id"),
+                    "committed_sha": commit.sha if commit else None,
+                    "skipped": skipped or None,
+                    "error": error or None,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    @hook(event="afterAgentResponse")
     def auto_turn(self, payload: dict) -> dict:
-        """Commit dirty checkout after the agent finishes when enabled."""
+        """Commit dirty checkout after each agent response when enabled."""
         git = self._git()
         if git is None or not git.is_dirty(untracked=True):
+            self._record_auto_turn_run(payload, None, skipped="clean")
             return {}
         self.utility = "auto_turn"
         self.subject = self._auto_turn_subject(git)
@@ -437,17 +467,11 @@ class Turn:
         self._ensure_named()
         try:
             commit = self._commit(stage_untracked=True)
-        except Exception:
-            commit = None
-        if commit is not None:
+        except Exception as exc:
+            self._record_auto_turn_run(payload, None, error=str(exc))
             return {}
-        return {
-            "followup_message": (
-                "Auto-turn commit failed. Run /turn with context_tool, action, "
-                "utility, subject (a few changed folders or files), and message "
-                "describing what changed in this session."
-            ),
-        }
+        self._record_auto_turn_run(payload, commit)
+        return {}
 
     def finish(
         self, prompt: str = "", result: str = "", context: str = ""

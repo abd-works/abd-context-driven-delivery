@@ -170,6 +170,14 @@ def format_subagent_start(data: dict) -> str:
     return "\n".join(lines)
 
 
+def format_after_agent_response(data: dict) -> str:
+    lines = [_header("afterAgentResponse", data)]
+    text = data.get("text")
+    if text:
+        lines.append(f"text: {_preview(str(text))}")
+    return "\n".join(lines)
+
+
 def handle(data: dict, *, target: Path | None = None) -> dict:
     event = data.get("hook_event_name", "preToolUse")
 
@@ -182,6 +190,9 @@ def handle(data: dict, *, target: Path | None = None) -> dict:
     if event == "subagentStart":
         append_log(format_subagent_start(data), target)
         return {"permission": "allow"}
+    if event == "afterAgentResponse":
+        append_log(format_after_agent_response(data), target)
+        return {}
     if event == "preToolUse":
         append_log(format_pre_tool_use(data), target)
         return {"permission": "allow"}

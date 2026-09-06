@@ -60,7 +60,7 @@ Only these fields are documented per event. `dispatch._merge_results` passes the
 
 | `stop` | `followup_message` | Auto-submits the next user message (e.g. ask agent to `/turn`) |
 
-| `afterAgentResponse` | *(none documented)* | Dispatch may merge handler output; Cursor effect unverified |
+| `afterAgentResponse` | *(none documented)* | `Turn.auto_turn` commits directly in the hook subprocess |
 
 | `afterAgentThought` | *(none documented)* | Same as `afterAgentResponse` |
 
@@ -72,37 +72,23 @@ Only these fields are documented per event. `dispatch._merge_results` passes the
 
 
 
-1. **Declare** — `@hook(event="stop")` on a toolset method; body receives the Cursor stdin JSON payload and returns a hook result dict using only documented fields for that event.
+1. **Declare** — `@hook(event="afterAgentResponse")` on a toolset method; body receives the Cursor stdin JSON payload and may commit directly (no output fields required).
 
 2. **Bootstrap** — `dispatch.py` calls `bootstrap.load()` to import toolsets that declare handlers (currently `workspace.workspace:Turn`).
 
-3. **Dispatch** — for each registered binding on the event, check the flag file; if enabled, instantiate the owner and call the handler; merge results. Debug trace: `primitives/hooks/dispatch.debug`.
+3. **Dispatch** — for each registered binding on the event, check the flag file; if enabled, instantiate the owner and call the handler; merge results. Debug trace: `primitives/hooks/dispatch.debug`. Live outcome: `.context/hooks/turn/auto_turn.last_run.json`.
 
 4. **Deploy** — harness `write_deploy` calls `deploy_dispatch()` last so partial deploys do not strip dispatch wiring.
 
-
-
 Flag path: `.context/hooks/{owner}/{method}_{event_suffix}.enabled`  
-
-Example: `.context/hooks/turn/auto_turn_stop.enabled`
-
-
+Example: `.context/hooks/turn/auto_turn_after_agent_response.enabled`
 
 ## Slash scene
 
-
-
-Harness generates **toggle skills** per `@hook` handler (not the handler logic itself):
-
-
-
 | Slash | What it does |
-
 |---|---|
-
-| `/auto_turn_stop_on` | Create flag → `Turn.auto_turn` runs on `stop` and commits dirty checkouts |
-
-| `/auto_turn_stop_off` | Remove flag → dispatcher skips `auto_turn` |
+| `/auto_turn_after_agent_response_on` | Create flag → `Turn.auto_turn` commits after each agent reply |
+| `/auto_turn_after_agent_response_off` | Remove flag → dispatcher skips `auto_turn` |
 
 
 
@@ -140,7 +126,7 @@ These run as direct hook commands; they are **not** routed through `@hook` dispa
 
 | `skill_inject.py` | `preToolUse` (Write\|StrReplace), `preCompact` | Inject skill context on edits |
 
-| `prompt_echo/prompt_echo.py` | `preToolUse` | Dev notification when action keywords detected |
+| `prompt_echo/prompt_echo.py` | `preToolUse` (when wired) | Dev notification when action keywords detected — **off** when `.context/hooks/prompt_echo.disabled` exists |
 
 
 
@@ -192,6 +178,6 @@ Install helpers: `install_dispatch.py`, `prompt_log/install_prompt_log.py`.
 
 - **Tools** — `@toolset` triggers `Hook.attach_owners` after class merge
 
-- **Consumers** — e.g. `utilities/workspace` (`Turn.auto_turn` on `stop`)
+- **Consumers** — e.g. `utilities/workspace` (`Turn.auto_turn` on `afterAgentResponse`)
 
 

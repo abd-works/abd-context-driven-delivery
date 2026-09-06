@@ -446,7 +446,7 @@ with description("a hook binding"):
     with context("that exposes skill sources"):
         with it("should include instructions and flag path for on and off"):
             binding = HookBinding(
-                event="stop",
+                event="afterAgentResponse",
                 operation="auto_turn",
                 slug="turn",
                 owner="Turn",
@@ -455,8 +455,8 @@ with description("a hook binding"):
             payloads = binding.skill_sources()
             expect(len(payloads)).to(equal(2))
             on_payload = payloads[0]
-            expect(on_payload["name"]).to(equal("auto_turn_stop_on"))
+            expect(on_payload["name"]).to(equal("auto_turn_after_agent_response_on"))
             expect(on_payload["body"]).to(contain("`auto_turn`"))
             expect(on_payload["body"]).to(
-                contain(".context/hooks/turn/auto_turn_stop.enabled")
+                contain(".context/hooks/turn/auto_turn_after_agent_response.enabled")
             )

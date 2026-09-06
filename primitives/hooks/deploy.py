@@ -67,8 +67,9 @@ class HookBinding:
             )
             if self.operation == "auto_turn":
                 body += (
-                    "\nOn `stop`, auto-turn stages all changes under the repo root "
-                    "(including new untracked files) and commits in one step.\n"
+                    "\nOn `afterAgentResponse`, auto-turn stages all changes under "
+                    "the repo root (including new untracked files) and commits after "
+                    "each agent reply.\n"
                 )
         else:
             body += "\nRemove the flag file so the dispatcher skips this handler.\n"

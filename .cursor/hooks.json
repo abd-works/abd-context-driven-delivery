@@ -3,11 +3,6 @@
   "hooks": {
     "preToolUse": [
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_echo/prompt_echo.py",
-        "timeout": 10,
-        "failClosed": false
-      },
-      {
         "command": ".venv/Scripts/python.exe primitives/hooks/skill_inject.py",
         "matcher": "Write|StrReplace",
         "timeout": 10,
@@ -47,7 +42,7 @@
         "failClosed": false
       }
     ],
-    "stop": [
+    "afterAgentResponse": [
       {
         "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
         "timeout": 30,

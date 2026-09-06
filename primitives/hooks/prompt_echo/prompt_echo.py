@@ -1,9 +1,10 @@
 """
 Prompt echo hook — detects action skill references in prompts.
 
-Fires on beforeSubmitPrompt. Parses the user prompt for known action
-names, then echoes what was detected via user_message so the user sees
-it right in the chat.
+Fires on preToolUse. Parses tool input for known action names, then echoes
+what was detected via user_message so the user sees it in the chat.
+
+Disabled when `.context/hooks/prompt_echo.disabled` exists (default: off).
 """
 
 import json
@@ -11,6 +12,13 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_DISABLED_FLAG = _REPO_ROOT / ".context/hooks/prompt_echo.disabled"
+
+
+def is_enabled() -> bool:
+    return not _DISABLED_FLAG.is_file()
 
 ACTIONS = frozenset({
     "car-inspect",
@@ -89,6 +97,10 @@ def _debug(msg: str):
 
 
 def main():
+    if not is_enabled():
+        print(json.dumps({"permission": "allow"}))
+        return
+
     raw = sys.stdin.buffer.read()
     _debug(f"ENTRY raw_len={len(raw)} raw={raw[:200]!r}")
 

@@ -359,6 +359,10 @@ class HookHarness:
             "failClosed": False,
         }
         for event in sorted(events):
+            if event == "afterAgentResponse":
+                # Cursor runs only the first hook on this event — dispatch-only.
+                hooks[event] = [dict(hook_def)]
+                continue
             bucket = hooks.setdefault(event, [])
             if not any(item.get("command") == dispatch_cmd for item in bucket):
                 bucket.append(hook_def)
