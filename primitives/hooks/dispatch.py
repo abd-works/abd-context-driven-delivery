@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import re
@@ -9,6 +10,15 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+_spec = importlib.util.spec_from_file_location(
+    "_ensure_paths",
+    Path(__file__).with_name("_ensure_paths.py"),
+)
+_ensure = importlib.util.module_from_spec(_spec)
+assert _spec.loader is not None
+_spec.loader.exec_module(_ensure)
+_REPO_ROOT = _ensure.ensure_repo_paths(Path(__file__))
 
 from hooks.bootstrap import load
 from hooks.hook import Hook
@@ -100,7 +110,7 @@ def dispatch(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> None:
-    repo_root = Path(__file__).resolve().parents[2]
+    repo_root = _REPO_ROOT
     os.chdir(repo_root)
     load()
     raw = sys.stdin.buffer.read()

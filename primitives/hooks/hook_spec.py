@@ -560,3 +560,20 @@ with description("auto turn end-to-end"):
             expect(run_data["conversation_id"]).to(equal("hook-spec-e2e"))
             expect(run_data["committed_sha"]).to(equal(after_sha))
             expect(run_data.get("error")).to(equal(None))
+
+        with it("should run dispatch.py without PYTHONPATH like Cursor hooks do"):
+            repo_root = _REPO_ROOT
+            py = repo_root / ".venv" / "Scripts" / "python.exe"
+            dispatch = repo_root / "primitives" / "hooks" / "dispatch.py"
+            env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+            completed = subprocess.run(
+                [str(py), str(dispatch)],
+                input='{"hook_event_name":"afterAgentResponse","conversation_id":"no-pythonpath"}',
+                text=True,
+                capture_output=True,
+                cwd=str(repo_root),
+                env=env,
+                timeout=30,
+            )
+            expect(completed.returncode).to(equal(0))
+            expect(json.loads(completed.stdout)).to(equal({"permission": "allow"}))
