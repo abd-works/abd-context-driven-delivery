@@ -1,9 +1,9 @@
 {
-  "at": "2026-09-06T16:37:00.335678+00:00",
+  "at": "2026-09-06T16:37:05.994410+00:00",
   "event": "afterAgentResponse",
-  "conversation_id": "hook-spec-e2e",
-  "generation_id": "spec1",
-  "committed_sha": "f69798b881e372420e39e3f7bf67a63a8f987870",
+  "conversation_id": "no-pythonpath",
+  "generation_id": null,
+  "committed_sha": "41a4c6d3194b022ce4eb7119e82db9d812675677",
   "skipped": null,
   "error": null
 }

@@ -184,3 +184,17 @@ path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
 ==============================================================================
 2026-09-06T16:37:01Z  afterAgentResponse  conv=no-pytho  gen=  model=
 ------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T16:37:09Z  afterAgentResponse  conv=9258f444  gen=c28f7546  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+text: Done. When no named session is open, hooks now stand up a **default session at repo root**:
+
+**`.context/sessions/default/`**
+- `session.md` â€” created if missing  
+- `logs/` â€” all hook logs go here (`prompt-log.txt`, `dispatch.debug`, etc.)
+
+**Behavior:**
+- No `_active` file â†’ `ensure_default_session()` creates default at repo root before writing logs
+... [12 lines, 537 chars total]
