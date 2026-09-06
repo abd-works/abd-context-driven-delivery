@@ -19182,3 +19182,61 @@ task: You are testing auto-turn like a real Cursor agent in c:\dev\abd-cdd-utili
 ==============================================================================
 2026-09-06T07:24:55Z  afterAgentResponse  conv=hook-spe  gen=spec1  model=
 ------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T07:24:57Z  preToolUse:Read  conv=fadf5a18  gen=2062973b  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\auto_turn_after_agent_response_on\SKILL.md
+
+==============================================================================
+2026-09-06T07:24:57Z  beforeReadFile  conv=fadf5a18  gen=2062973b  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\auto_turn_after_agent_response_on\SKILL.md
+size: 557 chars
+preview:
+---
+name: auto_turn_after_agent_response_on
+description: "Enable `auto_turn` hook on `afterAgentResponse` (after agent response) for Turn."
+disable-model-invocation: true
+---
+
+Enable the `auto_turn` hook on Cursor event `afterAgentResponse`.
+
+... [13 lines, 557 chars total]
+
+==============================================================================
+2026-09-06T07:25:00Z  afterAgentResponse  conv=no-pytho  gen=  model=
+------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T07:25:00Z  preToolUse:Read  conv=fadf5a18  gen=2062973b  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn\auto_turn_after_agent_response.enabled
+
+==============================================================================
+2026-09-06T07:25:00Z  preToolUse:Read  conv=fadf5a18  gen=2062973b  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn\subagent-agent-probe.txt
+
+==============================================================================
+2026-09-06T07:25:00Z  beforeReadFile  conv=fadf5a18  gen=2062973b  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn\auto_turn_after_agent_response.enabled
+size: 0 chars
+
+==============================================================================
+2026-09-06T07:25:01Z  preToolUse:Write  conv=fadf5a18  gen=2062973b  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn\subagent-agent-probe.txt
+
+==============================================================================
+2026-09-06T07:25:01Z  preToolUse:Write  conv=fadf5a18  gen=2062973b  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn\auto_turn_after_agent_response.enabled
