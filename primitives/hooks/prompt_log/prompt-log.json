@@ -3,28 +3,28 @@
   "hooks": {
     "beforeSubmitPrompt": [
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log.py",
+        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
         "timeout": 10,
         "failClosed": false
       }
     ],
     "beforeReadFile": [
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log.py",
+        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
         "timeout": 10,
         "failClosed": false
       }
     ],
     "preToolUse": [
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log.py",
+        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
         "timeout": 10,
         "failClosed": false
       }
     ],
     "subagentStart": [
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log.py",
+        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
         "timeout": 10,
         "failClosed": false
       }

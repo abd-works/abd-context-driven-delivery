@@ -1,16 +1,11 @@
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-# @agent-spec-manifest python -m tools agent-spec primitives/harness/harness_spec.py
-# Agent reading this file: run agent BDD via Task subagents (runner + judge); harness: cli
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
-"""BDD spec for primitives/harness — deploy, invoke, context-tool rules, and agent E2E."""
+"""BDD spec for primitives/harness — deploy, invoke, and context-tool rules."""
 
 import json
-import os
-import subprocess
 import sys
 import tempfile
-import time
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -21,42 +16,15 @@ for _cat in ("primitives", "utilities", "context_tools"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from expects import be_above, be_below, be_true, contain, equal, expect, raise_error
+from expects import be_true, contain, equal, expect, have_key, raise_error
 from mamba import context, description, it
 
-from agent_bdd import (
-    agent,
-    expect_ok_action,
-    expect_ok_tool,
-    read_workspace,
-    repo_root_from,
-    run_skill,
-    sessions_dir,
-)
-from agent_bdd.spec_helpers import (
-    command_fence_yaml,
-    expect_agent_invoked_shell,
-    parse_command_fence,
-    run_yaml_from_command,
-)
-from agent_bdd.yaml_fence import load_fenced
 from harness.agent import Agent
 from harness.agent_guidance import AgentGuidance
 from harness.bodies import ActionBody, ContextToolBody, FormatBody, UtilityBody, resolve_text
 from harness.command import Command
 from harness.context_tool_rules import rules_for_context_tool
 from harness.harness import Harness
-from harness.harness_invoke_fixtures import (
-    CAR,
-    CAR_CTX,
-    CAR_INSPECT,
-    CAR_ROAD_STORY,
-    CAR_SKILL,
-    CAR_START,
-    TRAVEL_TO,
-    car_tool_argument,
-    stage_invoke_commands,
-)
 from harness.harness_tool import required_init_params
 from hooks.deploy import HookBinding, hook_skill_sources
 from harness.instruction import Instruction
@@ -65,12 +33,6 @@ from harness.returned_guidance import compound_guidance
 from harness.rule import Rule
 from harness.skill import Skill
 from primitives.actions.action import _ActionExpander
-
-_INVOKE_REPO = repo_root_from(__file__, parents=2)
-_INVOKE_SESSIONS = sessions_dir(__file__)
-_AGENT_BUDGET_S = 90.0
-_CLI_OVERHEAD_S = 5.0
-_STABILITY_RUNS = 3
 
 
 def _recipe(harness: Harness) -> str:
@@ -351,7 +313,7 @@ with description("a harness"):
                 )
                 expect((root / ".cursor" / "skills" / "grill-context").exists()).to(equal(False))
                 expect((root / ".cursor" / "skills" / "workflow").exists()).to(equal(False))
-                expect((root / ".cursor" / "skills" / "context_tools" / "stories-story_map" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "context_tools" / "stories" / "stories-story_map" / "SKILL.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "skills" / "context_tools" / "story_map").exists()).to(equal(False))
                 expect((root / ".cursor" / "skills" / "context_tools" / "discovery").exists()).to(equal(False))
                 state = json.loads(
@@ -415,10 +377,10 @@ with description("a harness"):
                 Harness("Cursor", repo_root=root).write_deploy(
                     source="stories", deploy_path=str(root)
                 )
-                expect((root / ".cursor" / "skills" / "context_tools" / "stories-story_map" / "SKILL.md").is_file()).to(
+                expect((root / ".cursor" / "skills" / "context_tools" / "stories" / "stories-story_map" / "SKILL.md").is_file()).to(
                     equal(True)
                 )
-                expect((root / "skills" / "context_tools" / "stories-story_map").exists()).to(equal(False))
+                expect((root / "skills" / "context_tools" / "stories" / "stories-story_map").exists()).to(equal(False))
 
         with context("with type VS Code"):
             with it("should write under .github"):
@@ -1046,7 +1008,7 @@ with description("a harness"):
                     encoding="utf-8",
                 )
                 Harness("Cursor", repo_root=root).write_deploy(source="behavior", extended=True)
-                body = (root / ".cursor" / "skills" / "context_tools" / "bddish-behavior" / "SKILL.md").read_text(encoding="utf-8")
+                body = (root / ".cursor" / "skills" / "context_tools" / "bddish" / "bddish-behavior" / "SKILL.md").read_text(encoding="utf-8")
                 expect(body).to(contain("# bddish-behavior"))
                 expect(body).to(contain("Use bddish guidance at `behavior` fidelity only"))
                 expect(body).to(contain("@bddish-modules"))
@@ -1054,7 +1016,7 @@ with description("a harness"):
                 expect(body).to(contain("Provide guidance for bddish work."))
                 expect(body).not_to(contain("python -m tools run"))
                 expect(body).not_to(contain("tools.ps1 run"))
-                expect((root / ".cursor" / "skills" / "context_tools" / "bddish").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "context_tools" / "bddish-behavior").exists()).to(equal(False))
                 expect((root / ".cursor" / "skills" / "context_tools" / "behavior").exists()).to(equal(False))
 
         with context("with CleanEngineering compound guidance"):
@@ -1135,35 +1097,37 @@ with description("a harness"):
                     {"discovery": "discovery"},
                 )
                 Harness("Cursor", repo_root=root).write_deploy(source="discovery")
-                body = (root / ".cursor" / "skills" / "context_tools" / "cdd-discovery" / "SKILL.md").read_text(encoding="utf-8")
-                expect(body).to(contain("# cdd-discovery"))
-                expect(body).to(contain("Use cdd guidance at `discovery` fidelity only"))
+                body = (root / ".cursor" / "skills" / "context_tools" / "cdd" / "cdd-discovery" / "SKILL.md").read_text(encoding="utf-8")
+                expect(body).to(contain("toolset: context_tools.cdd.cdd:Cdd"))
+                expect(body).to(contain("action: generate"))
+                expect(body).to(contain("fidelity: discovery"))
                 expect((root / ".cursor" / "skills" / "context_tools" / "discovery").exists()).to(equal(False))
                 expect(body).not_to(contain("Then run:"))
                 expect(body).not_to(contain("Run this action for any provided context tools"))
                 expect(body).not_to(contain("Every tool call uses this shape"))
                 expect(body).not_to(contain("python -m tools run"))
-                expect(body).not_to(contain("tools.ps1 run"))
+                expect(body).to(contain("tools.ps1 run"))
 
         with context("with CleanEngineering model"):
             with it("should write a model skill"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="model")
-                expect((root / ".cursor" / "skills" / "context_tools" / "clean_engineering-model" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "context_tools" / "clean_engineering" / "clean_engineering-model" / "SKILL.md").is_file()).to(equal(True))
 
         with context("with DDD bounded_context"):
             with it("should write a bounded_context skill"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="bounded_context")
-                expect((root / ".cursor" / "skills" / "context_tools" / "ddd-bounded_context" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "context_tools" / "ddd" / "ddd-bounded_context" / "SKILL.md").is_file()).to(equal(True))
 
         with context("with UX ia"):
             with it("should write a prefixed ia prompt for Cursor and VS Code"):
                 root = _sandbox()
                 Harness("Cursor", repo_root=root).write_deploy(source="ia")
-                body = (root / ".cursor" / "skills" / "context_tools" / "ux-ia" / "SKILL.md").read_text(encoding="utf-8")
-                expect(body).to(contain("# ux-ia"))
-                expect(body).to(contain("Use ux guidance at `ia` fidelity only"))
+                body = (root / ".cursor" / "skills" / "context_tools" / "ux" / "ux-ia" / "SKILL.md").read_text(encoding="utf-8")
+                expect(body).to(contain("toolset: context_tools.ux.ux:Ux"))
+                expect(body).to(contain("action: generate"))
+                expect(body).to(contain("fidelity: ia"))
                 expect((root / ".cursor" / "skills" / "context_tools" / "ia").exists()).to(equal(False))
                 Harness("VS Code", repo_root=root).write_deploy(source="ia")
                 prompt = (root / ".github" / "prompts" / "ux.ia.prompt.md").read_text(encoding="utf-8")
@@ -1205,7 +1169,7 @@ with description("a harness"):
                 Harness("Cursor", repo_root=root).write_deploy()
                 expect((root / ".cursor" / "skills" / "context_tools" / "child" / "SKILL.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "skills" / "context_tools" / "base_context_tool").exists()).to(equal(False))
-                expect((root / ".cursor" / "skills" / "context_tools" / "child-family_map" / "SKILL.md").is_file()).to(equal(True))
+                expect((root / ".cursor" / "skills" / "context_tools" / "child" / "child-family_map" / "SKILL.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "skills" / "context_tools" / "family_map").exists()).to(equal(False))
                 expect((root / ".cursor" / "skills" / "context_tools" / "extra").exists()).to(equal(False))
                 text = (root / ".cursor" / "skills" / "context_tools" / "child" / "SKILL.md").read_text(encoding="utf-8")
@@ -1363,7 +1327,7 @@ with description("hook deploy"):
                 roots = [Path(tmp)]
                 payloads, _events = hook_skill_sources(
                     {
-                        "event": "beforeSubmitPrompt",
+                        "event": "stop",
                         "operation": "auto_turn",
                         "slug": "turn",
                         "owner": "Turn",
@@ -1374,11 +1338,29 @@ with description("hook deploy"):
                     skill_file = Skill("Cursor", payload["name"])
                     skill_file.disable_model_invocation = True
                     skill_file.generate(payload, roots)
-                on_path = roots[0] / "skills/utilities/turn/auto_turn_before_submit_prompt_on/SKILL.md"
-                off_path = roots[0] / "skills/utilities/turn/auto_turn_before_submit_prompt_off/SKILL.md"
+                on_path = roots[0] / "skills/utilities/turn/auto_turn_stop_on/SKILL.md"
+                off_path = roots[0] / "skills/utilities/turn/auto_turn_stop_off/SKILL.md"
                 expect(on_path.is_file()).to(be_true)
                 expect(off_path.is_file()).to(be_true)
                 expect(on_path.read_text(encoding="utf-8")).to(contain("auto_turn"))
+    with context("that wires dispatch in hooks.json"):
+        with it("should add dispatch.py on full deploy"):
+            root = _sandbox()
+            hooks_json = root / ".cursor" / "hooks.json"
+            Harness("Cursor", repo_root=root).write_deploy()
+            data = json.loads(hooks_json.read_text(encoding="utf-8"))
+            stop = data["hooks"]["stop"]
+            expect(any("dispatch.py" in item.get("command", "") for item in stop)).to(be_true)
+        with it("should keep dispatch after stage_invoke_commands partial deploys"):
+            root = _sandbox()
+            hooks_json = root / ".cursor" / "hooks.json"
+            Harness("Cursor", repo_root=root).write_deploy()
+            from harness.harness_invoke_fixtures import stage_invoke_commands
+
+            stage_invoke_commands(root)
+            data = json.loads(hooks_json.read_text(encoding="utf-8"))
+            stop = data["hooks"]["stop"]
+            expect(any("dispatch.py" in item.get("command", "") for item in stop)).to(be_true)
 
 
 with description("agent guidance"):
@@ -1459,7 +1441,7 @@ with description("clean"):
                             "hooks": {
                                 "beforeSubmitPrompt": [
                                     {
-                                        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log.py",
+                                        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
                                         "timeout": 10,
                                         "failClosed": False,
                                     },
@@ -1489,6 +1471,37 @@ with description("clean"):
                 before = data["hooks"]["beforeSubmitPrompt"]
                 expect(len(before)).to(equal(1))
                 expect(before[0]["command"]).to(contain("prompt_log.py"))
+            with it("should not strip dispatch wiring on a partial deploy"):
+                root = _sandbox()
+                hooks_json = root / ".cursor" / "hooks.json"
+                hooks_json.parent.mkdir(parents=True, exist_ok=True)
+                hooks_json.write_text(
+                    json.dumps(
+                        {
+                            "version": 1,
+                            "hooks": {
+                                "beforeSubmitPrompt": [
+                                    {
+                                        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
+                                        "timeout": 10,
+                                        "failClosed": False,
+                                    },
+                                    {
+                                        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
+                                        "timeout": 30,
+                                        "failClosed": False,
+                                    },
+                                ],
+                            },
+                        }
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(source="stories")
+                data = json.loads(hooks_json.read_text(encoding="utf-8"))
+                before = data["hooks"]["beforeSubmitPrompt"]
+                expect(any("dispatch.py" in item.get("command", "") for item in before)).to(be_true)
 
 
 with description("required_init_params"):
@@ -1612,88 +1625,6 @@ with description("_frontmatter model"):
         expect("model:" in text).to(equal(False))
 
 
-def _invoke_session(name: str) -> Path:
-    path = _INVOKE_SESSIONS / f"harness-spec-{name}.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists():
-        path.unlink(missing_ok=True)
-    path.write_text("{}", encoding="utf-8")
-    return path
-
-
-def _run_skill_strict(block: object, command: str, **kwargs: object):
-    response = run_skill(
-        command,
-        repo_root=_INVOKE_REPO,
-        require_agent_shell=True,
-        **kwargs,
-    )
-    expect_agent_invoked_shell(block)
-    return response
-
-
-def _cli_run(run_yaml: str) -> dict:
-    env = os.environ.copy()
-    env["PYTHONIOENCODING"] = "utf-8"
-    root = str(_INVOKE_REPO)
-    env["PYTHONPATH"] = os.pathsep.join(
-        [
-            root,
-            str(_INVOKE_REPO / "primitives"),
-            str(_INVOKE_REPO / "utilities"),
-            str(_INVOKE_REPO / "context_tools"),
-            str(_INVOKE_REPO / "context_tools" / "actions"),
-        ]
-    )
-    py = str(_INVOKE_REPO / ".venv" / "Scripts" / "python.exe")
-    completed = subprocess.run(
-        [py, "-m", "tools", "run", "-"],
-        input=run_yaml,
-        text=True,
-        capture_output=True,
-        cwd=root,
-        env=env,
-        timeout=30,
-    )
-    expect(completed.returncode).to(equal(0))
-    parsed = load_fenced(completed.stdout)
-    expect(parsed.get("ok")).to(equal(True))
-    return parsed
-
-
-def _cli_time(run_yaml: str) -> float:
-    env = os.environ.copy()
-    env["PYTHONIOENCODING"] = "utf-8"
-    root = str(_INVOKE_REPO)
-    env["PYTHONPATH"] = os.pathsep.join(
-        [
-            root,
-            str(_INVOKE_REPO / "primitives"),
-            str(_INVOKE_REPO / "utilities"),
-            str(_INVOKE_REPO / "context_tools"),
-            str(_INVOKE_REPO / "context_tools" / "actions"),
-        ]
-    )
-    py = str(_INVOKE_REPO / ".venv" / "Scripts" / "python.exe")
-    started = time.perf_counter()
-    completed = subprocess.run(
-        [py, "-m", "tools", "run", "-"],
-        input=run_yaml,
-        text=True,
-        capture_output=True,
-        cwd=root,
-        env=env,
-        timeout=30,
-    )
-    elapsed = time.perf_counter() - started
-    expect(completed.returncode).to(equal(0))
-    parsed = load_fenced(completed.stdout)
-    expect(parsed.get("ok")).to(equal(True))
-    expect(elapsed).to(be_below(_CLI_OVERHEAD_S))
-    expect(elapsed).to(be_above(0.0))
-    return elapsed
-
-
 with description("context tool rules"):
     with it("should extract shared and fidelity rules from stories.md"):
         specs = rules_for_context_tool(
@@ -1711,7 +1642,7 @@ with description("context tool rules"):
         expect(by_name["stories"].body).to(contain("kebab-case-paths"))
         expect(by_name["story_map"].body).to(contain("When story map, follow these rules"))
         expect(by_name["scenarios"].body).to(contain("@stories-scenarios"))
-        expect(by_name["scenarios"].globs).to(contain("**/*.py"))
+        expect(by_name["scenarios"].globs).to(contain("**/*.{py,js,ts,java}"))
 
     with it("should extract modules model and code rules from clean_engineering.md"):
         specs = rules_for_context_tool(
@@ -1771,191 +1702,3 @@ with description("Harness deploy context tool rules"):
         )
         rules_dir = root / ".github" / "rules" / "context_tools"
         expect(rules_dir.exists()).to(equal(False))
-
-
-with description("harness deploy for car invoke BDD"):
-    with context("after write_deploy"):
-        with it("should write the car context tool skill"):
-            stage_invoke_commands(_INVOKE_REPO)
-            skill = _INVOKE_REPO / CAR_SKILL
-            expect(skill.is_file()).to(be_true)
-            body = skill.read_text(encoding="utf-8")
-            expect("AskQuestion constrained to these actions" in body).to(be_true)
-            expect("trip_outline" in body or "road_story" in body).to(be_true)
-
-        with it("should write fidelity and action command prompts"):
-            stage_invoke_commands(_INVOKE_REPO)
-            expect((_INVOKE_REPO / CAR_ROAD_STORY).is_file()).to(be_true)
-            expect((_INVOKE_REPO / TRAVEL_TO).is_file()).to(be_true)
-            expect((_INVOKE_REPO / CAR_START).is_file()).to(be_true)
-            expect((_INVOKE_REPO / CAR_INSPECT).is_file()).to(be_true)
-
-        with it("should parse car.road_story.md fence like bdd.behavior.md"):
-            stage_invoke_commands(_INVOKE_REPO)
-            payload = parse_command_fence(CAR_ROAD_STORY, repo_root=_INVOKE_REPO)
-            expect(payload.get("toolset")).to(equal(CAR))
-            expect(payload.get("action")).to(equal("generate"))
-            expect(payload.get("context", {}).get("fidelity")).to(equal("road_story"))
-
-        with it("should invoke each deployed fence via CLI"):
-            stage_invoke_commands(_INVOKE_REPO)
-            gen = _cli_run(
-                run_yaml_from_command(
-                    CAR_ROAD_STORY,
-                    repo_root=_INVOKE_REPO,
-                    context={"make": "Dodge", "model": "Charger", "year": 1969, "personality": "loyal"},
-                )
-            )
-            expect(gen.get("action")).to(equal("generate"))
-            start = _cli_run(
-                run_yaml_from_command(
-                    CAR_START,
-                    repo_root=_INVOKE_REPO,
-                    context={"make": "Dodge", "model": "Charger", "year": 1969, "personality": "loyal", "fidelity": "road_story"},
-                )
-            )
-            expect(start.get("tool")).to(equal("start"))
-            travel = _cli_run(
-                run_yaml_from_command(
-                    TRAVEL_TO,
-                    repo_root=_INVOKE_REPO,
-                    arguments={
-                        "tools": [car_tool_argument()],
-                        "destination": "town",
-                        "conditions": "dry",
-                    },
-                )
-            )
-            tools = [str(t).lower() for t in (travel.get("tools") or [])]
-            expect("start" in tools).to(be_true)
-            inspect = _cli_run(
-                run_yaml_from_command(
-                    CAR_INSPECT,
-                    repo_root=_INVOKE_REPO,
-                    arguments={"tools": [car_tool_argument()], "plan": "test"},
-                )
-            )
-            expect("wrap_story" in [str(t).lower() for t in (inspect.get("tools") or [])]).to(be_true)
-
-        with it("should preserve exact fence text for agent prompts"):
-            stage_invoke_commands(_INVOKE_REPO)
-            fence = command_fence_yaml(CAR_START, repo_root=_INVOKE_REPO)
-            expect("tool: start" in fence).to(equal(True))
-            expect("toolset: context_tools.car.car:Car" in fence).to(equal(True))
-
-
-with description("manifest-alone E2E (#45)"):
-    with context("CLI overhead (no agent)"):
-        with it("invokes harness-deployed fences within CLI-only budget"):
-            stage_invoke_commands(_INVOKE_REPO)
-            _cli_time(run_yaml_from_command(CAR_ROAD_STORY, repo_root=_INVOKE_REPO, context=CAR_CTX))
-            _cli_time(run_yaml_from_command(CAR_START, repo_root=_INVOKE_REPO, context=CAR_CTX))
-            _cli_time(
-                run_yaml_from_command(
-                    TRAVEL_TO,
-                    repo_root=_INVOKE_REPO,
-                    arguments={
-                        "tools": [car_tool_argument()],
-                        "destination": "town",
-                        "conditions": "dry",
-                    },
-                )
-            )
-
-    with context("with strict agent shell (no harness replay)"):
-        with it("reads car skill and runs car.road_story.md"):
-            stage_invoke_commands(_INVOKE_REPO)
-            with agent(_INVOKE_REPO, _invoke_session("fidelity-generate")) as block:
-                read_workspace(CAR_SKILL)
-                read_workspace(CAR_ROAD_STORY)
-                started = time.perf_counter()
-                response = _run_skill_strict(
-                    block, CAR_ROAD_STORY, context=CAR_CTX, timeout_seconds=180
-                )
-                expect(time.perf_counter() - started).to(be_below(_AGENT_BUDGET_S))
-                expect_ok_action(response, "generate")
-
-        with it("reads car skill and runs car-start.md"):
-            stage_invoke_commands(_INVOKE_REPO)
-            with agent(_INVOKE_REPO, _invoke_session("one-tool")) as block:
-                read_workspace(CAR_SKILL)
-                read_workspace(CAR_START)
-                response = _run_skill_strict(
-                    block, CAR_START, context=CAR_CTX, timeout_seconds=180
-                )
-                expect_ok_tool(response, "start")
-                expect((response.resources or {}).get("running")).to(equal(True))
-
-        with it("reads car skill and travel-to.md; names start in response.tools"):
-            stage_invoke_commands(_INVOKE_REPO)
-            with agent(_INVOKE_REPO, _invoke_session("action-one-tool")) as block:
-                read_workspace(CAR_SKILL)
-                read_workspace(TRAVEL_TO)
-                travel = _run_skill_strict(
-                    block,
-                    TRAVEL_TO,
-                    arguments={
-                        "tools": [car_tool_argument()],
-                        "destination": "town",
-                        "conditions": "dry",
-                    },
-                    timeout_seconds=180,
-                )
-                expect_ok_action(travel, "travelTo")
-                expect("start" in [str(t).lower() for t in (travel.tools or [])]).to(be_true)
-
-        with it("reads car skill and travel-to.md; lists many tools"):
-            stage_invoke_commands(_INVOKE_REPO)
-            with agent(_INVOKE_REPO, _invoke_session("action-many-tools")) as block:
-                read_workspace(CAR_SKILL)
-                read_workspace(TRAVEL_TO)
-                travel = _run_skill_strict(
-                    block,
-                    TRAVEL_TO,
-                    arguments={
-                        "tools": [car_tool_argument()],
-                        "destination": "courthouse",
-                        "conditions": "muddy",
-                    },
-                    timeout_seconds=180,
-                )
-                expect_ok_action(travel, "travelTo")
-                tools = [str(t).lower() for t in (travel.tools or [])]
-                expect("start" in tools).to(be_true)
-                expect("speak" in tools).to(be_true)
-                expect("stop" in tools).to(be_true)
-                expect(len(tools)).to(be_above(3))
-
-        with it("reads car skill and car-inspect.md; lists wrap_story"):
-            stage_invoke_commands(_INVOKE_REPO)
-            with agent(_INVOKE_REPO, _invoke_session("utility")) as block:
-                read_workspace(CAR_SKILL)
-                read_workspace(CAR_INSPECT)
-                response = _run_skill_strict(
-                    block,
-                    CAR_INSPECT,
-                    arguments={
-                        "tools": [car_tool_argument()],
-                        "plan": "Night run to Atlanta.",
-                    },
-                    timeout_seconds=180,
-                )
-                expect_ok_action(response, "inspect_trip")
-                expect(
-                    "wrap_story" in [str(t).lower() for t in (response.tools or [])]
-                ).to(be_true)
-
-        with it("invokes car-start.md reliably across three fresh sessions"):
-            stage_invoke_commands(_INVOKE_REPO)
-            for attempt in range(_STABILITY_RUNS):
-                with agent(_INVOKE_REPO, _invoke_session(f"stability-{attempt}")) as block:
-                    read_workspace(CAR_SKILL)
-                    read_workspace(CAR_START)
-                    response = _run_skill_strict(
-                        block,
-                        CAR_START,
-                        context=CAR_CTX,
-                        timeout_seconds=180,
-                    )
-                    expect_ok_tool(response, "start")
-                    expect((response.resources or {}).get("running")).to(equal(True))

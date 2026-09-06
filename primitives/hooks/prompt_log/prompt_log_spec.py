@@ -5,10 +5,10 @@ import sys
 import tempfile
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives", "primitives/hooks"):
+for _cat in ("primitives", "primitives/hooks", "primitives/hooks/prompt_log"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -74,16 +74,16 @@ with description("a prompt log hook"):
         with it("should record the rule path and content size"):
             with tempfile.TemporaryDirectory() as tmp:
                 log_file = Path(tmp) / "prompt-log.txt"
-                content = _RULE.read_text(encoding="utf-8")
+                content = _BEHAVIOR_RULE.read_text(encoding="utf-8")
                 payload = {
                     "hook_event_name": "beforeReadFile",
                     "conversation_id": "conv-test-002",
                     "generation_id": "gen-test-002",
                     "model": "composer-2.5",
-                    "file_path": str(_RULE),
+                    "file_path": str(_BEHAVIOR_RULE),
                     "content": content,
                     "attachments": [
-                        {"type": "rule", "file_path": str(_RULE)},
+                        {"type": "rule", "file_path": str(_BEHAVIOR_RULE)},
                     ],
                 }
                 out = pl.handle(payload, target=log_file)
@@ -91,7 +91,7 @@ with description("a prompt log hook"):
                 expect(out).to(equal({"permission": "allow"}))
                 expect(text).to(contain("beforeReadFile"))
                 expect(text).to(contain("READ [rule]"))
-                expect(text).to(contain("character-driven-development.mdc"))
+                expect(text).to(contain("behavior.mdc"))
                 expect(text).to(contain(f"size: {len(content)} chars"))
 
     with context("that handles a preToolUse Read of a skill file"):

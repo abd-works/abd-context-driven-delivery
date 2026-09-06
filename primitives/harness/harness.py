@@ -592,10 +592,11 @@ class Harness:
         _BASE_FOLDER = {"context_tool": "context_tools", "action": "actions", "utility": "utilities"}
 
         def _folder_for(k: str, s: str) -> str:
-            base = _BASE_FOLDER.get(k, "")
             if k == "context_tool":
-                return f"{base}/{s}"
-            return base
+                return f"{_BASE_FOLDER['context_tool']}/{s}"
+            if k == "action":
+                return _BASE_FOLDER["action"]
+            return ""
 
         def source_for(name: str, guidance: str, *, operation: str = "", invoke: str = "action") -> dict:
             payload = {
@@ -680,17 +681,18 @@ class Harness:
                 if not self._wanted(wanted, deploy_name, slug, "fidelity"):
                     continue
                 payload = source_for(deploy_name, meta["guidance"])
-                payload["extended"] = True
+                payload["extended"] = self._extended
                 if cc:
                     payload["constructor_context"] = cc
-                payload["returned"] = compound_guidance(
-                    path,
-                    class_name,
-                    fidelity_name,
-                    cc or None,
-                    toolset=toolset,
-                    code_language=self._code_language,
-                )
+                if self._extended:
+                    payload["returned"] = compound_guidance(
+                        path,
+                        class_name,
+                        fidelity_name,
+                        cc or None,
+                        toolset=toolset,
+                        code_language=self._code_language,
+                    )
                 payload["fidelity"] = True
                 payload["fidelity_slug"] = fidelity_name
                 written = self._emit("prompt", payload, roots, seen)
@@ -723,7 +725,7 @@ class Harness:
                 "guidance": doc or name,
                 "toolset": "harness.harness:Harness",
                 "source_kind": "utility",
-                "folder": "primitives",
+                "folder": "",
                 "operation": cli_operation,
                 "invoke": cli_invoke,
             }
@@ -861,11 +863,24 @@ class Harness:
         """Suggested IDE folder to write skills, commands, and prompts."""
         return str(self._suggested_deploy_path())
 
-    def _deploy_cursor_hooks(self) -> None:
-        """Merge dispatch.py entries into ``.cursor/hooks.json`` for deployed hook events."""
-        from hooks.deploy import deploy_dispatch
+    def _deploy_cursor_hooks(self, wanted: str = "") -> None:
+        """Sync ``dispatch.py`` in ``.cursor/hooks.json`` for registered hook events.
 
-        deploy_dispatch(self.repo_root, self._hook_events)
+        Partial deploys that do not emit any ``@hook`` sources leave hooks.json
+        unchanged so an earlier full deploy is not stripped.
+        """
+        from hooks.bootstrap import load
+        from hooks.deploy import deploy_dispatch
+        from hooks.hook import Hook
+
+        if wanted.strip() and not self._hook_events:
+            return
+
+        load()
+        events = {entry["event"] for entry in Hook.registered()} | set(self._hook_events)
+        if not events:
+            return
+        deploy_dispatch(self.repo_root, events)
 
     @agent_tool
     def write_deploy(
@@ -948,10 +963,10 @@ class Harness:
             self._drop_unwritten_skills(roots, skill_names)
             self._drop_unwritten_prompts(roots, prompt_names)
             self._drop_unwritten_rules(roots, rule_names)
-        if self.type == "Cursor":
-            self._deploy_cursor_hooks()
         self._remove_unprefixed_fidelity_files(roots)
         self._save_ide(str(roots[0]))
+        if self.type == "Cursor":
+            self._deploy_cursor_hooks(wanted)
         return json.dumps(
             {
                 "roots": [str(r) for r in roots],

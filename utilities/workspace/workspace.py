@@ -411,28 +411,38 @@ class Turn:
         self._commit_message_override = commit_message.strip()
         return self._commit()
 
-    @hook(event="beforeSubmitPrompt")
+    def _auto_turn_subject(self, git: GitRepo) -> str:
+        names: set[str] = set()
+        for args in (("diff", "--name-only"), ("diff", "--cached", "--name-only")):
+            text = git._git(*args).strip()
+            if text:
+                names.update(line.strip() for line in text.splitlines() if line.strip())
+        if not names:
+            return ""
+        return self._compact_subject("\n".join(sorted(names)))
+
+    @hook(event="stop")
     def auto_turn(self, payload: dict) -> dict:
-        """Remind the agent to invoke /turn when this response is done."""
+        """Commit dirty checkout after the agent finishes when enabled."""
+        git = self._git()
+        if git is None or not git.is_dirty(untracked=False):
+            return {}
+        subject = self._auto_turn_subject(git)
+        try:
+            commit = self.turn(
+                utility="auto_turn",
+                subject=subject,
+                message="auto turn after agent response",
+            )
+        except Exception:
+            commit = None
+        if commit is not None:
+            return {}
         return {
-            "permission": "allow",
-            "agent_message": (
-                "When you finish this response — before you move on — commit "
-                "any changes with /turn. Fill context_tool, action, utility, "
-                "subject (a few folders or files), and message from what you "
-                "used and what changed in this reply.\n\n"
-                "Pipe from the repo root:\n"
-                "```\n"
-                "toolset: workspace.workspace:Turn\n"
-                "tool: turn\n"
-                "arguments:\n"
-                "  context_tool: <skill slug>\n"
-                "  action: <skill slug>\n"
-                "  utility: <optional skill slug>\n"
-                "  subject: <few folders or files>\n"
-                "  message: <what changed>\n"
-                "```\n"
-                ".\\tools.ps1 run -"
+            "followup_message": (
+                "Auto-turn commit failed. Run /turn with context_tool, action, "
+                "utility, subject (a few changed folders or files), and message "
+                "describing what changed in this session."
             ),
         }
 

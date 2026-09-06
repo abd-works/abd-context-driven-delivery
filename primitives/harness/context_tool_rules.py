@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from harness.bodies import _ROUTER_SKIP_FIDELITIES
 from primitives.assets.markdown_extractor import _FIDELITY_H2_NAMES, _h2_slug, _iter_h2_blocks
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -284,7 +285,10 @@ def rules_for_context_tool(
         py_files = list(tool_dir.glob("*.py"))
         py_path = py_files[0] if len(py_files) == 1 else py_path
     fidelity_names = _fidelity_names_from_py(py_path, class_name) if py_path.is_file() else frozenset()
-    skill_refs = _fidelity_skill_refs(slug, fidelity_names)
+    router_fidelities = frozenset(
+        name for name in fidelity_names if name not in _ROUTER_SKIP_FIDELITIES
+    )
+    skill_refs = _fidelity_skill_refs(slug, router_fidelities)
 
     specs: list[ContextToolRuleSpec] = []
 
@@ -303,7 +307,7 @@ def rules_for_context_tool(
                     slug,
                     shared=True,
                     skill_refs=skill_refs,
-                    fidelity_names=fidelity_names,
+                    fidelity_names=router_fidelities,
                 )
                 + "\n"
                 + shared_body,

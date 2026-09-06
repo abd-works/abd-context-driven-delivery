@@ -7,7 +7,7 @@
 from pathlib import Path
 
 from expects import equal, expect
-from mamba import description, it
+from mamba import before, description, it
 
 from agent_bdd import (
     agent,
@@ -22,11 +22,10 @@ from harness.harness_invoke_fixtures import (
     CAR_CTX,
     CAR_ROAD_STORY,
     CAR_SKILL,
-    stage_invoke_commands,
+    ensure_invoke_staged,
 )
 
 _REPO = repo_root_from(__file__, parents=2)
-stage_invoke_commands(_REPO)
 _SESSIONS = sessions_dir(__file__)
 
 
@@ -38,6 +37,8 @@ def _session(name: str) -> Path:
 
 
 with description("invoke context tool fidelity command (strict)"):
+    with before.all:
+        ensure_invoke_staged(_REPO)
     with it("reads car skill and runs car.road_story.md with shell capture"):
         with agent(_REPO, _session("road-story")) as block:
             read_workspace(CAR_SKILL)

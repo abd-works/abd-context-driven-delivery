@@ -2,16 +2,16 @@
 Merge prompt-log.json hook entries into .cursor/hooks.json.
 
 Usage (from repo root):
-    .venv/Scripts/python.exe primitives/hooks/install_prompt_log.py
+    .venv/Scripts/python.exe primitives/hooks/prompt_log/install_prompt_log.py
 """
 
 import json
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 _FRAGMENT = Path(__file__).with_name("prompt-log.json")
 _HOOKS_JSON = _REPO_ROOT / ".cursor" / "hooks.json"
-_PYTHON = ".venv/Scripts/python.exe primitives/hooks/prompt_log.py"
+_PYTHON = ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py"
 
 
 def _entry() -> dict:

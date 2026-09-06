@@ -14,7 +14,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_LOG = _REPO_ROOT / ".context" / "prompt-log.txt"
 _PREVIEW_LINES = 8
 _PREVIEW_CHARS = 600

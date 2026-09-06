@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 # Shaping-only fidelities deploy as skills but are not offered on the main context-tool router.
-_ROUTER_SKIP_FIDELITIES: frozenset[str] = frozenset()
+_ROUTER_SKIP_FIDELITIES: frozenset[str] = frozenset({"scaffold"})
 
 
 def _context_tool_name(toolset: str) -> str:
@@ -221,7 +221,11 @@ class ContextToolFidelityBody(ContextToolBody):
         tool_name = _context_tool_name(toolset)
         previous: list[str] = []
         if fidelity in fidelities:
-            previous = list(fidelities[: fidelities.index(fidelity)])
+            previous = [
+                name
+                for name in fidelities[: fidelities.index(fidelity)]
+                if name not in _ROUTER_SKIP_FIDELITIES
+            ]
         references = ""
         if previous:
             mentions = "\n".join(

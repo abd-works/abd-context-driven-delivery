@@ -64,8 +64,8 @@ with description("harness deploy for car invoke BDD"):
             skill = _REPO / CAR_SKILL
             expect(skill.is_file()).to(be_true)
             body = skill.read_text(encoding="utf-8")
-            expect("AskQuestion constrained to these actions" in body).to(be_true)
-            expect("trip_outline" in body or "road_story" in body).to(be_true)
+            expect("AskQuestion" in body).to(be_true)
+            expect("@car-road_story" in body or "road_story" in body).to(be_true)
 
         with it("should write fidelity and action command prompts"):
             stage_invoke_commands(_REPO)

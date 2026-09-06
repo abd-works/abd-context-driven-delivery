@@ -11,9 +11,9 @@ Usage::
         def turn(self, *, message: str = "") -> TurnCommit | None:
             ...
 
-        @hook(event="beforeSubmitPrompt")
+        @hook(event="stop")
         def auto_turn(self, payload: dict) -> dict:
-            return {"permission": "allow"}
+            return {}
 
     HookHarness(script="primitives/hooks/run.py").deploy(Path(".cursor/hooks.json"))
 """

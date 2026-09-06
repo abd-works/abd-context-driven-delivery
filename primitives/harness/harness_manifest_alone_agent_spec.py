@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 from expects import be_above, be_below, be_true, equal, expect
-from mamba import context, description, it
+from mamba import before, context, description, it
 
 from agent_bdd import (
     agent,
@@ -31,11 +31,10 @@ from harness.harness_invoke_fixtures import (
     CAR_START,
     TRAVEL_TO,
     car_tool_argument,
-    stage_invoke_commands,
+    ensure_invoke_staged,
 )
 
 _REPO_ROOT = repo_root_from(__file__, parents=2)
-stage_invoke_commands(_REPO_ROOT)
 _SESSIONS = sessions_dir(__file__)
 
 _AGENT_BUDGET_S = 90.0
@@ -94,6 +93,8 @@ def _cli_time(run_yaml: str) -> float:
 
 
 with description("manifest-alone E2E (#45)"):
+    with before.all:
+        ensure_invoke_staged(_REPO_ROOT)
     with context("CLI overhead (no agent)"):
         with it("invokes harness-deployed fences within CLI-only budget"):
             _cli_time(

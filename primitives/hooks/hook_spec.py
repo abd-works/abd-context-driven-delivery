@@ -79,6 +79,16 @@ class _DispatchFixture:
         return {"agent_message": "ran"}
 
 
+@toolset
+class _StopFixture:
+    calls: list[str] = []
+
+    @hook(event="stop")
+    def on_stop(self, payload: dict) -> dict:
+        type(self).calls.append("stop")
+        return {"followup_message": "/turn"}
+
+
 def _registered_events() -> list[str]:
     return [e["event"] for e in Hook.registered()]
 
@@ -305,7 +315,7 @@ with description("a hook harness"):
                             "hooks": {
                                 "beforeSubmitPrompt": [
                                     {
-                                        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log.py",
+                                        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
                                         "timeout": 10,
                                         "failClosed": False,
                                     },
@@ -390,6 +400,40 @@ with description("hook dispatch"):
             finally:
                 Hook.set_enabled(_DispatchFixture, "on_after", "afterAgentResponse", enabled=False)
 
+    with context("that receives a stop payload"):
+
+        with it("should pass through followup_message from enabled handlers"):
+            Hook.clear()
+            _StopFixture.calls = []
+            Hook.attach_owners(_StopFixture)
+            Hook.set_enabled(_StopFixture, "on_stop", "stop", enabled=True)
+            try:
+                out = dispatch({"hook_event_name": "stop"})
+                expect(out).to(equal({"permission": "allow", "followup_message": "/turn"}))
+                expect(_StopFixture.calls).to(equal(["stop"]))
+            finally:
+                Hook.set_enabled(_StopFixture, "on_stop", "stop", enabled=False)
+
+        with it("should keep user_message separate from agent_message"):
+            Hook.clear()
+
+            @toolset
+            class _MessageFixture:
+                @hook(event="beforeSubmitPrompt")
+                def on_before(self, payload: dict) -> dict:
+                    return {
+                        "user_message": "for user",
+                        "agent_message": "for agent",
+                    }
+
+            Hook.set_enabled(_MessageFixture, "on_before", "beforeSubmitPrompt", enabled=True)
+            try:
+                out = dispatch({"hook_event_name": "beforeSubmitPrompt"})
+                expect(out["user_message"]).to(equal("for user"))
+                expect(out["agent_message"]).to(equal("for agent"))
+            finally:
+                Hook.set_enabled(_MessageFixture, "on_before", "beforeSubmitPrompt", enabled=False)
+
     with context("that parses stdin payloads"):
 
         with it("should strip a UTF-8 BOM"):
@@ -402,7 +446,7 @@ with description("a hook binding"):
     with context("that exposes skill sources"):
         with it("should include instructions and flag path for on and off"):
             binding = HookBinding(
-                event="beforeSubmitPrompt",
+                event="stop",
                 operation="auto_turn",
                 slug="turn",
                 owner="Turn",
@@ -411,8 +455,8 @@ with description("a hook binding"):
             payloads = binding.skill_sources()
             expect(len(payloads)).to(equal(2))
             on_payload = payloads[0]
-            expect(on_payload["name"]).to(equal("auto_turn_before_submit_prompt_on"))
+            expect(on_payload["name"]).to(equal("auto_turn_stop_on"))
             expect(on_payload["body"]).to(contain("`auto_turn`"))
             expect(on_payload["body"]).to(
-                contain(".context/hooks/turn/auto_turn_before_submit_prompt.enabled")
+                contain(".context/hooks/turn/auto_turn_stop.enabled")
             )

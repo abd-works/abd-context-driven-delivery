@@ -3,7 +3,7 @@
   "hooks": {
     "preToolUse": [
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_echo.py",
+        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_echo/prompt_echo.py",
         "timeout": 10,
         "failClosed": false
       },
@@ -14,7 +14,7 @@
         "failClosed": false
       },
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log.py",
+        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
         "timeout": 10,
         "failClosed": false
       }
@@ -28,27 +28,29 @@
     ],
     "beforeSubmitPrompt": [
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log.py",
+        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
         "timeout": 10,
-        "failClosed": false
-      },
-      {
-        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
-        "timeout": 30,
         "failClosed": false
       }
     ],
     "beforeReadFile": [
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log.py",
+        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
         "timeout": 10,
         "failClosed": false
       }
     ],
     "subagentStart": [
       {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log.py",
+        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
         "timeout": 10,
+        "failClosed": false
+      }
+    ],
+    "stop": [
+      {
+        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
+        "timeout": 30,
         "failClosed": false
       }
     ]

@@ -69,27 +69,32 @@ def tools_run_prompt(run_yaml: str) -> str:
     )
 
 
-_COMMAND_FENCE_RE = re.compile(r"```yaml\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
+_COMMAND_FENCE_RE = re.compile(r"```(?:yaml)?\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
 
 
 def command_path(repo_root: Path, command: str | Path) -> Path:
-    """Resolve a workspace-relative ``.cursor/commands/*.md`` path."""
+    """Resolve a deployed slash/skill path under ``.cursor/``."""
     path = Path(command)
     if path.is_file():
         return path.resolve()
     resolved = (repo_root / path).resolve()
-    if not resolved.is_file():
-        raise FileNotFoundError(f"Deployed command not found: {resolved}")
-    return resolved
+    if resolved.is_file():
+        return resolved
+    legacy = (repo_root / ".cursor" / "commands" / f"{path.name}").resolve()
+    if legacy.is_file():
+        return legacy
+    raise FileNotFoundError(f"Deployed command not found: {resolved}")
 
 
 def command_fence_yaml(command: str | Path, *, repo_root: Path) -> str:
-    """Return the exact ```yaml fence body from a deployed slash/skill command."""
+    """Return the invoke fence body from a deployed slash/skill command."""
     path = command_path(repo_root, command)
-    match = _COMMAND_FENCE_RE.search(path.read_text(encoding="utf-8"))
-    if not match:
-        raise ValueError(f"No ```yaml fence in {path}")
-    return match.group(1).rstrip() + "\n"
+    text = path.read_text(encoding="utf-8")
+    for match in _COMMAND_FENCE_RE.finditer(text):
+        body = match.group(1).strip()
+        if body.startswith("toolset:"):
+            return body + "\n"
+    raise ValueError(f"No toolset invoke fence in {path}")
 
 
 def parse_command_fence(command: str | Path, *, repo_root: Path) -> dict[str, Any]:

@@ -7,7 +7,7 @@
 from pathlib import Path
 
 from expects import be_true, expect
-from mamba import description, it
+from mamba import before, description, it
 
 from agent_bdd import (
     agent,
@@ -22,11 +22,10 @@ from harness.harness_invoke_fixtures import (
     CAR_INSPECT,
     CAR_SKILL,
     car_tool_argument,
-    stage_invoke_commands,
+    ensure_invoke_staged,
 )
 
 _REPO = repo_root_from(__file__, parents=2)
-stage_invoke_commands(_REPO)
 _SESSIONS = sessions_dir(__file__)
 
 
@@ -38,6 +37,8 @@ def _session(name: str) -> Path:
 
 
 with description("invoke action with utility tool from deployed prompt (strict)"):
+    with before.all:
+        ensure_invoke_staged(_REPO)
     with it("reads car skill and car-inspect.md; lists wrap_story in response.tools"):
         with agent(_REPO, _session("car-inspect")) as block:
             read_workspace(CAR_SKILL)

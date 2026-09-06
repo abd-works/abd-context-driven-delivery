@@ -7,7 +7,7 @@
 from pathlib import Path
 
 from expects import be_above, be_true, expect
-from mamba import description, it
+from mamba import before, description, it
 
 from agent_bdd import (
     agent,
@@ -22,11 +22,10 @@ from harness.harness_invoke_fixtures import (
     CAR_SKILL,
     TRAVEL_TO,
     car_tool_argument,
-    stage_invoke_commands,
+    ensure_invoke_staged,
 )
 
 _REPO = repo_root_from(__file__, parents=2)
-stage_invoke_commands(_REPO)
 _SESSIONS = sessions_dir(__file__)
 
 
@@ -38,6 +37,8 @@ def _session(name: str) -> Path:
 
 
 with description("invoke CarStory action many tools (strict)"):
+    with before.all:
+        ensure_invoke_staged(_REPO)
     with it("reads car skill and travel-to.md; lists start speak stop in response.tools"):
         with agent(_REPO, _session("car-many")) as block:
             read_workspace(CAR_SKILL)
