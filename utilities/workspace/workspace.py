@@ -1399,12 +1399,23 @@ class WorkSession:
 
     @staticmethod
     def _closed_archive_content_root(closed_dir: Path, name: str) -> Path | None:
-        if (closed_dir / "session.md").is_file():
-            return closed_dir
         nested = closed_dir / name
         if (nested / "session.md").is_file():
             return nested
+        if (closed_dir / "session.md").is_file():
+            return closed_dir
         return None
+
+    def _move_tree_contents(self, source: Path, dest: Path) -> None:
+        dest.mkdir(parents=True, exist_ok=True)
+        for item in source.iterdir():
+            target = dest / item.name
+            if target.exists():
+                if target.is_dir():
+                    shutil.rmtree(target, ignore_errors=True)
+                else:
+                    target.unlink(missing_ok=True)
+            shutil.move(str(item), str(target))
 
     def _find_closed_session_archive(self) -> tuple[Path, Path] | None:
         """Return ``(closed_entry, content_root)`` for the best closed archive match."""
@@ -1444,13 +1455,15 @@ class WorkSession:
             return
         closed_dir, content = found
         dest = self.folder
-        dest.parent.mkdir(parents=True, exist_ok=True)
         if dest.exists():
             shutil.rmtree(dest, ignore_errors=True)
-        if content == closed_dir:
-            shutil.move(str(closed_dir), str(dest))
-            return
-        shutil.move(str(content), str(dest))
+        self._move_tree_contents(content, dest)
+        if content != closed_dir:
+            try:
+                if content.is_dir() and not any(content.iterdir()):
+                    content.rmdir()
+            except OSError:
+                pass
         try:
             if closed_dir.is_dir() and not any(closed_dir.iterdir()):
                 closed_dir.rmdir()
