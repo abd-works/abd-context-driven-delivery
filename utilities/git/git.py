@@ -1019,11 +1019,62 @@ class Repo:
         if self._memory:
             self._worktrees = [tree for tree in self._worktrees if tree.path != dest]
             return
-        self._git("worktree", "remove", "--force", str(dest))
-        # Windows often leaves an empty checkout dir after git worktree remove.
+        try:
+            self._git("worktree", "remove", "--force", str(dest))
+        except GitConnectError:
+            self._force_remove_directory_windows(dest)
         if dest.exists():
-            import shutil
             shutil.rmtree(dest, ignore_errors=True)
+        if dest.exists():
+            self._force_remove_directory_windows(dest)
+        if not dest.exists():
+            try:
+                self._git("worktree", "prune")
+            except GitConnectError:
+                pass
+
+    @staticmethod
+    def _force_remove_directory_windows(path: Path) -> bool:
+        """Last resort when git/shutil cannot delete a locked checkout (Windows only)."""
+        if os.name != "nt":
+            return False
+        target = path.resolve()
+        if not target.exists():
+            return True
+        user = os.environ.get("USERNAME", "").strip()
+        if not user:
+            return False
+        for args in (
+            ("takeown", "/f", str(target), "/r", "/d", "y"),
+            ("icacls", str(target), "/grant", f"{user}:(F)", "/t"),
+        ):
+            try:
+                subprocess.run(list(args), capture_output=True, check=False)
+            except OSError:
+                pass
+        try:
+            shutil.rmtree(target, ignore_errors=True)
+        except OSError:
+            pass
+        if target.exists():
+            try:
+                subprocess.run(
+                    [
+                        "powershell",
+                        "-NoProfile",
+                        "-NonInteractive",
+                        "-Command",
+                        (
+                            f'Remove-Item -LiteralPath "{target}" '
+                            "-Recurse -Force -ErrorAction SilentlyContinue"
+                        ),
+                    ],
+                    capture_output=True,
+                    check=False,
+                )
+            except OSError:
+                pass
+        return not target.exists()
 
     def fetch(self) -> None:
         if self._memory:

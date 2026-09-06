@@ -3,6 +3,7 @@
 """BDD spec for utilities/git/git.py."""
 
 import sys
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -277,6 +278,28 @@ with description("a Repo worktree"):
             path = self.repo.add_worktree("/tmp/wt-demo", "session/demo")
             self.repo.remove_worktree(path)
             expect(self.repo.worktree_for("session/demo")).to(equal(None))
+
+        with it("should run Windows takeown icacls and Remove-Item as last resort"):
+            import os
+            from unittest.mock import patch
+
+            with tempfile.TemporaryDirectory() as tmp:
+                target = Path(tmp) / "locked-wt"
+                target.mkdir()
+                calls: list[tuple[str, ...]] = []
+
+                def fake_run(args, **kwargs):
+                    calls.append(tuple(args))
+                    return subprocess.CompletedProcess(args, 0)
+
+                with patch("git.git.os.name", "nt"):
+                    with patch.dict(os.environ, {"USERNAME": "tester"}):
+                        with patch("git.git.shutil.rmtree"):
+                            with patch("git.git.subprocess.run", side_effect=fake_run):
+                                Repo._force_remove_directory_windows(target)
+                expect(calls[0][0]).to(equal("takeown"))
+                expect(calls[1][0]).to(equal("icacls"))
+                expect(any("Remove-Item" in " ".join(c) for c in calls)).to(be_true)
 
         with it("should fetch and pull in the current tree"):
             self.repo.fetch_pull()
