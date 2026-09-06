@@ -4,7 +4,7 @@ globs: **/*.py,**/*.js,**/*.ts,**/*.java,**/*.c,**/*.cs
 alwaysApply: false
 ---
 
-When code — seriously, whenever you are writing code and testing it — you MUST follow this procedure. See @clean_engineering-code for the full skill.
+Wheenever you are writing code and testing it — you MUST follow this procedure. See @clean_engineering-code for the full skill.
 
 
 **Test shape ladder** — applies to all code tests regardless of framework (unit BDD, agent BDD, story ATDD). `@bdd` and `@stories` sessions refer here instead of duplicating this workflow.
