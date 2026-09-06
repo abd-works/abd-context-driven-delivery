@@ -15542,3 +15542,167 @@ disable-model-invocation: true
 Enable the `auto_turn` hook on Cursor event `stop`.
 
 ... [11 lines, 338 chars total]
+
+==============================================================================
+2026-09-06T06:33:59Z  preToolUse:Grep  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+pattern: auto_turn_before|auto_turn_stop
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+
+==============================================================================
+2026-09-06T06:34:00Z  beforeReadFile  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\auto_turn_stop_on\SKILL.md
+size: 338 chars
+preview:
+---
+name: auto_turn_stop_on
+description: "Enable `auto_turn` hook on `stop` (stop) for Turn."
+disable-model-invocation: true
+---
+
+Enable the `auto_turn` hook on Cursor event `stop`.
+
+... [11 lines, 338 chars total]
+
+==============================================================================
+2026-09-06T06:34:01Z  preToolUse:Grep  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+pattern: 
+path [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\turn
+
+==============================================================================
+2026-09-06T06:34:01Z  preToolUse:Grep  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+pattern: 
+path [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\auto_turn_before_submit_prompt_on
+
+==============================================================================
+2026-09-06T06:34:03Z  preToolUse:Shell  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: cd c:\dev\abd-cdd-utility-cleanup; $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities;c:\dev\abd-cdd-utility-cleanup\context_tools;c:\dev\abd-cdd-utility-cleanup\context_tools\actions"; .\.venv\Scripts\python.exe -c "from pathlib import Path; from harness.harness import Harness; Harness('Cursor', repo_root=Path('.')).write_deploy(); print('full write_deploy ok')"
+
+==============================================================================
+2026-09-06T06:34:08Z  preToolUse:Grep  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+pattern: 
+path [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\turn
+
+==============================================================================
+2026-09-06T06:34:08Z  preToolUse:Grep  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills
+
+==============================================================================
+2026-09-06T06:34:10Z  preToolUse:Shell  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd c:\dev\abd-cdd-utility-cleanup; $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities;c:\dev\abd-cdd-utility-cleanup\context_tools;c:\dev\abd-cdd-utility-cleanup\context_tools\actions"; .\.venv\Scripts\python.exe -m mamba.cli primitives/hooks/hook_spec.py primitives/harness/harness_spec.py primitives/harness/harness_invoke_fixtures_spec.py --no-color 2>&1 | Select-Object -Last 8
+
+==============================================================================
+2026-09-06T06:34:10Z  preToolUse:Grep  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+pattern: auto_turn
+path [file]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills
+
+==============================================================================
+2026-09-06T06:34:10Z  preToolUse:Grep  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+
+==============================================================================
+2026-09-06T06:34:10Z  preToolUse:Read  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\.cursor\hooks.json
+
+==============================================================================
+2026-09-06T06:34:10Z  preToolUse:Grep  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: _folder_for|utilities/
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T06:34:11Z  beforeReadFile  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\.cursor\hooks.json
+size: 1467 chars
+preview:
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_echo/prompt_echo.py",
+        "timeout": 10,
+        "failClosed": false
+... [58 lines, 1467 chars total]
+
+==============================================================================
+2026-09-06T06:34:16Z  preToolUse:Grep  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+pattern: 
+path [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities
+
+==============================================================================
+2026-09-06T06:34:18Z  preToolUse:Read  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\turn\turn_before_submit_prompt_on\SKILL.md
+
+==============================================================================
+2026-09-06T06:34:19Z  preToolUse:Grep  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+pattern: turn_before_submit|turn_after_agent
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness
+
+==============================================================================
+2026-09-06T06:34:22Z  preToolUse:Read  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\turn\turn_before_submit_prompt_on\SKILL.md
+
+==============================================================================
+2026-09-06T06:34:25Z  preToolUse:Shell  conv=e5c98b02  gen=86fd6905  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: Get-ChildItem -Recurse "c:\dev\abd-cdd-utility-cleanup\.cursor\skills\utilities\turn" -ErrorAction SilentlyContinue | Select-Object FullName
+
+==============================================================================
+2026-09-06T06:35:42Z  preToolUse:Shell  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Test-Path "c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn\auto_turn_stop.enabled"; Select-String -Path "c:\dev\abd-cdd-utility-cleanup\.cursor\hooks.json" -Pattern "stop"
+
+==============================================================================
+2026-09-06T06:35:42Z  preToolUse:Read  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\testing-the-auto-commit-works.md
+
+==============================================================================
+2026-09-06T06:35:43Z  preToolUse:Write  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\testing-the-auto-commit-works.md
+
+==============================================================================
+2026-09-06T06:35:46Z  preToolUse:Shell  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd c:\dev\abd-cdd-utility-cleanup; git status --short primitives/hooks/testing-the-auto-commit-works.md; $payload = '{"hook_event_name":"stop","status":"completed","loop_count":0}'; $payload | .\.venv\Scripts\python.exe primitives/hooks/dispatch.py; Write-Host "---"; git status --short primitives/hooks/testing-the-auto-commit-works.md; git log -1 --oneline; Get-Content primitives/hooks/dispatch.debug -Tail 6
