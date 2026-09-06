@@ -198,3 +198,30 @@ text: Done. When no named session is open, hooks now stand up a **default sessio
 **Behavior:**
 - No `_active` file â†’ `ensure_default_session()` creates default at repo root before writing logs
 ... [12 lines, 537 chars total]
+
+==============================================================================
+2026-09-06T16:46:07Z  beforeSubmitPrompt  conv=9258f444  gen=a71eeb8c  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+did we finhs and mergwe top maion
+
+==============================================================================
+2026-09-06T16:46:12Z  preToolUse:Shell  conv=9258f444  gen=a71eeb8c  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; Write-Output "=== utility-cleanup worktree ==="; git branch --show-current; git log -3 --oneline; git status --short; Write-Output "`n=== primary clone main ==="; cd C:\dev\abd-context-driven-delivery; git branch --show-current; git log -3 --oneline; git status --short; Write-Output "`n=== worktrees ==="; git worktree list
+
+==============================================================================
+2026-09-06T16:46:17Z  afterAgentResponse  conv=9258f444  gen=a71eeb8c  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+text: **No.** Finish ran once earlier, but **main was never merged**.
+
+| | Status |
+|---|--------|
+| **Session branch** | `session/utility-cleanup` @ `13b45373` (many commits ahead) |
+| **Main** | Still @ `6b1cefdd` â€” unchanged |
+| **Worktree** | Still exists (`abd-cdd-utility-cleanup`) |
+| **Merge to main** | **Did not happen** |
+... [19 lines, 919 chars total]
