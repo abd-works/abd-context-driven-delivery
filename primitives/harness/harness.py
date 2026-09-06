@@ -21,7 +21,6 @@ from harness.agent import Agent
 from harness.agent_guidance import AgentGuidance
 from harness.command import Command
 from harness.harness_tool import operation_writes, required_init_params
-from harness.hook import Hook
 from harness.instruction import Instruction
 from harness.prompt import Prompt, prompt
 from harness.returned_guidance import _DEFAULT_CODE_LANGUAGE, compound_guidance
@@ -109,7 +108,7 @@ class Harness:
         self.instruction_files: list[Instruction] = []
         self.rules: list[Rule] = []
         self.agents: list[Agent] = []
-        self.hooks: list[Hook] = []
+        self._hook_events: set[str] = set()
         self.agent_guidance: list[AgentGuidance] = []
 
     def _require_implemented(self) -> None:
@@ -537,6 +536,17 @@ class Harness:
             skill_file.generate(source, roots)
             self.skills.append(skill_file)
             return name
+        if kind == "hook":
+            from hooks.deploy import hook_skill_sources
+
+            payloads, events = hook_skill_sources(source)
+            for payload in payloads:
+                skill_file = Skill(self.type, payload["name"])
+                skill_file.disable_model_invocation = True
+                skill_file.generate(payload, roots)
+                self.skills.append(skill_file)
+            self._hook_events.update(events)
+            return payloads[0]["name"] if payloads else name
         if kind == "instruction":
             instruction_file = Instruction(self.type, name)
             written = instruction_file.generate(source, roots)
@@ -620,9 +630,19 @@ class Harness:
         if writes:
             for vehicle, deploy_name, operation, doc, invoke in writes:
                 name = deploy_name or slug
+                if vehicle == "hook":
+                    name = operation or deploy_name or slug
                 if not self._wanted(wanted, name, slug, "source"):
                     continue
                 payload = source_for(name, doc or meta["guidance"], operation=operation, invoke=invoke)
+                if vehicle == "hook":
+                    payload["event"] = deploy_name or ""
+                    payload["owner"] = class_name
+                    payload["slug"] = slug
+                    payload["operation"] = operation
+                    base_folder = payload.get("folder") or ""
+                    if base_folder and slug and not base_folder.endswith(f"/{slug}"):
+                        payload["folder"] = f"{base_folder}/{slug}"
                 if cc:
                     payload["constructor_context"] = cc
                 written = self._emit(
@@ -841,6 +861,12 @@ class Harness:
         """Suggested IDE folder to write skills, commands, and prompts."""
         return str(self._suggested_deploy_path())
 
+    def _deploy_cursor_hooks(self) -> None:
+        """Merge dispatch.py entries into ``.cursor/hooks.json`` for deployed hook events."""
+        from hooks.deploy import deploy_dispatch
+
+        deploy_dispatch(self.repo_root, self._hook_events)
+
     @agent_tool
     def write_deploy(
         self,
@@ -873,7 +899,7 @@ class Harness:
         self.instruction_files = []
         self.rules = []
         self.agents = []
-        self.hooks = []
+        self._hook_events = set()
         self.agent_guidance = []
         self._actions_for_ask = self._action_option_names()
         self._context_tools_for_ask = self._context_tool_option_names()
@@ -922,6 +948,8 @@ class Harness:
             self._drop_unwritten_skills(roots, skill_names)
             self._drop_unwritten_prompts(roots, prompt_names)
             self._drop_unwritten_rules(roots, rule_names)
+        if self.type == "Cursor":
+            self._deploy_cursor_hooks()
         self._remove_unprefixed_fidelity_files(roots)
         self._save_ide(str(roots[0]))
         return json.dumps(
@@ -1003,4 +1031,10 @@ class Harness:
                 if target.is_dir():
                     shutil.rmtree(target)
                     removed.append(str(target))
+        if self.type == "Cursor":
+            from hooks.deploy import deploy_dispatch
+
+            hooks_json = self.repo_root / ".cursor" / "hooks.json"
+            deploy_dispatch(self.repo_root, set())
+            removed.append(str(hooks_json))
         return json.dumps({"roots": [str(r) for r in roots], "removed": removed})

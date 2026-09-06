@@ -10,6 +10,7 @@ Use stories guidance at `scenarios` fidelity only.
 
 Refer to these skills in order to fill in details from previous fidelities if not present:
 @stories-story_map
+@stories-scaffold
 
 # Contexts
 

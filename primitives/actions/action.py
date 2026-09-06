@@ -1501,6 +1501,12 @@ def agentic_toolset(cls: type) -> type:
 
     inherit_annotations_from_bases(merged)
     ToolsetExtensions.instance().validate_toolset(merged)
+    try:
+        from hooks.hook import Hook
+
+        Hook.attach_owners(merged)
+    except ImportError:
+        pass
     return merged
 
 

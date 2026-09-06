@@ -8,6 +8,9 @@ disable-model-invocation: true
 
 Use stories guidance at `story_map` fidelity only.
 
+Refer to these skills in order to fill in details from previous fidelities if not present:
+@stories-scaffold
+
 # Contexts
 
 Map stakeholder and system interactions as behaviours that deliver a solution.

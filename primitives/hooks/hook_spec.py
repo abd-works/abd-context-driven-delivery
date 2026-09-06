@@ -2,30 +2,30 @@
 # Agent reading this file: do not remanifest — slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
 # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
-"""BDD development specs for the Hook annotation and HookHarness."""
-import sys
+"""BDD specs for @hook, HookHarness, and dispatch."""
 import json
+import sys
 import tempfile
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-for _cat in ("primitives",):
+for _cat in ("primitives", "utilities", "primitives/hooks"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
         sys.path.insert(0, _p)
 sys.modules.pop("tools", None)
+sys.modules.pop("hooks", None)
 
-from expects import contain, equal, have_key, raise_error, expect
+from expects import contain, equal, expect, have_key, raise_error
 from mamba import context, description, it
+from tools.tool import toolset
 
-from tools.hooks.hook import Hook, HookHarness
+from hooks.deploy import HookBinding
+from hooks.dispatch import dispatch, parse_payload
+from hooks.hook import Hook, HookHarness, hook
 
-
-# ---------------------------------------------------------------------------
-# Fixture — one handler per Cursor event, registered via @Hook
-# ---------------------------------------------------------------------------
 
 class _Fixture:
     @Hook(event="sessionStart")
@@ -69,13 +69,19 @@ class _Fixture:
         return {"permission": "allow"}
 
 
+@toolset
+class _DispatchFixture:
+    calls: list[str] = []
+
+    @hook(event="afterAgentResponse")
+    def on_after(self, payload: dict) -> dict:
+        type(self).calls.append("after")
+        return {"agent_message": "ran"}
+
+
 def _registered_events() -> list[str]:
     return [e["event"] for e in Hook.registered()]
 
-
-# ---------------------------------------------------------------------------
-# Specs
-# ---------------------------------------------------------------------------
 
 with description("an operation method annotated with a Cursor event"):
 
@@ -88,14 +94,11 @@ with description("an operation method annotated with a Cursor event"):
             expect(_registered_events()).to(contain("sessionStart"))
 
         with it("should fire a notification when invoked"):
-            # Arrange
             notified: list[str] = []
             @Hook(event="sessionStart", notify=True, notifier=notified.append)
             def _on(payload: dict) -> dict:
                 return {}
-            # Act
             _on({})
-            # Assert
             expect(notified).to(equal(["sessionStart"]))
 
     with context("that is decorated with beforeSubmitPrompt"):
@@ -255,7 +258,6 @@ with description("a hook harness"):
 
     with context("that deploys a sessionStart handler"):
         with it("should write a sessionStart entry to hooks.json"):
-            # Arrange
             registry = [
                 {
                     "event": "sessionStart",
@@ -265,18 +267,15 @@ with description("a hook harness"):
                     "fail_closed": False,
                 }
             ]
-            harness = HookHarness(script="primitives/hooks/my_hooks.py")
+            harness = HookHarness(script="primitives/hooks/dispatch.py")
             with tempfile.TemporaryDirectory() as tmp:
                 dest = Path(tmp) / "hooks.json"
-                # Act
                 harness.deploy(dest, registry=registry)
-                # Assert
                 data = json.loads(dest.read_text(encoding="utf-8"))
                 expect(data["hooks"]).to(have_key("sessionStart"))
 
     with context("that deploys a preToolUse handler with a matcher"):
         with it("should include the matcher in the hooks.json entry"):
-            # Arrange
             registry = [
                 {
                     "event": "preToolUse",
@@ -286,12 +285,134 @@ with description("a hook harness"):
                     "fail_closed": False,
                 }
             ]
-            harness = HookHarness(script="primitives/hooks/my_hooks.py")
+            harness = HookHarness(script="primitives/hooks/dispatch.py")
             with tempfile.TemporaryDirectory() as tmp:
                 dest = Path(tmp) / "hooks.json"
-                # Act
                 harness.deploy(dest, registry=registry)
-                # Assert
                 data = json.loads(dest.read_text(encoding="utf-8"))
                 hook_entry = data["hooks"]["preToolUse"][0]
                 expect(hook_entry["matcher"]).to(equal("Write|StrReplace"))
+
+    with context("that syncs dispatch entries"):
+        with it("should drop dispatch wiring for events not in the target set"):
+            harness = HookHarness(script="primitives/hooks/dispatch.py")
+            with tempfile.TemporaryDirectory() as tmp:
+                dest = Path(tmp) / "hooks.json"
+                dest.write_text(
+                    json.dumps(
+                        {
+                            "version": 1,
+                            "hooks": {
+                                "beforeSubmitPrompt": [
+                                    {
+                                        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log.py",
+                                        "timeout": 10,
+                                        "failClosed": False,
+                                    },
+                                    {
+                                        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
+                                        "timeout": 30,
+                                        "failClosed": False,
+                                    },
+                                ],
+                                "afterAgentResponse": [
+                                    {
+                                        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
+                                        "timeout": 30,
+                                        "failClosed": False,
+                                    },
+                                ],
+                            },
+                        }
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                harness.sync_dispatch(dest, {"beforeSubmitPrompt"})
+                data = json.loads(dest.read_text(encoding="utf-8"))
+                expect(data["hooks"]).to(have_key("beforeSubmitPrompt"))
+                expect(data["hooks"]).not_to(have_key("afterAgentResponse"))
+                before = data["hooks"]["beforeSubmitPrompt"]
+                expect(len(before)).to(equal(2))
+                expect(before[0]["command"]).to(contain("prompt_log.py"))
+                expect(before[1]["command"]).to(contain("dispatch.py"))
+
+        with it("should remove all dispatch wiring when the target set is empty"):
+            harness = HookHarness(script="primitives/hooks/dispatch.py")
+            with tempfile.TemporaryDirectory() as tmp:
+                dest = Path(tmp) / "hooks.json"
+                dest.write_text(
+                    json.dumps(
+                        {
+                            "version": 1,
+                            "hooks": {
+                                "afterAgentResponse": [
+                                    {
+                                        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
+                                        "timeout": 30,
+                                        "failClosed": False,
+                                    },
+                                ],
+                            },
+                        }
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                harness.sync_dispatch(dest, set())
+                data = json.loads(dest.read_text(encoding="utf-8"))
+                expect(data["hooks"]).to(equal({}))
+
+
+with description("hook dispatch"):
+
+    with context("that receives an afterAgentResponse payload"):
+
+        with it("should skip handlers when the toggle flag is absent"):
+            Hook.clear()
+            _DispatchFixture.calls = []
+            Hook.attach_owners(_DispatchFixture)
+            Hook.set_enabled(_DispatchFixture, "on_after", "afterAgentResponse", enabled=False)
+            out = dispatch({"hook_event_name": "afterAgentResponse"})
+            expect(out).to(equal({"permission": "allow"}))
+            expect(_DispatchFixture.calls).to(equal([]))
+
+        with it("should invoke enabled handlers"):
+            Hook.clear()
+            _DispatchFixture.calls = []
+            Hook.attach_owners(_DispatchFixture)
+            Hook.set_enabled(_DispatchFixture, "on_after", "afterAgentResponse", enabled=True)
+            try:
+                out = dispatch({"hook_event_name": "afterAgentResponse"})
+                expect(out["permission"]).to(equal("allow"))
+                expect(out["agent_message"]).to(equal("ran"))
+                expect(_DispatchFixture.calls).to(equal(["after"]))
+            finally:
+                Hook.set_enabled(_DispatchFixture, "on_after", "afterAgentResponse", enabled=False)
+
+    with context("that parses stdin payloads"):
+
+        with it("should strip a UTF-8 BOM"):
+            raw = b'\xef\xbb\xbf{"hook_event_name":"stop"}'
+            expect(parse_payload(raw)).to(equal({"hook_event_name": "stop"}))
+
+
+with description("a hook binding"):
+
+    with context("that exposes skill sources"):
+        with it("should include instructions and flag path for on and off"):
+            binding = HookBinding(
+                event="beforeSubmitPrompt",
+                operation="auto_turn",
+                slug="turn",
+                owner="Turn",
+                folder="utilities/turn",
+            )
+            payloads = binding.skill_sources()
+            expect(len(payloads)).to(equal(2))
+            on_payload = payloads[0]
+            expect(on_payload["name"]).to(equal("auto_turn_before_submit_prompt_on"))
+            expect(on_payload["body"]).to(contain("`auto_turn`"))
+            expect(on_payload["body"]).to(
+                contain(".context/hooks/turn/auto_turn_before_submit_prompt.enabled")
+            )

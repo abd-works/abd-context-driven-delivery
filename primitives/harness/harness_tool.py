@@ -67,6 +67,13 @@ def _decorator_write(node: ast.expr) -> tuple[str, str | None] | None:
         return (raw, deploy_name)
     if raw == "instruction" and deploy_name is not None:
         return ("instruction", deploy_name)
+    if raw in {"hook", "Hook"}:
+        event_name: str | None = None
+        if isinstance(node, ast.Call):
+            for kw in node.keywords:
+                if kw.arg == "event" and isinstance(kw.value, ast.Constant):
+                    event_name = str(kw.value.value)
+        return ("hook", event_name)
     return None
 
 

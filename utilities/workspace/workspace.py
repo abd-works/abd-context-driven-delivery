@@ -27,6 +27,7 @@ from workspace.context_index import ContextIndex
 from workspace.git_repo import Commit, GitConnectError, GitRepo, NullGitRepo, Repo
 from tools.tool import resource, agent_tool, toolset
 from harness.prompt import prompt
+from hooks.hook import hook
 
 
 @dataclass
@@ -409,6 +410,31 @@ class Turn:
         self._ensure_named()
         self._commit_message_override = commit_message.strip()
         return self._commit()
+
+    @hook(event="beforeSubmitPrompt")
+    def auto_turn(self, payload: dict) -> dict:
+        """Remind the agent to invoke /turn when this response is done."""
+        return {
+            "permission": "allow",
+            "agent_message": (
+                "When you finish this response — before you move on — commit "
+                "any changes with /turn. Fill context_tool, action, utility, "
+                "subject (a few folders or files), and message from what you "
+                "used and what changed in this reply.\n\n"
+                "Pipe from the repo root:\n"
+                "```\n"
+                "toolset: workspace.workspace:Turn\n"
+                "tool: turn\n"
+                "arguments:\n"
+                "  context_tool: <skill slug>\n"
+                "  action: <skill slug>\n"
+                "  utility: <optional skill slug>\n"
+                "  subject: <few folders or files>\n"
+                "  message: <what changed>\n"
+                "```\n"
+                ".\\tools.ps1 run -"
+            ),
+        }
 
     def finish(
         self, prompt: str = "", result: str = "", context: str = ""
