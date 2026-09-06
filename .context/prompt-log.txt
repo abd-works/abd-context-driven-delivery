@@ -19240,3 +19240,13 @@ path [file]: c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn\subagent-agent-p
 ------------------------------------------------------------------------------
 
 path [file]: c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn\auto_turn_after_agent_response.enabled
+
+==============================================================================
+2026-09-06T07:25:07Z  preToolUse:Shell  conv=9258f444  gen=2921ef90  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; $before = git rev-parse HEAD; '{"hook_event_name":"afterAgentResponse","conversation_id":"subagent-agent-e2e","generation_id":"g1"}' | .\.venv\Scripts\python.exe primitives/hooks/dispatch.py; $after = git rev-parse HEAD; Write-Output "before=$before"; Write-Output "after=$after"; git ls-files .context/hooks/turn/subagent-agent-probe.txt; Get-Content .context/hooks/turn/auto_turn.last_run.json
+
+==============================================================================
+2026-09-06T07:25:08Z  afterAgentResponse  conv=subagent  gen=g1  model=
+------------------------------------------------------------------------------

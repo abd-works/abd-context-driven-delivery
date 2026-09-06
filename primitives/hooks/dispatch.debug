@@ -246,3 +246,8 @@
 2026-09-06T07:24:59Z MERGED {"permission": "allow"}
 2026-09-06T07:25:00Z ENTRY raw_len=74 raw=b'{"hook_event_name":"afterAgentResponse","conversation_id":"no-pythonpath"}'
 2026-09-06T07:25:00Z EVENT 'afterAgentResponse' conversation_id='no-pythonpath' payload_keys=['conversation_id', 'hook_event_name']
+2026-09-06T07:25:05Z HANDLER Turn.auto_turn result_keys=[] result={}
+2026-09-06T07:25:05Z ENABLED ['Turn.auto_turn']
+2026-09-06T07:25:05Z MERGED {"permission": "allow"}
+2026-09-06T07:25:08Z ENTRY raw_len=102 raw=b'{"hook_event_name":"afterAgentResponse","conversation_id":"subagent-agent-e2e","generation_id":"g1"}\r\n'
+2026-09-06T07:25:08Z EVENT 'afterAgentResponse' conversation_id='subagent-agent-e2e' payload_keys=['conversation_id', 'generation_id', 'hook_event_name']
