@@ -19264,3 +19264,42 @@ Cursor runs hooks **without `PYTHONPATH`**. `dispatch.py` and `install_dispatch.
 1. **`_ensure_paths.py`** â€” bootstraps `sys.path` before any `hooks` imports
 2. **`dispatch.py` + `install_dispatch.py`** â€” use it so hooks run like Cursor runs them
 ... [22 lines, 1348 chars total]
+
+==============================================================================
+2026-09-06T16:25:27Z  beforeSubmitPrompt  conv=9258f444  gen=55061560  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+ok change a file - i dont care what - lets see what happnes
+
+==============================================================================
+2026-09-06T16:25:32Z  preToolUse:Shell  conv=9258f444  gen=55061560  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git rev-parse HEAD; Test-Path .context/hooks/turn/auto_turn_after_agent_response.enabled; git status --short | Select-Object -First 8
+
+==============================================================================
+2026-09-06T16:25:32Z  preToolUse:Read  conv=9258f444  gen=55061560  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn\live-probe.txt
+
+==============================================================================
+2026-09-06T16:25:33Z  preToolUse:Write  conv=9258f444  gen=55061560  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn\live-probe.txt
+
+==============================================================================
+2026-09-06T16:25:37Z  afterAgentResponse  conv=9258f444  gen=55061560  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+text: Changed `.context/hooks/turn/live-probe.txt` (new file).
+
+**Before this reply finishes:**
+- HEAD: `f49c27f1`
+- Auto-turn flag: **on**
+- `live-probe.txt`: **untracked**
+
+I'm **not** running dispatch or commit manually. If auto-turn is working in live Cursor, it should fire on `afterAgentResponse` when this message completes and commit everything dirty â€” including `live-probe.txt`.
+... [15 lines, 698 chars total]

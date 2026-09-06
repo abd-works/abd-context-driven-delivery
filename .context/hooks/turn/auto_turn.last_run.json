@@ -1,9 +1,9 @@
 {
-  "at": "2026-09-06T07:25:13.457722+00:00",
+  "at": "2026-09-06T07:25:51.050039+00:00",
   "event": "afterAgentResponse",
-  "conversation_id": "subagent-agent-e2e",
-  "generation_id": "g1",
-  "committed_sha": "938a824be693ec29d50b2c02804954b5ba455735",
+  "conversation_id": "9258f444-8a88-4c20-8641-d5b916c9f19a",
+  "generation_id": "2921ef90-0b60-4374-9f8f-3ca02721c362",
+  "committed_sha": "f49c27f1650e69b571876b0ab6f58816dfe29f30",
   "skipped": null,
   "error": null
 }
