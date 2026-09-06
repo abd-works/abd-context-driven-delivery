@@ -19104,3 +19104,81 @@ command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; $BEFORE_SHA
 ==============================================================================
 2026-09-06T07:24:31Z  afterAgentResponse  conv=final-re  gen=g1  model=
 ------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T07:24:37Z  preToolUse:Shell  conv=28833af8  gen=a5eac719  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; git ls-files ".context/hooks/turn/final-reality-probe.txt"
+
+==============================================================================
+2026-09-06T07:24:37Z  preToolUse:Shell  conv=28833af8  gen=a5eac719  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; Get-Content ".context/hooks/turn/auto_turn.last_run.json" -Raw
+
+==============================================================================
+2026-09-06T07:24:38Z  preToolUse:Shell  conv=28833af8  gen=a5eac719  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; if (Test-Path ".context/hooks/turn/dispatch.debug") { Get-Content ".context/hooks/turn/dispatch.debug" -Tail 15 } else { Write-Host "dispatch.debug not found" }
+
+==============================================================================
+2026-09-06T07:24:40Z  preToolUse:Shell  conv=28833af8  gen=a5eac719  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; Get-ChildItem -Recurse -Filter "dispatch.debug" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+
+==============================================================================
+2026-09-06T07:24:43Z  preToolUse:Shell  conv=28833af8  gen=a5eac719  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; if (Test-Path ".context\hooks\turn\dispatch.debug") { Get-Content ".context\hooks\turn\dispatch.debug" -Tail 20 }
+
+==============================================================================
+2026-09-06T07:24:43Z  preToolUse:Shell  conv=28833af8  gen=a5eac719  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; Get-Content "primitives\hooks\dispatch.debug" -Tail 20
+
+==============================================================================
+2026-09-06T07:24:54Z  preToolUse:Shell  conv=9258f444  gen=2921ef90  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities"; .\.venv\Scripts\python.exe -m mamba.cli primitives/hooks/hook_spec.py 2>&1
+
+==============================================================================
+2026-09-06T07:24:54Z  preToolUse:Task  conv=9258f444  gen=2921ef90  model=
+------------------------------------------------------------------------------
+
+description: Agent skill + change E2E
+prompt: You are testing auto-turn like a real Cursor agent in c:\dev\abd-cdd-utility-cleanup.
+
+1. Read `.cursor/skills/auto_turn_after_agent_response_on/SKILL.md` and follow it (create the flag file).
+
+2. Write a new file `.context/hooks/turn/subagent-agent-probe.txt` with content: `subagent wrote this`
+
+3. Do NOT run dispatch or git commands yourself.
+
+... [11 lines, 413 chars total]
+subagent_type: generalPurpose
+
+==============================================================================
+2026-09-06T07:24:55Z  subagentStart  conv=9258f444  gen=9258f444  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+subagent_type: general-purpose
+subagent_model: composer-2.5-fast
+task: You are testing auto-turn like a real Cursor agent in c:\dev\abd-cdd-utility-cleanup.
+
+1. Read `.cursor/skills/auto_turn_after_agent_response_on/SKILL.md` and follow it (create the flag file).
+
+2. Write a new file `.context/hooks/turn/subagent-agent-probe.txt` with content: `subagent wrote this`
+
+3. Do NOT run dispatch or git commands yourself.
+
+... [11 lines, 413 chars total]
+
+==============================================================================
+2026-09-06T07:24:55Z  afterAgentResponse  conv=hook-spe  gen=spec1  model=
+------------------------------------------------------------------------------

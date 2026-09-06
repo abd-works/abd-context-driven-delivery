@@ -1,9 +1,9 @@
 {
-  "at": "2026-09-06T07:24:07.139401+00:00",
+  "at": "2026-09-06T07:24:36.077665+00:00",
   "event": "afterAgentResponse",
-  "conversation_id": "debug-e2e",
+  "conversation_id": "final-reality-e2e",
   "generation_id": "g1",
-  "committed_sha": "308ecbdc04c1827b9044d61cf24fea1076db4c54",
+  "committed_sha": "c8bd0db243d80f0948fd2b7ecae9f8c2f05f6def",
   "skipped": null,
   "error": null
 }
