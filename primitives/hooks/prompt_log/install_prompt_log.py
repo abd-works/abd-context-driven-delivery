@@ -44,6 +44,17 @@ def main():
     merged = merge(_HOOKS_JSON, fragment)
     _HOOKS_JSON.parent.mkdir(parents=True, exist_ok=True)
     _HOOKS_JSON.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
+    try:
+        from hooks.bootstrap import load
+        from hooks.deploy import deploy_dispatch
+        from hooks.hook import Hook
+
+        load()
+        events = {entry["event"] for entry in Hook.registered()}
+        if events:
+            deploy_dispatch(_REPO_ROOT, events)
+    except ImportError:
+        pass
     print(f"Installed prompt_log hooks -> {_HOOKS_JSON}")
 
 

@@ -17637,3 +17637,325 @@ command: $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utilit
 ==============================================================================
 2026-09-06T07:01:09Z  afterAgentResponse  conv=e2e-test  gen=gen1  model=
 ------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T07:01:21Z  preToolUse:Read  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\.cursor\hooks.json
+
+==============================================================================
+2026-09-06T07:01:21Z  preToolUse:Shell  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git status --short | Select-Object -First 25; Write-Output "---"; git log -2 --oneline
+
+==============================================================================
+2026-09-06T07:01:21Z  preToolUse:Read  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.debug
+
+==============================================================================
+2026-09-06T07:01:21Z  beforeReadFile  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\.cursor\hooks.json
+size: 1322 chars
+preview:
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": ".venv/Scripts/python.exe primitives/hooks/skill_inject.py",
+        "matcher": "Write|StrReplace",
+        "timeout": 10,
+... [53 lines, 1322 chars total]
+
+==============================================================================
+2026-09-06T07:01:21Z  beforeReadFile  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.debug
+size: 2201 chars
+preview:
+2026-09-06T06:38:20Z EVENT 'beforeSubmitPrompt' payload_keys=['hook_event_name']
+2026-09-06T06:38:20Z HANDLER _MessageFixture.on_before result_keys=['agent_message', 'user_message'] result={"user_message": "for user", "agent_message": "for agent"}
+2026-09-06T06:38:20Z ENABLED ['_MessageFixture.on_before']
+2026-09-06T06:38:20Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-09-06T06:42:50Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-06T06:42:50Z ENABLED ['(none)']
+2026-09-06T06:42:50Z MERGED {"permission"
+... [24 lines, 2201 chars total]
+
+==============================================================================
+2026-09-06T07:01:34Z  preToolUse:Read  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness\harness_spec.py
+ity-cleanup\primitives\hooks
+
+==============================================================================
+2026-09-06T07:01:35Z  beforeReadFile  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness\harness_spec.py
+size: 3904 chars
+preview:
+            ).to(equal("instructions/guide.instructions.md"))
+            root = _sandbox()
+            written = Instruction("Cursor", "guide")
+            written.body = "guide-body"
+            result = written.generate({"name": "guide", "body": "guide-body"}, [root / ".cursor"])
+            expect(isinstance(result, Rule)).to(equal(True))
+            text = (root / ".cursor" / "rules" / "guide.mdc").read_text(encoding="utf-8")
+            expect(text).to(contain("guide-body"))
+... [80 lines, 3904 chars total]
+
+==============================================================================
+2026-09-06T07:01:45Z  preToolUse:Read  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\install_prompt_log.py
+
+==============================================================================
+2026-09-06T07:01:45Z  preToolUse:Grep  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: sync_dispatch|install_prompt|afterAgentResponse
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness
+
+==============================================================================
+2026-09-06T07:01:47Z  beforeReadFile  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\install_prompt_log.py
+size: 1508 chars
+preview:
+"""
+Merge prompt-log.json hook entries into .cursor/hooks.json.
+
+Usage (from repo root):
+    .venv/Scripts/python.exe primitives/hooks/prompt_log/install_prompt_log.py
+"""
+
+import json
+... [51 lines, 1508 chars total]
+
+==============================================================================
+2026-09-06T07:01:57Z  preToolUse:Grep  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: deploy_dispatch|sync_dispatch|install_dispatch
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness
+
+==============================================================================
+2026-09-06T07:02:04Z  preToolUse:Read  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T07:02:05Z  beforeReadFile  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness\harness.py
+size: 1882 chars
+preview:
+                        {
+                            "skill_slug": slug,
+                            "class_name": class_name,
+                            "manifest_command": manifest_by_class.get(
+                                class_name, default_manifest
+                            ),
+                            "file_path": str(py_file),
+                        }
+... [50 lines, 1882 chars total]
+
+==============================================================================
+2026-09-06T07:02:13Z  preToolUse:Grep  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def find_root
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git
+
+==============================================================================
+2026-09-06T07:02:15Z  preToolUse:Read  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+
+==============================================================================
+2026-09-06T07:02:16Z  beforeReadFile  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+size: 862 chars
+preview:
+            self._init_memory_state()
+
+    @classmethod
+    def find_root(cls, start: str | Path) -> Path | None:
+        current = Path(start).resolve()
+        if current.is_file():
+            current = current.parent
+        for candidate in (current, *current.parents):
+... [25 lines, 862 chars total]
+
+==============================================================================
+2026-09-06T07:02:21Z  preToolUse:Read  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.py
+
+==============================================================================
+2026-09-06T07:02:21Z  preToolUse:Read  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:02:22Z  beforeReadFile  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+size: 19101 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""BDD specs for @hook, HookHarness, and dispatch."""
+import json
+import sys
+import tempfile
+... [462 lines, 19101 chars total]
+
+==============================================================================
+2026-09-06T07:02:22Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.py
+
+==============================================================================
+2026-09-06T07:02:22Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:02:23Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.py
+
+==============================================================================
+2026-09-06T07:02:23Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:02:28Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:02:31Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:02:32Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:02:33Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:02:33Z  preToolUse:Read  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness\harness_spec.py
+
+==============================================================================
+2026-09-06T07:02:33Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:02:33Z  beforeReadFile  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness\harness_spec.py
+size: 89319 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""BDD spec for primitives/harness â€” deploy, invoke, and context-tool rules."""
+
+import json
+import sys
+import tempfile
+... [1706 lines, 89319 chars total]
+
+==============================================================================
+2026-09-06T07:02:34Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\harness\harness_spec.py
+
+==============================================================================
+2026-09-06T07:02:34Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:02:36Z  preToolUse:Shell  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities;c:\dev\abd-cdd-utility-cleanup\context_tools;c:\dev\abd-cdd-utility-cleanup\context_tools\actions"; .\.venv\Scripts\python.exe -m mamba.cli primitives/hooks/hook_spec.py 2>&1
+
+==============================================================================
+2026-09-06T07:02:37Z  preToolUse:Read  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\install_prompt_log.py
+
+==============================================================================
+2026-09-06T07:02:37Z  beforeReadFile  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\install_prompt_log.py
+size: 1508 chars
+preview:
+"""
+Merge prompt-log.json hook entries into .cursor/hooks.json.
+
+Usage (from repo root):
+    .venv/Scripts/python.exe primitives/hooks/prompt_log/install_prompt_log.py
+"""
+
+import json
+... [51 lines, 1508 chars total]
+
+==============================================================================
+2026-09-06T07:02:37Z  afterAgentResponse  conv=hook-spe  gen=spec1  model=
+------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T07:02:38Z  preToolUse:Write  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\prompt_log\install_prompt_log.py

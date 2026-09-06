@@ -4,6 +4,8 @@
 # invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
 """BDD specs for @hook, HookHarness, and dispatch."""
 import json
+import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -18,7 +20,7 @@ for _cat in ("primitives", "utilities", "primitives/hooks"):
 sys.modules.pop("tools", None)
 sys.modules.pop("hooks", None)
 
-from expects import contain, equal, expect, have_key, raise_error
+from expects import be_true, contain, equal, expect, have_key, raise_error
 from mamba import context, description, it
 from tools.tool import toolset
 
@@ -347,6 +349,39 @@ with description("a hook harness"):
                 expect(before[0]["command"]).to(contain("prompt_log.py"))
                 expect(before[1]["command"]).to(contain("dispatch.py"))
 
+        with it("should keep afterAgentResponse dispatch-only when prompt_log was present"):
+            harness = HookHarness(script="primitives/hooks/dispatch.py")
+            with tempfile.TemporaryDirectory() as tmp:
+                dest = Path(tmp) / "hooks.json"
+                dest.write_text(
+                    json.dumps(
+                        {
+                            "version": 1,
+                            "hooks": {
+                                "afterAgentResponse": [
+                                    {
+                                        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
+                                        "timeout": 10,
+                                        "failClosed": False,
+                                    },
+                                    {
+                                        "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",
+                                        "timeout": 30,
+                                        "failClosed": False,
+                                    },
+                                ],
+                            },
+                        }
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                harness.sync_dispatch(dest, {"afterAgentResponse"})
+                data = json.loads(dest.read_text(encoding="utf-8"))
+                after = data["hooks"]["afterAgentResponse"]
+                expect(len(after)).to(equal(1))
+                expect(after[0]["command"]).to(contain("dispatch.py"))
+
         with it("should remove all dispatch wiring when the target set is empty"):
             harness = HookHarness(script="primitives/hooks/dispatch.py")
             with tempfile.TemporaryDirectory() as tmp:
@@ -460,3 +495,68 @@ with description("a hook binding"):
             expect(on_payload["body"]).to(
                 contain(".context/hooks/turn/auto_turn_after_agent_response.enabled")
             )
+
+
+with description("auto turn end-to-end"):
+
+    with context("that simulates Cursor afterAgentResponse dispatch"):
+
+        with it("should stage untracked changes and commit when the toggle is on"):
+            repo_root = _REPO_ROOT
+            py = repo_root / ".venv" / "Scripts" / "python.exe"
+            dispatch = repo_root / "primitives" / "hooks" / "dispatch.py"
+            flag = repo_root / ".context" / "hooks" / "turn" / "auto_turn_after_agent_response.enabled"
+            last_run = repo_root / ".context" / "hooks" / "turn" / "auto_turn.last_run.json"
+            flag.parent.mkdir(parents=True, exist_ok=True)
+            flag.write_text("", encoding="utf-8")
+            probe = repo_root / ".context" / "hooks" / "turn" / "_hook_spec_probe.txt"
+            probe.write_text("hook-spec-probe\n", encoding="utf-8")
+            (repo_root / "tmp_wrong_cwd").mkdir(exist_ok=True)
+            before_sha = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"],
+                cwd=repo_root,
+                text=True,
+            ).strip()
+            payload = json.dumps(
+                {
+                    "hook_event_name": "afterAgentResponse",
+                    "conversation_id": "hook-spec-e2e",
+                    "generation_id": "spec1",
+                }
+            )
+            env = dict(os.environ)
+            env["PYTHONPATH"] = os.pathsep.join(
+                [
+                    str(repo_root),
+                    str(repo_root / "primitives"),
+                    str(repo_root / "utilities"),
+                ]
+            )
+            completed = subprocess.run(
+                [str(py), str(dispatch)],
+                input=payload,
+                text=True,
+                capture_output=True,
+                cwd=str(repo_root / "tmp_wrong_cwd"),
+                env=env,
+                timeout=60,
+            )
+            expect(completed.returncode).to(equal(0))
+            expect(json.loads(completed.stdout)).to(equal({"permission": "allow"}))
+            after_sha = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"],
+                cwd=repo_root,
+                text=True,
+            ).strip()
+            expect(after_sha).not_to(equal(before_sha))
+            tracked = subprocess.check_output(
+                ["git", "ls-files", "--", str(probe.relative_to(repo_root)).replace("\\", "/")],
+                cwd=repo_root,
+                text=True,
+            ).strip()
+            expect(tracked).to(equal(probe.relative_to(repo_root).as_posix()))
+            expect(last_run.is_file()).to(be_true)
+            run_data = json.loads(last_run.read_text(encoding="utf-8"))
+            expect(run_data["conversation_id"]).to(equal("hook-spec-e2e"))
+            expect(run_data["committed_sha"]).to(equal(after_sha))
+            expect(run_data.get("error")).to(equal(None))

@@ -1350,7 +1350,11 @@ with description("hook deploy"):
             Harness("Cursor", repo_root=root).write_deploy()
             data = json.loads(hooks_json.read_text(encoding="utf-8"))
             after = data["hooks"]["afterAgentResponse"]
-            expect(any("dispatch.py" in item.get("command", "") for item in after)).to(be_true)
+            expect(len(after)).to(equal(1))
+            expect(after[0]["command"]).to(contain("dispatch.py"))
+            expect(any("prompt_log.py" in item.get("command", "") for item in after)).to(
+                equal(False)
+            )
         with it("should keep dispatch after stage_invoke_commands partial deploys"):
             root = _sandbox()
             hooks_json = root / ".cursor" / "hooks.json"

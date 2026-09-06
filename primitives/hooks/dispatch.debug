@@ -111,3 +111,23 @@
 2026-09-06T06:42:50Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
 2026-09-06T07:01:09Z ENTRY raw_len=94 raw=b'{"hook_event_name":"afterAgentResponse","conversation_id":"e2e-test","generation_id":"gen1"}\r\n'
 2026-09-06T07:01:09Z EVENT 'afterAgentResponse' conversation_id='e2e-test' payload_keys=['conversation_id', 'generation_id', 'hook_event_name']
+2026-09-06T07:01:14Z HANDLER Turn.auto_turn result_keys=[] result={}
+2026-09-06T07:01:14Z ENABLED ['Turn.auto_turn']
+2026-09-06T07:01:14Z MERGED {"permission": "allow"}
+2026-09-06T07:02:37Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-06T07:02:37Z ENABLED ['(none)']
+2026-09-06T07:02:37Z MERGED {"permission": "allow"}
+2026-09-06T07:02:37Z EVENT 'afterAgentResponse' conversation_id=None payload_keys=['hook_event_name']
+2026-09-06T07:02:37Z HANDLER _DispatchFixture.on_after result_keys=['agent_message'] result={"agent_message": "ran"}
+2026-09-06T07:02:37Z ENABLED ['_DispatchFixture.on_after']
+2026-09-06T07:02:37Z MERGED {"permission": "allow", "agent_message": "ran"}
+2026-09-06T07:02:37Z EVENT 'stop' conversation_id=None payload_keys=['hook_event_name']
+2026-09-06T07:02:37Z HANDLER _StopFixture.on_stop result_keys=['followup_message'] result={"followup_message": "/turn"}
+2026-09-06T07:02:37Z ENABLED ['_StopFixture.on_stop']
+2026-09-06T07:02:37Z MERGED {"permission": "allow", "followup_message": "/turn"}
+2026-09-06T07:02:37Z EVENT 'beforeSubmitPrompt' conversation_id=None payload_keys=['hook_event_name']
+2026-09-06T07:02:37Z HANDLER _MessageFixture.on_before result_keys=['agent_message', 'user_message'] result={"user_message": "for user", "agent_message": "for agent"}
+2026-09-06T07:02:37Z ENABLED ['_MessageFixture.on_before']
+2026-09-06T07:02:37Z MERGED {"permission": "allow", "user_message": "for user", "agent_message": "for agent"}
+2026-09-06T07:02:37Z ENTRY raw_len=103 raw=b'{"hook_event_name": "afterAgentResponse", "conversation_id": "hook-spec-e2e", "generation_id": "spec1"}'
+2026-09-06T07:02:37Z EVENT 'afterAgentResponse' conversation_id='hook-spec-e2e' payload_keys=['conversation_id', 'generation_id', 'hook_event_name']

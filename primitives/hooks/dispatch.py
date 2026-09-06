@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -99,6 +100,8 @@ def dispatch(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    os.chdir(repo_root)
     load()
     raw = sys.stdin.buffer.read()
     _debug(f"ENTRY raw_len={len(raw)} raw={raw[:200]!r}")

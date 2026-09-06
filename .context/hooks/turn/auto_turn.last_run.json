@@ -1,0 +1,9 @@
+{
+  "at": "2026-09-06T07:01:14.075807+00:00",
+  "event": "afterAgentResponse",
+  "conversation_id": "e2e-test",
+  "generation_id": "gen1",
+  "committed_sha": "3f94dc3868232d84d7440a61cfa84587f0a7337c",
+  "skipped": null,
+  "error": null
+}
