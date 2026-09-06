@@ -20388,3 +20388,211 @@ text: **Work session closed** â€” `finish_work_session` completed.
 - E2E probe temps removed before finish
 
 ... [19 lines, 901 chars total]
+
+==============================================================================
+2026-09-06T16:31:54Z  beforeSubmitPrompt  conv=9258f444  gen=8086a7fc  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+main nopt merged why?
+
+==============================================================================
+2026-09-06T16:31:57Z  preToolUse:Grep  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: finish_work_session|def finish
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace
+
+==============================================================================
+2026-09-06T16:31:57Z  preToolUse:Shell  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-cdd-utility-cleanup; git log -5 --oneline session/utility-cleanup; Write-Output "---"; git log -3 --oneline main; Write-Output "---"; git status --short; Write-Output "---"; git worktree list
+
+==============================================================================
+2026-09-06T16:32:01Z  preToolUse:Read  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:32:01Z  preToolUse:Read  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:32:01Z  beforeReadFile  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 2770 chars
+preview:
+        other = GitRepo(occupier.path)
+        other.clear_stash()
+        if other.is_dirty():
+            return
+        try:
+            other.merge_from(
+                self.session_branch,
+                message=f"merge {self.session_branch} into {default}",
+... [80 lines, 2770 chars total]
+
+==============================================================================
+2026-09-06T16:32:01Z  beforeReadFile  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 5006 chars
+preview:
+        except GitConnectError:
+            pass
+        return "finished without work session"
+
+    @prompt(name="finish-work-session")
+    @agent_tool
+    def finish_work_session(
+        self,
+... [120 lines, 5006 chars total]
+
+==============================================================================
+2026-09-06T16:32:03Z  preToolUse:Grep  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def close_session|_merge|merge_from|session_branch
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:32:06Z  preToolUse:Read  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:32:06Z  preToolUse:Read  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:32:06Z  preToolUse:Read  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:32:06Z  beforeReadFile  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 3194 chars
+preview:
+        if not self.sync_only_close:
+            self._land_on_default_branch()
+            self._remove_session_worktree_if_clean()
+        if archived is not None:
+            return archived / "session.md"
+        return self.session_md
+
+    def close_session(self, outcome: str = "", handoff: str = "handoff.md") -> str:
+... [90 lines, 3194 chars total]
+
+==============================================================================
+2026-09-06T16:32:06Z  beforeReadFile  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 1369 chars
+preview:
+        root = Repo.find_root(self.workspace.path)
+        if root is None:
+            return NullGitRepo(self.workspace.path)
+        return GitRepo(root)
+
+    @property
+    def session_branch(self) -> str:
+        return f"session/{self.name}"
+... [39 lines, 1369 chars total]
+
+==============================================================================
+2026-09-06T16:32:06Z  beforeReadFile  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 3361 chars
+preview:
+            self.git.fetch()
+        except GitConnectError:
+            return
+
+    def _try_fetch_pull(self) -> None:
+        self._try_fetch()
+        try:
+            self.git.pull()
+... [100 lines, 3361 chars total]
+
+==============================================================================
+2026-09-06T16:32:09Z  preToolUse:Read  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T16:32:09Z  preToolUse:Shell  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-context-driven-delivery; git status --short; Write-Output "---"; cd C:\dev\abd-cdd-utility-cleanup; git status --short
+
+==============================================================================
+2026-09-06T16:32:10Z  beforeReadFile  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py
+size: 2999 chars
+preview:
+        return self.cursor_chat_file(chat_id)
+
+    def _running_chat_paths(self) -> list[str]:
+        """CliAgent doer/judge chats when bound, plus this Cursor chat when present."""
+        paths: list[str] = []
+        seen: set[str] = set()
+
+        def _add(path: str) -> None:
+... [80 lines, 2999 chars total]
+
+==============================================================================
+2026-09-06T16:32:14Z  preToolUse:Read  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+
+==============================================================================
+2026-09-06T16:32:14Z  beforeReadFile  conv=9258f444  gen=8086a7fc  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+size: 464 chars
+preview:
+        owner, repo = name.split("/", 1)
+        return owner, repo
+
+    def is_dirty(
+        self, path: str | Path | None = None, *, untracked: bool = True
+    ) -> bool:
+        if self._memory:
+            return self._dirty
+... [15 lines, 464 chars total]
+
+==============================================================================
+2026-09-06T16:32:18Z  afterAgentResponse  conv=9258f444  gen=8086a7fc  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+text: **Main wasnâ€™t merged because the primary clone (`abd-context-driven-delivery`) was dirty when `finish_work_session` ran.**
+
+## How merge is supposed to work
+
+`_land_on_default_branch()` in `workspace.py`:
+
+1. Updates the session branch from main
+2. Pushes `session/utility-cleanup`
+... [59 lines, 1765 chars total]
