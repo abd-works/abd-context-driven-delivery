@@ -625,6 +625,8 @@ class Harness:
                 return f"{_BASE_FOLDER['context_tool']}/{s}"
             if k == "action":
                 return _BASE_FOLDER["action"]
+            if k == "utility":
+                return _BASE_FOLDER["utility"]
             return ""
 
         def source_for(name: str, guidance: str, *, operation: str = "", invoke: str = "action") -> dict:
@@ -828,8 +830,8 @@ class Harness:
         payload = {"type": self.type}
         if deploy_path:
             payload["deploy_path"] = deploy_path
-        if self._extended:
-            payload["extended"] = True
+        if not self._extended:
+            payload["legacy"] = True
         if self._code_language != _DEFAULT_CODE_LANGUAGE:
             payload["code_language"] = self._code_language
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -916,19 +918,20 @@ class Harness:
         source: str = "",
         name_filter: str = "",
         deploy_path: str = "",
-        extended: bool = False,
+        extended: bool = True,
         prod: bool = False,
         code_language: str = _DEFAULT_CODE_LANGUAGE,
+        legacy: bool = False,
     ) -> str:
         """Walk if needed, then write sources plus Harness prompts into the deploy area.
 
-        extended=True writes ct-fidelity skills ({context_tool}-{fidelity}) that
-        bake the guidance the tool returns at each fidelity.
+        By default bakes ct-fidelity guidance into skills ({context_tool}-{fidelity}).
+        legacy=True reverts to the old stub-only fidelity skills that call the tool at runtime.
         prod=True skips any class decorated with @dev_only.
         code_language selects python (default) or typescript for inlined code templates.
         """
         self._require_implemented()
-        self._extended = bool(extended)
+        self._extended = not legacy if extended else False
         self._prod = bool(prod)
         normalized = (code_language or _DEFAULT_CODE_LANGUAGE).strip().lower()
         if normalized not in {"python", "typescript"}:
@@ -1034,19 +1037,19 @@ class Harness:
             state = json.loads(path.read_text(encoding="utf-8"))
             saved = state.get("type")
             deploy_path = state.get("deploy_path") or ""
-            extended = bool(state.get("extended"))
+            legacy = bool(state.get("legacy"))
             code_language = state.get("code_language") or _DEFAULT_CODE_LANGUAGE
         except (OSError, json.JSONDecodeError):
             saved = None
             deploy_path = ""
-            extended = False
+            legacy = False
             code_language = _DEFAULT_CODE_LANGUAGE
         if not saved:
             raise RuntimeError("no saved IDE")
         self.type = saved
         return self.write_deploy(
             deploy_path=deploy_path,
-            extended=extended,
+            legacy=legacy,
             code_language=code_language,
         )
 
