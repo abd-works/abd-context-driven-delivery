@@ -19303,3 +19303,101 @@ text: Changed `.context/hooks/turn/live-probe.txt` (new file).
 
 I'm **not** running dispatch or commit manually. If auto-turn is working in live Cursor, it should fire on `afterAgentResponse` when this message completes and commit everything dirty â€” including `live-probe.txt`.
 ... [15 lines, 698 chars total]
+
+==============================================================================
+2026-09-06T16:25:56Z  beforeSubmitPrompt  conv=9258f444  gen=cff4f443  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+you check
+
+==============================================================================
+2026-09-06T16:26:00Z  preToolUse:Shell  conv=9258f444  gen=cff4f443  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git log -1 --oneline; git rev-parse HEAD; git ls-files .context/hooks/turn/live-probe.txt; git status --short .context/hooks/turn/live-probe.txt
+
+==============================================================================
+2026-09-06T16:26:00Z  preToolUse:Read  conv=9258f444  gen=cff4f443  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.debug
+
+==============================================================================
+2026-09-06T16:26:00Z  preToolUse:Read  conv=9258f444  gen=cff4f443  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn\auto_turn.last_run.json
+
+==============================================================================
+2026-09-06T16:26:01Z  beforeReadFile  conv=9258f444  gen=cff4f443  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\.context\hooks\turn\auto_turn.last_run.json
+size: 299 chars
+preview:
+{
+  "at": "2026-09-06T07:25:51.050039+00:00",
+  "event": "afterAgentResponse",
+  "conversation_id": "9258f444-8a88-4c20-8641-d5b916c9f19a",
+  "generation_id": "2921ef90-0b60-4374-9f8f-3ca02721c362",
+  "committed_sha": "f49c27f1650e69b571876b0ab6f58816dfe29f30",
+  "skipped": null,
+  "error": null
+... [9 lines, 299 chars total]
+
+==============================================================================
+2026-09-06T16:26:01Z  beforeReadFile  conv=9258f444  gen=cff4f443  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.debug
+size: 2011 chars
+preview:
+2026-09-06T07:25:05Z ENABLED ['Turn.auto_turn']
+2026-09-06T07:25:05Z MERGED {"permission": "allow"}
+2026-09-06T07:25:08Z ENTRY raw_len=102 raw=b'{"hook_event_name":"afterAgentResponse","conversation_id":"subagent-agent-e2e","generation_id":"g1"}\r\n'
+2026-09-06T07:25:08Z EVENT 'afterAgentResponse' conversation_id='subagent-agent-e2e' payload_keys=['conversation_id', 'generation_id', 'hook_event_name']
+2026-09-06T07:25:13Z HANDLER Turn.auto_turn result_keys=[] result={}
+2026-09-06T07:25:13Z ENABLED ['Turn.auto_turn']
+2026-09-06T07:25:13Z MERGED {"permission": "allow"}
+2026-09-06T07:25:16Z ENTRY
+... [14 lines, 2011 chars total]
+
+==============================================================================
+2026-09-06T16:26:08Z  preToolUse:Read  conv=9258f444  gen=cff4f443  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.debug
+
+==============================================================================
+2026-09-06T16:26:08Z  preToolUse:Shell  conv=9258f444  gen=cff4f443  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git show --stat --oneline -1 612c9f7e; git log -3 --oneline
+
+==============================================================================
+2026-09-06T16:26:08Z  beforeReadFile  conv=9258f444  gen=cff4f443  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.debug
+size: 734 chars
+preview:
+2026-09-06T07:25:51Z ENABLED ['Turn.auto_turn']
+2026-09-06T07:25:51Z MERGED {"permission": "allow"}
+2026-09-06T16:25:37Z ENTRY raw_len=1458 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"55061560-3179-4b93-9394-6ee704090f97","model":"composer-2.5-fast","model_id":"composer-2.5","model_params":[{"id":"fast","'
+2026-09-06T16:25:37Z EVENT 'afterAgentResponse' conversation_id='9258f444-8a88-4c20-8641-d5b916c9f19a' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tok
+... [4 lines, 734 chars total]
+
+==============================================================================
+2026-09-06T16:26:13Z  afterAgentResponse  conv=9258f444  gen=cff4f443  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+text: **It worked.** Live Cursor auto-turn ran and committed your change.
+
+| Check | Result |
+|-------|--------|
+| HEAD moved | `f49c27f1` â†’ **`612c9f7e`** |
+| `live-probe.txt` | **Committed** (in that commit) |
+| Commit message | `turn: auto turn after agent response` |
+| Live `conversation_id` | `9258f444-8a88-4c20-8641-d5b916c9f19a` (your real chat) |
+... [15 lines, 653 chars total]
