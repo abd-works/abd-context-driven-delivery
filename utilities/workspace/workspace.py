@@ -1134,6 +1134,18 @@ class WorkSession:
     def active(self) -> WorkSession:
         return self
 
+    @staticmethod
+    def _normalize_session_path(stored: str, checkout: str | Path) -> str:
+        """Resolve ``path: .`` (or other relative paths) against the active checkout."""
+        raw = (stored or "").strip()
+        base = Path(checkout or ".")
+        if not raw:
+            return str(base.resolve())
+        candidate = Path(raw)
+        if not candidate.is_absolute():
+            candidate = base / candidate
+        return str(candidate.resolve())
+
     def _take_from(self, other: WorkSession) -> None:
         self.path = other.path
         self.name = other.name
@@ -1194,7 +1206,6 @@ class WorkSession:
         parent = Workspace(path)
         session = cls(parent, name, path=path, workspace_root=path)
         session._attach_existing_session_worktree()
-        session._restore_closed_session_if_needed()
         md = session.session_md
         if not md.is_file():
             return session
@@ -1371,7 +1382,7 @@ class WorkSession:
         return closed
 
     def _closed_archive_search_roots(self) -> list[Path]:
-        """Repo checkouts that may hold ``.sessions/closed/{name}/`` from a prior close."""
+        """Checkouts that may hold ``.sessions/closed/{name}/`` from a prior close."""
         roots: list[Path] = []
         seen: set[str] = set()
 
@@ -1387,8 +1398,12 @@ class WorkSession:
             if closed.is_dir():
                 roots.append(closed)
 
-        add(self._repository_root())
+        try:
+            add(self._archive_root())
+        except (AttributeError, TypeError, ValueError):
+            pass
         add(Path(self.path or self.workspace.path))
+        add(self._repository_root())
         git = self.git
         if git is not None and not getattr(git, "_memory", False):
             try:
@@ -1404,6 +1419,11 @@ class WorkSession:
             return nested
         if (closed_dir / "session.md").is_file():
             return closed_dir
+        try:
+            if closed_dir.is_dir() and any(closed_dir.iterdir()):
+                return closed_dir
+        except OSError:
+            return None
         return None
 
     def _move_tree_contents(self, source: Path, dest: Path) -> None:
@@ -1448,35 +1468,45 @@ class WorkSession:
                 return closed_dir, content
         return None
 
-    def _restore_closed_session_if_needed(self) -> None:
+    def _restore_closed_session_if_needed(self) -> bool:
         """Move ``.sessions/closed/{name}/`` back to ``.context/sessions/{name}/`` on reopen."""
         found = self._find_closed_session_archive()
         if found is None:
-            return
+            return False
         closed_dir, content = found
         dest = self.folder
         if dest.exists():
             shutil.rmtree(dest, ignore_errors=True)
+        dest.mkdir(parents=True, exist_ok=True)
         self._move_tree_contents(content, dest)
         if closed_dir != content:
             for item in closed_dir.iterdir():
-                if item.name == self.name:
+                if item.resolve() == content.resolve():
                     continue
                 target = dest / item.name
-                if target.exists():
-                    continue
-                shutil.move(str(item), str(target))
-        if content != closed_dir:
-            try:
-                if content.is_dir() and not any(content.iterdir()):
-                    content.rmdir()
-            except OSError:
-                pass
-        try:
-            if closed_dir.is_dir() and not any(closed_dir.iterdir()):
-                closed_dir.rmdir()
-        except OSError:
-            pass
+                if item.is_dir():
+                    if target.exists():
+                        self._move_tree_contents(item, target)
+                        shutil.rmtree(item, ignore_errors=True)
+                    else:
+                        shutil.move(str(item), str(target))
+                elif not target.exists():
+                    shutil.move(str(item), str(target))
+        shutil.rmtree(closed_dir, ignore_errors=True)
+        return True
+
+    def _reactivate_on_reopen(self) -> None:
+        """Drop ``## End`` on reopen — a resumed session is active again."""
+        text = ""
+        if self.session_md.is_file():
+            text = self.session_md.read_text(encoding="utf-8")
+        if self._END_HEADING not in text and not self.ended:
+            return
+        self.ended = ""
+        self.outcome = ""
+        self.handoff = ""
+        if self.session_md.is_file():
+            self.session_md.write_text(self._render(), encoding="utf-8")
 
     def _archive_root(self) -> Path:
         """Checkout that owns closed-session archives (worktree when isolated)."""
@@ -1569,8 +1599,12 @@ class WorkSession:
         self.folder.mkdir(parents=True, exist_ok=True)
         creating = not self.session_md.is_file()
         if not creating:
-            loaded = type(self).load(self.path, self.name)
+            checkout = self.path
+            loaded = type(self).load(checkout, self.name)
             self._take_from(loaded)
+            self._ensure_session_worktree()
+            self.path = str(Path(self.git.root).resolve())
+            self._reactivate_on_reopen()
         if creating:
             if goal:
                 self.goal = goal
@@ -2132,7 +2166,7 @@ class WorkSession:
         return cls(
             parent,
             name,
-            path=fields.get("path") or path,
+            path=cls._normalize_session_path(fields.get("path") or path, path),
             goal=fields.get("goal", ""),
             fidelities=fields.get("fidelities", ""),
             contexts=fields.get("contexts", ""),
