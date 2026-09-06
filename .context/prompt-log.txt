@@ -18089,3 +18089,73 @@ command: Set-Location "c:\dev\abd-cdd-utility-cleanup"; New-Item -ItemType Direc
 ==============================================================================
 2026-09-06T07:03:01Z  afterAgentResponse  conv=subagent  gen=g1  model=
 ------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T07:03:09Z  preToolUse:Shell  conv=e3d6386d  gen=297e2b6a  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: Set-Location "c:\dev\abd-cdd-utility-cleanup"; git rev-parse HEAD; git ls-files ".context/hooks/turn/subagent-probe.txt"; if (Test-Path ".context/hooks/turn/auto_turn.last_run.json") { Get-Content ".context/hooks/turn/auto_turn.last_run.json" -Raw } else { "MISSING auto_turn.last_run.json" }
+
+==============================================================================
+2026-09-06T07:03:12Z  preToolUse:Shell  conv=e3d6386d  gen=297e2b6a  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: Set-Location "c:\dev\abd-cdd-utility-cleanup"; Get-ChildItem -Recurse -Filter "dispatch.debug*" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName; if (Test-Path ".context/hooks/turn/dispatch.debug") { Get-Content ".context/hooks/turn/dispatch.debug" -Tail 30 } elseif (Test-Path "primitives/hooks/dispatch.debug") { Get-Content "primitives/hooks/dispatch.debug" -Tail 30 } else { Get-ChildItem -Path .context -Recurse -Filter "*dispatch*" | Select-Object FullName }
+
+==============================================================================
+2026-09-06T07:03:14Z  preToolUse:Shell  conv=e3d6386d  gen=297e2b6a  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: Set-Location "c:\dev\abd-cdd-utility-cleanup"; $hooks = Get-Content ".cursor/hooks.json" -Raw | ConvertFrom-Json; $aar = $hooks.hooks.afterAgentResponse; "afterAgentResponse count: $($aar.Count)"; $aar | ForEach-Object { $_.command }
+
+==============================================================================
+2026-09-06T07:03:25Z  preToolUse:Grep  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: probe
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:03:25Z  preToolUse:Read  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+
+==============================================================================
+2026-09-06T07:03:27Z  beforeReadFile  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\hook_spec.py
+size: 761 chars
+preview:
+                cwd=repo_root,
+                text=True,
+            ).strip()
+            expect(after_sha).not_to(equal(before_sha))
+            tracked = subprocess.check_output(
+                ["git", "ls-files", "--", str(probe.relative_to(repo_root)).replace("\\", "/")],
+                cwd=repo_root,
+                text=True,
+... [15 lines, 761 chars total]
+
+==============================================================================
+2026-09-06T07:03:30Z  preToolUse:Shell  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git check-ignore -v .context/hooks/turn/hook-spec-probe.txt 2>&1; git status --short .context/hooks/turn/hook-spec-probe.txt 2>&1
+
+==============================================================================
+2026-09-06T07:03:34Z  preToolUse:Shell  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities"; .\.venv\Scripts\python.exe -m mamba.cli primitives/hooks/hook_spec.py --grep "should stage untracked" 2>&1
+
+==============================================================================
+2026-09-06T07:03:50Z  preToolUse:Shell  conv=9258f444  gen=f9cb3b4d  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities;c:\dev\abd-cdd-utility-cleanup\context_tools;c:\dev\abd-cdd-utility-cleanup\context_tools\actions"; .\.venv\Scripts\python.exe -m mamba.cli primitives/hooks/hook_spec.py 2>&1
+
+==============================================================================
+2026-09-06T07:03:51Z  afterAgentResponse  conv=hook-spe  gen=spec1  model=
+------------------------------------------------------------------------------
