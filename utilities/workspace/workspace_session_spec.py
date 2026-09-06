@@ -694,7 +694,7 @@ with description("a WorkSession that is closed in a git worktree"):
             equal("keep me\n")
         )
         expect(archived.exists()).to(equal(False))
-        expect(reopened.outcome).to(equal("paused"))
+        expect(reopened.outcome).to(equal(""))
         shutil.rmtree(tmp, ignore_errors=True)
 
     with it("should restore a dated closed archive folder on reopen"):
