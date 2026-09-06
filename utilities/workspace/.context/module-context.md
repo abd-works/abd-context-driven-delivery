@@ -9,11 +9,11 @@ Two folders matter — never confuse them:
 | Folder | Holds |
 |--------|--------|
 | `{working_path}/.context/` | Durable artifacts local to where you work — sketches, generated markdown, grill-answers, `context-index.md` |
-| `{repo_root}/.context/sessions/{name}/` | Session temps at **repository root** — `session.md`, `model`, `logs/` (not under the worktree) |
+| `{working_path}/.context/sessions/{name}/` | Session temps in the **active checkout** (primary clone or worktree) — `session.md`, `model`, `logs/` |
 
 Closed sessions archive to `{repo_root}/.sessions/closed/{name}/`.
 
-Path helpers: `SessionPaths.docs_dir(working_path)`, `SessionPaths.session_dir(repo_root, name)`, `SessionPaths.repository_root(path)`.
+Path helpers: `SessionPaths.docs_dir(working_path)`, `SessionPaths.session_dir(working_path, name)`, `SessionPaths.repository_root(path)`.
 
 ## Public surface
 
@@ -89,7 +89,7 @@ Scoped unit of work inside a session. States: Backlog → In Progress → Done.
 4. **`session.md`** — **always rewritten** with End date, outcome, handoff.
 5. **Git** — commit `session.md` + scope paths if dirty; push session branch.
 6. **Chats** — transcript paths saved to git notes before bindings cleared.
-7. **Archive** — move `{repo_root}/.context/sessions/{name}/` → `{repo_root}/.sessions/closed/{name}/` (creates `.sessions/closed/` when missing). Durable `{working_path}/.context/` artifacts are **not** moved.
+7. **Archive** — move `{working_path}/.context/sessions/{name}/` → `{repo_root}/.sessions/closed/{name}/` (creates `.sessions/closed/` when missing). Durable `{working_path}/.context/` artifacts are **not** moved.
 8. **Worktree** — merge session branch onto main **without** checking out main in the session tree; remove worktree **only when clean** (no dirty files, no stash). `events.log` does not count as dirty.
 
 ## On disk after open vs close
@@ -97,7 +97,7 @@ Scoped unit of work inside a session. States: Backlog → In Progress → Done.
 | Artifact | After open | After close |
 |----------|------------|-------------|
 | `session.md` | Start block (new) or unchanged (resume) | Start + **End** block — archived to `{repo}/.sessions/closed/{name}/` |
-| `model` | At `{repo}/.context/sessions/{name}/model` | Moved with session folder to `.sessions/closed/{name}/` |
+| `model` | At `{working_path}/.context/sessions/{name}/model` | Moved with session folder to `.sessions/closed/{name}/` |
 | `logs/events.log` | Grows during session | **Deleted** (before archive) |
 | `cli-agent.json` | Present if CLI was bound | **Deleted** (before archive) |
 | `handoff-*.md` | Deleted if consumed on open | — |

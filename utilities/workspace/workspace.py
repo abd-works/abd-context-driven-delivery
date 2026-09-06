@@ -43,8 +43,9 @@ class SessionPaths:
 
     Durable artifacts (sketches, generated markdown, grill-answers) live in
     ``{working_path}/.context/``. Session temps (session.md, handoff, logs) live
-    at the **repository root** under ``{repo_root}/.context/sessions/{name}/``.
-    Those two are never the same folder and sessions do not follow the working path.
+    under the **working path** at ``{working_path}/.context/sessions/{name}/``
+    (the active checkout or sibling worktree — not the primary clone root).
+    Those two are never the same folder.
     """
 
     @staticmethod
@@ -56,9 +57,9 @@ class SessionPaths:
         return Path(path)
 
     @staticmethod
-    def sessions_root(repo_root: str | Path) -> Path:
-        """All session temps for a repo: ``{repo_root}/.context/sessions/``."""
-        return SessionPaths.repository_root(repo_root) / ".context" / "sessions"
+    def sessions_root(working_path: str | Path) -> Path:
+        """All session temps for a working path: ``{working_path}/.context/sessions/``."""
+        return Path(working_path) / ".context" / "sessions"
 
     @staticmethod
     def is_session_folder(destination: str | Path) -> bool:
@@ -86,14 +87,14 @@ class SessionPaths:
         return dest / ".context"
 
     @staticmethod
-    def session_dir(repo_root: str | Path, name: str = "") -> Path:
-        """Session temp dir: ``{repo_root}/.context/sessions/{name}/``.
+    def session_dir(working_path: str | Path, name: str = "") -> Path:
+        """Session temp dir: ``{working_path}/.context/sessions/{name}/``.
 
-        *repo_root* is the git repository root (not the working path / worktree).
-        If *repo_root* is already a session folder, return it. Otherwise *name*
+        *working_path* is the active checkout (primary clone or worktree).
+        If *working_path* is already a session folder, return it. Otherwise *name*
         is required.
         """
-        dest = Path(repo_root)
+        dest = Path(working_path)
         if SessionPaths.is_session_folder(dest):
             return dest
         slug = (name or "").strip()
@@ -109,9 +110,9 @@ session_dir = SessionPaths.session_dir
 
 
 class SessionModel:
-    """Persist the preferred Cursor/IDE model under ``{repo_root}/.context/sessions/{name}/model``.
+    """Persist the preferred Cursor/IDE model under ``{working_path}/.context/sessions/{name}/model``.
 
-    When no work session is active, use the root-repo ``sessions/default`` folder.
+    When no work session is active, use ``sessions/default`` under the workspace path.
     """
 
     DEFAULT_SESSION = "default"
@@ -133,8 +134,7 @@ class SessionModel:
 
     @classmethod
     def file_path(cls, workspace: str | Path, session: str = "") -> Path:
-        root = SessionPaths.repository_root(workspace)
-        return SessionPaths.session_dir(root, cls.session_slug(session)) / cls.FILENAME
+        return SessionPaths.session_dir(workspace, cls.session_slug(session)) / cls.FILENAME
 
     @classmethod
     def read(cls, workspace: str | Path, session: str = "") -> str:
@@ -834,13 +834,13 @@ class WorkSession:
 
     @property
     def folder(self) -> Path:
-        """Session temps at repo root: session.md, handoff, logs."""
+        """Session temps in the working path: session.md, handoff, logs."""
         if not self.name:
             raise ValueError(
                 "session name is not set - confirm working path and session slug with the "
                 "user, then call open before grill/sketch/handoff"
             )
-        return SessionPaths.session_dir(self._repository_root(), self.name)
+        return SessionPaths.session_dir(self.path, self.name)
 
     @property
     def log(self) -> Path:

@@ -8,6 +8,8 @@ start_work_session — agent starts or resumes a named work session.
 
 Non-default session branches isolate in a sibling worktree named
 ``{abbrev}-{ticket}`` (or a short slug) next to the primary clone.
+Session temps (``session.md``, ``model``, ``logs/``) live under that worktree
+at ``{worktree}/.context/sessions/{name}/``.
 Stay in the primary clone when the session branch is the default branch.
 Pass ``isolate: false`` to keep session folders / turns / logs on the
 current checkout (no sibling worktree) — e.g. track work on main.

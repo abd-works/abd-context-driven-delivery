@@ -161,8 +161,8 @@ with description("a WorkSession with a name and path"):
     with it("should expose docs_dir as path/.context"):
         expect(self.session.docs_dir).to(equal(self.tmp / ".context"))
 
-    with it("should expose folder under repo-root .context/sessions/{name}"):
-        # Act / Assert — session temps live at git repo root, not under working path
+    with it("should expose folder under working-path .context/sessions/{name}"):
+        # Act / Assert — session temps live in the active checkout
         expect(self.session.folder).to(
             equal(self.tmp / ".context" / "sessions" / "my-sprint")
         )
@@ -804,9 +804,10 @@ with description("a WorkSession tool"):
             logs.mkdir()
             (logs / "events.log").write_text("noise\n", encoding="utf-8")
             session.close_session(outcome="done")
-            expect((session.folder / "session.md").is_file()).to(be_true)
+            archived = self.tmp / ".sessions" / "closed" / "close-scratch"
+            expect((archived / "session.md").is_file()).to(be_true)
             expect(logs.exists()).to(be_false)
-            expect(leftover.is_file()).to(be_true)
+            expect((archived / "wait_judge3.py").is_file()).to(be_true)
 
         with it("should call cleanup on cli_agent when that property is set"):
             from workspace.git_repo import NullGitRepo
@@ -821,8 +822,9 @@ with description("a WorkSession tool"):
             (session.folder / "wait_judge3.py").write_text("pass\n", encoding="utf-8")
             (session.folder / "cli-agent-job-queue.json").write_text("[]\n", encoding="utf-8")
             session.close_session(outcome="done")
-            expect((session.folder / "wait_judge3.py").exists()).to(be_false)
-            expect((session.folder / "cli-agent-job-queue.json").exists()).to(be_false)
+            archived = self.tmp / ".sessions" / "closed" / "close-cli"
+            expect((archived / "wait_judge3.py").exists()).to(be_false)
+            expect((archived / "cli-agent-job-queue.json").exists()).to(be_false)
 
     with context("read_context_index"):
         with it("should return a missing message when no context-index.md exists"):
@@ -889,14 +891,14 @@ with description("session_dir"):
         sprint = Path("/work/.context/sessions/my-sprint")
         expect(SessionPaths.session_dir(sprint)).to(equal(sprint))
 
-    with it("should build sessions/{name} under the repository root"):
+    with it("should build sessions/{name} under the working path"):
         from workspace.workspace import SessionPaths
         working = Path("/work/sandbox")
         expect(SessionPaths.session_dir(working, "my-sprint")).to(
             equal(working / ".context" / "sessions" / "my-sprint")
         )
 
-    with it("should keep sessions at repo root when working path is a worktree"):
+    with it("should keep sessions in the worktree when working path is a worktree"):
         import shutil
         import tempfile
         from workspace.git_repo import GitRepo, _git
@@ -913,7 +915,7 @@ with description("session_dir"):
         GitRepo(tmp).add_worktree(worktree, "session/decouple-test")
         session = WorkSession(Workspace(str(tmp)), "decouple-test", path=str(worktree))
         expect(session.docs_dir).to(equal(worktree / ".context"))
-        expect(session.folder).to(equal(tmp / ".context" / "sessions" / "decouple-test"))
+        expect(session.folder).to(equal(worktree / ".context" / "sessions" / "decouple-test"))
         shutil.rmtree(tmp, ignore_errors=True)
         shutil.rmtree(worktree, ignore_errors=True)
 
