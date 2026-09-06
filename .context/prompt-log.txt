@@ -18043,3 +18043,49 @@ Steps (execute all, report PASS/FAIL with evidence):
 3. Run `python primitives/hooks/install_dispatch.py` 
 4. Verify `.cursor/hooks.json` has exactly ONE hook on afterAgentResponse and it contains dispatch.py (not prompt_log)
 ... [19 lines, 1187 chars total]
+
+==============================================================================
+2026-09-06T07:02:55Z  preToolUse:Shell  conv=e3d6386d  gen=297e2b6a  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: cd "c:\dev\abd-cdd-utility-cleanup" && $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities"; New-Item -ItemType File -Force -Path ".context/hooks/turn/auto_turn_after_agent_response.enabled" | Out-Null; python primitives/hooks/install_dispatch.py
+
+==============================================================================
+2026-09-06T07:02:55Z  preToolUse:Shell  conv=e3d6386d  gen=297e2b6a  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: cd "c:\dev\abd-cdd-utility-cleanup" && git rev-parse HEAD
+
+==============================================================================
+2026-09-06T07:02:57Z  preToolUse:Shell  conv=e3d6386d  gen=297e2b6a  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: Set-Location "c:\dev\abd-cdd-utility-cleanup"; $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities"; New-Item -ItemType File -Force -Path ".context/hooks/turn/auto_turn_after_agent_response.enabled" | Out-Null; python primitives/hooks/install_dispatch.py
+
+==============================================================================
+2026-09-06T07:02:57Z  preToolUse:Shell  conv=e3d6386d  gen=297e2b6a  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: Set-Location "c:\dev\abd-cdd-utility-cleanup"; git rev-parse HEAD
+
+==============================================================================
+2026-09-06T07:03:00Z  preToolUse:Shell  conv=e3d6386d  gen=297e2b6a  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: Set-Location "c:\dev\abd-cdd-utility-cleanup"; Get-Content ".cursor/hooks.json" -Raw
+
+==============================================================================
+2026-09-06T07:03:00Z  preToolUse:Shell  conv=e3d6386d  gen=297e2b6a  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: Set-Location "c:\dev\abd-cdd-utility-cleanup"; Set-Content -Path ".context/hooks/turn/subagent-probe.txt" -Value "subagent e2e probe" -NoNewline
+
+==============================================================================
+2026-09-06T07:03:00Z  preToolUse:Shell  conv=e3d6386d  gen=297e2b6a  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+command: Set-Location "c:\dev\abd-cdd-utility-cleanup"; New-Item -ItemType Directory -Force -Path "tmp_wrong_cwd" | Out-Null; $json = '{"hook_event_name":"afterAgentResponse","conversation_id":"subagent-e2e","generation_id":"g1"}'; $env:PYTHONPATH = "c:\dev\abd-cdd-utility-cleanup;c:\dev\abd-cdd-utility-cleanup\primitives;c:\dev\abd-cdd-utility-cleanup\utilities"; $json | & "c:\dev\abd-cdd-utility-cleanup\.venv\Scripts\python.exe" "c:\dev\abd-cdd-utility-cleanup\primitives\hooks\dispatch.py"
+
+==============================================================================
+2026-09-06T07:03:01Z  afterAgentResponse  conv=subagent  gen=g1  model=
+------------------------------------------------------------------------------
