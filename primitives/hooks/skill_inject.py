@@ -1,26 +1,14 @@
-"""Skill-inject hook — re-export from ``dispatch``."""
+"""Skill-inject hook — delegates to ``dispatch.py``."""
 
-from hooks.dispatch import (
-    already_injected,
-    mark_injected,
-    parse_payload,
-    scan_tag,
-    skill_digest,
-    skill_inject,
-    skill_inject_compact,
-)
+import subprocess
+import sys
+from pathlib import Path
 
-__all__ = [
-    "already_injected",
-    "mark_injected",
-    "parse_payload",
-    "scan_tag",
-    "skill_digest",
-    "skill_inject",
-    "skill_inject_compact",
-]
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 
 if __name__ == "__main__":
-    from hooks.dispatch import main
-
-    main()
+    subprocess.run(
+        [sys.executable, str(_REPO_ROOT / "primitives/hooks/dispatch.py")],
+        stdin=sys.stdin,
+        check=False,
+    )

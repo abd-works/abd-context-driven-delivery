@@ -19800,3 +19800,126 @@ command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; .\.venv\Scr
 ==============================================================================
 2026-09-06T16:28:38Z  afterAgentResponse  conv=no-pytho  gen=  model=
 ------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T16:28:50Z  preToolUse:Read  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\install_dispatch.py
+
+==============================================================================
+2026-09-06T16:28:50Z  preToolUse:Read  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\skill_inject.py
+
+==============================================================================
+2026-09-06T16:28:50Z  preToolUse:Shell  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; .\.venv\Scripts\python.exe primitives/hooks/install_dispatch.py; echo '{"hook_event_name":"preCompact","conversation_id":"x"}' | .\.venv\Scripts\python.exe primitives/hooks/dispatch.py
+
+==============================================================================
+2026-09-06T16:28:50Z  preToolUse:Read  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\deploy.py
+
+==============================================================================
+2026-09-06T16:28:50Z  preToolUse:Write  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\bootstrap.py
+
+==============================================================================
+2026-09-06T16:28:51Z  beforeReadFile  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\install_dispatch.py
+size: 165 chars
+preview:
+"""Install dispatch hook entries â€” re-export from ``dispatch``."""
+
+from hooks.dispatch import install_dispatch
+
+if __name__ == "__main__":
+    install_dispatch()
+
+==============================================================================
+2026-09-06T16:28:51Z  beforeReadFile  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\skill_inject.py
+size: 466 chars
+preview:
+"""Skill-inject hook â€” re-export from ``dispatch``."""
+
+from hooks.dispatch import (
+    already_injected,
+    mark_injected,
+    parse_payload,
+    scan_tag,
+    skill_digest,
+... [26 lines, 466 chars total]
+
+==============================================================================
+2026-09-06T16:28:51Z  beforeReadFile  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\deploy.py
+size: 281 chars
+preview:
+"""Hook deploy metadata â€” re-export from ``dispatch``."""
+
+from hooks.dispatch import (
+    DISPATCH_SCRIPT,
+    HookBinding,
+    deploy_dispatch,
+    hook_skill_sources,
+)
+... [15 lines, 281 chars total]
+
+==============================================================================
+2026-09-06T16:28:51Z  preToolUse:Write  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\install_dispatch.py
+
+==============================================================================
+2026-09-06T16:28:51Z  preToolUse:Write  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\deploy.py
+
+==============================================================================
+2026-09-06T16:28:51Z  preToolUse:Write  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\skill_inject.py
+
+==============================================================================
+2026-09-06T16:28:57Z  preToolUse:Shell  conv=9258f444  gen=8184fb29  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; .\.venv\Scripts\python.exe primitives/hooks/install_dispatch.py 2>&1
+
+==============================================================================
+2026-09-06T16:29:01Z  afterAgentResponse  conv=9258f444  gen=8184fb29  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+text: Merged everything into **`primitives/hooks/dispatch.py`** â€” one file that handles:
+
+| Section | What it does |
+|---------|----------------|
+| Path bootstrap | Works without `PYTHONPATH` (Cursor) |
+| `load()` | Imports `@hook` toolsets |
+| `HookBinding` / `deploy_dispatch` / `install_dispatch()` | Harness deploy + `hooks.json` wiring |
+| `dispatch()` | Routes `@hook` handlers (auto-turn, etc.) |
+... [20 lines, 1064 chars total]
+
+==============================================================================
+2026-09-06T16:29:03Z  beforeSubmitPrompt  conv=9258f444  gen=7fe8a49b  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+USER PROMPT:
+no shim pl;eaewe

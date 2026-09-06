@@ -1,6 +1,13 @@
-"""Install dispatch hook entries — re-export from ``dispatch``."""
+"""Install dispatch hook entries — delegates to ``dispatch.py --install``."""
 
-from hooks.dispatch import install_dispatch
+import subprocess
+import sys
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 
 if __name__ == "__main__":
-    install_dispatch()
+    subprocess.run(
+        [sys.executable, str(_REPO_ROOT / "primitives/hooks/dispatch.py"), "--install"],
+        check=True,
+    )
