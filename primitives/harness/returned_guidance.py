@@ -22,7 +22,7 @@ _DEPLOY_CODE_LANGUAGES = frozenset({"python", "typescript"})
 _DEFAULT_CODE_LANGUAGE = "python"
 
 _SKETCHING_PREAMBLE = (
-    "When sketching, use the following sketch template. "
+    "When sketching, use the sketch template at `{sketch_path}`. "
     "Do not use the produce templates below — stop reading this skill when sketching."
 )
 
@@ -163,12 +163,19 @@ def _find_sketch_template(module_dir: Path) -> str | None:
     return None
 
 
-def _inline_sketch_section(module_dir: Path) -> str | None:
-    """Sketching block for fidelity skills — preamble plus domain sketch template."""
-    content = _find_sketch_template(module_dir)
-    if not content:
+def _sketch_reference(module_dir: Path) -> str | None:
+    """Sketching reference for fidelity skills — preamble with file path, no inline content."""
+    templates_dir = module_dir / "templates"
+    if not templates_dir.is_dir():
         return None
-    return f"{_SKETCHING_PREAMBLE}\n\n{content}"
+    for path in sorted(templates_dir.glob("*-sketch.*")):
+        if path.is_file():
+            try:
+                rel = path.relative_to(path.resolve().parents[2])
+            except ValueError:
+                rel = path
+            return _SKETCHING_PREAMBLE.format(sketch_path=rel.as_posix())
+    return None
 
 
 def _strip_invocation_prose(text: str) -> str:
@@ -269,7 +276,7 @@ def compound_guidance(
 
     result = contexts
 
-    sketch_block = _inline_sketch_section(module_dir)
+    sketch_block = _sketch_reference(module_dir)
     if sketch_block:
         result += "\n\n## Sketching\n\n" + sketch_block
 
