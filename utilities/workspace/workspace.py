@@ -1439,14 +1439,14 @@ class WorkSession:
 
     def _restore_closed_session_if_needed(self) -> None:
         """Move ``.sessions/closed/{name}/`` back to ``.context/sessions/{name}/`` on reopen."""
-        if self.session_md.is_file():
-            return
         found = self._find_closed_session_archive()
         if found is None:
             return
         closed_dir, content = found
         dest = self.folder
         dest.parent.mkdir(parents=True, exist_ok=True)
+        if dest.exists():
+            shutil.rmtree(dest, ignore_errors=True)
         if content == closed_dir:
             shutil.move(str(closed_dir), str(dest))
             return

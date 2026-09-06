@@ -698,6 +698,26 @@ with description("a WorkSession that is closed in a git worktree"):
         expect(dated.exists()).to(equal(False))
         shutil.rmtree(tmp, ignore_errors=True)
 
+    with it("should replace a stale active session folder when a closed archive exists"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_reopen_stale_"))
+        git = NullGitRepo(tmp)
+        session = Workspace(str(tmp)).open_work_session("stale-me", git=git)
+        session.ensure_started(goal="original")
+        (session.folder / "artifact.txt").write_text("from archive\n", encoding="utf-8")
+        session.close_session(outcome="done", handoff="")
+        stale = tmp / ".context" / "sessions" / "stale-me"
+        stale.mkdir(parents=True, exist_ok=True)
+        (stale / "session.md").write_text("# stale\n", encoding="utf-8")
+        reopened = Workspace(str(tmp)).open_work_session("stale-me", git=git)
+        expect((reopened.folder / "artifact.txt").read_text(encoding="utf-8")).to(
+            equal("from archive\n")
+        )
+        expect((tmp / ".sessions" / "closed" / "stale-me").exists()).to(equal(False))
+        shutil.rmtree(tmp, ignore_errors=True)
+
     with it("should close a forgotten turn before session close"):
         from workspace.git_repo import NullGitRepo
         from workspace.workspace import Turn, Workspace
