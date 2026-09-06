@@ -19250,3 +19250,17 @@ command: $env:PYTHONPATH = $null; cd c:\dev\abd-cdd-utility-cleanup; $before = g
 ==============================================================================
 2026-09-06T07:25:08Z  afterAgentResponse  conv=subagent  gen=g1  model=
 ------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-06T07:25:16Z  afterAgentResponse  conv=9258f444  gen=2921ef90  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+text: **Done. Subagents ran the full flow. It works.**
+
+## The actual bug
+Cursor runs hooks **without `PYTHONPATH`**. `dispatch.py` and `install_dispatch.py` imported `hooks.*` at the top level and **crashed immediately** in real Cursor sessions. Our earlier tests always set `PYTHONPATH`, so they passed while live Cursor silently failed.
+
+## Fixes shipped
+1. **`_ensure_paths.py`** â€” bootstraps `sys.path` before any `hooks` imports
+2. **`dispatch.py` + `install_dispatch.py`** â€” use it so hooks run like Cursor runs them
+... [22 lines, 1348 chars total]
