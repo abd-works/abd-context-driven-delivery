@@ -20305,3 +20305,86 @@ command: @'
 toolset: workspace.workspace:WorkSession
 tool: finish_work_session
 '@ | .\tools.ps1 run -
+
+==============================================================================
+2026-09-06T16:31:15Z  preToolUse:Shell  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git worktree list; git branch --show-current 2>$null; git log -1 --oneline; git status --short
+
+==============================================================================
+2026-09-06T16:31:15Z  preToolUse:Grep  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-context-driven-delivery\.sessions\closed\utility-cleanup
+
+==============================================================================
+2026-09-06T16:31:19Z  preToolUse:Grep  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-context-driven-delivery\.sessions\closed\utility-cleanup
+
+==============================================================================
+2026-09-06T16:31:19Z  preToolUse:Shell  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: git log -5 --oneline session/utility-cleanup; git log -1 --oneline main; git status; git stash list
+
+==============================================================================
+2026-09-06T16:31:24Z  preToolUse:Shell  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd C:\dev\abd-context-driven-delivery; git log -3 --oneline; git branch -v | Select-String utility
+
+==============================================================================
+2026-09-06T16:31:24Z  preToolUse:Read  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\.sessions\closed\utility-cleanup\session.md
+
+==============================================================================
+2026-09-06T16:31:24Z  beforeReadFile  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\.sessions\closed\utility-cleanup\session.md
+size: 264 chars
+preview:
+# Session: utility-cleanup
+
+## Start
+
+- **date:** 2026-09-06
+- **path:** C:\dev\abd-cdd-utility-cleanup
+- **goal:** (unset)
+- **fidelities:** (unset)
+... [15 lines, 264 chars total]
+
+==============================================================================
+2026-09-06T16:31:28Z  preToolUse:Grep  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-cdd-utility-cleanup
+
+==============================================================================
+2026-09-06T16:31:28Z  preToolUse:Grep  conv=9258f444  gen=68d2b8ce  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-context-driven-delivery
+
+==============================================================================
+2026-09-06T16:31:32Z  afterAgentResponse  conv=9258f444  gen=68d2b8ce  model=composer-2.5-fast
+------------------------------------------------------------------------------
+
+text: **Work session closed** â€” `finish_work_session` completed.
+
+## Done
+- Session **utility-cleanup** closed (`eea80345 close`)
+- Branch pushed: `origin/session/utility-cleanup` (up to date)
+- Archive: `C:\dev\abd-context-driven-delivery\.sessions\closed\utility-cleanup\session.md`
+- E2E probe temps removed before finish
+
+... [19 lines, 901 chars total]

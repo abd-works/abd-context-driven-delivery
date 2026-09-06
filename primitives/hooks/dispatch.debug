@@ -334,3 +334,5 @@
 2026-09-06T16:29:54Z HANDLER Turn.auto_turn result_keys=[] result={}
 2026-09-06T16:29:54Z ENABLED ['Turn.auto_turn']
 2026-09-06T16:29:54Z MERGED {"permission": "allow"}
+2026-09-06T16:31:32Z ENTRY raw_len=1674 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"68d2b8ce-a12d-445c-89e1-67e66829b2ca","model":"composer-2.5-fast","model_id":"composer-2.5","model_params":[{"id":"fast","'
+2026-09-06T16:31:32Z EVENT 'afterAgentResponse' conversation_id='9258f444-8a88-4c20-8641-d5b916c9f19a' payload_keys=['cache_read_tokens', 'cache_write_tokens', 'conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'input_tokens', 'model', 'model_id', 'model_params', 'output_tokens', 'session_id', 'text', 'transcript_path', 'user_email', 'workspace_roots']
