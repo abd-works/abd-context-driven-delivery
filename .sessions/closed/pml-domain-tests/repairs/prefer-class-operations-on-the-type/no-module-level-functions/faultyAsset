@@ -1,0 +1,1 @@
+export async function open(cfg: Config = defaultConfig): Promise<ParadiseMobile> { return ParadiseMobileE2e.open(cfg) }

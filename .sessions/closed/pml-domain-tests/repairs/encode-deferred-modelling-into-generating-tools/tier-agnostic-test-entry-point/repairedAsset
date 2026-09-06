@@ -1,0 +1,1 @@
+Introduced ParadiseMobile + Config as tier-agnostic factory; removed sandbox/Domain/browser-session imports from sign-up-select-plan.e2e.ts; all domain objects now come off paradise.*()

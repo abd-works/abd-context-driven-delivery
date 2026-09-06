@@ -1,0 +1,1 @@
+Deleted erroneous nest pml-my/.context/sessions/pml-my-current-state/.context/ (duplicate session.md only). Canonical session files at session root. ensure_session path/workspace must be workspace root (pml-my), never the session folder.

@@ -1,0 +1,2 @@
+const prospect = await paradise.prospectRepository().load(accountCredentials)
+await prospect.cart.pickNumber(msisdn)

@@ -1,0 +1,67 @@
+[
+  {
+    "prompt": "Migration U2: lifecycle.py uses agent.agent.Workspace.open \u2192 AgentSession. begin/end use session.turn and session.decisions. Remove WorkSession imports. Do NOT patch SessionPaths or utilities/workspace/workspace.py. Canonical: agents/.context/agent-session-redesign-sketch.md. Vanilla BDD first; then production code in context_tools/actions/lifecycle.py. Finish the Turn. Do not contact the judge or edit the job queue.",
+    "tools": [
+      "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+      "context_tools.bdd.bdd:Bdd"
+    ],
+    "actions": [
+      "generate.generate:Generate"
+    ],
+    "judge": true,
+    "judge_criteria": "PASS only when: (1) lifecycle.py opens via agent.agent.Workspace + AgentSession; (2) WorkSession removed from lifecycle; (3) Bdd validate on actions host is clean; (4) judge ran validate with Bdd + CleanEngineering.",
+    "index": 0
+  },
+  {
+    "prompt": "Migration U3: base_context_tool.py opens agent.agent.Workspace + AgentSession. Remove workspace.workspace WorkSession import. Canonical: agents/.context/agent-session-redesign-sketch.md. Vanilla BDD first; green base_context_tool_spec. Finish the Turn. Do not contact the judge or edit the job queue.",
+    "tools": [
+      "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+      "context_tools.bdd.bdd:Bdd"
+    ],
+    "actions": [
+      "generate.generate:Generate"
+    ],
+    "judge": true,
+    "judge_criteria": "PASS only when: (1) BaseContextTool uses agent.agent.Workspace.open \u2192 AgentSession; (2) WorkSession import gone; (3) mamba context_tools/base/base_context_tool_spec.py green; (4) judge ran validate.",
+    "index": 1
+  },
+  {
+    "prompt": "Migration U4: SessionLog and tools run coalesce/bind to AgentSession (name, folder, turn). Judge validate shares session with agent BDD. Touch utilities/workspace/session_log.py and primitives/tools/tool.py only. Canonical: agents/.context/agent-session-redesign-sketch.md. Finish the Turn. Do not contact the judge or edit the job queue.",
+    "tools": [
+      "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+      "context_tools.bdd.bdd:Bdd"
+    ],
+    "actions": [
+      "generate.generate:Generate"
+    ],
+    "judge": true,
+    "judge_criteria": "PASS only when: (1) SessionLog and tools run bind AgentSession; (2) validate kit on agents passes; (3) judge ran validate with Bdd + CleanEngineering.",
+    "index": 2
+  },
+  {
+    "prompt": "Migration U5: CliAgent queue/model/bindings use AgentSession.folder (.agent_sessions/{name}/), not WorkSession paths. Touch utilities/cli_agent/cli_agent.py + cli_agent_spec. Canonical: agents/.context/agent-session-redesign-sketch.md. Finish the Turn. Do not contact the judge or edit the job queue.",
+    "tools": [
+      "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+      "context_tools.bdd.bdd:Bdd"
+    ],
+    "actions": [
+      "generate.generate:Generate"
+    ],
+    "judge": true,
+    "judge_criteria": "PASS only when: (1) CliAgent session artifacts under AgentSession.folder; (2) mamba utilities/cli_agent/cli_agent_spec.py green; (3) judge ran validate.",
+    "index": 3
+  },
+  {
+    "prompt": "Migration U6: Delete WorkSession and SessionPaths.session_dir; grep-clean .context/sessions/ session temps usage. Keep git/Turn kit in utilities/workspace only. Canonical: agents/.context/agent-session-redesign-sketch.md. Finish the Turn. Do not contact the judge or edit the job queue.",
+    "tools": [
+      "context_tools.clean_engineering.clean_engineering:CleanEngineering",
+      "context_tools.bdd.bdd:Bdd"
+    ],
+    "actions": [
+      "generate.generate:Generate"
+    ],
+    "judge": true,
+    "judge_criteria": "PASS only when: (1) WorkSession removed from production code; (2) grep-clean; (3) mamba utilities/workspace + agents green; (4) judge ran validate.",
+    "index": 4
+  }
+]

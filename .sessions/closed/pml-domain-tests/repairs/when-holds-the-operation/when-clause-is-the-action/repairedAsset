@@ -1,0 +1,1 @@
+when now calls catalog.getAvailablePlans() and catalog.getPlans() and stores results in scenario-scoped variables; all then blocks are now synchronous assertions over those variables; getAvailablePlans() called once per scenario not once per then

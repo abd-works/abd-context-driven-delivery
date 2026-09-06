@@ -1,0 +1,16 @@
+export interface ChangePlan {
+  open(): Promise<void>
+  openFromServices(): Promise<void>
+  waitForCatalog(): Promise<void>
+  isSelectPlanShowing(): Promise<boolean>
+  selectPlan(planName: string): Promise<void>
+  isConfirmShowing(): Promise<boolean>
+  isConfirmDisabled(): Promise<boolean>
+  acceptTerms(): Promise<boolean>
+  confirmChange(): Promise<void>
+  goBackToPlanSelection(): Promise<void>
+  infoMessageText(): Promise<string | null>
+  summaryPlanName(): Promise<string | null>
+  isOnHome(): Promise<boolean>
+  isErrorVisible(text: string): Promise<boolean>
+}

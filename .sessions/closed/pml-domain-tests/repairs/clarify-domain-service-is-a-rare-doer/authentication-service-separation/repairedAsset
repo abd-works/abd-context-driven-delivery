@@ -1,0 +1,16 @@
+// Form object — field values and validation only
+export interface AccountCredentials {
+  email: string
+  password: string
+  setEmail(value: string): Promise<void>
+  setPassword(value: string): Promise<void>
+  getPasswordRules(): Promise<PasswordRuleStatus[]>
+}
+
+// Auth operations — receives a filled form, drives the session
+export interface AuthenticationService {
+  enterAccountCredentials(): AccountCredentials
+  authenticate(accountCredentials: AccountCredentials): Promise<void>
+  register(accountCredentials: AccountCredentials): Promise<void>
+  signOut(): Promise<void>
+}

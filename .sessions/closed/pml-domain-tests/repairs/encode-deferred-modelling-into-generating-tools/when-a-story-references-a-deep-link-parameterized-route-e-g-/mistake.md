@@ -1,0 +1,7 @@
+# when-a-story-references-a-deep-link-parameterized-route-e-g-
+
+- **entry_id:** 69fa6dc1
+- **artifact:** .context/sessions/pml-my-current-state/cdd-sketch.md — 'Sign Up — Select Plan' story + Plan BC (Voucher/VoucherRepository)
+- **rule:** when a story references a deep-link/parameterized route (e.g. /sign-up/:planId, /sign-up/voucher/:code), the story must explain HOW a user actually arrives there from a flow perspective (in-app navigation vs external/marketing deep-link vs client-side wizard-step jump with no URL change) — not just assert 'When they navigate to X'
+- **wrong:** The 'Sign Up — Select Plan' story asserted 'Given the plan catalog contains plan :planId / When they navigate to /sign-up/:planId' with no explanation of how a prospect gets there. Checked SignUp.tsx/Catalog.tsx/Router.tsx: it's an external-link-only entry point, never reached via in-app navigation — in-app plan selection is a client-side Wizard.goToStep() call with no URL change at all. The investigation also surfaced two further modeling gaps that had been sitting undetected: (1) an entire 'Trial' wizard step (steps/Trial/Trial.tsx) with zero story/DDD coverage, reachable only via a trial-flagged voucher deep-link; (2) PlanRepository.findByVoucher(code): Plan was modeled wrong — a voucher code resolves to its own Voucher value object (discount/trial/eligiblePlanIds), not directly to a Plan.
+- **status:** fixed

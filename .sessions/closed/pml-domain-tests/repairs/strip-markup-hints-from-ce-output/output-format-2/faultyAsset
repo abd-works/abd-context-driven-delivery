@@ -1,0 +1,4 @@
+Module entries should read as: '# config
+- **Purpose:** ...' not '# config
+
+- **Purpose:** ...'. Remove the blank line that separates each heading from its immediate content block.

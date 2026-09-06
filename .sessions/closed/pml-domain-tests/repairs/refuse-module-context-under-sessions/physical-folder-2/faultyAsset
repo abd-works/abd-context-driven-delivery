@@ -1,0 +1,1 @@
+Conflated 'session folder' with the destination for all output. Module artifacts must live in .context/ directories inside the source tree they describe. The session folder is only for session-admin files (session.yaml, handoff, etc.). pml-my-modules.md and module-build-order.md both belong at src/.context/.

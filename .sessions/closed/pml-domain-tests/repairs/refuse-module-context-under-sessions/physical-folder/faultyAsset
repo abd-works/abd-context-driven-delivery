@@ -1,0 +1,1 @@
+Misread {session}/{module}/ as the session sprint folder rather than the active.path root. The context states 'Create module structure under {session}/{module}/' where {session} resolves to active.path (C:\dev\paradise-mobile\pml-my), not active.folder. module-context.md files must sit at src/{module}/.context/module-context.md so they are co-located with the code.

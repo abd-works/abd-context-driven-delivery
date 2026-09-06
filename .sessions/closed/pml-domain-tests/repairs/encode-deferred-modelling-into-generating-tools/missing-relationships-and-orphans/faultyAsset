@@ -1,0 +1,1 @@
+OnboardingStep is a property of Prospect (derived via _deriveOnboardingStep). Billing is a composition on Subscriber. MsisdnInventory is a domain service depended on by Cart.selectNumber(). PortingInfo is a field on Cart. Usage is inline on Subscription. Money does not exist. Order is accessible after checkout from Checkout.capturePayment() — no OrderRepository.

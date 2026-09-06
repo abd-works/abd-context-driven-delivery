@@ -1,0 +1,2 @@
+beforeAll(async () => { paradise = await ParadiseMobileE2e.initialize(config) })
+background starts with given('the plan catalog contains purchasable plans', ...)

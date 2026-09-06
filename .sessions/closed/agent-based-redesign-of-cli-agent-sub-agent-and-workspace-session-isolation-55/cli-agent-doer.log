@@ -1,0 +1,3 @@
+
+--- spawn 2026-08-31 19:53:23 ---
+C:\Users\jeffa\AppData\Local\cursor-agent\cursor-agent.CMD --force --trust --resume e3cf1e28-4818-43b3-8b91-8ef9f6e2a19d --workspace c:\dev\abd-cdd-55 --model composer-2.5[fast=false] Read .context/cli-agent-task.txt and follow it exactly.

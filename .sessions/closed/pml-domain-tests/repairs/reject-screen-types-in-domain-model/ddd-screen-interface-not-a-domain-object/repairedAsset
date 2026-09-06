@@ -1,0 +1,1 @@
+Scanner flags TypeScript types with open() and isShowing() as screen drivers, not domain objects.

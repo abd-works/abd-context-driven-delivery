@@ -1,0 +1,1 @@
+Moved Cart and Billing under Subscription BC. Customer keeps identity/onboarded + → Subscription only. Subscription has cart?, billing; Catalog dependency via Cart/bundle stays on Subscription.

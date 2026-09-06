@@ -1,0 +1,1607 @@
+branch: session/eval-consolidate-workspace
+path: context_tools/actions/workspace
+cdd_at: fab54f7de84c850917db59c42f417a697dcf8d27
+turns:
+- id: 7f0c79ab
+  prompt: bdd grill tick 1 - first behavior slice boundary
+  result: One slice-boundary question appended to grill-answers.md
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 7f0c79ab
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: ac8ed88a4c3ed32301edcbacfee956c1d0bd2154
+  tool_calls: []
+  mistakes: []
+- id: 6cdf54db
+  prompt: bdd judge answer - grill tick 1
+  result: Recommend slice A; slice family locked
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 6cdf54db
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: a2378dd0d43045f907fad1e793029c060df4d824
+  tool_calls: []
+  mistakes: []
+- id: 0c3be234
+  prompt: bdd grill tick 2 - lookupPath absent + row shape
+  result: Question on lookupPath when no row
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 0c3be234
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: d326e062d9fcc9cd7a9ee215d3b5d70be96fedd8
+  tool_calls: []
+  mistakes: []
+- id: 3ceac306
+  prompt: bdd judge answer - grill tick 2
+  result: lookupPath absent -> None; tool+fidelity+path rows
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 3ceac306
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 58bb179ec7ef4c81acc56b9f79da0b0f2c331154
+  tool_calls: []
+  mistakes: []
+- id: bea7a355
+  prompt: bdd grill tick 3 - upsertPath default-match removal
+  result: Question on sparse row removal
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: bea7a355
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 684d6f6ac72a26879c13484e70e561aa965dca46
+  tool_calls: []
+  mistakes: []
+- id: 92bd1931
+  prompt: bdd judge answer - grill tick 3
+  result: upsertPath(..., default_path); slice A unlocked
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 92bd1931
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: d0fbf02e8e6490a7f34f35cbbc7067f7a72c9012
+  tool_calls: []
+  mistakes: []
+- id: f836cfb9
+  prompt: bdd sketch - slice A path overrides
+  result: workspace-bdd-sketch.md slice A
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: f836cfb9
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: e1cdf2f57e441643fe5c6b2f7127efb413b5ab60
+  tool_calls: []
+  mistakes: []
+- id: 38d36f65
+  prompt: bdd judge validate - slice A sketch
+  result: PASS
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 38d36f65
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 802116c19c34557bae9307959a58f8c0db5207ad
+  tool_calls: []
+  mistakes: []
+- id: d541cf31
+  prompt: bdd iterate - slice A behavior SIGNATUREs
+  result: workspace_spec.py 7 markers
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: d541cf31
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 928bdf65fbf35af4bbbcce9cf6f4c77300eae280
+  tool_calls: []
+  mistakes: []
+- id: 6d48c64c
+  prompt: bdd grill tick 4 - slice B boundary
+  result: openWorkSession boundary question
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 6d48c64c
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 0e5557f60907199811ec3e52e49eb1edb5dcc616
+  tool_calls: []
+  mistakes: []
+- id: 652448a0
+  prompt: bdd judge answer - grill tick 4
+  result: Workspace-only openWorkSession; slice B unlocked
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 652448a0
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 46425f378d64f2a9bc67df16b538ef589866f929
+  tool_calls: []
+  mistakes: []
+- id: c4e8f2a1
+  prompt: bdd sketch - slice B openWorkSession
+  result: workspace-bdd-sketch.md slices A+B
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: c4e8f2a1
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 7f70922c0baa57de36f511786357b817bd1060e8
+  tool_calls: []
+  mistakes: []
+- id: d7a3b9e2
+  prompt: bdd judge validate - slice B sketch
+  result: PASS
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: d7a3b9e2
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: fddee5d3755efd429594a79bfe76e94271fa1210
+  tool_calls: []
+  mistakes: []
+- id: e8f1c4d3
+  prompt: bdd iterate - slice B behavior SIGNATUREs
+  result: workspace_spec.py +slice B markers
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: e8f1c4d3
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 00f30d835e013d03a3adf5e68e711de89338692e
+  tool_calls: []
+  mistakes: []
+- id: 32a30eb3
+  prompt: bdd grill tick 5 - slice C boundary
+  result: WorkSession.open git branch policy question
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 32a30eb3
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: f400523ad13c203ca43a16386fd4a6f7a3ed4c5d
+  tool_calls: []
+  mistakes: []
+- id: 0944f56c
+  prompt: bdd judge answer - grill tick 5
+  result: Branch rules only; slice C unlocked
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 0944f56c
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: bb0f9a3476f13f5ac552e03397720871293301de
+  tool_calls: []
+  mistakes: []
+- id: f2a8d6e1
+  prompt: bdd sketch - slice C WorkSession.open
+  result: workspace-bdd-sketch.md slices A+B+C
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: f2a8d6e1
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 3ae9df2751b831fb61b0ecadaeb4789e3e4f3617
+  tool_calls: []
+  mistakes: []
+- id: a3b7c9f4
+  prompt: bdd judge validate - slice C sketch
+  result: PASS
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: a3b7c9f4
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: ba43071076d7c91504d17afcf7773bc4c2bf46df
+  tool_calls: []
+  mistakes: []
+- id: b4c8d2e5
+  prompt: bdd iterate - slice C behavior SIGNATUREs
+  result: workspace_spec.py +slice C markers
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: b4c8d2e5
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: e2d87b34e0bcb83f76561cf1df9644ddc4bd1228
+  tool_calls: []
+  mistakes: []
+- id: 912446d6
+  prompt: bdd grill tick 6 - slice D boundary
+  result: host edit-path resolution question
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 912446d6
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 1c4ee17dad58288ccb27dc858fbf7ec2f2218306
+  tool_calls: []
+  mistakes: []
+- id: e5788bb5
+  prompt: bdd judge answer - grill tick 6
+  result: slice D unlocked
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: e5788bb5
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: c7f9b427eae7046e380896a193a0740a40f79c1f
+  tool_calls: []
+  mistakes: []
+- id: c5d9e3f6
+  prompt: bdd sketch - slice D host edit-path resolution
+  result: workspace-bdd-sketch.md slices A-D
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: c5d9e3f6
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: ab08b5838ad6700eada3ded5256a9303bc26a288
+  tool_calls: []
+  mistakes: []
+- id: d6e0f4a7
+  prompt: bdd judge validate - slice D sketch
+  result: PASS; checklist 1-5 covered
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: d6e0f4a7
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 7308d48fd200e00b6bcca612092773ce3c3905fc
+  tool_calls: []
+  mistakes: []
+- id: e7f1a5b8
+  prompt: bdd iterate - slice D behavior SIGNATUREs
+  result: workspace_spec.py 21 markers; scan clean
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: e7f1a5b8
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: cf3e282fb1255c13ee9bb67a18584250ab0ed87f
+  tool_calls: []
+  mistakes: []
+- id: ca24345f
+  prompt: log correction — workspace-bdd-sketch usage story and domain vocabulary
+  result: mistakes d6ddab78 1ad49040 fixed; sketch usage-order + path resolution wording;
+    workspace_spec.py aligned
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: ca24345f
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - d6ddab78
+    - 1ad49040
+    sha: f8c6fba1ad6f3d84b56047091084d7e30cd94924
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=d6ddab78, rule=domain-practice-alignment
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=1ad49040, rule=usage-order-behaviors
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=d6ddab78, status=fixed
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=1ad49040, status=fixed
+  mistakes: []
+- id: f100ccc9
+  prompt: log correction — sketch action-first usage story entry
+  result: mistake 23dd937b fixed; sketch starts at action invoke; turn.open opens
+    a turn for the run
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: f100ccc9
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - 23dd937b
+    sha: 5863f0c7f23b2021cc582be418bec47ead31ab82
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=23dd937b, rule=usage-order-behaviors
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=23dd937b, status=fixed
+  mistakes: []
+- id: c02437db
+  prompt: log correction — full workspace-bdd-sketch domain audit
+  result: three mistakes fixed; path resolve then openWorkSession then WorkSession.open
+    then turn.open; openWorkSession signature aligned to OO model
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: c02437db
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - acddcec1
+    - e4736325
+    - 0bf09f1e
+    sha: 10eb37e332d2ebc3753e2f493e2ab3dbba97e86d
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=acddcec1, rule=domain-practice-alignment
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=e4736325, rule=usage-order-behaviors
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=0bf09f1e, rule=describe-is-plain-english
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=acddcec1, status=fixed
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=e4736325, status=fixed
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=0bf09f1e, status=fixed
+  mistakes: []
+- id: db766338
+  prompt: log correction — workspace sketch hierarchy and branch nesting
+  result: nest workspace under context tool; branch no-index vs with-index to depth;
+    dedupe upsert/save once under that has been loaded
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: db766338
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - a4b78031
+    - 18df551a
+    sha: 767739a36982ba7480e42d8809586eb8ae3fb670
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=a4b78031, rule=usage-order-behaviors
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=18df551a, rule=state-oriented-hierarchy
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=a4b78031, status=fixed
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=18df551a, status=fixed
+  mistakes: []
+- id: b555cf01
+  prompt: log correction — pathOverrides domain vocabulary in workspace sketch
+  result: replace context-index phrasing with path override / pathOverrides load save
+    upsertPath lookupPath language
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: b555cf01
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - 95ae9520
+    sha: a734ec2ad4a8cf1a2d736f85671097cdc2b04668
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=95ae9520, rule=domain-practice-alignment
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=95ae9520, status=fixed
+  mistakes: []
+- id: 3ac4898f
+  prompt: log correction — lookupPath scenarios from context tool caller perspective
+  result: frame lookup under resolving edit path for tool+fidelity; explicit lookupPath
+    call; action prelude uses lookupPath return value branches
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 3ac4898f
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - 1bcaf881
+    sha: eaa725b29c426ab524179c459132dad8fdadeeb3
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=1bcaf881, rule=usage-order-behaviors
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=1bcaf881, status=fixed
+  mistakes: []
+- id: 94c219e3
+  prompt: log correction — observable behavior not lookupPath mechanism in sketch
+  result: path override state as with conditions; it should have/return override path;
+    action open branches on stored override not API return value
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 94c219e3
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - ee24d3a0
+    sha: ae199e47cb419d3ac5b166fca83d4f885a040d18
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=ee24d3a0, rule=observable-behavior
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=ee24d3a0, status=fixed
+  mistakes: []
+- id: 6c4097f7
+  prompt: log correction — usage story from action run against context tool
+  result: with an action run against it → with a workspace → that is opening for the
+    run; override branches under load during open
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 6c4097f7
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - ad49022f
+    sha: 03e273471a314d523e22f7373664b84a6665f163
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=ad49022f, rule=usage-order-behaviors
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=ad49022f, status=fixed
+  mistakes: []
+- id: 26551cf0
+  prompt: log correction — action run event not workspace opening operation
+  result: that has an action run against it; with branches for persisted override
+    state and run inputs; it should outcomes only
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 26551cf0
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: a17d9f1f07af421f50260045a9985bd79a42e46e
+  tool_calls: []
+  mistakes: []
+- id: 31902d4e
+  prompt: log correction — behavior under turn artifact I/O not API operations
+  result: action run → turn open → reading/writing module artifacts with path override
+    state; keep/drop override per path for the turn; no resolve/load/lookupPath operation
+    lines
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 31902d4e
+    session_name: eval-consolidate-workspace
+    tool_names:
+    - log_mistake
+    - log_correction
+    mistake_ids:
+    - 89c985b0
+    sha: c2949f081d7e6a898c0aace1064b7beb58f133a6
+  tool_calls:
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_mistake
+    summary: entry_id=89c985b0, rule=observable-behavior
+  - toolset: context_tools.bdd.bdd:Bdd
+    name: log_correction
+    summary: entry_id=89c985b0, status=fixed
+  mistakes: []
+- id: 27ca0c61
+  prompt: bdd grill tick 7 — deferred slice E boundary
+  result: question on Turn.finish vs SessionLog vs Repair split for workspace-bdd-sketch
+    deferred line
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 27ca0c61
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 0d9f34d5a00ab31f118a285825644cf3d4c629f0
+  tool_calls: []
+  mistakes: []
+- id: 84517bfa
+  prompt: bdd judge answer — grill tick 7 deferred slice E
+  result: recommend B — Turn.finish git + SessionLog audit; exclude domain Repair
+    to eval sketch
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 84517bfa
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 524c0cd21bfc88476e57ade47c116d4433eaf931
+  tool_calls: []
+  mistakes: []
+- id: db1c5376
+  prompt: bdd sketch tick — slice E deferred (SessionLog + Turn.finish)
+  result: slice E under turn open and turn finished; behavior observables only; Repair
+    deferred to eval sketch
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: db1c5376
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 85bf5a43dbd539023957ccfa83ac7c69644cb4d6
+  tool_calls: []
+  mistakes: []
+- id: 8a3d60bb
+  prompt: bdd sketch — generate behavior signatures (slices A–E)
+  result: workspace_spec.py rewritten to match workspace-bdd-sketch usage story; 20
+    SIGNATURE markers; scan clean
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 8a3d60bb
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 21bb5907b05929ca876fda900f60d0aaf60c90e0
+  tool_calls: []
+  mistakes: []
+- id: d1dd751c
+  prompt: session index sync — turn 8a3d60bb
+  result: session.yaml turn record; drop _req_finish.yaml from tree
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: d1dd751c
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: d3867a825e75d07c2e8799ba6c91c68c0b11474f
+  tool_calls: []
+  mistakes: []
+- id: 24dc4aa5
+  prompt: session index sync — turn d1dd751c
+  result: session.yaml + remove _req_finish.yaml
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 24dc4aa5
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 8a9e6c8fda86ea0df306918ce8e48e57a5a1d95b
+  tool_calls: []
+  mistakes: []
+- id: 2245e8ec
+  prompt: log correction — action-run audit under turn finish not logged state
+  result: mistake db6b3528 fixed; run trail + turn attachment under that has finished
+    its turn; expand stays under that is asked for its instructions
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 2245e8ec
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: c1785adb1d742a46cc6df746a47c00b3726f8cae
+  tool_calls: []
+  mistakes: []
+- id: 99079d1e
+  prompt: bdd grill tick 8 — usage-story describe taxonomy
+  result: grill-answers.md tick 8 Q+A; mistake 745db890 logged; skipped-grill on /bdd
+    /sketch corrected
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 99079d1e
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: c84bc25419a2c4625a56319bedb733b55a891faf
+  tool_calls: []
+  mistakes: []
+- id: 26ddc97e
+  prompt: log correction replay — single-process 745db890 db6b3528
+  result: repairs/ with repairedAsset + improvement.md; session.yaml mistake_ids on
+    turn
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 26ddc97e
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - 745db890
+    - db6b3528
+    sha: 011a3dcaf839e66bb7e06bb7279bf773ba6fb97e
+  tool_calls: []
+  mistakes:
+  - entry_id: 745db890
+    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+    rule: usage-order-behaviors
+    wrong: Ran /bdd /sketch without grilling the consolidated usage story. Sketcher
+      generate wrote workspace_spec.py and edited the hierarchy without grill tick
+      classifying legitimate subjects, standing with conditions, enabling that events,
+      and invalid patterns per describe line — repeated bad Bdd (logged state, API
+      narration).
+    original: "\uFEFF# BDD sketch — workspace module (usage story)\n\nDesign: `workspace-eval-oo-sketch.md`\
+      \ §2. Grill: `grill-answers.md` (slices A–E; tick 8 usage-story taxonomy).\n\
+      \nFidelity: behavior\n\na context tool\n  with a workspace\n    that has an\
+      \ action run against it\n      with a new work session name\n        it should\
+      \ add the opened work session to its work sessions\n        it should set the\
+      \ current work session to the opened work session\n      with an existing work\
+      \ session name\n        it should load the existing work session from its sessions\
+      \ folder\n        it should set the current work session to that work session\n\
+      \      with HEAD already on its session branch\n        it should continue without\
+      \ switching branch\n      with a clean working tree not on its session branch\n\
+      \        with an existing session branch\n          it should check out that\
+      \ session branch\n        with no session branch yet\n          it should create\
+      \ its session branch\n      with a dirty working tree not on its session branch\n\
+      \        it should refuse to switch branch\n      it should open a turn for\
+      \ the action run\n      that has a turn open\n        that is reading or writing\
+      \ module artifacts\n          with an explicit path given on the run\n     \
+      \       it should use that path for its module artifacts\n          with no\
+      \ explicit path given on the run\n            with no path override for its\
+      \ tool and fidelity\n              it should use its default workspace folder\
+      \ for its module artifacts\n            with a path override for its tool and\
+      \ fidelity\n              it should use the override path for its module artifacts\n\
+      \        with a path for the turn that differs from the default path\n     \
+      \     it should keep a path override for that tool and fidelity\n        with\
+      \ a path for the turn that equals the default path\n          it should drop\
+      \ the path override for that tool and fidelity\n        that is asked for its\
+      \ instructions\n          it should record the expansion on the session trail\n\
+      \          it should attach the expansion record to its open turn\n      that\
+      \ has finished its turn\n        it should record the action run on the session\
+      \ trail\n        it should attach the action run record to its turn\n      \
+      \  with a dirty working tree on its session branch\n          it should commit\
+      \ its scoped changes on the session branch\n        it should push its session\
+      \ branch to origin\n\n**Deferred:** domain Repair / mistake / correction chain\
+      \ (eval module Bdd sketch).\n"
+    tool: Bdd
+    fidelity: behavior
+    folder: repairs/usage-order-behaviors/usage-order-behaviors-7
+    correction:
+      improved: "\uFEFF# BDD sketch — workspace module (usage story)\n\nDesign: `workspace-eval-oo-sketch.md`\
+        \ §2. Grill: `grill-answers.md` (slices A–E; tick 8 usage-story taxonomy).\n\
+        \nFidelity: behavior\n\na context tool\n  with a workspace\n    that has an\
+        \ action run against it\n      with a new work session name\n        it should\
+        \ add the opened work session to its work sessions\n        it should set\
+        \ the current work session to the opened work session\n      with an existing\
+        \ work session name\n        it should load the existing work session from\
+        \ its sessions folder\n        it should set the current work session to that\
+        \ work session\n      with HEAD already on its session branch\n        it\
+        \ should continue without switching branch\n      with a clean working tree\
+        \ not on its session branch\n        with an existing session branch\n   \
+        \       it should check out that session branch\n        with no session branch\
+        \ yet\n          it should create its session branch\n      with a dirty working\
+        \ tree not on its session branch\n        it should refuse to switch branch\n\
+        \      it should open a turn for the action run\n      that has a turn open\n\
+        \        that is reading or writing module artifacts\n          with an explicit\
+        \ path given on the run\n            it should use that path for its module\
+        \ artifacts\n          with no explicit path given on the run\n          \
+        \  with no path override for its tool and fidelity\n              it should\
+        \ use its default workspace folder for its module artifacts\n            with\
+        \ a path override for its tool and fidelity\n              it should use the\
+        \ override path for its module artifacts\n        with a path for the turn\
+        \ that differs from the default path\n          it should keep a path override\
+        \ for that tool and fidelity\n        with a path for the turn that equals\
+        \ the default path\n          it should drop the path override for that tool\
+        \ and fidelity\n        that is asked for its instructions\n          it should\
+        \ record the expansion on the session trail\n          it should attach the\
+        \ expansion record to its open turn\n      that has finished its turn\n  \
+        \      it should record the action run on the session trail\n        it should\
+        \ attach the action run record to its turn\n        with a dirty working tree\
+        \ on its session branch\n          it should commit its scoped changes on\
+        \ the session branch\n        it should push its session branch to origin\n\
+        \n**Deferred:** domain Repair / mistake / correction chain (eval module Bdd\
+        \ sketch).\n"
+      how: Single-process log_correction replay; grill tick 8 before sketch; run audit
+        under that has finished its turn.
+      status: fixed
+  - entry_id: db6b3528
+    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+    rule: nest-by-enabling-events
+    wrong: 'Used operation outcomes as nested states: `that has logged its action
+      run` and `that has expanded its action instructions`. Logging is not a standing
+      state — the `that` must name what triggers the record (agent asks for instructions
+      → expansion trail; recipe body runs → run trail). Same class of error as treating
+      API steps as subjects.'
+    original: "that has logged its action run\n  it should record the run on the session\
+      \ trail\nthat has expanded its action instructions\n  it should record the expansion\
+      \ on the session trail\n"
+    tool: Bdd
+    fidelity: behavior
+    folder: repairs/nest-by-enabling-events/nest-by-enabling-events-2
+    correction:
+      improved: "\uFEFF# BDD sketch — workspace module (usage story)\n\nDesign: `workspace-eval-oo-sketch.md`\
+        \ §2. Grill: `grill-answers.md` (slices A–E; tick 8 usage-story taxonomy).\n\
+        \nFidelity: behavior\n\na context tool\n  with a workspace\n    that has an\
+        \ action run against it\n      with a new work session name\n        it should\
+        \ add the opened work session to its work sessions\n        it should set\
+        \ the current work session to the opened work session\n      with an existing\
+        \ work session name\n        it should load the existing work session from\
+        \ its sessions folder\n        it should set the current work session to that\
+        \ work session\n      with HEAD already on its session branch\n        it\
+        \ should continue without switching branch\n      with a clean working tree\
+        \ not on its session branch\n        with an existing session branch\n   \
+        \       it should check out that session branch\n        with no session branch\
+        \ yet\n          it should create its session branch\n      with a dirty working\
+        \ tree not on its session branch\n        it should refuse to switch branch\n\
+        \      it should open a turn for the action run\n      that has a turn open\n\
+        \        that is reading or writing module artifacts\n          with an explicit\
+        \ path given on the run\n            it should use that path for its module\
+        \ artifacts\n          with no explicit path given on the run\n          \
+        \  with no path override for its tool and fidelity\n              it should\
+        \ use its default workspace folder for its module artifacts\n            with\
+        \ a path override for its tool and fidelity\n              it should use the\
+        \ override path for its module artifacts\n        with a path for the turn\
+        \ that differs from the default path\n          it should keep a path override\
+        \ for that tool and fidelity\n        with a path for the turn that equals\
+        \ the default path\n          it should drop the path override for that tool\
+        \ and fidelity\n        that is asked for its instructions\n          it should\
+        \ record the expansion on the session trail\n          it should attach the\
+        \ expansion record to its open turn\n      that has finished its turn\n  \
+        \      it should record the action run on the session trail\n        it should\
+        \ attach the action run record to its turn\n        with a dirty working tree\
+        \ on its session branch\n          it should commit its scoped changes on\
+        \ the session branch\n        it should push its session branch to origin\n\
+        \n**Deferred:** domain Repair / mistake / correction chain (eval module Bdd\
+        \ sketch).\n"
+      how: Nest under turn finish for action-run audit; expand under that is asked
+        for its instructions.
+      status: fixed
+- id: f5ebf552
+  prompt: log correction — eval turn single-process attachment
+  result: workflow + improvement.md + grill-answers; mistake 9d033ff4
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: f5ebf552
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - 9d033ff4
+    sha: 319df4a2748233185bf55864c4393b3af8d5023b
+  tool_calls: []
+  mistakes:
+  - entry_id: 9d033ff4
+    artifact: context_tools/bdd/.context/bdd-grill-sketch-workflow.md
+    rule: eval-turn-single-process
+    wrong: 'Ran begin_eval_turn, log_mistake, log_correction, and finish_eval_turn
+      as separate tools.ps1 run calls. Each process reloads session.yaml only; mistakes
+      on disk under mistakes/ are not in session._mistakes; log_correction _find_mistake
+      fails silently; repairs/ not created; session.yaml turns 99079d1e and 2245e8ec
+      have mistake_ids: [].'
+    original: 'Use .\tools.ps1 from repo root. Write _req.yaml, run, delete.
+
+      (No warning that separate runs orphan log_mistake / log_correction.)'
+    tool: Bdd
+    fidelity: behavior
+    folder: repairs/eval-turn-single-process/eval-turn-single-process
+    correction:
+      improved: "\uFEFF# Bdd grill ΓåÆ sketch ΓÇö two-agent workflow\n\n**Purpose:**\
+        \ Bdd behavior prep for iterate must **grill before sketch**. Two agents split\
+        \ responsibility; **eval owns every turn** as its own commit.\n\n## Agents\n\
+        \n| Agent | Skill | Owns |\n|---|---|---|\n| **Runner** | `bdd-grill-runner`\
+        \ | One grill question per turn; sketch after 2ΓÇô3 grounded answers unlock\
+        \ a slice; never self-answers from memory |\n| **Judge** | `bdd-grill-judge`\
+        \ | Prove-read repo; answer grill questions with citations; validate sketches\
+        \ **independently** and **against runner output**; record mistakes + corrections\
+        \ on the turn |\n\nRead this file from both skills before acting.\n\n## Turn\
+        \ kinds (each = `begin_eval_turn` ΓÇª work ΓÇª `finish_eval_turn` ΓåÆ commit)\n\
+        \n| Kind | Agent | `prompt` (example) | `result` (example) |\n|---|---|---|---|\n\
+        | **grill** | Runner | `bdd grill tick N ΓÇö slice boundary` | One question\
+        \ + options + paths prove-read |\n| **answer** | Judge | `bdd judge answer\
+        \ ΓÇö grill tick N` | Grounded answer with cited paths; PASS/FAIL on question\
+        \ quality |\n| **sketch** | Runner | `bdd sketch tick ΓÇö <slice name>` |\
+        \ Path to persisted `{slug}-bdd-sketch.md` delta |\n| **validate** | Judge\
+        \ | `bdd judge validate ΓÇö <slice name>` | Independent rubric + scan report;\
+        \ mistakes logged if FAIL |\n\n**Never** combine grill + sketch in one turn.\
+        \ **Never** skip `begin_eval_turn` / `finish_eval_turn`.\n\n## Eval toolset\
+        \ (default)\n\n```yaml\ntoolset: context_tools.bdd.bdd:Bdd\ncontext:\n  fidelity:\
+        \ behavior\n  path: <module under test, e.g. context_tools/actions/workspace>\n\
+        \  session: <eval session slug, e.g. eval-consolidate-workspace>\n```\n\n\
+        Use `.\\tools.ps1` from repo root. Write `_req.yaml`, run, delete.\n\n## Eval\
+        \ turn — single process (required)\n\n**Never** run `begin_eval_turn`, `log_mistake`,\
+        \ `log_correction`, or `finish_eval_turn` as **separate** `tools.ps1 run`\
+        \ calls. Each invocation starts a **new Python process**. `EvalSession.load()`\
+        \ reads `session.yaml` only — it does **not** scan `mistakes/` on disk. A\
+        \ mistake written in one run is invisible to `log_correction` in the next;\
+        \ `_find_mistake` returns nothing, `repairs/` is never created, and `finish_eval_turn`\
+        \ commits with empty `mistake_ids` even when `mistake.md` exists under `mistakes/`.\n\
+        \n**Required shape — one process, one open turn:**\n\n```python\nbdd = Bdd(fidelity=\"\
+        behavior\", path=..., session=...)\nbdd.open()\nbdd.begin_eval_turn()\nentry_id\
+        \ = bdd.log_mistake(artifact=..., rule=..., wrong=..., original=...)\n# fix\
+        \ artifact on disk\nbdd.log_correction(entry_id=entry_id, improved=<full repaired\
+        \ file contents>, how=..., status=\"fixed\")\nbdd.finish_eval_turn(prompt=...,\
+        \ result=..., context=...)\n```\n\nAll four calls must share the same in-memory\
+        \ `open_turn` so mistakes attach to the turn and `session.yaml` records `mistake_ids`\
+        \ and `mistakes:` on finish.\n\n**Replay (orphaned turns):** When earlier\
+        \ turns logged `mistakes/` files but `session.yaml` has `mistake_ids: []`\
+        \ (turns `99079d1e`, `2245e8ec` in eval-consolidate-workspace), hydrate each\
+        \ `Mistake` from `mistakes/{folder}/mistake.md` + `faultyAsset` into `session._mistakes`\
+        \ and `open_turn`, then `log_correction` in the **same** process before `finish_eval_turn`.\
+        \ Turn `26ddc97e` replayed `745db890` and `db6b3528` this way.\n\n## Session\
+        \ artifacts\n\nUnder `{active.folder}` (sprint):\n\n- `grill-answers.md` ΓÇö\
+        \ append-only: question, judge answer, paths cited, slice notes\n- `workspace-bdd-sketch.md`\
+        \ (or `{slug}-bdd-sketch.md`) ΓÇö behavior hierarchy; runner writes, judge\
+        \ validates\n- `session.yaml` ΓÇö turn index; mistakes attach to the **validate**\
+        \ turn (or **answer** turn if the question itself was defective)\n\nUnder\
+        \ `{active.path}` when behavior signatures exist:\n\n- `{module}_spec.py`\
+        \ ΓÇö **after** sketch is judge-clean and iterate unlocks generate (not during\
+        \ grill/sketch turns)\n\n## Source-of-truth read order (judge prove-read)\n\
+        \n1. User-cited OO / CE sketch (e.g. `workspace-eval-oo-sketch.md`)\n2. `{module}/.context/module-context.md`\n\
+        3. Existing `*-bdd-sketch.md` and `grill-answers.md` in session folder\n4.\
+        \ `context_tools/bdd/bdd.md`, `templates/bdd-sketch.md`\n5. Production source\
+        \ only when documenting **current** behavior (`document`); target-model Bdd\
+        \ follows sketch, not today's code\n\n## Judge mistakes\n\nWhen judge FAILs:\n\
+        \n1. `log_mistake` ΓÇö artifact path, rule name, wrong, original excerpt\n\
+        2. Fix artifact (sketch or grill-answers)\n3. `log_correction` ΓÇö entry_id,\
+        \ improved, how, status=fixed\n4. Same turn's `finish_eval_turn` includes\
+        \ mistake ids in session.yaml\n\nRunner **does not** argue with judge; runner\
+        \ applies correction or re-grills.\n\n## Orchestration (parent chat)\n\n1.\
+        \ Task **runner** with `bdd-grill-runner` ΓåÆ one grill turn ΓåÆ stop\n2.\
+        \ Task **judge** with `bdd-grill-judge` ΓåÆ answer turn ΓåÆ stop\n3. Repeat\
+        \ until 2ΓÇô3 answers name one slice boundary\n4. Task **runner** ΓåÆ sketch\
+        \ turn ΓåÆ stop\n5. Task **judge** ΓåÆ validate turn ΓåÆ stop\n6. If validate\
+        \ FAIL ΓåÆ correction on turn ΓåÆ runner may re-sketch in a **new** sketch\
+        \ turn\n\nDo not chain ticks in one agent message.\n"
+      how: Added bdd-grill-sketch-workflow.md section Eval turn — single process;
+        updated repairs/*/improvement.md and grill-answers tick 8 with orphan turn
+        ids and replay pattern (turn 26ddc97e).
+      status: fixed
+- id: fa8e4e6e
+  prompt: log mistake — same-turn mistake+correction doc error
+  result: entry_id=cb4724b1
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: fa8e4e6e
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - cb4724b1
+    sha: 9bb09d2b597ffc922f70a8b0a5c7d69eb0e653fa
+  tool_calls: []
+  mistakes:
+  - entry_id: cb4724b1
+    artifact: context_tools/bdd/.context/bdd-grill-sketch-workflow.md
+    rule: eval-turn-single-process
+    wrong: Documented log_mistake and log_correction in the same turn / same finish_eval_turn.
+      Mistake and correction are separate turns; only begin+tool+finish share one
+      process per turn.
+    original: 'bdd.begin_eval_turn()
+
+      entry_id = bdd.log_mistake(...)
+
+      bdd.log_correction(entry_id=entry_id, ...)
+
+      bdd.finish_eval_turn(...)
+
+      '
+    tool: Bdd
+    fidelity: behavior
+    folder: repairs/eval-turn-single-process/eval-turn-single-process-2
+    correction:
+      improved: "\uFEFF# Bdd grill ΓåÆ sketch ΓÇö two-agent workflow\n\n**Purpose:**\
+        \ Bdd behavior prep for iterate must **grill before sketch**. Two agents split\
+        \ responsibility; **eval owns every turn** as its own commit.\n\n## Agents\n\
+        \n| Agent | Skill | Owns |\n|---|---|---|\n| **Runner** | `bdd-grill-runner`\
+        \ | One grill question per turn; sketch after 2ΓÇô3 grounded answers unlock\
+        \ a slice; never self-answers from memory |\n| **Judge** | `bdd-grill-judge`\
+        \ | Prove-read repo; answer grill questions with citations; validate sketches\
+        \ **independently** and **against runner output**; record mistakes + corrections\
+        \ on the turn |\n\nRead this file from both skills before acting.\n\n## Turn\
+        \ kinds (each = `begin_eval_turn` ΓÇª work ΓÇª `finish_eval_turn` ΓåÆ commit)\n\
+        \n| Kind | Agent | `prompt` (example) | `result` (example) |\n|---|---|---|---|\n\
+        | **grill** | Runner | `bdd grill tick N ΓÇö slice boundary` | One question\
+        \ + options + paths prove-read |\n| **answer** | Judge | `bdd judge answer\
+        \ ΓÇö grill tick N` | Grounded answer with cited paths; PASS/FAIL on question\
+        \ quality |\n| **sketch** | Runner | `bdd sketch tick ΓÇö <slice name>` |\
+        \ Path to persisted `{slug}-bdd-sketch.md` delta |\n| **validate** | Judge\
+        \ | `bdd judge validate ΓÇö <slice name>` | Independent rubric + scan report;\
+        \ mistakes logged if FAIL |\n\n**Never** combine grill + sketch in one turn.\
+        \ **Never** skip `begin_eval_turn` / `finish_eval_turn`.\n\n## Eval toolset\
+        \ (default)\n\n```yaml\ntoolset: context_tools.bdd.bdd:Bdd\ncontext:\n  fidelity:\
+        \ behavior\n  path: <module under test, e.g. context_tools/actions/workspace>\n\
+        \  session: <eval session slug, e.g. eval-consolidate-workspace>\n```\n\n\
+        Use `.\\tools.ps1` from repo root. Write `_req.yaml`, run, delete.\n\n## Eval\
+        \ turn — one process per turn (required)\n\n**Mistake and correction are different\
+        \ turns** — each gets its own `begin_eval_turn` → … → `finish_eval_turn` →\
+        \ commit. Never `log_mistake` and `log_correction` on the same turn.\n\n**Within\
+        \ one turn**, never run `begin_eval_turn`, `log_mistake` or `log_correction`,\
+        \ and `finish_eval_turn` as **separate** `tools.ps1 run` calls. Each invocation\
+        \ is a new Python process; the open turn from `begin_eval_turn` is lost, so\
+        \ `finish_eval_turn` commits with empty `mistake_ids` even when files exist\
+        \ under `mistakes/`.\n\n**Mistake turn** — one process, then commit:\n\n```python\n\
+        bdd.open()\nbdd.begin_eval_turn()\nentry_id = bdd.log_mistake(artifact=...,\
+        \ rule=..., wrong=..., original=...)\nbdd.finish_eval_turn(prompt=\"log mistake\
+        \ — …\", result=f\"entry_id={entry_id}\", context=...)\n```\n\n**Fix the artifact**\
+        \ on disk (separate work between turns).\n\n**Correction turn** — new process,\
+        \ new turn, then commit:\n\n```python\nbdd.open()\nbdd.begin_eval_turn()\n\
+        bdd.log_correction(\n    entry_id=entry_id,\n    improved=<full repaired file\
+        \ contents>,\n    how=...,\n    status=\"fixed\",\n)\nbdd.finish_eval_turn(prompt=\"\
+        log correction — …\", result=f\"entry_id={entry_id} fixed\", context=...)\n\
+        ```\n\n`log_correction` loads the mistake from `session.yaml` (prior mistake\
+        \ turn's `mistakes:` / `mistake_ids`). It does not scan `mistakes/` on disk.\
+        \ If the mistake turn did not finish with the mistake on the turn record,\
+        \ correction cannot attach.\n\n**Orphaned turns** (`99079d1e`, `2245e8ec`):\
+        \ separate `tools.ps1 run` per tool inside what should have been one mistake\
+        \ turn or one correction turn — `mistake_ids: []` despite files under `mistakes/`.\
+        \ Re-run as proper two-turn sequence; do not combine mistake + correction\
+        \ in one turn (turn `26ddc97e` replay was a workaround only).\n\n## Session\
+        \ artifacts\n\nUnder `{active.folder}` (sprint):\n\n- `grill-answers.md` ΓÇö\
+        \ append-only: question, judge answer, paths cited, slice notes\n- `workspace-bdd-sketch.md`\
+        \ (or `{slug}-bdd-sketch.md`) ΓÇö behavior hierarchy; runner writes, judge\
+        \ validates\n- `session.yaml` ΓÇö turn index; mistakes attach to the **validate**\
+        \ turn (or **answer** turn if the question itself was defective)\n\nUnder\
+        \ `{active.path}` when behavior signatures exist:\n\n- `{module}_spec.py`\
+        \ ΓÇö **after** sketch is judge-clean and iterate unlocks generate (not during\
+        \ grill/sketch turns)\n\n## Source-of-truth read order (judge prove-read)\n\
+        \n1. User-cited OO / CE sketch (e.g. `workspace-eval-oo-sketch.md`)\n2. `{module}/.context/module-context.md`\n\
+        3. Existing `*-bdd-sketch.md` and `grill-answers.md` in session folder\n4.\
+        \ `context_tools/bdd/bdd.md`, `templates/bdd-sketch.md`\n5. Production source\
+        \ only when documenting **current** behavior (`document`); target-model Bdd\
+        \ follows sketch, not today's code\n\n## Judge mistakes\n\nWhen judge FAILs:\n\
+        \n1. **Mistake turn:** `begin_eval_turn` → `log_mistake` → `finish_eval_turn`\
+        \ → commit (one process for all three)\n2. Fix artifact (sketch or grill-answers)\n\
+        3. **Correction turn:** `begin_eval_turn` → `log_correction` → `finish_eval_turn`\
+        \ → commit (one process; separate turn from step 1)\n\nRunner **does not**\
+        \ argue with judge; runner applies correction or re-grills.\n\n## Orchestration\
+        \ (parent chat)\n\n1. Task **runner** with `bdd-grill-runner` ΓåÆ one grill\
+        \ turn ΓåÆ stop\n2. Task **judge** with `bdd-grill-judge` ΓåÆ answer turn\
+        \ ΓåÆ stop\n3. Repeat until 2ΓÇô3 answers name one slice boundary\n4. Task\
+        \ **runner** ΓåÆ sketch turn ΓåÆ stop\n5. Task **judge** ΓåÆ validate turn\
+        \ ΓåÆ stop\n6. If validate FAIL ΓåÆ correction on turn ΓåÆ runner may re-sketch\
+        \ in a **new** sketch turn\n\nDo not chain ticks in one agent message.\n"
+      how: 'bdd-grill-sketch-workflow.md: two turns; one process per turn; not same
+        turn for mistake+correction.'
+      status: fixed
+- id: 1fa233af
+  prompt: log correction — two-turn eval model
+  result: entry_id=cb4724b1 fixed; workflow + improvement.md updated
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 1fa233af
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 8a4f5e47908ccd521dd7e7f566b41bd93a1b27ae
+  tool_calls: []
+  mistakes: []
+- id: b7dda0c1
+  prompt: log mistake — turn finish commit not conditional on dirty
+  result: entry_id=4b1a8711
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: b7dda0c1
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - 4b1a8711
+    sha: b7679898d266ecc561610672e57892a6a53d1bd7
+  tool_calls: []
+  mistakes:
+  - entry_id: 4b1a8711
+    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+    rule: nest-by-enabling-events
+    wrong: Nested commit under `with a dirty working tree on its session branch` at
+      turn finish. Finishing a turn after work always commits scoped changes — dirty
+      is not an optional `with` branch.
+    original: "      that has finished its turn\n        it should record the action\
+      \ run on the session trail\n        it should attach the action run record to\
+      \ its turn\n        with a dirty working tree on its session branch\n      \
+      \    it should commit its scoped changes on the session branch\n        it should\
+      \ push its session branch to origin\n"
+    tool: Bdd
+    fidelity: behavior
+    folder: repairs/nest-by-enabling-events/nest-by-enabling-events
+    correction:
+      improved: "\uFEFF# BDD sketch — workspace module (usage story)\n\nDesign: `workspace-eval-oo-sketch.md`\
+        \ §2. Grill: `grill-answers.md` (slices A–E; tick 8 usage-story taxonomy).\n\
+        \nFidelity: behavior\n\na context tool\n  with a workspace\n    that has an\
+        \ action run against it\n      with a new work session name\n        it should\
+        \ add the opened work session to its work sessions\n        it should set\
+        \ the current work session to the opened work session\n      with an existing\
+        \ work session name\n        it should load the existing work session from\
+        \ its sessions folder\n        it should set the current work session to that\
+        \ work session\n      with HEAD already on its session branch\n        it\
+        \ should continue without switching branch\n      with a clean working tree\
+        \ not on its session branch\n        with an existing session branch\n   \
+        \       it should check out that session branch\n        with no session branch\
+        \ yet\n          it should create its session branch\n      with a dirty working\
+        \ tree not on its session branch\n        it should refuse to switch branch\n\
+        \      it should open a turn for the action run\n      that has a turn open\n\
+        \        that is reading or writing module artifacts\n          with an explicit\
+        \ path given on the run\n            it should use that path for its module\
+        \ artifacts\n          with no explicit path given on the run\n          \
+        \  with no path override for its tool and fidelity\n              it should\
+        \ use its default workspace folder for its module artifacts\n            with\
+        \ a path override for its tool and fidelity\n              it should use the\
+        \ override path for its module artifacts\n        with a path for the turn\
+        \ that differs from the default path\n          it should keep a path override\
+        \ for that tool and fidelity\n        with a path for the turn that equals\
+        \ the default path\n          it should drop the path override for that tool\
+        \ and fidelity\n        that is asked for its instructions\n          it should\
+        \ record the expansion on the session trail\n          it should attach the\
+        \ expansion record to its open turn\n      that the agent is finished working\
+        \ with it\n        it should finish its turn for the action\n      that has\
+        \ finished its turn\n        it should record the action run on the session\
+        \ trail\n        it should attach the action run record to its turn\n    \
+        \    it should commit its scoped changes on the session branch\n        it\
+        \ should push its session branch to origin\n\n**Deferred:** domain Repair\
+        \ / mistake / correction chain (eval module Bdd sketch).\n"
+      how: Remove dirty `with`; commit is direct outcome under that has finished its
+        turn.
+      status: fixed
+- id: 26dce6b8
+  prompt: log correction — turn finish always commits
+  result: entry_id=4b1a8711 fixed; sketch + workspace_spec.py
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 26dce6b8
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 59867ae4af202f53476c609f2e6b9f0e2a61130c
+  tool_calls: []
+  mistakes: []
+- id: e5b802be
+  prompt: log mistake — spec edited during sketch phase
+  result: entry_id=32453ccf
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: e5b802be
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - 32453ccf
+    sha: 8d96d5670fef943985dcdbc17bf736bb73aa9517
+  tool_calls: []
+  mistakes:
+  - entry_id: 32453ccf
+    artifact: context_tools/actions/workspace/workspace_spec.py
+    rule: usage-order-behaviors
+    wrong: 'Hand-edited workspace_spec.py while the consolidated sketch is still in
+      grill/sketch. bdd-grill-sketch-workflow.md: {module}_spec.py only after sketch
+      is judge-clean and iterate unlocks generate — not during grill/sketch turns.
+      Agent-finish slice belongs in workspace-bdd-sketch.md only until generate.'
+    original: "            with context(\"that the agent is finished working with\
+      \ it\"):\n                with it(\"should finish its turn for the action\"\
+      ):\n                    # BDD: SIGNATURE\n                    pass\n\n     \
+      \       with context(\"that has finished its turn\"):\n"
+    tool: Bdd
+    fidelity: behavior
+    folder: repairs/usage-order-behaviors/usage-order-behaviors
+    correction:
+      improved: "# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd\n\
+        # invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd\n# invoke-check:\
+        \ action validate | toolset: context_tools.bdd.bdd:Bdd\n\"\"\"BDD behavior\
+        \ signatures — Workspace target model (slices A–E).\"\"\"\n\nfrom mamba import\
+        \ context, description, it\n\n\nwith description(\"a context tool\"):\n  \
+        \  with context(\"with a workspace\"):\n        with context(\"that has an\
+        \ action run against it\"):\n            with context(\"with a new work session\
+        \ name\"):\n                with it(\"should add the opened work session to\
+        \ its work sessions\"):\n                    # BDD: SIGNATURE\n          \
+        \          pass\n\n                with it(\"should set the current work session\
+        \ to the opened work session\"):\n                    # BDD: SIGNATURE\n \
+        \                   pass\n\n            with context(\"with an existing work\
+        \ session name\"):\n                with it(\"should load the existing work\
+        \ session from its sessions folder\"):\n                    # BDD: SIGNATURE\n\
+        \                    pass\n\n                with it(\"should set the current\
+        \ work session to that work session\"):\n                    # BDD: SIGNATURE\n\
+        \                    pass\n\n            with context(\"with HEAD already\
+        \ on its session branch\"):\n                with it(\"should continue without\
+        \ switching branch\"):\n                    # BDD: SIGNATURE\n           \
+        \         pass\n\n            with context(\"with a clean working tree not\
+        \ on its session branch\"):\n                with context(\"with an existing\
+        \ session branch\"):\n                    with it(\"should check out that\
+        \ session branch\"):\n                        # BDD: SIGNATURE\n         \
+        \               pass\n\n                with context(\"with no session branch\
+        \ yet\"):\n                    with it(\"should create its session branch\"\
+        ):\n                        # BDD: SIGNATURE\n                        pass\n\
+        \n            with context(\"with a dirty working tree not on its session\
+        \ branch\"):\n                with it(\"should refuse to switch branch\"):\n\
+        \                    # BDD: SIGNATURE\n                    pass\n\n      \
+        \      with it(\"should open a turn for the action run\"):\n             \
+        \   # BDD: SIGNATURE\n                pass\n\n            with context(\"\
+        that has a turn open\"):\n                with context(\"that is reading or\
+        \ writing module artifacts\"):\n                    with context(\"with an\
+        \ explicit path given on the run\"):\n                        with it(\"should\
+        \ use that path for its module artifacts\"):\n                           \
+        \ # BDD: SIGNATURE\n                            pass\n\n                 \
+        \   with context(\"with no explicit path given on the run\"):\n          \
+        \              with context(\"with no path override for its tool and fidelity\"\
+        ):\n                            with it(\"should use its default workspace\
+        \ folder for its module artifacts\"):\n                                # BDD:\
+        \ SIGNATURE\n                                pass\n\n                    \
+        \    with context(\"with a path override for its tool and fidelity\"):\n \
+        \                           with it(\"should use the override path for its\
+        \ module artifacts\"):\n                                # BDD: SIGNATURE\n\
+        \                                pass\n\n                with context(\"with\
+        \ a path for the turn that differs from the default path\"):\n           \
+        \         with it(\"should keep a path override for that tool and fidelity\"\
+        ):\n                        # BDD: SIGNATURE\n                        pass\n\
+        \n                with context(\"with a path for the turn that equals the\
+        \ default path\"):\n                    with it(\"should drop the path override\
+        \ for that tool and fidelity\"):\n                        # BDD: SIGNATURE\n\
+        \                        pass\n\n                with context(\"that is asked\
+        \ for its instructions\"):\n                    with it(\"should record the\
+        \ expansion on the session trail\"):\n                        # BDD: SIGNATURE\n\
+        \                        pass\n\n                    with it(\"should attach\
+        \ the expansion record to its open turn\"):\n                        # BDD:\
+        \ SIGNATURE\n                        pass\n\n            with context(\"that\
+        \ has finished its turn\"):\n                with it(\"should record the action\
+        \ run on the session trail\"):\n                    # BDD: SIGNATURE\n   \
+        \                 pass\n\n                with it(\"should attach the action\
+        \ run record to its turn\"):\n                    # BDD: SIGNATURE\n     \
+        \               pass\n\n                with it(\"should commit its scoped\
+        \ changes on the session branch\"):\n                    # BDD: SIGNATURE\n\
+        \                    pass\n\n                with it(\"should push its session\
+        \ branch to origin\"):\n                    # BDD: SIGNATURE\n           \
+        \         pass\n"
+      how: Revert premature spec edit; agent-finish slice stays in sketch until validate
+        + generate.
+      status: fixed
+- id: f9f4655c
+  prompt: log correction — spec reverted; sketch-only until generate
+  result: entry_id=32453ccf fixed
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: f9f4655c
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: 53f251c408cdde07238457177c6999d068132c67
+  tool_calls: []
+  mistakes: []
+- id: 6697559b
+  prompt: log mistake — sketch entry hierarchy inverted
+  result: entry_id=3170dd3e
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 6697559b
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - 3170dd3e
+    sha: d8b0068810a15b1f972fdd705cab1b5335a23464
+  tool_calls: []
+  mistakes:
+  - entry_id: 3170dd3e
+    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-bdd-sketch.md
+    rule: usage-order-behaviors
+    wrong: 'Nested enabling event `that has an action run against it` before standing
+      `with a workspace`. Grill tick 8: subject `a context tool` → standing `with
+      a workspace` → domain entry event — not event-before-standing.'
+    original: "a context tool\n  that has an action run against it\n    with a workspace\n\
+      \      with a new work session name\n"
+    tool: Bdd
+    fidelity: behavior
+    folder: repairs/usage-order-behaviors/usage-order-behaviors-3
+    correction:
+      improved: "\uFEFF# BDD sketch — workspace module (usage story)\n\nDesign: `workspace-eval-oo-sketch.md`\
+        \ §2 (Workspace), §4 (turn envelope).\n\nFidelity: behavior\n\na context tool\n\
+        \  with a workspace\n    that has an action run against it\n      with a new\
+        \ work session name\n        it should add the opened work session to its\
+        \ work sessions\n        it should set the current work session to the opened\
+        \ work session\n      with an existing work session name\n        it should\
+        \ load the existing work session from its sessions folder\n        it should\
+        \ set the current work session to that work session\n      with HEAD already\
+        \ on its session branch\n        it should continue without switching branch\n\
+        \      with a clean working tree not on its session branch\n        with an\
+        \ existing session branch\n          it should check out that session branch\n\
+        \        with no session branch yet\n          it should create its session\
+        \ branch\n      with a dirty working tree not on its session branch\n    \
+        \    it should refuse to switch branch\n      it should open a turn for the\
+        \ action run\n      that has a turn open\n        that is reading or writing\
+        \ module artifacts\n          with an explicit path given on the run\n   \
+        \         it should use that path for its module artifacts\n          with\
+        \ no explicit path given on the run\n            with no path override for\
+        \ its tool and fidelity\n              it should use its default workspace\
+        \ folder for its module artifacts\n            with a path override for its\
+        \ tool and fidelity\n              it should use the override path for its\
+        \ module artifacts\n        with a path for the turn that differs from the\
+        \ default path\n          it should keep a path override for that tool and\
+        \ fidelity\n        with a path for the turn that equals the default path\n\
+        \          it should drop the path override for that tool and fidelity\n \
+        \       that is asked for its instructions\n          it should record the\
+        \ expansion on the session trail\n          it should attach the expansion\
+        \ record to its open turn\n      that the agent is finished working with it\n\
+        \        it should finish its turn for the action\n      that has finished\
+        \ its turn\n        it should record the action run on the session trail\n\
+        \        it should attach the action run record to its turn\n        it should\
+        \ commit its scoped changes on the session branch\n        it should push\
+        \ its session branch to origin\n\n**Deferred:** domain Repair / mistake /\
+        \ correction chain (eval module Bdd sketch).\n"
+      how: 'OO §2 three levels: BaseContextTool composes Workspace (with a workspace)
+        before action-run envelope; §4 openWorkSession + Turn.open then agent work.
+        Design cites workspace-eval-oo-sketch.md only.'
+      status: fixed
+- id: 9c9106ff
+  prompt: log correction — sketch hierarchy per OO §2
+  result: entry_id=3170dd3e fixed
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 9c9106ff
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: cabaeca0e0eb251e9e919373b505fe3b3eea6027
+  tool_calls: []
+  mistakes: []
+- id: 1e36cbd8
+  prompt: log mistake — wrong grill question style tick 9
+  result: entry_id=1c9526fa
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: 1e36cbd8
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids:
+    - 1c9526fa
+    sha: 6a2d321b9d885b751df63483ba39b8bbd941a4c9
+  tool_calls: []
+  mistakes:
+  - entry_id: 1c9526fa
+    artifact: context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/grill-answers.md
+    rule: usage-order-behaviors
+    wrong: 'Grill tick 9 asked slice-boundary / process options (where should the
+      first extension boundary fall) instead of BDD design-tree questions: highest-level
+      behavior, event, or state change to model; substates under that branch; legitimate
+      it should tests. bdd.md: nest by enabling events and usage story — grill must
+      walk the tree down, not pick sketch scope by checklist letter.'
+    original: '### Turn — grill tick 9 — slice F boundary (mistake / correction)
+
+
+      **Question:** Slice **F** extends the workspace Bdd sketch for the mistake/correction
+      chain (`workspace-eval-oo-sketch.md` §4 lines 264, 393–394, 427–446, 660–683;
+      §9 item 6). Where should the **first** sketch extension boundary fall?
+
+
+      **Options:**
+
+
+      - **A — Mistake-only under open turn:** enabling event when recording a mistake
+      → on open turn, persist under work session, nest in themed repair backlog. Exclude
+      correction and TurnCommit.mistakeIds until later tick.
+
+      - **B — Mistake + correction same open turn:** both sibling enabling events
+      under `that has a turn open` in one action run, before finish_turn.
+
+      - **C — Separate action runs:** mistake under one action run''s open turn; correction
+      under a **later** action run''s open turn. TurnCommit mistakeIds only when mistakes
+      recorded on that turn.
+
+      - **D — Workspace sketch stops at turn envelope:** Mistake/Correction/Repair
+      in eval-module Bdd sketch only; keep workspace deferred.
+
+
+      **Answer (user):** **B — Mistake + correction same open turn** — sibling enabling
+      events under `that has a turn open` in one action run.
+
+      '
+    tool: Bdd
+    fidelity: behavior
+    folder: repairs/usage-order-behaviors/usage-order-behaviors-4
+    correction:
+      improved: "\uFEFF# Grill answers â€” eval-consolidate-workspace Bdd behavior\
+        \ prep\n\nDesign source: `context_tools/actions/workspace/.context/sessions/eval-consolidate-workspace/workspace-eval-oo-sketch.md`\n\
+        \nAppend-only. Runner adds question blocks; judge adds answers beneath.\n\n\
+        ---\n\n### Turn 9266b3db â€” grill tick 1\n\n**Question:** For the **first**\
+        \ Bdd behavior sketch slice (Â§9 workspace module checklist), where should\
+        \ the boundary fall?\n\n**Options:**\n\n- **A â€” Path overrides only:** `Workspace.load`\
+        \ / `save`, `pathOverrides`, `lookupPath`, `upsertPath`; persistence at `{workspace.path}/.context/context-index.md`;\
+        \ **exclude** `openWorkSession`, `currentWorkSession`, and the host three-step\
+        \ resolution chain on `open`.\n- **B â€” Path overrides + host lookup on open:**\
+        \ everything in A, **plus** observable outcomes when a context tool resolves\
+        \ its edit path via `lookupPath(context_index_key, fidelity)` vs `{workspace.path}/{default_workspace_folder}`\
+        \ (OO sketch resolution steps 2â€“3 at lines 125â€“131).\n- **C â€” openWorkSession\
+        \ first:** skip override persistence; start Bdd at `openWorkSession` setting\
+        \ `currentWorkSession` and delegating to `WorkSession.open` (checklist item\
+        \ 5).\n- **D â€” Discard unvalidated draft:** treat existing `workspace-bdd-sketch.md`\
+        \ (path-overrides slice, never judge-validated) as void; re-sketch only after\
+        \ grill ticks name a slice.\n\n**Runner paths read:**\n\n- `workspace-eval-oo-sketch.md`\
+        \ Â§2 (Workspace model, PathOverride, path overrides table, resolution on\
+        \ open)\n- `workspace-eval-oo-sketch.md` Â§9 workspace checklist items 1â€“2\
+        \ and 5\n- `workspace-bdd-sketch.md` (existing draft â€” slice 1 path overrides,\
+        \ deferred list)\n- `context_tools/bdd/.context/bdd-grill-sketch-workflow.md`\n\
+        \n**Judge answer:** **Recommend A â€” path overrides only.** Checklist item\
+        \ 1 lists `load` / `save` / `lookupPath` / `upsertPath` on **`Workspace`**\
+        \ together with `pathOverrides`; item 2 isolates **`PathOverride`** row shape.\
+        \ Item 5 (`openWorkSession`) and item 4 (`BaseContextTool.workspace` resolution)\
+        \ are separate slices. OO sketch lines 125â€“131 label the three-step chain\
+        \ as **resolution on `open`** â€” that uses host `context_index_key` and `default_workspace_folder`,\
+        \ not bare `Workspace.lookupPath` in isolation. Option B would mix aggregates\
+        \ in one Bdd subject. Option C skips the usage-story prerequisite (overrides\
+        \ exist before a work session opens). Option D is wrong: existing `workspace-bdd-sketch.md`\
+        \ aligns with A but was never judge-validated â€” keep the hierarchy direction,\
+        \ run validate after a proper sketch turn; do not void without a FAIL on the\
+        \ file.\n\n**Citations:**\n\n- `workspace-eval-oo-sketch.md` Â§2 lines 47â€“50,\
+        \ 55â€“58, 111â€“123 â€” `pathOverrides`, `lookupPath`, `upsertPath`, sparse\
+        \ rows, `context-index.md` persistence\n- `workspace-eval-oo-sketch.md` Â§2\
+        \ lines 84â€“91, 125â€“131 â€” host resolution on **open** (defer to later\
+        \ slice)\n- `workspace-eval-oo-sketch.md` Â§9 lines 826â€“830 â€” checklist\
+        \ ordering: items 1â€“2 before 5\n- `context_index.py` lines 15â€“20 â€” todayâ€™s\
+        \ index path `{workspace}/.context/context-index.md` (persistence seam to\
+        \ fold into `Workspace`)\n- `bdd-sketch.md` â€” usage-story order: establish\
+        \ subject state before downstream open/session behaviors\n\n**Slice unlocked:**\
+        \ **no** â€” tick 1 selects slice **family** (A). Tick 2 should lock observables\
+        \ inside A (e.g. `lookupPath` when no row: absent override vs todayâ€™s `lookup_root`\
+        \ returning `None`; row key shape `tool` + `fidelity` vs todayâ€™s single-key\
+        \ entries).\n\n---\n\n### Turn 27ae89d2 â€” grill tick 2\n\n**Question:**\
+        \ Inside slice **A** (path overrides only), when `Workspace.lookupPath(tool,\
+        \ fidelity)` is called and **no** matching override row exists, what is the\
+        \ stakeholder-visible outcome?\n\n**Options:**\n\n- **A â€” No override path:**\
+        \ `lookupPath` yields nothing (e.g. `None` / absent) â€” the hostâ€™s default-folder\
+        \ fallback is **out of scope** for this slice (OO sketch puts that at resolution\
+        \ step 3 on **open**, lines 127â€“129).\n- **B â€” Implicit default path:**\
+        \ `lookupPath` returns `{workspace.path}/{default_workspace_folder}` even\
+        \ though `Workspace` does not carry host defaults in the target model (would\
+        \ duplicate checklist item 4).\n- **C â€” Workspace root path:** return `{workspace.path}`\
+        \ when no row (todayâ€™s `root_glob_to_path` for `./*`).\n- **D â€” Error:**\
+        \ raise when no row exists.\n\n**Secondary (index row shape):** persisted\
+        \ rows use **`tool` + `fidelity` + `path`** (OO sketch lines 115â€“118, PathOverride\
+        \ lines 55â€“58) â€” **not** todayâ€™s single `tool_key = root_glob` entries\
+        \ in `ContextIndex.parse_current_entries` (one key per tool, no fidelity dimension).\n\
+        \n**Runner paths read:**\n\n- `workspace-eval-oo-sketch.md` Â§2 lines 55â€“58,\
+        \ 115â€“118, 125â€“129\n- `context_index.py` `lookup_root`, `parse_current_entries`,\
+        \ `upsert_entry` (today: tool_key only; `## Log` section â€” target drops\
+        \ Log per OO line 123)\n- `grill-answers.md` tick 1 judge recommendation (slice\
+        \ A)\n\n**Judge answer:** **Recommend A â€” no override path.** Target `Workspace.lookupPath(tool,\
+        \ fidelity)` should behave like todayâ€™s absent-key case: `ContextIndex.lookup_root`\
+        \ returns **`None`** when the key is missing (lines 91â€“94) â€” not workspace\
+        \ root, not implicit host default. Step 3 of the open resolution chain (`{workspace.path}/{default_workspace_folder}`)\
+        \ belongs on **BaseContextTool** / **open**, not on `Workspace.lookupPath`\
+        \ (OO lines 127â€“129). Reject B (host default on wrong aggregate), C (workspace\
+        \ root), D (error on miss).\n\n**Row shape:** Confirm **`tool` + `fidelity`\
+        \ + `path`** per PathOverride (OO lines 55â€“58, 115â€“118). Todayâ€™s `parse_current_entries`\
+        \ / `upsert_entry` use a **single `tool_key`** with no fidelity dimension\
+        \ â€” Bdd describes the **target** model, not a line-for-line port. Persisted\
+        \ file drops **`## Log`** (OO line 123); todayâ€™s `render_index` still emits\
+        \ Log (lines 113â€“117) â€” out of scope for slice A observables except â€œsave\
+        \ writes Current rows only.â€\x9D\n\n**Slice unlocked:** **partial â€” yes\
+        \ for sketch draft** with one open branch: `upsertPath` â€œremove row when\
+        \ path matches host default againâ€\x9D (OO line 131) needs tick 3 â€” `Workspace`\
+        \ does not own `default_workspace_folder`.\n\n**Citations:**\n\n- `workspace-eval-oo-sketch.md`\
+        \ lines 47â€“50, 55â€“58, 115â€“123, 127â€“129\n- `context_index.py` lines\
+        \ 91â€“94 (`lookup_root` â†’ `None`), 136â€“165 (`upsert_entry` / Log)\n-\
+        \ `grill-answers.md` tick 1 â€” slice A family\n\n**Slice unlocked:** **partial**\
+        \ â€” sketch may proceed for load / lookup / save / sparse rows; hold **`it\
+        \ should drop the row when path matches host default`** until tick 3.\n\n\
+        ---\n\n### Turn 4d111cd1 â€” grill tick 3\n\n**Question:** OO sketch line\
+        \ 131: `upsertPath` when resolved path **matches host default again** â†’\
+        \ remove the row. `Workspace` does not own `default_workspace_folder`. How\
+        \ should slice **A** Bdd express default-match **removal**?\n\n**Options:**\n\
+        \n- **A â€” Caller-supplied default:** `upsertPath(tool, fidelity, path, default_path)`\
+        \ â€” when `path == default_path`, remove the row; when path differs from\
+        \ default, upsert sparse row. Host passes its `default_workspace_folder`-resolved\
+        \ path at call time.\n- **B â€” Explicit remove only:** `removePath(tool,\
+        \ fidelity)` on `Workspace`; slice A Bdd covers add/update + explicit remove;\
+        \ â€œmatches defaultâ€\x9D removal is host orchestration in a **later** slice\
+        \ (open / BaseContextTool).\n- **C â€” Omit removal from slice A:** only add/update\
+        \ rows in this sketch; no `it should` for default-match removal anywhere yet.\n\
+        \n**Runner paths read:**\n\n- `workspace-eval-oo-sketch.md` line 131, lines\
+        \ 47â€“50\n- `grill-answers.md` ticks 1â€“2 (slice A, lookupPath absent â†’\
+        \ None)\n\n**Judge answer:** **Recommend A â€” caller-supplied `default_path`.**\
+        \ OO line 131 describes behavior at **open** time when the host already knows\
+        \ the resolved path and its default â€” passing `default_path` into `upsertPath`\
+        \ keeps `Workspace` free of host fields while making removal observable on\
+        \ the aggregate: equal â†’ drop row; unequal â†’ sparse upsert. Reject B (splits\
+        \ one policy across two slices unnecessarily). Reject C (drops locked requirement\
+        \ from line 131).\n\n**Citations:**\n\n- `workspace-eval-oo-sketch.md` lines\
+        \ 47â€“50, 131\n- `grill-answers.md` ticks 1â€“2 â€” slice A, lookup absent\
+        \ â†’ None, tool+fidelity+path\n\n**Slice unlocked:** **yes** â€” slice A\
+        \ boundary: `load` / `save` / `lookupPath` (absent â†’ no override) / `upsertPath(tool,\
+        \ fidelity, path, default_path)` (sparse add/update/remove on default match);\
+        \ persistence `{workspace.path}/.context/context-index.md` without `## Log`;\
+        \ exclude `openWorkSession`, host resolution chain, `WorkSession`.\n\n---\n\
+        \n### Turn (grill tick 4 â€” slice B boundary)\n\n**Question:** Slice **B**\
+        \ â€” `Workspace.openWorkSession(name, goal, fidelities, contexts, path, default_path)`\
+        \ (OO lines 51â€“53). Which observables belong in B vs defer to slice **C**\
+        \ (`WorkSession.open` / git branch)?\n\n**Options:**\n\n- **A â€” Workspace\
+        \ open only:** `load()`; add/load session in `workSessions`; set `currentWorkSession`;\
+        \ `upsertPath` when explicit `path` â‰  `default_path`; **exclude** git checkout,\
+        \ branch naming, `WorkSession.open` innards.\n- **B â€” Include git branch\
+        \ checkout** in the same slice (WorkSession.open policy).\n- **C â€” Include\
+        \ host three-step path resolution** instead of openWorkSession.\n\n**Runner\
+        \ paths read:** `workspace-eval-oo-sketch.md` lines 51â€“53, 60â€“71, Â§9\
+        \ items 3 and 5.\n\n**Judge answer:** **Recommend A.** OO line 53 sequences\
+        \ `load(); currentWorkSession.open(...); upsertPath` â€” Bdd slice B stops\
+        \ at **Workspace** outcomes before git/branch (slice C). Checklist item 5\
+        \ is `openWorkSession`; item 3 is `WorkSession` with `openTurn`/git. Reject\
+        \ B (mixes aggregates). Reject C (checklist item 4).\n\n**Citations:** OO\
+        \ lines 45â€“53, 60â€“71; Â§9 lines 826â€“828.\n\n**Slice unlocked:** **yes**\
+        \ â€” slice B: openWorkSession loads overrides, mutates workSessions/currentWorkSession,\
+        \ upsertPath on non-default explicit path; exclude WorkSession.open git.\n\
+        \n---\n\n### Turn (grill tick 5 â€” slice C)\n\n**Question:** Slice **C**\
+        \ â€” `WorkSession.open` git branch policy only?\n\n**Options:** **A** â€”\
+        \ branch checkout/create/refuse-when-dirty per `workspace_session.md` lines\
+        \ 50â€“61; exclude Turn/git commit. **B** â€” include Turn.finish commit.\n\
+        \n**Judge answer:** **A.** Git branch rules are documented in workspace_session.md;\
+        \ Turn commit is checklist item 8 / eval slice.\n\n**Slice unlocked:** **yes**\n\
+        \n---\n\n### Turn (grill tick 6 â€” slice D)\n\n**Question:** Slice **D**\
+        \ â€” host edit-path resolution (OO lines 125â€“131) as subject **a context\
+        \ tool host**?\n\n**Judge answer:** **yes** â€” three-step chain as observable\
+        \ outcomes; Workspace lookup already slice A.\n\n**Slice unlocked:** **yes**\
+        \ â€” Bdd workspace module checklist items 1â€“5 covered at behavior signature\
+        \ level.\n\n---\n\n### Turn 7643854d â€” grill tick 7 (deferred slice E)\n\
+        \n**Question:** `workspace-bdd-sketch.md` deferred line â€” Turn/git/repairs\
+        \ via `currentWorkSession`; SessionLog; GitRepo commit/push on `Turn.finish`.\
+        \ Where should slice **E** boundary fall for workspace Bdd?\n\n**Options:**\n\
+        \n- **A â€” Turn.finish git only:** when a turn finishes, commit scoped changes\
+        \ when the working tree is dirty on the session branch, always push the session\
+        \ branch; **exclude** SessionLog and domain Repair.\n- **B â€” Turn.finish\
+        \ + SessionLog:** add observables for action-run and instruction-expand audit\
+        \ on the session trail and on the open turn; commit/push on turn finish as\
+        \ in A; **exclude** domain Repair/mistake/correction (eval package).\n- **C\
+        \ â€” Include domain Repair chain:** mistake â†’ correction â†’ themed Repair\
+        \ on `WorkSession.repairs` in the same workspace sketch.\n- **D â€” Defer\
+        \ all to eval module:** workspace sketch stays closed at slice D; deferred\
+        \ items move to a separate eval Bdd sketch only.\n\n**Runner paths read:**\n\
+        \n- `workspace-eval-oo-sketch.md` Â§4 (SessionLog, Turn envelope, Turn.finish\
+        \ push)\n- `workspace-eval-oo-sketch.md` Â§9 workspace checklist items 8â€“9;\
+        \ eval checklist items 2â€“6\n- `workspace-bdd-sketch.md` deferred line\n\
+        - `mistakes/observable-behavior-2/mistake.md` â€” behavior under turn artifact\
+        \ I/O, not API operations\n\n**Slice unlocked:** **no** â€” await judge answer.\n\
+        \n**Judge answer:** **Recommend B â€” Turn.finish + SessionLog.** OO Â§4 locks\
+        \ SessionLog.append for expand (framework) and run (recipe body) â€” same\
+        \ record on session trail (`events.log`) and on `openTurn.toolCalls` when\
+        \ a turn is open. Turn.finish (checklist item 8) commits when dirty then **always**\
+        \ pushes session branch. Domain Repair/mistake/correction stays on eval package\
+        \ (`WorkSession.repairs`) â€” eval checklist items 2â€“6; reject C (mixes\
+        \ eval domain into workspace module sketch). Reject D (SessionLog and Turn.finish\
+        \ git are workspace checklist items 8â€“9, not eval-only). Reject A (drops\
+        \ locked SessionLog observables).\n\n**Citations:** OO Â§4 lines 217â€“240,\
+        \ 256â€“266; Â§9 lines 832â€“834; observable-behavior-2 correction â€” nest\
+        \ under turn events, not API calls.\n\n**Slice unlocked:** **yes** â€” slice\
+        \ E: SessionLog audit during open turn; turn finish commit-when-dirty + always\
+        \ push; exclude domain Repair (defer to eval Bdd sketch).\n\n---\n\n### Turn\
+        \ — grill tick 8 — usage-story describe taxonomy (consolidated sketch)\n\n\
+        **Question:** Consolidated `workspace-bdd-sketch.md` — for **each** `describe`\
+        \ / `that` / `with` line, what category is it (**subject**, **standing condition**,\
+        \ **enabling event**, **outcome-only leaf**), and what legitimate behaviors,\
+        \ events, or state changes may nest there? What must **never** appear as a\
+        \ nested `that` (operation outcomes, API steps, logging as state)?\n\n**Options\
+        \ (per line class):**\n\n- **A — Subject / entry:** top `describe` names the\
+        \ stakeholder-facing actor (`a context tool`); nest only usage entry (`with\
+        \ a workspace`) then one domain entry event.\n- **B — Standing `with`:** narrows\
+        \ git/session/path/input state **already true** before the next observation\
+        \ (`with a new work session name`, `with HEAD already on its session branch`,\
+        \ `with no path override…`); nest `it should` outcomes only — not further\
+        \ API calls.\n- **C — Enabling `that` (event):** names something that **happens**\
+        \ and unlocks the next observations (`that has an action run against it`,\
+        \ `that has a turn open`, `that is reading or writing module artifacts`, `that\
+        \ is asked for its instructions`, `that the agent is finished working with\
+        \ it`, `that has finished its turn`); nest narrower `with` or `it should`\
+        \ — never past-tense operation results (`that has logged…`).\n- **D — Invalid:**\
+        \ operation/API narration (`openWorkSession`, `lookupPath`, `SessionLog.append`),\
+        \ outcomes dressed as state (`that has logged`, `that has expanded`), or manager\
+        \ classes as subjects.\n\n**Runner paths read:**\n\n- `workspace-bdd-sketch.md`\
+        \ (consolidated usage story)\n- `workspace-eval-oo-sketch.md` §2 lines 42–93,\
+        \ 125–131; §4 lines 217–266 (turn envelope, SessionLog moments, finish_turn)\n\
+        - `context_tools/bdd/bdd.md` — hierarchy shape, `nest-by-enabling-events`,\
+        \ `state-not-when`, `observable-behavior`\n- `context_tools/bdd/.context/bdd-grill-sketch-workflow.md`\
+        \ — grill before sketch; never skip grill on `/bdd /sketch`\n- `mistakes/nest-by-enabling-events-2/mistake.md`\
+        \ (db6b3528) — logged state anti-pattern\n\n**Answer (taxonomy — apply before\
+        \ any sketch edit):**\n\n| Line | Category | What may nest | Reject |\n|---|---|---|---|\n\
+        | `a context tool` | **subject** | `with a workspace` only at this depth |\
+        \ `BaseContextTool`, `SessionLog`, `@agent_tool` |\n| `with a workspace` |\
+        \ **standing `with`** | domain entry event | path override load/save as subjects\
+        \ |\n| `that has an action run against it` | **enabling event** (single entry)\
+        \ | session-name `with` branches; git `with` branches; prelude outcome; turn-open\
+        \ state; turn-finished event | `openWorkSession`, separate host-resolution\
+        \ slice lines |\n| `with a new/existing work session name` | **standing `with`**\
+        \ | `currentWorkSession` / `workSessions` outcomes | WorkSession.open API\
+        \ steps |\n| `with HEAD…` / `with a clean…` / `with a dirty…` | **standing\
+        \ `with`** (git) | branch policy `it should` | checkout/create as operation\
+        \ lines |\n| `it should open a turn for the action run` | **outcome** (prelude)\
+        \ | leaf | nested under wrong parent |\n| `that has a turn open` | **state\
+        \ after event** (`Turn.open`) | artifact-I/O event; path-for-turn `with`;\
+        \ expand event | SessionLog as subject |\n| `that is reading or writing module\
+        \ artifacts` | **enabling event** | explicit-path / override `with` branches\
+        \ → edit-path outcomes | `lookupPath`, resolve-on-open |\n| `with a path for\
+        \ the turn that differs/equals…` | **standing `with`** (after path known)\
+        \ | keep/drop override outcomes | upsertPath call lines |\n| `that is asked\
+        \ for its instructions` | **enabling event** (expand) | expansion trail +\
+        \ openTurn attachment outcomes | `that has expanded…` |\n| `that the agent\
+        \ is finished working with it` | **enabling event** (agent done with tool)\
+        \ | `it should finish its turn for the action` | logged state; skipping `finish_turn`;\
+        \ API narration |\n| `it should finish its turn for the action` | **outcome**\
+        \ (turn envelope) | leaf — agent invokes `finish_turn` after work | nested\
+        \ under `that has finished its turn` |\n| `that has finished its turn` | **enabling\
+        \ event** (`finish_turn` completed) | action-run trail + turn attachment;\
+        \ commit scoped changes; push session branch | `that has logged…`, recipe-run\
+        \ event; optional dirty `with` on commit |\n\n**Locked behaviors from OO §4\
+        \ (stakeholder-visible, not implementation):**\n\n- **Expand audit** — when\
+        \ instructions are **asked for** (framework expand), record on session trail\
+        \ and on **open** turn.\n- **Finish turn obligation** — when the agent is\
+        \ **finished working with** the context tool, it must **finish its turn for\
+        \ the action** (`finish_turn` @agent_tool) — testable gate before turn-finish\
+        \ outcomes.\n- **Run audit** — when the turn is **finished** for the action,\
+        \ record action run on session trail and on that turn — **not** under a “logged”\
+        \ state.\n- **Git on finish** — commit scoped changes on the session branch;\
+        \ push session branch (turn finish implies work landed — not an optional dirty\
+        \ `with` branch).\n\n**Process correction:** `/bdd /sketch` must run **grill\
+        \ → sketch → generate** cadence (`Sketcher.sketch_session` / `bdd-grill-sketch-workflow.md`).\
+        \ Consolidated sketch was generated without tick 8 taxonomy — caused repeated\
+        \ nest-by-enabling-events failures.\n\n**Eval turn attachment:** Mistake and\
+        \ correction are **separate turns** (each: one process for `begin` → tool\
+        \ → `finish`, then commit). See `bdd-grill-sketch-workflow.md` § Eval turn\
+        \ — one process per turn. Orphans `99079d1e` / `2245e8ec`: separate `tools.ps1\
+        \ run` per tool broke the open turn. Do not combine `log_mistake` and `log_correction`\
+        \ in one turn.\n\n**Citations:** OO §2 lines 51–53, 84–92, 125–131; §4 lines\
+        \ 223–224, 255–266, 611–618; `bdd.md` pass/fail examples; mistake db6b3528.\n\
+        \n**Slice unlocked:** **yes** — consolidated usage-story sketch may proceed\
+        \ only where each line matches taxonomy above; re-grill if a new `that`/`with`\
+        \ line is added.\n\n---\n\n### Turn — grill tick 9 — slice F design tree root\
+        \ (mistake / correction)\n\n**Question:** Slice **F** adds the OO mistake/correction\
+        \ chain (`workspace-eval-oo-sketch.md` §4: `Turn.mistakes`, mistake/correction\
+        \ record paths, `TurnCommit.mistakeIds`; §9 item 6). The consolidated sketch\
+        \ already reaches `that has a turn open` (expand, artifact I/O) and turn finish.\n\
+        \nAt the **highest level** still under `that has a turn open`, what **event\
+        \ or state change** should we model first?\n\n**Options (design tree — next\
+        \ branch):**\n\n- **A — Enabling event: violation found** — `that finds a\
+        \ violation in an artifact` unlocks mistake substates (what is recorded, where\
+        \ it lands). Correction and Repair bucket deferred to later ticks.\n- **B\
+        \ — Enabling event: mistake recorded** — `that is recording a mistake` (agent\
+        \ invoked mistake path while turn is open). Unlocks substates to drill next:\
+        \ on open turn, work-session files, themed repair backlog.\n- **C — Standing\
+        \ state: mistakes on open turn** — `with mistakes on its open turn` before\
+        \ finish — unlocks turn-finish substates (`TurnCommit.mistakeIds`). Requires\
+        \ a prior tick to name how mistakes arrive on the turn.\n- **D — Standing\
+        \ state: repair backlog** — `with a themed repair in its backlog` — model\
+        \ Repair bucket first. Likely violates nest-by-enabling-events unless a prior\
+        \ event is named.\n\n**Runner paths read:**\n\n- `workspace-eval-oo-sketch.md`\
+        \ §4 lines 393–394, 408, 427–446, 660–683; §191 domain chain\n- `workspace-bdd-sketch.md`\
+        \ — `that has a turn open` through turn finish\n- `context_tools/bdd/bdd.md`\
+        \ — hierarchy shape, nest-by-enabling-events, state-not-when\n- `grill-answers.md`\
+        \ tick 8 taxonomy\n\n**Answer:** _(pending — user)_\n\n**Slice unlocked:**\
+        \ **no** — tick 10 drills **substates** under the chosen branch: nested `with`\
+        \ / `it should` that are legitimate tests; reject API steps and logged-state\
+        \ `that`.\n\n"
+      how: 'Replace slice-boundary grill with BDD design-tree root: highest-level
+        event/state under that has a turn open; tick 10 will drill substates and legitimate
+        tests.'
+      status: fixed
+- id: a44861b9
+  prompt: log correction — grill tick 9 design-tree question
+  result: entry_id=1c9526fa fixed
+  context: eval-consolidate-workspace
+  change_commit:
+    turn_id: a44861b9
+    session_name: eval-consolidate-workspace
+    tool_names: []
+    mistake_ids: []
+    sha: f17318febba7e2413cf0d305e193f6b41f04e230
+  tool_calls: []
+  mistakes: []

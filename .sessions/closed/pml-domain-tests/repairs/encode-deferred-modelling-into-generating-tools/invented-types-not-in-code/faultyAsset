@@ -1,0 +1,1 @@
+Neither type exists in any .ts file. AuthenticationService.signIn() returns void, not Session. EnterpriseIdentity was speculative.

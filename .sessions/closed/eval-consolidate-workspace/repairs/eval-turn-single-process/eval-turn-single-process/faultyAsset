@@ -1,0 +1,2 @@
+Use .\tools.ps1 from repo root. Write _req.yaml, run, delete.
+(No warning that separate runs orphan log_mistake / log_correction.)

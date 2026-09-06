@@ -1,0 +1,11 @@
+that has been loaded
+  with no context-index file present
+    it should expose an empty path override list
+  with a context-index file listing tool, fidelity, and path rows
+    it should expose those rows as path overrides
+that is asked for a tool path
+  ...
+that records a tool path with a known default path
+  ...
+that is saved after path overrides change
+  ...

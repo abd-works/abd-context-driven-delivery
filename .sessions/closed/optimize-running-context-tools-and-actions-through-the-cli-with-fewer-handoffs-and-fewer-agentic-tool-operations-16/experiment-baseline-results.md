@@ -1,0 +1,21 @@
+# baseline results
+
+- branch: experiment/baseline
+- options: none
+- pair_a_story_map_generate:
+  - start: 2026-08-27T13:19:53
+  - end: 2026-08-27T13:23:48
+  - elapsed: 03:55
+  - artifact: sandbox/courier/.context/story-map.md
+- pair_b_model_generate:
+  - start: 2026-08-27T13:23:56
+  - end: 2026-08-27T13:25:01
+  - elapsed: 01:05
+  - artifact: sandbox/courier/.context/clean-engineering-model.md
+- notes:
+  - First `python -m tools` without PYTHONPATH imported `tools` from OneDrive `paradise-mobile/abd-context-driven-delivery` and failed with `ModuleNotFoundError: No module named 'harness'`. Workaround: prefix PYTHONPATH with this checkout plus `primitives`, `utilities`, `context_tools`, `context_tools/actions` (venv still used).
+  - Stories `action: generate` (catalog `story_map.yaml`) returned `unknown action`. Used `action: guidance` with `fidelity: story_map`, `format: markdown`, `path: sandbox/courier`, `session: optimize-running-context-tools-and-actions-through-the-cli-with-fewer-handoffs-and-fewer-agentic-tool-operations-16`.
+  - Generate accepted `path` and `session` (not "none"). Nested Stories/CE `action: generate` on the host kit worked; expander `tools` lists were empty of Stories/CE steps (`read_cdr_format` / `finish_turn` / CE also `create_diagram`).
+  - Passing `session` on Stories constructed a work session under `sandbox/courier/.context/sessions/...` and `context-index.md` even though this experiment did not call `open` / `finish_turn`.
+  - Also wrote `sandbox/courier/.context/thin-slice.md` (story_map guidance: map + thin-slice). Generic `scanners.scan:Scan` on those files returned `ok: True` with empty `rules`/`violations` (not the Stories scanner collection).
+  - CE guidance used `format: markdown` so the model is markdown, not default python. Generate suggested Drawio `create_diagram`; skipped that because format was not drawio.

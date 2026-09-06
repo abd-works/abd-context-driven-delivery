@@ -1,0 +1,1 @@
+Cart is an invariant of Prospect — accessed via prospect.cart after prospectRepository.load(). CartRepository is a test-tier seeding seam (allows planting msisdn/plan in a given without driving UI), not a domain repository.

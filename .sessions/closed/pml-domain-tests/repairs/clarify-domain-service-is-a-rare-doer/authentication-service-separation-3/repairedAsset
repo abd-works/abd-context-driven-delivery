@@ -1,0 +1,1 @@
+AuthenticationService interface added to customer.ts with enterCredentials(): Credentials, authenticate(credentials), register(credentials), signOut(), requestPasswordReset(credentials), resetPassword(password); Credentials stripped to form-only contract; paradise-mobile.ts authentication() now returns AuthenticationService

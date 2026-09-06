@@ -1,0 +1,1 @@
+Scenario 1 in tests/onboard-a-customer/select-sim.e2e.ts reconciled live: Then asserts SelectSim.availableTypes() === ['eSIM', 'pSIM'] via card copy ("eSIM - the fastest way!" / "The slightly less fast way"), not tab roles. SelectSimE2e in tests/domain/cart/cart.e2e.ts.

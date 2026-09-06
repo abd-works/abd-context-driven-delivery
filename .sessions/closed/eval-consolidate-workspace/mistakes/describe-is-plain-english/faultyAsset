@@ -1,0 +1,4 @@
+it should load path overrides from context-index before opening
+default path for the opening tool
+under the workspace
+with its work session opening on the workspace

@@ -1,0 +1,9 @@
+export interface OrderDone {
+  open(options: { success: boolean; payUpFront?: boolean }): Promise<void>
+  isShowingSummaryBanner(): Promise<boolean>
+  isShowingSimBanner(): Promise<boolean>
+  isShowingInvoiceBanner(): Promise<boolean>
+  isShowingOrderFailedBanner(): Promise<boolean>
+  isShowingPaymentFailedBanner(): Promise<boolean>
+  headline(): Promise<string>
+}

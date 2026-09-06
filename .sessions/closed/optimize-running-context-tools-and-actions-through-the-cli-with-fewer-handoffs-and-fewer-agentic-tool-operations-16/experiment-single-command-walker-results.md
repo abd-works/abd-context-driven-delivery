@@ -1,0 +1,26 @@
+# single-command walker results
+
+- branch: experiment/single-command
+- worktree: `C:\dev\abd-cdd-experiment-single-command`
+- options: 1b + 1c + 4c + 5a + expander lists tools
+- clock: first `python -m tools run -` of that pair → artifact written (ISO-8601 local)
+- pair_a_story_map_generate:
+  - start: 2026-08-27T14:03:32
+  - end: 2026-08-27T14:04:23
+  - elapsed: 00:51
+  - hops: 1 (stdin YAML → `python -m tools run -` only)
+  - first_generate_tools: [read_cdr_format, list_cdrs, write_cdr, guidance, finish_turn]
+  - artifact: `C:\dev\abd-cdd-experiment-single-command\sandbox\courier\.context\story-map.md`
+- pair_b_model_generate:
+  - start: 2026-08-27T14:04:40
+  - end: 2026-08-27T14:05:17
+  - elapsed: 00:37
+  - hops: 1 (stdin YAML → `python -m tools run -` only)
+  - first_generate_tools: [read_cdr_format, list_cdrs, write_cdr, create_diagram, scan, repair, finish_turn]
+  - artifact: `C:\dev\abd-cdd-experiment-single-command\sandbox\courier\.context\clean-engineering-model.md`
+- notes:
+  - No `tools.ps1` on this worktree. Used `$env:PYTHONIOENCODING=utf-8`, PYTHONPATH = worktree + primitives + utilities + context_tools + context_tools\actions, then `.venv\Scripts\python.exe -m tools run -`.
+  - Zero `_req.yaml`. Never remanifested. No `session=`. Did not AskQuestion. Did not open a work session / `finish_turn`.
+  - Pair A: expander listed tools (not `[]`). Host Stories guidance was inlined in the first generate payload. Did **not** invent a Stories `action: guidance` hop. Wrote `story-map.md` from those inlined instructions. Listed CDR / `guidance` / `finish_turn` tools were not extra CLI hops.
+  - Pair B: expander listed tools (not `[]`). No domain `guidance` in the list; Drawio `create_diagram` / `scan` / `repair` were listed even with `format: markdown`. Skipped those (markdown model, not drawio). Did **not** invent a CE `action: guidance` hop. Wrote `clean-engineering-model.md` from inlined CE generate instructions.
+  - Did not write `c:\dev\abd-context-driven-delivery\sandbox\courier`. Thin-slice lives inside `story-map.md`.

@@ -1,0 +1,8 @@
+export interface BillingPage {
+  open(): Promise<void>
+  isShowing(): Promise<boolean>
+  latestInvoiceAmount(): Promise<string | null>
+  paymentMethodLastFour(): Promise<string | null>
+  expandPastInvoices(): Promise<void>
+  pastInvoiceMonthLabels(): Promise<string[]>
+}

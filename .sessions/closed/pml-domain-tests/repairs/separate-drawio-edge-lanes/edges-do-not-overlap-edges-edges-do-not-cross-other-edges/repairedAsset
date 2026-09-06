@@ -1,0 +1,1 @@
+Fixed _route_waypoints in drawio_class_model.py: absolute highway lanes (lane_sep=12, no ROW_GAP modulo), keep check_edges=True while prior segments exist, early stub + far-outer channels outside intervening class bbox, free-Y ranking from occupied horizontals. Regenerated domain-model.drawio from markdown; scan clean.

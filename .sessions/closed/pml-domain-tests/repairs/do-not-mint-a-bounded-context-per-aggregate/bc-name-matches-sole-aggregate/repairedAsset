@@ -1,0 +1,1 @@
+Renamed DDD bounded context Catalog → Plan (sole aggregate Plan). Subscription→Catalog arc is now Subscription→Plan.

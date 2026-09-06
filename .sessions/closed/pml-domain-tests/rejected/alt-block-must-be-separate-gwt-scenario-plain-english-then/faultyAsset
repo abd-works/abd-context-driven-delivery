@@ -1,0 +1,12 @@
+Reconstructed faulty shape (already corrected in the current cdd-sketch.md):
+a single Sign In scenario carried a nested "Alt:" decision table mapping
+onboarding-incomplete states directly to route redirects, e.g.:
+  Alt:
+    no plan selected yet -> /onboarding/select-plan
+    plan selected but no phone number chosen -> /onboarding/checkout
+    phone number chosen but no SIM type selected -> /onboarding/checkout
+instead of each distinct customer state being its own full Given/When/Then
+scenario block separated by `---` (matching the rest of the document's
+convention), with the Then outcome described in plain English referencing
+the story name, e.g. "they are taken back to the Select SIM step to
+continue onboarding" — not a literal route path.

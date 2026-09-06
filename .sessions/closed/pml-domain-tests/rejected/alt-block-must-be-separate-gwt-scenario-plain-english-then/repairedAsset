@@ -1,0 +1,18 @@
+Sign In (Access Selfcare) now has each distinct onboarding-incomplete
+customer state as its own full Given/When/Then scenario block, separated
+by `---`, consistent with the rest of the document's convention:
+  - no plan selected yet -> Then ... taken back to the Select Plan
+    (Onboarding) step to continue onboarding
+  - plan selected but no phone number chosen -> Then ... taken back to
+    the Pick Number step to continue onboarding
+  - phone number chosen but no SIM type selected -> Then ... taken back
+    to the Select SIM step to continue onboarding
+  - identity not yet verified -> Then ... taken back to the Profile & KYC
+    step to continue onboarding
+  - identity verified but no payment method set up -> Then ... taken
+    back to the Checkout & Pay step to continue onboarding
+  - otherwise complete but order result not yet seen -> Then ... taken
+    back to the View Order Result step
+No nested "Alt:" decision table and no literal route paths in any Then
+step — outcomes are described in plain English referencing the story
+name being resumed.

@@ -1,0 +1,1 @@
+Same output-format scanner fails a blank line between a module heading and its - **Purpose:** block.

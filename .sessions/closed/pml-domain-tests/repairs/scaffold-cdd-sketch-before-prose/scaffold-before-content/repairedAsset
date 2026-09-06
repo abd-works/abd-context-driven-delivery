@@ -1,0 +1,4 @@
+scaffold-before-content is now a named hard gate on CDD generate and on sketch.md.
+Do not write cdd-sketch.md until templates/cdd-sketch.md and each active child's
+sketch_template have been read, and AskQuestion has confirmed lenses.
+Free prose instead of the scaffold is a defect.

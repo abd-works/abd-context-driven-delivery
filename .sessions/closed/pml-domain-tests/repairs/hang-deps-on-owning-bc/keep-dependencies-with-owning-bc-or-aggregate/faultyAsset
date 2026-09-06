@@ -1,0 +1,3 @@
+Sketch structure used a standalone ### Cross-Context Relationships block after all BCs.
+User: keep dependencies with the actual bounded context / aggregate, not a separate section.
+Building-blocks sketch fidelity colocates cross-agg / cross-BC refs under the owning aggregate; agent reinforced or accepted the detached section.

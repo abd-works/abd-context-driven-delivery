@@ -1,0 +1,1 @@
+Removed checkout() and credentials() from ParadiseMobile; replaced credentials() with authentication() returning AuthenticationService; checkout reached via cartRepository; subscriberRepository.load(credentials) / prospectRepository.load(credentials) make identity dependency explicit

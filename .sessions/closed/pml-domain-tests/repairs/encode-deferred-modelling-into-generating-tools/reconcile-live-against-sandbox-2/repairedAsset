@@ -1,0 +1,1 @@
+Scenario 1 Given seeds cart.bundle and cart.msisdn (prospectWithMsisdnExample) before SelectSim.open(); CartRepositoryE2e.save() queues GET /mv/customer override so navigation to /onboarding/select-sim survives stub redirect. Staging select-sim.md still pending full-story reconcile.

@@ -1,0 +1,1 @@
+Removed module-level open() function; renamed static open() to static initialize() on ParadiseMobileE2e; exported ParadiseMobileE2e class directly; story files now call ParadiseMobileE2e.initialize(config)

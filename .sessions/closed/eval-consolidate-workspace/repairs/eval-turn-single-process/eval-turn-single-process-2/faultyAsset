@@ -1,0 +1,4 @@
+bdd.begin_eval_turn()
+entry_id = bdd.log_mistake(...)
+bdd.log_correction(entry_id=entry_id, ...)
+bdd.finish_eval_turn(...)

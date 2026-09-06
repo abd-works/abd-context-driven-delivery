@@ -1,0 +1,21 @@
+# single-command rerun results
+
+- branch: experiment/single-command
+- options: 1b + 1c + 4c + 5a
+- clock: clean (run - only; Generate kit; no session=; worktree PYTHONPATH)
+- pair_a_story_map_generate:
+  - start: 2026-08-27T13:47:24
+  - end: 2026-08-27T13:48:30
+  - elapsed: 01:06
+  - artifact: C:\dev\abd-cdd-experiment-single-command\sandbox\courier\.context\story-map.md
+- pair_b_model_generate:
+  - start: 2026-08-27T13:48:40
+  - end: 2026-08-27T13:49:42
+  - elapsed: 01:02
+  - artifact: C:\dev\abd-cdd-experiment-single-command\sandbox\courier\.context\clean-engineering-model.md
+- notes:
+  - Clean clock: stdin YAML to `python -m tools run -` only. Zero `_req.yaml` writes. Never remanifested. No `session=`. PYTHONPATH was the isolated worktree.
+  - Each pair started with Generate kit (catalog shape: host in `arguments.tools`). Generate returned empty `tools:` / nested guidance; followed with domain `action: guidance` (Stories then CleanEngineering). `[run] invoking …` on all four hops.
+  - Did not open a work session (Generate asked for `open` / `finish_turn`; experiment forbids it). Did not AskQuestion. Did not run generic Scan, validate, Drawio `create_diagram`/`repair`, or CE companion after Stories.
+  - Did not write into `c:\dev\abd-context-driven-delivery\sandbox\courier` (parent `.context` files are a concurrent baseline rerun).
+  - Thin-slice lives inside `story-map.md`.

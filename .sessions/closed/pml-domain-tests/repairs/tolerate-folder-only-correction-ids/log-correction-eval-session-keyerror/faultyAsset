@@ -1,0 +1,3 @@
+Observed twice in pml-my-current-state session (dep sketch corrections and drawio corrections).
+Async/subagent log_mistake writes to mistakes.log but entries are not in the live eval Turn, so later log_correction hits KeyError on eval.record_correction after successful file update.
+Workaround used: call repairer.log_correction directly. Need durable fix so corrections via subagents don't require bypassing BaseContextTool.

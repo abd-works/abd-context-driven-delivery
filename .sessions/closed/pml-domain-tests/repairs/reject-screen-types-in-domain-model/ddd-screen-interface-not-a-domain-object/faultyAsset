@@ -1,0 +1,9 @@
+export interface SelectSim {
+  open(): Promise<void>
+  isShowing(): Promise<boolean>
+  availableTypes(): Promise<SimType[]>
+  selectEsim(): Promise<void>
+  selectPhysicalSim(): Promise<void>
+  continueWithEsim(): Promise<void>
+  continueWithPhysicalSim(options: { hasCard: boolean; iccid?: string }): Promise<void>
+}

@@ -1,0 +1,1 @@
+The <!-- Mu --> comments are a code-generation scaffolding signal, not a documentation element. They do not belong in any output markdown file. Strip all such annotation comments (<!-- Mu -->, <!-- Mv -->, and any similar internal tags) from every file written to disk.

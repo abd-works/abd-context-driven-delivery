@@ -1,0 +1,1 @@
+CredentialsE2e stripped to form interaction only; new AuthenticationServiceE2e added to customer.e2e.ts implementing AuthenticationService — enterCredentials() returns new CredentialsE2e, authenticate/register/signOut/requestPasswordReset/resetPassword drive the actual browser flows; paradise-mobile.e2e.ts constructs AuthenticationServiceE2e directly

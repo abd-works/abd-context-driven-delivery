@@ -1,0 +1,12 @@
+export interface LinePortability {
+  open(): Promise<void>
+  isInfoStepShowing(): Promise<boolean>
+  continueFromInfo(): Promise<void>
+  isFormStepShowing(): Promise<boolean>
+  isContinueDisabled(): Promise<boolean>
+  port(info: PortingInfo): Promise<void>
+  submitWithoutFilling(): Promise<void>
+  validationMessage(): Promise<string | null>
+  goBackToServices(): Promise<void>
+  isErrorVisible(text: string): Promise<boolean>
+}

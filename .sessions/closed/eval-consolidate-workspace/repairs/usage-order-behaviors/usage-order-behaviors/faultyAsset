@@ -1,0 +1,6 @@
+            with context("that the agent is finished working with it"):
+                with it("should finish its turn for the action"):
+                    # BDD: SIGNATURE
+                    pass
+
+            with context("that has finished its turn"):

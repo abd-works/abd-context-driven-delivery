@@ -1,0 +1,1 @@
+catalog.select(plan) now returns AccountCredentials — the explicit identity anchor for the next step; prospectRepository.load() is not called at the CreateAccount boundary at all because no prospect record exists yet; explicit references must be threaded through subsequent loads

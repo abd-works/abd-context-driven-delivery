@@ -1,0 +1,7 @@
+# no-nested-context-inside-session-verify-cleanup-is-complete-
+
+- **entry_id:** 81a50fff
+- **artifact:** pml-my/.context/sessions/pml-my-current-state/.context/ (stale nested duplicate session tree)
+- **rule:** (process) no-nested-context-inside-session -- verify-cleanup-is-complete-not-partial
+- **wrong:** A prior mistake (entry id 0c41f32b in the same mistakes.log, rule "no-nested-context-inside-session") claimed to have fully deleted an erroneous nested pml-my/.context/sessions/pml-my-current-state/.context/sessions/pml-my-current-state/ tree (created when ensure_session was invoked with path pointed at the session folder instead of the workspace root), but that cleanup was actually incomplete: it only removed the duplicate session.md, leaving mistakes.log (with several stale open entries: 6596e779, e533d9e5, b4842371, 40d31011, 93311882, 041afe0c, 02054857) and logs/events.log still sitting in the nested duplicate path. This stale duplicate silently persisted and was only discovered now, during an unrelated follow-up check, by manually listing files on disk rather than through any tool-driven verification step. Lesson: when a mistake's "improved" note claims a directory/tree was deleted, the correction step must verify the ENTIRE tree is gone (e.g. a recursive listing), not just the one file that was top-of-mind: a partial deletion can leave a stale nested duplicate mistakes.log with its own set of never-actioned open entries, which is confusing and easy to mistake for current state.
+- **status:** rejected

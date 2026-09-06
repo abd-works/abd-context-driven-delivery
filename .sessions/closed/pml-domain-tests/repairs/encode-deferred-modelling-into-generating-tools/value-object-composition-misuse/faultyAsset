@@ -1,0 +1,1 @@
+Value objects are shareable and immutable — composition implies lifecycle ownership and is only valid from an Entity/Aggregate Root TO a Value Object. VO-to-VO relationships are plain associations/references. Also Money does not exist in code (Transaction.totalAmount is inline { unit, value }).

@@ -1,0 +1,1 @@
+Scanner flags public + derive* helpers; private ops must use - and _ prefix.

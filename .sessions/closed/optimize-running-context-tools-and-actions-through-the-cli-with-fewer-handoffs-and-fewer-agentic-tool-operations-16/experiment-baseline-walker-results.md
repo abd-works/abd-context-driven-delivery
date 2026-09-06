@@ -1,0 +1,42 @@
+# baseline walker results
+
+- branch: experiment/baseline (this checkout)
+- options: none + expander lists tools
+- clock: first `.\tools.ps1` of the pair → artifact written; `session: null`; no remanifest; no domain `action: guidance`
+- pair_a_story_map_generate:
+  - start: 2026-08-27T14:03:09
+  - end: 2026-08-27T14:04:24
+  - elapsed: 01:15
+  - artifact: sandbox/courier/.context/story-map.md
+  - first_generate_tools:
+    - read_cdr_format
+    - list_cdrs
+    - write_cdr
+    - guidance
+    - finish_turn
+  - hops:
+    - hop 1: `.\tools.ps1 manifest generate.generate:Generate` then `.\tools.ps1 run _req.yaml` (Stories `fidelity: story_map`, `format: markdown`, `path: sandbox/courier`, `session: null`)
+    - write artifact from inlined generate instructions (no extra CLI hop)
+- pair_b_model_generate:
+  - start: 2026-08-27T14:04:31
+  - end: 2026-08-27T14:05:22
+  - elapsed: 00:51
+  - artifact: sandbox/courier/.context/clean-engineering-model.md
+  - first_generate_tools:
+    - read_cdr_format
+    - list_cdrs
+    - write_cdr
+    - create_diagram
+    - scan
+    - repair
+    - finish_turn
+  - hops:
+    - hop 1: `.\tools.ps1 manifest generate.generate:Generate` then `.\tools.ps1 run _req.yaml` (CleanEngineering `fidelity: model`, `format: markdown`, `path: sandbox/courier`, `session: null`)
+    - write artifact from inlined generate instructions (no extra CLI hop)
+- notes:
+  - Walker listed tools on both pairs (`tools:` was not `[]`). Host contexts/examples/templates were inlined in the first generate response.
+  - Pair A `guidance` in that list is the Clean Engineering companion (deferred). Did not invent Stories or CleanEngineering `action: guidance`.
+  - Did not call `read_cdr_format` / `list_cdrs` / `write_cdr` / `finish_turn` (no work session; `session` stayed null; no qualifying CDR).
+  - Pair B Drawio `create_diagram` / `scan` / `repair` listed but skipped — format was markdown.
+  - Both generates printed `Ran SessionLog.append (plain): error cannot evaluate plain-call argument type(tool).manifest_path` instead of a generate header. Did not remanifest or restart the clock (not a workaround hop).
+  - Did not AskQuestion, open a work session, or write under `sandbox/courier/.context/sessions/`.

@@ -1,0 +1,1 @@
+Already fixed: Session.record_correction is gone; log_correction with folder-only entry_id no longer raises KeyError (returns id, no-op if not in yaml turns).

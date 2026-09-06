@@ -1,0 +1,3 @@
+Agent/sketch discussion kept Subscription only as Customer.subscriptions[] under Customer BC.
+User pointed out: add/update/remove cadence differs — Catalog rarest, Customer occasional, Subscription/line frequent (plan, status, usage, porting, change-plan).
+Frequency of lifecycle change is a primary BC boundary signal; Subscription (phone-service line) deserves consideration as its own context, not only as Customer aggregate nesting.

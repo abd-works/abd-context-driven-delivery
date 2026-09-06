@@ -1,0 +1,1 @@
+Subscription is an invariant of Subscriber — loaded via SubscriberRepository.load(); no SubscriptionRepository exists in any .ts file

@@ -1,0 +1,4 @@
+User: we need to log improvements so we can defer improvements from mistakes and not pollute the mistake log.
+Mistakes = pointed-out failures (log_mistake immediately, status open until log_correction).
+Improvements = deferred betterments / process ideas — must use a separate log (e.g. improvements.log) or distinct entry type, not mixed into mistakes.log as fake mistakes.
+Follow-up needed later: add/log_improvement (or similar) and agent habit to route improvement ideas there.

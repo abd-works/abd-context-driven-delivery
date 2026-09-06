@@ -1,0 +1,17 @@
+Rewrote the Sign In story as a Background ("Given a customer is not signed
+in") plus separate Scenarios, one per actual resume gate traced from code:
+  - onboarding already complete -> gate is customer.billing.id existing
+    (not metadata.verified) -> Then ... taken to their Dashboard
+  - no plan selected yet -> Then ... taken back to Select Plan
+  - plan selected but no phone number chosen -> Then ... taken back to
+    Pick Number
+  - phone number chosen but no SIM type selected -> Then ... taken back
+    to Select SIM
+  - SIM selected but identity not verified -> Then ... taken back to
+    Profile & KYC
+  - identity verified but checkout not completed -> Then ... taken back
+    to Checkout & Pay
+  - checkout done but result not yet seen -> Then ... taken back to View
+    Order Result
+No Given cites metadata.verified for this decision anymore; outcomes are
+plain English naming the story being resumed, no literal route paths.

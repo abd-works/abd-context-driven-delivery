@@ -1,0 +1,1 @@
+CredentialsE2e.signIn(), CredentialsE2e.register(), CredentialsE2e.signOut() etc. all in customer.e2e.ts
