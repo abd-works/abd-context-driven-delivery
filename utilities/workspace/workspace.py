@@ -12,6 +12,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import uuid
 from dataclasses import dataclass, field
@@ -1426,15 +1427,48 @@ class WorkSession:
             return None
         return None
 
+    @staticmethod
+    def _force_rmtree(path: Path) -> None:
+        """Remove a directory tree on Windows even when files are read-only."""
+        if not path.exists():
+            return
+        for root, dirs, files in os.walk(path, topdown=False):
+            for name in files:
+                item = Path(root) / name
+                try:
+                    item.chmod(stat.S_IWRITE)
+                    item.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            for name in dirs:
+                item = Path(root) / name
+                try:
+                    item.chmod(stat.S_IWRITE)
+                    item.rmdir()
+                except OSError:
+                    pass
+        try:
+            path.chmod(stat.S_IWRITE)
+            path.rmdir()
+        except OSError:
+            shutil.rmtree(path, ignore_errors=True)
+
     def _move_tree_contents(self, source: Path, dest: Path) -> None:
         dest.mkdir(parents=True, exist_ok=True)
         for item in source.iterdir():
             target = dest / item.name
             if target.exists():
                 if target.is_dir():
-                    shutil.rmtree(target, ignore_errors=True)
+                    try:
+                        self._force_rmtree(target)
+                    except OSError:
+                        self._move_tree_contents(item, target)
                 else:
-                    target.unlink(missing_ok=True)
+                    try:
+                        target.chmod(stat.S_IWRITE)
+                        target.unlink(missing_ok=True)
+                    except OSError:
+                        pass
             shutil.move(str(item), str(target))
 
     def _find_closed_session_archive(self) -> tuple[Path, Path] | None:
@@ -1475,8 +1509,6 @@ class WorkSession:
             return False
         closed_dir, content = found
         dest = self.folder
-        if dest.exists():
-            shutil.rmtree(dest, ignore_errors=True)
         dest.mkdir(parents=True, exist_ok=True)
         self._move_tree_contents(content, dest)
         if closed_dir != content:
@@ -1487,12 +1519,12 @@ class WorkSession:
                 if item.is_dir():
                     if target.exists():
                         self._move_tree_contents(item, target)
-                        shutil.rmtree(item, ignore_errors=True)
+                        self._force_rmtree(item)
                     else:
                         shutil.move(str(item), str(target))
                 elif not target.exists():
                     shutil.move(str(item), str(target))
-        shutil.rmtree(closed_dir, ignore_errors=True)
+        self._force_rmtree(closed_dir)
         return True
 
     def _reactivate_on_reopen(self) -> None:

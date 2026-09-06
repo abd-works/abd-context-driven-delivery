@@ -939,6 +939,15 @@ class Repo:
             self._commit = f"commit-{len(self._commits)}"
             self._dirty = False
             return self._commit
+        merge_in_progress = (self.root / ".git" / "MERGE_HEAD").is_file()
+        if merge_in_progress:
+            add_flag = "-A" if untracked else "-u"
+            self._git("add", add_flag)
+            staged = self._git("diff", "--cached", "--name-only")
+            if not staged:
+                return self.current_commit
+            self._git("commit", "-m", message)
+            return self.current_commit
         rels = [self._rel(path) for path in paths]
         add_flag = "-A" if untracked else "-u"
         self._git("add", add_flag, "--", *rels)

@@ -24,7 +24,11 @@ from harness.harness_tool import operation_writes, required_init_params
 from harness.instruction import Instruction
 from harness.prompt import Prompt, prompt
 from harness.returned_guidance import _DEFAULT_CODE_LANGUAGE, compound_guidance
-from harness.context_tool_rules import all_context_tool_rule_specs
+from harness.context_tool_rules import (
+    all_context_tool_mdc_specs,
+    all_context_tool_procedure_specs,
+    all_context_tool_rule_specs,
+)
 from harness.rule import Rule
 from harness.skill import Skill
 
@@ -486,13 +490,13 @@ class Harness:
                     except OSError:
                         pass
 
-    def _write_context_tool_rules(
+    def _write_context_tool_mdcs(
         self,
         roots: list[Path],
         wanted: str,
         seen: set[tuple[str, str]],
     ) -> list[str]:
-        """Write scoped `.mdc` rules under `rules/context_tools/{slug}/` (Cursor only)."""
+        """Write scoped `.mdc` rules and procedures under `rules/context_tools/{slug}/` (Cursor only)."""
         if self.type != "Cursor":
             return []
         names: list[str] = []
@@ -512,7 +516,32 @@ class Harness:
             rule.write(roots)
             self.rules.append(rule)
             names.append(f"{spec.tool_slug}/{spec.name}")
+        for spec in all_context_tool_procedure_specs(self.repo_root):
+            if wanted and wanted != spec.tool_slug and not wanted.startswith(f"{spec.tool_slug}-"):
+                continue
+            key = (f"{spec.tool_slug}-{spec.name}", "procedure")
+            if key in seen:
+                continue
+            seen.add(key)
+            rule = Rule(self.type, spec.name)
+            rule.description = spec.description
+            rule.globs = spec.globs
+            rule.always_apply = False
+            rule.body = spec.body
+            rule.subfolder = f"context_tools/{spec.tool_slug}"
+            rule.write(roots)
+            self.rules.append(rule)
+            names.append(f"{spec.tool_slug}/{spec.name}")
         return names
+
+    def _write_context_tool_rules(
+        self,
+        roots: list[Path],
+        wanted: str,
+        seen: set[tuple[str, str]],
+    ) -> list[str]:
+        """Write scoped `.mdc` rules under `rules/context_tools/{slug}/` (Cursor only)."""
+        return self._write_context_tool_mdcs(roots, wanted, seen)
 
     def _wanted(self, wanted: str, name: str, source_slug: str, derived: str) -> bool:
         if not wanted:
@@ -926,9 +955,9 @@ class Harness:
         if self.type == "Cursor":
             if not wanted or any(
                 wanted == spec.tool_slug or wanted.startswith(f"{spec.tool_slug}-")
-                for spec in all_context_tool_rule_specs(self.repo_root)
+                for spec in all_context_tool_mdc_specs(self.repo_root)
             ):
-                names.extend(self._write_context_tool_rules(roots, wanted, seen))
+                names.extend(self._write_context_tool_mdcs(roots, wanted, seen))
         for fmt in _FORMATS:
             if wanted and fmt != wanted:
                 continue

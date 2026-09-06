@@ -85,6 +85,8 @@ Key rules: `branch-on-mechanical-uniqueness` — split on distinct mechanics, no
 
 **Goal:** Turn locked scenarios into runnable acceptance coverage; CE runs alongside to produce matching wrap classes under `domain/`.
 
+**Procedure:** Follow the **Test shape ladder** in `@clean_engineering` `## code` § Procedure — real standup first, then stub TDD, then e2e swap on request.
+
 **Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
 
 **Produce:** `tests/{epic}/{sub-epic}/{story}.{tier}.py` — one GWT file per story per seam. `{tier}` is `front-end`, `back-end`, or any other system name you are proving. No `{story}/` folder and no `*_story` / `*_test_helper` split.
