@@ -15706,3 +15706,51 @@ path [file]: c:\dev\abd-cdd-utility-cleanup\primitives\hooks\testing-the-auto-co
 ------------------------------------------------------------------------------
 
 command: cd c:\dev\abd-cdd-utility-cleanup; git status --short primitives/hooks/testing-the-auto-commit-works.md; $payload = '{"hook_event_name":"stop","status":"completed","loop_count":0}'; $payload | .\.venv\Scripts\python.exe primitives/hooks/dispatch.py; Write-Host "---"; git status --short primitives/hooks/testing-the-auto-commit-works.md; git log -1 --oneline; Get-Content primitives/hooks/dispatch.debug -Tail 6
+
+==============================================================================
+2026-09-06T06:35:55Z  preToolUse:Shell  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd c:\dev\abd-cdd-utility-cleanup; git show --stat --oneline -1; git status --short | Select-Object -First 25
+
+==============================================================================
+2026-09-06T06:35:55Z  preToolUse:Grep  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: is_dirty|untracked
+path [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git
+
+==============================================================================
+2026-09-06T06:35:59Z  preToolUse:Shell  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd c:\dev\abd-cdd-utility-cleanup; git ls-files primitives/hooks/.context/module-context.md; git ls-files "primitives/hooks/*.md"
+
+==============================================================================
+2026-09-06T06:36:03Z  preToolUse:Read  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+
+==============================================================================
+2026-09-06T06:36:04Z  beforeReadFile  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-cdd-utility-cleanup\utilities\git\git.py
+size: 837 chars
+preview:
+        owner, repo = name.split("/", 1)
+        return owner, repo
+
+    def is_dirty(
+        self, path: str | Path | None = None, *, untracked: bool = True
+    ) -> bool:
+        if self._memory:
+            return self._dirty
+... [25 lines, 837 chars total]
+
+==============================================================================
+2026-09-06T06:36:07Z  preToolUse:Shell  conv=9258f444  gen=07b45522  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd c:\dev\abd-cdd-utility-cleanup; git add primitives/hooks/testing-the-auto-commit-works.md; git status --short primitives/hooks/testing-the-auto-commit-works.md; $payload = '{"hook_event_name":"stop","status":"completed","loop_count":0}'; $payload | .\.venv\Scripts\python.exe primitives/hooks/dispatch.py; git log -1 --oneline; git show --stat -1 --name-only | Select-Object -First 15

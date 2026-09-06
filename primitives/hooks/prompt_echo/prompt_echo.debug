@@ -4411,3 +4411,18 @@ a'
 2026-09-06T06:35:46Z ENTRY raw_len=1102 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"07b45522-21bf-41de-873f-a197fb03739c","model":"composer-2.5","tool_name":"Shell","tool_input":{"command":"cd c:\\\\dev\\\\abd-'
 2026-09-06T06:35:46Z PAYLOAD keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
 2026-09-06T06:35:46Z OUTPUT {"permission": "allow"}
+2026-09-06T06:35:54Z ENTRY raw_len=785 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"07b45522-21bf-41de-873f-a197fb03739c","model":"composer-2.5","tool_name":"Shell","tool_input":{"command":"cd c:\\\\dev\\\\abd-'
+2026-09-06T06:35:54Z PAYLOAD keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:35:54Z OUTPUT {"permission": "allow"}
+2026-09-06T06:35:55Z ENTRY raw_len=724 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"07b45522-21bf-41de-873f-a197fb03739c","model":"composer-2.5","tool_name":"Grep","tool_input":{"pattern":"is_dirty|untracke'
+2026-09-06T06:35:55Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:35:55Z OUTPUT {"permission": "allow"}
+2026-09-06T06:35:59Z ENTRY raw_len=807 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"07b45522-21bf-41de-873f-a197fb03739c","model":"composer-2.5","tool_name":"Shell","tool_input":{"command":"cd c:\\\\dev\\\\abd-'
+2026-09-06T06:35:59Z PAYLOAD keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:35:59Z OUTPUT {"permission": "allow"}
+2026-09-06T06:36:03Z ENTRY raw_len=701 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"07b45522-21bf-41de-873f-a197fb03739c","model":"composer-2.5","tool_name":"Read","tool_input":{"file_path":"c:\\\\dev\\\\abd-cd'
+2026-09-06T06:36:03Z PAYLOAD keys=['conversation_id', 'cursor_version', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:36:03Z OUTPUT {"permission": "allow"}
+2026-09-06T06:36:07Z ENTRY raw_len=1076 raw=b'\xef\xbb\xbf{"conversation_id":"9258f444-8a88-4c20-8641-d5b916c9f19a","generation_id":"07b45522-21bf-41de-873f-a197fb03739c","model":"composer-2.5","tool_name":"Shell","tool_input":{"command":"cd c:\\\\dev\\\\abd-'
+2026-09-06T06:36:07Z PAYLOAD keys=['conversation_id', 'cursor_version', 'cwd', 'generation_id', 'hook_event_name', 'model', 'session_id', 'tool_input', 'tool_name', 'tool_use_id', 'transcript_path', 'user_email', 'workspace_roots']
+2026-09-06T06:36:07Z OUTPUT {"permission": "allow"}
