@@ -734,6 +734,55 @@ with description("a WorkSession that is closed in a git worktree"):
         expect((tmp / ".sessions" / "closed" / "stale-me").exists()).to(equal(False))
         shutil.rmtree(tmp, ignore_errors=True)
 
+    with it("should restore a nested closed archive and remove the closed entry"):
+        from workspace.git_repo import NullGitRepo
+        from workspace.workspace import Workspace
+
+        tmp = Path(tempfile.mkdtemp(prefix="session_reopen_nested_"))
+        git = NullGitRepo(tmp)
+        session = Workspace(str(tmp)).open_work_session("nested-me", git=git)
+        session.ensure_started(goal="nested")
+        (session.folder / "artifact.txt").write_text("nested\n", encoding="utf-8")
+        session.close_session(outcome="done", handoff="")
+        closed_root = tmp / ".sessions" / "closed"
+        dated = next(
+            path
+            for path in closed_root.iterdir()
+            if path.is_dir() and path.name.startswith("nested-me")
+        )
+        nested = dated / "nested-me"
+        nested.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(dated / "session.md"), str(nested / "session.md"))
+        shutil.move(str(dated / "artifact.txt"), str(nested / "artifact.txt"))
+        (dated / "session.md").write_text("# stale top-level\n", encoding="utf-8")
+        reopened = Workspace(str(tmp)).open_work_session("nested-me", git=git)
+        expect((reopened.folder / "artifact.txt").read_text(encoding="utf-8")).to(
+            equal("nested\n")
+        )
+        expect(dated.exists()).to(equal(False))
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    with it("should keep the sibling worktree path when session.md stores path as dot"):
+        from workspace.git_repo import GitRepo
+        from workspace.workspace import Workspace
+
+        tmp = _init_clone("session_reopen_worktree_path_")
+        session = Workspace(str(tmp)).open_work_session("path-dot")
+        session.ensure_started(goal="worktree")
+        tree = Path(session.git.root)
+        session.session_md.write_text(
+            session.session_md.read_text(encoding="utf-8").replace(
+                str(tree), "."
+            ),
+            encoding="utf-8",
+        )
+        session.close(outcome="done", handoff="")
+        reopened = Workspace(str(tmp)).open_work_session("path-dot")
+        expect(Path(reopened.path).resolve()).to(equal(tree.resolve()))
+        expect((reopened.folder / "session.md").is_file()).to(be_true)
+        expect("## End" in reopened.session_md.read_text(encoding="utf-8")).to(be_false)
+        _purge_clone(tmp)
+
     with it("should close a forgotten turn before session close"):
         from workspace.git_repo import NullGitRepo
         from workspace.workspace import Turn, Workspace
