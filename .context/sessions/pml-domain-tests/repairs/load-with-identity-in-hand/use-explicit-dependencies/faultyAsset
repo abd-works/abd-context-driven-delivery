@@ -1,1 +1,0 @@
-const prospect = await paradise.prospectRepository().load()

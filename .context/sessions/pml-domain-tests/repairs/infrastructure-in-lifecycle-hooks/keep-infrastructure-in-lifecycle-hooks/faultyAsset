@@ -1,3 +1,0 @@
-given('the prospect is unauthenticated', async () => {
-  paradise = await ParadiseMobileE2e.initialize(config)
-})

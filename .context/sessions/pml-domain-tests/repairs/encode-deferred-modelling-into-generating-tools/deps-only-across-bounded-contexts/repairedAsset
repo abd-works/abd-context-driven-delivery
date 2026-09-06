@@ -1,1 +1,0 @@
-Removed Portability→Subscription (same BC). Remaining cross-BC arcs only: Customer→Subscription, Subscription→Catalog.

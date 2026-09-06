@@ -1,1 +1,0 @@
-Layout is user-facing first, left to right: pml-my (Prospect | Customer | Subscriber) → pml-midtier ACL → externals. Direct Conformist systems sit under the consumer app.
