@@ -1,9 +1,9 @@
 {
-  "at": "2026-09-06T16:26:17.743440+00:00",
+  "at": "2026-09-06T16:28:31.868013+00:00",
   "event": "afterAgentResponse",
-  "conversation_id": "9258f444-8a88-4c20-8641-d5b916c9f19a",
-  "generation_id": "cff4f443-521d-48ff-b758-fd4f6599cc99",
-  "committed_sha": "693853d874d66251bdad24e59ca0f617f554be27",
+  "conversation_id": "merge-test",
+  "generation_id": null,
+  "committed_sha": "dbbb9deeb83d8b4d952c4d1969b49c5a8a319688",
   "skipped": null,
   "error": null
 }
