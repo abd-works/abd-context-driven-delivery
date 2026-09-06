@@ -13,8 +13,6 @@ describe {subject — domain thing, state, or observable condition}
       it should {observable outcome}
 ```
 
-Read top-down as a **usage / storytelling sequence**: what the user or system does first, then what is true, then what is observed. Nest by the **real events and conditions** that make the next observation possible — not by package, class role, or test fixture type.
-
 | Line | Names | Never names |
 | --- | --- | --- |
 | **describe** | Subject under observation in plain English (thing, state, condition) | Manager / hub / runner / service / internal class; decorator symbol (`@log`); marker name |
@@ -22,34 +20,97 @@ Read top-down as a **usage / storytelling sequence**: what the user or system do
 | **with …** | Narrower standing condition (`with no session name given`, `with verbose off`) | `when …`; implementation knobs phrased as API flags |
 | **it should …** | One stakeholder-visible outcome | Internals, private fields, call counts on mocks of the subject |
 
-**Pass (storytelling / usage order):**
-```
-an action that is annotated with log
-  that is invoked
-    it should record a run event on the session trail
-  that has been logged
-    with no session name given
-      it should use the default session
-    with a given session name
-      it should keep events under that session
-    with verbose off
-      it should write a summary line and keep the last payload
-      with full logging requested
-        it should flush the last payload
-    with verbose on
-      it should write payload files for later events
-
-an action that is not annotated
-  that is invoked
-    it should leave the session trail empty
-```
-
 **Fail:**
 ```
 @log marker                          ← mechanism / symbol, not a subject
 ToolsetRunner                        ← manager / internal
 a logged tool                        ← splits the same subject; use one action story
 when no session name is given        ← never "when" for state — use "with …"
+```
+
+### Mental model
+
+Design the tree hierarchy by building a flowing sentence. Build every hierarchy so that reading from the outermost `describe` through every nested `that`/`with` down to the `it should` produces a clean, flowing English sentence — spoken aloud, it describes the behavior naturally.
+
+**Always start with the subject:** place the baseline entity type, class, or user mode at the outermost `describe`. **Then nest layers in any order** — choose whichever sequence produces the most natural spoken sentence. Select from these three layer types and arrange them to flow:
+
+* **Structure:** the content configuration or data shape of that identity. `with items in the cart`, `with no billing address`, `with a linked payment method`
+* **Event:** the static system state *after* an action has been finalized. `that has been submitted`, `that has been cancelled`, `that has been approved` — express lifecycle events as past-participle states only
+* **Environmental Variance:** external factors, temporal rules, or inputs applied to that state. `during a flash sale weekend`, `outside of promotional periods`, `on a public holiday`
+
+Arrange these in whatever sequence makes the sentence read naturally. `"with items in the cart, that has been submitted, during a flash sale"` flows. `"during a flash sale, that has been submitted, with items in the cart"` does not. Always let the sentence guide the nesting order.
+
+> *"a ShoppingCart, for a premium member account, with items in the cart, that has been submitted, during a flash sale weekend, it should apply an automatic double-points multiplier"*
+
+**Branch** when the system behaves entirely differently based on a change. Make sibling `describe` blocks mutually exclusive.
+```
+describe a user
+  that is authenticated
+    [Behaviors exclusive to logged-in state]
+  that is an anonymous visitor
+    [Behaviors exclusive to logged-out state]
+```
+
+**Nest** when a sub-state inherits everything from its parent but introduces another behavior.
+```
+describe an account
+  that is premium
+    with a linked payment method
+      [Behaviors for fully active premium users]
+      that belongs a minor
+      [Behaviors for minors linked premium users account]
+```
+
+**Share** when multiple channels or implementations produce the same observable behavior but each has a few unique behaviors of its own. Define the shared behaviors once, include them per channel, add only the deltas.
+```
+shared_examples "onboarding a new mobile customer"
+  that selects a plan
+    it should display the selected plan details
+    it should show the monthly cost
+  that provides identity verification
+    it should validate the customer's ID
+    it should create a pending account
+  that completes payment
+    it should activate the mobile line
+    it should send a welcome confirmation
+
+describe onboarding through the web
+  it_behaves_like "onboarding a new mobile customer"
+  that uploads a selfie for verification
+    it should match the selfie against the ID photo
+
+describe onboarding through voice
+  it_behaves_like "onboarding a new mobile customer"
+  that speaks the verification code
+    it should confirm identity via voice match
+
+describe onboarding through the retail store
+  it_behaves_like "onboarding a new mobile customer"
+  that scans the physical ID at the counter
+    it should verify the document in real time
+```
+
+**Promote** when a condition repeated inside many areas is actually a core state that other behaviors sit inside. Pull it to the outermost boundary and nest everything under it.
+```
+before:                                     after:
+describe a Payment                          describe a Payment
+  that is submitted                           with an expired token       *promoted
+    with an expired token  ←repeated            that is submitted
+    with a valid token                            it should reject
+  that is refunded                              that is refunded
+    with an expired token  ←repeated              it should reject
+    with a valid token                          that is disputed
+  that is disputed                                it should reject
+    with an expired token  ←repeated            that checks balance
+    with a valid token                            it should reject
+  that checks balance                           that generates statement
+    with an expired token  ←repeated              it should reject
+    with a valid token                        with a valid token
+  that generates statement                      that is submitted
+    with an expired token  ←repeated              it should process
+    with a valid token                          that is refunded
+                                                  it should process
+                                                ...
 ```
 
 **Shared Rules:**

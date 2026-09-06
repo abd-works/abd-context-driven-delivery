@@ -34,6 +34,20 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 **Produce:** Story map.
 
+### Mental model
+
+**Analyze mechanics before grouping.** For each entity type under a shared heading, list: (a) what the user configures, (b) what the system validates or resolves, (c) what runtime lifecycle it has. Group stories by that analysis — not by category label, source heading, or shared name. Five "shipping methods" under one heading may require five stories if each has different rate logic, carrier APIs, and compliance rules.
+
+**Distinct mechanics = distinct stories.** Compare entity-type workflows before writing: entities with identical workflows share one parameterized story; entities with different workflows get separate stories. This holds across all lifecycle phases — configuration, runtime, and reporting. A payments domain with 8 instrument types may need only 3 stories if wire (correspondent-bank routing), card (auth-capture-settle), and ACH (batch-and-clear) are the three distinct clearing mechanics — and cheque, BPAY, direct debit share ACH's workflow.
+
+**Same mechanics, different data = consolidate.** Merge stories that share the same logic but differ only by value (six address fields → one `Validate Address Field` story). When consolidating, add **Consolidation Notes** listing which variants the AC phase must specify per variant — the parenthetical hint `(type A, type B)` alone is insufficient.
+
+**Map all lifecycle phases and all directions.** After mapping forward stories, re-scan for reverse, compensating, defensive, and observational actions in the same context. An order system that maps `Place Order → Process Payment → Ship Order` but misses `Issue Refund`, `Cancel Reservation`, and `Apply Store Credit` has three stories with distinct mechanics hiding behind the forward path.
+
+**Check state changes for exit mechanics.** When a story creates a new state (escalated, held, locked), check whether the exit from that state has a different actor, action type, or check. If yes, the exit is a distinct story.
+
+**Thin-slice by marketable outcome.** Cut into increments where each delivers something users can do after it ships. The spine is the smallest path that delivers core value. Ship the riskiest learning first.
+
 ### Scaffold
 
 **When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
@@ -61,6 +75,18 @@ Key rules: `branch-on-mechanical-uniqueness` — split on distinct mechanics, no
 
 **Produce:** Same `{story}.{tier}.py` tree as acceptance_tests. Pass `format markdown` only when the strategy command names it.
 
+### Mental model
+
+**Explore the full interaction surface — not just the happy path.** The main flow is the starting point, not the finish line. Systematically walk every branch: inline validation rules and how they change while typing, field-level errors clearing as input conforms, cross-field rules (confirm password mismatch, date range overlap), submit-button gating, server-side error surfaces. A story that only codifies the happy path when the screen has rich client-side validation is a defect. Branch into additional scenarios per mechanical variation.
+
+**Same flow, different data = outline with examples table.** Different flow = separate scenario. Use outlines when the same interaction produces different results based on input combinations. Use individual scenarios when the flow structure itself diverges.
+
+**Every Given/When/Then step traces to a named domain operation.** Given states conditions the running system actually uses for the behavior under test — not fields the code never reads. When holds the single domain operation being exercised — never empty, never buried inside Then. Then observes what When already produced — no I/O, no further operations. If a step can't trace to a domain operation, that's a modeling gap — add the operation, don't gloss over it.
+
+**Example data traces to the specification — never invent data.** Every value in a scenario must come from the Examples table or from a fixture derived from it. Stubs receive and return the exact values named in the examples — not defaults or placeholders that happen not to break the test. If the spec says 3 plan cards, assert exactly 3 — not `>= 1`.
+
+**Concrete enough to disagree.** If you showed these scenarios to a domain expert and a developer, would they argue about whether the output is correct? If not, the examples are too vague. Realistic domain values surface edge cases that `John Doe, $100` never will. Check: what state combinations have we not explored? What happens at zero, one, many, max, just-over-max?
+
 ### Rules
 
 - **`behavioral-observable-outcomes`** — Name and Then in domain-observable terms; never internals.
@@ -84,6 +110,8 @@ Key rules: `branch-on-mechanical-uniqueness` — split on distinct mechanics, no
 **Default format:** python
 
 **Goal:** Turn locked scenarios into runnable acceptance coverage; CE runs alongside to produce matching wrap classes under `domain/`.
+
+**Mental model:** Follow the scenarios mental model above — acceptance_tests covers the same explored interaction surface. Design the API through failing tests: call the real expected class and method even when they don't exist yet. The test must fail initially (RED) — the failure message reveals the API design. Then make it pass (GREEN). Example data in tests traces to the spec's Examples table via shared fixtures — never inline invented values.
 
 **Procedure:** Follow the **Test shape ladder** in `@clean_engineering` `## code` § Procedure — real standup first, then stub TDD, then e2e swap on request.
 
