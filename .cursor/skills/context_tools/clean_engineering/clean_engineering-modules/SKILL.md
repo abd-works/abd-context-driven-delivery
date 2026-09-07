@@ -26,10 +26,7 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 ---
 
-## Language companion (not a fidelity)
-
-**Language is not invocable** (`context.fidelity: language` is rejected). Natural-language identity is a **companion** that deepens at every stage through code.
-
+## Language 
 - At each fidelity, refresh prose for terms/classes already named at that stage — definition, story bullets, invariants in plain English.
 - Keep identity on the class (or `## ClassName` section); member bullets move onto members as model/code deepen.
 - Do **not** invent types, method bodies, relationship kinds, or Public API ahead of the active fidelity.
