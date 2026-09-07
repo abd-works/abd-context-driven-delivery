@@ -23,10 +23,8 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 **Goal:** Partition a problem or solution space into independently understandable units — each a deep module with a narrow public seam and substantial implementation behind it. Name the units, their seams, and the one-way dependencies between them. Thin class/term identification only — enough to show independence. Do not invent types, method bodies, or relationship kinds yet. Each **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
-- Write the caller-facing contract only: **Purpose**, **Primary use case**, **Rationale**, **Seam** (public term/class names), **Public API** / **Constraint**, **Dependencies** (one-way module names), and optional **Extend** / **Mechanism**. 
-- Name terms/classes only enough to show independence. Write **language companion** prose for those names.
+- Write **language companion** prose for the terms you name.
 - Seam terms: **one name per concept** (prefer the type name). Do not list singular and plural of the same term (e.g. `Ability` — not `Ability, Abilities`).
-- Do not add types, method bodies, or relationship kinds (composition / aggregation / association).
 
 
 
