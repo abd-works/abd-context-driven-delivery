@@ -55,7 +55,7 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ### Scaffold
 
-**When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
+**When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. 
 
 Rough story-map outline for a **partition** pass or first cut — **names only**: verb–noun epics + story names (`StoryMap` → `Epic` → `SubEpic` → `Story`). No scenarios, no thin-slice increments, no scope prose yet.
 
@@ -70,6 +70,7 @@ Key rules: `branch-on-mechanical-uniqueness` — split on distinct mechanics, no
 - **`behaviours-not-one-time-tasks`** — A Story is a repeatable stakeholder/system interaction you can specify Given/When/Then against more than once. One-time maintainer chores (rename X to Y, copy/migrate an asset once, one-off repo surgery) are not Stories — keep them in the plan/todos. Once done, the result is ordinary inventory the remaining stories already cover.
 - **`do-not-invent-requirements`** — same rule as Shared: no invented Status/stale/warning-badge concepts; no competing command/invoke surface beside one already specified; unconfigured = no row + existing fallback.
 
+**Stop reading this skill when scaffolding.**
 ---
 
 ## scenarios
@@ -80,19 +81,20 @@ Key rules: `branch-on-mechanical-uniqueness` — split on distinct mechanics, no
 
 **Produce:** Same `{story}.{tier}.py` tree as acceptance_tests. Pass `format markdown` only when the strategy command names it.
 
-Create specifications through **concrete scenarios** with preconditions (**Given**), a triggering action (**When**), and observable outcomes (**Then**). **And** continues a block; start a new **When** when the actor or trigger changes. Use **Background** only when 3+ scenarios share identical starting state (Given/And only — no When/Then). Use **Scenario Outline** with `{column_name}` tokens and an **Examples** table when variation is real and steps are identical; use plain **Scenario** for distinct flows (happy path, rejection, edge case).
+Create testable specifications grounded in user system interactions through **concrete scenarios** with preconditions (**Given**), a triggering action (**When**), and observable outcomes (**Then**). **And** continues a block; start a new **When** when the actor or trigger changes. Use **Background** only when 3+ scenarios share identical starting state (Given/And only — no When/Then). Use **Scenario Outline** with `{column_name}` tokens and an **Examples** table when variation is real and steps are identical; use plain **Scenario** for distinct flows (happy path, rejection, edge case).
 
 Use scenarios to ground the domain model. Concept names in examples must match model language exactly. Example table columns should relate data across relational structure as well.
 
 ### Mental model
+Write scenarios that clearly articulate the preconditions required to start, the triggering conditions and steps to complete, and the resulting outomes.
 
-Start from the main-flow scenario for each story — the happy path through Given/When/Then. Write it concrete enough that a domain expert and a developer would argue about whether the output is correct. Realistic domain values surface edge cases that `John Doe, $100` never will.
+**Start from the main-flow** scenario for each story — the happy path through Given/When/Then. Write the scenario concrete enough that a domain expert and a developer would argue about whether the output is correct. **Then walk the full interaction surface**: inline validation rules, field-level errors, cross-field constraints, submit-button gating, server-side error surfaces. Branch into additional scenarios for each distinct mechanical variation. Use separate Scenarios whenever the flow structure diverges. 
 
-Then walk the full interaction surface: inline validation rules, field-level errors, cross-field constraints, submit-button gating, server-side error surfaces. Branch into additional scenarios for each distinct mechanical variation — a story that only codifies the happy path when the screen has rich client-side validation is a defect.
+**Provide concrete examples** add examples to specific steps in line or use a **Scenario Outline** with an Examples table when the same flow produces different outcomes based on input variation. 
 
-Use a Scenario Outline with an Examples table when the same flow produces different outcomes based on input variation. Use separate Scenarios when the flow structure itself diverges. Every Given/When/Then step must trace to a named domain operation — if a step cannot trace, that is a modelling gap, not a glossed-over detail. Given states only what the running system checks for this behaviour. When holds the operation. Then observes what When produced — no further I/O.
+**Align scenarios to the Domain** Trace every Given/When/Then step must to a named domain operation. Trace examples to domain state and domain properties. . When holds the operation. Then observes what When produced — no further I/O.
 
-Ground every scenario in the domain model. Concept names in examples must match model language exactly. Example table columns should relate data across the relational structure — not just list one concept's fields in isolation.
+**Ground every scenario in the domain model**. Concept names in examples must match model language exactly. Example table columns should relate data across the relational structure — not just list one concept's fields in isolation.
 
 ### Rules
 
@@ -118,7 +120,7 @@ Ground every scenario in the domain model. Concept names in examples must match 
 
 **Goal:** Turn locked scenarios into runnable acceptance coverage; CE runs alongside to produce matching wrap classes under `domain/`.
 
-**Mental model:** Follow the scenarios mental model above — acceptance_tests covers the same explored interaction surface. Design the API through failing tests: call the real expected class and method even when they don't exist yet. The test must fail initially (RED) — the failure message reveals the API design. Then make it pass (GREEN). Example data in tests traces to the spec's Examples table via shared fixtures — never inline invented values.
+**Mental model:** Follow the scenarios mental model as `@stories` `#scenarios` § Mental Model — acceptance_tests covers the same explored interaction surface. Take a TDD apporach and Design the code through failing scenario tests: call the realcode even when it does't exist yet. The test must fail initially (RED) — the failure message reveals the API design. Then make it pass (GREEN). Example data in tests traces to the spec's Examples table via shared fixtures — never inline invented values.
 
 **Procedure:** Follow the **Test shape ladder** in `@clean_engineering` `## code` § Procedure — real standup first, then stub TDD, then e2e swap on request.
 

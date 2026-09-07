@@ -32,6 +32,16 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 **Goal:** Refine **modules** purpose, primary use case, rationale, key terms, and relationship to other modules. Strive for **independent modules with one-way dependencies** and an explicit **build order**. Thin class/term identification only — enough to show independence.
 
+### Mental model
+
+Start by identifying the major structural boundaries — group closely related classes around a single domain concept. Each module should be **deep**: a narrow public interface with substantial implementation behind it. A deep module replaces a large cognitive load (reading the implementation) with a small one (learning the interface). If the interface is nearly as complex as the implementation, the module is shallow and adds overhead without encapsulating anything. Resist the urge to decompose into many small modules — each split widens the total interface surface callers must learn.
+
+Arrange dependencies so they flow **one way only** — from volatile toward stable, never back, never circular. Read every import as an arrow; all arrows point in the same direction. When two modules would depend on each other, break the cycle by extracting the shared concept into a module both depend on, or invert the dependency through an interface. Avoid dependency magnets — modules that accumulate inbound arrows from everywhere become rigid and expensive to change. When a module attracts too many dependents, narrow its surface or split it along domain lines.
+
+Make every dependency **explicit**. If module A uses module B, that relationship appears in A's dependency list and in the build order — not hidden behind events, globals, or configuration magic. Implicit coupling (side effects, shared mutable state, convention-based wiring) is harder to reason about, harder to test, and harder to change safely. Prefer direct, visible references over indirection.
+
+Document only the **public seam** — how to use the module, how to extend it, and what it depends on. Never document internals in module-context. The caller-facing contract is the only thing that should survive into documentation; implementation details live in source code and session notes. If someone needs to read the internals to use the module, the interface is too shallow.
+
 ### Scaffold
 
 **When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
@@ -151,6 +161,16 @@ Scanner rule: **`public-seam-only`**.
 - Edit to carry forward language-companion identity into **Purpose**; expand primary use case and rationale at this fidelity.
 - Edit class docstrings so member bullets move down onto those members; keep everything inside the module folder (`physical-folder`).
 - Refresh the **language companion** for terms now on the Public API — still no typed signatures in prose ahead of code.
+
+### Mental model
+
+Design each class as a named idea that knows things, does things, and interacts with other things. Start from what the caller needs — the public operations and properties — and work inward. Keep the public surface narrow: a few well-named operations that express intent, not a long list of getters and configuration flags. Push complexity into the implementation so callers pass intent, not setup.
+
+Give each class a single reason to change. If a class does two things, it reveals either a missing operation or a missing class. Pass every collaborator through the constructor — never reach for a global or construct a collaborator inside construction. This makes dependencies visible and testable.
+
+When modelling relationships, choose by lifecycle: composition when the owner controls the other's lifecycle, aggregation when members can outlive the collector, association when both sides are independent. Before promoting a term to its own class, check whether it fits as a property, an instance, or a subtype of something that already exists.
+
+Continue to document only the public seam in module-context — what callers invoke, what they must or must not do, and how to extend. Internal design, private participants, and implementation notes stay in source code. If the module-context needs to explain internals for callers to succeed, the public surface is not well designed.
 
 ### What is a class
 
