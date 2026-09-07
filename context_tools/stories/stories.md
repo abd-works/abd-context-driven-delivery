@@ -16,12 +16,7 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ## Mental model
 
-Use stories to progressively explore a problem and solution surface. **Think hierarchically** and write action-oriented interactions between users and systems at multiple levels of detail; **Epics** - business capabilities or end-to-end outcomes, often decomposed into **Sub-Epics**, and then **Storis**  a discrete user or system action and observable system response. `Manage User Accounts` → `Register New User` → `Enter Contact Details`, not `Build Registration Database`.
-
-**Start by outlining the overall map.** Lay down the overarching hierarchy using epics then groud epics with a few confirming stories. determine what you can from context and try to extrapolate the rest from patterns already found. **Then define the spine** the thinnest end-to-end path that delivers core value. Sketch one or two later increments to show where the remaining scope lands, but keep them light. 
-
-**Detail out stories in small increments** Start with the basic main-flow scenario for each story — the happy path through Given/When/Then. Then flesh out alternate flows, rejection paths, and edge cases. Add examples tables when the same flow produces different outcomes based on input variation.  Treat each story as a blueprint for developing **executable specifications** using **acceptance test driven development**. Design the solution through tests that call the real code even when it 
-do not exist yet (Red/Green/Refactor), write code until tests pass
+Use stories to progressively explore a problem and solution surface. Think hierarchically and write action-oriented interactions between users and systems at multiple levels of detail: **Epics** (business capabilities or end-to-end outcomes), often decomposed into **Sub-Epics**, and then **Stories** (a discrete user or system action and observable system response). `Manage User Accounts` → `Register New User` → `Enter Contact Details`, not `Build Registration Database`. Size each level so it contains no more than 7–9 items at the next level down. At every stage, explore what you can see, then extrapolate the rest from patterns already found.
 
 ---
 
@@ -50,6 +45,17 @@ do not exist yet (Red/Green/Refactor), write code until tests pass
 
 **Epics** are major capability areas — containers for flows. Named verb–noun: `Manage Customer Orders`, `Process Payments`. Epics nest into **SubEpics**,  then **Stories** — each a discrete, observable behavior independently testable. Stories are verb–noun (`Place Order`, `Validate Payment`); and are behaviors, not tasks.
 
+### Mental model
+
+Start by laying down the overarching hierarchy — epics covering the full capability surface. Ground each epic with a few confirming stories that prove the epic is real and the scope is right. Do not decompose further yet — determine what you can from context and extrapolate the rest from patterns already found.
+
+Then find the spine — the thinnest end-to-end path that delivers core value. "If we ran out of money next week, what would we ship?" Mark that as the first increment. Sketch one or two later increments to show where the remaining scope lands, but keep them light.
+
+Then decompose by increment. Take the spine increment and fully name its sub-epics and stories. Analyze mechanics before grouping: for each entity type under a shared heading, list (a) what the user configures, (b) what the system validates or resolves, (c) what runtime lifecycle it has. Group stories by that analysis — not by category label, source heading, or shared name. Distinct mechanics require distinct stories; same mechanics with different data consolidate into one story with consolidation notes.
+
+After mapping forward stories, re-scan for reverse, compensating, defensive, and observational actions in the same context. When a story creates a new state (escalated, held, locked), check whether the exit from that state has a different actor, action type, or check — if yes, the exit is a distinct story.
+
+When an increment is too large, split along these dimensions: Users (role/context), Data Variations, Workflow (simple before complex), Environment (technology/channel), Interfaces (interaction modes), Subjective Quality (NFRs), Business Rule Variations, and Uncertainty (spike the unknown first).
 
 ### Scaffold
 
@@ -81,6 +87,16 @@ Key rules: `branch-on-mechanical-uniqueness` — split on distinct mechanics, no
 Create specifications through **concrete scenarios** with preconditions (**Given**), a triggering action (**When**), and observable outcomes (**Then**). **And** continues a block; start a new **When** when the actor or trigger changes. Use **Background** only when 3+ scenarios share identical starting state (Given/And only — no When/Then). Use **Scenario Outline** with `{column_name}` tokens and an **Examples** table when variation is real and steps are identical; use plain **Scenario** for distinct flows (happy path, rejection, edge case).
 
 Use scenarios to ground the domain model. Concept names in examples must match model language exactly. Example table columns should relate data across relational structure as well.
+
+### Mental model
+
+Start from the main-flow scenario for each story — the happy path through Given/When/Then. Write it concrete enough that a domain expert and a developer would argue about whether the output is correct. Realistic domain values surface edge cases that `John Doe, $100` never will.
+
+Then walk the full interaction surface: inline validation rules, field-level errors, cross-field constraints, submit-button gating, server-side error surfaces. Branch into additional scenarios for each distinct mechanical variation — a story that only codifies the happy path when the screen has rich client-side validation is a defect.
+
+Use a Scenario Outline with an Examples table when the same flow produces different outcomes based on input variation. Use separate Scenarios when the flow structure itself diverges. Every Given/When/Then step must trace to a named domain operation — if a step cannot trace, that is a modelling gap, not a glossed-over detail. Given states only what the running system checks for this behaviour. When holds the operation. Then observes what When produced — no further I/O.
+
+Ground every scenario in the domain model. Concept names in examples must match model language exactly. Example table columns should relate data across the relational structure — not just list one concept's fields in isolation.
 
 ### Rules
 
