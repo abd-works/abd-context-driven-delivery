@@ -1,12 +1,12 @@
 # Contexts
 
-Structure the problem into a solution of independent, decoupled modules behind small, simple public APIs that hide deep functionality, with explict one way dependencies named. Implement those modules using rigourous object oriiented and clean-code practice.
+Structure the problem into a solution of independent, decoupled modules behind small, simple public APIs that hide deep functionality, and contain one way dependencies. Implement those modules using rigourous object oriented and clean-code practice. When the boundaries hold, a change lands inside one module and nothing outside it has to be reopened or retested; when they blur, every change ripples and the next one costs more.
 
 ## Shared rules
 
 - **`honor-every-rule-in-the-artifact`** — Honor every rule in the artifact you are writing. One-way dependencies, named seams, and localized behavior apply to language and markdown as well as to code. Do not create a dependency in prose that violates isolation. Treat prose with the same respect you treat the model and the code.
-- **`vocabulary-traces-to-source`** — Take every term from the source. The English term and the code name are the same word: *shopping cart* is `ShoppingCart`.
-- **`do-not-invent-terms`** — Do not invent a second noun or a parallel vocabulary. Keep `do-not-invent-parallel-object-models` on the model for wrappers and `*Model` / `*Entry` families.
+- **`vocabulary-traces-to-source`** — Take every term from the source. The English term and the code name are the same word: *shopping cart* is `ShoppingCart`. When the code says a different word than the domain, every reader keeps a translation in their head, and the two names drift until they mean different things.
+- **`do-not-invent-terms`** — Do not invent a second noun or a parallel vocabulary. A second noun for the same thing becomes a second class, and then the same rule has to be written and fixed in both. Keep `do-not-invent-parallel-object-models` on the model for wrappers and `*Model` / `*Entry` families.
 
 ---
 
@@ -24,7 +24,9 @@ When asked to express output using language, write the same names, definitions, 
 **Default format:** markdown  
 **Diagram format:** `drawio` (modules view — blue boxes, seam-term bullets, one-way dependency arrows; template `templates/modules.drawio`). Language channels (python/java/…) are for **model** and later — not required here.
 
-**Goal:** Partition a problem or solution space into independently understandable units — each a deep module with a narrow public seam and substantial implementation behind it. Name the units, their seams, and the one-way dependencies between them. Thin class/term identification only — enough to show independence. Do not invent types, method bodies, or relationship kinds yet. Each **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
+**Goal:** Partition a problem or solution space into independently understandable units — each a deep module with a narrow public seam and substantial implementation behind it. Name the units, their seams, and the one-way dependencies between them. Thin class/term identification only — enough to show independence. Do not invent types, method bodies, or relationship kinds yet — anything written before the boundaries settle gets thrown away when it changes, and while they exists they argue for leaving the boundary where it is. 
+
+Each **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
 ### Language
 
@@ -54,23 +56,23 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 
 **Form the module**
 
-- `named-seam-and-constraint` — Name the seam (public classes and operations) and the constraint (what callers must or must not do).
-- `high-cohesion` — Group classes that share one purpose and the same domain concept.
-- `single-boundary` — Do not let another module hold, mutate, or duplicate this module’s concept.
+- `named-seam-and-constraint` — Name the seam (public classes and operations) and the constraint (what callers must or must not do). A constraint you do not name is one callers find by breaking it at runtime.
+- `high-cohesion` — Group classes that share one purpose and the same domain concept, or else unrelated work will keep landing in the same module and every feature ends up editing it.
+- `single-boundary` — Do not let another module hold, mutate, or duplicate this module’s concept. The two modules will drift, and every rule change has to be found and made in both.
 
 **Shape the seam**
 
-- `deep-module` — Keep most top-level symbols private (at most **40%** public). Substantial work stays behind a short seam.
-- `abstraction-focus` — Name *what* the module does for callers, not internal steps or storage.
-- `public-seam-only` — Document only public seam and dependencies on other modules. Do not document internals, or tests.
-- `use-typed-signatures` — Use typed public signatures. Do not put vanilla `dict`, `Any`, or untyped lists on them.
-- `general-purpose-surface` — Do not shape the seam for one caller’s UI or workflow.
-- `temporal-independence` — Leave the module valid after every public operation. Do not require a call order unless you document it.
+- `deep-module` — Keep most top-level symbols private (at most **40%** public). Substantial work stays behind a short seam. Every public symbol is a signature you cannot change without editing every caller, so public parts are much harder to refactor then private ones.
+- `abstraction-focus` — Name *what* the module does for callers, not internal steps or storage. A seam named after its implementation has to be renamed — and every caller updated — when ever the implementation changes.
+- `public-seam-only` — Document only public seam and dependencies on other modules. Do not document internals, or tests. Documented internals are misunderstodd as public promises, and callers start writing code against them.
+- `use-typed-signatures` — Use typed public signatures. Do not put vanilla `dict`, `Any`, or untyped lists on them — an untyped bag moves every shape error to runtime and leaves the caller guessing which keys are required.
+- `general-purpose-surface` — Do not shape the seam for one caller’s UI or workflow. The second caller then either needs a near-duplicate operation or has to reshape its data to look like the first caller’s.
+- `temporal-independence` — Leave the module valid after every public operation. Do not require a call order unless you document it — an undocumented order will cayse the system on the first path nobody happened to test.
 
 **Define Dependebcues**
 
-- `low-coupling` — Depend only through other modules’ seams. Keep sibling imports few.
-- `layer-separation` — keep dependent modules at different levels of abstractions. Collapse pass-through modules.
+- `low-coupling` — Depend only through other modules’ seams. Keep sibling imports few. Reaching past a seam freezes that module’s internals — it can no longer change them without breaking you.
+- `layer-separation` — keep dependent modules at different levels of abstractions. Collapse pass-through modules — a module that only forwards turns every signature change into an edit in three files instead of one.
 - `nesting` — Nest a child only when it shares mechanics or is a sub-system; keep independent modules flat. Put shared behavior on the parent. A child may depend on the parent, not on siblings.
 
 ---
@@ -78,47 +80,48 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 
 **Default format:** Python
 
-**Goal:** Analyze modules and design its object model — the classes, what they remember and do, and how they relate. Stub empty properties and operations. No production behavior yet.
+**Goal:** Analyze modules and design its object model — the classes, what they remember and do, and how they relate. Stub empty properties and operations. No production behavior yet. A model is the whole design in one place — who owns what, what they do, how they connect — so a human or an agent can read it, challenge it, and refactor before any body or call site exists. Those are the decisions that are cheap here and expensive in code: once behavior is written, moving an operation means rewriting the body and every caller.
 
 ### Language
 
-**When the user asks for language** (not full generate at this fidelity): use the language template at `templates/clean_engineering-language.md`. Do not use ### Guidelines, ### Rules, ## Sketching, or ## Templates. **Stop reading this skill when writing language.**
+**When the user asks for language** (not full generate at this fidelity): use the language template at `templates/clean_engineering-language.md`. Do not use ### Guidance, ### Rules, ## Sketching, or ## Templates. **Stop reading this skill when writing language.**
 
-### Guidelines
+### Guidance
 
-Analyze the source context to identify the concepts and operations the domain already names — do not invent terminology. Group concepts that have their own identity, state, and behavior into **classes**. Model them **behaviors first and data second** — **properties** (what they remember — noun phrases) and **operations** (what they do — verb phrases). An `Order` calculates its own total; a `Cart` checks itself out. Do not invent a `Manager`, `Service`, `Helper`, or `Processor` to do what the object itself should do.
+Analyze the source context to identify the concepts and operations the domain already names — do not invent terminology, or the model and the code will each use a different word for the same thing and drift apart. Group concepts that have their own identity, state, and behavior into **classes**. Model them **behaviors first and data second** — **properties** (what they remember — noun phrases) and **operations** (what they do — verb phrases). Verbs tell you what the object is for; nouns alone produce data holders with the logic parked somewhere else. An `Order` calculates its own total; a `Cart` checks itself out. Do not invent a `Manager`, `Service`, `Helper`, or `Processor` to do what the object itself should do — that splits state from behavior into two types, and every change to the rule has to land in both.
 
-**Localize behavior to the object that owns the state.** Each object accesses its own state and enforces its own invariants — do not write objects that manipulate another object's internal state. When deciding where an operation belongs, ask: which object has the data this operation needs? That is where the operation lives. `cart.checkout()`, not `CheckoutManager.processCheckout(cart)`. 
+**Localize behavior to the object that owns the state.** Each object accesses its own state and enforces its own invariants — do not write objects that manipulate another object's internal state. When deciding where an operation belongs, ask: which object has the data this operation needs? That is where the operation lives. `cart.checkout()`, not `CheckoutManager.processCheckout(cart)`. Logic for one concept that lives on a type that does not own the data is now scattered across two or more types — harder to find, harder to keep consistent, and harder to refactor when the concept changes.
 
-**Give each class one clear, focused responsibility.** When a class accumulates operations spanning different concerns, it reveals missing classes — split by the data each group of operations works with, this will reveal a hidden conceptthis will reveal a hidden concept. Keep the public surface narrow: a few well-named operations that express intent, not a long list of methods covering every concern the system touches.
+**Give each class one clear, focused responsibility.** When a class accumulates operations spanning different concerns, it reveals missing classes — split by the data each group of operations works with; that split surfaces the concept you had not named yet. Keep the public surface narrow: a few well-named operations that express intent, not a long list of methods covering every concern the system touches. A class that does everything is a class that changes for every feature, and a long seam forces every caller to pick from methods that were not written for their job.
 
-**Find the operations.** Walk the source for the verbs this concept already performs — what a user or system asks it to do. An operation belongs on the class that owns the data it needs. Parameters are only what the object does not already hold; the return is what the caller must observe, not internals. Inside an operation, name **interactions** with other classes — specifically in other modules. Use the existing public seam named in those modules or create new ones that respect module boundaries. Add **invariants** — things that must stay true when the operation runs. How to write those notes is in the model template.
+**Find the operations.** Walk the source for the verbs this concept already performs — what a user or system asks it to do. An operation belongs on the class that owns the data it needs. Parameters are only what the object does not already hold; the return is what the caller must observe, not internals — parameters that duplicate state mean callers assemble what the object should already know, and returns that expose internals let callers depend on how you store things. Inside an operation, name **interactions** with other classes — specifically in other modules. Use the existing public seam named in those modules or create new ones that respect module boundaries. Add **invariants** — things that must stay true when the operation runs; an invariant you do not name here is a bug you only find once the body is written. 
 
-**Get typing right.** Write a **property** when variation is data — a `type` field, not a new class. Write a **base class** when two or more types share identity, state, and operations — put that shared behavior in one place. Write a **subtype** when a variant changes what the thing *does*; record only the delta. Anywhere the base is used, the subtype must work in its place. Write an **interface** when multiple implementations sit behind one seam.
+**Get typing right.** Write a **property** when variation is data — a `type` field, not a new class. Write a **base class** when two or more types share identity, state, and operations — put that shared behavior in one place. Write a **subtype** when a variant changes what the thing *does*; record only the delta. Anywhere the base is used, the subtype must work in its place. Write an **interface** when multiple implementations sit behind one seam. A class for a field difference copies the same operations across types; a missing base class copies shared behavior by hand in every subtype.
 
-**Make dependencies explicit.** Pass publicly accessible and swappable collaborators through the constructor — never reach for a global.
+**Make dependencies explicit.** Pass publicly accessible and swappable collaborators through the constructor — never reach for a global. A dependency you cannot see in the constructor cannot be swapped for a test double, and a global hides what the class actually needs to run.
 
-**Name the relationships.** Add kind and cardinality. Choose kind by **ownership** and **identity**. **Write composition** when the owner completely owns the part and the part has no identity outside it — an airplane is composed of its wings, cockpit, and engine; the cockpit has no identity outside the plane. **Write aggregation** when the collector has no meaning without its members, but members keep their own identity — a fleet is an aggregate of planes. **Write association** when both sides are independent — a plane is driven by a pilot; the pilot has complete independence from the plane.
+**Name the relationships.** Add kind and cardinality. Choose kind by **ownership** and **identity**. **Write composition** when the owner completely owns the part and the part has no identity outside it — an airplane is composed of its wings, cockpit, and engine; the cockpit has no identity outside the plane. **Write aggregation** when the collector has no meaning without its members, but members keep their own identity — a fleet is an aggregate of planes. **Write association** when both sides are independent — a plane is driven by a pilot; the pilot has complete independence from the plane. The kind you pick here becomes the lifecycle in code — composition deletes the part with the owner, association does not — so the wrong kind means rewriting constructors, delete paths, and every caller that assumed the wrong ownership.
 
-Extend module level **public seam** documentation — what callers invoke, what they must or must not do, and how to extend — plus **dependencies**: every other-module class or operation this module calls. See `@clean_engineering-modules`. Refresh the language for new or uodated terms now on the public API. Do not document internal design, private participants, or implementation notes.
+Extend module level **public seam** documentation — what callers invoke, what they must or must not do, and how to extend — plus **dependencies**: every other-module class or operation this module calls. See `@clean_engineering-modules`. Refresh the language for new or updated terms now on the public API. Do not document internal design, private participants, or implementation notes — documented internals read as promises, and callers write against them.
 
 
 ### Rules
 
 **Shape classes**
-- `class-not-property-instance-or-subtype` — Before you write a new class, check property, instance, then subtype. Write a class only when none of those three fit.
+- `class-not-property-instance-or-subtype` — Before you write a new class, check property, instance, then subtype. Write a class only when none of those three fit. Every new class is another type to construct, pass around, and keep in step with the rest; a property or subtype reuses one that already works.
 - `keep-classes-single-responsibility` — Give each class one reason to change.
-- `put-logic-on-the-owning-resource` — Put the logic on the object that owns the resource first — `client.accounts[id].transactions.last.validate()`, not `client.validateLastTransactionForPrimaryAccount()`. A shorter public API may facade that later.
-- `hide-inner-details` — Expose behavior through named operations. Do not let callers see how the class stores or arranges its data.
-- `use-property-not-accessor` — Use `@property` (or the language equivalent) for read-only computed values. Hide the logic that updates state behind a setter — do not write an update opration. Do not prefix methods with `get_` or `set_`.
-- `prefer-class-operations` — Put factory, lifecycle, and helpers used from one class on that class. Do not export them as module-level functions.
-- `use-explicit-dependencies` — Pass every collaborator through the constructor. Do not reach for a global or construct a collaborator inside construction.
+- `put-logic-on-the-owning-resource` — Put the logic on the object that owns the resource first — `client.accounts[id].transactions.last.validate()`, not `client.validateLastTransactionForPrimaryAccount()`. Logic placed away from its data has to be handed that data to work on, so two objects can now change it and disagree. A shorter public API may facade that later.
+- `hide-inner-details` — Expose behavior through named operations. Do not let callers see how the class stores or arranges its data — once they read the storage directly it becomes a public contract you cannot change.
+- `use-property-not-accessor` — Use `@property` (or the language equivalent) to announce what state a concept exposes or accepts without revealing how it is stored. Hide update logic behind a setter — do not write a separate update operation; a propery encapsulates behavior required to work with state behind the seam. A property makes simple and complex state access indistinguishable — that is what callers should see.
+- `prefer-class-operations` — Put factory, lifecycle, and helpers used from one class on that class. Do not export them as module-level functions — a free function holds no state, so it takes the object as a parameter and reaches into it to do the work.
+- `use-explicit-dependencies` — Pass every collaborator through the constructor. Do not reach for a global or construct a collaborator inside construction. A collaborator the class fetches or builds itself cannot be swapped, so the class can only ever run against that one implementation.
 
 
 **Define operations**
-- `keep-operations-single-responsibility` — Give each operation one job. Separate orchestration, from calculation, calculation from I/O and mutation, etc. When an operation does two things, split it or find the missing class.
-- `use-clear-operation-parameters` — Have callers pass intent, not setup. Prefer 0–2 parameters; when you need more, promote paramters to a class. Do not use vague names (`data`, `options`, `info`).
-- `errors-out-of-existence` — For ordinary edges — empty cart, missing optional field, no matches — return an empty result or a quiet no-op. Raise an exception only when something is actually broken.
+- `keep-operations-single-responsibility` — Give each operation one job. Separate orchestration, from calculation, calculation from I/O and mutation, etc. When an operation does two things, split it or find the missing class. Two jobs mean two reasons to change, often pulling in opposite directions — every change to one can tangle with the other, so the operation breaks for twice as many reasons and stays brittle.
+- `limit-operation-parameters` — Have callers pass intent, not setup. Prefer 0–2 parameters. Three or more usually means a missing concept in the model — the values belong together as a class that may even need to own that behavior, and the operation is likely doing more than one job as well. Promote them to a class instead of adding another parameter.
+- `avoid-vague-parameter-names` — Do not name parameters `data`, `options`, `info`, or other placeholders that could mean anything. A vague name hides what the caller must supply and what the operation does with it.
+- `errors-out-of-existence` — For ordinary edges — empty cart, missing optional field, no matches — return an empty result or a quiet no-op. Raise an exception only when something is actually broken. Raising on an ordinary case puts a `try` at every call site to handle something that is not a failure.
 - `limit-comments` — write comment in operations and properties only when the signature cannot say a constraint or explain why the code behaves the way it does. Do not narrate a line that already names what it does.
 
 **Invariants, interactions, and comments**
@@ -129,9 +132,9 @@ Extend module level **public seam** documentation — what callers invoke, what 
 **Names and reuse**
 
 - `use-intention-revealing-names` — Name each class, property, operation, and parameter so it answers why it exists. Do not abbreviate.
-- `use-consistent-naming` — Use one word per concept. Pick one verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`).
-- `eliminate-duplication` — Give repeated logic one canonical function.
-- `do-not-invent-parallel-object-models` — Wrap or extend the live objects. Name a wrapper after the type it wraps. Do not invent a parallel domain noun, and do not scrape the same data into a second `*Model` / `*Entry` family.
+- `use-consistent-naming` — Use one word per concept. Pick one verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`). Two words for one concept is how the same logic gets written twice — nobody searching for `fetch_` finds the `retrieve_` that already does the job.
+- `eliminate-duplication` — Give repeated logic one canonical function. Every copy is another place the fix has to be repeated, and the copy you miss is the bug.
+- `do-not-invent-parallel-object-models` — Wrap or extend the live objects. Name a wrapper after the type it wraps. Do not invent a parallel domain noun, and do not scrape the same data into a second `*Model` / `*Entry` family. The second family drifts from the first, and you end up writing and maintaining conversion code between two representations of the same thing.
 
 
 
@@ -140,45 +143,45 @@ Extend module level **public seam** documentation — what callers invoke, what 
 
 **Default format:** Python
 
-**Goal:** Turn the model into working production code. Implement types and seams first, then real behavior behind them. Write real backend and real frontend — not a demo shell with stand-ins.
+**Goal:** Turn the model into working production code — where the design actually runs. Implement the types and seams the model named, then fill real behavior behind them: real persistence, services, and UI. Clean code here is not polish at the end; it is how you keep the module boundaries and object model intact as the system grows — behavior stays on the object that owns it, operations stay short, dependencies stay visible — so a change lands in one place instead of spreading. Write a real backend and real frontend, not a demo shell with stand-ins that lets tests pass while broken seams hide until more callers depend on them.
 
-### Guidelines
+### Guidance
 
 Follow the idioms in `[context_tools/language-tools.md](/context_tools/language-tools.md)`.
 
-Start by **Implenenting the public surface.** Where the model asked for an interface, the class implements it in the same file and the interface stays public-only. Where it did not, continue to impmlement the class. Implement public properties and operations first; write out private members next. Relationships keep the kind and cardinality already named. 
+Start by **Implementing the public surface.** Where the model asked for an interface, the class implements it in the same file and the interface stays public-only. Where it did not, continue to implement the class. Implement public properties and operations first; write out private members next — the seam the model named is the contract, and privates follow from what those operations need, not the other way around. Relationships keep the kind and cardinality already named. 
 
-Make sure to **Implement real behavior.** Fill every empty body. Wire real persistence, services, and other-module seams — not stand-ins as the shipping path. Add helpers, named constants, and domain exceptions only when the implementation needs them. Keep an existing interface as the seam; otherwise treat the class as the seam. 
+Make sure to **Implement real behavior.** Fill every empty body — a stub ships as a silent no-op and hides that the seam was never finished. Wire real persistence, services, and other-module seams — not stand-ins as the shipping path. Add helpers, named constants, and domain exceptions only when the implementation needs them; speculative helpers become APIs nobody asked for. Keep an existing interface as the seam; otherwise treat the class as the seam. 
 
-When writing out code take care to **Fill out all interactions with real code.** Turn `-> collaborator.operation` notes into actual calls — have the object ask its collaborators to do the work; do not reach into their internals. Drop the placeholder once the call is real.
+When writing out code take care to **Fill out all interactions with real code.** Turn `-> collaborator.operation` notes into actual calls — have the object ask its collaborators to do the work; do not reach into their internals. A placeholder left in place means the module boundary was never exercised; reaching past the seam couples you to another module's internals. Drop the placeholder once the call is real.
 
-**Honor invariants in the implementation.** Turn `// remaining budget never goes negative` comments into methods where you can; replace comments with explicit code.
+**Honor invariants in the implementation.** Turn `// remaining budget never goes negative` comments into methods where you can; replace comments with explicit code. A comment-only invariant runs only if someone read it — explicit code runs on every path.
 
-**Keep the code clean.** Give each operation one thing to do; keep it short and at one level of abstraction — do not mix orchestration with raw I/O. Name things so they say why they exist. Handle the failing or empty cases first and return — then write the main path flat. Do not bury the real work inside nested ifs. Name exceptions after the failure; never swallow them. Give magic numbers names. Keep the public surface the seam already designed: short, caller-facing, with substantial implementation behind it, still in the module folder.
+**Keep the code clean.** Give each operation one thing to do; keep it short and at one level of abstraction — do not mix orchestration with raw I/O, or a storage change drags through business logic. Name things so they say why they exist. Handle the failing or empty cases first and return — then write the main path flat. Do not bury the real work inside nested ifs. Name exceptions after the failure; never swallow them. Give magic numbers names. Keep the public surface the seam already designed: short, caller-facing, with substantial implementation behind it, still in the module folder.
 
-**Skip the model only for a very small change** — fill a body, rename, extract a helper, honor an invariant already named. The language is already there; keep it current. When you start needing to model — a new class, a new responsibility, a new relationship, a new public seam, or a new concept — stop and go to **model**. See `@clean_engineering-model`. Then return to code and implement what the model now names. Do not grow a shadow model only in the implementation.
+**Skip the model only for a very small change** — fill a body, rename, extract a helper, honor an invariant already named. The language is already there; keep it current. When you start needing to model — a new class, a new responsibility, a new relationship, a new public seam, or a new concept — stop and go to **model**. See `@clean_engineering-model`. Then return to code and implement what the model now names. Do not grow a shadow model only in the implementation — code-only design drifts from the language and module-context, and the next reader cannot find what you decided.
 
-**Refresh the language and the seam.** Keep class identity in the docstring; put member bullets on the members. Edit the same public-seam module-context — how to use it, what callers must honor, what it depends on. Never internals. Never a parallel file.
+**Refresh the language and the seam.** Keep class identity in the docstring; put member bullets on the members. Edit the same public-seam module-context — how to use it, what callers must honor, what it depends on. Never internals. Never a parallel file — two documents drift, and documented internals read as promises callers build against.
 
 
 
 ### Rules
 
 **Implement the model**
-- `hide-inner-details` — Expose behavior through named operations. Do not let callers see how the class stores or arranges its data.
+- `hide-inner-details` — Expose behavior through named operations. Do not let callers see how the class stores or arranges its data — once they read the storage directly it becomes a public contract you cannot change.
 - `keep-operations-small-focused` — Keep each operation short enough to read as one thought — under 20 lines. When it grows, extract a private helper whose name says why that slice exists.
-- `keep-operations-single-responsibility` — Give each operation one job. Separate orchestration, from calculation, calculation from I/O and mutation, etc. When an operation does two things, split it or find the missing class.
-- `simplify-control-flow` — Handle the failing or empty cases first and return. Keep the main path flat. Do not nest more than three levels.
-- `errors-out-of-existence` — For ordinary edges — empty cart, missing optional field, no matches — return an empty result or a quiet no-op. Raise an exception only when something is actually broken.
+- `keep-operations-single-responsibility` — Give each operation one job. Separate orchestration, from calculation, calculation from I/O and mutation, etc. When an operation does two things, split it or find the missing class. Two jobs mean two reasons to change, often pulling in opposite directions — every change to one can tangle with the other, so the operation breaks for twice as many reasons and stays brittle.
+- `simplify-control-flow` — Handle the failing or empty cases first and return. Keep the main path flat. Do not nest more than three levels — deeper than that you cannot tell which conditions hold on a given line without reading back up, and that is where the unhandled branch hides.
+- `errors-out-of-existence` — For ordinary edges — empty cart, missing optional field, no matches — return an empty result or a quiet no-op. Raise an exception only when something is actually broken. Raising on an ordinary case puts a `try` at every call site to handle something that is not a failure.
 
 **Names and reuse**
 - `use-intention-revealing-names` — Name each class, property, operation, and parameter so it answers why it exists. Do not abbreviate.
-- `use-consistent-naming` — Use one word per concept. Pick one verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`).
+- `use-consistent-naming` — Use one word per concept. Pick one verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`). Two words for one concept is how the same logic gets written twice — nobody searching for `fetch_` finds the `retrieve_` that already does the job.
 - `provide-meaningful-context` — Give a number or literal a name that says why it is there (`SECONDS_PER_DAY`, not `86400`). Do not number variables (`item1`).
-- `eliminate-duplication` — Give repeated logic one canonical function.
+- `eliminate-duplication` — Give repeated logic one canonical function. Every copy is another place the fix has to be repeated, and the copy you miss is the bug.
 
 **Errors / comments**
-- `use-exceptions-properly` — Raise a domain exception that names the failure (`CartAlreadyCheckedOut`, not `Error` or a bare string). Catch the specific type you can handle. Do not use a bare `except`.
+- `use-exceptions-properly` — Raise a domain exception that names the failure (`CartAlreadyCheckedOut`, not `Error` or a bare string). Catch the specific type you can handle. Do not use a bare `except`. A generic exception cannot be caught selectively, so the caller has to handle everything or nothing.
 - `never-swallow-exceptions` — Do not catch and ignore. Log and re-raise, or convert to a domain exception that still names the failure. A `pass` in `except` hides a broken invariant.
 - `limit-comments` — write comment in operations and properties only when the signature cannot say a constraint or explain why the code behaves the way it does. Do not narrate a line that already names what it does.
 
