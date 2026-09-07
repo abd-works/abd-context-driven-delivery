@@ -16,24 +16,9 @@ Refer to these skills in order to fill in details from previous fidelities if no
 
 Deepen OO design from modules toward production code. Each fidelity **adds** artifacts — do not invent detail from a deeper level.
 
-**Progression:** `partition` (action) → **modules** (scaffold → full map) → **model** → **code**.
-
-
-| Fidelity    | Default format      | Produce                                                                                                                                                                                  |
-| ----------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **modules** | markdown (+ drawio) | Independent modules, one-way deps, build order, thin seam terms                                                                                                                          |
-| **model**   | python              | Empty public seam (on `Class` directly by default, or on a separate `I{Class}` contract **only when interfaces are explicitly requested**) + full module-context; stub example factories |
-| **code**    | python              | Typed contracts (`Class(I{Class})` when an interface was requested, otherwise `Class` directly) → full production implementation                                                         |
-
-
-**Interfaces (**`I{Class}`**) are optional, not automatic.** See `## model` § Interfaces for the trigger — ask for one, or a genuine multi-layer/multi-implementation seam.
-
 ---
 
-## Language companion (not a fidelity)
-
-**Language is not invocable** (`context.fidelity: language` is rejected). Natural-language identity is a **companion** that deepens at every stage through code.
-
+## Language 
 - At each fidelity, refresh prose for terms/classes already named at that stage — definition, story bullets, invariants in plain English.
 - Keep identity on the class (or `## ClassName` section); member bullets move onto members as model/code deepen.
 - Do **not** invent types, method bodies, relationship kinds, or Public API ahead of the active fidelity.

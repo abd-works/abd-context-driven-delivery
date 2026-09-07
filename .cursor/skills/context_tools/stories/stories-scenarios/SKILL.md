@@ -28,7 +28,7 @@ Map stakeholder and system interactions as behaviours that deliver a solution.
 ## Shared rules
 
 - **`vocabulary-traces-to-domain-source`** — Trace terms to domain language / model when present.
-- **`artifacts-mirror-story-hierarchy`** — Mirror Epic → SubEpic → Story on disk as folders for epic and sub-epic, and as `{story}.{tier}.py` files (no per-story directory).
+- **`artifacts-mirror-story-hierarchy`** — Mirror Epic → SubEpic → Story on disk as folders for epic and sub-epic, and as `{story}.py` files (no per-story directory).
 - **`kebab-case-paths`** — Epic and SubEpic **folder** names, story **file** stems, and tier segments use lowercase kebab-case (`sign-up`, `front-end`). No `snake_case` folders or `PascalCase` paths. **Exception:** Python epic helper only — `{epic_slug}_helper.py` at the epic folder root; nothing else may use underscores.
 - **`read-all-source-context-in-full`** — Before locking hierarchy **and before any grill/iterate question about a seam**, prove-read **every relevant referenced context** for that decision: owning `*-segment.md`, `module-context.md`, session sketches / grill-answers / handoff, peer story-context, build-order, and any path the plan or prior answers cite. Index / mid-epic stub columns are structure hints only — **not** story inventory. Grep or primer-only skims do not count; cite concrete terms from the files read in the question turn. Also re-read these rules. Do not thin from titles or memory!
 - **`do-not-invent-requirements`** — Only model behaviours present in source context or an explicit ask. Never invent status concepts, maintenance signals, warning badges, or config columns (e.g. `Status (ok/stale)`) the source does not require — unconfigured / not-yet-current = **no row** + the existing fallback, never a new invented state to render.
@@ -41,7 +41,7 @@ Map stakeholder and system interactions as behaviours that deliver a solution.
 
 **Goal:** Main-flow scenarios per story (single or multiple) with optional variations.
 
-**Produce:** Same `{story}.{tier}.py` tree as acceptance_tests. Pass `format markdown` only when the strategy command names it.
+**Produce:** `tests/{epic}/{sub-epic}/{story}.py` — one GWT file per story. No `{story}/` folder and no `*_story` / `*_test_helper` split. Pass `format markdown` only when the strategy command names it.
 
 Create testable specifications grounded in user system interactions through **concrete scenarios** with preconditions (**Given**), a triggering action (**When**), and observable outcomes (**Then**). **And** continues a block; start a new **When** when the actor or trigger changes. Use **Background** only when 3+ scenarios share identical starting state (Given/And only — no When/Then). Use **Scenario Outline** with `{column_name}` tokens and an **Examples** table when variation is real and steps are identical; use plain **Scenario** for distinct flows (happy path, rejection, edge case).
 
@@ -182,17 +182,11 @@ Use when an examples table adds no value — express mechanical variation as sib
 # tests/
 #   {epic-verb-noun}/
 #     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
-#       {story_snake_slug}.{tier}.py     # one GWT file per story per tier
+#       {story_snake_slug}.py            # one GWT file per story
 #
 # # Machinery — copy once per tests/ tree if missing (do not inline in skills):
 #   context_tools/stories/templates/py/story_test.py → tests/story_test.py
 # story_test: tests/story_test.py
-#
-# # Naming rules
-# - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
-# - Story test file        → {story_snake_slug}.{tier}.py at epic or sub-epic — NO {story}/ folder
-# - Tier                   → file extension segment (.e2e.py, .front-end.py, .back-end.py)
-# - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
 # Pattern: GWT structure only — replace pass with real code under each with.

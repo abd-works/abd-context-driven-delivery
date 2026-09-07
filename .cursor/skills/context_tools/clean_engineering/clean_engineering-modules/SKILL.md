@@ -12,18 +12,6 @@ Use clean_engineering guidance at `modules` fidelity only.
 
 Deepen OO design from modules toward production code. Each fidelity **adds** artifacts — do not invent detail from a deeper level.
 
-**Progression:** `partition` (action) → **modules** (scaffold → full map) → **model** → **code**.
-
-
-| Fidelity    | Default format      | Produce                                                                                                                                                                                  |
-| ----------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **modules** | markdown (+ drawio) | Independent modules, one-way deps, build order, thin seam terms                                                                                                                          |
-| **model**   | python              | Empty public seam (on `Class` directly by default, or on a separate `I{Class}` contract **only when interfaces are explicitly requested**) + full module-context; stub example factories |
-| **code**    | python              | Typed contracts (`Class(I{Class})` when an interface was requested, otherwise `Class` directly) → full production implementation                                                         |
-
-
-**Interfaces (**`I{Class}`**) are optional, not automatic.** See `## model` § Interfaces for the trigger — ask for one, or a genuine multi-layer/multi-implementation seam.
-
 ---
 
 ## Language 
@@ -51,14 +39,6 @@ A **module** is a named structural boundary that groups closely related classes 
 - Do not add types, method bodies, or relationship kinds (composition / aggregation / association).
 
 
-**Rules**
-- `nested-physical-folder` — Child module path is `{parent}/{child}/` (e.g. `powers/attack/`). Each module that is a real seam owns its own folder and `.context/module-context.md`. Parent shared code lives in the **parent** folder (e.g. types at `powers/`), not copy-pasted into every child — do not invent a `powers/effect` submodule for shared base.
-- `shared-base-before-siblings` — If children would duplicate the same mechanics, extract **parent-owned base** types first; children depend on that base through a thin interface.
-- `nest-when-shared-else-flat` — Nest under a parent only when there is shared mechanics or a clear sub-system boundary. Independent top-level concepts (`checks`, `character`) stay flat.
-- `independent-child` — A child must still pass "implement with siblings stubbed"; it may depend on the **parent base**, not on sibling children.
-- **Naming** — Domain nouns; path form `parent/child` in indexes and sketches (`powers/general`, `conflicts/turns`).
-
-Examples: `powers` (owns Effect) + `powers/attack|control|defense|movement|sensory|general` + `powers/extras|flaws`; `conflicts/turns|actions|conditions`; `gear/equipment|headquarters|vehicles`.
 
 ### Mental model
 
@@ -86,7 +66,8 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 - `named-seam-and-constraint` — Every module owns a *seam* — the public surface of classes and operations callers depend on — paired with a *constraint* stating what callers must do or must not do at that boundary. A module is described by what it requires of its callers, not only by what it holds.
 - `public-seam-only` — `.context/module-context.md` documents **only** the public seam: how to **use** the module, how to **extend** it, and what its **dependencies** are. Internals are banned (see dedicated section below). Scanner: `public-seam-only`.
 - `deep-module` — The seam stays a short named list of classes and operations with substantial functionality behind it (Ousterhout: small interface, large hidden implementation). If internal helpers leak into the seam, encapsulation is overhead without benefit. Scanner heuristic: at most **40%** of top-level symbols may be public (leading underscore for the rest).
-- `physical-folder` — Each module occupies its own folder; class files, markdown documents, and other module-level artifacts live in it. Generated code belongs in that folder — not beside the module, not in a flat dump outside it. Nested modules use child folders under the parent (`nested-physical-folder`). Not every folder is a module — chapter or organisational folders may group several modules and must not be treated as one module unless they own `.context/module-context.md`. **Do not stop at an arbitrary depth** — every folder that is a cohesive functional unit owns `.context/module-context.md`; folders that are only implementation detail (`assets/`, thin config/) are absorbed into the parent description. Stopping mid-tree at `pages/My` while leaving nested pages, hooks, and services undocumented is a defect. `module-context.md` **never lives under** `.context/sessions/` — the session folder is for sprint artifacts; the context file belongs beside the source it describes.
+- `physical-folder` — Each module occupies its own folder; class files, markdown documents, and other module-level artifacts live in it. Generated code belongs in that folder — not beside the module, not in a flat dump outside it. Not every folder is a module — chapter or organisational folders may group several modules and must not be treated as one module unless they own `.context/module-context.md`. **Do not stop at an arbitrary depth** — every folder that is a cohesive functional unit owns `.context/module-context.md`; folders that are only implementation detail (`assets/`, thin config/) are absorbed into the parent description. `module-context.md` **never lives under** `.context/sessions/` — the session folder is for sprint artifacts; the context file belongs beside the source it describes.
+- `nesting` — Nest under a parent only when children share mechanics or form a clear sub-system boundary; independent concepts stay flat. Child path is `{parent}/{child}/` (e.g. `powers/attack/`). Parent-shared code lives in the **parent** folder — do not invent a submodule for shared base. If children would duplicate mechanics, extract parent-owned base types first. Each child must be independently implementable (siblings stubbed); it may depend on the parent base, not on sibling children.
 - `output-format` — Written markdown is human-readable only. Strip template markup (`<!-- Mu -->`, `<!-- Mv -->`, and similar) before writing. A module heading sits immediately above its `- **Purpose:**` block — no blank line between them.
 - `cohesive-file` — Put a **class family** in one file: the primary type, its subtypes, and tightly connected peers that only make sense together (element + collection, small aggregate + its part). Name the file after the family concept (`abilities.py` for `Ability` + `Abilities`). Split into another file only when a type is independently reused across families or the file becomes a grab-bag of unrelated types. Do not default to one class per file. **Exception:** `{Type}ExampleFactory` (and its `examples` data, plus `I{Type}ExampleFactory` when one was requested) always live in a **sibling file** — never in the production family file (see **Example factories**).
 - `abstraction-focus` — Module description names *what* the module does at a higher level than the classes inside it; public verbs are caller-facing, not internal steps or storage layouts.
