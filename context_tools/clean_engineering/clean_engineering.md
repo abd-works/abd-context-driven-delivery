@@ -23,7 +23,7 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 **Goal:** Partition a problem or solution space into independently understandable units — each a deep module with a narrow public seam and substantial implementation behind it. Name the units, their seams, and the one-way dependencies between them. Thin class/term identification only — enough to show independence. Do not invent types, method bodies, or relationship kinds yet. Each **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
-### Mental model
+### Guidance:
 
 **Deep modules** Start by identifying the major structural boundaries — group closely related classes around a single domain concept. Each module should be **deep**: a narrow public interface with substantial implementation behind it. Create deep module to reduce both your and human user cognitive load so that you can focus on reading the interface versus reading the implementation. Build interfaces to be much simpler than their implementation, avoid shallow modules that adds overhead without encapsulation. Resist the urge to decompose into many small modules.
 
@@ -67,18 +67,10 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 
 **Default format:** Python
 
-**Goal:** Define the public seam — what the module exposes, why it is shaped that way, and what callers depend on. **By default the seam is stubbed directly on** `Class` **itself** — no production behavior yet, no separate interface either, unless one is asked for. Expand `module-context.md` fully. 
+**Goal:** Define the public seam — what the module exposes, why it is shaped that way, and what callers depend on. Stub empty properties and operations on `Class`. Expand `module-context.md` fully.
 
-- **Default (no interface):** stub the Public API **directly on** `Class` — no production `Class` yet in the sense of behavior, but the type itself already exists as an empty contract. Public properties and operations are **empty interfaces** (Python: `...` / `@property`+empty body; Java: stub methods; other channels: abstract/empty equivalent). No internals until code.
-- **Opt-in (interface requested):** create a separate `I{Class}` contract instead — only when the user explicitly asks for one at this fidelity, or the module genuinely has multiple layers/implementations that need abstracting apart (see **Interfaces** below for the full trigger). Name it `I{Class}` (e.g. `IShoppingCart`) and keep it and its later extender in the **same file** (`cohesive-file`); there is no production `Class` yet in this case.
-- Do not default to `I{Class}` just because this is model fidelity — interfaces are the exception, not the rule.
-- When the type will be used from Stories examples, stub `{Type}ExampleFactory` (empty, named methods only — plus `I{Type}ExampleFactory` only if that interface was also requested) in a **sibling** `{type}_example_factory.{ext}` file — see **Example factories** below. Complete the factory at **code** fidelity.
-- Expand `.context/module-context.md` (seeded at modules) within the **public-seam-only** allowlist: **Purpose**, **Primary use case**, **Rationale**, **Seam**, **Public API**, **Constraint**, **Dependencies**, optional **Extend** / **Mechanism stereotype**. Nested children list the **parent base** under Dependencies; parents list children as nested modules (not as a flat dump of sibling APIs). **Never** add Internal design, Participants, Domain separation, underscore types, or private participants.
-- Ensure code and context for a module belong only in that module's folder (parent owns shared base; child owns specialization).
-- Apply `cohesive-file`: one file per class family; example factories live in a sibling file (`example-factory-separate-file`).
-- Edit to carry forward language-companion identity into **Purpose**; expand primary use case and rationale at this fidelity.
-- Edit class docstrings so member bullets move down onto those members; keep everything inside the module folder (`physical-folder`).
-- Refresh the **language companion** for terms now on the Public API — still no typed signatures in prose ahead of code.
+- When the type will be used from Stories examples, stub `{Type}ExampleFactory` (empty, named methods only) in a sibling `{type}_example_factory.{ext}` file. Complete the factory at **code** fidelity.
+- Carry language-companion identity into **Purpose**; move member bullets onto those members; refresh companion prose for terms now on the Public API.
 
 
 
