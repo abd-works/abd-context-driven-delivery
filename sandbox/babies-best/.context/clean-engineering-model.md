@@ -10,7 +10,7 @@ format: md
 
 **Sources / context:** `.context/babies-best-sketch.md` (Discover Nyc Activities); `.context/bounded-context-map.md`; `.context/cdr/0001-activity-links-neighborhood-only.md`
 
-## Language companion
+## Language
 
 *Activity* is a curated NYC thing-to-do — either an evergreen place/experience or a dated event. It links at most one *Neighborhood*; when that link is absent the activity is citywide. Borough is never stored on the activity; it is read from the neighborhood. *PlaceFilter* narrows browse by borough then neighborhood and may include citywide. *RememberedPlace* restores the last filter; when empty the parent must choose place before results.
 

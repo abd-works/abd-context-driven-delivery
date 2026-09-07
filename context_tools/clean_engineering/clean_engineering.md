@@ -1,20 +1,23 @@
 # Contexts
 
-Deepen OO design from modules toward production code. Each fidelity **adds** artifacts — do not invent detail from a deeper level.
+Structure the problem into a solution of independent, decoupled modules behind small, simple public APIs that hide deep functionality, with explict one way dependencies named. Implement those modules using rigourous object oriiented and clean-code practice.
+
+## Shared rules
+
+- **`honor-every-rule-in-the-artifact`** — Honor every rule in the artifact you are writing. One-way dependencies, named seams, and localized behavior apply to language and markdown as well as to code. Do not create a dependency in prose that violates isolation. Treat prose with the same respect you treat the model and the code.
+- **`vocabulary-traces-to-source`** — Take every term from the source. The English term and the code name are the same word: *shopping cart* is `ShoppingCart`.
+- **`do-not-invent-terms`** — Do not invent a second noun or a parallel vocabulary. Keep `do-not-invent-parallel-object-models` on the model for wrappers and `*Model` / `*Entry` families.
 
 ---
 
+## Language
 
+When asked to express output using language, write the same names, definitions, and rules in a conversational format that we do in modules, model, and code. Shared rules `vocabulary-traces-to-source` and `do-not-invent-terms` apply here.
 
-## Language 
-- At each fidelity, refresh prose for terms/classes already named at that stage — definition, story bullets, invariants in plain English.
-- Keep identity on the class (or `## ClassName` section); member bullets move onto members as model/code deepen.
-- Do **not** invent types, method bodies, relationship kinds, or Public API ahead of the active fidelity.
-- Prose lives under `{session}/{module}/` (markdown sections and/or class docstrings) and is updated in place — never a separate language-only generate run.
+**Follow the object-oriented thinking in modules and model — write it in English.** Use the same ideas: a **root** to group terms, then **concept**, **subtype**, **property**, **instance**, and **invariant**. Do not restate those rules here; apply them as prose — short definitions, verb-led story bullets, italicized domain terms — not typed class blocks. Keep identity on the ; move member bullets onto members as the model and code deepen. Update prose in place under `{session}/{module}/`.
+ If the user asks for language while generating **modules** or **model**, stop there and use the language template at `templates/clean_engineering-language.md` — do not continue reading the remaining templates.
 
 ---
-
-
 
 ## modules
 
@@ -22,6 +25,10 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 **Diagram format:** `drawio` (modules view — blue boxes, seam-term bullets, one-way dependency arrows; template `templates/modules.drawio`). Language channels (python/java/…) are for **model** and later — not required here.
 
 **Goal:** Partition a problem or solution space into independently understandable units — each a deep module with a narrow public seam and substantial implementation behind it. Name the units, their seams, and the one-way dependencies between them. Thin class/term identification only — enough to show independence. Do not invent types, method bodies, or relationship kinds yet. Each **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
+
+### Language
+
+**When the user asks for language** (not full generate at this fidelity): use the language template at `templates/clean_engineering-language.md`. Do not use ### Guidance, ### Scaffold, ### Module rules, ## Sketching, or ## Templates. **Stop reading this skill when writing language.**
 
 ### Guidance:
 
@@ -31,43 +38,51 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 Make every dependency **explicit**. Use direct, visible references over indirection. Avoid Implicit coupling ( globals, configuration magic ,side effects, shared mutable state, convention-based wiring), as it is harder to reason about, harder to test, and harder to change safely. 
 
-Document only the **public seam** — how to use the module, how to extend it, and what it depends on. One name per concept on the seam (prefer the type name — `Ability`, not `Ability, Abilities`). Write language-companion prose for the terms you name. Never document internals in module-context. The caller-facing contract is the only thing that should survive into documentation; implementation details live in source code and session notes. If someone needs to read the internals to use the module, the interface is too shallow.
+Document only the **public seam** — how to use the module, how to extend it, and what it depends on. One name per concept on the seam (prefer the type name — `Ability`, not `Ability, Abilities`). Write language for the terms you name. Never document internals in module-context. The caller-facing contract is the only thing that should survive into documentation; implementation details live in source code and session notes. If someone needs to read the internals to use the module, the interface is too shallow.
 
 ### Scaffold
 
-**When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
+**When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. 
 
 Rough module index for a **partition** pass or first cut — module paths, chunk files, seam terms, and thin dependency notes only. Formal one-way graph and full `module-context.md` wait for **modules** generate.
 
 Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `domain-nouns-only` — module names are domain nouns or paths, never action verbs or `*Model`/`*Runtime` suffixes. Use **abd-code-research** (not raw file scraping) when the corpus is code.
 
+**Stop reading this skill when scaffolding.**
+
 ### Module rules
 
-- `high-cohesion` — Classes inside a module share a common purpose and operate on the same domain concept. Cross-class relationships within the module are strong and semantic, not incidental.
-- `low-coupling` — Modules depend on each other only through well-defined interfaces. Cross-module dependencies are explicit and minimal — no module reaches into another's internals.
-- `single-boundary` — Each module is the single source of truth for its domain concept. No other module holds, mutates, or duplicates that concept's state or rules.
-- `named-seam-and-constraint` — Every module owns a *seam* — the public surface of classes and operations callers depend on — paired with a *constraint* stating what callers must do or must not do at that boundary. A module is described by what it requires of its callers, not only by what it holds.
-- `public-seam-only` — `.context/module-context.md` documents **only** the public seam. Never internals, participants, implementation, layout dumps, tests, scanners, scan notes, or any heading containing *internal*. Never underscore-prefixed types, helpers, or methods. Never private participants (abstract bases, doers, judges, stores) that callers do not import. Scanner: `public-seam-only`.
-- `deep-module` — The seam stays a short named list of classes and operations with substantial functionality behind it (Ousterhout: small interface, large hidden implementation). If internal helpers leak into the seam, encapsulation is overhead without benefit. Scanner heuristic: at most **40%** of top-level symbols may be public (leading underscore for the rest).
-- `physical-folder` — Each module occupies its own folder; class files, markdown documents, and other module-level artifacts live in it. Generated code belongs in that folder — not beside the module, not in a flat dump outside it. Not every folder is a module — chapter or organisational folders may group several modules and must not be treated as one module unless they own `.context/module-context.md`. **Do not stop at an arbitrary depth** — every folder that is a cohesive functional unit owns `.context/module-context.md`; folders that are only implementation detail (`assets/`, thin config/) are absorbed into the parent description. `module-context.md` **never lives under** `.context/sessions/` — the session folder is for sprint artifacts; the context file belongs beside the source it describes.
-- `nesting` — Nest under a parent only when children share mechanics or form a clear sub-system boundary; independent concepts stay flat. Child path is `{parent}/{child}/` (e.g. `powers/attack/`). Parent-shared code lives in the **parent** folder — do not invent a submodule for shared base. If children would duplicate mechanics, extract parent-owned base types first. Each child must be independently implementable (siblings stubbed); it may depend on the parent base, not on sibling children.
-- `output-format` — Written markdown is human-readable only. Strip template markup (`<!-- Mu -->`, `<!-- Mv -->`, and similar) before writing. A module heading sits immediately above its `- **Purpose:**` block — no blank line between them.
-- `cohesive-file` — Put a **class family** in one file: the primary type, its subtypes, and tightly connected peers that only make sense together (element + collection, small aggregate + its part). Name the file after the family concept (`abilities.py` for `Ability` + `Abilities`). Split into another file only when a type is independently reused across families or the file becomes a grab-bag of unrelated types. Do not default to one class per file. **Exception:** `{Type}ExampleFactory` (and its `examples` data, plus `I{Type}ExampleFactory` when one was requested) always live in a **sibling file** — never in the production family file (see **Example factories**).
-- `abstraction-focus` — Module description names *what* the module does at a higher level than the classes inside it; public verbs are caller-facing, not internal steps or storage layouts.
-- `layer-separation` — Adjacent modules operate at different abstraction levels; collapse pass-through modules.
-- `complexity-absorption` — Push configuration and edge-case handling into the module; callers pass intent, not setup flags.
-- `information-hiding` — Volatile implementation choices must not appear in public signatures or return types.
-- `temporal-independence` — Every public operation leaves the module in a valid state; avoid order-coupled APIs or document the constraint.
-- `general-purpose-surface` — Public interface is not hardcoded to one caller's UI/workflow.
-- `errors-out-of-existence` — Prefer total functions / empty states for routine edges; reserve exceptions for real failures.
+**Form the module**
 
+- `named-seam-and-constraint` — Name the seam (public classes and operations) and the constraint (what callers must or must not do).
+- `high-cohesion` — Group classes that share one purpose and the same domain concept.
+- `single-boundary` — Do not let another module hold, mutate, or duplicate this module’s concept.
+
+**Shape the seam**
+
+- `deep-module` — Keep most top-level symbols private (at most **40%** public). Substantial work stays behind a short seam.
+- `abstraction-focus` — Name *what* the module does for callers, not internal steps or storage.
+- `public-seam-only` — Document only public seam and dependencies on other modules. Do not document internals, or tests.
+- `use-typed-signatures` — Use typed public signatures. Do not put vanilla `dict`, `Any`, or untyped lists on them.
+- `general-purpose-surface` — Do not shape the seam for one caller’s UI or workflow.
+- `temporal-independence` — Leave the module valid after every public operation. Do not require a call order unless you document it.
+
+**Define Dependebcues**
+
+- `low-coupling` — Depend only through other modules’ seams. Keep sibling imports few.
+- `layer-separation` — keep dependent modules at different levels of abstractions. Collapse pass-through modules.
+- `nesting` — Nest a child only when it shares mechanics or is a sub-system; keep independent modules flat. Put shared behavior on the parent. A child may depend on the parent, not on siblings.
 
 ---
 ## model
 
 **Default format:** Python
 
-**Goal:** Analyze the module and design its object model — the classes, what they remember and do, and how they relate. Stub empty properties and operations. No production behavior yet.
+**Goal:** Analyze modules and design its object model — the classes, what they remember and do, and how they relate. Stub empty properties and operations. No production behavior yet.
+
+### Language
+
+**When the user asks for language** (not full generate at this fidelity): use the language template at `templates/clean_engineering-language.md`. Do not use ### Guidelines, ### Rules, ## Sketching, or ## Templates. **Stop reading this skill when writing language.**
 
 ### Guidelines
 
@@ -77,45 +92,46 @@ Analyze the source context to identify the concepts and operations the domain al
 
 **Give each class one clear, focused responsibility.** When a class accumulates operations spanning different concerns, it reveals missing classes — split by the data each group of operations works with, this will reveal a hidden conceptthis will reveal a hidden concept. Keep the public surface narrow: a few well-named operations that express intent, not a long list of methods covering every concern the system touches.
 
-**Find the operations.** Walk the source for the verbs this concept already performs — what a user or system asks it to do. An operation belongs on the class that owns the data it needs. Parameters are only what the object does not already hold; the return is what the caller must observe, not internals. Inside an operation, name **interactions** with other classes — specifically in other modules (`-> {collaborator}.{operation}`). Use exsisting public seam named in those modules or create new ones that respect module boundaries. Add **invariants** thins that must stay true (`// remaining budget never goes negative`) when the operation runs.
+**Find the operations.** Walk the source for the verbs this concept already performs — what a user or system asks it to do. An operation belongs on the class that owns the data it needs. Parameters are only what the object does not already hold; the return is what the caller must observe, not internals. Inside an operation, name **interactions** with other classes — specifically in other modules. Use the existing public seam named in those modules or create new ones that respect module boundaries. Add **invariants** — things that must stay true when the operation runs. How to write those notes is in the model template.
 
 **Get typing right.** Write a **property** when variation is data — a `type` field, not a new class. Write a **base class** when two or more types share identity, state, and operations — put that shared behavior in one place. Write a **subtype** when a variant changes what the thing *does*; record only the delta. Anywhere the base is used, the subtype must work in its place. Write an **interface** when multiple implementations sit behind one seam.
 
-**Make dependencies explicit.** Pass publicly accessible and swappable collaborators through the constructor — never reach for a global. When modelling relationships, choose by lifecycle: composition when the owner controls the other's lifecycle, aggregation when the collector has no meaning without its members, association when both sides are independent.
+**Make dependencies explicit.** Pass publicly accessible and swappable collaborators through the constructor — never reach for a global.
 
-Extend module level **public seam** documentation — what callers invoke, what they must or must not do, and how to extend — plus **dependencies**: every other-module class or operation this module calls. See `@clean_engineering-modules`. Refresh the language companion for new or uodated terms now on the public API. Do not document internal design, private participants, or implementation notes.
+**Name the relationships.** Add kind and cardinality. Choose kind by **ownership** and **identity**. **Write composition** when the owner completely owns the part and the part has no identity outside it — an airplane is composed of its wings, cockpit, and engine; the cockpit has no identity outside the plane. **Write aggregation** when the collector has no meaning without its members, but members keep their own identity — a fleet is an aggregate of planes. **Write association** when both sides are independent — a plane is driven by a pilot; the pilot has complete independence from the plane.
 
-### Relationships
-
-Relationship kind and cardinality are added  here. Three kinds, chosen by lifecycle:
-
-1. **Composition** — owner controls the other's lifecycle. (`Order` composes `OrderLine`.)
-2. **Aggregation** — collector groups members that can outlive it. (`Playlist` aggregates `Song`. A **Repository** aggregates the aggregate it collects — hollow diamond.)
-3. **Association** — both sides are independent; they simply use each other. (`Customer` associates with `SupportAgent`.)
-
-Value objects that merely describe (`Money` on a Transaction, `PortingInfo` on a number) are **association** or a property — not composition diamonds. Composition is for parts whose lifecycle the owner controls.
+Extend module level **public seam** documentation — what callers invoke, what they must or must not do, and how to extend — plus **dependencies**: every other-module class or operation this module calls. See `@clean_engineering-modules`. Refresh the language for new or uodated terms now on the public API. Do not document internal design, private participants, or implementation notes.
 
 
 ### Rules
 
-- `class-not-property-instance-or-subtype` — Before promoting a term to its own class, check whether it fits as a property, an instance, or a subtype. Only when none of those three fit does it deserve its own class.
-- `use-property-not-accessor` — Use `@property` (or the language equivalent) for read-only computed values; do not use `get_` / `set_` method prefixes.
-- `keep-operations-single-responsibility` — Each operation has one reason to change — pure calculation or orchestration, not both. An operation doing two things reveals either a missing operation or a missing class.
-- `separate-concerns` — Pure calculation separate from I/O and mutation.
-- `use-clear-operation-parameters` — Prefer 0–2 parameters. When more configuration is needed, the extra parameters reveal a missing value object — promote them to a new class and pass that instead.
-- `interactions-are-operation-calls` — Nest `-> {collaborator}.{operation}` under the calling operation. `-> ClassName` alone is not an interaction. Do not invent `- **Interaction:**` bullets.
-- `invariants-are-class-level-notes` — Class-level invariants sit as `//` on the class, not under one operation. They do not become methods.
-- `keep-classes-single-responsibility` — Each class has **one reason to change**.
-- `hide-inner-details` — Expose **behavior** through named methods; callers see what the class does, not how it stores or arranges its information.
-- `eliminate-duplication` — Repeated logic gets one canonical function.
-- `prefer-class-operations` — Factory and lifecycle operations are **static methods on the class**, not module-level exported functions (`ParadiseMobile.initialize(config)`, not `export async function open()`). Private helpers used from one class belong on that class.
-- `use-explicit-dependencies` — Pass every collaborator through the **constructor**; never reach for a global or construct a collaborator inside construction.
-- `use-intention-revealing-names` — Every name — class, property, operation, parameter — answers "why does this exist?" No abbreviations, no single-letter identifiers outside trivial loop indices.
-- `use-consistent-naming` — One word per concept across the model. Pick one verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`).
-- `reuse-existing-not-invent-parallel` — When a class wraps or renders an existing type, name it after that type (`CatalogContextTool` wraps `BaseContextTool`; `CatalogAction` wraps `Action`). Do not invent a parallel domain noun for the same concept — especially not a retired synonym the project has already replaced (Foundry **Practice** → CDD **context tool**). Explicit old→new mapping rows (and overview lines that *state* the replacement) are allowed; live class names, constructor args, and row/registry/toolset labels are not.
-- `reuse-established-notation-not-a-parallel-one` — Interactions/invariants at sketch and `## model` reuse `->` / `//`; never invent a bold-bullet parallel (`- **Interaction:**` / `- **Invariant:**` as collaboration markers). Language companion `- **Invariant:** <!-- L -->` and Spec indented labels are different surfaces.
-- `ce-comments-are-for-invariants-and-sequencing-notes-only` — `//` comments are must/never/always/before/after notes only. Not narrative, not “transient value object”, not cross-references between atoms.
-- `do-not-invent-parallel-object-models` — Do not invent a parallel object model when existing objects already carry the data a new requirement needs. Wrap or extend the live hierarchy instead; do not scrape the same information into a second `*Model` / `*Entry` (or similar) family.
+**Shape classes**
+- `class-not-property-instance-or-subtype` — Before you write a new class, check property, instance, then subtype. Write a class only when none of those three fit.
+- `keep-classes-single-responsibility` — Give each class one reason to change.
+- `put-logic-on-the-owning-resource` — Put the logic on the object that owns the resource first — `client.accounts[id].transactions.last.validate()`, not `client.validateLastTransactionForPrimaryAccount()`. A shorter public API may facade that later.
+- `hide-inner-details` — Expose behavior through named operations. Do not let callers see how the class stores or arranges its data.
+- `use-property-not-accessor` — Use `@property` (or the language equivalent) for read-only computed values. Hide the logic that updates state behind a setter — do not write an update opration. Do not prefix methods with `get_` or `set_`.
+- `prefer-class-operations` — Put factory, lifecycle, and helpers used from one class on that class. Do not export them as module-level functions.
+- `use-explicit-dependencies` — Pass every collaborator through the constructor. Do not reach for a global or construct a collaborator inside construction.
+
+
+**Define operations**
+- `keep-operations-single-responsibility` — Give each operation one job. Separate orchestration, from calculation, calculation from I/O and mutation, etc. When an operation does two things, split it or find the missing class.
+- `use-clear-operation-parameters` — Have callers pass intent, not setup. Prefer 0–2 parameters; when you need more, promote paramters to a class. Do not use vague names (`data`, `options`, `info`).
+- `errors-out-of-existence` — For ordinary edges — empty cart, missing optional field, no matches — return an empty result or a quiet no-op. Raise an exception only when something is actually broken.
+- `limit-comments` — write comment in operations and properties only when the signature cannot say a constraint or explain why the code behaves the way it does. Do not narrate a line that already names what it does.
+
+**Invariants, interactions, and comments**
+
+- `write-invariants` — Name a rule the object itself must keep true whenever it acts — a must, never, always, before, or after about its own state. Write one a caller can break by using the object wrong. Do not restate a type, a name, or a single operation’s happy path.
+- `write-interactions` — Collaborate when this object cannot finish its job from its own state — another object owns the data or the next act. Ask that object to do the work so each keeps its own invariants; do not reach into its internals or steal its job. Ask through a named public operation on a collaborator you hold or are given. Do not point at a type, and do not invent a third object to mediate a conversation two objects can have.
+
+**Names and reuse**
+
+- `use-intention-revealing-names` — Name each class, property, operation, and parameter so it answers why it exists. Do not abbreviate.
+- `use-consistent-naming` — Use one word per concept. Pick one verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`).
+- `eliminate-duplication` — Give repeated logic one canonical function.
+- `do-not-invent-parallel-object-models` — Wrap or extend the live objects. Name a wrapper after the type it wraps. Do not invent a parallel domain noun, and do not scrape the same data into a second `*Model` / `*Entry` family.
 
 
 
@@ -124,56 +140,46 @@ Value objects that merely describe (`Money` on a Transaction, `PortingInfo` on a
 
 **Default format:** Python
 
-**Goal:** Two phases in one fidelity — first lock down the typed contracts (`Class(I{Class})` when an interface was requested at model, otherwise the `Class` stub already in place from model), then wire the full production implementation. When an `I{Class}` exists it stays as the stable seam throughout; when it does not, `Class` itself is the seam.
+**Goal:** Turn the model into working production code. Implement types and seams first, then real behavior behind them. Write real backend and real frontend — not a demo shell with stand-ins.
 
-A vertical is not at **code** fidelity while it still depends on a mockup / Story Demo shell as the only UI, or on in-memory / fake factories as the only "backend." **Code** means real backend **and** real frontend (UX **code** fidelity) — not greybox + demo domain alone.
+### Guidelines
 
-### Phase 1 — typed contracts
+Follow the idioms in `[context_tools/language-tools.md](/context_tools/language-tools.md)`.
 
-- **Tooling & Idioms:** Refer to `[context_tools/language-tools.md](/context_tools/language-tools.md)` for language-specific recommendations for coding.
-- **When an** `I{Class}` **interface was requested at model** (interfaces are optional — see `## model` § Interfaces): add `Class(I{Class})` (Java: `implements I{Class}`) in the **same file** as `I{Class}`. Do **not** fill out `I{Class}` or add private members to it.
-- **When no interface was requested:** skip that step — the empty `Class` stub already exists from **model** fidelity in its own family file; continue directly onto it.
-- On `Class`: implement public properties and operations; add private properties/operations as **empty interfaces** (`...` / `@abstractmethod`); add each relationship with its **kind** (composition / aggregation / association) and **cardinality** (e.g. `1..`*, `0..1`); invariants as **comments** (not methods) — formalizing any named at `## model` § Invariants, or newly introduced here.
-- Interactions: `@interaction` abstract methods on `Class` (never on `I{Class}`, whether or not one exists) — formalizing any named at `## model` § Interactions, or newly introduced here.
-- Complete `{Type}ExampleFactory` — fill in Fake, Isolated, and Production modes per the **Example factories** pattern in `## model`.
-- Refresh `.context/module-context.md` still **public-seam-only**: ensure **Public API**, **Constraint**, and **Dependencies** match the implemented seam; add **Extend** / **Mechanism** only for public variation points. **Do not** add **Participants**, **Internal design**, **Domain separation**, or any other internals section — those stay in source and sketches, never in module-context.
-- Edit the same `.context/module-context.md` — do not create parallel context files.
-- Edit so remaining language-companion bullets sit on members; class-level docstring keeps only the opening definition.
+Start by **Implenenting the public surface.** Where the model asked for an interface, the class implements it in the same file and the interface stays public-only. Where it did not, continue to impmlement the class. Implement public properties and operations first; write out private members next. Relationships keep the kind and cardinality already named. 
 
-State which side **navigates** to the other — direction is explicit.
+Make sure to **Implement real behavior.** Fill every empty body. Wire real persistence, services, and other-module seams — not stand-ins as the shipping path. Add helpers, named constants, and domain exceptions only when the implementation needs them. Keep an existing interface as the seam; otherwise treat the class as the seam. 
 
-### Phase 2 — production implementation
+When writing out code take care to **Fill out all interactions with real code.** Turn `-> collaborator.operation` notes into actual calls — have the object ask its collaborators to do the work; do not reach into their internals. Drop the placeholder once the call is real.
 
-- Fill all remaining empty bodies on `Class` (no `...`, no `# TODO` on production ops/props).
-- Wire **Production** collaborators — real persistence, services, and cross-module dependencies — not Fake-mode stubs as the shipping path.
-- Drop `@interaction` methods — not needed once implemented.
-- Keep invariants as **comments**.
-- If an `I{Class}` exists, leave it in place for the public seam and for hand-written test fakes; if it does not, `Class` itself remains the seam.
-- Add exceptions, named constants, private helpers as needed.
-- Edit so language-companion prose stays as the class docstring — implementations sit beneath intent, they do not replace it.
-- Edit so the implemented public surface matches the seam already designed — a short caller-facing API with real behaviour behind it, still living in the module folder.
+**Honor invariants in the implementation.** Turn `// remaining budget never goes negative` comments into methods where you can; replace comments with explicit code.
 
+**Keep the code clean.** Give each operation one thing to do; keep it short and at one level of abstraction — do not mix orchestration with raw I/O. Name things so they say why they exist. Handle the failing or empty cases first and return — then write the main path flat. Do not bury the real work inside nested ifs. Name exceptions after the failure; never swallow them. Give magic numbers names. Keep the public surface the seam already designed: short, caller-facing, with substantial implementation behind it, still in the module folder.
 
+**Skip the model only for a very small change** — fill a body, rename, extract a helper, honor an invariant already named. The language is already there; keep it current. When you start needing to model — a new class, a new responsibility, a new relationship, a new public seam, or a new concept — stop and go to **model**. See `@clean_engineering-model`. Then return to code and implement what the model now names. Do not grow a shadow model only in the implementation.
 
+**Refresh the language and the seam.** Keep class identity in the docstring; put member bullets on the members. Edit the same public-seam module-context — how to use it, what callers must honor, what it depends on. Never internals. Never a parallel file.
 
 
 
 ### Rules
 
-**Operations**
+**Implement the model**
+- `hide-inner-details` — Expose behavior through named operations. Do not let callers see how the class stores or arranges its data.
+- `keep-operations-small-focused` — Keep each operation short enough to read as one thought — under 20 lines. When it grows, extract a private helper whose name says why that slice exists.
+- `keep-operations-single-responsibility` — Give each operation one job. Separate orchestration, from calculation, calculation from I/O and mutation, etc. When an operation does two things, split it or find the missing class.
+- `simplify-control-flow` — Handle the failing or empty cases first and return. Keep the main path flat. Do not nest more than three levels.
+- `errors-out-of-existence` — For ordinary edges — empty cart, missing optional field, no matches — return an empty result or a quiet no-op. Raise an exception only when something is actually broken.
 
-- `keep-operations-small-focused` — Under **20 lines**; extract named helpers.
-- `simplify-control-flow` — Guard clauses; max nesting depth as enforced by scanners.
-- `maintain-abstraction-levels` — One level at a time; no raw I/O mixed into orchestration names.
-
-**Naming / context**
-
-- `provide-meaningful-context` — Named constants for magic numbers and unexplained literals.
+**Names and reuse**
+- `use-intention-revealing-names` — Name each class, property, operation, and parameter so it answers why it exists. Do not abbreviate.
+- `use-consistent-naming` — Use one word per concept. Pick one verb and use it everywhere (`fetch_`, not a mix of `fetch_`, `get_`, and `retrieve_`).
+- `provide-meaningful-context` — Give a number or literal a name that says why it is there (`SECONDS_PER_DAY`, not `86400`). Do not number variables (`item1`).
+- `eliminate-duplication` — Give repeated logic one canonical function.
 
 **Errors / comments**
-
-- `use-exceptions-properly` — Domain exceptions that name the failure.
-- `never-swallow-exceptions` — Log and re-raise or convert; never bare swallow.
-- `stop-writing-useless-comments` — Comments explain **why**, not **what**.
+- `use-exceptions-properly` — Raise a domain exception that names the failure (`CartAlreadyCheckedOut`, not `Error` or a bare string). Catch the specific type you can handle. Do not use a bare `except`.
+- `never-swallow-exceptions` — Do not catch and ignore. Log and re-raise, or convert to a domain exception that still names the failure. A `pass` in `except` hides a broken invariant.
+- `limit-comments` — write comment in operations and properties only when the signature cannot say a constraint or explain why the code behaves the way it does. Do not narrate a line that already names what it does.
 
 

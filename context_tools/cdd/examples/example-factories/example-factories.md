@@ -5,14 +5,14 @@
 
 <!--
   clean_engineering model fidelity — Fake / Isolated / Production are factory modes, not subclasses.
-  L = language companion (prose). Md = model (I{Type} seam). Production {Type} at specification+.
+  L = language (prose). Md = model (I{Type} seam). Production {Type} at specification+.
 -->
 
 # Example Factories                                                    <!-- L -->
 
 ---
 
-## Language companion                                             <!-- L -->
+## Language                                                       <!-- L -->
 
 The clean_engineering generator produces `{IType}`, production `{Type}`, and a pattern-generated `{Type}ExampleFactory` whose methods load multi-type example bundles. <!-- L -->
 **Fake / Isolated / Production are modes** of how the factory builds `I{Type}` — not generated subclasses. <!-- L -->

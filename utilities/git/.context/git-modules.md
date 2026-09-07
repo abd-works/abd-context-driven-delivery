@@ -1,6 +1,6 @@
 **Sources / context:** `utilities/git/git.py`, `utilities/git/git_spec.py`, `.context/research/git-knowledge-and-workflow-backbone.md` §8, G-04, G-36, G-37; `workspace/.context/module-context.md`; `workflow/.context/module-context.md`
 
-## Language companion
+## Language
 
 *Repo* is the root of a local git clone. It owns branches, the current HEAD, optional
 GitHub project linkage, and tickets (issues). *Branch* names a line of development;

@@ -47,8 +47,6 @@ An **Aggregate** is decided **inside** the context already named. Cluster for **
 
 **When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
 
-
-
 ### Rules:
 
 - **`experts-words-preferred`** — Prefer the words domain experts use; do not invent technical synonyms when a domain word already exists. A ported telephone number is `TelephoneNumber` with `PortingInformation`, not `PortabilityRequest`; the operation is `port()`, not `requestPortability()`.

@@ -21,7 +21,7 @@ from context_tools.bdd.spec_helpers import (  # noqa: E402
 from scan import Scan, ScannerCollection  # noqa: E402
 
 _SCANNERS = Path(__file__).resolve().parent
-_RULE = "ce-comments-are-for-invariants-and-sequencing-notes-only"
+_RULE = "limit-comments"
 
 _FAULTY = (
     "SelectedPlan\n"
@@ -42,7 +42,7 @@ class _CeScan(Scan):
         return ScannerCollection(module_dir=_SCANNERS, root_path=_SCANNERS)
 
 
-with description("ce-comments-are-for-invariants-and-sequencing-notes-only"):
+with description("limit-comments"):
     with before.each:
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)

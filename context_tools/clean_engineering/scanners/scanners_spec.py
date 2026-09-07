@@ -115,10 +115,10 @@ with description("Clean Code python scanners"):
         with it("should keep faultyAsset violating and repairedAsset clean"):
             _assert_scanner_examples("reuse-existing-not-invent-parallel")
 
-    with context("reuse-established-notation-not-a-parallel-one"):
+    with context("write-interactions-as-operation-calls"):
         with it("should keep faultyAsset.md violating and repairedAsset.md clean"):
             _assert_scanner_examples(
-                "reuse-established-notation-not-a-parallel-one", ext=".md"
+                "write-interactions-as-operation-calls", ext=".md"
             )
 
     with context("do-not-invent-parallel-object-models"):

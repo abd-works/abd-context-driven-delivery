@@ -59,25 +59,17 @@ State which side **navigates** to the other — direction is explicit.
 - Edit so language-companion prose stays as the class docstring — implementations sit beneath intent, they do not replace it.
 - Edit so the implemented public surface matches the seam already designed — a short caller-facing API with real behaviour behind it, still living in the module folder.
 
-
-
-
-
-
 ### Rules
 
 **Operations**
-
 - `keep-operations-small-focused` — Under **20 lines**; extract named helpers.
 - `simplify-control-flow` — Guard clauses; max nesting depth as enforced by scanners.
 - `maintain-abstraction-levels` — One level at a time; no raw I/O mixed into orchestration names.
 
 **Naming / context**
-
 - `provide-meaningful-context` — Named constants for magic numbers and unexplained literals.
 
 **Errors / comments**
-
 - `use-exceptions-properly` — Domain exceptions that name the failure.
 - `never-swallow-exceptions` — Log and re-raise or convert; never bare swallow.
 - `stop-writing-useless-comments` — Comments explain **why**, not **what**.
@@ -97,11 +89,10 @@ fidelity: all
 <!--
   clean_engineering markdown template — unified across all fidelities.
 
-  INTERFACES ARE OPTIONAL (see clean_engineering.md § Interfaces). This template shows
-  the `I{ClassName}` form because it is the richer case to document. Default to
-  skipping `## I{ClassName}` entirely and starting straight at `## {ClassName}` (empty,
-  untagged Md members at model) unless the user asked for an interface, or the module
-  genuinely has multiple layers/implementations behind one seam.
+  I{ClassName} is not the default. When generated, it lives in the same file /
+  same module H1 as {ClassName} — public members only on I{ClassName}; private
+  members stay on {ClassName}. Omit ## I{ClassName} unless the user asked or
+  multiple implementations sit behind one seam.
 
   Fidelity tags on section headings (as HTML comments — informational only):
     L  = language companion (prose identity; refined at every stage — not a fidelity)
@@ -115,6 +106,9 @@ fidelity: all
     ----    (four dashes)  properties / operations separator
     -       (dash prefix)  private operation
     +       (plus prefix)  public — code fidelity only
+
+  One file per cohesive set — the primary class, its subtypes, and peers
+  that only make sense together. Do not default to one class per file.
 
   Document structure: H1 = module, H2 = class within that module.
   Interface (I{ClassName}) and implementation ({ClassName}) both sit under the
@@ -144,6 +138,8 @@ This paragraph IS the class definition. Identity only.}           <!-- L -->
 - {delta behavior only — what this subtype adds or overrides}     <!-- L -->
 
 ## Modules                                                        <!-- Mu -->
+
+# FILE: {module}/.context/module-context.md
 
 Build order: `{first}` → `{second}` → `{third}`
 
@@ -255,23 +251,40 @@ load_{example_key}(mode): I{ClassName}
 # Conceptual Clean Engineering Reference (Python style)
 # Refer to context_tools/language-tools.md for tool recommendations.
 # =============================================================================
-# A production file holds the public seam (I{Class} when one exists), the 
-# production Class, subtypes, and tightly connected peers. 
-# Example factories are ALWAYS in a separate sibling file.
+# One file per cohesive set — the primary class, its subtypes, and peers
+# that only make sense together. Do not default to one class per file.
+# Default: Class is the seam. I{ClassName} is not the default — add it in
+# this same file when multiple implementations sit behind one seam, or when
+# the user asks. Public members only on I{ClassName}; private members stay
+# on {ClassName}. Example factories are ALWAYS in a separate sibling file.
 # =============================================================================
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
 # FILE: {family_slug}.py
-class {ClassName}:
+# Optional — omit unless generating an interface:
+class I{ClassName}(ABC):
+    @property
+    @abstractmethod
+    def {property}(self) -> {Type}:
+        ...
+
+    @abstractmethod
+    def {operation}(self, {param}: {Type}) -> {ReturnType}:
+        ...
+
+class {ClassName}:  # or class {ClassName}(I{ClassName}):
     """*{ClassName}* unique role."""
-    
+
     @property
     def {property}(self) -> {Type}:
         ...
 
     def {operation}(self, {param}: {Type}) -> {ReturnType}:
+        ...
+
+    def _{private_helper}(self, {param}: {Type}) -> {Type}:
         ...
 
 # FILE: {type_slug}_example_factory.py

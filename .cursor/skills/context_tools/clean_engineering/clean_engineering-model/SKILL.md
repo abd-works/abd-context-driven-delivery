@@ -20,8 +20,7 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 ## Language 
 - At each fidelity, refresh prose for terms/classes already named at that stage — definition, story bullets, invariants in plain English.
 - Keep identity on the class (or `## ClassName` section); member bullets move onto members as model/code deepen.
-- Do **not** invent types, method bodies, relationship kinds, or Public API ahead of the active fidelity.
-- Prose lives under `{session}/{module}/` (markdown sections and/or class docstrings) and is updated in place — never a separate language-only generate run.
+- Prose lives under `{session}/{module}/` (markdown sections and/or class docstrings) and is updated in place
 
 ---
 
@@ -29,140 +28,36 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 **Default format:** Python
 
-**Goal:** Define the public seam — what the module exposes, why it is shaped that way, and what callers depend on. **By default the seam is stubbed directly on** `Class` **itself** — no production behavior yet, no separate interface either, unless one is asked for. Expand `module-context.md` fully. 
+**Goal:** Analyze modules and design its object model — the classes, what they remember and do, and how they relate. Stub empty properties and operations. No production behavior yet.
 
-- **Default (no interface):** stub the Public API **directly on** `Class` — no production `Class` yet in the sense of behavior, but the type itself already exists as an empty contract. Public properties and operations are **empty interfaces** (Python: `...` / `@property`+empty body; Java: stub methods; other channels: abstract/empty equivalent). No internals until code.
-- **Opt-in (interface requested):** create a separate `I{Class}` contract instead — only when the user explicitly asks for one at this fidelity, or the module genuinely has multiple layers/implementations that need abstracting apart (see **Interfaces** below for the full trigger). Name it `I{Class}` (e.g. `IShoppingCart`) and keep it and its later extender in the **same file** (`cohesive-file`); there is no production `Class` yet in this case.
-- Do not default to `I{Class}` just because this is model fidelity — interfaces are the exception, not the rule.
-- When the type will be used from Stories examples, stub `{Type}ExampleFactory` (empty, named methods only — plus `I{Type}ExampleFactory` only if that interface was also requested) in a **sibling** `{type}_example_factory.{ext}` file — see **Example factories** below. Complete the factory at **code** fidelity.
-- Expand `.context/module-context.md` (seeded at modules) within the **public-seam-only** allowlist: **Purpose**, **Primary use case**, **Rationale**, **Seam**, **Public API**, **Constraint**, **Dependencies**, optional **Extend** / **Mechanism stereotype**. Nested children list the **parent base** under Dependencies; parents list children as nested modules (not as a flat dump of sibling APIs). **Never** add Internal design, Participants, Domain separation, underscore types, or private participants.
-- Ensure code and context for a module belong only in that module's folder (parent owns shared base; child owns specialization).
-- Apply `cohesive-file`: one file per class family; example factories live in a sibling file (`example-factory-separate-file`).
-- Edit to carry forward language-companion identity into **Purpose**; expand primary use case and rationale at this fidelity.
-- Edit class docstrings so member bullets move down onto those members; keep everything inside the module folder (`physical-folder`).
-- Refresh the **language companion** for terms now on the Public API — still no typed signatures in prose ahead of code.
+### Guidelines
 
+Analyze the source context to identify the concepts and operations the domain already names — do not invent terminology. Group concepts that have their own identity, state, and behavior into **classes**. Model them **behaviors first and data second** — **properties** (what they remember — noun phrases) and **operations** (what they do — verb phrases). An `Order` calculates its own total; a `Cart` checks itself out. Do not invent a `Manager`, `Service`, `Helper`, or `Processor` to do what the object itself should do.
 
+**Localize behavior to the object that owns the state.** Each object accesses its own state and enforces its own invariants — do not write objects that manipulate another object's internal state. When deciding where an operation belongs, ask: which object has the data this operation needs? That is where the operation lives. `cart.checkout()`, not `customer.checkoutCart()` and not `CheckoutManager.processCheckout(cart)`. 
 
-### Mental model
+**Give each class one clear, focused responsibility.** When a class accumulates operations spanning different concerns, it reveals missing classes — split by the data each group of operations works with, this will reveal a hidden concept. Keep the public surface narrow: a few well-named operations that express intent, not a long list of methods covering every concern the system touches.
 
-Analyze the source context to identify the concepts and operations the domain already names — do not invent terminology. Then model the solution as a collection of those concepts with **behaviors first and data second**. Focus on what each concept *does* — not just what data it holds. Avoid anemic class structures where objects are data bags and logic lives somewhere else. An `Order` calculates its own total; a `Cart` checks itself out. Do not invent a `Manager`, `Service`, `Helper`, or `Processor` to do what the object itself should do.
+**Find the operations.** Walk the source for the verbs this concept already performs — what a user or system asks it to do. An operation belongs on the class that owns the data it needs. Parameters are only what the object does not already hold; the return is what the caller must observe, not internals. Inside an operation, name **interactions** with other classes — specifically in other modules (`-> {collaborator}.{operation}`). Use exsisting public seam named in those modules or create new ones that respect module boundaries. Add **invariants** thins that must stay true (`// remaining budget never goes negative`) when the operation runs.
 
-**Localize behavior to the object that owns the state.** Each object accesses its own state and enforces its own invariants — do not write objects that manipulate another object's internal state. When deciding where an operation belongs, ask: which object has the data this operation needs? That is where the operation lives. `cart.checkout()`, not `CheckoutManager.processCheckout(cart)`. 
+**Get typing right.** Write a **property** when variation is data — a `type` field, not a new class. Write a **base class** when two or more types share identity, state, and operations — put that shared behavior in one place. Write a **subtype** when a variant changes what the thing *does*; record only the delta. Anywhere the base is used, the subtype must work in its place. Write an **interface** when multiple implementations sit behind one seam.
 
-**Give each class one clear, focused responsibility.** When a class accumulates operations spanning different concerns, it reveals missing classes — split by the data each group of operations works with, this will reveal a hidden conceptthis will reveal a hidden concept. Keep the public surface narrow: a few well-named operations that express intent, not a long list of methods covering every concern the system touches.
+**Make dependencies explicit.** Pass publicly accessible and swappable collaborators through the constructor — never reach for a global.
 
-**Get typing right.** When a concept varies, decide whether that variation is a property or a subtype. Use a **property** when the variation can be captured through the data — a `type` field that associates an object to different values held in a type table. Use a **subtype** when the variation changes behavior — a `PremiumAccount` that overrides how `Account` calculates fees. If the variation does not change what the object *does*, it is a property, not a new class.
+**Name the relationships.** Add kind and cardinality. Choose kind by **ownership** and **identity**. **Write composition** when the owner completely owns the part and the part has no identity outside it — an airplane is composed of its wings, cockpit, and engine; the cockpit has no identity outside the plane. **Write aggregation** when the collector has no meaning without its members, but members keep their own identity — a fleet is an aggregate of planes. **Write association** when both sides are independent — a plane is driven by a pilot; the pilot has complete independence from the plane.
 
-**Make dependencies explicit.** Pass publicly accessible and swappable collaborators through the constructor — never reach for a global. When modelling relationships, choose by lifecycle: composition when the owner controls the other's lifecycle, aggregation when the collector has no meaning without its members, association when both sides are independent.
-
-Document only the **public seam** in module-context — what callers invoke, what they must or must not do, and how to extend. Internal design, private participants, and implementation notes stay in source code. If the module-context needs to explain internals for callers to succeed, the public surface is not well designed.
-
-### What is a class
-
-A class is a named idea that earns its own identity because it has at least one of: **distinct identity**, **state**, **behavior**, **structure**, or **interactions** that cannot be collapsed into a property, instance, or subtype of something else.
-
-A class knows things (**state**), does things (**behavior**), interacts with other things (**interactions**), has (**relationships**) with other things, can be a sub type of other things (**inheritance**), and can implement (**interfaces**) — finally, it maintains the (**invariants**) that constrain it.
-
-### Responsibilities
-
-For each responsibility a class owns, ask: *hold something, do something, or both?* A responsibility may be a property, an operation, or **both** — the class holds state *and* exposes an action that works with it.
-
-### Properties
-
-The class must remember something across calls. Named as a **noun phrase**: *remaining budget*, *active status*, *target character*. A **property** encapsulates information a class exposes to its callers together with the logic required to access or update it. A property may be **typed** — carries a concrete type like `Person`, `int`, or `Car` or can be untyped.
-
-- `use-property-not-accessor` — Use `@property` (or the language equivalent) for read-only computed values; do not use `get_` / `set_` method prefixes.
-
-
-
-### Operations
-
-The class must do something on demand. Named as a **verb phrase**: *charge card*, *reserve seat*, *compute total*. An **operation** is an action a class performs or a result it computes on demand. Operations may be entirely stateless — depending only on their parameters — or work with the class's own state.
-
-- `keep-operations-single-responsibility` — Each operation has one reason to change — pure calculation or orchestration, not both. An operation doing two things reveals either a missing operation or a missing class.
-- `separate-concerns` — Pure calculation separate from I/O and mutation.
-- `use-clear-operation-parameters` — Prefer 0–2 parameters. When more configuration is needed, the extra parameters reveal a missing value object — promote them to a new class and pass that instead.
-
-
-
-### Interfaces (`I{Class}`) — optional
-
-A separate interface is **not generated by default.** A type's public seam lives directly on `Class` itself unless a distinct `I{Class}` contract is explicitly introduced. Add `I{Class}` only when:
-
-- **the user asks for it** — at **model** or **code** fidelity, or
-- **the module genuinely has multiple layers/implementations behind one seam** that need abstracting apart — e.g. swappable backends, more than one concrete adapter, or a boundary hand-written test fakes must satisfy independently of the production class.
-
-A single concrete implementation with no swapping need does not warrant a separate interface — `Class` itself **is** the seam. Do not add `I{Class}` "for consistency" with a sibling module, and do not default to it just because a fidelity table mentions it.
-
-**Default (no interface):** the public seam is the empty `Class` stub introduced at **model** fidelity (properties/operations as empty contracts directly on `Class`, in its own family file) and filled in at **code** fidelity. The `## code` Phase 1 step of adding `Class(I{Class})` is skipped — there is no interface to implement.
-
-**Opt-in (interface requested):** the public seam is a separate interface named `I{Class}`, introduced at **model** fidelity. Properties and operations on the interface are empty contracts — typed signatures with no body.
-
-
-| Channel                 | `I{Class}` form                                                             |
-| ----------------------- | --------------------------------------------------------------------------- |
-| Python                  | `class IClass(ABC):` with `@abstractmethod` / `@property`+`@abstractmethod` |
-| Java                    | `public interface IClass`                                                   |
-| TypeScript / JavaScript | abstract or empty-method contract equivalent                                |
-| Markdown                | `### **I{Class}**` compact block (public members only)                      |
-
-
-**Code** adds `Class` that **extends / implements** `I{Class}` in the **same file**. Public members are filled on `Class`; private members are empty interfaces on `Class` only — never added to `I{Class}`. `I{Class}` stays as the stable seam throughout (including for hand-written test fakes). Existing production types may satisfy `I{Class}` informally without a formal extends clause.
-
-Empty vs filled is inferred from the member body (`...` / empty vs real implementation) — no extra abstract flag on the model.
-
-### Inheritance and subtypes
-
-A **base class** defines the common identity, state, and behavior shared by a family of related things. It owns everything that is true of every member of that family — the responsibilities, rules, and collaborations that do not change regardless of which specific variant you are dealing with.
-
-A **subtype** is a class that specialises the base by adding or overriding behavior that only applies to it. The subtype inherits everything the base defines and records **only the delta** — inherited responsibilities are not repeated in the subtype. Use a subtype when the distinction changes what the thing *does*, not just what data it carries.
-
-#### Liskov Substitution rule
-
-**Anywhere the base is used, a subtype must work correctly in its place.** If swapping in a subtype breaks or weakens a rule the base guarantees, the subtype is not a true specialisation — it is a different thing that happens to share some behavior.
-
-### Relationships
-
-Relationship kind and cardinality are added  here. Three kinds, chosen by lifecycle:
-
-1. **Composition** — owner controls the other's lifecycle. (`Order` composes `OrderLine`.)
-2. **Aggregation** — collector groups members that can outlive it. (`Playlist` aggregates `Song`. A **Repository** aggregates the aggregate it collects — hollow diamond.)
-3. **Association** — both sides are independent; they simply use each other. (`Customer` associates with `SupportAgent`.)
-
-Value objects that merely describe (`Money` on a Transaction, `PortingInfo` on a number) are **association** or a property — not composition diamonds. Composition is for parts whose lifecycle the owner controls.
-
-### Interactions (optional at this fidelity)
-
-An **interaction** is one class's operation calling another class's operation — who talks to whom, and about what. You **may** name interactions at **model** fidelity to capture collaboration/sequencing intent early; naming none is equally valid — this is optional, not a required artifact for reaching model.
-
-Reuse the exact notation from `templates/{tool}-sketch.md`'s **Notation**/**Interaction rules** — do not invent a parallel bullet convention:
-
-Do **not** invent `- **Interaction:** calls {Other}.{operation}` or use `- **Invariant:** …` as the sketch/model collaboration marker — that is a parallel symbol set. Sketch/`## model` interactions and notes use `->` / `//` only. Language companion's `- **Invariant:** … <!-- L -->` and Spec's indented `Interaction:` / `Invariant:` labels are different surfaces; neither replaces the sketch notation.
-
-- Nest `-> {collaborator}.{operation}` directly under the calling operation — a real call on a held property, peer, or `super`. No parameters, no body, just the receiver and the operation (or `x = {collaborator}.{attribute}` for a field read).
-- Nest `// …` under the same operation for any invariant or sequencing note — including looping/conditionals around the call (e.g. `// once per {item} in {collection}`). Control flow is a `//` note, never folded into the `->` line.
-- `ce-comments-are-for-invariants-and-sequencing-notes-only` — `//` is must/never/always/before/after notes only. Do not use `//` for descriptive prose, implementation asides, or cross-references.
-- `-> ClassName` alone (pointing at a type, not an operation) is not an interaction.
-- Naming an interaction here does **not** add a method to `I{Class}` or `Class` — it stays prose (or class-docstring bullet) until **code**.
-- At **code** fidelity, any interaction named here becomes a real `@interaction` abstract stub method on `Class` (not on `I{Class}`) — see `## code` Phase 1 — and is dropped once implemented in Phase 2.
-
-
-
-### Invariants (optional at this fidelity)
-
-An **invariant** is a rule that must hold for every valid instance of the class, regardless of which operation last ran. You **may** state invariants at **model** fidelity in plain English; leaving them unstated is equally valid — this is optional, not a required artifact for reaching model.
-
-- State a class-level invariant (one that holds regardless of which operation ran, not tied to one call) the same way: a `// …` line, on the class rather than nested under one operation (e.g. `// remaining budget never goes negative`).
-- An invariant named here is prose only — it does not gate any method body until **code**.
-- At **code** fidelity, any invariant named here gets pinned down as a **comment** (not an enforcement method) on `Class` — see `## code` Phase 1 and Phase 2.
-
+Extend module level **public seam** documentation — what callers invoke, what they must or must not do, and how to extend — plus **dependencies**: every other-module class or operation this module calls. See `@clean_engineering-modules`. Refresh the language companion for new or uodated terms now on the public API. Do not document internal design, private participants, or implementation notes.
 
 
 ### Rules
 
-Before promoting a term to its own class, check whether it fits as a **property** (see *Properties*), an **instance** (see *Instances*), or a **subtype** (see *Inheritance and subtypes*). Only when none of those three fit does something deserve its own class.
-
+- `class-not-property-instance-or-subtype` — Before promoting a term to its own class, check whether it fits as a property, an instance, or a subtype. Only when none of those three fit does it deserve its own class.
+- `use-property-not-accessor` — Use `@property` (or the language equivalent) for read-only computed values; do not use `get_` / `set_` method prefixes.
+- `keep-operations-single-responsibility` — Each operation has one reason to change — pure calculation or orchestration, not both. An operation doing two things reveals either a missing operation or a missing class.
+- `separate-concerns` — Pure calculation separate from I/O and mutation.
+- `use-clear-operation-parameters` — Prefer 0–2 parameters. When more configuration is needed, the extra parameters reveal a missing value object — promote them to a new class and pass that instead.
+- `interactions-are-operation-calls` — Nest `-> {collaborator}.{operation}` under the calling operation. `-> ClassName` alone is not an interaction. Do not invent `- **Interaction:**` bullets.
+- `invariants-are-class-level-notes` — Class-level invariants sit as `//` on the class, not under one operation. They do not become methods.
 - `keep-classes-single-responsibility` — Each class has **one reason to change**.
 - `hide-inner-details` — Expose **behavior** through named methods; callers see what the class does, not how it stores or arranges its information.
 - `eliminate-duplication` — Repeated logic gets one canonical function.
@@ -190,11 +85,10 @@ fidelity: all
 <!--
   clean_engineering markdown template — unified across all fidelities.
 
-  INTERFACES ARE OPTIONAL (see clean_engineering.md § Interfaces). This template shows
-  the `I{ClassName}` form because it is the richer case to document. Default to
-  skipping `## I{ClassName}` entirely and starting straight at `## {ClassName}` (empty,
-  untagged Md members at model) unless the user asked for an interface, or the module
-  genuinely has multiple layers/implementations behind one seam.
+  I{ClassName} is not the default. When generated, it lives in the same file /
+  same module H1 as {ClassName} — public members only on I{ClassName}; private
+  members stay on {ClassName}. Omit ## I{ClassName} unless the user asked or
+  multiple implementations sit behind one seam.
 
   Fidelity tags on section headings (as HTML comments — informational only):
     L  = language companion (prose identity; refined at every stage — not a fidelity)
@@ -208,6 +102,9 @@ fidelity: all
     ----    (four dashes)  properties / operations separator
     -       (dash prefix)  private operation
     +       (plus prefix)  public — code fidelity only
+
+  One file per cohesive set — the primary class, its subtypes, and peers
+  that only make sense together. Do not default to one class per file.
 
   Document structure: H1 = module, H2 = class within that module.
   Interface (I{ClassName}) and implementation ({ClassName}) both sit under the
@@ -237,6 +134,8 @@ This paragraph IS the class definition. Identity only.}           <!-- L -->
 - {delta behavior only — what this subtype adds or overrides}     <!-- L -->
 
 ## Modules                                                        <!-- Mu -->
+
+# FILE: {module}/.context/module-context.md
 
 Build order: `{first}` → `{second}` → `{third}`
 
@@ -348,23 +247,40 @@ load_{example_key}(mode): I{ClassName}
 # Conceptual Clean Engineering Reference (Python style)
 # Refer to context_tools/language-tools.md for tool recommendations.
 # =============================================================================
-# A production file holds the public seam (I{Class} when one exists), the 
-# production Class, subtypes, and tightly connected peers. 
-# Example factories are ALWAYS in a separate sibling file.
+# One file per cohesive set — the primary class, its subtypes, and peers
+# that only make sense together. Do not default to one class per file.
+# Default: Class is the seam. I{ClassName} is not the default — add it in
+# this same file when multiple implementations sit behind one seam, or when
+# the user asks. Public members only on I{ClassName}; private members stay
+# on {ClassName}. Example factories are ALWAYS in a separate sibling file.
 # =============================================================================
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod
 
 # FILE: {family_slug}.py
-class {ClassName}:
+# Optional — omit unless generating an interface:
+class I{ClassName}(ABC):
+    @property
+    @abstractmethod
+    def {property}(self) -> {Type}:
+        ...
+
+    @abstractmethod
+    def {operation}(self, {param}: {Type}) -> {ReturnType}:
+        ...
+
+class {ClassName}:  # or class {ClassName}(I{ClassName}):
     """*{ClassName}* unique role."""
-    
+
     @property
     def {property}(self) -> {Type}:
         ...
 
     def {operation}(self, {param}: {Type}) -> {ReturnType}:
+        ...
+
+    def _{private_helper}(self, {param}: {Type}) -> {Type}:
         ...
 
 # FILE: {type_slug}_example_factory.py

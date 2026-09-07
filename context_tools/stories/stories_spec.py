@@ -237,6 +237,7 @@ with description("Stories"):
 
         with it("should omit scenario-only rule slugs"):
             expect("gwt-steps-trace-to-domain-operations" in self.contexts).to(equal(False))
+            expect("behavioral-observable-outcomes" in self.contexts).to(equal(False))
 
     with context("whose contexts slot is expanded at scenarios"):
         with before.each:
@@ -246,14 +247,11 @@ with description("Stories"):
         with it("should include the gwt-steps-trace-to-domain-operations rule slug"):
             expect("gwt-steps-trace-to-domain-operations" in self.contexts).to(be_true)
 
-        with it("should include the reconcile-live-immediately rule slug"):
-            expect("reconcile-live-immediately" in self.contexts).to(be_true)
+        with it("should not include the retired behavioral-observable-outcomes slug"):
+            expect("behavioral-observable-outcomes" in self.contexts).to(equal(False))
 
-        with it("should include the explain-deep-link-arrival rule slug"):
-            expect("explain-deep-link-arrival" in self.contexts).to(be_true)
-
-        with it("should include the then-and-chaining rule slug"):
-            expect("then-and-chaining" in self.contexts).to(be_true)
+        with it("should include the and-chaining rule slug"):
+            expect("and-chaining" in self.contexts).to(be_true)
 
         with it("should include the when-holds-the-operation rule slug"):
             expect("when-holds-the-operation" in self.contexts).to(be_true)
@@ -261,23 +259,41 @@ with description("Stories"):
         with it("should include the given-only-what-the-system-checks rule slug"):
             expect("given-only-what-the-system-checks" in self.contexts).to(be_true)
 
-        with it("should include the load-with-identity-in-hand rule slug"):
-            expect("load-with-identity-in-hand" in self.contexts).to(be_true)
-
-        with it("should include the reuse-owning-aggregate-stubs rule slug"):
-            expect("reuse-owning-aggregate-stubs" in self.contexts).to(be_true)
-
-        with it("should include the infrastructure-in-lifecycle-hooks rule slug"):
-            expect("infrastructure-in-lifecycle-hooks" in self.contexts).to(be_true)
-
-        with it("should include the extract-assertion-helper rule slug"):
-            expect("extract-assertion-helper" in self.contexts).to(be_true)
-
         with it("should include the seed-prior-story-as-given rule slug"):
             expect("seed-prior-story-as-given" in self.contexts).to(be_true)
 
+        with it("should not include extract-assertion-helper at scenarios fidelity"):
+            expect("extract-assertion-helper" in self.contexts).to(equal(False))
+
+        with it("should not include shared-example-fixtures at scenarios fidelity"):
+            expect("shared-example-fixtures" in self.contexts).to(equal(False))
+
+        with it("should not include infrastructure-in-lifecycle-hooks at scenarios fidelity"):
+            expect("infrastructure-in-lifecycle-hooks" in self.contexts).to(equal(False))
+
         with it("should omit the story_map heading"):
             expect("## story_map" in self.contexts).to(equal(False))
+
+    with context("whose contexts slot is expanded at acceptance_tests"):
+        with before.each:
+            self.stories = Stories(fidelity="acceptance_tests")
+            self.contexts = self.stories.contexts().expand()
+
+        with it("should reference scenarios rules via deployed skill notation"):
+            expect("@stories" in self.contexts).to(be_true)
+            expect("#scenarios" in self.contexts).to(be_true)
+            expect("§ Rules" in self.contexts).to(be_true)
+
+        with it("should include acceptance_tests-only rule slugs"):
+            expect("shared-example-fixtures" in self.contexts).to(be_true)
+            expect("extract-assertion-helper" in self.contexts).to(be_true)
+            expect("infrastructure-in-lifecycle-hooks" in self.contexts).to(be_true)
+
+        with it("should not duplicate scenarios rule slugs as same-rule bullets"):
+            expect("same rule as **scenarios**" in self.contexts).to(equal(False))
+
+        with it("should omit the scenarios heading"):
+            expect("## scenarios" in self.contexts).to(equal(False))
 
     with context("whose examples slot is expanded at markdown"):
         with it("should omit python example files"):

@@ -4,7 +4,7 @@
 
 Before writing any class, ask: **what IS this thing?** Write one sentence that defines its unique role — what it holds, what it does, why it exists. This sentence IS the class definition. If you can't write it, the class doesn't have a clear identity yet.
 
-This is the language companion pattern: prose identity precedes structural design. The sentence you write becomes the class docstring and drives every decision about what properties and operations belong on it.
+This is the language pattern: prose identity precedes structural design. The sentence you write becomes the class docstring and drives every decision about what properties and operations belong on it.
 
 ## What deserves its own class
 
@@ -24,7 +24,7 @@ Clean Engineering deepens through three levels, each adding artifacts without in
 - **Model** — empty public seam (properties and operations as stubs). The shape of the contract, not the implementation.
 - **Code** — filled implementation. Everything works.
 
-At each level, refresh the language companion (the prose identity) for terms already named. Don't invent method bodies at modules. Don't fill implementations at model.
+At each level, refresh the language (the prose identity) for terms already named. Don't invent method bodies at modules. Don't fill implementations at model.
 
 ## Cohesive file thinking
 

@@ -11,7 +11,7 @@ fidelity: all
   multiple implementations sit behind one seam.
 
   Fidelity tags on section headings (as HTML comments — informational only):
-    L  = language companion (prose identity; refined at every stage — not a fidelity)
+    L  = language (prose identity; refined at every stage — not a fidelity)
     Mu = modules        (thin terms, one-way deps, build order; no I{Class} yet)
     Md = model          (I{ClassName} — typed compact block — ONLY when an interface is
                          requested; otherwise model is the empty `## {ClassName}` block)
@@ -23,14 +23,44 @@ fidelity: all
     -       (dash prefix)  private operation
     +       (plus prefix)  public — code fidelity only
 
-  One file per cohesive set — the primary class, its subtypes, and peers
-  that only make sense together. Do not default to one class per file.
+  Invariants, interactions, comments (model):
+    Write each invariant as `//` on the class (or under the property / operation
+    it constrains): a must / never / always / before / after that stays true
+    when the object acts.
+    Write each interaction as `-> {collaborator}.{operation}` nested under the
+    calling operation. `-> ClassName` alone is not an interaction.
+    State an invariant or a sequence with `//`. Leave every other line
+    uncommented.
+
+  Put a class family in one file: the primary type, its subtypes, and
+  tightly connected peers that only make sense together (element +
+  collection, small aggregate + its part). Name the file after the family
+  concept (`abilities.py` for Ability + Abilities). Split into another
+  file only when a type is independently reused across families or the
+  file becomes a grab-bag of unrelated types. Do not default to one class
+  per file. Put `{Type}ExampleFactory` (and its examples data, plus
+  `I{Type}ExampleFactory` when one was requested) in a sibling file —
+  never in the production family file.
+
+  Give each module its own folder. Put class files, markdown, and other
+  module-level artifacts in that folder — not beside it, not in a flat
+  dump. Not every folder is a module: treat a folder as a module only
+  when it owns `.context/module-context.md`. Do not stop at an arbitrary
+  depth — every folder that is a cohesive functional unit owns
+  `module-context.md`. Absorb implementation-only folders (`assets/`,
+  thin `config/`) into the parent description. Never put
+  `module-context.md` under `.context/sessions/`.
 
   Document structure: H1 = module, H2 = class within that module.
   Interface (I{ClassName}) and implementation ({ClassName}) both sit under the
   same module H1 — interface first, then implementation. No fidelity section
   headers (## Model fidelity / ## Code fidelity) in the output.
-  Language companion and modules overview go as prose BEFORE the first H1.
+  Language and modules overview go as prose BEFORE the first H1.
+
+  Write human-readable markdown only. Strip template markup (`<!-- Mu -->`,
+  `<!-- Mv -->`, `<!-- L -->`, `<!-- Md -->`, `<!-- C -->`, and similar)
+  before writing. Sit a module heading immediately above its
+  `- **Purpose:**` block — no blank line between them.
 
   Subtypes use ## {ChildClass} : {ClassName} notation; deltas only.
   Substitute {ClassName} / {owned_property} / {param} / {Type} / ... when generating.
@@ -38,7 +68,7 @@ fidelity: all
 
 **Sources / context:** {source_files}                             <!-- L -->
 
-## Language companion                                             <!-- L -->
+## Language                                                       <!-- L -->
 
 *{ClassName}* is {intent — what role it plays, what it holds, what it does.
 This paragraph IS the class definition. Identity only.}           <!-- L -->
@@ -83,17 +113,16 @@ I{ClassName}({param}: {Type})
 ## {ClassName}                                                    <!-- Md -->
 
 + {ClassName}({param}: {Type})
+	// {must / never / always / before / after that stays true of the object}
 ------
 + << composition >> {owned_property}: {Type}
-	Invariant: {constraint sentence.}
+	// {must / never / always / before / after about this property}
 + << aggregation >> {collected_property}: list[{Type}]
 + << association >> {referenced_property}: {Type}
 ----
 + {operation_name}({param}: {Type}): {ReturnType}
-	Invariant: {constraint sentence applicable to this operation.}
-	Interaction:
-		{variable}: {Type} = {other}.{call}({args})
-		return {variable}
+	// {must / never / always / before / after when this operation runs}
+	-> {collaborator}.{operation}
 - _{private_helper}({param}: {Type}): {Type}
 
 ## I{ChildClass}                                                  <!-- Md, optional -->
@@ -108,7 +137,7 @@ I{ChildClass}({param}: {Type})
 + {ChildClass}({param}: {Type})
 ------
 + {child_specific_property}: {Type}
-	Invariant: {constraint sentence.}
+	// {must / never / always / before / after about this property}
 ----
 + {delta_operation}({param}: {Type}): {ReturnType}
 

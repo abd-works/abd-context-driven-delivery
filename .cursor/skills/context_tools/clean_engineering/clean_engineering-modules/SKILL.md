@@ -27,20 +27,9 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 **Default format:** markdown  
 **Diagram format:** `drawio` (modules view — blue boxes, seam-term bullets, one-way dependency arrows; template `templates/modules.drawio`). Language channels (python/java/…) are for **model** and later — not required here.
 
-**Goal:** Refine **modules** purpose, primary use case, rationale, key terms, and relationship to other modules. Strive for **independent modules with one-way dependencies** and an explicit **build order**. Thin class/term identification only — enough to show independence.
+**Goal:** Partition a problem or solution space into independently understandable units — each a deep module with a narrow public seam and substantial implementation behind it. Name the units, their seams, and the one-way dependencies between them. Thin class/term identification only — enough to show independence. Do not invent types, method bodies, or relationship kinds yet. Each **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
-A **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
-
-- Consume the existing `{session}/{subject}-index.md` and partition chunks if they exist — **do not edit** or wipe partitions.
-- When nesting, the **parent module** owns shared base classes/terms (e.g. `powers` owns `Effect`). Specializing children use a path under the parent (`powers/attack`) and depend on the parent — not on siblings. Do **not** invent a `parent/base` submodule (e.g. no `powers/effect`) just to hold shared content; that content belongs on the parent. Diagram: path nesting = containment (children drawn inside the parent box).
-- Seed `{module}/.context/module-context.md` Thin: **Purpose**, **Seam** (public term/class names), **Dependencies**, optional **Extend** / **Mechanism** note. 
-- Name terms/classes only enough to show independence. Seed **language companion** prose for those names.
-- Seam terms: **one name per concept** (prefer the type name). Do not list singular and plural of the same term (e.g. `Ability` — not `Ability, Abilities`).
-- Do not add types, method bodies, or relationship kinds (composition / aggregation / association).
-
-
-
-### Mental model
+### Guidance:
 
 **Deep modules** Start by identifying the major structural boundaries — group closely related classes around a single domain concept. Each module should be **deep**: a narrow public interface with substantial implementation behind it. Create deep module to reduce both your and human user cognitive load so that you can focus on reading the interface versus reading the implementation. Build interfaces to be much simpler than their implementation, avoid shallow modules that adds overhead without encapsulation. Resist the urge to decompose into many small modules.
 
@@ -48,7 +37,7 @@ A **module** is a named structural boundary that groups closely related classes 
 
 Make every dependency **explicit**. Use direct, visible references over indirection. Avoid Implicit coupling ( globals, configuration magic ,side effects, shared mutable state, convention-based wiring), as it is harder to reason about, harder to test, and harder to change safely. 
 
-Document only the **public seam** — how to use the module, how to extend it, and what it depends on. Never document internals in module-context. The caller-facing contract is the only thing that should survive into documentation; implementation details live in source code and session notes. If someone needs to read the internals to use the module, the interface is too shallow.
+Document only the **public seam** — how to use the module, how to extend it, and what it depends on. One name per concept on the seam (prefer the type name — `Ability`, not `Ability, Abilities`). Write language-companion prose for the terms you name. Never document internals in module-context. The caller-facing contract is the only thing that should survive into documentation; implementation details live in source code and session notes. If someone needs to read the internals to use the module, the interface is too shallow.
 
 ### Scaffold
 
@@ -64,8 +53,8 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 - `low-coupling` — Modules depend on each other only through well-defined interfaces. Cross-module dependencies are explicit and minimal — no module reaches into another's internals.
 - `single-boundary` — Each module is the single source of truth for its domain concept. No other module holds, mutates, or duplicates that concept's state or rules.
 - `named-seam-and-constraint` — Every module owns a *seam* — the public surface of classes and operations callers depend on — paired with a *constraint* stating what callers must do or must not do at that boundary. A module is described by what it requires of its callers, not only by what it holds.
-- `public-seam-only` — `.context/module-context.md` documents **only** the public seam: how to **use** the module, how to **extend** it, and what its **dependencies** are. Internals are banned (see dedicated section below). Scanner: `public-seam-only`.
-- `deep-module` — The seam stays a short named list of classes and operations with substantial functionality behind it (Ousterhout: small interface, large hidden implementation). If internal helpers leak into the seam, encapsulation is overhead without benefit. Scanner heuristic: at most **40%** of top-level symbols may be public (leading underscore for the rest).
+- `public-seam-only` — `.context/module-context.md` documents **only** the public seam. Never internals, participants, implementation, layout dumps, tests, scanners, scan notes, or any heading containing *internal*. Never underscore-prefixed types, helpers, or methods. Never private participants (abstract bases, doers, judges, stores) that callers do not import. Scanner: `public-seam-only`.
+- `deep-module` — The seam stays a short named list of classes and operations with substantial functionality behind it (Ousterhout: small interface, large hidden implementation). If internal helpers leak into the seam, encapsulation is overhead without benefit. Scanner heuristic: at most **40%** of top-level symbols may be public.
 - `physical-folder` — Each module occupies its own folder; class files, markdown documents, and other module-level artifacts live in it. Generated code belongs in that folder — not beside the module, not in a flat dump outside it. Not every folder is a module — chapter or organisational folders may group several modules and must not be treated as one module unless they own `.context/module-context.md`. **Do not stop at an arbitrary depth** — every folder that is a cohesive functional unit owns `.context/module-context.md`; folders that are only implementation detail (`assets/`, thin config/) are absorbed into the parent description. `module-context.md` **never lives under** `.context/sessions/` — the session folder is for sprint artifacts; the context file belongs beside the source it describes.
 - `nesting` — Nest under a parent only when children share mechanics or form a clear sub-system boundary; independent concepts stay flat. Child path is `{parent}/{child}/` (e.g. `powers/attack/`). Parent-shared code lives in the **parent** folder — do not invent a submodule for shared base. If children would duplicate mechanics, extract parent-owned base types first. Each child must be independently implementable (siblings stubbed); it may depend on the parent base, not on sibling children.
 - `output-format` — Written markdown is human-readable only. Strip template markup (`<!-- Mu -->`, `<!-- Mv -->`, and similar) before writing. A module heading sits immediately above its `- **Purpose:**` block — no blank line between them.
@@ -78,32 +67,6 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 - `general-purpose-surface` — Public interface is not hardcoded to one caller's UI/workflow.
 - `errors-out-of-existence` — Prefer total functions / empty states for routine edges; reserve exceptions for real failures.
 
-
-
-
-
-
-
-### `module-context.md` — public seam only
-
-`.context/module-context.md` (and any `.module-context` synonym) is the **caller-facing contract**. It must contain **only**:
-
-
-| Concern          | Allowed headings / content                                                                                                                                                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Use**          | **Purpose**, **Primary use case**, **Rationale**, **Seam**, **Public API** / **Public surface**, **Constraint** — what callers invoke and what they must / must not do                                                                |
-| **Extend**       | **Extend**, **Extension**, **How to extend**, optional **Mechanism** / **Mechanism stereotype** — variation points and fixed parts that are part of the *public* extension contract; authoring annotations that callers use to extend |
-| **Dependencies** | **Dependencies** — one-way module / package names only                                                                                                                                                                                |
-
-
-**Hard ban — never put these in module-context:**
-
-- **Internal design**, **Internals**, **Participants** (private collaborators), **Domain separation**, **Pickup**, **Layout** (as an implementation dump), **Known scan notes**, **Implementation**, **Scan violations**, **Tests**, **Scanners** (as a private inventory), or any heading containing *internal*
-- Underscore-prefixed **types**, **helpers**, or **methods** (`_CliAgentLog`, `_Pickup`, `_await_pickup`, `_ensure_work_session`, `_scanner_collection`, …) — leading underscore means private; keep them out of the seam list and out of prose
-- Abstract bases, doers/judges, job-template stores, and other **private participants** that are not the public contract callers import
-- Implementation notes, pickup/transcript heuristics, test inventories, scanner FP notes, private marker wiring beyond the public authoring annotations
-
-Scanner rule: `public-seam-only`.
 
 ---
 
@@ -122,11 +85,10 @@ fidelity: all
 <!--
   clean_engineering markdown template — unified across all fidelities.
 
-  INTERFACES ARE OPTIONAL (see clean_engineering.md § Interfaces). This template shows
-  the `I{ClassName}` form because it is the richer case to document. Default to
-  skipping `## I{ClassName}` entirely and starting straight at `## {ClassName}` (empty,
-  untagged Md members at model) unless the user asked for an interface, or the module
-  genuinely has multiple layers/implementations behind one seam.
+  I{ClassName} is not the default. When generated, it lives in the same file /
+  same module H1 as {ClassName} — public members only on I{ClassName}; private
+  members stay on {ClassName}. Omit ## I{ClassName} unless the user asked or
+  multiple implementations sit behind one seam.
 
   Fidelity tags on section headings (as HTML comments — informational only):
     L  = language companion (prose identity; refined at every stage — not a fidelity)
@@ -140,6 +102,9 @@ fidelity: all
     ----    (four dashes)  properties / operations separator
     -       (dash prefix)  private operation
     +       (plus prefix)  public — code fidelity only
+
+  One file per cohesive set — the primary class, its subtypes, and peers
+  that only make sense together. Do not default to one class per file.
 
   Document structure: H1 = module, H2 = class within that module.
   Interface (I{ClassName}) and implementation ({ClassName}) both sit under the
@@ -169,6 +134,8 @@ This paragraph IS the class definition. Identity only.}           <!-- L -->
 - {delta behavior only — what this subtype adds or overrides}     <!-- L -->
 
 ## Modules                                                        <!-- Mu -->
+
+# FILE: {module}/.context/module-context.md
 
 Build order: `{first}` → `{second}` → `{third}`
 

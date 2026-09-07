@@ -165,7 +165,7 @@ def _contexts_preamble(text: str) -> str:
 
 
 # H2 titles that name a kit fidelity. Sibling sections drop; Shared rules /
-# Language companion / Hierarchy shape stay. Same rule for Stories, CE, DDD, UX, BDD.
+# Language / Hierarchy shape stay. Same rule for Stories, CE, DDD, UX, BDD.
 _FIDELITY_H2_NAMES = frozenset(
     {
         "story_map",
@@ -255,7 +255,7 @@ def thin_examples_by_format(items: dict[str, str], format_name: str | None) -> d
     """Keep example files for the active format.
 
     Prefer ``/{alias}/`` paths (Stories). If none, keep by suffix (CE shopping-cart
-    ``examples.md`` / ``examples.py``). ``examples.md`` is skipped only as a
+    ``cart/shopping_cart.md`` / ``cart/shopping_cart.py``). ``examples.md`` is skipped only as a
     folder-index next to ``/{alias}/`` trees.
     """
     if not format_name or not str(format_name).strip():

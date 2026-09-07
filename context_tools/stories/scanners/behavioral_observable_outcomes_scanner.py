@@ -1,4 +1,4 @@
-"""behavioral-observable-outcomes - Then steps describe observable outcomes."""
+"""gwt-steps-trace-to-domain-operations - GWT steps trace to domain operations."""
 
 from __future__ import annotations
 

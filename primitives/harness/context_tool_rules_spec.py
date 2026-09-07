@@ -34,7 +34,8 @@ with description("context tool rules"):
         expect(by_name["stories"].body).to(
             contain("When acceptance tests, scenarios, or story map, also follow these rules on top of the fidelity-specific ones")
         )
-        expect(by_name["stories"].body).to(contain("kebab-case-paths"))
+        expect(by_name["stories"].body).to(contain("vocabulary-traces-to-domain-source"))
+        expect(by_name["stories"].body).not_to(contain("kebab-case-paths"))
         expect(by_name["story_map"].body).to(contain("When story map, follow these rules"))
         expect(by_name["scenarios"].body).to(contain("@stories-scenarios"))
         expect(by_name["scenarios"].globs).to(contain("**/*.py"))

@@ -4,7 +4,7 @@ Map stakeholder and system interactions as behaviours that deliver a solution.
 
 ---
 
-## Mental model
+## Guidance
 
 **Think hierarchically** and use stories to progressively explore a problem and solution surface at multiple levels of detail: **Epics** (business capabilities or end-to-end outcomes), often decomposed into **Sub-Epics**, and then **Stories** (a discrete user or system action and observable system response). Stories get decomposed into **Scenarios**, and each scenarios are made up of **Steps**. `Manage User Accounts` → `Register New User` → `Enter Contact Details` → `Accept valid contact details` → `System confirms sucessful save of contact details`.
 
@@ -35,7 +35,7 @@ Map stakeholder and system interactions as behaviours that deliver a solution.
 
 **Epics** are major capability areas — containers for flows. Named verb–noun: `Manage Customer Orders`, `Process Payments`. Epics nest into **SubEpics**,  then **Stories** — each a discrete, observable behavior independently testable. Stories are verb–noun (`Place Order`, `Validate Payment`); and are behaviors, not tasks.
 
-### Mental model
+### Guidance
 
 **Decompose the hierarchy** using user and system interactions  — epics covering the full capability surface. Ground each epic with a few confirming stories that prove the epic is real and the scope is right.  **Then find the spine** — the thinnest end-to-end path that delivers core value. Sketch later increments to show where the remaining scope lands.   Keep increments small by spliting along Actors, Data, Workflow, Channel, Interfaces, NFRs, or Business Rules.
 
@@ -73,33 +73,23 @@ Create testable specifications grounded in user system interactions through **co
 
 Use scenarios to ground the domain model. Concept names in examples must match model language exactly. Example table columns should relate data across relational structure as well.
 
-### Mental model
+### Guidance
 Write scenarios that clearly articulate the preconditions required to start, the triggering conditions and steps to complete, and the resulting outomes.
 
-**Start from the main-flow** scenario for each story — the happy path through Given/When/Then. Write the scenario concrete enough that a domain expert and a developer would argue about whether the output is correct. **Then walk the full interaction surface**: inline validation rules, field-level errors, cross-field constraints, submit-button gating, server-side error surfaces. Branch into additional scenarios for each distinct mechanical variation. Use separate Scenarios whenever the flow structure diverges. 
+**Start from the main-flow** scenario for each story — the happy path through Given/When/Then. Write the scenario concrete enough that a domain expert and a developer would argue about whether the output is correct. **Then walk the full interaction surface** — every distinct user-visible behavior: inline rule checklists and how they change while typing, field-level validation errors clearing as input conforms, cross-field rules (confirm password, paste mismatch), submit-button gating, and server-side error surfaces. A story that only codifies the happy path when the screen has rich client-side validation is incomplete — branch into additional scenarios (or scenario outlines with examples) per mechanical variation. Use separate Scenarios whenever the flow structure diverges.
 
 **Provide concrete examples** add examples to specific steps in line or use a **Scenario Outline** with an Examples table when the same flow produces different outcomes based on input variation. 
 
-**Align scenarios to the Domain** Trace every Given/When/Then step must to a named domain operation. Trace examples to domain state and domain properties. . When holds the operation. Then observes what When produced — no further I/O.
-
-**Ground every scenario in the domain model**. Concept names in examples must match model language exactly. Example table columns should relate data across the relational structure — not just list one concept's fields in isolation.
+**Ground scenarios in domain language** Maximize proper domain language in every Given / When / Then and in example tables. Reuse terms and operations from the domain language and model when they exist; when a step has no name yet, still phrase it in domain-observable terms — that gap signals what to add. Relate example columns across the relational structure, not one concept's fields in isolation.
 
 ### Rules
 
-- **`behavioral-observable-outcomes`** — Name and Then in domain-observable terms; never internals.
-- **`explore-full-interaction-surface`** — Scenarios are not complete when only the main-flow GWT from the sketch is written. Before locking scenarios (and again before acceptance_tests), walk the real UI and model **every distinct user-visible behavior**: inline rule checklists and how they change while typing, field-level validation errors clearing as input conforms, cross-field rules (confirm password, paste mismatch), submit-button gating, and server-side error surfaces. A story that only codifies the happy path when the screen has rich client-side validation is a **defect** — branch into additional scenarios (or scenario outlines with examples) per mechanical variation, not one paragraph that mentions "validation" in passing.
-- **`gwt-steps-trace-to-domain-operations`** — Every Given / When / Then maps to a named domain operation or property. If a step cannot be traced, that is a modelling gap — add the operation or property; do not gloss over it. A hop to the next step is a named operation on the arriving aggregate (`prospect.verifyIdentity()`), not a route, `waitForCompletion()`, or driving the next concern through the previous aggregate.
-- **`reconcile-live-immediately`** — The running app wins. When a walk-through disagrees with the sketch, fix the sketch in that increment before locking the test.
-- **`explain-deep-link-arrival`** — A scenario that navigates to a parameterized route (`/sign-up/:planId`) must say how a user actually arrives: in-app navigation, marketing/external deep-link, or a wizard step with no URL change. Do not write `When they navigate to X` as if it were a button.
-- **`given-only-what-the-system-checks`** — Given states conditions the **running system actually uses** for the behaviour under test. Do not Given a field the code never reads for that decision (`metadata.verified` when routing actually keys off `customer.billing.id`).
+- **`gwt-steps-trace-to-domain-operations`** — Write every Given / When / Then in domain-observable terms that map to a named domain operation or property — never internals, routes, or framework mechanics. If a step cannot be traced, that is a modelling gap — add the operation or property; do not gloss over it. A hop to the next step is a named operation on the arriving aggregate (`prospect.verifyIdentity()`), not a route, `waitForCompletion()`, or driving the next concern through the previous aggregate.
+- **`explore-full-interaction-surface`** — Before locking scenarios (and again before acceptance_tests), walk every distinct user-visible behavior on the full interaction surface. Happy path alone is insufficient; branch scenarios to cover mechanical variations.
+- **`given-only-what-the-system-checks`** — Write given statementys only conditions the system can validate. No user backstory, other off-system history E.g. no *Given the user previously browsed products* - to capture a buying behavior system will not check.
 - **`when-holds-the-operation`** — When holds the domain operation being exercised. An empty When with a comment, or the operation called inside Then, is a defect. Then only asserts on what When already produced — no I/O in Then.
-- **`then-and-chaining`** — The first outcome uses `then()`; every later outcome on the same interaction chains `.and()`. Repeated `then()` calls break the Gherkin narrative. Markdown `And` stays `And`.
-- **`extract-assertion-helper`** — The same assertion shape more than twice becomes a named helper that takes a data bag. Call sites pass only the concrete values.
-- **`infrastructure-in-lifecycle-hooks`** — Browser boot, app wiring, and `initialize` live in `beforeAll` / `afterAll`. `given(` is domain state only.
-- **`load-with-identity-in-hand`** — `load` takes the identity already in hand. Do not assume a browser session. Load once at the highest Given that needs the aggregate and reuse the variable. A cart has no identity outside its prospect — reach it through the owner, not `cartRepository().current()`.
+- **`and-chaining`** — The first precondtion uses `given`, event uses `when`, outcome uses `then()`; every later give, when/then in a pair on the scenario uses `.and()`. Repeated `given..  when... then..` right after each other break the narrative. Markdown `And` stays `And`.
 - **`seed-prior-story-as-given`** — A later story's Given is seeded from prior-story fixtures (`givens.py` / `examples/`), not a replay of that story's When.
-- **`reuse-owning-aggregate-stubs`** — For a non-core aggregate, take stubs from **that aggregate's folder / source repository** (`domain/{bounded-context}/{aggregate}/stubs/{system}/`). Do not invent a test-local stub. Do not stub the seam you are proving.
-
 ---
 
 ## acceptance_tests
@@ -108,28 +98,20 @@ Write scenarios that clearly articulate the preconditions required to start, the
 
 **Goal:** Turn locked scenarios into runnable acceptance coverage; CE runs alongside to produce matching wrap classes under `domain/`.
 
-**Mental model:** Follow the scenarios mental model as `@stories` `#scenarios` § Mental Model — acceptance_tests covers the same explored interaction surface. Take a TDD apporach and Design the code through failing scenario tests: call the realcode even when it does't exist yet. The test must fail initially (RED) — the failure message reveals the API design. Then make it pass (GREEN). Example data in tests traces to the spec's Examples table via shared fixtures — never inline invented values.
+**Guidance:** Follow `@stories` `#scenarios` § Guidance — acceptance_tests covers the same explored interaction surface. Take a TDD apporach and Design the code through failing scenario tests: call the realcode even when it does't exist yet. The test must fail initially (RED) — the failure message reveals the API design. Then make it pass (GREEN). Example data in tests traces to the spec's Examples table via shared fixtures — never inline invented values.
 
-**Procedure:** Follow the **Test shape ladder** in the `testing-approach` rule under `clean_engineering/rules/` — real standup first, then stub TDD, then e2e swap on request.
+Follow the **Test shape ladder** in the `testing-approach` rule under `clean_engineering/rules/` — real standup first, then stub TDD, then e2e swap on request.
 
 **Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
 
-**Produce:** `tests/{epic}/{sub-epic}/{story}.py` — one GWT file per story. No `{story}/` folder and no `*_story` / `*_test_helper` split.
+**Produce:** `tests/{epic}/{sub-epic}/{story}.py` — one GWT file per story.
 
 ### Rules
 
-- **`behavioral-observable-outcomes`** — same rule as **scenarios**: assertions stay in domain-observable terms, never internals.
-- **`explore-full-interaction-surface`** — same rule as **scenarios**: acceptance_tests must cover the explored interaction surface, not just translate the first main-flow scenario into Playwright. Trace react-hook-form rules, shared validation components, and stubbed failure modes during the sandbox walk-through; add a `scenario()` per distinct behavior.
-- **`gwt-steps-trace-to-domain-operations`** — same rule as **scenarios**: each step in the test traces to a named domain operation or property. A hop to the next step is a named operation on the arriving aggregate, not a route or `waitForCompletion()`.
-- **`reconcile-live-immediately`** — same rule as **scenarios**: live disagreement updates the sketch before the test is locked.
-- **`explain-deep-link-arrival`** — same rule as **scenarios**.
-- **`given-only-what-the-system-checks`** — same rule as **scenarios**.
-- **`when-holds-the-operation`** — same rule as **scenarios**.
-- **`then-and-chaining`** — same rule as **scenarios**.
-- **`extract-assertion-helper`** — same rule as **scenarios**.
-- **`infrastructure-in-lifecycle-hooks`** — same rule as **scenarios**.
-- **`load-with-identity-in-hand`** — same rule as **scenarios**.
-- **`seed-prior-story-as-given`** — same rule as **scenarios**.
-- **`reuse-owning-aggregate-stubs`** — same rule as **scenarios**.
+Apply every rule in `@stories` `#scenarios` § Rules where it applies at acceptance_tests fidelity.
+
+- **`shared-example-fixtures`** — Name concrete values in `examples/` fixtures — one file per domain concept — and import them; never inline literals in scenario files. Place each fixture at the highest epic, sub-epic, or story folder that shares it.
+- **`extract-assertion-helper`** — The same assertion shape more than twice becomes a named helper that takes a data bag. Call sites pass only the concrete values.
+- **`infrastructure-in-lifecycle-hooks`** — Browser boot, app wiring, and `initialize` live in `beforeAll` / `afterAll`. `given(` is domain state only.
 
 ---

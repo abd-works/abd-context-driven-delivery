@@ -10,7 +10,7 @@ from pathlib import Path
 
 from scan import Scanner
 
-RULE = "ce-comments-are-for-invariants-and-sequencing-notes-only"
+RULE = "limit-comments"
 
 _COMMENT = re.compile(r"(?:^|\s)//\s*(.+)$")
 _INVARIANT_OR_SEQUENCE = re.compile(

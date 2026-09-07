@@ -10,7 +10,7 @@ format: md
 
 **Sources / context:** `.context/sessions/courier-ops/cdd-sketch.md` (Plan Delivery Routes specification sketch); `.context/bounded-context-map.md`
 
-## Language companion
+## Language
 
 *Route* holds an ordered sequence of zones. Every stop whose zone appears in that sequence is on the route. The route calculates a path from the zone order, then checks whether any adjacent zones allow a shorter driver path.
 
