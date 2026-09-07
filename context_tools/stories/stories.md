@@ -14,6 +14,57 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ---
 
+## Mental model
+
+Stories are a **progressive exploration device**. You do not write stories once at full detail — you reveal them through successive passes at increasing depth, each pass producing just enough understanding to make the next decision.
+
+### Explore → extrapolate → estimate
+
+Story work follows an exploration rhythm at every stage:
+
+**Explore** — map the terrain. Go wide. Find the boundaries, actors, and major capability areas. Answer "what is the shape of this thing?" — not "what exactly does each piece do?"
+
+**Extrapolate** — estimate what you have not explored yet from patterns you have already found. "These three epics averaged 12 stories each, so the remaining two are probably similar." Buy information about scope without paying the cost of full decomposition.
+
+**Estimate** — size based on experience, not analysis. Compare this increment to ones previously delivered. You do not need to decompose to estimate.
+
+### Progressive depth — wide then deep
+
+Each stage of the delivery flow goes deeper on a narrower scope. Only map as much as needed to uncover uncertainty and validate assumptions at that stage.
+
+| Stage | Scope | Depth | What you learn |
+|---|---|---|---|
+| **Idea shaping** | Whole initiative | Wide and shallow — epics + confirming stories | Is this worth doing? How big is it? |
+| **Discovery** | Next increment | Complete the map — all stories named | What is the work? What are the risks? |
+| **Exploration** | Next sprint's features | Deep-dive — acceptance criteria, edge cases, unknowns | Is each story ready to build? |
+| **Specification** | Individual stories | Concrete — Given/When/Then with real examples | Can we disagree about whether this is correct? |
+
+Do not invent detail from a deeper stage. Idea shaping produces epics and confirming stories, not scenarios. Discovery names all stories, but does not refine acceptance criteria. Exploration refines the next sprint's stories, not the whole map.
+
+### Stories are multi-purpose units
+
+A story simultaneously serves as a unit of **scope** (what to build), **value** (what the user gets), **planning** (what to schedule), **testing** (what to verify), and **conversation** (what to discuss). Written detail adds just enough structure to enable focused dialogue — not enough to replace one.
+
+### Altitude levels and sizing
+
+Stories exist at multiple altitudes: **Epic** → nestable **SubEpic** → **Story**. Each level has sizing guardrails: 4–9 direct children per parent. A story has 5–9 acceptance criteria or 3–5 testable scenarios and completes in days. "Stop at sea level" — do not write stories below the level of a discrete user action and observable system response.
+
+### Scatter-aggregate
+
+Decompose the large problem (epic, increment) into progressively finer-grained units — epics to sub-epics to stories. Work each piece independently. Then reassemble them for integration testing and release. The story map is the picture of both the scatter and the planned reassembly.
+
+### Spine-first and marketable increments
+
+The spine is the thinnest end-to-end path that delivers core value — "if we ran out of money next week, what would we ship?" Build iteratively outward from the spine. Each increment delivers something users can do after it ships.
+
+When splitting increments, apply **eight splitting dimensions**: Users (role/context), Data Variations, Workflow (simple before complex), Environment (technology/channel), Interfaces (interaction modes), Subjective Quality (NFRs), Business Rule Variations, and Uncertainty (spike the unknown first).
+
+### Collaborative ownership
+
+Story development is a **team sport**. The product owner identifies, the analyst specifies, the tester adds edge cases and real-world data, the developer estimates and collaborates on acceptance criteria. The whole team owns every story — stories are not sequential hand-offs between roles.
+
+---
+
 ## Shared rules
 
 - **`vocabulary-traces-to-domain-source`** — Trace terms to domain language / model when present.
@@ -79,23 +130,9 @@ Key rules: `branch-on-mechanical-uniqueness` — split on distinct mechanics, no
 
 **Produce:** Same `{story}.{tier}.py` tree as acceptance_tests. Pass `format markdown` only when the strategy command names it.
 
-Specification by example: create specifications through **concrete scenarios** with preconditions (**Given**), a triggering action (**When**), and observable outcomes (**Then**). **And** continues a block; start a new **When** when the actor or trigger changes. Use **Background** only when 3+ scenarios share identical starting state (Given/And only — no When/Then). Use **Scenario Outline** with `{column_name}` tokens and an **Examples** table when variation is real and steps are identical; use plain **Scenario** for distinct flows (happy path, rejection, edge case).
+Create specifications through **concrete scenarios** with preconditions (**Given**), a triggering action (**When**), and observable outcomes (**Then**). **And** continues a block; start a new **When** when the actor or trigger changes. Use **Background** only when 3+ scenarios share identical starting state (Given/And only — no When/Then). Use **Scenario Outline** with `{column_name}` tokens and an **Examples** table when variation is real and steps are identical; use plain **Scenario** for distinct flows (happy path, rejection, edge case).
 
-When AC exist (WHEN/THEN from acceptance criteria), use the main-flow AC as the spine — convert to Given/When/Then, add preconditions to make it runnable, then add scenarios for failures, edges, and alternate flows. Scenarios are not throwaway analysis — they become executable requirements that stay current as the system evolves.
-
-Scenarios ground the domain model. Concept names must match domain language exactly. Example table columns (`customer_name | account_number | payment_product`) ground data in domain relational structure — tables showing only one concept's fields lose the relations.
-
-### Mental model
-
-**Explore the full interaction surface — not just the happy path.** The main flow is the starting point, not the finish line. Systematically walk every branch: inline validation rules and how they change while typing, field-level errors clearing as input conforms, cross-field rules (confirm password mismatch, date range overlap), submit-button gating, server-side error surfaces. A story that only codifies the happy path when the screen has rich client-side validation is a defect. Branch into additional scenarios per mechanical variation.
-
-**Same flow, different data = outline with examples table.** Different flow = separate scenario. Use outlines when the same interaction produces different results based on input combinations. Use individual scenarios when the flow structure itself diverges.
-
-**Every Given/When/Then step traces to a named domain operation.** Given states conditions the running system actually uses for the behavior under test — not fields the code never reads. When holds the single domain operation being exercised — never empty, never buried inside Then. Then observes what When already produced — no I/O, no further operations. If a step can't trace to a domain operation, that's a modeling gap — add the operation, don't gloss over it.
-
-**Example data traces to the specification — never invent data.** Every value in a scenario must come from the Examples table or from a fixture derived from it. Stubs receive and return the exact values named in the examples — not defaults or placeholders that happen not to break the test. If the spec says 3 plan cards, assert exactly 3 — not `>= 1`.
-
-**Concrete enough to disagree.** If you showed these scenarios to a domain expert and a developer, would they argue about whether the output is correct? If not, the examples are too vague. Realistic domain values surface edge cases that `John Doe, $100` never will. Check: what state combinations have we not explored? What happens at zero, one, many, max, just-over-max?
+Use scenarios to ground the domain model. Concept names in examples must match model language exactly. Example table columns should relate data across relational structure as well.
 
 ### Rules
 
