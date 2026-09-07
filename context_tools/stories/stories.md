@@ -2,16 +2,6 @@
 
 Map stakeholder and system interactions as behaviours that deliver a solution.
 
-Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic` → `Story`. Each story is `Scenario`s with discrete steps; backgrounds and scenarios carry examples.
-
-| Fidelity | Default Format | Produce |
-|---|---|---|
-| **story_map** | markdown | Story map |
-| **scenarios** | python | Main-flow scenarios per story — `{story}.{tier}.py` GWT files. Pass `format markdown` only when the strategy asks for a markdown view. |
-| **acceptance_tests** | python | Same `{story}.{tier}.py` tree as scenarios. CE runs alongside for wrap classes. |
-
-**Templates** live under `templates/` per format. **Scanners** read the canonical model only — never language syntax.
-
 ---
 
 ## Mental model
