@@ -5,11 +5,10 @@ fidelity: all
 <!--
   clean_engineering markdown template — unified across all fidelities.
 
-  INTERFACES ARE OPTIONAL (see clean_engineering.md § Interfaces). This template shows
-  the `I{ClassName}` form because it is the richer case to document. Default to
-  skipping `## I{ClassName}` entirely and starting straight at `## {ClassName}` (empty,
-  untagged Md members at model) unless the user asked for an interface, or the module
-  genuinely has multiple layers/implementations behind one seam.
+  I{ClassName} is not the default. When generated, it lives in the same file /
+  same module H1 as {ClassName} — public members only on I{ClassName}; private
+  members stay on {ClassName}. Omit ## I{ClassName} unless the user asked or
+  multiple implementations sit behind one seam.
 
   Fidelity tags on section headings (as HTML comments — informational only):
     L  = language companion (prose identity; refined at every stage — not a fidelity)
