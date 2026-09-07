@@ -170,13 +170,6 @@ Use when an examples table adds no value — express mechanical variation as sib
 # Scenario template — refer to context_tools/language-tools.md for tooling.
 #
 # ```
-# # Params — fill before writing code
-# epic:       {epic-verb-noun}           # kebab folder under tests/
-# sub_epic:   {sub-epic-verb-noun}       # kebab folder under epic/ (omit level if story hangs off epic)
-# story:      {story-verb-noun}          # Verb Noun title from the story map
-# story_file: {story_snake_slug}         # snake file slug, e.g. sign_up_create_account
-# tier:       e2e | front-end | back-end | {system}
-#
 # # Artifact layout (artifacts-mirror-story-hierarchy)
 # tests/
 #   {epic-verb-noun}/
