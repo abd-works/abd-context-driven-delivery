@@ -152,7 +152,7 @@ Analyze the source context to identify the concepts and operations the domain al
 
 **Give each class one clear, focused responsibility.** When a class accumulates operations spanning different concerns, it reveals missing classes — split by the data each group of operations works with, this will reveal a hidden conceptthis will reveal a hidden concept. Keep the public surface narrow: a few well-named operations that express intent, not a long list of methods covering every concern the system touches.
 
-**Get typing right.** When a concept varies, decide whether that variation is a property or a subtype. Use a **property** when the variation is data — a `status` field that holds different values. Use a **subtype** when the variation changes behavior — a `PremiumAccount` that overrides how `Account` calculates fees. If the variation does not change what the object *does*, it is a property, not a new class.
+**Get typing right.** When a concept varies, decide whether that variation is a property or a subtype. Use a **property** when the variation can be captured through the data — a `type` field that associates an object to different values held in a type table. Use a **subtype** when the variation changes behavior — a `PremiumAccount` that overrides how `Account` calculates fees. If the variation does not change what the object *does*, it is a property, not a new class.
 
 **Make dependencies explicit.** Pass publicly accessible and swappable collaborators through the constructor — never reach for a global. When modelling relationships, choose by lifecycle: composition when the owner controls the other's lifecycle, aggregation when the collector has no meaning without its members, association when both sides are independent.
 
@@ -312,31 +312,6 @@ State which side **navigates** to the other — direction is explicit.
 - Edit so the implemented public surface matches the seam already designed — a short caller-facing API with real behaviour behind it, still living in the module folder.
 
 
-
-### Procedure
-
-**Test shape ladder** — applies to all code tests regardless of framework (unit BDD, agent BDD, story ATDD). `@bdd` and `@stories` sessions refer here instead of duplicating this workflow.
-
-**Mandatory.** Whenever you are writing or testing production code at this fidelity, you **MUST** follow this ladder — no exceptions, no stub-first shortcuts.
-
-Do the **opposite of the human default** and the **AI shortcut**: humans stub early for speed; agents stub to get to green without really testing anything. Test real conditions first — **no automated tests**; do it manually. Discover real shape, then test with stubs and lock fast regression tests, then extend with real conditions from the first pass. **Every error is an additional test.**
-
-1. **Discover with real conditions (MUST run first)** — No stub, no mock on the subject or the integration path you are proving. Call exactly as the user would.
-  - **AI utility** — real sub-agents pretending to type to the user (`@agent_bdd`); never mock the harness.
-  - **Website** — real standup / running app; reconcile live before locking tests.
-  - **Backend** — real backend or documented local integration endpoint.
-  - **Goal** — learn the real shape of responses, files, and side effects before any mock knows what to return.
-  - **Signatures only** — write a test method signature for every failure you encounter (do **not** implement tests yet).
-2. **Stub TDD (fast suite)** — Only after step 1 and once code works: write two-pass tests with stubs/mocks at **architecture boundaries** only (never the subject under test). Stubs **MUST** match the observed real shape. These tests run on every change (regression TDD).
-3. **E2E swap (on request)** — Separate test class or file: same signature, same assertions, swap stubs for real collaborators. Extend or inherit from the fast suite where practical. **Final run** with production collaborators. In future, run only when the user asks for e2e / integration / full stack.
-
-**File layout (Python/Mamba example):**
-
-
-| File                   | When run                                           |
-| ---------------------- | -------------------------------------------------- |
-| `{module}_spec.py`     | Always — fast stub/isolated suite                  |
-| `{module}_e2e_spec.py` | On explicit e2e request — production collaborators |
 
 
 

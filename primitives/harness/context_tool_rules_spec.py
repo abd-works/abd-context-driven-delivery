@@ -57,18 +57,18 @@ with description("context tool rules"):
         expect(by_name["code"].body).to(contain("keep-operations-small-focused"))
         expect(by_name["code"].globs).to(equal("**/*.py,**/*.js,**/*.ts,**/*.java,**/*.c,**/*.cs"))
 
-    with it("should extract code procedure from clean_engineering.md"):
-        specs = procedures_for_context_tool(
+    with it("should discover rule files from rules/ subfolder"):
+        from harness.context_tool_rules import rules_from_rules_folder
+
+        specs = rules_from_rules_folder(
             _REPO_ROOT / "context_tools" / "clean_engineering",
             slug="clean_engineering",
-            class_name="CleanEngineering",
         )
         by_name = {s.name: s for s in specs}
-        expect("code-procedure" in by_name).to(be_true)
-        expect(by_name["code-procedure"].body).to(contain("you MUST follow this procedure"))
-        expect(by_name["code-procedure"].body).to(contain("Test shape ladder"))
-        expect(by_name["code-procedure"].body).to(contain("Discover with real conditions"))
-        expect(by_name["code-procedure"].globs).to(equal("**/*.py,**/*.js,**/*.ts,**/*.java,**/*.c,**/*.cs"))
+        expect("testing-approach" in by_name).to(be_true)
+        expect(by_name["testing-approach"].body).to(contain("Test shape ladder"))
+        expect(by_name["testing-approach"].body).to(contain("Discover with real conditions"))
+        expect(by_name["testing-approach"].tool_slug).to(equal("clean_engineering"))
 
     with it("should place procedures under context_tools/{slug}/ as {name}.mdc"):
         rule = Rule("Cursor", "code-procedure")
@@ -110,25 +110,25 @@ with description("Harness deploy context tool rules"):
         expect(kit.read_text(encoding="utf-8")).to(contain("alwaysApply: false"))
         expect(scenarios.read_text(encoding="utf-8")).to(contain("@stories-scenarios"))
 
-    with it("should write clean_engineering code-procedure on Cursor deploy"):
+    with it("should write clean_engineering rules-folder rule on Cursor deploy"):
         from harness.harness import Harness
 
-        root = Path(tempfile.mkdtemp(prefix="harness-procedure-"))
+        root = Path(tempfile.mkdtemp(prefix="harness-rules-folder-"))
         Harness("Cursor", repo_root=_REPO_ROOT).write_deploy(
             deploy_path=str(root / ".cursor"),
             source="clean_engineering",
         )
-        procedure = (
+        rule_file = (
             root
             / ".cursor"
             / "rules"
             / "context_tools"
             / "clean_engineering"
-            / "code-procedure.mdc"
+            / "testing-approach.mdc"
         )
-        expect(procedure.is_file()).to(be_true)
-        expect(procedure.read_text(encoding="utf-8")).to(contain("Test shape ladder"))
-        expect(procedure.read_text(encoding="utf-8")).to(contain("alwaysApply: false"))
+        expect(rule_file.is_file()).to(be_true)
+        expect(rule_file.read_text(encoding="utf-8")).to(contain("Test shape ladder"))
+        expect(rule_file.read_text(encoding="utf-8")).to(contain("alwaysApply: false"))
 
     with it("should not write context tool rules for VS Code deploy"):
         from harness.harness import Harness

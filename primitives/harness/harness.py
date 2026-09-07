@@ -28,6 +28,7 @@ from harness.context_tool_rules import (
     all_context_tool_mdc_specs,
     all_context_tool_procedure_specs,
     all_context_tool_rule_specs,
+    all_rules_folder_specs,
 )
 from harness.rule import Rule
 from harness.skill import Skill
@@ -520,6 +521,22 @@ class Harness:
             if wanted and wanted != spec.tool_slug and not wanted.startswith(f"{spec.tool_slug}-"):
                 continue
             key = (f"{spec.tool_slug}-{spec.name}", "procedure")
+            if key in seen:
+                continue
+            seen.add(key)
+            rule = Rule(self.type, spec.name)
+            rule.description = spec.description
+            rule.globs = spec.globs
+            rule.always_apply = False
+            rule.body = spec.body
+            rule.subfolder = f"context_tools/{spec.tool_slug}"
+            rule.write(roots)
+            self.rules.append(rule)
+            names.append(f"{spec.tool_slug}/{spec.name}")
+        for spec in all_rules_folder_specs(self.repo_root):
+            if wanted and wanted != spec.tool_slug and not wanted.startswith(f"{spec.tool_slug}-"):
+                continue
+            key = (f"{spec.tool_slug}-{spec.name}", "rules-folder")
             if key in seen:
                 continue
             seen.add(key)
