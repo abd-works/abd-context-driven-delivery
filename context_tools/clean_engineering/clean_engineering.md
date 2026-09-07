@@ -107,21 +107,9 @@ Document only the **public seam** in module-context — what callers invoke, wha
 
 A class is a named idea that earns its own identity because it has at least one of: **distinct identity**, **state**, **behavior**, **structure**, or **interactions** that cannot be collapsed into a property, instance, or subtype of something else. A class knows things (**state**), does things (**behavior**), interacts with other things (**interactions**), has (**relationships**) with other things, can be a sub type of other things (**inheritance**), and can implement (**interfaces**) — finally, it maintains the (**invariants**) that constrain it.
 
-### Properties
+### Properties — what the class remembers across calls. Named as a **noun phrase** (*remaining budget*, *active status*). May be typed or untyped.
 
-The class must remember something across calls. Named as a **noun phrase**: *remaining budget*, *active status*, *target character*. A **property** encapsulates information a class exposes to its callers together with the logic required to access or update it. A property may be **typed** — carries a concrete type like `Person`, `int`, or `Car` or can be untyped.
-
-- `use-property-not-accessor` — Use `@property` (or the language equivalent) for read-only computed values; do not use `get_` / `set_` method prefixes.
-
-### Operations
-
-The class must do something on demand. Named as a **verb phrase**: *charge card*, *reserve seat*, *compute total*. An **operation** is an action a class performs or a result it computes on demand. Operations may be entirely stateless — depending only on their parameters — or work with the class's own state.
-
-- `keep-operations-single-responsibility` — Each operation has one reason to change — pure calculation or orchestration, not both. An operation doing two things reveals either a missing operation or a missing class.
-- `separate-concerns` — Pure calculation separate from I/O and mutation.
-- `use-clear-operation-parameters` — Prefer 0–2 parameters. When more configuration is needed, the extra parameters reveal a missing value object — promote them to a new class and pass that instead.
-
-
+### Operations — what the class does on demand. Named as a **verb phrase** (*charge card*, *compute total*). May use the class's own state or only its parameters.
 
 ### Interfaces (`I{Class}`) — optional
 
@@ -160,37 +148,20 @@ Relationship kind and cardinality are added  here. Three kinds, chosen by lifecy
 
 Value objects that merely describe (`Money` on a Transaction, `PortingInfo` on a number) are **association** or a property — not composition diamonds. Composition is for parts whose lifecycle the owner controls.
 
-### Interactions (optional at this fidelity)
+### Interactions (optional) — one class's operation calling another's (`-> {collaborator}.{operation}` nested under the caller). Name them at model or skip; they stay prose until **code**.
 
-An **interaction** is one class's operation calling another class's operation — who talks to whom, and about what. You **may** name interactions at **model** fidelity to capture collaboration/sequencing intent early; naming none is equally valid — this is optional, not a required artifact for reaching model.
-
-Reuse the exact notation from `templates/{tool}-sketch.md`'s **Notation**/**Interaction rules** — do not invent a parallel bullet convention:
-
-Do **not** invent `- **Interaction:** calls {Other}.{operation}` or use `- **Invariant:** …` as the sketch/model collaboration marker — that is a parallel symbol set. Sketch/`## model` interactions and notes use `->` / `//` only. Language companion's `- **Invariant:** … <!-- L -->` and Spec's indented `Interaction:` / `Invariant:` labels are different surfaces; neither replaces the sketch notation.
-
-- Nest `-> {collaborator}.{operation}` directly under the calling operation — a real call on a held property, peer, or `super`. No parameters, no body, just the receiver and the operation (or `x = {collaborator}.{attribute}` for a field read).
-- Nest `// …` under the same operation for any invariant or sequencing note — including looping/conditionals around the call (e.g. `// once per {item} in {collection}`). Control flow is a `//` note, never folded into the `->` line.
-- `ce-comments-are-for-invariants-and-sequencing-notes-only` — `//` is must/never/always/before/after notes only. Do not use `//` for descriptive prose, implementation asides, or cross-references.
-- `-> ClassName` alone (pointing at a type, not an operation) is not an interaction.
-- Naming an interaction here does **not** add a method to `I{Class}` or `Class` — it stays prose (or class-docstring bullet) until **code**.
-- At **code** fidelity, any interaction named here becomes a real `@interaction` abstract stub method on `Class` (not on `I{Class}`) — see `## code` Phase 1 — and is dropped once implemented in Phase 2.
-
-
-
-### Invariants (optional at this fidelity)
-
-An **invariant** is a rule that must hold for every valid instance of the class, regardless of which operation last ran. You **may** state invariants at **model** fidelity in plain English; leaving them unstated is equally valid — this is optional, not a required artifact for reaching model.
-
-- State a class-level invariant (one that holds regardless of which operation ran, not tied to one call) the same way: a `// …` line, on the class rather than nested under one operation (e.g. `// remaining budget never goes negative`).
-- An invariant named here is prose only — it does not gate any method body until **code**.
-- At **code** fidelity, any invariant named here gets pinned down as a **comment** (not an enforcement method) on `Class` — see `## code` Phase 1 and Phase 2.
-
-
+### Invariants (optional) — a rule that must hold for every valid instance (`// remaining budget never goes negative` on the class). Name them at model or skip; they become comments at **code**, not enforcement methods.
 
 ### Rules
 
 Before promoting a term to its own class, check whether it fits as a **property** (see *Properties*), an **instance** (see *Instances*), or a **subtype** (see *Inheritance and subtypes*). Only when none of those three fit does something deserve its own class.
 
+- `use-property-not-accessor` — Use `@property` (or the language equivalent) for read-only computed values; do not use `get_` / `set_` method prefixes.
+- `keep-operations-single-responsibility` — Each operation has one reason to change — pure calculation or orchestration, not both. An operation doing two things reveals either a missing operation or a missing class.
+- `separate-concerns` — Pure calculation separate from I/O and mutation.
+- `use-clear-operation-parameters` — Prefer 0–2 parameters. When more configuration is needed, the extra parameters reveal a missing value object — promote them to a new class and pass that instead.
+- `interactions-are-operation-calls` — Nest `-> {collaborator}.{operation}` under the calling operation. `-> ClassName` alone is not an interaction. Do not invent `- **Interaction:**` bullets.
+- `invariants-are-class-level-notes` — Class-level invariants sit as `//` on the class, not under one operation. They do not become methods.
 - `keep-classes-single-responsibility` — Each class has **one reason to change**.
 - `hide-inner-details` — Expose **behavior** through named methods; callers see what the class does, not how it stores or arranges its information.
 - `eliminate-duplication` — Repeated logic gets one canonical function.
