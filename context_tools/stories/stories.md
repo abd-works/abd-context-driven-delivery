@@ -30,18 +30,14 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 **Default format:** markdown
 
-**Goal:** Shape the hierarchy — `Epic` → nestable `SubEpic` → `Story` — decomposed on real mechanical variation, not requirement-row bookkeeping.
-
 **Produce:** Story map.
 
-A story map is a visual hierarchy of how users and systems interact with a product — outcomes and behaviors, not tasks or tickets. It answers: who uses the system (**Actors**), what are the major capability areas (**Epics**), and how do users move through them step by step (**Stories**).
+**Goal:** Define a visual, hierarchical model of how users and systems interact with a product or service; as a hiererachy of — `Epic` → nestable `SubEpic` → `Story`.
 
-**Actors** are users (Customer, Admin, Agent) or systems (Payment gateway, Scheduler) that interact with the product. Each actor's goals drive the epics below them.
 
-**Epics** are major capability areas — containers for flows, not stories themselves. Named verb–noun: `Manage Customer Orders`, `Process Payments`. A medium system has 3–8 top-level epics. Epics nest into **SubEpics** — distinct flows or phases within a capability area (`Place New Order`, `Cancel Order`). Depth is typically 1–2 levels.
+**Actors** are users or systems that interact with the system.
 
-**Stories** are the leaves — each a discrete, observable behavior independently testable in principle. Named verb–noun (`Place Order`, `Validate Payment`); actor goes in `story_type` metadata, not the title. Stories are behaviors, not tasks — "process payment" not "call the payments API." Story types: `user` (human), `system` (automated/external), `technical` (infra — use sparingly).
-
+**Epics** are major capability areas — containers for flows. Named verb–noun: `Manage Customer Orders`, `Process Payments`. Epics nest into **SubEpics**,  then **Stories** — each a discrete, observable behavior independently testable. Stories are verb–noun (`Place Order`, `Validate Payment`); and are behaviors, not tasks.
 ### Mental model
 
 **Analyze mechanics before grouping.** For each entity type under a shared heading, list: (a) what the user configures, (b) what the system validates or resolves, (c) what runtime lifecycle it has. Group stories by that analysis — not by category label, source heading, or shared name. Five "shipping methods" under one heading may require five stories if each has different rate logic, carrier APIs, and compliance rules.
@@ -82,6 +78,12 @@ Key rules: `branch-on-mechanical-uniqueness` — split on distinct mechanics, no
 **Goal:** Main-flow scenarios per story (single or multiple) with optional variations.
 
 **Produce:** Same `{story}.{tier}.py` tree as acceptance_tests. Pass `format markdown` only when the strategy command names it.
+
+Specification by example: create specifications through **concrete scenarios** with preconditions (**Given**), a triggering action (**When**), and observable outcomes (**Then**). **And** continues a block; start a new **When** when the actor or trigger changes. Use **Background** only when 3+ scenarios share identical starting state (Given/And only — no When/Then). Use **Scenario Outline** with `{column_name}` tokens and an **Examples** table when variation is real and steps are identical; use plain **Scenario** for distinct flows (happy path, rejection, edge case).
+
+When AC exist (WHEN/THEN from acceptance criteria), use the main-flow AC as the spine — convert to Given/When/Then, add preconditions to make it runnable, then add scenarios for failures, edges, and alternate flows. Scenarios are not throwaway analysis — they become executable requirements that stay current as the system evolves.
+
+Scenarios ground the domain model. Concept names must match domain language exactly. Example table columns (`customer_name | account_number | payment_product`) ground data in domain relational structure — tables showing only one concept's fields lose the relations.
 
 ### Mental model
 
