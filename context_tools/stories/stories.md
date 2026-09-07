@@ -16,15 +16,12 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ## Mental model
 
-Use stories to progressively explore a problem and solution surface. **Think hierarchically** and write action-oriented interactions between users and systems at multiple levels of detail; **Epics** - business capabilities or end-to-end outcomes, often decomposed into **Sub-Epics**, and then **Storis**  a discrete user or system action and observable system response. `Manage User Accounts` → `Register New User` → `Enter Contact Details`, not `Build Registration Database`.  FLesh out the solution at multiple levels of detail;  Size each level so it contains no more than 7–9 items at the next level down.
+Use stories to progressively explore a problem and solution surface. **Think hierarchically** and write action-oriented interactions between users and systems at multiple levels of detail; **Epics** - business capabilities or end-to-end outcomes, often decomposed into **Sub-Epics**, and then **Storis**  a discrete user or system action and observable system response. `Manage User Accounts` → `Register New User` → `Enter Contact Details`, not `Build Registration Database`.
 
-**Start by outlining the overall map.** Lay down the overarching hierarchy using epics then groud epics with a few confirming stories. determine what you can from context and try to extrapolate the rest from patterns already found. **Then define the spine** the thinnest end-to-end path that delivers core value. Sketch one or two later increments to show where the remaining scope lands, but keep them light.
+**Start by outlining the overall map.** Lay down the overarching hierarchy using epics then groud epics with a few confirming stories. determine what you can from context and try to extrapolate the rest from patterns already found. **Then define the spine** the thinnest end-to-end path that delivers core value. Sketch one or two later increments to show where the remaining scope lands, but keep them light. 
 
-**Then decompose by increment.** Take the spine increment and break it down — fully name the sub-epics and stories within it. When an increment is too large, split along these dimensions: Users (role/context), Data Variations, Workflow (simple before complex), Environment (technology/channel), Interfaces (interaction modes), Subjective Quality (NFRs), Business Rule Variations, and Uncertainty (spike the unknown first).
-
-**Then define scenarios.** Start with the basic main-flow scenario for each story — the happy path through Given/When/Then. Then flesh out alternate flows, rejection paths, and edge cases. Add examples tables when the same flow produces different outcomes based on input variation. Each scenario must be concrete enough that a domain expert and a developer would argue about whether the output is correct.
-
-**Then lock acceptance tests.** Turn the scenarios into executable specifications. Design the API through failing tests — call the real expected class and method even when they do not exist yet. The test fails first (RED), the failure message reveals the API design, then make it pass (GREEN).
+**Detail out stories in small increments** Start with the basic main-flow scenario for each story — the happy path through Given/When/Then. Then flesh out alternate flows, rejection paths, and edge cases. Add examples tables when the same flow produces different outcomes based on input variation.  Treat each story as a blueprint for developing **executable specifications** using **acceptance test driven development**. Design the solution through tests that call the real code even when it 
+do not exist yet (Red/Green/Refactor), write code until tests pass
 
 ---
 
@@ -52,19 +49,7 @@ Use stories to progressively explore a problem and solution surface. **Think hie
 **Actors** are users or systems that interact with the system.
 
 **Epics** are major capability areas — containers for flows. Named verb–noun: `Manage Customer Orders`, `Process Payments`. Epics nest into **SubEpics**,  then **Stories** — each a discrete, observable behavior independently testable. Stories are verb–noun (`Place Order`, `Validate Payment`); and are behaviors, not tasks.
-### Mental model
 
-**Analyze mechanics before grouping.** For each entity type under a shared heading, list: (a) what the user configures, (b) what the system validates or resolves, (c) what runtime lifecycle it has. Group stories by that analysis — not by category label, source heading, or shared name. Five "shipping methods" under one heading may require five stories if each has different rate logic, carrier APIs, and compliance rules.
-
-**Distinct mechanics = distinct stories.** Compare entity-type workflows before writing: entities with identical workflows share one parameterized story; entities with different workflows get separate stories. This holds across all lifecycle phases — configuration, runtime, and reporting. A payments domain with 8 instrument types may need only 3 stories if wire (correspondent-bank routing), card (auth-capture-settle), and ACH (batch-and-clear) are the three distinct clearing mechanics — and cheque, BPAY, direct debit share ACH's workflow.
-
-**Same mechanics, different data = consolidate.** Merge stories that share the same logic but differ only by value (six address fields → one `Validate Address Field` story). When consolidating, add **Consolidation Notes** listing which variants the AC phase must specify per variant — the parenthetical hint `(type A, type B)` alone is insufficient.
-
-**Map all lifecycle phases and all directions.** After mapping forward stories, re-scan for reverse, compensating, defensive, and observational actions in the same context. An order system that maps `Place Order → Process Payment → Ship Order` but misses `Issue Refund`, `Cancel Reservation`, and `Apply Store Credit` has three stories with distinct mechanics hiding behind the forward path.
-
-**Check state changes for exit mechanics.** When a story creates a new state (escalated, held, locked), check whether the exit from that state has a different actor, action type, or check. If yes, the exit is a distinct story.
-
-**Thin-slice by marketable outcome.** Cut into increments where each delivers something users can do after it ships. The spine is the smallest path that delivers core value. Ship the riskiest learning first.
 
 ### Scaffold
 
