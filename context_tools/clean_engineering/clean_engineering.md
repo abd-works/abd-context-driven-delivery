@@ -26,7 +26,6 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 A **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
 - Consume the existing `{session}/{subject}-index.md` and partition chunks if they exist — **do not edit** or wipe partitions.
-- When nesting, the **parent module** owns shared base classes/terms (e.g. `powers` owns `Effect`). Specializing children use a path under the parent (`powers/attack`) and depend on the parent — not on siblings. Do **not** invent a `parent/base` submodule (e.g. no `powers/effect`) just to hold shared content; that content belongs on the parent. Diagram: path nesting = containment (children drawn inside the parent box).
 - Seed `{module}/.context/module-context.md` Thin: **Purpose**, **Seam** (public term/class names), **Dependencies**, optional **Extend** / **Mechanism** note. 
 - Name terms/classes only enough to show independence. Seed **language companion** prose for those names.
 - Seam terms: **one name per concept** (prefer the type name). Do not list singular and plural of the same term (e.g. `Ability` — not `Ability, Abilities`).
