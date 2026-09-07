@@ -21,7 +21,7 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 **Default format:** markdown  
 **Diagram format:** `drawio` (modules view — blue boxes, seam-term bullets, one-way dependency arrows; template `templates/modules.drawio`). Language channels (python/java/…) are for **model** and later — not required here.
 
-**Goal:** Refine **modules** purpose, primary use case, rationale, key terms, and relationship to other modules. Strive for **independent modules with one-way dependencies** and an explicit **build order**. Thin class/term identification only — enough to show independence.
+**Goal:** Partition a problem or solution space into independently understandable units — each a deep module with a narrow public seam and substantial implementation behind it. Name the units, their seams, and the one-way dependencies between them. Thin class/term identification only — enough to show independence. Do not invent types, method bodies, or relationship kinds yet.
 
 A **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
