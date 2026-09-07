@@ -113,13 +113,9 @@ An **interface** names the seam without naming the implementation — callers de
 
 ### Inheritance and subtypes
 
-A **base class** defines the common identity, state, and behavior shared by a family of related things. It owns everything that is true of every member of that family — the responsibilities, rules, and collaborations that do not change regardless of which specific variant you are dealing with.
+Write a **base class** when two or more types share the same identity, state, and operations — put that shared behavior in one place so it is not duplicated.
 
-A **subtype** is a class that specialises the base by adding or overriding behavior that only applies to it. The subtype inherits everything the base defines and records **only the delta** — inherited responsibilities are not repeated in the subtype. Use a subtype when the distinction changes what the thing *does*, not just what data it carries.
-
-#### Liskov Substitution rule
-
-**Anywhere the base is used, a subtype must work correctly in its place.** If swapping in a subtype breaks or weakens a rule the base guarantees, the subtype is not a true specialisation — it is a different thing that happens to share some behavior.
+Write a **subtype** when a variant changes what the thing *does*, not just what data it carries. Record **only the delta** — do not repeat inherited members. Anywhere the base is used, the subtype must work in its place.
 
 ### Relationships
 
