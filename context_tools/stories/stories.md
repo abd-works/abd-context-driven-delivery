@@ -16,9 +16,9 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ## Mental model
 
-Use stories to progressively explore a problem and solution surface. Think hierarchically and write action-oriented interactions between users and systems at multiple levels of detail: **Epics** (business capabilities or end-to-end outcomes), often decomposed into **Sub-Epics**, and then **Stories** (a discrete user or system action and observable system response). Stories get decomposed into **Scenarios**, and each scenarios are made up of **Steps**. `Manage User Accounts` → `Register New User` → `Enter Contact Details` → `Accept valid contact details` → `System confirms sucessful save of contact details`.
+**Think hierarchically** and use stories to progressively explore a problem and solution surface at multiple levels of detail: **Epics** (business capabilities or end-to-end outcomes), often decomposed into **Sub-Epics**, and then **Stories** (a discrete user or system action and observable system response). Stories get decomposed into **Scenarios**, and each scenarios are made up of **Steps**. `Manage User Accounts` → `Register New User` → `Enter Contact Details` → `Accept valid contact details` → `System confirms sucessful save of contact details`.
 
-At every level the naming pattern is the same: actor–action–subject with an optional qualifier. An epic, a sub-epic, a story, and a scenario all read the same way — only the altitude differs. Size each level so it contains no more than 7–9 items at the next level down. When a node accumulates too many children, promote it up a level; when it has too few, absorb it into its parent.
+**Write action-oriented interactions** between users and systems; at every level the thinking pattern is the same: actor–action–subject with an optional qualifier. An epic, a sub-epic, a story, a scenario, and each step in a scenario, all are saying the same thing at a different horizon and different level of detail. Size each level so it contains no more than 7–9 items at the next level down. When a node accumulates too many children, promote it or break it up; when it has too few, absorb it into its parent.
 
 ---
 
@@ -49,13 +49,10 @@ At every level the naming pattern is the same: actor–action–subject with an 
 
 ### Mental model
 
-Start by laying down the overarching hierarchy — epics covering the full capability surface. Ground each epic with a few confirming stories that prove the epic is real and the scope is right. Do not decompose further yet — determine what you can from context and extrapolate the rest from patterns already found.
+Decoompose user and system interactions into an overarching hierarchy — epics covering the full capability surface. Ground each epic with a few confirming stories that prove the epic is real and the scope is right.  **Then find the spine** — the thinnest end-to-end path that delivers core value. Sketch later increments to show where the remaining scope lands.
 
-Then find the spine — the thinnest end-to-end path that delivers core value. "If we ran out of money next week, what would we ship?" Mark that as the first increment. Sketch one or two later increments to show where the remaining scope lands, but keep them light.
 
-Then decompose by increment. Take the spine increment and fully name its sub-epics and stories. Analyze mechanics before grouping: for each entity type under a shared heading, list (a) what the user configures, (b) what the system validates or resolves, (c) what runtime lifecycle it has. Group stories by that analysis — not by category label, source heading, or shared name. Distinct mechanics require distinct stories; same mechanics with different data consolidate into one story with consolidation notes.
-
-After mapping forward stories, re-scan for reverse, compensating, defensive, and observational actions in the same context. When a story creates a new state (escalated, held, locked), check whether the exit from that state has a different actor, action type, or check — if yes, the exit is a distinct story.
+Map all the interactions required to achieve a business outcome — not just the primary user's forward path. Include supporting actors (administrators, call centre agents, operations) and the activities that make the product work: configuring catalogs, setting up pricing rules, onboarding partners. Then check for the reverse and defensive paths: cancellations, refunds, escalations, error recovery. When a story creates a new state, check whether the exit from that state has a different actor or action — if yes, the exit is a distinct story.
 
 When an increment is too large, split along these dimensions: Users (role/context), Data Variations, Workflow (simple before complex), Environment (technology/channel), Interfaces (interaction modes), Subjective Quality (NFRs), Business Rule Variations, and Uncertainty (spike the unknown first).
 
