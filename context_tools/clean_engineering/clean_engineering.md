@@ -70,9 +70,6 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 
 
 ---
-
-
-
 ## model
 
 **Default format:** Python
@@ -145,16 +142,7 @@ A single concrete implementation with no swapping need does not warrant a separa
 
 **Default (no interface):** the public seam is the empty `Class` stub introduced at **model** fidelity (properties/operations as empty contracts directly on `Class`, in its own family file) and filled in at **code** fidelity. The `## code` Phase 1 step of adding `Class(I{Class})` is skipped — there is no interface to implement.
 
-**Opt-in (interface requested):** the public seam is a separate interface named `I{Class}`, introduced at **model** fidelity. Properties and operations on the interface are empty contracts — typed signatures with no body.
-
-
-| Channel                 | `I{Class}` form                                                             |
-| ----------------------- | --------------------------------------------------------------------------- |
-| Python                  | `class IClass(ABC):` with `@abstractmethod` / `@property`+`@abstractmethod` |
-| Java                    | `public interface IClass`                                                   |
-| TypeScript / JavaScript | abstract or empty-method contract equivalent                                |
-| Markdown                | `### **I{Class}**` compact block (public members only)                      |
-
+**Opt-in (interface requested):** the public seam is a separate interface named `I{Class}`, introduced at **model** fidelity. Properties and operations on the interface are empty contracts — typed signatures with no body. Use the language template for the `I{Class}` form.
 
 **Code** adds `Class` that **extends / implements** `I{Class}` in the **same file**. Public members are filled on `Class`; private members are empty interfaces on `Class` only — never added to `I{Class}`. `I{Class}` stays as the stable seam throughout (including for hand-written test fakes). Existing production types may satisfy `I{Class}` informally without a formal extends clause.
 
