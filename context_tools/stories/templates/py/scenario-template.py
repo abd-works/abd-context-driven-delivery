@@ -11,7 +11,7 @@
 # tests/
 #   {epic-verb-noun}/
 #     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
-#       {story_snake_slug}.{tier}.py     # one GWT file per story per tier
+#       {story_snake_slug}.py            # one GWT file per story
 #
 # # Machinery — copy once per tests/ tree if missing (do not inline in skills):
 #   context_tools/stories/templates/py/story_test.py → tests/story_test.py

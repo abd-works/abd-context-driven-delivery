@@ -6,7 +6,7 @@
  * tests/
  *   {epic-verb-noun}/
  *     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
- *       {story-kebab-slug}.{tier}.ts     # one GWT file per story per tier
+ *       {story-kebab-slug}.ts            # one GWT file per story
  *
  * # Machinery — copy once per tests/ tree if missing (do not inline in skills):
  *   context_tools/stories/templates/ts/story-test.ts → tests/story-test.ts
