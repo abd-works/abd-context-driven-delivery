@@ -103,9 +103,9 @@ Analyze the source context to identify the concepts and operations the domain al
 
 Document only the **public seam** in module-context — what callers invoke, what they must or must not do, and how to extend. Internal design, private participants, and implementation notes stay in source code. If the module-context needs to explain internals for callers to succeed, the public surface is not well designed.
 
-### What is a class
+### Classes
 
-A class is a named idea that cannot be collapsed into a property, instance, or subtype of something else. It has **properties** (what it remembers — noun phrases, typed or untyped), **operations** (what it does on demand — verb phrases), **interactions**, **relationships**, **inheritance**, **interfaces**, and **invariants**.
+Group concepts that have their own identity, state, or behavior — and cannot collapse into a property, instance, or subtype of something else — into **classes**. Classes have **properties** (what they remember — noun phrases, typed or untyped), **operations** (what they do on demand — verb phrases), **interactions**, **relationships**, **inheritance**, **interfaces**, and **invariants**.
 
 ### Interfaces (`I{Class}`) — optional
 
