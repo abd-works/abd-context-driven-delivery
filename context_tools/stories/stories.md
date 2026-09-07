@@ -16,7 +16,7 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ## Mental model
 
-Use stories to progressively explore a problem and solution surface. Think hierarchically and write action-oriented interactions between users and systems at multiple levels of detail: **Epics** (business capabilities or end-to-end outcomes), often decomposed into **Sub-Epics**, and then **Stories** (a discrete user or system action and observable system response). Stories get decomposed into **Scenarios**, and elaborated on with examples `Manage User Accounts` → `Register New User` → `Enter Contact Details` → *Given a new user on the registration page, When they submit valid contact details, Then the account is created and a confirmation email is sent*. Size each level so it contains no more than 7–9 items at the next level down. At every stage, explore what you can see, then extrapolate the rest from patterns already found.
+Use stories to progressively explore a problem and solution surface. Think hierarchically and write action-oriented interactions between users and systems at multiple levels of detail: **Epics** (business capabilities or end-to-end outcomes), often decomposed into **Sub-Epics**, and then **Stories** (a discrete user or system action and observable system response). Stories get decomposed into **Scenarios**, and elaborated on with examples `Manage User Accounts` → `Register New User` → `Enter Contact Details` → `Valid contact details accepted`. Size each level so it contains no more than 7–9 items at the next level down. At every stage, explore what you can see, then extrapolate the rest from patterns already found.
 
 ---
 
