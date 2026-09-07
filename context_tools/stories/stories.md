@@ -52,7 +52,8 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 Decoompose user and system interactions into an overarching hierarchy — epics covering the full capability surface. Ground each epic with a few confirming stories that prove the epic is real and the scope is right.  **Then find the spine** — the thinnest end-to-end path that delivers core value. Sketch later increments to show where the remaining scope lands.
 
 
-Map all the interactions required to achieve a business outcome — not just the primary user's forward path. Include supporting actors (administrators, call centre agents, operations) and the activities that make the product work: configuring catalogs, setting up pricing rules, onboarding partners. Then check for the reverse and defensive paths: cancellations, refunds, escalations, error recovery. When a story creates a new state, check whether the exit from that state has a different actor or action — if yes, the exit is a distinct story.
+Map all the interactions required to achieve a business outcome — not just the primary user's forward path. Include supporting actors (administrators, call centre agents, operations) and the activities that make the product work: configuring catalogs, setting up pricing rules, onboarding partners. Then check for the reverse and defensive paths: cancellations, refunds, escalations, error recovery. For multi-system solutions, map each distinct system-to-system hop as its own story using the same behaviour-oriented language: `Validate Payment Eligibility`, `Authorize Card Transaction`, not `Send request to gateway` or `Receive response`.
+
 
 When an increment is too large, split along these dimensions: Users (role/context), Data Variations, Workflow (simple before complex), Environment (technology/channel), Interfaces (interaction modes), Subjective Quality (NFRs), Business Rule Variations, and Uncertainty (spike the unknown first).
 
