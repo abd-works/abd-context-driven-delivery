@@ -23,7 +23,7 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 **Goal:** Partition a problem or solution space into independently understandable units — each a deep module with a narrow public seam and substantial implementation behind it. Name the units, their seams, and the one-way dependencies between them. Thin class/term identification only — enough to show independence. Do not invent types, method bodies, or relationship kinds yet. Each **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
-- Write `{module}/.context/module-context.md` as the caller-facing contract only: **Purpose**, **Primary use case**, **Rationale**, **Seam** (public term/class names), **Public API** / **Constraint**, **Dependencies** (one-way module names), and optional **Extend** / **Mechanism**. 
+- Write the caller-facing contract only: **Purpose**, **Primary use case**, **Rationale**, **Seam** (public term/class names), **Public API** / **Constraint**, **Dependencies** (one-way module names), and optional **Extend** / **Mechanism**. 
 - Name terms/classes only enough to show independence. Write **language companion** prose for those names.
 - Seam terms: **one name per concept** (prefer the type name). Do not list singular and plural of the same term (e.g. `Ability` — not `Ability, Abilities`).
 - Do not add types, method bodies, or relationship kinds (composition / aggregation / association).
@@ -105,7 +105,7 @@ Document only the **public seam** in module-context — what callers invoke, wha
 
 ### Classes
 
-Group concepts that have their own identity, state, or behavior — and cannot collapse into a property, instance, or subtype of something else — into **classes**. Classes have **properties** (what they remember — noun phrases, typed or untyped), **operations** (what they do on demand — verb phrases), **interactions**, **relationships**, **inheritance**, **interfaces**, and **invariants**.
+Group concepts that have their own identity, state, and behavior — into **classes**. Write classes as a set of **properties** (what they remember — noun phrases, typed or untyped), **operations** (what they do on demand — verb phrases), **interactions**, **relationships**, **inheritance**, **interfaces**, and **invariants**.
 
 ### Interfaces (`I{Class}`) — optional
 

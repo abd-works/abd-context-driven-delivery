@@ -52,6 +52,8 @@ This paragraph IS the class definition. Identity only.}           <!-- L -->
 
 ## Modules                                                        <!-- Mu -->
 
+# FILE: {module}/.context/module-context.md
+
 Build order: `{first}` → `{second}` → `{third}`
 
 ---
