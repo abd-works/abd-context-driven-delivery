@@ -34,6 +34,14 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 **Produce:** Story map.
 
+A story map is a visual hierarchy of how users and systems interact with a product — outcomes and behaviors, not tasks or tickets. It answers: who uses the system (**Actors**), what are the major capability areas (**Epics**), and how do users move through them step by step (**Stories**).
+
+**Actors** are users (Customer, Admin, Agent) or systems (Payment gateway, Scheduler) that interact with the product. Each actor's goals drive the epics below them.
+
+**Epics** are major capability areas — containers for flows, not stories themselves. Named verb–noun: `Manage Customer Orders`, `Process Payments`. A medium system has 3–8 top-level epics. Epics nest into **SubEpics** — distinct flows or phases within a capability area (`Place New Order`, `Cancel Order`). Depth is typically 1–2 levels.
+
+**Stories** are the leaves — each a discrete, observable behavior independently testable in principle. Named verb–noun (`Place Order`, `Validate Payment`); actor goes in `story_type` metadata, not the title. Stories are behaviors, not tasks — "process payment" not "call the payments API." Story types: `user` (human), `system` (automated/external), `technical` (infra — use sparingly).
+
 ### Mental model
 
 **Analyze mechanics before grouping.** For each entity type under a shared heading, list: (a) what the user configures, (b) what the system validates or resolves, (c) what runtime lifecycle it has. Group stories by that analysis — not by category label, source heading, or shared name. Five "shipping methods" under one heading may require five stories if each has different rate logic, carrier APIs, and compliance rules.
