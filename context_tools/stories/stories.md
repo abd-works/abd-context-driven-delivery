@@ -16,7 +16,19 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ## Mental model
 
-Use stories to progressively explore a problem and solution surface. Reveal details them through successive passes at increasing depth. Each pass produces just enough understanding to make the next decision.
+Use stories to progressively explore a problem and solution surface. Stories are action-oriented — they describe interactions between users and systems, not development tasks or system internals. Focus on how the system behaves as observed by users: `Register New User Account`, not `Build Registration Database`.
+
+### Multiple levels of detail
+
+Stories let teams work at different levels of detail depending on where they are in the delivery flow. Break behaviour down through these levels:
+
+- **Epic** — a business capability, end-to-end process, or customer outcome. Contains 4–7 features. Example: `Purchase Lottery Ticket`.
+- **Feature** — an integrated grouping of value that is natural to define, develop, and test together. Completable in 1–2 sprints with 4–7 stories. Example: `Purchase With Existing Card`.
+- **Story** — a small increment of system behaviour a user can observe. Completable in under a week with 5–9 acceptance criteria or 3–5 testable scenarios. Example: `Display Player's Existing Cards on Web`.
+
+Stop at sea level. Do not write stories below the level of a discrete user action and observable system response. Tasks and system internals belong in other artifacts.
+
+Size each level so it contains no more than 7–9 items at the next level down. Group stories into **marketable increments** — deployable releases completable in 6–12 weeks.
 
 ### Explore → extrapolate
 
