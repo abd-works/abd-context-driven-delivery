@@ -23,11 +23,6 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 **Goal:** Partition a problem or solution space into independently understandable units — each a deep module with a narrow public seam and substantial implementation behind it. Name the units, their seams, and the one-way dependencies between them. Thin class/term identification only — enough to show independence. Do not invent types, method bodies, or relationship kinds yet. Each **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
-- Write **language companion** prose for the terms you name.
-- Seam terms: **one name per concept** (prefer the type name). Do not list singular and plural of the same term (e.g. `Ability` — not `Ability, Abilities`).
-
-
-
 ### Mental model
 
 **Deep modules** Start by identifying the major structural boundaries — group closely related classes around a single domain concept. Each module should be **deep**: a narrow public interface with substantial implementation behind it. Create deep module to reduce both your and human user cognitive load so that you can focus on reading the interface versus reading the implementation. Build interfaces to be much simpler than their implementation, avoid shallow modules that adds overhead without encapsulation. Resist the urge to decompose into many small modules.
@@ -36,7 +31,7 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 Make every dependency **explicit**. Use direct, visible references over indirection. Avoid Implicit coupling ( globals, configuration magic ,side effects, shared mutable state, convention-based wiring), as it is harder to reason about, harder to test, and harder to change safely. 
 
-Document only the **public seam** — how to use the module, how to extend it, and what it depends on. Never document internals in module-context. The caller-facing contract is the only thing that should survive into documentation; implementation details live in source code and session notes. If someone needs to read the internals to use the module, the interface is too shallow.
+Document only the **public seam** — how to use the module, how to extend it, and what it depends on. One name per concept on the seam (prefer the type name — `Ability`, not `Ability, Abilities`). Write language-companion prose for the terms you name. Never document internals in module-context. The caller-facing contract is the only thing that should survive into documentation; implementation details live in source code and session notes. If someone needs to read the internals to use the module, the interface is too shallow.
 
 ### Scaffold
 
