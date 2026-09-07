@@ -110,7 +110,7 @@ Write scenarios that clearly articulate the preconditions required to start, the
 
 **Mental model:** Follow the scenarios mental model as `@stories` `#scenarios` § Mental Model — acceptance_tests covers the same explored interaction surface. Take a TDD apporach and Design the code through failing scenario tests: call the realcode even when it does't exist yet. The test must fail initially (RED) — the failure message reveals the API design. Then make it pass (GREEN). Example data in tests traces to the spec's Examples table via shared fixtures — never inline invented values.
 
-**Procedure:** Follow the **Test shape ladder** in `@clean_engineering` `## code` § Procedure — real standup first, then stub TDD, then e2e swap on request.
+**Procedure:** Follow the **Test shape ladder** in the `testing-approach` rule under `clean_engineering/rules/` — real standup first, then stub TDD, then e2e swap on request.
 
 **Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
 
