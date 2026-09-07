@@ -109,6 +109,8 @@ A class is a named idea that cannot be collapsed into a property, instance, or s
 
 ### Interfaces (`I{Class}`) — optional
 
+An **interface** names the seam without naming the implementation — callers depend on *what can be asked*, not *which class answers*. Use one when the model needs a stable contract that more than one class can satisfy (swappable backends, test fakes, a boundary between layers).
+
 Do not generate a separate interface by default — `Class` itself is the seam. Add `I{Class}` only when the user asks, or when multiple implementations sit behind one seam. Keep `I{Class}` and `Class` in the same file; public members go on `Class`, never private members on `I{Class}`. Use the language template for the form.
 
 ### Inheritance and subtypes
