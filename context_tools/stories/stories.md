@@ -16,52 +16,50 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ## Mental model
 
-Stories are a **progressive exploration device**. You do not write stories once at full detail — you reveal them through successive passes at increasing depth, each pass producing just enough understanding to make the next decision.
+Progressively explore the problem and solution surface. Do not write stories once at full detail — reveal them through successive passes at increasing depth. Each pass produces just enough understanding to make the next decision.
 
 ### Explore → extrapolate → estimate
 
-Story work follows an exploration rhythm at every stage:
+Apply this rhythm at every stage of story work:
 
-**Explore** — map the terrain. Go wide. Find the boundaries, actors, and major capability areas. Answer "what is the shape of this thing?" — not "what exactly does each piece do?"
+1. **Explore** — go wide. Map the boundaries, actors, and major capability areas. Answer "what is the shape of this thing?" — not "what exactly does each piece do?"
+2. **Extrapolate** — estimate what you have not explored yet from patterns already found. "These three epics averaged 12 stories each, so the remaining two are probably similar." Buy information about scope without paying the cost of full decomposition.
+3. **Estimate** — size based on experience, not analysis. Compare this increment to ones previously delivered. Full decomposition is not required to estimate.
 
-**Extrapolate** — estimate what you have not explored yet from patterns you have already found. "These three epics averaged 12 stories each, so the remaining two are probably similar." Buy information about scope without paying the cost of full decomposition.
+### Go wide then deep
 
-**Estimate** — size based on experience, not analysis. Compare this increment to ones previously delivered. You do not need to decompose to estimate.
+Deepen on a narrower scope at each stage. Only map as much as needed to uncover uncertainty and validate assumptions at that stage.
 
-### Progressive depth — wide then deep
-
-Each stage of the delivery flow goes deeper on a narrower scope. Only map as much as needed to uncover uncertainty and validate assumptions at that stage.
-
-| Stage | Scope | Depth | What you learn |
+| Stage | Scope | Depth | Question answered |
 |---|---|---|---|
 | **Idea shaping** | Whole initiative | Wide and shallow — epics + confirming stories | Is this worth doing? How big is it? |
 | **Discovery** | Next increment | Complete the map — all stories named | What is the work? What are the risks? |
 | **Exploration** | Next sprint's features | Deep-dive — acceptance criteria, edge cases, unknowns | Is each story ready to build? |
 | **Specification** | Individual stories | Concrete — Given/When/Then with real examples | Can we disagree about whether this is correct? |
 
-Do not invent detail from a deeper stage. Idea shaping produces epics and confirming stories, not scenarios. Discovery names all stories, but does not refine acceptance criteria. Exploration refines the next sprint's stories, not the whole map.
+Stay at the depth the stage calls for. Idea shaping produces epics and confirming stories, not scenarios. Discovery names all stories but does not refine acceptance criteria. Exploration refines the next sprint's stories, not the whole map.
 
-### Stories are multi-purpose units
+### Treat every story as a multi-purpose unit
 
-A story simultaneously serves as a unit of **scope** (what to build), **value** (what the user gets), **planning** (what to schedule), **testing** (what to verify), and **conversation** (what to discuss). Written detail adds just enough structure to enable focused dialogue — not enough to replace one.
+Write each story to serve simultaneously as a unit of **scope** (what to build), **value** (what the user gets), **planning** (what to schedule), **testing** (what to verify), and **conversation** (what to discuss). Add just enough written detail to enable focused dialogue — not enough to replace one.
 
-### Altitude levels and sizing
+### Size by altitude
 
-Stories exist at multiple altitudes: **Epic** → nestable **SubEpic** → **Story**. Each level has sizing guardrails: 4–9 direct children per parent. A story has 5–9 acceptance criteria or 3–5 testable scenarios and completes in days. "Stop at sea level" — do not write stories below the level of a discrete user action and observable system response.
+Organise stories at multiple altitudes: **Epic** → nestable **SubEpic** → **Story**. Keep 4–9 direct children per parent. Give each story 5–9 acceptance criteria or 3–5 testable scenarios; it should complete in days. Stop at sea level — do not write stories below the level of a discrete user action and observable system response.
 
-### Scatter-aggregate
+### Scatter then aggregate
 
-Decompose the large problem (epic, increment) into progressively finer-grained units — epics to sub-epics to stories. Work each piece independently. Then reassemble them for integration testing and release. The story map is the picture of both the scatter and the planned reassembly.
+Decompose the large problem (epic, increment) into progressively finer-grained units — epics to sub-epics to stories. Work each piece independently. Then reassemble for integration testing and release. The story map is the picture of both the scatter and the planned reassembly.
 
-### Spine-first and marketable increments
+### Start from the spine
 
-The spine is the thinnest end-to-end path that delivers core value — "if we ran out of money next week, what would we ship?" Build iteratively outward from the spine. Each increment delivers something users can do after it ships.
+Identify the thinnest end-to-end path that delivers core value — "if we ran out of money next week, what would we ship?" Build iteratively outward from that spine. Each increment must deliver something users can do after it ships.
 
-When splitting increments, apply **eight splitting dimensions**: Users (role/context), Data Variations, Workflow (simple before complex), Environment (technology/channel), Interfaces (interaction modes), Subjective Quality (NFRs), Business Rule Variations, and Uncertainty (spike the unknown first).
+When an increment is too large, split it along **eight dimensions**: Users (role/context), Data Variations, Workflow (simple before complex), Environment (technology/channel), Interfaces (interaction modes), Subjective Quality (NFRs), Business Rule Variations, and Uncertainty (spike the unknown first).
 
-### Collaborative ownership
+### Own stories as a team
 
-Story development is a **team sport**. The product owner identifies, the analyst specifies, the tester adds edge cases and real-world data, the developer estimates and collaborates on acceptance criteria. The whole team owns every story — stories are not sequential hand-offs between roles.
+Develop stories collaboratively. The product owner identifies, the analyst specifies, the tester adds edge cases and real-world data, the developer estimates and collaborates on acceptance criteria. The whole team owns every story — do not hand stories sequentially between roles.
 
 ---
 
