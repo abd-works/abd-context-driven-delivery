@@ -2,6 +2,8 @@
 # Conceptual Clean Engineering Reference (Python style)
 # Refer to context_tools/language-tools.md for tool recommendations.
 # =============================================================================
+# One file per cohesive set — the primary class, its subtypes, and peers
+# that only make sense together. Do not default to one class per file.
 # Default: Class is the seam. I{ClassName} is not the default — add it in
 # this same file when multiple implementations sit behind one seam, or when
 # the user asks. Public members only on I{ClassName}; private members stay

@@ -23,6 +23,9 @@ fidelity: all
     -       (dash prefix)  private operation
     +       (plus prefix)  public — code fidelity only
 
+  One file per cohesive set — the primary class, its subtypes, and peers
+  that only make sense together. Do not default to one class per file.
+
   Document structure: H1 = module, H2 = class within that module.
   Interface (I{ClassName}) and implementation ({ClassName}) both sit under the
   same module H1 — interface first, then implementation. No fidelity section

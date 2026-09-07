@@ -67,40 +67,23 @@ Key rules: `one-way-deps` — dependencies flow one direction only; no cycles; `
 
 **Default format:** Python
 
-**Goal:** Define the public seam — what the module exposes, why it is shaped that way, and what callers depend on. Stub empty properties and operations on `Class`. Expand `module-context.md` fully.
+**Goal:** Analyze the module and design its object model — the classes, what they remember and do, and how they relate. Stub empty properties and operations. No production behavior yet.
 
-- When the type will be used from Stories examples, stub `{Type}ExampleFactory` (empty, named methods only) in a sibling `{type}_example_factory.{ext}` file. Complete the factory at **code** fidelity.
-- Carry language-companion identity into **Purpose**; move member bullets onto those members; refresh companion prose for terms now on the Public API.
+### Guidelines
 
-
-
-### Mental model
-
-Analyze the source context to identify the concepts and operations the domain already names — do not invent terminology. Then model the solution as a collection of those concepts with **behaviors first and data second**. Focus on what each concept *does* — not just what data it holds. Avoid anemic class structures where objects are data bags and logic lives somewhere else. An `Order` calculates its own total; a `Cart` checks itself out. Do not invent a `Manager`, `Service`, `Helper`, or `Processor` to do what the object itself should do.
+Analyze the source context to identify the concepts and operations the domain already names — do not invent terminology. Group concepts that have their own identity, state, and behavior into **classes**. Model them **behaviors first and data second** — **properties** (what they remember — noun phrases) and **operations** (what they do — verb phrases). An `Order` calculates its own total; a `Cart` checks itself out. Do not invent a `Manager`, `Service`, `Helper`, or `Processor` to do what the object itself should do.
 
 **Localize behavior to the object that owns the state.** Each object accesses its own state and enforces its own invariants — do not write objects that manipulate another object's internal state. When deciding where an operation belongs, ask: which object has the data this operation needs? That is where the operation lives. `cart.checkout()`, not `CheckoutManager.processCheckout(cart)`. 
 
 **Give each class one clear, focused responsibility.** When a class accumulates operations spanning different concerns, it reveals missing classes — split by the data each group of operations works with, this will reveal a hidden conceptthis will reveal a hidden concept. Keep the public surface narrow: a few well-named operations that express intent, not a long list of methods covering every concern the system touches.
 
-**Get typing right.** When a concept varies, decide whether that variation is a property or a subtype. Use a **property** when the variation can be captured through the data — a `type` field that associates an object to different values held in a type table. Use a **subtype** when the variation changes behavior — a `PremiumAccount` that overrides how `Account` calculates fees. If the variation does not change what the object *does*, it is a property, not a new class.
+**Find the operations.** Walk the source for the verbs this concept already performs — what a user or system asks it to do. An operation belongs on the class that owns the data it needs. Parameters are only what the object does not already hold; the return is what the caller must observe, not internals. Inside an operation, name **interactions** with other classes — specifically in other modules (`-> {collaborator}.{operation}`). Use exsisting public seam named in those modules or create new ones that respect module boundaries. Add **invariants** thins that must stay true (`// remaining budget never goes negative`) when the operation runs.
+
+**Get typing right.** Write a **property** when variation is data — a `type` field, not a new class. Write a **base class** when two or more types share identity, state, and operations — put that shared behavior in one place. Write a **subtype** when a variant changes what the thing *does*; record only the delta. Anywhere the base is used, the subtype must work in its place. Write an **interface** when multiple implementations sit behind one seam.
 
 **Make dependencies explicit.** Pass publicly accessible and swappable collaborators through the constructor — never reach for a global. When modelling relationships, choose by lifecycle: composition when the owner controls the other's lifecycle, aggregation when the collector has no meaning without its members, association when both sides are independent.
 
-Document only the **public seam** in module-context — what callers invoke, what they must or must not do, and how to extend. Internal design, private participants, and implementation notes stay in source code. If the module-context needs to explain internals for callers to succeed, the public surface is not well designed.
-
-### Classes
-
-Group concepts that have their own identity, state, and behavior — into **classes**. Write classes as a set of **properties** (what they remember — noun phrases, typed or untyped), **operations** (what they do on demand — verb phrases), **interactions**, **relationships**, **inheritance**, **interfaces**, and **invariants**.
-
-### Interfaces (`I{Class}`) — optional
-
-An **interface** names the seam without naming the implementation — callers depend on *what can be asked*, not *which class answers*. Generate `I{Class}` when multiple implementations sit behind one seam, or when the user asks. Otherwise `Class` itself is the seam.
-
-### Inheritance and subtypes
-
-Write a **base class** when two or more types share the same identity, state, and operations — put that shared behavior in one place so it is not duplicated.
-
-Write a **subtype** when a variant changes what the thing *does*, not just what data it carries. Record **only the delta** — do not repeat inherited members. Anywhere the base is used, the subtype must work in its place.
+Extend module level **public seam** documentation — what callers invoke, what they must or must not do, and how to extend — plus **dependencies**: every other-module class or operation this module calls. See `@clean_engineering-modules`. Refresh the language companion for new or uodated terms now on the public API. Do not document internal design, private participants, or implementation notes.
 
 ### Relationships
 
@@ -112,14 +95,10 @@ Relationship kind and cardinality are added  here. Three kinds, chosen by lifecy
 
 Value objects that merely describe (`Money` on a Transaction, `PortingInfo` on a number) are **association** or a property — not composition diamonds. Composition is for parts whose lifecycle the owner controls.
 
-### Interactions (optional) — one class's operation calling another's (`-> {collaborator}.{operation}` nested under the caller). Name them at model or skip; they stay prose until **code**.
-
-### Invariants (optional) — a rule that must hold for every valid instance (`// remaining budget never goes negative` on the class). Name them at model or skip; they become comments at **code**, not enforcement methods.
 
 ### Rules
 
-Before promoting a term to its own class, check whether it fits as a **property** (see *Properties*), an **instance** (see *Instances*), or a **subtype** (see *Inheritance and subtypes*). Only when none of those three fit does something deserve its own class.
-
+- `class-not-property-instance-or-subtype` — Before promoting a term to its own class, check whether it fits as a property, an instance, or a subtype. Only when none of those three fit does it deserve its own class.
 - `use-property-not-accessor` — Use `@property` (or the language equivalent) for read-only computed values; do not use `get_` / `set_` method prefixes.
 - `keep-operations-single-responsibility` — Each operation has one reason to change — pure calculation or orchestration, not both. An operation doing two things reveals either a missing operation or a missing class.
 - `separate-concerns` — Pure calculation separate from I/O and mutation.
