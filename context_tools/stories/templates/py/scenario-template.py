@@ -16,12 +16,6 @@
 # # Machinery — copy once per tests/ tree if missing (do not inline in skills):
 #   context_tools/stories/templates/py/story_test.py → tests/story_test.py
 # story_test: tests/story_test.py
-#
-# # Naming rules
-# - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
-# - Story test file        → {story_snake_slug}.{tier}.py at epic or sub-epic — NO {story}/ folder
-# - Tier                   → file extension segment (.e2e.py, .front-end.py, .back-end.py)
-# - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
 # ```
 #
 # Pattern: GWT structure only — replace pass with real code under each with.

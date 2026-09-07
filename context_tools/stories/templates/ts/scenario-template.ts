@@ -11,12 +11,6 @@
  * # Machinery — copy once per tests/ tree if missing (do not inline in skills):
  *   context_tools/stories/templates/ts/story-test.ts → tests/story-test.ts
  * story-test: tests/story-test.ts
- *
- * # Naming rules
- * - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
- * - Story test file        → {story-kebab-slug}.{tier}.ts at epic or sub-epic — NO {story}/ folder
- * - Tier                   → file extension segment (.e2e.ts, .front-end.ts, .back-end.ts)
- * - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
  * ```
  *
  * Pattern: GWT structure only — // test code goes here in each step callback.
