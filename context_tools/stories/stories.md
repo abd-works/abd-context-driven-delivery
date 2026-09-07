@@ -16,15 +16,14 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ## Mental model
 
-Progressively explore the problem and solution surface. Do not write stories once at full detail — reveal them through successive passes at increasing depth. Each pass produces just enough understanding to make the next decision.
+Use stories to progressively explore a problem and solution surface. Reveal details them through successive passes at increasing depth. Each pass produces just enough understanding to make the next decision.
 
-### Explore → extrapolate → estimate
+### Explore → extrapolate
 
 Apply this rhythm at every stage of story work:
 
 1. **Explore** — go wide. Map the boundaries, actors, and major capability areas. Answer "what is the shape of this thing?" — not "what exactly does each piece do?"
-2. **Extrapolate** — estimate what you have not explored yet from patterns already found. "These three epics averaged 12 stories each, so the remaining two are probably similar." Buy information about scope without paying the cost of full decomposition.
-3. **Estimate** — size based on experience, not analysis. Compare this increment to ones previously delivered. Full decomposition is not required to estimate.
+2. **Extrapolate** — extend what you have not explored yet from patterns already found. "These three epics averaged 12 stories each, so the remaining two are probably similar." Buy information about scope without paying the cost of full decomposition.
 
 ### Go wide then deep
 
