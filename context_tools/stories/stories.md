@@ -16,13 +16,9 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ## Mental model
 
-Use stories to progressively explore a problem and solution surface. Stories are action-oriented — they describe interactions between users and systems, not development tasks or system internals. Focus on how the system behaves as observed by users: `Register New User Account`, not `Build Registration Database`.
+Use stories to progressively explore a problem and solution surface. **Think hierarchically** and write action-oriented interactions between users and systems at multiple levels of detail; **Epics** - business capabilities or end-to-end outcomes, often decomposed into **Sub-Epics**, and then **Storis**  a discrete user or system action and observable system response. `Manage User Accounts` → `Register New User` → `Enter Contact Details`, not `Build Registration Database`.  FLesh out the solution at multiple levels of detail;  Size each level so it contains no more than 7–9 items at the next level down.
 
-Stories work at multiple levels of detail. An **Epic** is a business capability or end-to-end outcome (4–7 features). A **Feature** is an integrated grouping natural to define, develop, and test together (4–7 stories, 1–2 sprints). A **Story** is a small increment of behaviour a user can observe (5–9 acceptance criteria or 3–5 scenarios, under a week). Stop at sea level — do not write stories below a discrete user action and observable system response. Size each level so it contains no more than 7–9 items at the next level down.
-
-**Start by outlining the overall map.** Lay down the overarching hierarchy — epics covering the full capability surface. Ground each epic with a few confirming stories that prove the epic is real and the scope is right. Do not decompose further yet. At every stage, explore what you can see, then extrapolate the rest from patterns already found — buy information about scope without paying the cost of full decomposition.
-
-**Then find the spine.** Identify the thinnest end-to-end path that delivers core value — "if we ran out of money next week, what would we ship?" Mark that as the first increment. Sketch one or two later increments to show where the remaining scope lands, but keep them light.
+**Start by outlining the overall map.** Lay down the overarching hierarchy using epics then groud epics with a few confirming stories. determine what you can from context and try to extrapolate the rest from patterns already found. **Then define the spine** the thinnest end-to-end path that delivers core value. Sketch one or two later increments to show where the remaining scope lands, but keep them light.
 
 **Then decompose by increment.** Take the spine increment and break it down — fully name the sub-epics and stories within it. When an increment is too large, split along these dimensions: Users (role/context), Data Variations, Workflow (simple before complex), Environment (technology/channel), Interfaces (interaction modes), Subjective Quality (NFRs), Business Rule Variations, and Uncertainty (spike the unknown first).
 
