@@ -18,13 +18,15 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 **Progression:** `partition` (action) → **modules** (scaffold → full map) → **model** → **code**.
 
-| Fidelity | Default format | Produce |
-|---|---|---|
-| **modules** | markdown (+ drawio) | Independent modules, one-way deps, build order, thin seam terms |
-| **model** | python | Empty public seam (on `Class` directly by default, or on a separate `I{Class}` contract **only when interfaces are explicitly requested**) + full module-context; stub example factories |
-| **code** | python | Typed contracts (`Class(I{Class})` when an interface was requested, otherwise `Class` directly) → full production implementation |
 
-**Interfaces (`I{Class}`) are optional, not automatic.** See `## model` § Interfaces for the trigger — ask for one, or a genuine multi-layer/multi-implementation seam.
+| Fidelity    | Default format      | Produce                                                                                                                                                                                  |
+| ----------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **modules** | markdown (+ drawio) | Independent modules, one-way deps, build order, thin seam terms                                                                                                                          |
+| **model**   | python              | Empty public seam (on `Class` directly by default, or on a separate `I{Class}` contract **only when interfaces are explicitly requested**) + full module-context; stub example factories |
+| **code**    | python              | Typed contracts (`Class(I{Class})` when an interface was requested, otherwise `Class` directly) → full production implementation                                                         |
+
+
+**Interfaces (**`I{Class}`**) are optional, not automatic.** See `## model` § Interfaces for the trigger — ask for one, or a genuine multi-layer/multi-implementation seam.
 
 ---
 
@@ -49,16 +51,15 @@ A vertical is not at **code** fidelity while it still depends on a mockup / Stor
 
 ### Phase 1 — typed contracts
 
-- **Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific recommendations for coding.
-- **When an `I{Class}` interface was requested at model** (interfaces are optional — see `## model` § Interfaces): add `Class(I{Class})` (Java: `implements I{Class}`) in the **same file** as `I{Class}`. Do **not** fill out `I{Class}` or add private members to it.
+- **Tooling & Idioms:** Refer to `[context_tools/language-tools.md](/context_tools/language-tools.md)` for language-specific recommendations for coding.
+- **When an** `I{Class}` **interface was requested at model** (interfaces are optional — see `## model` § Interfaces): add `Class(I{Class})` (Java: `implements I{Class}`) in the **same file** as `I{Class}`. Do **not** fill out `I{Class}` or add private members to it.
 - **When no interface was requested:** skip that step — the empty `Class` stub already exists from **model** fidelity in its own family file; continue directly onto it.
-- On `Class`: implement public properties and operations; add private properties/operations as **empty interfaces** (`...` / `@abstractmethod`); add each relationship with its **kind** (composition / aggregation / association) and **cardinality** (e.g. `1..*`, `0..1`); invariants as **comments** (not methods) — formalizing any named at `## model` § Invariants, or newly introduced here.
+- On `Class`: implement public properties and operations; add private properties/operations as **empty interfaces** (`...` / `@abstractmethod`); add each relationship with its **kind** (composition / aggregation / association) and **cardinality** (e.g. `1..`*, `0..1`); invariants as **comments** (not methods) — formalizing any named at `## model` § Invariants, or newly introduced here.
 - Interactions: `@interaction` abstract methods on `Class` (never on `I{Class}`, whether or not one exists) — formalizing any named at `## model` § Interactions, or newly introduced here.
 - Complete `{Type}ExampleFactory` — fill in Fake, Isolated, and Production modes per the **Example factories** pattern in `## model`.
 - Refresh `.context/module-context.md` still **public-seam-only**: ensure **Public API**, **Constraint**, and **Dependencies** match the implemented seam; add **Extend** / **Mechanism** only for public variation points. **Do not** add **Participants**, **Internal design**, **Domain separation**, or any other internals section — those stay in source and sketches, never in module-context.
 - Edit the same `.context/module-context.md` — do not create parallel context files.
 - Edit so remaining language-companion bullets sit on members; class-level docstring keeps only the opening definition.
-
 
 State which side **navigates** to the other — direction is explicit.
 
@@ -73,49 +74,28 @@ State which side **navigates** to the other — direction is explicit.
 - Edit so language-companion prose stays as the class docstring — implementations sit beneath intent, they do not replace it.
 - Edit so the implemented public surface matches the seam already designed — a short caller-facing API with real behaviour behind it, still living in the module folder.
 
-### Procedure
 
-**Test shape ladder** — applies to all code tests regardless of framework (unit BDD, agent BDD, story ATDD). `@bdd` and `@stories` sessions refer here instead of duplicating this workflow.
 
-**Mandatory.** Whenever you are writing or testing production code at this fidelity, you **MUST** follow this ladder — no exceptions, no stub-first shortcuts.
 
-Do the **opposite of the human default** and the **AI shortcut**: humans stub early for speed; agents stub to get to green without really testing anything. Test real conditions first — **no automated tests**; do it manually. Discover real shape, then test with stubs and lock fast regression tests, then extend with real conditions from the first pass. **Every error is an additional test.**
 
-1. **Discover with real conditions (MUST run first)** — No stub, no mock on the subject or the integration path you are proving. Call exactly as the user would.
-   - **AI utility** — real sub-agents pretending to type to the user (`@agent_bdd`); never mock the harness.
-   - **Website** — real standup / running app; reconcile live before locking tests.
-   - **Backend** — real backend or documented local integration endpoint.
-   - **Goal** — learn the real shape of responses, files, and side effects before any mock knows what to return.
-   - **Signatures only** — write a test method signature for every failure you encounter (do **not** implement tests yet).
-
-2. **Stub TDD (fast suite)** — Only after step 1 and once code works: write two-pass tests with stubs/mocks at **architecture boundaries** only (never the subject under test). Stubs **MUST** match the observed real shape. These tests run on every change (regression TDD).
-
-3. **E2E swap (on request)** — Separate test class or file: same signature, same assertions, swap stubs for real collaborators. Extend or inherit from the fast suite where practical. **Final run** with production collaborators. In future, run only when the user asks for e2e / integration / full stack.
-
-**File layout (Python/Mamba example):**
-
-| File | When run |
-|---|---|
-| `{module}_spec.py` | Always — fast stub/isolated suite |
-| `{module}_e2e_spec.py` | On explicit e2e request — production collaborators |
 
 ### Rules
 
 **Operations**
 
-- **`keep-operations-small-focused`** — Under **20 lines**; extract named helpers.
-- **`simplify-control-flow`** — Guard clauses; max nesting depth as enforced by scanners.
-- **`maintain-abstraction-levels`** — One level at a time; no raw I/O mixed into orchestration names.
+- `keep-operations-small-focused` — Under **20 lines**; extract named helpers.
+- `simplify-control-flow` — Guard clauses; max nesting depth as enforced by scanners.
+- `maintain-abstraction-levels` — One level at a time; no raw I/O mixed into orchestration names.
 
 **Naming / context**
 
-- **`provide-meaningful-context`** — Named constants for magic numbers and unexplained literals.
+- `provide-meaningful-context` — Named constants for magic numbers and unexplained literals.
 
 **Errors / comments**
 
-- **`use-exceptions-properly`** — Domain exceptions that name the failure.
-- **`never-swallow-exceptions`** — Log and re-raise or convert; never bare swallow.
-- **`stop-writing-useless-comments`** — Comments explain **why**, not **what**.
+- `use-exceptions-properly` — Domain exceptions that name the failure.
+- `never-swallow-exceptions` — Log and re-raise or convert; never bare swallow.
+- `stop-writing-useless-comments` — Comments explain **why**, not **what**.
 
 ## Sketching
 

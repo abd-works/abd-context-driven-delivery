@@ -16,10 +16,6 @@ Use ddd guidance at `bounded_context` fidelity only.
 
 **Goal:** Draw context boundaries, dependency arcs, and the aggregates that protect invariants — naming everything in the experts' vocabulary.
 
-### Scaffold
-
-**When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
-
 Rough bounded-context map for a **partition** pass or first cut — **names only**: context name + candidate aggregates + short ubiquitous-language note (`DomainMap` → `BoundedContext` → `Aggregate`). No building blocks, no tactics, no dependency arcs yet.
 
 Key rules: `language-is-context-scoped` — a term's meaning is only valid inside the context that defines it; the same word in two contexts is two different concepts.
@@ -44,9 +40,16 @@ An **Aggregate** is decided **inside** the context already named. Cluster for **
 
 **Input traps:** hidden coupling; ownership ambiguity; false cognates; missing unnamed contexts; unclear direction; a new BC for each aggregate.
 
+
 **Produce:** one `bounded-context-map.md` in **tree format** — `## BC | vendor`, then `### Aggregate`, then bulleted **concepts**. Links on any level: `→ BC · Aggregate · Entity` (cross-context; omit leading segments when same BC/aggregate) or `→ System · Entity` (external vendor). Fill `templates/bounded-context-template.md`. Call clean_engineering at **modules**.
 
-**Rules:**
+### Scaffold
+
+**When scaffolding only** (`/partition` or a names-only first cut — not full generate at this fidelity): follow this subsection. Do not use ### Rules below, ## Sketching, or ## Templates. **Stop reading this skill when scaffolding.**
+
+
+
+### Rules:
 
 - **`experts-words-preferred`** — Prefer the words domain experts use; do not invent technical synonyms when a domain word already exists. A ported telephone number is `TelephoneNumber` with `PortingInformation`, not `PortabilityRequest`; the operation is `port()`, not `requestPortability()`.
 - **`domain-concepts-not-technical-names`** — Every class/module names a domain concept (or honest boundary collaborator). Reject `Manager`, `Helper`, `Processor`, `*Result`, `*Response`, `*Dto`, `*Request`. Do not invent a type for fields that already belong on a concept (`OrderResult` → fields on `Order`). Do not invent a concept the experts and the running system do not name.

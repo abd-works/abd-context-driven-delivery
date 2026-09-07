@@ -27,6 +27,14 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 ---
 
+## Mental model
+
+**Think hierarchically** and use stories to progressively explore a problem and solution surface at multiple levels of detail: **Epics** (business capabilities or end-to-end outcomes), often decomposed into **Sub-Epics**, and then **Stories** (a discrete user or system action and observable system response). Stories get decomposed into **Scenarios**, and each scenarios are made up of **Steps**. `Manage User Accounts` → `Register New User` → `Enter Contact Details` → `Accept valid contact details` → `System confirms sucessful save of contact details`.
+
+**Write action-oriented interactions** between users and systems; at every level the thinking pattern is the same: actor–action–subject with an optional qualifier. An epic, a sub-epic, a story, a scenario, and each step in a scenario, all are saying the same thing at a different horizon and different level of detail. Size each level so it contains no more than 7–9 items at the next level down. When a node accumulates too many children, promote it or break it up; when it has too few, absorb it into its parent.
+
+---
+
 ## Shared rules
 
 - **`vocabulary-traces-to-domain-source`** — Trace terms to domain language / model when present.
@@ -47,17 +55,20 @@ Interactions fit into a hierarchy: a `StoryMap` of `Epic` → nestable `SubEpic`
 
 **Produce:** Same `{story}.{tier}.py` tree as acceptance_tests. Pass `format markdown` only when the strategy command names it.
 
+Create testable specifications grounded in user system interactions through **concrete scenarios** with preconditions (**Given**), a triggering action (**When**), and observable outcomes (**Then**). **And** continues a block; start a new **When** when the actor or trigger changes. Use **Background** only when 3+ scenarios share identical starting state (Given/And only — no When/Then). Use **Scenario Outline** with `{column_name}` tokens and an **Examples** table when variation is real and steps are identical; use plain **Scenario** for distinct flows (happy path, rejection, edge case).
+
+Use scenarios to ground the domain model. Concept names in examples must match model language exactly. Example table columns should relate data across relational structure as well.
+
 ### Mental model
+Write scenarios that clearly articulate the preconditions required to start, the triggering conditions and steps to complete, and the resulting outomes.
 
-**Explore the full interaction surface — not just the happy path.** The main flow is the starting point, not the finish line. Systematically walk every branch: inline validation rules and how they change while typing, field-level errors clearing as input conforms, cross-field rules (confirm password mismatch, date range overlap), submit-button gating, server-side error surfaces. A story that only codifies the happy path when the screen has rich client-side validation is a defect. Branch into additional scenarios per mechanical variation.
+**Start from the main-flow** scenario for each story — the happy path through Given/When/Then. Write the scenario concrete enough that a domain expert and a developer would argue about whether the output is correct. **Then walk the full interaction surface**: inline validation rules, field-level errors, cross-field constraints, submit-button gating, server-side error surfaces. Branch into additional scenarios for each distinct mechanical variation. Use separate Scenarios whenever the flow structure diverges. 
 
-**Same flow, different data = outline with examples table.** Different flow = separate scenario. Use outlines when the same interaction produces different results based on input combinations. Use individual scenarios when the flow structure itself diverges.
+**Provide concrete examples** add examples to specific steps in line or use a **Scenario Outline** with an Examples table when the same flow produces different outcomes based on input variation. 
 
-**Every Given/When/Then step traces to a named domain operation.** Given states conditions the running system actually uses for the behavior under test — not fields the code never reads. When holds the single domain operation being exercised — never empty, never buried inside Then. Then observes what When already produced — no I/O, no further operations. If a step can't trace to a domain operation, that's a modeling gap — add the operation, don't gloss over it.
+**Align scenarios to the Domain** Trace every Given/When/Then step must to a named domain operation. Trace examples to domain state and domain properties. . When holds the operation. Then observes what When produced — no further I/O.
 
-**Example data traces to the specification — never invent data.** Every value in a scenario must come from the Examples table or from a fixture derived from it. Stubs receive and return the exact values named in the examples — not defaults or placeholders that happen not to break the test. If the spec says 3 plan cards, assert exactly 3 — not `>= 1`.
-
-**Concrete enough to disagree.** If you showed these scenarios to a domain expert and a developer, would they argue about whether the output is correct? If not, the examples are too vague. Realistic domain values surface edge cases that `John Doe, $100` never will. Check: what state combinations have we not explored? What happens at zero, one, many, max, just-over-max?
+**Ground every scenario in the domain model**. Concept names in examples must match model language exactly. Example table columns should relate data across the relational structure — not just list one concept's fields in isolation.
 
 ### Rules
 
