@@ -105,11 +105,7 @@ Document only the **public seam** in module-context — what callers invoke, wha
 
 ### What is a class
 
-A class is a named idea that earns its own identity because it has at least one of: **distinct identity**, **state**, **behavior**, **structure**, or **interactions** that cannot be collapsed into a property, instance, or subtype of something else. A class knows things (**state**), does things (**behavior**), interacts with other things (**interactions**), has (**relationships**) with other things, can be a sub type of other things (**inheritance**), and can implement (**interfaces**) — finally, it maintains the (**invariants**) that constrain it.
-
-### Properties — what the class remembers across calls. Named as a **noun phrase** (*remaining budget*, *active status*). May be typed or untyped.
-
-### Operations — what the class does on demand. Named as a **verb phrase** (*charge card*, *compute total*). May use the class's own state or only its parameters.
+A class is a named idea that cannot be collapsed into a property, instance, or subtype of something else. It has **properties** (what it remembers — noun phrases, typed or untyped), **operations** (what it does on demand — verb phrases), **interactions**, **relationships**, **inheritance**, **interfaces**, and **invariants**.
 
 ### Interfaces (`I{Class}`) — optional
 
