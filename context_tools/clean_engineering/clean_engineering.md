@@ -25,7 +25,6 @@ Deepen OO design from modules toward production code. Each fidelity **adds** art
 
 A **module** is a named structural boundary that groups closely related classes — and optionally smaller modules — into a single cohesive unit. Modules can be composed of other modules; a highly complex and nested module can be thought of as a sub-system.
 
-- Consume the existing `{session}/{subject}-index.md` and partition chunks if they exist — **do not edit** or wipe partitions.
 - Seed `{module}/.context/module-context.md` Thin: **Purpose**, **Seam** (public term/class names), **Dependencies**, optional **Extend** / **Mechanism** note. 
 - Name terms/classes only enough to show independence. Seed **language companion** prose for those names.
 - Seam terms: **one name per concept** (prefer the type name). Do not list singular and plural of the same term (e.g. `Ability` — not `Ability, Abilities`).
