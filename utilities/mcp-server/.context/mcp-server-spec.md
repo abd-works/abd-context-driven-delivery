@@ -50,21 +50,25 @@ Do not retain parallel CDD abstractions for functionality already supplied by MC
 
 If manifest, schema, or runner abstractions become unnecessary, remove them.
 
-Do **not** remove or redesign `@resource`, `@skill`, or `@prompt` as part of this migration — see [Out of scope](#out-of-scope--do-not-change).
+Do **not** remove or redesign the **`@resource`**, **`@skill`**, or **`@prompt` decorators** as part of this migration — see [Out of scope](#out-of-scope--decorators-unchanged).
+
+**Harness deploy must change:** generated skills, prompts, commands, rules, agents, and related host artifacts that today tell the model to invoke YAML/CLI must instead tell the model to invoke MCP tools. See [Harness deploy changes](#harness-deploy-changes).
 
 ---
 
-## Out of scope — do not change
+## Out of scope — decorators unchanged
 
-These CDD/harness annotations and their current behavior are **explicitly out of scope** for this refactor. Leave them untouched:
+These **annotation decorators** stay as they are today. Do not rename, merge, or delete them:
 
-- **`@resource`** — observable toolset state (`primitives/tools`); property getters, instruction inlining, and any manifest/harness usage stay as they are today unless a separate change targets them.
-- **`@skill`** — harness skill generation (`primitives/harness`); deployed `SKILL.md` artifacts and `@skill` discovery/writing behavior are unchanged by this migration.
-- **`@prompt`** — harness prompt/command generation (`primitives/harness`); deployed prompt/command files and `@prompt(name=…)` behavior are unchanged by this migration.
+- **`@resource`** — observable toolset state (`primitives/tools`); property getters, instruction inlining, and resource registration behavior are unchanged.
+- **`@skill`** — harness marker for skill files (`primitives/harness`); still selects which operations deploy as `SKILL.md`.
+- **`@prompt`** — harness marker for prompt/command files (`primitives/harness`); still selects which operations deploy as slash commands / prompt files.
 
-This migration replaces **AI tool invocation transport** (YAML/CLI → MCP). It does **not** refactor harness deploy vehicles, read-only resources, or slash-command/prompt catalog authoring.
+What **does** change under `@skill` / `@prompt` is only the **generated file body** where it currently describes YAML/CLI invocation — that content becomes MCP invocation guidance instead.
 
-When deleting YAML/manifest/runner plumbing, do not delete or rewrite code whose primary job is implementing `@resource`, `@skill`, or `@prompt` unless that code is **only** used by the removed YAML/CLI path and has no remaining role for those annotations.
+This migration replaces **AI tool invocation transport** (YAML/CLI → MCP). It does **not** remove harness deploy vehicles or read-only resource authoring.
+
+When deleting YAML/manifest/runner plumbing, do not delete code whose primary job is `@resource`, `@skill`, or `@prompt` discovery/writing unless that code is **only** used by the removed YAML/CLI path and has no remaining role after harness bodies emit MCP references.
 
 ---
 
@@ -422,31 +426,67 @@ discover class
 
 ---
 
-## `@resource`, `@skill`, and `@prompt` (unchanged)
+## `@resource`, `@skill`, and `@prompt` (decorators unchanged)
 
-`@resource`, `@skill`, and `@prompt` are **not** deprecated or replaced by this migration.
+The **decorators** are not deprecated or replaced:
 
-- **`@resource`** remains the CDD annotation for observable toolset state. Do not fold it into MCP tools or delete it “because MCP has resources.” Native MCP resources are a separate concern for a later change, if ever.
-- **`@skill`** and **`@prompt`** remain the harness annotations for generating host skills and prompts/commands. Only the **tool invocation tail** inside generated artifacts changes (YAML block → MCP tool reference). The decorators, deploy paths, and file kinds stay the same.
+- **`@resource`** — still marks observable toolset state. Do not fold it into MCP tools or delete it because MCP has its own resource concept.
+- **`@skill`** / **`@prompt`** — still mark which operations deploy as skills and prompts/commands.
 
-Do not remove `@resource` registration, `@skill`/`@prompt` harness writers, or their tests as part of YAML/CLI removal unless a line of code is provably dead **and** not used by these annotations.
+Generated **content** under those deploy paths **must** change wherever it currently teaches YAML/CLI invocation.
 
 ---
 
-## Generated harness artifacts
+## Harness deploy changes
 
-Keep the current harness capability to generate:
+Harness deploy **is in scope** and **must** be updated as part of this migration.
 
-- skills;
-- prompts;
-- commands;
-- rules;
-- AGENTS.md or equivalent guidance;
-- host-specific artifacts.
+Any generated host artifact that today tells an agent to call CDD through YAML stdin, `tools.ps1`, or `python -m tools run` must be regenerated to tell the agent to call **MCP tools** instead.
 
-Change only the invocation representation.
+### Artifacts that must change
 
-Current generated tail:
+Review and update generation for every deploy kind, including:
+
+- **`@skill` → `SKILL.md`** — context-tool skills, utility skills, fidelity skills
+- **`@prompt` → commands / prompt files** — action commands, utility prompts, harness lifecycle prompts
+- **`@instruction` → rules** — generated rule bodies that embed tool invocation
+- **Agents** — generated agent definitions that reference YAML/CLI (present or planned under harness)
+- **Context-tool bodies** — `ContextToolBody`, `ContextToolFidelityBody`, `ActionBody`
+- **Utility / format bodies** — `UtilityBody`, `FormatBody`, `resolve_text` output
+- **AGENTS.md** (or equivalent repo guidance) — any global instructions that mention the YAML protocol
+- **Redeployed `.cursor/skills/**`, `.cursor/commands/**`, rules, and sibling IDE trees** after harness generation changes land
+
+### Remove from generated output
+
+Delete from all generated artifacts:
+
+- YAML invoke fences (`toolset:`, `context:`, `tool:`, `action:`, `arguments:`)
+- “Pipe the block to stdin”
+- “Do not write a request file”
+- “Do not remanifest”
+- “Follow `response.instructions` only” (when that meant YAML/CLI response plumbing)
+- “through the tools cli”
+- `.\tools.ps1 run -` / `python -m tools run -`
+
+Replace with a single concise MCP line (see [Harness transport rendering](#harness-transport-rendering)).
+
+### Harness code that must change
+
+At minimum, update `primitives/harness/` (and anything that duplicates its invoke rendering):
+
+- **`_invoke_block()`** — remove or replace; must not emit YAML
+- **`_CATALOG_LINE`** and **`resolve_text()`** — stop teaching stdin YAML catalog protocol
+- **Body classes** (`bodies.py`, skill/prompt/agent writers) — call the centralized MCP renderer instead of YAML blocks
+- **`returned_guidance.py`** — stop building YAML input for CLI subprocess invocation
+- **Harness tests** (`harness_spec.py`, invoke agent specs) — assert MCP references, not `tools.ps1` / YAML fences
+
+### Redeploy requirement
+
+After harness generation is updated, run **`deploy-harness`** (or equivalent) so checked-in generated skills/commands/rules in the repo match the new MCP invocation text. The migration is not done while deployed artifacts still contain YAML invoke instructions.
+
+### Before / after (skill tail)
+
+Current:
 
 ```yaml
 toolset: context_tools.bdd.bdd:Bdd
@@ -456,21 +496,13 @@ tool: find_examples
 .\tools.ps1 run -
 ```
 
-Target generated tail:
+Target:
 
 ```
 Use MCP tool: `bdd.find_examples(concept: str, limit: int = 10)`
 ```
 
-That is enough.
-
-The function signature is included because it is helpful to humans reading the generated skill.
-
-It is not the machine-readable contract.
-
-MCP owns the authoritative runtime schema.
-
-Do not generate extra MCP configuration or schema text into every skill.
+Same change applies to prompts, commands, rules, and agent files that currently carry the YAML tail or CLI shell step.
 
 ---
 
@@ -537,7 +569,8 @@ Add tests for:
 - Python signature → MCP schema
 - tool invocation → direct Python callable
 - persistent process / retained instance where relevant
-- generated skill → correct MCP tool reference
+- generated skill / prompt / command / rule / agent → correct MCP tool reference (no YAML tail)
+- harness `deploy-harness` redeploy removes YAML from `.cursor/skills` and sibling deploy trees
 - `@instruction` docstring behavior
 - `tool(...)` extraction from instruction bodies
 
@@ -570,11 +603,11 @@ CDD
 ├── @tool
 ├── @instruction
 ├── tool(...)
-├── @resource          (unchanged)
-├── @skill / @prompt   (unchanged — harness deploy only)
+├── @resource          (decorator unchanged)
+├── @skill / @prompt   (decorators unchanged; generated bodies use MCP invocation)
 ├── minimal discovery / construction
 ├── MCP server registration
-└── harness generation
+└── harness generation (deploy output updated — no YAML invoke tails)
 ```
 
 MCP owns:
@@ -607,7 +640,7 @@ There should be no duplicate schema system unless a concrete CDD requirement dem
 
 The migration is complete when:
 
-1. No generated skill/prompt/rule contains YAML invocation instructions.
+1. No generated skill/prompt/rule/command/agent contains YAML invocation instructions.
 2. No normal AI execution path uses `tools.ps1` or `python -m tools run`.
 3. MCP invokes annotated Python operations directly.
 4. Tool schemas come from the actual Python callable.
@@ -620,7 +653,8 @@ The migration is complete when:
 10. Old CLI dispatcher plumbing is removed when it no longer serves the target architecture.
 11. Duplicate signature/schema machinery is removed unless a remaining concrete use justifies it.
 12. The resulting implementation is materially smaller than the current one.
-13. `@resource`, `@skill`, and `@prompt` behavior and harness/deploy outputs for those annotations remain unchanged except where generated skills/prompts previously embedded YAML tool-invocation tails (those tails become MCP references only).
+13. `@resource`, `@skill`, and `@prompt` **decorators** remain; harness deploy has been updated and redeployed so generated skills/prompts/commands/rules/agents use MCP invocation text instead of YAML/CLI tails.
+14. Checked-in deploy trees (e.g. `.cursor/skills/**`, `.cursor/commands/**`) contain no remaining `toolset:` / `tools.ps1 run -` invoke blocks from harness generation.
 
 ---
 
