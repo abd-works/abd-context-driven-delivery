@@ -17,7 +17,6 @@ Build order: `primitives.tools` | `primitives.instructions` → `mcp_server`
 ---
 
 # utilities/mcp_server
-
 - **Purpose:** MCP-native runtime that discovers CDD `@tool` and `@instruction` members, registers them with MCP, and invokes `@tool` callables directly.
 - **Seam (terms):** McpServer, McpToolCatalog, McpInstructionCatalog, ToolsetLoader, ToolBinding, InstructionBinding, McpNameFormatter
 - **Dependencies (one-way):** `primitives.tools`, `primitives.instructions`; MCP SDK adapter (internal)

@@ -123,9 +123,14 @@ class McpInstructionCatalog:
 class ToolsetLoader:
     """Discover toolsets, construct instances, and collect MCP bindings."""
 
-    def __init__(self, *, name_formatter: McpNameFormatter) -> None:
+    def __init__(
+        self,
+        *,
+        name_formatter: McpNameFormatter,
+        toolset_loader: _ToolsetLoader | None = None,
+    ) -> None:
         self._name_formatter = name_formatter
-        self._toolset_loader = _ToolsetLoader.instance()
+        self._toolset_loader = toolset_loader or _ToolsetLoader.instance()
 
     def load_instances(
         self,
@@ -141,10 +146,10 @@ class ToolsetLoader:
         return tuple(instances)
 
     def collect_tool_bindings(self, instance: Any) -> tuple[ToolBinding, ...]:
-        slug = _toolset_slug(instance)
+        slug = self.toolset_slug(instance)
         bindings: list[ToolBinding] = []
         for name, member in inspect.getmembers(instance.__class__, predicate=inspect.isfunction):
-            if not _is_ai_tool(member):
+            if not self._is_ai_tool(member):
                 continue
             bound = member.__get__(instance, instance.__class__)
             bindings.append(
@@ -159,7 +164,7 @@ class ToolsetLoader:
         return tuple(bindings)
 
     def collect_instruction_bindings(self, instance: Any) -> tuple[InstructionBinding, ...]:
-        slug = _toolset_slug(instance)
+        slug = self.toolset_slug(instance)
         bindings: list[InstructionBinding] = []
         for name, member in inspect.getmembers(instance.__class__, predicate=inspect.isfunction):
             if not getattr(member, "_is_mcp_instruction", False):
@@ -171,11 +176,43 @@ class ToolsetLoader:
                     toolset_slug=slug,
                     method_name=name,
                     prompt_text=(inspect.getdoc(member) or "").strip(),
-                    referenced_tool_names=_referenced_tool_names(member),
+                    referenced_tool_names=self._referenced_tool_names(member),
                     callable=bound,
                 )
             )
         return tuple(bindings)
+
+    @staticmethod
+    def toolset_slug(instance: Any) -> str:
+        explicit = getattr(instance.__class__, "TOOLSET_SLUG", None)
+        if isinstance(explicit, str) and explicit.strip():
+            return explicit.strip()
+        module = instance.__class__.__module__.split(".")[-1]
+        return module.replace("-", "_")
+
+    @staticmethod
+    def _is_ai_tool(member: Callable[..., Any]) -> bool:
+        return bool(getattr(member, "_is_agent_tool", False))
+
+    @staticmethod
+    def _referenced_tool_names(method: Callable[..., Any]) -> tuple[str, ...]:
+        try:
+            source = textwrap.dedent(inspect.getsource(method))
+        except (OSError, TypeError):
+            return ()
+        tree = ast.parse(source)
+        names: list[str] = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if not isinstance(node.func, ast.Name) or node.func.id != "tool":
+                continue
+            if not node.args:
+                continue
+            target = node.args[0]
+            if isinstance(target, ast.Attribute):
+                names.append(target.attr)
+        return tuple(dict.fromkeys(names))
 
 
 class McpServer:
@@ -187,12 +224,12 @@ class McpServer:
         tool_catalog: McpToolCatalog,
         instruction_catalog: McpInstructionCatalog,
         loader: ToolsetLoader,
-        name_formatter: McpNameFormatter | None = None,
+        name_formatter: McpNameFormatter,
     ) -> None:
         self._tool_catalog = tool_catalog
         self._instruction_catalog = instruction_catalog
         self._loader = loader
-        self._name_formatter = name_formatter or McpNameFormatter()
+        self._name_formatter = name_formatter
         self._instances: dict[str, Any] = {}
         self._started = False
 
@@ -209,7 +246,7 @@ class McpServer:
         for instance in self._loader.load_instances(
             toolset_refs, constructor_context=constructor_context
         ):
-            slug = _toolset_slug(instance)
+            slug = self._loader.toolset_slug(instance)
             self._instances[slug] = instance
             for binding in self._loader.collect_tool_bindings(instance):
                 self._tool_catalog.register(binding)
@@ -249,35 +286,3 @@ class McpServer:
             return binding.callable(**dict(arguments or {}))
         finally:
             _MCP_CTX.reset(token)
-
-
-def _is_ai_tool(member: Callable[..., Any]) -> bool:
-    return bool(getattr(member, "_is_agent_tool", False))
-
-
-def _toolset_slug(instance: Any) -> str:
-    explicit = getattr(instance.__class__, "TOOLSET_SLUG", None)
-    if isinstance(explicit, str) and explicit.strip():
-        return explicit.strip()
-    module = instance.__class__.__module__.split(".")[-1]
-    return module.replace("-", "_")
-
-
-def _referenced_tool_names(method: Callable[..., Any]) -> tuple[str, ...]:
-    try:
-        source = textwrap.dedent(inspect.getsource(method))
-    except (OSError, TypeError):
-        return ()
-    tree = ast.parse(source)
-    names: list[str] = []
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        if not isinstance(node.func, ast.Name) or node.func.id != "tool":
-            continue
-        if not node.args:
-            continue
-        target = node.args[0]
-        if isinstance(target, ast.Attribute):
-            names.append(target.attr)
-    return tuple(dict.fromkeys(names))
