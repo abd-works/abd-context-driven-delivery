@@ -568,26 +568,26 @@ Do not spread MCP-specific formatting throughout every harness body class.
 
 ## Naming
 
-Give every exposed tool a stable MCP name derived from its CDD identity.
+Give every exposed MCP tool and instruction prompt a stable name derived from its CDD identity.
 
-Example:
+**Always use dot notation:** `{toolset_slug}.{method_name}`
+
+Examples:
 
 - `bdd.find_examples` — tool
 - `bdd.validate_behavior` — tool
 - `bdd.bdd_thinking` — instruction prompt
 - `plan.create` — tool
 
-If host compatibility requires another character convention:
+Do **not** use alternate separators (no `bdd_find_examples`, no runtime-generated aliases, no host-specific rewrites).
 
-- `bdd_find_examples`
-- `bdd_validate_behavior`
-- `bdd_bdd_thinking`
-
-use one deterministic naming strategy globally for **both** tools and instruction prompts.
+Apply this convention globally for **both** tools and instruction prompts.
 
 Do not create runtime-generated names unless required by future partial-binding work.
 
-Instruction prompts and their referenced tools share the same namespace rules so `tool(self.find_examples)` resolves to the same MCP name the tool was registered under.
+Instruction prompts and their referenced tools share the same namespace rules so `tool(self.find_examples)` resolves to the same MCP name the tool was registered under (e.g. `bdd.find_examples`).
+
+Generated harness text, MCP registration, and tests must all use this same dotted form.
 
 ---
 
