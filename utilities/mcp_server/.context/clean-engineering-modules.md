@@ -4,7 +4,7 @@ artifact: [clean_engineering]
 format: md
 ---
 
-**Sources / context:** `utilities/mcp-server/.context/mcp-server-spec.md`
+**Sources / context:** `utilities/mcp_server/.context/mcp_server_spec.md`
 
 ## Language
 
@@ -16,7 +16,7 @@ Build order: `primitives.tools` | `primitives.instructions` → `mcp_server`
 
 ---
 
-# utilities/mcp-server
+# utilities/mcp_server
 
 - **Purpose:** MCP-native runtime that discovers CDD `@tool` and `@instruction` members, registers them with MCP, and invokes `@tool` callables directly.
 - **Seam (terms):** McpServer, McpToolCatalog, McpInstructionCatalog, ToolsetLoader, ToolBinding, InstructionBinding, McpNameFormatter

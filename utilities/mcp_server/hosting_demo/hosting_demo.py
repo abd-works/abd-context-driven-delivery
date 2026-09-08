@@ -1,4 +1,4 @@
-"""Hosting demo toolset for mcp-server BDD specs."""
+"""Hosting demo toolset for mcp_server BDD specs."""
 from __future__ import annotations
 
 from mcp_server import mcp_instruction, tool

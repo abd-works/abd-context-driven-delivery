@@ -4,9 +4,9 @@ artifact: [clean_engineering]
 format: py
 ---
 
-**Sources / context:** `utilities/mcp-server/.context/mcp-server-spec.md`; `utilities/mcp-server/.context/clean-engineering-modules.md`; `utilities/mcp-server/.context/module-context.md`
+**Sources / context:** `utilities/mcp_server/.context/mcp_server_spec.md`; `utilities/mcp_server/.context/clean-engineering-modules.md`; `utilities/mcp_server/.context/module-context.md`
 
-Model fidelity lives in `utilities/mcp-server/mcp_server.py` (Python channel).
+Model fidelity lives in `utilities/mcp_server/mcp_server.py` (Python channel).
 
 ## Language
 
@@ -14,6 +14,6 @@ Model fidelity lives in `utilities/mcp-server/mcp_server.py` (Python channel).
 
 ## Module
 
-# utilities/mcp-server
+# utilities/mcp_server
 
 See class stubs in `mcp_server.py`: `McpServer`, `McpToolCatalog`, `McpInstructionCatalog`, `ToolsetLoader`, `ToolBinding`, `InstructionBinding`, `McpNameFormatter`.

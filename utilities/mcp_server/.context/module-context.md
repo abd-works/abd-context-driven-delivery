@@ -1,4 +1,4 @@
-# mcp-server — module context
+# mcp_server — module context
 
 ## Purpose
 

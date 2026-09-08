@@ -1,14 +1,11 @@
 # @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
-"""BDD spec for utilities/mcp-server/mcp_server.py."""
+"""BDD spec for utilities/mcp_server/mcp_server.py."""
 import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-_MCP_PKG = Path(__file__).resolve().parent
-if str(_MCP_PKG) not in sys.path:
-    sys.path.insert(0, str(_MCP_PKG))
 for _cat in ("utilities", "primitives", "context_tools"):
     _p = str(_REPO_ROOT / _cat)
     if _p not in sys.path:
@@ -27,7 +24,7 @@ from mcp_server import (
 
 
 def _demo_ref() -> str:
-    return "hosting_demo.hosting_demo:HostingDemo"
+    return "mcp_server.hosting_demo.hosting_demo:HostingDemo"
 
 
 def _build_server() -> McpServer:
