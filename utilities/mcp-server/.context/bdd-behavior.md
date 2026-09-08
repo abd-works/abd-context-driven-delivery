@@ -8,4 +8,6 @@ format: py
 
 Behavior fidelity lives in `utilities/mcp-server/mcp_server_spec.py` (Python/Mamba channel).
 
-Increment 1: MCP server discovers and registers `@tool` and `@instruction`; dotted naming; direct callable invocation; no YAML/CLI path.
+Increment 1: toolset operations annotated as AI tools or instructions, registered and invoked by MCP; dotted naming; direct callable invocation; no YAML/CLI path.
+
+Hierarchy anchors on **toolset operation** → annotation → MCP registration/invocation — not server startup plumbing.
