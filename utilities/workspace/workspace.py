@@ -2073,10 +2073,12 @@ class WorkSession:
         anything you cannot attribute to disposable temps. Never ask the user whether
         to delete the worktree.
 
-        Then: commits change-related paths (scope + session artifacts), pushes, merges onto main,
-        clears any stash (stash must never keep a worktree), and removes the sibling worktree when
-        the tree is clean and pushed. If untracked or dirty files remain after you removed known
-        temps, leave the worktree and report what blocked removal.
+        Then: treats the worktree as the unit of isolation, commits every modified, staged,
+        deleted, and untracked file under the repository root, pushes, and merges onto main.
+        Do not filter by scope paths, session artifacts, author, or which changes you recognize.
+        Clear any stash (stash must never keep a worktree), and remove the sibling worktree when
+        the tree is clean and pushed. If untracked or dirty files remain after the full-root commit,
+        leave the worktree and report what blocked removal.
 
         When no work session is open (e.g. work landed on main without ``start_work_session``),
         skips session.md / worktree removal and still finishes the turn (commit dirty checkout),
@@ -2123,11 +2125,8 @@ class WorkSession:
         return [str(self.session_md)]
 
     def _commit_paths(self) -> list[str]:
-        paths = list(self.scope_paths)
-        for extra in self._session_artifact_paths():
-            if extra not in paths:
-                paths.append(extra)
-        return paths
+        """Commit the complete worktree; the worktree is the isolation boundary."""
+        return [str(self.git.root)]
 
     def append_trail(self, call: ToolCall) -> None:
         self.trail.append(call)
