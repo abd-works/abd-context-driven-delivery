@@ -24,7 +24,7 @@ from mcp_server import (
 
 
 def _demo_ref() -> str:
-    return "mcp_server.hosting_demo.hosting_demo:HostingDemo"
+    return "mcp_server.examples.hosting_demo.hosting_demo:HostingDemo"
 
 
 def _build_server() -> McpServer:

@@ -1,5 +1,6 @@
 """MCP-native CDD runtime."""
 from mcp_server.mcp_server import (
+    AnnotatedToolset,
     InstructionBinding,
     McpInstructionCatalog,
     McpNameFormatter,
@@ -12,6 +13,7 @@ from mcp_server.mcp_server import (
 )
 
 __all__ = [
+    "AnnotatedToolset",
     "InstructionBinding",
     "McpInstructionCatalog",
     "McpNameFormatter",

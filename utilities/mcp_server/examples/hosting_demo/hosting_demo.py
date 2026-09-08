@@ -1,8 +1,20 @@
 """Hosting demo toolset for mcp_server BDD specs."""
 from __future__ import annotations
 
+from typing import TypedDict
+
 from mcp_server import mcp_instruction, tool
 from tools.tool import agent_tool, toolset
+
+
+class PlanWorkResult(TypedDict):
+    concept: str
+    count: int
+
+
+class OrchestrateResult(TypedDict):
+    plain: str
+    count: int
 
 
 @toolset
@@ -30,10 +42,10 @@ class HostingDemo:
         return "plain-result"
 
     @mcp_instruction
-    def plan_work(self, concept: str) -> dict[str, object]:
+    def plan_work(self, concept: str) -> PlanWorkResult:
         """Think about the concept before acting."""
         count = tool(self.increment, step=2)
-        return {"concept": concept, "count": count}
+        return {"concept": concept, "count": int(count)}
 
     @mcp_instruction
     def guidance_only(self) -> str:
@@ -41,8 +53,8 @@ class HostingDemo:
         return "guidance-text"
 
     @mcp_instruction
-    def orchestrate_with_plain(self) -> dict[str, object]:
+    def orchestrate_with_plain(self) -> OrchestrateResult:
         """Mix explicit AI tool use with ordinary code."""
         plain = self._ordinary_helper()
         count = tool(self.increment, step=1)
-        return {"plain": plain, "count": count}
+        return {"plain": plain, "count": int(count)}
