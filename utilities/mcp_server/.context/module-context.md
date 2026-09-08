@@ -16,6 +16,7 @@ Persistent local MCP runtime for CDD. Discovers annotated toolset classes, const
 - `McpServer.list_tools` — return registered MCP tool names
 - `McpServer.list_instructions` — return registered instruction prompt names
 - `McpServer.instruction_for` — return discovery metadata (prompt text and declared tools) for an `@instruction`
+- `McpServer.started` — report whether toolsets have been loaded
 - `ToolsetLoader.load_instances` — construct toolset objects required for discovery
 - `McpNameFormatter.format` — derive `{toolset_slug}.{method_name}` dotted names
 

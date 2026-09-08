@@ -21,12 +21,12 @@ class AnnotatedToolset(Protocol):
 
 @dataclass(frozen=True)
 class _McpRuntimeContext:
-    server: McpServer
+    server: _McpServer
     toolset_slug: str
 
 
 @dataclass(frozen=True)
-class ToolBinding:
+class _ToolBinding:
     """A registered AI-callable operation exposed to MCP under a dotted name."""
 
     mcp_name: str
@@ -50,7 +50,7 @@ class ToolBinding:
 
 
 @dataclass(frozen=True)
-class InstructionBinding:
+class _InstructionBinding:
     """Agent guidance registered for discovery; body executes when invoked."""
 
     mcp_name: str
@@ -80,21 +80,21 @@ class _BindingCatalog(Generic[_TBinding]):
         return None
 
 
-class McpToolCatalog(_BindingCatalog[ToolBinding]):
+class _McpToolCatalog(_BindingCatalog[_ToolBinding]):
     """Registry of AI tool bindings keyed by dotted MCP name."""
 
-    def register(self, binding: ToolBinding) -> None:
+    def register(self, binding: _ToolBinding) -> None:
         self._register(binding, mcp_name=binding.mcp_name)
 
 
-class McpInstructionCatalog(_BindingCatalog[InstructionBinding]):
+class _McpInstructionCatalog(_BindingCatalog[_InstructionBinding]):
     """Registry of agent guidance bindings keyed by dotted MCP name."""
 
-    def register(self, binding: InstructionBinding) -> None:
+    def register(self, binding: _InstructionBinding) -> None:
         self._register(binding, mcp_name=binding.mcp_name)
 
 
-class McpNameFormatter:
+class _McpNameFormatter:
     """Derives stable dotted MCP names from CDD toolset identity."""
 
     def format(self, toolset_slug: str, method_name: str) -> str:
@@ -134,25 +134,13 @@ def tool(bound_method: Callable[..., object], /, **arguments: object) -> object:
     return _invoke_registered_tool(ctx, bound_method, dict(arguments))
 
 
-def _runtime_context_token(server: McpServer, toolset_slug: str) -> _McpRuntimeContext | None:
-    global _ACTIVE_CTX
-    previous = _ACTIVE_CTX
-    _ACTIVE_CTX = _McpRuntimeContext(server=server, toolset_slug=toolset_slug)
-    return previous
-
-
-def _reset_runtime_context(previous: _McpRuntimeContext | None) -> None:
-    global _ACTIVE_CTX
-    _ACTIVE_CTX = previous
-
-
-class ToolsetLoader:
+class _ToolsetLoader:
     """Discover toolsets, construct instances, and collect MCP bindings."""
 
     def __init__(
         self,
         *,
-        name_formatter: McpNameFormatter,
+        name_formatter: _McpNameFormatter,
         toolset_loader: _CddToolsetLoader | None = None,
     ) -> None:
         self._name_formatter = name_formatter
@@ -171,15 +159,15 @@ class ToolsetLoader:
             instances.append(toolset_cls(**context))
         return tuple(instances)
 
-    def collect_tool_bindings(self, instance: AnnotatedToolset) -> tuple[ToolBinding, ...]:
+    def collect_tool_bindings(self, instance: AnnotatedToolset) -> tuple[_ToolBinding, ...]:
         slug = self.toolset_slug(instance)
-        bindings: list[ToolBinding] = []
+        bindings: list[_ToolBinding] = []
         for name, member in inspect.getmembers(instance.__class__, predicate=inspect.isfunction):
             if not self._is_ai_tool(member):
                 continue
             bound = member.__get__(instance, instance.__class__)
             bindings.append(
-                ToolBinding(
+                _ToolBinding(
                     mcp_name=self._name_formatter.format(slug, name),
                     toolset_slug=slug,
                     method_name=name,
@@ -191,15 +179,15 @@ class ToolsetLoader:
 
     def collect_instruction_bindings(
         self, instance: AnnotatedToolset
-    ) -> tuple[InstructionBinding, ...]:
+    ) -> tuple[_InstructionBinding, ...]:
         slug = self.toolset_slug(instance)
-        bindings: list[InstructionBinding] = []
+        bindings: list[_InstructionBinding] = []
         for name, member in inspect.getmembers(instance.__class__, predicate=inspect.isfunction):
             if not getattr(member, "_is_mcp_instruction", False):
                 continue
             bound = member.__get__(instance, instance.__class__)
             bindings.append(
-                InstructionBinding(
+                _InstructionBinding(
                     mcp_name=self._name_formatter.format(slug, name),
                     toolset_slug=slug,
                     method_name=name,
@@ -243,16 +231,16 @@ class ToolsetLoader:
         return tuple(dict.fromkeys(names))
 
 
-class McpServer:
+class _McpServer:
     """Persistent local MCP server for CDD tool and instruction discovery."""
 
     def __init__(
         self,
         *,
-        tool_catalog: McpToolCatalog,
-        instruction_catalog: McpInstructionCatalog,
-        loader: ToolsetLoader,
-        name_formatter: McpNameFormatter,
+        tool_catalog: _McpToolCatalog,
+        instruction_catalog: _McpInstructionCatalog,
+        loader: _ToolsetLoader,
+        name_formatter: _McpNameFormatter,
     ) -> None:
         self._tool_catalog = tool_catalog
         self._instruction_catalog = instruction_catalog
@@ -266,7 +254,7 @@ class McpServer:
         return self._started
 
     @property
-    def name_formatter(self) -> McpNameFormatter:
+    def name_formatter(self) -> _McpNameFormatter:
         return self._name_formatter
 
     def start(
@@ -292,7 +280,7 @@ class McpServer:
     def list_instructions(self) -> tuple[str, ...]:
         return self._instruction_catalog.names
 
-    def instruction_for(self, mcp_name: str) -> InstructionBinding | None:
+    def instruction_for(self, mcp_name: str) -> _InstructionBinding | None:
         return self._instruction_catalog.binding_for(mcp_name)
 
     def invocable_parameters_for(self, mcp_name: str) -> tuple[str, ...]:
@@ -315,12 +303,30 @@ class McpServer:
         binding = self._instruction_catalog.binding_for(mcp_name)
         if binding is None:
             raise KeyError(mcp_name)
-        token = _runtime_context_token(self, binding.toolset_slug)
+        token = self._push_runtime_context(binding.toolset_slug)
         try:
             return binding.callable(**dict(arguments or {}))
         finally:
-            _reset_runtime_context(token)
+            self._pop_runtime_context(token)
 
+    def _push_runtime_context(self, toolset_slug: str) -> _McpRuntimeContext | None:
+        global _ACTIVE_CTX
+        previous = _ACTIVE_CTX
+        _ACTIVE_CTX = _McpRuntimeContext(server=self, toolset_slug=toolset_slug)
+        return previous
+
+    def _pop_runtime_context(self, previous: _McpRuntimeContext | None) -> None:
+        global _ACTIVE_CTX
+        _ACTIVE_CTX = previous
+
+
+ToolBinding = _ToolBinding
+InstructionBinding = _InstructionBinding
+McpToolCatalog = _McpToolCatalog
+McpInstructionCatalog = _McpInstructionCatalog
+McpNameFormatter = _McpNameFormatter
+ToolsetLoader = _ToolsetLoader
+McpServer = _McpServer
 
 __all__ = [
     "AnnotatedToolset",

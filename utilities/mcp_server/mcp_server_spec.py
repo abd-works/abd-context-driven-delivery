@@ -52,6 +52,9 @@ with description("a toolset operation"):
                 params = self.server.invocable_parameters_for("hosting_demo.increment")
                 expect("step" in params).to(equal(True))
 
+            with it("should report the server as started"):
+                expect(self.server.started).to(equal(True))
+
         with context("that has been invoked through MCP"):
             with it("should return the operation result to the host"):
                 result = self.server.invoke_tool("hosting_demo.increment", {"step": 3})
@@ -70,6 +73,9 @@ with description("a toolset operation"):
             with it("should list each AI tool name that the guidance orchestrates"):
                 binding = self.server.instruction_for("hosting_demo.plan_work")
                 expect(binding.referenced_tool_names).to(equal(("increment",)))
+
+            with it("should expose registered guidance names to the host"):
+                expect(self.server.list_instructions()).to(contain("hosting_demo.plan_work"))
 
         with context("that has been invoked through MCP"):
             with it("should complete its orchestration and return a result to the host"):
