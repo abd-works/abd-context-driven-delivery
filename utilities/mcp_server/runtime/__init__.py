@@ -1,1 +1,0 @@
-"""Internal MCP runtime collaborators."""
