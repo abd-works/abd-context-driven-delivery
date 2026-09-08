@@ -19,13 +19,14 @@ class ToolBinding:
 
 @dataclass(frozen=True)
 class InstructionBinding:
-    """An @instruction exposed as MCP prompt text plus referenced tool names."""
+    """An @instruction registered for discovery; body executes when invoked."""
 
     mcp_name: str
     toolset_slug: str
     method_name: str
     prompt_text: str
     referenced_tool_names: tuple[str, ...]
+    callable: Callable[..., Any]
 
 
 class McpNameFormatter:
@@ -96,7 +97,7 @@ class ToolsetLoader:
         ...
 
     def collect_instruction_bindings(self, instance: Any) -> tuple[InstructionBinding, ...]:
-        """Discover @instruction methods; extract docstring and tool(...) references only."""
+        """Discover @instruction methods; capture docstring, tool(...) refs, and bound callable."""
         ...
 
 
@@ -139,9 +140,13 @@ class McpServer:
         ...
 
     def instruction_for(self, mcp_name: str) -> InstructionBinding | None:
-        """Return prompt text and referenced tools for an @instruction."""
+        """Return discovery metadata for an @instruction (prompt text and declared tools)."""
         ...
 
     def invoke_tool(self, mcp_name: str, arguments: dict[str, Any]) -> Any:
         """Call the bound Python callable for a registered @tool."""
+        ...
+
+    def invoke_instruction(self, mcp_name: str, arguments: dict[str, Any]) -> Any:
+        """Run an @instruction body; execute tool(...) calls and return the instruction result."""
         ...

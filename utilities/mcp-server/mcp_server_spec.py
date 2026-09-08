@@ -14,7 +14,7 @@ from mamba import context, description, it
 
 
 with description("an MCP server"):
-    with context("that has started against a checkout"):
+    with context("that has started against a repository working tree"):
         with context("with annotated toolsets loaded"):
             with it("should expose each @tool under a dotted MCP name"):
                 # BDD: SIGNATURE
@@ -29,15 +29,23 @@ with description("an MCP server"):
                 pass
 
         with context("with @instruction methods on those toolsets"):
-            with it("should expose each instruction prompt text from its docstring"):
+            with it("should expose each instruction prompt text from its docstring at discovery"):
                 # BDD: SIGNATURE
                 pass
 
-            with it("should declare the MCP tool names referenced by tool(...) in the instruction body"):
+            with it("should declare the MCP tool names referenced by tool(...) in the instruction body at discovery"):
                 # BDD: SIGNATURE
                 pass
 
-            with it("should not execute the instruction body as orchestration"):
+            with it("should run the instruction body when the instruction is invoked"):
+                # BDD: SIGNATURE
+                pass
+
+            with it("should invoke each tool(...) call through the registered @tool callable"):
+                # BDD: SIGNATURE
+                pass
+
+            with it("should allow tool return values to contribute to the instruction output"):
                 # BDD: SIGNATURE
                 pass
 
@@ -69,12 +77,19 @@ with description("MCP tool registration"):
             pass
 
 
-with description("an instruction binding"):
-    with context("that is collected from an @instruction method"):
-        with it("should resolve tool(...) references to the same dotted names used at registration"):
+with description("an instruction invocation"):
+    with context("that reaches a tool(...) call in the instruction body"):
+        with it("should run the wrapped @tool like a direct MCP tool invocation"):
             # BDD: SIGNATURE
             pass
 
-        with it("should ignore ordinary method calls that are not wrapped in tool(...)"):
+        with it("should not treat a plain self.method(...) call as an AI tool invocation"):
+            # BDD: SIGNATURE
+            pass
+
+
+with description("an instruction binding"):
+    with context("that is collected from an @instruction method"):
+        with it("should resolve tool(...) references to the same dotted names used at registration"):
             # BDD: SIGNATURE
             pass

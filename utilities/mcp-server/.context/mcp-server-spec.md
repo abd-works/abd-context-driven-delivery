@@ -145,14 +145,23 @@ On startup (and on reload if supported), the server walks annotated toolset clas
 | CDD annotation | MCP exposure | Runtime payload |
 |---|---|---|
 | `@tool` | MCP **tool** | bound Python callable; schema from signature |
-| `@instruction` | MCP **prompt** (or prompt-like catalog entry) | docstring text + declared tool references |
+| `@instruction` | MCP **prompt** (or prompt-like catalog entry) | docstring text + declared tool references; **body runs when invoked** |
 
-An `@instruction` does **not** execute Python orchestration at runtime. The server **returns** (discovers/exposes):
+At **discovery**, the server registers each `@instruction` with:
 
 1. **Prompt** — the instruction method's docstring (after CDD docstring expansion/normalization if any).
 2. **Tools** — the MCP tool names resolved from each `tool(self.some_tool)` reference in the instruction body.
 
-The host uses the prompt for guidance and the declared tools for callable operations. CDD does not re-run the instruction body through a generic dispatcher.
+At **invocation**, the server **runs the instruction body** like normal Python:
+
+- Ordinary statements execute in order.
+- Each `tool(self.some_tool, …)` **invokes** the bound `@tool` callable (same path as `invoke_tool`).
+- Tool return values are available to the instruction body and **may contribute to the instruction result/output**.
+- The docstring is guidance exposed at discovery; it is not a substitute for running the body when the host calls the instruction.
+
+Do not statically discard `tool(...)` calls as metadata only — wrapped tools **run** at call time.
+
+Do not route instruction execution through YAML, CLI, or a generic request document.
 
 Example registration shape (conceptual):
 
@@ -201,26 +210,29 @@ MCP should derive the runtime parameter schema from the actual Python callable.
 
 Keep CDD's `@instruction`.
 
-This is a CDD-specific abstraction. The MCP server **discovers** instructions and exposes what they declare: a **prompt** (docstring) and **tools** (`tool(...)` references).
+This is a CDD-specific abstraction. The MCP server **discovers** instructions (docstring + declared tools) and **executes** them when invoked.
 
 Example:
 
 ```python
 @instruction
-def bdd_thinking(self):
+def bdd_thinking(self, concept: str):
     """
     Think in states, substates, events and transitions.
     Look for meaningful transitions, invalid transitions,
     ambiguity and concrete examples.
     """
-    tool(self.find_examples)
-    tool(self.validate_behavior)
+    examples = tool(self.find_examples, concept=concept)
+    tool(self.validate_behavior, examples=examples)
+    return examples
 ```
 
 Semantics:
 
-- **Docstring** → the instruction prompt text returned to the host via MCP prompt discovery.
-- **`tool(...)` lines** → explicit MCP tool references bundled with that instruction (must resolve to registered `@tool` methods on the same toolset instance).
+- **Docstring** → instruction prompt text exposed at MCP discovery.
+- **`tool(...)` calls** → **run** the referenced `@tool` at invocation time (direct bound callable — same as MCP tool invocation).
+- **Return value / side effects** → ordinary Python; tool results may flow into later statements or the instruction output.
+- **Plain `self.find_examples(...)`** without `tool(...)` → normal method call, **not** an AI tool boundary (see [Explicit tool references](#explicit-tool-references)).
 
 Do not require:
 
@@ -228,9 +240,9 @@ Do not require:
 return """..."""
 ```
 
-Do not execute the instruction body as an orchestration runtime. Statically extract docstring + `tool(...)` references at discovery time.
+Do not treat `@instruction` as discovery-only metadata. The body is real orchestration code that runs when the instruction is called.
 
-Do not teach agents a separate YAML/CLI protocol to "fetch" instructions — MCP discovery is the path.
+Do not teach agents a separate YAML/CLI protocol to invoke instructions — MCP is the path.
 
 **Naming note:** harness `@prompt` (deployed slash commands / prompt **files**) is unrelated to MCP prompt entries produced from `@instruction`. Both may coexist; this migration adds MCP prompt discovery for `@instruction` without removing harness `@prompt` deploy.
 
@@ -262,12 +274,14 @@ The source should visibly distinguish:
 Initial semantics:
 
 ```python
-tool(self.find_examples)
+tool(self.find_examples, concept=concept)
 ```
 
 means:
 
-this instruction exposes/requires the `find_examples` AI tool
+**invoke** the `find_examples` AI tool now, with the given arguments, and use its return value like any other Python call.
+
+Discovery still records that this instruction **may** call `bdd.find_examples` so hosts can list related tools — but invocation **runs** the call, not merely declares it.
 
 Future syntax may support binding:
 
@@ -611,6 +625,7 @@ Add tests for:
 - MCP registration of tools
 - MCP registration of instruction prompts with correct docstring text
 - MCP instruction entries include correct referenced tool names from `tool(...)` bodies
+- invoking an `@instruction` runs `tool(...)` calls and may include tool results in the instruction output
 - Python signature → MCP schema (tools only)
 - tool invocation → direct Python callable
 - persistent process / retained instance where relevant
@@ -689,7 +704,7 @@ The migration is complete when:
 1. No generated skill/prompt/rule/command/agent contains YAML invocation instructions.
 2. No normal AI execution path uses `tools.ps1` or `python -m tools run`.
 3. MCP invokes annotated `@tool` operations directly.
-4. MCP discovers annotated `@instruction` operations and exposes each as a prompt (docstring) plus its referenced tools.
+4. MCP discovers annotated `@instruction` operations and exposes each as a prompt (docstring) plus its referenced tools; **invoking** an instruction runs its Python body and executes `tool(...)` calls.
 5. Tool schemas come from the actual Python callable.
 6. `@tool` remains the CDD authoring annotation for AI-callable operations.
 7. `@instruction` remains the CDD authoring annotation for docstring-based guidance with explicit `tool(...)` references.
