@@ -119,10 +119,12 @@ Add one persistent local MCP server.
 It should:
 
 - discover CDD `@tool` operations;
+- discover CDD `@instruction` operations;
 - construct the required Python objects;
-- register bound callables with MCP;
+- register bound `@tool` callables with MCP;
+- register `@instruction` content as MCP prompts (or equivalent host-visible prompt entries) plus their referenced tools;
 - remain alive across repeated calls;
-- invoke those callables directly.
+- invoke `@tool` callables directly when the host calls an MCP tool.
 
 Assume a local single-user process.
 
@@ -135,6 +137,32 @@ The live MCP process itself may retain:
 - caches;
 - workspace state;
 - other useful in-memory state.
+
+### Discovery model
+
+On startup (and on reload if supported), the server walks annotated toolset classes and builds two catalogs:
+
+| CDD annotation | MCP exposure | Runtime payload |
+|---|---|---|
+| `@tool` | MCP **tool** | bound Python callable; schema from signature |
+| `@instruction` | MCP **prompt** (or prompt-like catalog entry) | docstring text + declared tool references |
+
+An `@instruction` does **not** execute Python orchestration at runtime. The server **returns** (discovers/exposes):
+
+1. **Prompt** — the instruction method's docstring (after CDD docstring expansion/normalization if any).
+2. **Tools** — the MCP tool names resolved from each `tool(self.some_tool)` reference in the instruction body.
+
+The host uses the prompt for guidance and the declared tools for callable operations. CDD does not re-run the instruction body through a generic dispatcher.
+
+Example registration shape (conceptual):
+
+```
+bdd.bdd_thinking          → prompt text + [bdd.find_examples, bdd.validate_behavior]
+bdd.find_examples         → callable tool
+bdd.validate_behavior     → callable tool
+```
+
+Use one deterministic naming strategy for both tools and instruction prompts (see [Naming](#naming)).
 
 ---
 
@@ -173,7 +201,7 @@ MCP should derive the runtime parameter schema from the actual Python callable.
 
 Keep CDD's `@instruction`.
 
-This is a CDD-specific abstraction and should remain independent of MCP.
+This is a CDD-specific abstraction. The MCP server **discovers** instructions and exposes what they declare: a **prompt** (docstring) and **tools** (`tool(...)` references).
 
 Example:
 
@@ -189,7 +217,10 @@ def bdd_thinking(self):
     tool(self.validate_behavior)
 ```
 
-The instruction docstring is the actual instruction content.
+Semantics:
+
+- **Docstring** → the instruction prompt text returned to the host via MCP prompt discovery.
+- **`tool(...)` lines** → explicit MCP tool references bundled with that instruction (must resolve to registered `@tool` methods on the same toolset instance).
 
 Do not require:
 
@@ -197,9 +228,11 @@ Do not require:
 return """..."""
 ```
 
-Do not convert every instruction into an MCP prompt.
+Do not execute the instruction body as an orchestration runtime. Statically extract docstring + `tool(...)` references at discovery time.
 
-MCP prompts should only be used if there is an actual need for the host's MCP prompt catalog.
+Do not teach agents a separate YAML/CLI protocol to "fetch" instructions — MCP discovery is the path.
+
+**Naming note:** harness `@prompt` (deployed slash commands / prompt **files**) is unrelated to MCP prompt entries produced from `@instruction`. Both may coexist; this migration adds MCP prompt discovery for `@instruction` without removing harness `@prompt` deploy.
 
 ---
 
@@ -402,8 +435,13 @@ CDD needs a minimal mechanism to:
 - find annotated toolset classes;
 - construct them;
 - discover `@tool` methods;
+- discover `@instruction` methods;
+- extract each instruction's docstring and `tool(...)` references;
 - resolve whatever constructor context the class requires;
-- hand bound methods to MCP.
+- hand bound `@tool` methods to MCP as tools;
+- hand each `@instruction` to MCP as a prompt entry plus its referenced tool names.
+
+Reduce the loader to those responsibilities.
 
 Reduce the loader to those responsibilities.
 
@@ -420,8 +458,8 @@ Target:
 ```
 discover class
 → instantiate class
-→ discover @tool methods
-→ register bound methods
+→ discover @tool methods → register MCP tools
+→ discover @instruction methods → register MCP prompts + tool refs
 ```
 
 ---
@@ -534,18 +572,22 @@ Give every exposed tool a stable MCP name derived from its CDD identity.
 
 Example:
 
-- `bdd.find_examples`
-- `bdd.validate_behavior`
-- `plan.create`
+- `bdd.find_examples` — tool
+- `bdd.validate_behavior` — tool
+- `bdd.bdd_thinking` — instruction prompt
+- `plan.create` — tool
 
 If host compatibility requires another character convention:
 
 - `bdd_find_examples`
 - `bdd_validate_behavior`
+- `bdd_bdd_thinking`
 
-use one deterministic naming strategy globally.
+use one deterministic naming strategy globally for **both** tools and instruction prompts.
 
 Do not create runtime-generated names unless required by future partial-binding work.
+
+Instruction prompts and their referenced tools share the same namespace rules so `tool(self.find_examples)` resolves to the same MCP name the tool was registered under.
 
 ---
 
@@ -565,8 +607,11 @@ Delete tests whose only purpose is validating:
 Add tests for:
 
 - `@tool` discovery
-- MCP registration
-- Python signature → MCP schema
+- `@instruction` discovery
+- MCP registration of tools
+- MCP registration of instruction prompts with correct docstring text
+- MCP instruction entries include correct referenced tool names from `tool(...)` bodies
+- Python signature → MCP schema (tools only)
 - tool invocation → direct Python callable
 - persistent process / retained instance where relevant
 - generated skill / prompt / command / rule / agent → correct MCP tool reference (no YAML tail)
@@ -615,6 +660,7 @@ MCP owns:
 - tool schema
 - tool discovery
 - tool invocation protocol
+- instruction prompt discovery (for `@instruction` docstrings)
 - transport
 - structured arguments
 - structured results
@@ -623,9 +669,9 @@ MCP owns:
 CDD owns:
 
 - domain semantics
-- instruction composition
+- `@instruction` composition and `tool(...)` reference semantics
 - tool grouping/reference semantics
-- generated host guidance
+- generated host guidance (harness deploy)
 - object/context construction
 
 There should be no YAML transport architecture underneath this.
@@ -642,19 +688,20 @@ The migration is complete when:
 
 1. No generated skill/prompt/rule/command/agent contains YAML invocation instructions.
 2. No normal AI execution path uses `tools.ps1` or `python -m tools run`.
-3. MCP invokes annotated Python operations directly.
-4. Tool schemas come from the actual Python callable.
-5. `@tool` remains the CDD authoring annotation for AI-callable operations.
-6. `@instruction` remains the CDD authoring annotation for docstring-based guidance.
-7. `tool(...)` explicitly marks AI tool usage inside instructions.
-8. Generated artifacts reference MCP tools in a concise form such as:  
+3. MCP invokes annotated `@tool` operations directly.
+4. MCP discovers annotated `@instruction` operations and exposes each as a prompt (docstring) plus its referenced tools.
+5. Tool schemas come from the actual Python callable.
+6. `@tool` remains the CDD authoring annotation for AI-callable operations.
+7. `@instruction` remains the CDD authoring annotation for docstring-based guidance with explicit `tool(...)` references.
+8. `tool(...)` explicitly marks AI tool usage inside instructions and resolves to MCP tool names at discovery time.
+9. Generated artifacts reference MCP tools in a concise form such as:  
    `Use MCP tool: bdd.find_examples(concept: str, limit: int = 10)`
-9. Old YAML request/response and manifest plumbing is removed when it no longer serves the target architecture.
-10. Old CLI dispatcher plumbing is removed when it no longer serves the target architecture.
-11. Duplicate signature/schema machinery is removed unless a remaining concrete use justifies it.
-12. The resulting implementation is materially smaller than the current one.
-13. `@resource`, `@skill`, and `@prompt` **decorators** remain; harness deploy has been updated and redeployed so generated skills/prompts/commands/rules/agents use MCP invocation text instead of YAML/CLI tails.
-14. Checked-in deploy trees (e.g. `.cursor/skills/**`, `.cursor/commands/**`) contain no remaining `toolset:` / `tools.ps1 run -` invoke blocks from harness generation.
+10. Old YAML request/response and manifest plumbing is removed when it no longer serves the target architecture.
+11. Old CLI dispatcher plumbing is removed when it no longer serves the target architecture.
+12. Duplicate signature/schema machinery is removed unless a remaining concrete use justifies it.
+13. The resulting implementation is materially smaller than the current one.
+14. `@resource`, `@skill`, and `@prompt` **decorators** remain; harness deploy has been updated and redeployed so generated skills/prompts/commands/rules/agents use MCP invocation text instead of YAML/CLI tails.
+15. Checked-in deploy trees (e.g. `.cursor/skills/**`, `.cursor/commands/**`) contain no remaining `toolset:` / `tools.ps1 run -` invoke blocks from harness generation.
 
 ---
 
