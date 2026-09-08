@@ -48,7 +48,23 @@ Semantics:
 
 Do not retain parallel CDD abstractions for functionality already supplied by MCP unless they materially improve authoring ergonomics.
 
-If custom `@resource`, prompt, manifest, schema, or runner abstractions become unnecessary, remove them.
+If manifest, schema, or runner abstractions become unnecessary, remove them.
+
+Do **not** remove or redesign `@resource`, `@skill`, or `@prompt` as part of this migration — see [Out of scope](#out-of-scope--do-not-change).
+
+---
+
+## Out of scope — do not change
+
+These CDD/harness annotations and their current behavior are **explicitly out of scope** for this refactor. Leave them untouched:
+
+- **`@resource`** — observable toolset state (`primitives/tools`); property getters, instruction inlining, and any manifest/harness usage stay as they are today unless a separate change targets them.
+- **`@skill`** — harness skill generation (`primitives/harness`); deployed `SKILL.md` artifacts and `@skill` discovery/writing behavior are unchanged by this migration.
+- **`@prompt`** — harness prompt/command generation (`primitives/harness`); deployed prompt/command files and `@prompt(name=…)` behavior are unchanged by this migration.
+
+This migration replaces **AI tool invocation transport** (YAML/CLI → MCP). It does **not** refactor harness deploy vehicles, read-only resources, or slash-command/prompt catalog authoring.
+
+When deleting YAML/manifest/runner plumbing, do not delete or rewrite code whose primary job is implementing `@resource`, `@skill`, or `@prompt` unless that code is **only** used by the removed YAML/CLI path and has no remaining role for those annotations.
 
 ---
 
@@ -406,17 +422,14 @@ discover class
 
 ---
 
-## Resources
+## `@resource`, `@skill`, and `@prompt` (unchanged)
 
-CDD resources are not important to this migration.
+`@resource`, `@skill`, and `@prompt` are **not** deprecated or replaced by this migration.
 
-Do not preserve a custom resource abstraction just because it exists.
+- **`@resource`** remains the CDD annotation for observable toolset state. Do not fold it into MCP tools or delete it “because MCP has resources.” Native MCP resources are a separate concern for a later change, if ever.
+- **`@skill`** and **`@prompt`** remain the harness annotations for generating host skills and prompts/commands. Only the **tool invocation tail** inside generated artifacts changes (YAML block → MCP tool reference). The decorators, deploy paths, and file kinds stay the same.
 
-If it is unused, delete it.
-
-If an actual MCP-readable resource is needed later, use native MCP resources unless CDD has a concrete semantic requirement MCP does not satisfy.
-
-Avoid speculative abstractions.
+Do not remove `@resource` registration, `@skill`/`@prompt` harness writers, or their tests as part of YAML/CLI removal unless a line of code is provably dead **and** not used by these annotations.
 
 ---
 
@@ -557,6 +570,8 @@ CDD
 ├── @tool
 ├── @instruction
 ├── tool(...)
+├── @resource          (unchanged)
+├── @skill / @prompt   (unchanged — harness deploy only)
 ├── minimal discovery / construction
 ├── MCP server registration
 └── harness generation
@@ -605,6 +620,7 @@ The migration is complete when:
 10. Old CLI dispatcher plumbing is removed when it no longer serves the target architecture.
 11. Duplicate signature/schema machinery is removed unless a remaining concrete use justifies it.
 12. The resulting implementation is materially smaller than the current one.
+13. `@resource`, `@skill`, and `@prompt` behavior and harness/deploy outputs for those annotations remain unchanged except where generated skills/prompts previously embedded YAML tool-invocation tails (those tails become MCP references only).
 
 ---
 
