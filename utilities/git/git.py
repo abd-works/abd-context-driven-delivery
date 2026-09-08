@@ -14,13 +14,6 @@ from typing import Any
 
 from tools.tool import toolset
 
-_GIT_DO_NOT_PROCEED = (
-    "Do not proceed unless the user tells you to continue without a git connection."
-)
-_GH_DO_NOT_PROCEED = (
-    "Do not proceed unless the user tells you to continue without GitHub CLI access."
-)
-
 
 class GitConnectError(RuntimeError):
     """Raised when the clone cannot be used for git."""
@@ -310,9 +303,7 @@ class Ticket:
         item = json.loads(item_raw or "{}")
         item_id = item.get("id")
         if not item_id:
-            raise GhConnectError(
-                f"Could not add issue to project. {_GH_DO_NOT_PROCEED}"
-            )
+            raise GhConnectError("Could not add issue to project.")
         gh_value = resolve_github_status_option(
             state_name, project.status_option_names()
         )
@@ -620,9 +611,7 @@ class Repo:
                     found = str(candidate)
                     break
         if not found:
-            raise GitConnectError(
-                f"Cannot connect git: `git` is not available. {_GIT_DO_NOT_PROCEED}"
-            )
+            raise GitConnectError("Cannot connect git: `git` is not available.")
         try:
             completed = subprocess.run(
                 [found, "-c", "core.longpaths=true", "-C", str(root), *args],
@@ -632,14 +621,12 @@ class Repo:
                 check=False,
             )
         except OSError as exc:
-            raise GitConnectError(
-                f"Cannot connect git: {exc}. {_GIT_DO_NOT_PROCEED}"
-            ) from exc
+            raise GitConnectError(f"Cannot connect git: {exc}.") from exc
         if completed.returncode != 0:
             err = (completed.stderr or completed.stdout or "").strip()
             raise GitConnectError(
                 f"Cannot connect git: git {' '.join(args)} failed in {root}: "
-                f"{err}. {_GIT_DO_NOT_PROCEED}"
+                f"{err}."
             )
         return (completed.stdout or "").strip()
 
@@ -660,9 +647,7 @@ class Repo:
                     found = str(candidate)
                     break
         if not found:
-            raise GhConnectError(
-                f"Cannot connect gh: `gh` is not available. {_GH_DO_NOT_PROCEED}"
-            )
+            raise GhConnectError("Cannot connect gh: `gh` is not available.")
         try:
             completed = subprocess.run(
                 [found, *args],
@@ -674,14 +659,12 @@ class Repo:
                 input=stdin,
             )
         except OSError as exc:
-            raise GhConnectError(
-                f"Cannot connect gh: {exc}. {_GH_DO_NOT_PROCEED}"
-            ) from exc
+            raise GhConnectError(f"Cannot connect gh: {exc}.") from exc
         if completed.returncode != 0:
             err = (completed.stderr or completed.stdout or "").strip()
             shown = " ".join(a for a in args if a != stdin)
             raise GhConnectError(
-                f"Cannot connect gh: gh {shown} failed: {err}. {_GH_DO_NOT_PROCEED}"
+                f"Cannot connect gh: gh {shown} failed: {err}."
             )
         return (completed.stdout or "").strip()
 
@@ -872,9 +855,7 @@ class Repo:
         payload = json.loads(raw or "{}")
         name = payload.get("nameWithOwner", "")
         if "/" not in name:
-            raise GhConnectError(
-                f"Cannot resolve owner/repo for {self.root}. {_GH_DO_NOT_PROCEED}"
-            )
+            raise GhConnectError(f"Cannot resolve owner/repo for {self.root}.")
         owner, repo = name.split("/", 1)
         return owner, repo
 
@@ -1310,9 +1291,7 @@ class Repo:
         )
         url = (raw or "").strip().splitlines()[-1].strip() if raw else ""
         if "/issues/" not in url:
-            raise GhConnectError(
-                f"Cannot parse issue URL from gh issue create: {raw!r}. {_GH_DO_NOT_PROCEED}"
-            )
+            raise GhConnectError(f"Cannot parse issue URL from gh issue create: {raw!r}.")
         number = int(url.rstrip("/").rsplit("/", 1)[-1])
         ticket = self.ticket(str(number))
         if ticket is None:
