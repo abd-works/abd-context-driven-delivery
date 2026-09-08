@@ -34,7 +34,7 @@ from harness.rule import Rule
 from harness.skill import Skill
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_IMPLEMENTED = frozenset({"Cursor", "VS Code"})
+_IMPLEMENTED = frozenset({"Cursor", "VS Code", "Kilo"})
 _SKIP_DIRS = frozenset({"__pycache__", "examples"})
 _COMPOSER_CLASSES = frozenset({"BaseContextTool", "LifecycleAction"})
 _WALK_TREES = ("context_tools", "utilities")
@@ -124,6 +124,8 @@ class Harness:
         return self.repo_root / "primitives" / "harness" / ".deploy-state.json"
 
     def _ide_folder(self) -> str:
+        if self.type == "Kilo":
+            return ".kilo"
         return ".cursor" if self.type == "Cursor" else ".github"
 
     def _should_skip(self, path: Path) -> bool:
@@ -197,7 +199,7 @@ class Harness:
         if deploy_path.strip():
             root = Path(deploy_path.strip())
             ide = self._ide_folder()
-            if root.name != ide:
+            if root.name != ide and root.name not in (".kilo", ".cursor", ".github"):
                 root = root / ide
             return [root]
         return [self._suggested_deploy_path()]
