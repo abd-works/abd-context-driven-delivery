@@ -28,17 +28,17 @@ a logged tool                        ← splits the same subject; use one action
 when no session name is given        ← never "when" for state — use "with …"
 ```
 
-### Mental model
+### Guidance
 
-Design the tree hierarchy by building a flowing sentence. Build every hierarchy so that reading from the outermost `describe` through every nested `that`/`with` down to the `it should` produces a clean, flowing English sentence — spoken aloud, it describes the behavior naturally.
+Design the tree hierarchy by building a flowing sentence. Build every hierarchy so that reading from the outermost `describe` through every nested `that`/`with` down to the `it should` produces a clean, flowing English sentence — spoken aloud, it describes the behavior naturally. When it does not read as a sentence, the nesting is grouping tests for convenience instead of following the conditions the behavior depends on — and you can no longer reason about all the possible behaviors and alternate behaviors that require coverage.
 
-**Always start with the subject:** place the baseline entity type, class, or user mode at the outermost `describe`. **Then nest layers in any order** — choose whichever sequence produces the most natural spoken sentence. Select from these three layer types and arrange them to flow:
+**Always start with the subject:** place the baseline entity type, class, or user mode at the outermost `describe` — everything below inherits it, so the wrong subject at the top misplaces every behavior under it. **Then nest layers in any order** — choose whichever sequence produces the most natural spoken sentence. Nesting means each condition is set up once and everything inside adds to it — easier to follow, and no rebuilding the same state in every test. Select from these three layer types and arrange them to flow: 
 
 * **Structure:** the content configuration or data shape of that identity. `with items in the cart`, `with no billing address`, `with a linked payment method`
 * **Event:** the static system state *after* an action has been finalized. `that has been submitted`, `that has been cancelled`, `that has been approved` — express lifecycle events as past-participle states only
 * **Environmental Variance:** external factors, temporal rules, or inputs applied to that state. `during a flash sale weekend`, `outside of promotional periods`, `on a public holiday`
 
-Arrange these in whatever sequence makes the sentence read naturally. `"with items in the cart, that has been submitted, during a flash sale"` flows. `"during a flash sale, that has been submitted, with items in the cart"` does not. Always let the sentence guide the nesting order.
+Arrange these in whatever sequence makes the sentence read naturally. `"with items in the cart, that has been submitted, during a flash sale"` flows. Always let the sentence guide the nesting order.
 
 > *"a ShoppingCart, for a premium member account, with items in the cart, that has been submitted, during a flash sale weekend, it should apply an automatic double-points multiplier"*
 
@@ -51,7 +51,7 @@ describe a user
     [Behaviors exclusive to logged-out state]
 ```
 
-**Nest** when a sub-state inherits everything from its parent but introduces another behavior.
+**Nest** when a sub-state inherits everything from its parent but introduces another behavior — a nested block only makes sense if the parent state has to hold for the behavior to happen.
 ```
 describe an account
   that is premium
@@ -115,14 +115,14 @@ describe a Payment                          describe a Payment
 
 **Shared Rules:**
 
-- **`observable-behavior`** — Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals.
-- **`domain-practice-alignment`** — Describe names must match domain language / model exactly.
-- **`usage-order-behaviors`** — Order describes, contexts, and examples as a **usage story** or operational sequence (what happens first → next). Do not order by implementation layer, package, or internal type.
-- **`describe-is-subject-not-internal`** — A `describe` is a domain subject, state, or observable condition — never a manager, hub, runner, service, or other internal (`SessionLog`, `ToolsetRunner`, …).
+- **`observable-behavior`** — Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals. Assertions on internals break when the code is refactored and still pass when the behavior is wrong.
+- **`domain-practice-alignment`** — Describe names must match domain language / model exactly, so the business, the spec, and the code all use the same words.
+- **`usage-order-behaviors`** — Order describes, contexts, and examples as a **usage story** or operational sequence (what happens first → next). Do not order by implementation layer, package, or internal type. In usage order a missing step is obvious; ordered by layer, nobody can tell what is not covered.
+- **`describe-is-subject-not-internal`** — A `describe` is a domain subject, state, or observable condition — never a manager, hub, runner, service, or other internal (`SessionLog`, `ToolsetRunner`, …). A spec named after a class has to be rewritten when that class is replaced, even though the behavior did not change.
 - **`describe-is-plain-english`** — Full English phrases (e.g. "an action that is annotated with log", "an action that is not annotated"). Never symbol/mechanism names (`"@log marker"`) as the subject.
 - **`state-not-when`** — Never name a nested state with `when`. Use `that …` for events/conditions on the subject and `with …` for standing conditions. Ask: what event or condition must already be true for this observation?
 - **`nest-by-enabling-events`** — Each nested `that` / `with` must be a real precondition or event required for the nested `it should` — not a test-file grouping convenience.
-- **`full-surface-coverage`** — When generating or satisfying tests for a module that already exists, scan the production source for every public method, property, class, and constant. Each must have at least one `it should` covering its observable behavior. Any gap is a violation. Private and underscore-prefixed members are excluded unless they are part of a documented public contract.
+- **`full-surface-coverage`** — Full coverage means the behavior tree is complete — every observable outcome has an `it should` in the right branch. Walk the describe/`that`/`with` tree for missing subjects, states, and outcomes; do not add one `it` per public method just because the member exists.
 - **`scan-fixture-pair`** — A mechanical mistake spec passes the fail file to `expect_scan_fails` and the pass file to `expect_scan_passes` (`context_tools.bdd.spec_helpers`). Do not invent a parallel eval spec harness.
 
 ---
@@ -155,7 +155,7 @@ Key rules: `state-not-when` — nest by the state or condition that enables an o
 
 **Goal:** map observation to a real test before implementation. Lock the sketched hierarchy as framework `describe` / `it` nesting. Every `it` body is exactly one `BDD: SIGNATURE` marker — nothing else.
 
-- Sketch nesting (subjects → `with`/`that`/events → `it should`) is agreed 
+- Sketch nesting (subjects → `with`/`that`/events → `it should`) is agreed
 - **Confirm framework** — ask if not stated. Default: Mamba/Python; Jest/TypeScript or JUnit 5/Java when the project uses those.
 - Convert every sketch hierarchy line to its framework equivalent (see Framework syntax).
 - Process in batches of ~18 describe blocks when the hierarchy is large.
@@ -164,8 +164,6 @@ Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.
 
 ### Rules
 
-- **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count.
-- **`signature-markers`** — Every `it` body is exactly `// BDD: SIGNATURE` or `# BDD: SIGNATURE`.
 - **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup.
 - **`framework-syntax`** — Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs.
 
@@ -199,14 +197,14 @@ it('should apply a percentage discount to eligible items', () => {
 7. Refactor only while green. Move to the next marker.
 8. Repeat until zero markers remain, then run **validate**.
 
-### Coverage scan (existing code)
+### Coverage check (existing module)
 
-When generating or satisfying against a module that already exists, read the production source before touching the spec:
+When generating or satisfying against a module that already exists, check the behavior tree before touching the spec:
 
-1. List every public method, property, class, and constant (exclude `_`-prefixed members unless publicly documented).
-2. Compare against the existing spec to find members with no `it should` entry.
-3. Add `it should` entries (at behavior fidelity) or full test bodies (at development fidelity) for every gap — do not skip any public member.
-4. Only then proceed with RED-GREEN-REFACTOR for the new or updated tests.
+1. Walk the describe/`that`/`with` tree for subjects, states, branches, or outcomes with no `it should`.
+2. Compare against the usage story and observable behaviors the module is meant to support.
+3. Add hierarchy and `it should` entries for missing behaviors — not one entry per public member on the class.
+4. Then proceed with RED-GREEN-REFACTOR.
 
 ### The RED-GREEN-REFACTOR cycle
 
@@ -219,26 +217,13 @@ When generating or satisfying against a module that already exists, read the pro
 Label Arrange / Act / Assert; one observable outcome per `it` (`observable-behavior` above). Split unrelated expects. Shared construction → `beforeEach` / factory at three sibling dupes.
 
 ### Rules
-
-- **`red-then-green`** — Fail for the right reason before production code changes.
-- **`minimum-green`** / **`code-minimalism`** — Least production code that makes this assertion pass.
-- **`refactor-only-when-green`** — Refactor only while green.
-- **`one-signature-at-a-time`** — One marker → green → next. Do not batch all bodies first.
-- **`one-assertion-per-test`** —  one outcome per `it`. tighly connects `expects`
-- **`layer-isolation`** — Mock only at architecture boundaries; never the subject under test.
-- **`no-remaining-signatures`** — Zero `BDD: SIGNATURE` markers when done.
-- **`full-surface-coverage`** — Before generating or satisfying, scan the production source for all public members. Add `it should` entries for every uncovered public method, property, or class. Complete coverage is required; no public surface may be left untested.
-- **`context-sharing`** — Shared construction in `beforeEach` / factory at three sibling dupes.
-- **`oo-api-design`** — Ask-don't-tell: construct fully; own state on the object; operations on the closest domain concept.
+- **`hierarchy-preservation`** — 1:1 from sketch nesting to code. Nothing added, removed, or flattened. Same depth, same `it` count. Changing the tree during implementation drops behaviors that were agreed on, or adds ones nobody specified.
+- **`red-then-green`** — Fix code by writing the test first, then watching it fail, then making production code changes.
+- **`minimum-green`** / **`code-minimalism`** — Least production code that makes this assertion pass. Refactor only while green.
+- **`one-signature-at-a-time`** — Implement and test one `BDD: SIGNATURE` at a time — get it passing before moving to the next. Do not fill in every test body first and try to make them all pass together.
+- **`one-assertion-per-test`** — One outcome per `it` — two outcomes in one test and a failure does not tell you which behavior broke.
+- **`layer-isolation`** — Mock only at architecture boundaries; never the subject under test. Mocking the subject tests the mock, not your code.
+- **`context-sharing`** — Shared construction in `beforeEach` / factory at three sibling dupes. Repeated setup in every test hides what actually differs between them.
+- **`oo-api-design`** — Ask-don't-tell: construct fully; own state on the object; operations on the closest domain concept. Tests that assemble state through getters or pass setup bags couple to how you built it, not what it does.
 - **`honors-documented-surface-contracts`** — Public API must match documented surface contracts; if a spec fights the contract, fix the spec.
-- **`roundtrip-parity-is-required`** — Adapter parse/render seams assert `counts(parse(render(canonical))) == counts(canonical)`.
-- **`code-source-of-truth-guard`** — Tests reject unsafe regeneration when generation can overwrite hand-edited code.
-- **`impl-must-carry-bdd-manifest`** — Impl paired with `*_spec.py` carries `# @toolset-manifest … context_tools.bdd.bdd:Bdd`.
-- **`observable-behavior`** — Assert public outcomes only.
-- **`scan-fixture-pair`** — A mechanical mistake spec passes the fail file to `expect_scan_fails` and the pass file to `expect_scan_passes` (`context_tools.bdd.spec_helpers`). Do not invent a parallel eval spec harness.
-
 ---
-
-## Story acceptance (Python)
-
-Story files import **`story_test.py`** — it extends **Mamba** with **`with given`**, **`with when`**, **`with then`**, **`with and_`**, and **`with background.all` / `with background.each`** (like **`with before.all` / `with before.each`**). Run with **`python -m story_test`**. Unit BDD specs keep plain `description` / `context` / `it`.

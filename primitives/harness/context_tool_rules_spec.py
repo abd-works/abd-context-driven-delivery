@@ -131,6 +131,29 @@ with description("Harness deploy context tool rules"):
         expect(rule_file.read_text(encoding="utf-8")).to(contain("Test shape ladder"))
         expect(rule_file.read_text(encoding="utf-8")).to(contain("alwaysApply: false"))
 
+    with it("should discover rule files from repo rules/ folder"):
+        from harness.context_tool_rules import rules_from_repo_rules_folder
+
+        specs = rules_from_repo_rules_folder(_REPO_ROOT)
+        by_name = {s.name: s for s in specs}
+        expect("writing-guidelines" in by_name).to(be_true)
+        expect(by_name["writing-guidelines"].body).to(contain("AI garbage phrasing"))
+        expect(by_name["writing-guidelines"].always_apply).to(be_true)
+        expect(by_name["writing-guidelines"].folder).to(equal(""))
+
+    with it("should write repo rules/ folder rule on Cursor deploy"):
+        from harness.harness import Harness
+
+        root = Path(tempfile.mkdtemp(prefix="harness-repo-rules-"))
+        Harness("Cursor", repo_root=_REPO_ROOT).write_deploy(
+            deploy_path=str(root / ".cursor"),
+            source="stories",
+        )
+        rule_file = root / ".cursor" / "rules" / "writing-guidelines.mdc"
+        expect(rule_file.is_file()).to(be_true)
+        expect(rule_file.read_text(encoding="utf-8")).to(contain("AI garbage phrasing"))
+        expect(rule_file.read_text(encoding="utf-8")).to(contain("alwaysApply: true"))
+
     with it("should not write context tool rules for VS Code deploy"):
         from harness.harness import Harness
 

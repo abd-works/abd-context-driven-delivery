@@ -25,10 +25,12 @@ from harness.instruction import Instruction
 from harness.prompt import Prompt, prompt
 from harness.returned_guidance import _DEFAULT_CODE_LANGUAGE, compound_guidance
 from harness.context_tool_rules import (
+    ContextToolRuleSpec,
     all_context_tool_mdc_specs,
     all_context_tool_procedure_specs,
     all_context_tool_rule_specs,
     all_rules_folder_specs,
+    rules_from_repo_rules_folder,
 )
 from harness.rule import Rule
 from harness.skill import Skill
@@ -493,6 +495,44 @@ class Harness:
                     except OSError:
                         pass
 
+    def _write_rule_spec(
+        self,
+        spec: ContextToolRuleSpec,
+        roots: list[Path],
+        seen: set[tuple[str, str]],
+        seen_key: tuple[str, str],
+    ) -> str | None:
+        if seen_key in seen:
+            return None
+        seen.add(seen_key)
+        rule = Rule(self.type, spec.name)
+        rule.description = spec.description
+        rule.globs = spec.globs
+        rule.always_apply = spec.always_apply
+        rule.body = spec.body
+        if spec.tool_slug:
+            rule.subfolder = f"{spec.folder}/{spec.tool_slug}" if spec.folder else spec.tool_slug
+        else:
+            rule.subfolder = spec.folder
+        rule.write(roots)
+        self.rules.append(rule)
+        return spec.name
+
+    def _write_repo_rules(
+        self,
+        roots: list[Path],
+        seen: set[tuple[str, str]],
+    ) -> list[str]:
+        """Write repo-level ``rules/*.md`` as top-level ``rules/*.mdc`` (Cursor only)."""
+        if self.type != "Cursor":
+            return []
+        names: list[str] = []
+        for spec in rules_from_repo_rules_folder(self.repo_root):
+            written = self._write_rule_spec(spec, roots, seen, (spec.name, "repo-rule"))
+            if written:
+                names.append(written)
+        return names
+
     def _write_context_tool_mdcs(
         self,
         roots: list[Path],
@@ -506,51 +546,27 @@ class Harness:
         for spec in all_context_tool_rule_specs(self.repo_root):
             if wanted and wanted != spec.tool_slug and not wanted.startswith(f"{spec.tool_slug}-"):
                 continue
-            key = (f"{spec.tool_slug}-{spec.name}", "rule")
-            if key in seen:
-                continue
-            seen.add(key)
-            rule = Rule(self.type, spec.name)
-            rule.description = spec.description
-            rule.globs = spec.globs
-            rule.always_apply = False
-            rule.body = spec.body
-            rule.subfolder = f"context_tools/{spec.tool_slug}"
-            rule.write(roots)
-            self.rules.append(rule)
-            names.append(f"{spec.tool_slug}/{spec.name}")
+            written = self._write_rule_spec(
+                spec, roots, seen, (f"{spec.tool_slug}-{spec.name}", "rule")
+            )
+            if written:
+                names.append(f"{spec.tool_slug}/{written}")
         for spec in all_context_tool_procedure_specs(self.repo_root):
             if wanted and wanted != spec.tool_slug and not wanted.startswith(f"{spec.tool_slug}-"):
                 continue
-            key = (f"{spec.tool_slug}-{spec.name}", "procedure")
-            if key in seen:
-                continue
-            seen.add(key)
-            rule = Rule(self.type, spec.name)
-            rule.description = spec.description
-            rule.globs = spec.globs
-            rule.always_apply = False
-            rule.body = spec.body
-            rule.subfolder = f"context_tools/{spec.tool_slug}"
-            rule.write(roots)
-            self.rules.append(rule)
-            names.append(f"{spec.tool_slug}/{spec.name}")
+            written = self._write_rule_spec(
+                spec, roots, seen, (f"{spec.tool_slug}-{spec.name}", "procedure")
+            )
+            if written:
+                names.append(f"{spec.tool_slug}/{written}")
         for spec in all_rules_folder_specs(self.repo_root):
             if wanted and wanted != spec.tool_slug and not wanted.startswith(f"{spec.tool_slug}-"):
                 continue
-            key = (f"{spec.tool_slug}-{spec.name}", "rules-folder")
-            if key in seen:
-                continue
-            seen.add(key)
-            rule = Rule(self.type, spec.name)
-            rule.description = spec.description
-            rule.globs = spec.globs
-            rule.always_apply = False
-            rule.body = spec.body
-            rule.subfolder = f"context_tools/{spec.tool_slug}"
-            rule.write(roots)
-            self.rules.append(rule)
-            names.append(f"{spec.tool_slug}/{spec.name}")
+            written = self._write_rule_spec(
+                spec, roots, seen, (f"{spec.tool_slug}-{spec.name}", "rules-folder")
+            )
+            if written:
+                names.append(f"{spec.tool_slug}/{written}")
         return names
 
     def _write_context_tool_rules(
@@ -976,6 +992,7 @@ class Harness:
         for entry in json.loads(self.walk(name_filter)):
             names.extend(self._generate_entry(entry, roots, wanted, seen))
         if self.type == "Cursor":
+            names.extend(self._write_repo_rules(roots, seen))
             if not wanted or any(
                 wanted == spec.tool_slug or wanted.startswith(f"{spec.tool_slug}-")
                 for spec in all_context_tool_mdc_specs(self.repo_root)

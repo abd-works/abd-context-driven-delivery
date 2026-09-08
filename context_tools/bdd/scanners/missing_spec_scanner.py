@@ -10,8 +10,7 @@ spec that imports it - and that spec must contain at least one `it` observation.
 A module with no spec, or with a spec that declares no observations, has no
 specified behavior at all: BDD cannot report clean on it.
 
-This is the structural floor under `full-surface-coverage`. That rule asks whether
-every public member is observed; this one asks whether anything is observed at all.
+This is the structural floor under `full-surface-coverage`. That rule asks whether the behavior tree covers every observable outcome; this one asks whether anything is observed at all.
 
 FP profile: LOW. Structural check; fires only on files with real public definitions,
 and never inside template or scanner folders. Demo folders are handled by the shared
