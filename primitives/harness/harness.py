@@ -783,12 +783,13 @@ class Harness:
                 payload["constructor_context"] = harness_cc
             if operation == "generate":
                 payload["guidance"] = (
-                    "With no IDE given, AskQuestion: Which IDE? Cursor | VS Code. "
+                    "With no IDE given, AskQuestion: Which IDE? Cursor | VS Code | Kilo. "
                     "With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring. "
                     "With no deploy path given, call suggested_deploy_path, then AskQuestion: "
                     "deploy to that suggested path (recommended) / enter another path. "
                     "With no code_language given, AskQuestion: Python (recommended) | TypeScript. "
-                    "Set context.type to the chosen IDE and code_language to the chosen language before running."
+                    "Set context.type to the chosen IDE. Pass the chosen language as "
+                    "arguments.code_language to write_deploy."
                 )
             emitted = self._emit(vehicle, payload, roots, seen)
             if emitted:
@@ -1033,12 +1034,13 @@ class Harness:
         deploy_path: str | None = None,
         code_language: str | None = None,
     ) -> str:
-        """With no IDE given, AskQuestion: Which IDE? Cursor | VS Code."""
+        """With no IDE given, AskQuestion: Which IDE? Cursor | VS Code | Kilo."""
         """Set context.type to the chosen IDE before running."""
         self._require_implemented()
         """With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring."""
         """With no deploy path given, call suggested_deploy_path, then AskQuestion: deploy to that suggested path (recommended) / enter another path."""
         """With no code_language given, AskQuestion: Python (recommended) | TypeScript."""
+        """Pass the chosen language as arguments.code_language to write_deploy."""
         self.suggested_deploy_path()
         """With no source: walk context_tools/ and utilities/, generate each source into the deploy area, also write Harness prompts (/deploy-harness, /clean-harness). Generate is the deploy — no separate deploy. Do not confirm the scanned list. Overwrite generated files. Remove files this generate did not write. Save the IDE."""
         """With a source: write that source into the deploy area."""

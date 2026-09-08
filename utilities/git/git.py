@@ -262,6 +262,21 @@ class Ticket:
         repo._gh("issue", "edit", str(self.number), "--add-label", label)
         return self
 
+    def remove_label(self, name: str) -> Ticket:
+        """Take a label off this issue. Empty or absent name is a quiet no-op."""
+        label = (name or "").strip()
+        if not label:
+            return self
+        repo = self._repo
+        if repo is None:
+            raise RuntimeError("Ticket.remove_label requires a repo")
+        if label in self.labels:
+            self.labels.remove(label)
+        if repo._memory:
+            return self
+        repo._gh("issue", "edit", str(self.number), "--remove-label", label)
+        return self
+
     def add_theme(self, theme: str) -> Ticket:
         """Apply theme on the issue label and the project board Theme field."""
         self.add_label(issue_theme_label(theme))

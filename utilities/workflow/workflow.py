@@ -100,6 +100,18 @@ class Workflow:
     def _workflow_config_path(self, repo_root: Path) -> Path:
         return repo_root / ".context" / "workflow.yaml"
 
+    def _workflow_rules_path(self, repo_root: Path) -> Path:
+        return repo_root / ".context" / "workflow-rules.yaml"
+
+    def _load_workflow_rules(self, workspace: str = "") -> list[str]:
+        """Read the repo's agentic workflow rules; empty when the file is absent."""
+        path = self._workflow_rules_path(self._repo_root(workspace))
+        if not path.is_file():
+            return []
+        payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        rules = payload.get("rules") if isinstance(payload, dict) else payload
+        return [str(rule).strip() for rule in (rules or []) if str(rule).strip()]
+
     def _load_workflow_config(self, repo_root: Path) -> WorkflowConfig:
         path = self._workflow_config_path(repo_root)
         if not path.is_file():
@@ -399,22 +411,52 @@ class Workflow:
             "default_branch": config.default_branch,
         }
 
+    @prompt(name="ticket-rules")
+    @agent_tool
+    def read_ticket_rules(self, workspace: str = "") -> dict[str, object]:
+        """Read the repo's workflow rules that govern every ticket action."""
+        return {"rules": self._load_workflow_rules(workspace)}
+
+    @prompt(name="update-ticket-labels")
+    @agent_tool
+    def update_ticket_labels(
+        self,
+        ticket: str,
+        add: str = "",
+        remove: str = "",
+        workspace: str = "",
+    ) -> dict[str, str | int]:
+        """Update ticket labels: add and/or remove comma-separated labels."""
+        issue = self._require_ticket(self._repo(workspace), ticket)
+        for label in (part.strip() for part in remove.split(",")):
+            issue.remove_label(label)
+        for label in (part.strip() for part in add.split(",")):
+            issue.add_label(label)
+        return {
+            "number": issue.number,
+            "title": issue.title,
+            "labels": ", ".join(sorted(set(issue.labels))),
+        }
+
     @skill(name="tickets")
     @prompt(name="tickets")
     @agent_instructions
     def manage_tickets(self, request: str, workspace: str = "") -> str:
         """Manage project tickets from {{request}}.
 
-        Display each available ticket tool name and purpose before acting. Start by
-        reviewing ticket statuses so board state and left-to-right column order are
-        known. Then call only the tool needed to move a ticket, add a child ticket,
-        update a ticket, align children to parent, or report board status. Never infer
-        a ticket number when the request is ambiguous.
+        Start by calling read_ticket_rules and follow every rule it returns; the repo's
+        rules override defaults. Display each available ticket tool name and purpose
+        before acting. Then review ticket statuses so board state and left-to-right
+        column order are known. Then call only the tool needed to move a ticket, add a
+        child ticket, update a ticket, update labels, align children to parent, or
+        report board status. Never infer a ticket number when the request is ambiguous.
         """
+        self.read_ticket_rules(workspace=workspace)
         self.review_ticket_statuses(workspace=workspace)
         self.move_ticket(ticket="", destination="", workspace=workspace)
         self.add_child_ticket(parent="", title="", workspace=workspace)
         self.update_ticket(ticket="", workspace=workspace)
+        self.update_ticket_labels(ticket="", workspace=workspace)
         self.align_child_tickets_to_parent(parent="", workspace=workspace)
         return "Ticket request completed."
 
@@ -461,7 +503,7 @@ class Workflow:
         workspace: str = "",
         align_children: bool = True,
     ) -> dict[str, object]:
-        """Move a ticket to an exact board state, or to its next/previous state."""
+        """Move a ticket to an exact board state, or to its next/previous state. Follow the repo workflow rules (read_ticket_rules)."""
         repo_root = self._repo_root(workspace)
         repo = self._repo(workspace)
         project = self._ensure_project(repo, repo_root)
@@ -514,7 +556,7 @@ class Workflow:
         theme: str = "",
         category: str = "",
     ) -> dict[str, str | int]:
-        """Create a project ticket and attach it as a direct child of a parent issue."""
+        """Create a project ticket and attach it as a direct child of a parent issue. Follow the repo workflow rules (read_ticket_rules)."""
         repo = self._repo(workspace)
         parent_issue = self._require_ticket(repo, parent)
         created = self.create_ticket(
@@ -544,7 +586,7 @@ class Workflow:
         body: str | None = None,
         workspace: str = "",
     ) -> dict[str, str | int]:
-        """Update a ticket title and/or body; omitted values remain unchanged."""
+        """Update a ticket title and/or body; omitted values remain unchanged. Follow the repo workflow rules (read_ticket_rules)."""
         issue = self._require_ticket(self._repo(workspace), ticket)
         normalized_title = title.strip() if title is not None else None
         issue.update(title=normalized_title, body=body)
@@ -557,7 +599,7 @@ class Workflow:
         workspace: str = "",
         status: str = "",
     ) -> dict[str, object]:
-        """List project tickets by board columns from left to right, optionally filtered."""
+        """List project tickets by board columns from left to right, optionally filtered. Follow the repo workflow rules (read_ticket_rules)."""
         repo_root = self._repo_root(workspace)
         repo = self._repo(workspace)
         project = self._ensure_project(repo, repo_root)
@@ -578,7 +620,7 @@ class Workflow:
         parent: str = "",
         workspace: str = "",
     ) -> dict[str, object]:
-        """Align child tickets so no child is in a board column prior to its parent."""
+        """Align child tickets so no child is in a board column prior to its parent. Follow the repo workflow rules (read_ticket_rules)."""
         repo_root = self._repo_root(workspace)
         repo = self._repo(workspace)
         project = self._ensure_project(repo, repo_root)

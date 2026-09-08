@@ -262,7 +262,7 @@ def _frontmatter(
 
 
 class HarnessTool:
-    """One generated IDE file. ``type`` is Cursor or VS Code."""
+    """One generated IDE file. ``type`` is Cursor, VS Code, or Kilo."""
 
     def __init__(self, type: str, name: str = "") -> None:
         self.type = type

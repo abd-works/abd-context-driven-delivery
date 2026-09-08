@@ -245,7 +245,9 @@ with description("a harness"):
     with context("that generates"):
         with context("with no IDE given"):
             with it("should AskQuestion for the IDE"):
-                expect(_recipe(Harness("Cursor"))).to(contain("Which IDE?"))
+                prose = _recipe(Harness("Cursor"))
+                expect(prose).to(contain("Which IDE?"))
+                expect(prose).to(contain("Cursor | VS Code | Kilo"))
 
         with context("with no name filter given"):
             with it("should AskQuestion all or a substring"):
@@ -266,6 +268,7 @@ with description("a harness"):
             with it("should AskQuestion Python or TypeScript"):
                 prose = _recipe(Harness("Cursor"))
                 expect(prose).to(contain("Python (recommended) | TypeScript"))
+                expect(prose).to(contain("arguments.code_language"))
 
         with context("with no IDE type set in context"):
             with it("should tell the agent to set context.type before running"):
@@ -392,6 +395,15 @@ with description("a harness"):
                 expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
                     equal("OLD CONTENT")
                 )
+
+        with context("with type Kilo"):
+            with it("should write under .kilo"):
+                root = _sandbox()
+                Harness("Kilo", repo_root=root).write_deploy(source="stories")
+                expect((root / ".kilo" / "skills" / "context_tools" / "stories" / "SKILL.md").is_file()).to(equal(True))
+                deploy_body = (root / ".kilo" / "skills" / "deploy-harness" / "SKILL.md").read_text(encoding="utf-8")
+                expect(deploy_body).to(contain("Cursor | VS Code | Kilo"))
+                expect(deploy_body).to(contain("arguments.code_language"))
 
         with context("with type Claude"):
             with it("should not implement yet"):
