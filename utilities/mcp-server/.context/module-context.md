@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Persistent local MCP runtime for CDD. Discovers annotated toolset classes, constructs instances, registers `@tool` methods as MCP tools and `@instruction` methods as MCP prompts with declared tool references, and invokes bound Python callables directly — without YAML request documents, CLI dispatch, or a generic RPC runner underneath MCP.
+Persistent local MCP runtime for CDD. Discovers annotated toolset classes, constructs instances, registers AI-callable operations and agent guidance, and invokes bound Python callables directly — without YAML request documents, CLI dispatch, or a generic RPC runner underneath MCP.
 
 ## Seam (terms)
 
