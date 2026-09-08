@@ -13,83 +13,70 @@ for _cat in ("utilities", "primitives", "context_tools"):
 from mamba import context, description, it
 
 
-with description("an MCP server"):
-    with context("that has started against a repository working tree"):
-        with context("with annotated toolsets loaded"):
-            with it("should expose each @tool under a dotted MCP name"):
+with description("a toolset operation"):
+    with context("that has been annotated as an AI-callable tool"):
+        with context("that has been registered by MCP"):
+            with it("should be exposed under a dotted MCP name"):
                 # BDD: SIGNATURE
                 pass
 
-            with it("should invoke the bound Python callable when a tool is called"):
+            with it("should derive its parameter schema from the Python callable signature"):
                 # BDD: SIGNATURE
                 pass
 
-            with it("should retain loaded toolset instances across repeated tool calls"):
+            with it("should register the bound callable without a YAML request document"):
                 # BDD: SIGNATURE
                 pass
 
-        with context("with @instruction methods on those toolsets"):
-            with it("should expose each instruction prompt text from its docstring at discovery"):
+        with context("that has been invoked by MCP"):
+            with it("should run the bound Python callable directly"):
                 # BDD: SIGNATURE
                 pass
 
-            with it("should declare the MCP tool names referenced by tool(...) in the instruction body at discovery"):
+    with context("that has been annotated as an instruction"):
+        with context("that has been registered by MCP"):
+            with it("should expose its docstring as prompt text"):
                 # BDD: SIGNATURE
                 pass
 
-            with it("should run the instruction body when the instruction is invoked"):
+            with it("should declare the dotted MCP names for each tool(...) reference in its body"):
                 # BDD: SIGNATURE
                 pass
 
-            with it("should invoke each tool(...) call through the registered @tool callable"):
+        with context("that has been invoked by MCP"):
+            with it("should run its Python body"):
                 # BDD: SIGNATURE
                 pass
 
-            with it("should allow tool return values to contribute to the instruction output"):
+            with context("with a tool(...) call in its body"):
+                with it("should invoke the wrapped AI-callable tool through the same path as a direct MCP tool call"):
+                    # BDD: SIGNATURE
+                    pass
+
+                with it("should allow the tool return value to contribute to the instruction output"):
+                    # BDD: SIGNATURE
+                    pass
+
+            with context("with a plain method call that is not wrapped in tool(...)"):
+                with it("should run it as ordinary Python without treating it as an MCP tool invocation"):
+                    # BDD: SIGNATURE
+                    pass
+
+
+with description("a toolset instance"):
+    with context("that has been loaded by MCP"):
+        with context("that receives repeated invocations against the same operation"):
+            with it("should reuse the same instance"):
                 # BDD: SIGNATURE
                 pass
 
-    with context("that lists its registered surface"):
-        with it("should return tool names separately from instruction prompt names"):
-            # BDD: SIGNATURE
-            pass
 
-
-with description("an MCP tool name"):
-    with context("that is derived from a CDD toolset identity"):
-        with it("should use dot notation between toolset slug and method name"):
+with description("an MCP exposed name"):
+    with context("for a toolset operation"):
+        with it("should use dot notation between toolset slug and operation name"):
             # BDD: SIGNATURE
             pass
 
         with it("should not use underscore separators"):
-            # BDD: SIGNATURE
-            pass
-
-
-with description("MCP tool registration"):
-    with context("that discovers annotated @tool methods"):
-        with it("should register bound callables without YAML request documents"):
-            # BDD: SIGNATURE
-            pass
-
-        with it("should derive parameter schema from the Python callable signature"):
-            # BDD: SIGNATURE
-            pass
-
-
-with description("an instruction invocation"):
-    with context("that reaches a tool(...) call in the instruction body"):
-        with it("should run the wrapped @tool like a direct MCP tool invocation"):
-            # BDD: SIGNATURE
-            pass
-
-        with it("should not treat a plain self.method(...) call as an AI tool invocation"):
-            # BDD: SIGNATURE
-            pass
-
-
-with description("an instruction binding"):
-    with context("that is collected from an @instruction method"):
-        with it("should resolve tool(...) references to the same dotted names used at registration"):
             # BDD: SIGNATURE
             pass
