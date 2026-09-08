@@ -223,6 +223,17 @@ class Ticket:
         self.body = body if body is not None else self.body
         return self
 
+    def comment(self, body: str) -> Ticket:
+        """Add a comment to this issue."""
+        repo = self._repo
+        if repo is None:
+            raise RuntimeError("Ticket.comment requires a repo")
+        if repo._memory:
+            repo._ticket_comments.setdefault(self.number, []).append(body)
+            return self
+        repo._gh("issue", "comment", str(self.number), "--body-file", "-", stdin=body)
+        return self
+
     def add_child(self, child: Ticket) -> Ticket:
         """Attach an existing issue as a direct sub-issue of this issue."""
         repo = self._repo
@@ -576,6 +587,112 @@ class Project:
         payload = json.loads(raw or "{}")
         return self._ticket_rows_from_items(payload.get("items") or [])
 
+    def set_text_field(self, ticket_number: int, field_name: str, value: str) -> None:
+        """Set an arbitrary text field on one issue's project item."""
+        if self._repo._memory:
+            self._repo._ticket_project_fields.setdefault(ticket_number, {})[
+                field_name
+            ] = value
+            return
+        field_id = self._ensure_text_field(field_name)
+        item_id = self._item_id(ticket_number)
+        project_id = self._project_id()
+        self._repo._gh(
+            "project",
+            "item-edit",
+            "--id",
+            item_id,
+            "--project-id",
+            project_id,
+            "--field-id",
+            field_id,
+            "--text",
+            value,
+        )
+
+    def archive_ticket(self, ticket_number: int) -> None:
+        """Archive an issue's project item without deleting the issue."""
+        if self._repo._memory:
+            self._repo._archived_project_tickets.add(ticket_number)
+            return
+        self._repo._gh(
+            "project",
+            "item-archive",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--id",
+            self._item_id(ticket_number),
+        )
+
+    def _project_id(self) -> str:
+        raw = self._repo._gh(
+            "project",
+            "view",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--format",
+            "json",
+        )
+        project_id = str(json.loads(raw or "{}").get("id") or "")
+        if not project_id:
+            raise ValueError(f"project {self.owner}/{self.number} has no id")
+        return project_id
+
+    def _field_rows(self) -> list[dict[str, object]]:
+        raw = self._repo._gh(
+            "project",
+            "field-list",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--format",
+            "json",
+        )
+        payload = json.loads(raw or "{}")
+        return [row for row in payload.get("fields") or [] if isinstance(row, dict)]
+
+    def _ensure_text_field(self, field_name: str) -> str:
+        for field in self._field_rows():
+            if str(field.get("name") or "") == field_name:
+                return str(field.get("id") or "")
+        raw = self._repo._gh(
+            "project",
+            "field-create",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--name",
+            field_name,
+            "--data-type",
+            "TEXT",
+            "--format",
+            "json",
+        )
+        field_id = str(json.loads(raw or "{}").get("id") or "")
+        if not field_id:
+            raise ValueError(f"project field was not created: {field_name}")
+        return field_id
+
+    def _item_id(self, ticket_number: int) -> str:
+        raw = self._repo._gh(
+            "project",
+            "item-list",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--limit",
+            "1000",
+            "--format",
+            "json",
+        )
+        for item in json.loads(raw or "{}").get("items") or []:
+            content = item.get("content") if isinstance(item, dict) else None
+            if isinstance(content, dict) and content.get("number") == ticket_number:
+                return str(item.get("id") or "")
+        raise ValueError(f"ticket {ticket_number} is not on the project board")
+
     def _memory_ticket_rows(self) -> list[dict[str, str | int]]:
         rows: list[dict[str, str | int]] = []
         for number, ticket in self._repo._tickets.items():
@@ -686,9 +803,12 @@ class Repo:
         self._tickets: dict[int, Ticket] = {}
         self._ticket_project_state: dict[int, str] = {}
         self._ticket_project_theme: dict[int, str] = {}
+        self._ticket_project_fields: dict[int, dict[str, str]] = {}
         self._ticket_children: dict[int, list[int]] = {}
         self._ticket_parents: dict[int, int] = {}
+        self._ticket_comments: dict[int, list[str]] = {}
         self._closed_tickets: set[int] = set()
+        self._archived_project_tickets: set[int] = set()
         if memory:
             self._init_memory_state()
 

@@ -448,13 +448,15 @@ class Workflow:
         rules override defaults. Display each available ticket tool name and purpose
         before acting. Then review ticket statuses so board state and left-to-right
         column order are known. Then call only the tool needed to move a ticket, add a
-        child ticket, update a ticket, update labels, align children to parent, or
-        report board status. Never infer a ticket number when the request is ambiguous.
+        child ticket, merge a completed child into its parent, update a ticket, update
+        labels, align children to parent, or report board status. Never infer a ticket
+        number when the request is ambiguous.
         """
         self.read_ticket_rules(workspace=workspace)
         self.review_ticket_statuses(workspace=workspace)
         self.move_ticket(ticket="", destination="", workspace=workspace)
         self.add_child_ticket(parent="", title="", workspace=workspace)
+        self.merge_child_into_parent(child="", summary="", workspace=workspace)
         self.update_ticket(ticket="", workspace=workspace)
         self.update_ticket_labels(ticket="", workspace=workspace)
         self.align_child_tickets_to_parent(parent="", workspace=workspace)
@@ -569,7 +571,66 @@ class Workflow:
         )
         child = self._require_ticket(repo, str(created["number"]))
         parent_issue.add_child(child)
-        return {**created, "parent": parent_issue.number}
+        project = self._ensure_project(repo, self._repo_root(workspace))
+        ancestors = self._ticket_ancestors(repo, parent_issue)
+        ultimate_parent = ancestors[-1]
+        for issue in (child, *ancestors):
+            project.set_text_field(issue.number, "Ultimate Parent", ultimate_parent.title)
+        return {
+            **created,
+            "parent": parent_issue.number,
+            "ultimate_parent": ultimate_parent.title,
+        }
+
+    def _ticket_ancestors(self, repo: Repo, issue: Ticket) -> list[Ticket]:
+        ancestors = [issue]
+        seen = {issue.number}
+        while ancestors[-1].parent_number is not None:
+            parent = self._require_ticket(repo, str(ancestors[-1].parent_number))
+            if parent.number in seen:
+                raise ValueError(f"cycle in ticket parents at {parent.number}")
+            ancestors.append(parent)
+            seen.add(parent.number)
+        return ancestors
+
+    @prompt(name="merge-child-into-parent")
+    @agent_tool
+    def merge_child_into_parent(
+        self,
+        child: str,
+        summary: str,
+        workspace: str = "",
+    ) -> dict[str, str | int]:
+        """Roll a completed child result into its parent.
+
+        Close and archive the child while preserving the sub-issue relationship.
+        """
+        repo = self._repo(workspace)
+        child_issue = self._require_ticket(repo, child)
+        if child_issue.parent_number is None:
+            raise ValueError(f"ticket {child_issue.number} has no parent")
+        parent = self._require_ticket(repo, str(child_issue.parent_number))
+        result = summary.strip()
+        if not result:
+            raise ValueError("summary is required")
+        child_link = child_issue.url or f"#{child_issue.number}"
+        heading = f"## Completed child: [{child_issue.title}]({child_link})"
+        merged_section = f"{heading}\n\n{result}"
+        if heading not in parent.body:
+            parent.update(body=f"{parent.body.rstrip()}\n\n{merged_section}\n")
+        child_issue.comment(
+            f"Result merged into parent #{parent.number}.\n\n{result}"
+        )
+        project = self._ensure_project(repo, self._repo_root(workspace))
+        child_issue.set_status(project.state_named("Done").name)
+        child_issue.close()
+        project.archive_ticket(child_issue.number)
+        return {
+            "child": child_issue.number,
+            "parent": parent.number,
+            "project_status": "Done",
+            "archived": "yes",
+        }
 
     def _require_ticket(self, repo: Repo, ticket: str) -> Ticket:
         issue = repo.ticket(ticket)
