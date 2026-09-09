@@ -1,4 +1,4 @@
-"""Session-scoped hook log paths — always under ``.context/sessions/{name}/logs/``."""
+"""Session-scoped hook log paths — always under ``.sessions/{name}/logs/``."""
 
 from __future__ import annotations
 
@@ -6,7 +6,8 @@ import shutil
 from datetime import date
 from pathlib import Path
 
-_ACTIVE = Path(".context") / "sessions" / "_active"
+_ACTIVE = Path(".sessions") / "_active"
+_LEGACY_ACTIVE = Path(".context") / "sessions" / "_active"
 DEFAULT_SESSION = "default"
 
 # Legacy repo-root paths removed on session close.
@@ -21,6 +22,12 @@ _LEGACY_LOG_PATHS = (
 
 def write_active_session(repo_root: Path, name: str) -> None:
     slug = (name or "").strip() or DEFAULT_SESSION
+    legacy_active = repo_root / _LEGACY_ACTIVE
+    if legacy_active.is_file():
+        try:
+            legacy_active.unlink()
+        except OSError:
+            pass
     path = repo_root / _ACTIVE
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(slug, encoding="utf-8")
@@ -35,16 +42,23 @@ def clear_active_session(repo_root: Path) -> None:
 
 
 def active_session_name(repo_root: Path) -> str:
-    path = repo_root / _ACTIVE
-    if path.is_file():
-        text = path.read_text(encoding="utf-8").strip()
-        if text:
-            return text
+    for rel in (_ACTIVE, _LEGACY_ACTIVE):
+        path = repo_root / rel
+        if path.is_file():
+            text = path.read_text(encoding="utf-8").strip()
+            if text:
+                return text
     return DEFAULT_SESSION
 
 
 def session_folder(repo_root: Path, name: str) -> Path:
-    return repo_root / ".context" / "sessions" / name
+    slug = (name or "").strip() or DEFAULT_SESSION
+    dest = repo_root / ".sessions" / slug
+    legacy = repo_root / ".context" / "sessions" / slug
+    if legacy.is_dir() and not dest.exists():
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(legacy), str(dest))
+    return dest
 
 
 def session_logs_dir_for(repo_root: Path, name: str) -> Path:
@@ -52,7 +66,7 @@ def session_logs_dir_for(repo_root: Path, name: str) -> Path:
 
 
 def ensure_default_session(repo_root: Path) -> Path:
-    """Create ``.context/sessions/default/`` at repo root when no session is active."""
+    """Create ``.sessions/default/`` at repo root when no session is active."""
     folder = session_folder(repo_root, DEFAULT_SESSION)
     folder.mkdir(parents=True, exist_ok=True)
     session_logs_dir_for(repo_root, DEFAULT_SESSION).mkdir(parents=True, exist_ok=True)

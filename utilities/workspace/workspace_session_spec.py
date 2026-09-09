@@ -162,11 +162,9 @@ with description("a WorkSession with a name and path"):
     with it("should expose docs_dir as path/.context"):
         expect(self.session.docs_dir).to(equal(self.tmp / ".context"))
 
-    with it("should expose folder under working-path .context/sessions/{name}"):
-        # Act / Assert — session temps live in the active checkout
-        expect(self.session.folder).to(
-            equal(self.tmp / ".context" / "sessions" / "my-sprint")
-        )
+    with it("should expose folder under repository-root .sessions/{name}"):
+        # Act / Assert — session temps live at the repository root
+        expect(self.session.folder).to(equal(self.tmp / ".sessions" / "my-sprint"))
 
     with it("should expose log dir under folder/logs"):
         # Act / Assert
@@ -627,9 +625,7 @@ with description("a WorkSession that is closed in a git worktree"):
             landed = tmp / ".sessions" / "closed" / "close-clean" / "session.md"
             expect(landed.is_file()).to(be_true)
             expect("## End" in landed.read_text(encoding="utf-8")).to(be_true)
-            expect(
-                (tmp / ".context" / "sessions" / "close-clean").exists()
-            ).to(equal(False))
+            expect((tmp / ".sessions" / "close-clean").exists()).to(equal(False))
         _purge_clone(tmp)
 
     with it("should archive the session folder under .sessions/closed at the repo root"):
@@ -646,7 +642,7 @@ with description("a WorkSession that is closed in a git worktree"):
         expect(archived.is_dir()).to(be_true)
         expect((archived / "session.md").is_file()).to(be_true)
         expect((archived / "model").read_text(encoding="utf-8")).to(equal("composer-2.5"))
-        expect((tmp / ".context" / "sessions" / "archive-me").exists()).to(equal(False))
+        expect((tmp / ".sessions" / "archive-me").exists()).to(equal(False))
         expect(durable.is_file()).to(be_true)
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -678,7 +674,7 @@ with description("a WorkSession that is closed in a git worktree"):
         session.close_session(outcome="paused", handoff="")
         archived = tmp / ".sessions" / "closed" / "reopen-me"
         expect(archived.is_dir()).to(be_true)
-        expect((tmp / ".context" / "sessions" / "reopen-me").exists()).to(equal(False))
+        expect((tmp / ".sessions" / "reopen-me").exists()).to(equal(False))
         reopened = Workspace(str(tmp)).open_work_session("reopen-me", git=git)
         expect(reopened.folder.is_dir()).to(be_true)
         expect((reopened.folder / "session.md").is_file()).to(be_true)
@@ -716,7 +712,7 @@ with description("a WorkSession that is closed in a git worktree"):
         session.ensure_started(goal="original")
         (session.folder / "artifact.txt").write_text("from archive\n", encoding="utf-8")
         session.close_session(outcome="done", handoff="")
-        stale = tmp / ".context" / "sessions" / "stale-me"
+        stale = tmp / ".sessions" / "stale-me"
         stale.mkdir(parents=True, exist_ok=True)
         (stale / "session.md").write_text("# stale\n", encoding="utf-8")
         reopened = Workspace(str(tmp)).open_work_session("stale-me", git=git)
@@ -984,7 +980,7 @@ with description("a WorkSession tool"):
 with description("docs_dir"):
     with it("should resolve a sprint folder up to path/.context"):
         from workspace.workspace import SessionPaths
-        sprint = Path("/work/.context/sessions/my-sprint")
+        sprint = Path("/work/.sessions/my-sprint")
         # Act / Assert
         expect(SessionPaths.docs_dir(sprint)).to(equal(Path("/work/.context")))
 
@@ -1007,14 +1003,14 @@ with description("docs_dir"):
 with description("session_dir"):
     with it("should return a sprint folder unchanged"):
         from workspace.workspace import SessionPaths
-        sprint = Path("/work/.context/sessions/my-sprint")
+        sprint = Path("/work/.sessions/my-sprint")
         expect(SessionPaths.session_dir(sprint)).to(equal(sprint))
 
-    with it("should build sessions/{name} under the working path"):
+    with it("should build .sessions/{name} under the repository root"):
         from workspace.workspace import SessionPaths
         working = Path("/work/sandbox")
         expect(SessionPaths.session_dir(working, "my-sprint")).to(
-            equal(working / ".context" / "sessions" / "my-sprint")
+            equal(working / ".sessions" / "my-sprint")
         )
 
     with it("should keep sessions in the worktree when working path is a worktree"):
@@ -1034,17 +1030,17 @@ with description("session_dir"):
         GitRepo(tmp).add_worktree(worktree, "session/decouple-test")
         session = WorkSession(Workspace(str(tmp)), "decouple-test", path=str(worktree))
         expect(session.docs_dir).to(equal(worktree / ".context"))
-        expect(session.folder).to(equal(worktree / ".context" / "sessions" / "decouple-test"))
+        expect(session.folder).to(equal(tmp / ".sessions" / "decouple-test"))
         shutil.rmtree(tmp, ignore_errors=True)
         shutil.rmtree(worktree, ignore_errors=True)
 
 with description("SessionModel"):
-    with it("should persist under .context/sessions/{session}/model"):
+    with it("should persist under .sessions/{session}/model"):
         from workspace.workspace import SessionModel
 
         tmp = Path(tempfile.mkdtemp(prefix="session_model_"))
         path = SessionModel.write(tmp, "composer-2.5-fast", "ticket-25")
-        expect(path).to(equal(tmp / ".context" / "sessions" / "ticket-25" / "model"))
+        expect(path).to(equal(tmp / ".sessions" / "ticket-25" / "model"))
         expect(SessionModel.read(tmp, "ticket-25")).to(equal("composer-2.5-fast"))
 
     with it("should use sessions/default when session name is empty"):
@@ -1060,7 +1056,7 @@ with description("SessionModel"):
 
         tmp = Path(tempfile.mkdtemp(prefix="session_model_copy_"))
         SessionModel.write(tmp, "cursor-grok-4.6-medium", "default")
-        dest = tmp / "worktree" / ".context" / "sessions" / "new-ticket"
+        dest = tmp / ".sessions" / "new-ticket"
         copied = SessionModel.copy_into(dest, tmp, "new-ticket")
         expect(copied is not None).to(be_true)
         expect((dest / "model").read_text(encoding="utf-8").strip()).to(
@@ -1126,7 +1122,7 @@ with description("default work session when none is set"):
         session.git = git
         session.ensure_started()
         expect(session.name).to(equal("default"))
-        expect(session.folder).to(equal(tmp / ".context" / "sessions" / "default"))
+        expect(session.folder).to(equal(tmp / ".sessions" / "default"))
         expect(session.session_md.is_file()).to(be_true)
 
     with it("should warn when default session opens off main without switching branch"):

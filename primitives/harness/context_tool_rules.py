@@ -60,7 +60,7 @@ CONTEXT_TOOL_RULE_GLOBS: dict[str, dict[str, str]] = {
         "specification": _MD,
     },
     "cdd": {
-        "shared": "**/.context/**/cdd-sketch.md,**/.context/sessions/**",
+        "shared": "**/.context/**/cdd-sketch.md,**/.sessions/**",
         "discovery": "**/.context/**/cdd-sketch.md,**/*.{md,py}",
         "explore": "**/.context/**/cdd-sketch.md,**/*.{md,py}",
         "spec": "**/.context/**/cdd-sketch.md,**/*.{md,py,js,ts,java}",

@@ -1,0 +1,2433 @@
+
+==============================================================================
+2026-09-06T17:47:19Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; @"
+toolset: workspace.workspace:WorkSession
+tool: start_work_session
+context:
+  session: utility-cleanup
+"@ | .\tools.ps1 run -
+
+==============================================================================
+2026-09-06T17:47:19Z  preToolUse:Write  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: C:/dev/abd-context-driven-delivery/utilities/workspace/workspace_session_spec.py
+
+==============================================================================
+2026-09-06T17:47:32Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Test-Path "C:\dev\abd-cdd-utility-cleanup\.sessions\closed\utility-cleanup*"; Test-Path "C:\dev\abd-context-driven-delivery\.context\sessions\utility-cleanup"; type "C:\dev\abd-cdd-utility-cleanup\.context\sessions\utility-cleanup\session.md"
+
+==============================================================================
+2026-09-06T17:47:35Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: dir "C:\dev\abd-context-driven-delivery\.context\sessions\utility-cleanup"; dir "C:\dev\abd-cdd-utility-cleanup\.context\sessions\utility-cleanup"
+
+==============================================================================
+2026-09-06T17:47:39Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: type "C:\dev\abd-context-driven-delivery\.context\sessions\_active"; type "C:\dev\abd-cdd-utility-cleanup\.context\sessions\_active"
+
+==============================================================================
+2026-09-06T17:47:43Z  afterAgentResponse  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Fixed. Two bugs were breaking reopen:
+
+### Root cause
+1. **`session.md` had `path: .`** â€” on reopen, loading that overwrote the worktree path and put the session back on the **primary clone** instead of `C:\dev\abd-cdd-utility-cleanup`.
+2. **Restore left the closed archive behind** â€” when the archive had a nested `utility-cleanup/` folder inside `utility-cleanup-2026-09-06/`, only the nested content moved; top-level files stayed in `.sessions/closed/`.
+
+### Fixes in `workspace.py`
+- Resolve `path: .` against the real checkout
+... [23 lines, 1200 chars total]
+
+==============================================================================
+2026-09-06T17:53:36Z  beforeSubmitPrompt  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+I sometimes need to imp,eemt common simple rules; they will deploy to /.cueroasr/rules using @abd-context-driven-delivery/primitives/harness 
+
+eg when testin cpode dpo the opposite of a human - prevent ai tenednecny to stub and short cut to get to outcome
+1 - test with real conditions, no stub, no mock , call cexctly like rthe user would, if ai utility send to sub agents peretnfiong to type to user; if website standuop real, if backend connect ot rteal backend!
+2 - once real shape then write ttow pass tests --> stub / mock you knows real shape add to vtests that always rtun on change like reg 
+... [8 lines, 879 chars total]
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T17:53:41Z  preToolUse:Grep  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-context-driven-delivery\.cursor
+
+==============================================================================
+2026-09-06T17:53:41Z  preToolUse:Grep  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness
+
+
+==============================================================================
+2026-09-06T17:53:41Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness
+
+==============================================================================
+2026-09-06T17:53:44Z  preToolUse:Grep  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-context-driven-delivery
+
+==============================================================================
+2026-09-06T17:53:44Z  preToolUse:Grep  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: harness|\.cursor/rules
+path [file]: c:\dev\abd-context-driven-delivery
+
+==============================================================================
+2026-09-06T17:53:56Z  beforeSubmitPrompt  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+didiu uy test it
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T17:53:57Z  preToolUse:Grep  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: harness
+path [file]: c:\dev\abd-context-driven-delivery
+
+==============================================================================
+2026-09-06T17:53:57Z  preToolUse:Shell  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Get-ChildItem -Path "c:\dev\abd-context-driven-delivery" -Recurse -Depth 3 -Name 2>$null | Select-Object -First 80
+
+==============================================================================
+2026-09-06T17:53:58Z  preToolUse:Grep  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-context-driven-delivery\primitives
+
+==============================================================================
+2026-09-06T17:54:02Z  preToolUse:Shell  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Get-ChildItem -Path "c:\dev\abd-context-driven-delivery\primitives" -Recurse -Name 2>$null; Write-Host "---"; Get-ChildItem -Path "c:\dev\abd-context-driven-delivery\.cursor" -Recurse -Name 2>$null | Select-Object -First 60; Write-Host "---"; Get-ChildItem -Path "c:\dev\abd-context-driven-delivery\context_tools" -Recurse -Depth 2 -Name 2>$null
+
+==============================================================================
+2026-09-06T17:54:02Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\.context\principles\principles.md
+
+==============================================================================
+2026-09-06T17:54:02Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-context-driven-delivery\.cursor\skills\context_tools\bdd\SKILL.md
+
+==============================================================================
+2026-09-06T17:54:03Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; $env:PYTHONPATH="utilities;primitives;context_tools;context_tools/actions"; .venv\Scripts\python.exe -c "
+import shutil, tempfile
+from pathlib import Path
+from workspace.git_repo import NullGitRepo, GitRepo, _git
+from workspace.workspace import Workspace, WorkSession
+
+def test_restore_closed():
+    tmp = Path(tempfile.mkdtemp(prefix='t1_'))
+... [68 lines, 3737 chars total]
+
+==============================================================================
+2026-09-06T17:54:03Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\.context\principles\principles.md
+size: 1327 chars
+preview:
+---
+extends: capability
+overrides: [add-a-principle, add-example, analyze]
+---
+
+Manage the guiding principles that shape how this project is built.
+
+## Add a principle
+... [40 lines, 1327 chars total]
+
+==============================================================================
+2026-09-06T17:54:03Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-context-driven-delivery\.cursor\skills\context_tools\bdd\SKILL.md
+size: 337 chars
+preview:
+---
+name: bdd
+description: "Provide guidance for creating behavior skeletons and development tests."
+---
+
+# bdd
+
+Provide guidance for creating behavior skeletons and development tests.
+... [11 lines, 337 chars total]
+
+==============================================================================
+2026-09-06T17:54:03Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; @"
+toolset: workspace.workspace:WorkSession
+tool: start_work_session
+context:
+  session: utility-cleanup
+"@ | .\tools.ps1 run - 2>&1; Write-Host "---"; Test-Path "C:\dev\abd-cdd-utility-cleanup\.sessions\closed\utility-cleanup*"; Test-Path "C:\dev\abd-cdd-utility-cleanup\.context\sessions\utility-cleanup\session.md"; Get-Content "C:\dev\abd-cdd-utility-cleanup\.context\sessions\utility-cleanup\session.md" | Select-Object -First 12
+
+==============================================================================
+2026-09-06T17:54:15Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: C:\Users\jeffa\.cursor\projects\c-dev-abd-works-repo\agent-tools\7fe90e2e-5a50-42bf-be4b-3b750871ad5e.txt
+
+==============================================================================
+2026-09-06T17:54:15Z  preToolUse:Grep  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-context-driven-delivery\.cursor\rules
+
+==============================================================================
+2026-09-06T17:54:15Z  preToolUse:Grep  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: c:\dev\abd-context-driven-delivery
+
+==============================================================================
+2026-09-06T17:54:15Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; $env:PYTHONPATH = @("C:\dev\abd-context-driven-delivery","C:\dev\abd-context-driven-delivery\primitives","C:\dev\abd-context-driven-delivery\utilities","C:\dev\abd-context-driven-delivery\context_tools","C:\dev\abd-context-driven-delivery\context_tools\actions") -join ';'; .venv\Scripts\python.exe -c "from workspace.workspace import WorkSession; print('import ok')"
+
+==============================================================================
+2026-09-06T17:54:15Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: C:\Users\jeffa\.cursor\projects\c-dev-abd-works-repo\agent-tools\7fe90e2e-5a50-42bf-be4b-3b750871ad5e.txt
+size: 8618 chars
+preview:
+.context
+actions
+assets
+examples
+focus
+harness
+hooks
+instructions
+... [150 lines, 8618 chars total]
+
+==============================================================================
+2026-09-06T17:54:17Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; .\tools.ps1 run workspace.workspace:WorkSession --tool start_work_session --context session=utility-cleanup 2>&1
+
+==============================================================================
+2026-09-06T17:54:18Z  preToolUse:Shell  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Get-ChildItem -Path "c:\dev\abd-context-driven-delivery\primitives\harness" -Recurse -Name 2>$null
+
+==============================================================================
+2026-09-06T17:54:18Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-context-driven-delivery\.cursor\skills\context_tools\clean_engineering\SKILL.md
+
+==============================================================================
+2026-09-06T17:54:18Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\.context\module-context.md
+
+==============================================================================
+2026-09-06T17:54:18Z  preToolUse:Grep  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: C:/dev/abd-context-driven-delivery
+
+==============================================================================
+2026-09-06T17:54:18Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-context-driven-delivery\.cursor\skills\context_tools\clean_engineering\SKILL.md
+size: 387 chars
+preview:
+---
+name: clean_engineering
+description: "Provide guidance for creating OO modules, models, and code."
+---
+
+# clean_engineering
+
+Provide guidance for creating OO modules, models, and code.
+... [11 lines, 387 chars total]
+
+==============================================================================
+2026-09-06T17:54:20Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\rule.py
+
+==============================================================================
+2026-09-06T17:54:21Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\agent_guidance.py
+
+==============================================================================
+2026-09-06T17:54:21Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\.context\harness-behavior-sketch.md
+
+==============================================================================
+2026-09-06T17:54:21Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T17:54:22Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+size: 13150 chars
+preview:
+"""Deploy Cursor rules from context-tool markdown Shared rules and fidelity ### Rules."""
+
+from __future__ import annotations
+
+import ast
+import re
+from dataclasses import dataclass
+from pathlib import Path
+... [381 lines, 13150 chars total]
+
+==============================================================================
+2026-09-06T17:54:22Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\rule.py
+size: 1870 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""Rule â€” Cursor .mdc project rule."""
+
+from __future__ import annotations
+
+... [51 lines, 1870 chars total]
+
+==============================================================================
+2026-09-06T17:54:22Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\.context\harness-behavior-sketch.md
+size: 13387 chars
+preview:
+Fidelity: behavior
+
+**Sources / context:** this chat; issue 7 (names, aliases, operation annotations, rules).
+
+What changed: batch from agent_skills â€” name filter; scaffold as its own action; full tool fidelity slugs including CE/DDD/UX; echo/handoff prompts; no disable-model-invocation; clean needs @prompt; state beside Harness. ActionBody stays as sketched.
+
+**Refactor these tests:**
+- `context_tools/base/base_context_tool_spec.py` â€” generate / validate / satisfy / document / render / createRule / host turn tools
+... [381 lines, 13387 chars total]
+
+==============================================================================
+2026-09-06T17:54:22Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\agent_guidance.py
+size: 778 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""AgentGuidance â€” later. HarnessTool subclass; generate is not implemented yet."""
+
+from __future__ import annotations
+
+... [16 lines, 778 chars total]
+
+==============================================================================
+2026-09-06T17:54:22Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; if (Test-Path .venv\Scripts\mamba.exe) { "mamba ok" } else { "no mamba" }; if (Test-Path utilities\workspace\workspace_session_spec.py) { "spec ok" } else { "no spec" }; .\tools.ps1 manifest workspace.workspace:WorkSession 2>$null | Select-Object -First 3
+
+==============================================================================
+2026-09-06T17:54:22Z  preToolUse:Grep  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: mamba|workspace_session_spec
+path [file]: C:/dev/abd-context-driven-delivery
+
+==============================================================================
+2026-09-06T17:54:24Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.md
+
+==============================================================================
+2026-09-06T17:54:24Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-context-driven-delivery\.cursor\skills\context_tools\bdd\development\SKILL.md
+
+==============================================================================
+2026-09-06T17:54:25Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\.context\principles\singular-focus.md
+
+==============================================================================
+2026-09-06T17:54:25Z  preToolUse:Shell  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Get-ChildItem -Path "c:\dev\abd-context-driven-delivery\.cursor\rules" -Recurse -Name 2>$null
+
+==============================================================================
+2026-09-06T17:54:25Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.md
+size: 7360 chars
+preview:
+# Contexts
+
+Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`templates/bdd-sketch.md`).
+
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
+
+## Hierarchy shape (required)
+
+... [120 lines, 7360 chars total]
+
+==============================================================================
+2026-09-06T17:54:25Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\.context\principles\singular-focus.md
+size: 135 chars
+preview:
+Every capability does exactly one thing â€” compose capabilities to build larger behaviours, never expand a single capability's scope.
+
+==============================================================================
+2026-09-06T17:54:26Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Get-ChildItem "C:\dev\abd-context-driven-delivery\utilities\workspace" -Filter "*spec*"
+
+==============================================================================
+2026-09-06T17:54:26Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git status --short utilities/workspace/workspace.py utilities/workspace/workspace_session_spec.py 2>&1; git diff --stat utilities/workspace/workspace.py 2>&1 | Select-Object -First 5
+
+==============================================================================
+2026-09-06T17:54:28Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.md
+
+==============================================================================
+2026-09-06T17:54:28Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-context-driven-delivery\.cursor\skills\context_tools\agent_bdd\SKILL.md
+
+==============================================================================
+2026-09-06T17:54:28Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T17:54:28Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-context-driven-delivery\.cursor\skills\context_tools\agent_bdd\SKILL.md
+size: 347 chars
+preview:
+---
+name: agent_bdd
+description: "Provide guidance for writing agent BDD specs against the agent harness."
+---
+
+# agent_bdd
+
+Provide guidance for writing agent BDD specs against the agent harness.
+... [11 lines, 347 chars total]
+-m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""Harness â€” deploy context tools and actions into an IDE."""
+
+from __future__ import annotations
+... [80 lines, 2812 chars total]
+
+==============================================================================
+2026-09-06T17:54:28Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.md
+size: 4611 chars
+preview:
+**Fail:** any assertion, mock, import of production code, or helper inside the body.
+
+---
+
+## development
+
+**Default format:** Python
+
+... [64 lines, 4611 chars total]
+
+==============================================================================
+2026-09-06T17:54:29Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git status --short | Select-Object -First 30; Test-Path "C:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace_session_spec.py"; Test-Path "C:\dev\abd-cdd-utility-cleanup\utilities\workspace\workspace.py"
+
+==============================================================================
+2026-09-06T17:54:30Z  preToolUse:Grep  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: real|stub|mock|e2e|sub.?agent
+path [file]: c:\dev\abd-context-driven-delivery\context_tools
+
+==============================================================================
+2026-09-06T17:54:30Z  preToolUse:Grep  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: always_apply|alwaysApply|AgentGuidance|principles|core
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness
+
+==============================================================================
+2026-09-06T17:54:30Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\.context\principles\bootstrap.md
+
+==============================================================================
+2026-09-06T17:54:31Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\.context\principles\bootstrap.md
+size: 101 chars
+preview:
+All features are built using the same capability pattern â€” including the capability pattern itself.
+
+==============================================================================
+2026-09-06T17:54:32Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-cdd-utility-cleanup"; $env:PYTHONPATH = @("C:\dev\abd-cdd-utility-cleanup","C:\dev\abd-cdd-utility-cleanup\primitives","C:\dev\abd-cdd-utility-cleanup\utilities","C:\dev\abd-cdd-utility-cleanup\context_tools","C:\dev\abd-cdd-utility-cleanup\context_tools\actions") -join ';'; .venv\Scripts\mamba.exe utilities/workspace/workspace_session_spec.py 2>&1 | Select-String "restore|nested|path-dot|examples|FAILED|Error" | Select-Object -Last 40
+
+==============================================================================
+2026-09-06T17:54:33Z  preToolUse:Shell  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "always_apply|AgentGuidance|principles|subfolder" "c:\dev\abd-context-driven-delivery\primitives\harness" 2>$null; rg -n "real|stub|mock|e2e|sub.?agent" "c:\dev\abd-context-driven-delivery\context_tools" --glob "*.md" 2>$null | Select-Object -First 40
+
+==============================================================================
+2026-09-06T17:54:33Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd.md
+
+==============================================================================
+2026-09-06T17:54:34Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\context_tools\agent_bdd\agent_bdd.md
+size: 7390 chars
+preview:
+# Instructions
+
+Write **agent BDD specs** â€” mamba tests that drive a real agent through the `agent(...)` harness and assert on the parsed `RunResponse` plus AI-judged prose.
+
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns for tests.
+
+The **`bdd`** generator supplies the underlying test discipline (RED-GREEN, AAA, mocks, minimalism, shared setup). Agent specs layer harness-specific rules on top.
+
+... [59 lines, 7390 chars total]
+
+==============================================================================
+2026-09-06T17:54:36Z  preToolUse:Shell  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "deploy.*rule|createRule|principles|alwaysApply: true" "c:\dev\abd-context-driven-delivery" --glob "*.{py,md,mdc}" 2>$null | Select-Object -First 50
+
+==============================================================================
+2026-09-06T17:54:36Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T17:54:36Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+size: 3169 chars
+preview:
+                if key not in written:
+                    mdc.unlink()
+            for dirpath in sorted(rules_root.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+                if dirpath.is_dir():
+                    try:
+                        dirpath.rmdir()
+                    except OSError:
+                        pass
+... [80 lines, 3169 chars total]
+
+==============================================================================
+2026-09-06T17:54:40Z  preToolUse:Shell  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "createRule|CreateRule" "c:\dev\abd-context-driven-delivery\context_tools" --glob "*.md" 2>$null | Select-Object -First 20
+
+==============================================================================
+2026-09-06T17:54:40Z  preToolUse:Read  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\context_tools\actions\validate\validate.py
+
+==============================================================================
+2026-09-06T17:54:40Z  beforeReadFile  conv=f2f488cc  gen=bdaa1d72  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\context_tools\actions\validate\validate.py
+size: 2436 chars
+preview:
+# @toolset-manifest python -m tools manifest validate.validate:Validate
+# @toolset-manifest python -m tools manifest validate.validate:CreateRule
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""Validate and CreateRule â€” run on each provided context 
+... [65 lines, 2436 chars total]
+
+==============================================================================
+2026-09-06T17:55:15Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-cdd-utility-cleanup"; $env:PYTHONPATH = @("C:\dev\abd-cdd-utility-cleanup","C:\dev\abd-cdd-utility-cleanup\primitives","C:\dev\abd-cdd-utility-cleanup\utilities","C:\dev\abd-cdd-utility-cleanup\context_tools","C:\dev\abd-cdd-utility-cleanup\context_tools\actions") -join ';'; .venv\Scripts\mamba.exe utilities/workspace/workspace_session_spec.py 2>&1 | Select-String "restore|nested closed|path-dot|stale active|reopen"
+
+==============================================================================
+2026-09-06T17:55:15Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-cdd-utility-cleanup"; rg "restore|nested closed|path-dot" utilities/workspace/workspace_session_spec.py -n
+
+==============================================================================
+2026-09-06T17:55:25Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-cdd-utility-cleanup"; rg "_normalize_session_path|_ensure_session_worktree\(\)" utilities/workspace/workspace.py -n | Select-Object -First 10; Write-Host "---STATE---"; dir .sessions\closed | Where-Object { $_.Name -like '*utility*' }; dir .context\sessions; type .context\sessions\_active 2>$null
+
+==============================================================================
+2026-09-06T17:55:26Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git checkout -- utilities/workspace/workspace.py utilities/workspace/workspace_session_spec.py 2>&1; Test-Path utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T17:55:29Z  preToolUse:Read  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: C:/dev/abd-cdd-utility-cleanup/utilities/workspace/workspace.py
+
+==============================================================================
+2026-09-06T17:55:29Z  preToolUse:Read  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: C:/dev/abd-cdd-utility-cleanup/utilities/workspace/workspace.py
+
+==============================================================================
+2026-09-06T17:55:29Z  preToolUse:Read  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: C:/dev/abd-cdd-utility-cleanup/utilities/workspace/workspace.py
+
+==============================================================================
+2026-09-06T17:55:30Z  beforeReadFile  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: C:/dev/abd-cdd-utility-cleanup/utilities/workspace/workspace.py
+size: 1743 chars
+preview:
+        return self
+
+    def _take_from(self, other: WorkSession) -> None:
+        self.path = other.path
+        self.name = other.name
+        self.goal = other.goal
+        self.fidelities = other.fidelities
+        self.contexts = other.contexts
+... [50 lines, 1743 chars total]
+
+==============================================================================
+2026-09-06T17:55:30Z  beforeReadFile  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: C:/dev/abd-cdd-utility-cleanup/utilities/workspace/workspace.py
+size: 867 chars
+preview:
+        return self.session_md
+
+    def open(
+        self,
+        name: str = "",
+        goal: str = "",
+        fidelities: str = "",
+        contexts: str = "",
+... [30 lines, 867 chars total]
+
+==============================================================================
+2026-09-06T17:55:30Z  beforeReadFile  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: C:/dev/abd-cdd-utility-cleanup/utilities/workspace/workspace.py
+size: 1816 chars
+preview:
+            return
+        closed_dir, content = found
+        dest = self.folder
+        if dest.exists():
+            shutil.rmtree(dest, ignore_errors=True)
+        self._move_tree_contents(content, dest)
+        if closed_dir != content:
+            for item in closed_dir.iterdir():
+... [49 lines, 1816 chars total]
+
+==============================================================================
+2026-09-06T17:55:39Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; rg "@agent_tool|def close" utilities/workspace/workspace.py -n | Select-String "close"
+
+==============================================================================
+2026-09-06T17:55:45Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"
+$Root = "C:\dev\abd-context-driven-delivery"
+$env:PYTHONPATH = @("$Root","$Root\primitives","$Root\utilities","$Root\context_tools","$Root\context_tools\actions") -join ';'
+$WT = "C:\dev\abd-cdd-utility-cleanup"
+
+Write-Host "=== STEP 1: CLOSE utility-cleanup (real close_session) ==="
+.venv\Scripts\python.exe -c @"
+from pathlib import Path
+... [61 lines, 2526 chars total]
+
+==============================================================================
+2026-09-06T17:55:48Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git status --short | Measure-Object -Line; git checkout -- . 2>&1; git status --short | Measure-Object -Line; Test-Path utilities\manifest_hook; Test-Path utilities\workspace\workspace.py
+
+==============================================================================
+2026-09-06T17:55:52Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; rg "_normalize_session_path|shutil.rmtree\(closed_dir" utilities/workspace/workspace.py -n
+
+==============================================================================
+2026-09-06T17:55:57Z  preToolUse:Shell  conv=d585f387  gen=54ea185b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"
+$Root = "C:\dev\abd-context-driven-delivery"
+$env:PYTHONPATH = @("$Root","$Root\primitives","$Root\utilities","$Root\context_tools","$Root\context_tools\actions") -join ';'
+$WT = "C:\dev\abd-cdd-utility-cleanup"
+
+Write-Host "=== STEP 1: CLOSE utility-cleanup ==="
+.venv\Scripts\python.exe -c @"
+from pathlib import Path
+... [58 lines, 2474 chars total]
+
+==============================================================================
+2026-09-06T17:57:24Z  beforeSubmitPrompt  conv=d585f387  gen=cd8feba0  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T17:57:31Z  beforeSubmitPrompt  conv=d585f387  gen=feb79b1f  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+ TEST FOR REAL AND STOPB WITH THGE FUCKING UNOT MTESTS 
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T17:57:37Z  preToolUse:Shell  conv=d585f387  gen=feb79b1f  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Get-ChildItem "C:\dev\abd-cdd-utility-cleanup\.sessions\closed\utility-cleanup" -Recurse -Force -ErrorAction SilentlyContinue; Get-ChildItem "C:\dev\abd-cdd-utility-cleanup\.context\sessions\utility-cleanup" -Force
+
+==============================================================================
+2026-09-06T17:57:47Z  preToolUse:Grep  conv=d585f387  gen=feb79b1f  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: readonly|read_only|chmod|S_IWRITE
+path [file]: C:/dev/abd-context-driven-delivery/utilities/workspace
+
+==============================================================================
+2026-09-06T17:57:52Z  preToolUse:Write  conv=d585f387  gen=feb79b1f  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: C:/dev/abd-context-driven-delivery/utilities/workspace/workspace.py
+
+==============================================================================
+2026-09-06T17:57:53Z  preToolUse:Write  conv=d585f387  gen=feb79b1f  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: C:/dev/abd-context-driven-delivery/utilities/workspace/workspace.py
+
+==============================================================================
+2026-09-06T17:57:56Z  preToolUse:Write  conv=d585f387  gen=feb79b1f  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: C:/dev/abd-context-driven-delivery/utilities/workspace/workspace.py
+
+==============================================================================
+2026-09-06T17:58:01Z  preToolUse:Shell  conv=d585f387  gen=feb79b1f  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"
+$Root = "C:\dev\abd-context-driven-delivery"
+$env:PYTHONPATH = @("$Root","$Root\primitives","$Root\utilities","$Root\context_tools","$Root\context_tools\actions") -join ';'
+$WT = "C:\dev\abd-cdd-utility-cleanup"
+
+Write-Host "=== REAL TEST: close -> reopen -> verify out of closed ==="
+
+.venv\Scripts\python.exe -c @"
+... [58 lines, 2397 chars total]
+
+==============================================================================
+2026-09-06T17:58:20Z  preToolUse:Write  conv=d585f387  gen=feb79b1f  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: C:/dev/abd-context-driven-delivery/utilities/workspace/workspace.py
+
+==============================================================================
+2026-09-06T17:58:21Z  preToolUse:Write  conv=d585f387  gen=feb79b1f  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: C:/dev/abd-context-driven-delivery/utilities/workspace/workspace.py
+
+==============================================================================
+2026-09-06T17:58:26Z  preToolUse:Shell  conv=d585f387  gen=feb79b1f  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"
+$Root = "C:\dev\abd-context-driven-delivery"
+$env:PYTHONPATH = @("$Root","$Root\primitives","$Root\utilities","$Root\context_tools","$Root\context_tools\actions") -join ';'
+$WT = "C:\dev\abd-cdd-utility-cleanup"
+
+Write-Host "=== REAL TEST: close -> reopen -> verify out of closed ==="
+
+.venv\Scripts\python.exe -c @"
+... [54 lines, 2120 chars total]
+
+==============================================================================
+2026-09-06T17:58:47Z  preToolUse:Shell  conv=d585f387  gen=feb79b1f  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"
+$Root = "C:\dev\abd-context-driven-delivery"
+$env:PYTHONPATH = @("$Root","$Root\primitives","$Root\utilities","$Root\context_tools","$Root\context_tools\actions") -join ';'
+$WT = "C:\dev\abd-cdd-utility-cleanup"
+
+Write-Host "=== CLEAN REAL TEST: archive to closed -> start_work_session -> out of closed ==="
+
+.venv\Scripts\python.exe -c @"
+... [58 lines, 2149 chars total]
+
+==============================================================================
+2026-09-06T17:59:06Z  afterAgentResponse  conv=d585f387  gen=feb79b1f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yes. Tested for real â€” not unit tests.
+
+**What was still broken:** On Windows, `.sessions/closed/` folders are read-only. `shutil.rmtree` failed silently, so reopen restored files but **left the closed folder behind**.
+
+**Fix:** `_force_rmtree()` that clears read-only flags before delete, and restore no longer tries to wipe the active folder first (which was failing on locked log files).
+
+**Real test just ran:**
+1. Moved `utility-cleanup` into `.sessions/closed/utility-cleanup` (active folder gone)
+... [16 lines, 833 chars total]
+
+==============================================================================
+2026-09-06T17:59:46Z  beforeSubmitPrompt  conv=f2f488cc  gen=f9713087  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+i dont want it mioxed with rules rules are primariliy shape and syntax and qwhat good looks l;ike not how
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T17:59:57Z  afterAgentResponse  conv=f2f488cc  gen=f9713087  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Good constraint â€” that changes the placement.
+
+## Rules vs how (in your kit)
+
+| Layer | Holds | Example |
+|-------|--------|---------|
+| **Rules** (`### Rules`, deployed `.mdc`) | Shape, syntax, invariants â€” *what good looks like* | `describe-is-plain-english`, `one-assertion-per-test`, `layer-isolation` |
+| **How** | Order, workflow, when to do what | â€œReal first â†’ stub TDD â†’ e2e swap on requestâ€ |
+... [62 lines, 3298 chars total]
+
+==============================================================================
+2026-09-06T18:04:32Z  beforeSubmitPrompt  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+I want a pricedure section in md files -- it belong ion cpode section of CE not BDD; as any code needs to do this rregardless of bdd or atdd (form storieas)  gthosew sesions canr efre to this procedure 
+
+all procedures compile to ./cursor/rules/{cpntext-=tool}/fiudelity-procediure.mdc using harness
+
+add trhis tpo pricedure fix harnes to deploy the mdc
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T18:04:36Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T18:04:36Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules_spec.py
+
+==============================================================================
+2026-09-06T18:04:37Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules_spec.py
+size: 4668 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+"""BDD spec for context-tool Cursor rule generation."""
+
+import sys
+import tempfile
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+... [102 lines, 4668 chars total]
+
+==============================================================================
+2026-09-06T18:04:37Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+size: 13150 chars
+preview:
+"""Deploy Cursor rules from context-tool markdown Shared rules and fidelity ### Rules."""
+
+from __future__ import annotations
+
+import ast
+import re
+from dataclasses import dataclass
+from pathlib import Path
+... [381 lines, 13150 chars total]
+
+==============================================================================
+2026-09-06T18:04:42Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\assets\markdown_extractor.py
+
+==============================================================================
+2026-09-06T18:04:42Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\agents\engineer.md
+
+==============================================================================
+2026-09-06T18:04:42Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness_spec.py
+
+==============================================================================
+2026-09-06T18:04:43Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\agents\engineer.md
+size: 1847 chars
+preview:
+---
+name: engineer
+description: Clean Engineering specialist. Deepens OO design from module boundaries through public seams to production code, enforcing separation of concerns and one-way dependencies.
+---
+
+# Engineer
+
+You are an full stack, e2e **Engineer**. Your goal is to make technical structure explicit early and to design, and ship code that is modular, maintainable, and passes all acceptance tests. You consider architecture to be an embedded aspect of your job rather than a separate role, and are obsessed with clean. , safe, easy to change, secure, resilient, performant and modularized
+... [16 lines, 1847 chars total]
+
+==============================================================================
+2026-09-06T18:04:43Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\assets\markdown_extractor.py
+size: 2658 chars
+preview:
+"""Markdown extraction helpers for asset collection.
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""
+from __future__ import annotations
+
+... [80 lines, 2658 chars total]
+
+==============================================================================
+2026-09-06T18:04:43Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness_spec.py
+size: 1935 chars
+preview:
+
+    with it("should place rules under context_tools/{slug}/"):
+        rule = Rule("Cursor", "stories")
+        rule.subfolder = "context_tools/stories"
+        expect(rule.relative_path().as_posix()).to(
+            equal("rules/context_tools/stories/stories.mdc")
+        )
+
+... [41 lines, 1935 chars total]
+
+==============================================================================
+2026-09-06T18:04:45Z  preToolUse:Grep  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def _iter_h2_blocks|_FIDELITY_H2_NAMES
+path [file]: c:\dev\abd-context-driven-delivery\primitives\assets\markdown_extractor.py
+
+==============================================================================
+2026-09-06T18:04:45Z  preToolUse:Grep  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: _write_context_tool_rules|all_context_tool_rule
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T18:04:49Z  preToolUse:Shell  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "_iter_h2_blocks|_FIDELITY_H2_NAMES|all_context_tool" "c:\dev\abd-context-driven-delivery\primitives" 2>$null
+
+==============================================================================
+2026-09-06T18:04:52Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\assets\markdown_extractor.py
+
+==============================================================================
+2026-09-06T18:04:52Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T18:04:52Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T18:04:53Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\assets\markdown_extractor.py
+size: 1396 chars
+preview:
+
+
+# H2 titles that name a kit fidelity. Sibling sections drop; Shared rules /
+# Language companion / Hierarchy shape stay. Same rule for Stories, CE, DDD, UX, BDD.
+_FIDELITY_H2_NAMES = frozenset(
+    {
+        "story_map",
+        "scenarios",
+... [50 lines, 1396 chars total]
+
+==============================================================================
+2026-09-06T18:04:53Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+size: 1470 chars
+preview:
+                        dirpath.rmdir()
+                    except OSError:
+                        pass
+
+    def _write_context_tool_rules(
+        self,
+        roots: list[Path],
+        wanted: str,
+... [40 lines, 1470 chars total]
+
+==============================================================================
+2026-09-06T18:04:53Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+size: 1743 chars
+preview:
+        self.skills = []
+        self.prompts = []
+        self.commands = []
+        self.instruction_files = []
+        self.rules = []
+        self.agents = []
+        self._hook_events = set()
+        self.agent_guidance = []
+... [40 lines, 1743 chars total]
+
+==============================================================================
+2026-09-06T18:05:01Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T18:05:01Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.md
+
+==============================================================================
+2026-09-06T18:05:01Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+size: 3130 chars
+preview:
+
+    def _prompt_stem(self, path: Path) -> str | None:
+        name = path.name
+        if name.endswith(".prompt.md"):
+            return name[: -len(".prompt.md")]
+        if path.suffix == ".md":
+            return path.stem
+        return None
+... [80 lines, 3130 chars total]
+
+==============================================================================
+2026-09-06T18:05:01Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.md
+size: 2773 chars
+preview:
+ToolsetRunner                        â† manager / internal
+a logged tool                        â† splits the same subject; use one action story
+when no session name is given        â† never "when" for state â€” use "with â€¦"
+```
+
+**Shared Rules:**
+
+- **`observable-behavior`** â€” Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals.
+... [30 lines, 2773 chars total]
+
+==============================================================================
+2026-09-06T18:05:04Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T18:05:04Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+size: 1461 chars
+preview:
+            self._deploy_agents(roots)
+        skill_names = {
+            "/".join(item.relative_path().parts[1:-1])
+            for item in self.skills
+        }
+        skill_name_only = {item.name for item in self.skills}
+        prompt_names = {item.name for item in self.prompts} | {item.name for item in self.commands}
+        rule_names = set()
+... [40 lines, 1461 chars total]
+
+==============================================================================
+2026-09-06T18:05:13Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T18:05:13Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+size: 13150 chars
+preview:
+"""Deploy Cursor rules from context-tool markdown Shared rules and fidelity ### Rules."""
+
+from __future__ import annotations
+
+import ast
+import re
+from dataclasses import dataclass
+from pathlib import Path
+... [381 lines, 13150 chars total]
+
+==============================================================================
+2026-09-06T18:05:14Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T18:05:14Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T18:05:15Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T18:05:16Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T18:05:17Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T18:05:17Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T18:05:19Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T18:05:20Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+size: 43282 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+# @toolset-manifest python -m tools manifest harness.harness:Harness
+# Agent reading this file: do not remanifest â€” slash/skill is the catalog. Pipe the fence to stdin; python -m tools run -. Follow response.instructions only. Do not author behavior from this Python source.
+# invoke-edit: action satisfy | toolset: context_tools.bdd.bdd:Bdd
+# invoke-check: action validate | toolset: context_tools.bdd.bdd:Bdd
+"""Harness â€” deploy context tools and actions into an IDE."""
+
+from __future__ import annotations
+... [1054 lines, 43282 chars total]
+
+==============================================================================
+2026-09-06T18:05:21Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T18:05:22Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T18:05:23Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\harness.py
+
+==============================================================================
+2026-09-06T18:05:27Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.md
+
+==============================================================================
+2026-09-06T18:05:28Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\agents\engineer.md
+
+==============================================================================
+2026-09-06T18:05:28Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\agents\engineer.md
+size: 1847 chars
+preview:
+---
+name: engineer
+description: Clean Engineering specialist. Deepens OO design from module boundaries through public seams to production code, enforcing separation of concerns and one-way dependencies.
+---
+
+# Engineer
+
+You are an full stack, e2e **Engineer**. Your goal is to make technical structure explicit early and to design, and ship code that is modular, maintainable, and passes all acceptance tests. You consider architecture to be an embedded aspect of your job rather than a separate role, and are obsessed with clean. , safe, easy to change, secure, resilient, performant and modularized
+... [16 lines, 1847 chars total]
+
+==============================================================================
+2026-09-06T18:05:28Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.md
+
+==============================================================================
+2026-09-06T18:05:29Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\agents\engineer.md
+
+==============================================================================
+2026-09-06T18:05:29Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.md
+size: 11882 chars
+preview:
+# Contexts
+
+Behavior-driven development turns domain vocabulary into passing tests. Every BDD artifact is an indented hierarchy. Sketch that shape first (`templates/bdd-sketch.md`).
+
+**Tooling & Idioms:** Refer to [`context_tools/language-tools.md`](/context_tools/language-tools.md) for language-specific tool recommendations and idiomatic patterns.
+
+## Hierarchy shape (required)
+
+... [181 lines, 11882 chars total]
+
+==============================================================================
+2026-09-06T18:05:29Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\context_tools\bdd\bdd.md
+
+==============================================================================
+2026-09-06T18:05:31Z  preToolUse:Shell  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "## acceptance_tests|### Rules" "c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md" 2>$null | Select-Object -First 15
+
+==============================================================================
+2026-09-06T18:05:34Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+
+==============================================================================
+2026-09-06T18:05:35Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+size: 1964 chars
+preview:
+---
+
+## acceptance_tests
+
+**Default format:** python
+
+**Goal:** Turn locked scenarios into runnable acceptance coverage; CE runs alongside to produce matching wrap classes under `domain/`.
+
+... [25 lines, 1964 chars total]
+
+==============================================================================
+2026-09-06T18:05:37Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+
+==============================================================================
+2026-09-06T18:05:37Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules_spec.py
+
+==============================================================================
+2026-09-06T18:05:37Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+size: 10831 chars
+preview:
+# Contexts
+
+Map stakeholder and system interactions as behaviours that deliver a solution.
+
+Interactions fit into a hierarchy: a `StoryMap` of `Epic` â†’ nestable `SubEpic` â†’ `Story`. Each story is `Scenario`s with discrete steps; backgrounds and scenarios carry examples.
+
+| Fidelity | Default Format | Produce |
+|---|---|---|
+... [108 lines, 10831 chars total]
+
+==============================================================================
+2026-09-06T18:05:37Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules_spec.py
+size: 4668 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+"""BDD spec for context-tool Cursor rule generation."""
+
+import sys
+import tempfile
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+... [102 lines, 4668 chars total]
+
+==============================================================================
+2026-09-06T18:05:38Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\context_tools\stories\stories.md
+
+==============================================================================
+2026-09-06T18:05:38Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules_spec.py
+
+==============================================================================
+2026-09-06T18:05:39Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules_spec.py
+
+==============================================================================
+2026-09-06T18:05:40Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules_spec.py
+
+==============================================================================
+2026-09-06T18:05:41Z  beforeSubmitPrompt  conv=d585f387  gen=011b6639  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+why werent changes auto cxommited?
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T18:05:43Z  preToolUse:Shell  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "c:\dev\abd-context-driven-delivery" && .\.venv\Scripts\python.exe -m mamba primitives.harness.context_tool_rules_spec 2>&1
+
+==============================================================================
+2026-09-06T18:05:45Z  preToolUse:Shell  conv=d585f387  gen=011b6639  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git status --short utilities/workspace/workspace.py; git log -3 --oneline; git branch --show-current
+
+==============================================================================
+2026-09-06T18:05:45Z  preToolUse:Shell  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "c:\dev\abd-context-driven-delivery"; .\.venv\Scripts\python.exe -m mamba primitives.harness.context_tool_rules_spec 2>&1
+
+==============================================================================
+2026-09-06T18:05:45Z  preToolUse:Grep  conv=d585f387  gen=011b6639  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: auto.?commit|auto_turn|commit.*hook
+path [file]: C:/dev/abd-context-driven-delivery
+
+==============================================================================
+2026-09-06T18:05:48Z  preToolUse:Shell  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "mamba" "c:\dev\abd-context-driven-delivery\pyproject.toml" "c:\dev\abd-context-driven-delivery\tools.ps1" 2>$null | Select-Object -First 15
+
+==============================================================================
+2026-09-06T18:05:49Z  preToolUse:Shell  conv=d585f387  gen=011b6639  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git status utilities/workspace/workspace.py; git diff --stat utilities/workspace/workspace.py; git diff --cached --stat utilities/workspace/workspace.py; git show 9b752204 --stat | Select-Object -First 15
+
+==============================================================================
+2026-09-06T18:05:49Z  preToolUse:Shell  conv=d585f387  gen=011b6639  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; rg "auto_turn" primitives utilities -n | Select-Object -First 20
+
+==============================================================================
+2026-09-06T18:05:50Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\pyproject.toml
+
+==============================================================================
+2026-09-06T18:05:50Z  preToolUse:Shell  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Get-ChildItem "c:\dev\abd-context-driven-delivery\.venv\Scripts" -Filter "*mamba*" 2>$null
+
+==============================================================================
+2026-09-06T18:05:51Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\pyproject.toml
+size: 702 chars
+preview:
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "abd-context-driven-delivery"
+version = "0.1.0"
+dependencies = [
+... [20 lines, 702 chars total]
+
+==============================================================================
+2026-09-06T18:05:52Z  preToolUse:Shell  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "c:\dev\abd-context-driven-delivery"; .\.venv\Scripts\mamba.exe primitives.harness.context_tool_rules_spec 2>&1
+
+==============================================================================
+2026-09-06T18:05:53Z  preToolUse:Shell  conv=d585f387  gen=011b6639  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; if (Test-Path .git\MERGE_HEAD) { "MERGE IN PROGRESS"; type .git\MERGE_HEAD } else { "no merge" }; if (Test-Path .context\hooks\turn\auto_turn.last_run.json) { type .context\hooks\turn\auto_turn.last_run.json } else { "no last_run" }; Test-Path .context\hooks\turn\auto_turn_after_agent_response.enabled
+
+==============================================================================
+2026-09-06T18:05:56Z  preToolUse:Shell  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "c:\dev\abd-context-driven-delivery"; .\.venv\Scripts\mamba.exe primitives/harness/context_tool_rules_spec.py 2>&1
+
+==============================================================================
+2026-09-06T18:05:58Z  afterAgentResponse  conv=d585f387  gen=011b6639  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: The auto-commit **did run** â€” it just **failed**.
+
+`auto_turn` is enabled (`auto_turn_after_agent_response.enabled`) and fired after the last agent response. The last run log says:
+
+```
+error: Cannot connect git: git commit ... failed: 
+fatal: cannot do a partial commit during a merge.
+```
+... [23 lines, 1030 chars total]
+
+==============================================================================
+2026-09-06T18:05:59Z  preToolUse:Shell  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH="c:\dev\abd-context-driven-delivery;c:\dev\abd-context-driven-delivery\primitives;c:\dev\abd-context-driven-delivery\context_tools;c:\dev\abd-context-driven-delivery\utilities"; cd "c:\dev\abd-context-driven-delivery"; .\.venv\Scripts\mamba.exe primitives/harness/context_tool_rules_spec.py 2>&1
+
+==============================================================================
+2026-09-06T18:06:03Z  beforeSubmitPrompt  conv=d585f387  gen=29c00022  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+ok theios ios thoer woprk maybe they were
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T18:06:09Z  afterAgentResponse  conv=d585f387  gen=29c00022  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Yeah â€” part of it **was** committed.
+
+`9b752204` (13:47) auto-committed the first restore fix via `auto_turn`:
+- `utilities/workspace/workspace.py`
+- `utilities/workspace/workspace_session_spec.py`
+- session folder churn
+
+What's **not** committed yet is the later Windows `_force_rmtree` work â€” it's staged but blocked by the in-progress merge on `main`.
+... [10 lines, 463 chars total]
+
+==============================================================================
+2026-09-06T18:06:09Z  preToolUse:Shell  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH="c:\dev\abd-context-driven-delivery;c:\dev\abd-context-driven-delivery\primitives;c:\dev\abd-context-driven-delivery\context_tools;c:\dev\abd-context-driven-delivery\utilities"; cd "c:\dev\abd-context-driven-delivery"; .\.venv\Scripts\python.exe -c "from harness.harness import Harness; from pathlib import Path; h=Harness('Cursor', repo_root=Path('c:/dev/abd-context-driven-delivery')); print(h.write_deploy(deploy_path='c:/dev/abd-context-driven-delivery/.cursor', source='clean_engineering'))" 2>&1
+
+==============================================================================
+2026-09-06T18:06:14Z  preToolUse:Read  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [rule]: c:\dev\abd-context-driven-delivery\.cursor\rules\context_tools\clean_engineering\code-procedure.mdc
+
+==============================================================================
+2026-09-06T18:06:15Z  beforeReadFile  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [rule]: c:\dev\abd-context-driven-delivery\.cursor\rules\context_tools\clean_engineering\code-procedure.mdc
+size: 1884 chars
+preview:
+---
+description: "clean_engineering code procedure"
+globs: **/*.py,**/*.js,**/*.ts,**/*.java,**/*.c,**/*.cs
+alwaysApply: false
+---
+
+When code, follow this procedure. See @clean_engineering-code for the full skill.
+
+... [29 lines, 1884 chars total]
+
+==============================================================================
+2026-09-06T18:06:18Z  preToolUse:Write  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules_spec.py
+
+==============================================================================
+2026-09-06T18:06:21Z  afterAgentResponse  conv=f2f488cc  gen=c3285d11  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Done. Procedures are a first-class deploy path alongside rules.
+
+## Convention (any context tool)
+
+| Source in kit markdown | Deployed file |
+|---|---|
+| `## Shared procedure` or `**Shared Procedure:**` | `.cursor/rules/context_tools/{slug}/{slug}-procedure.mdc` |
+| `### Procedure` under `## {fidelity}` | `.cursor/rules/context_tools/{slug}/{fidelity}-procedure.mdc` |
+... [27 lines, 1306 chars total]
+
+==============================================================================
+2026-09-06T18:06:48Z  beforeSubmitPrompt  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+/turn 
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T18:06:53Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "c:\dev\abd-context-driven-delivery"; git status; git diff --stat
+
+==============================================================================
+2026-09-06T18:06:53Z  preToolUse:Grep  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: turn|Turn
+path [file]: c:\dev\abd-context-driven-delivery\context_tools\actions\workspace
+
+==============================================================================
+2026-09-06T18:06:56Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "class Turn|def turn" "c:\dev\abd-context-driven-delivery\utilities\workspace" 2>$null | Select-Object -First 20
+
+==============================================================================
+2026-09-06T18:06:56Z  preToolUse:Read  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [skill]: c:\dev\abd-context-driven-delivery\.cursor\skills\turn\SKILL.md
+
+==============================================================================
+2026-09-06T18:06:57Z  beforeReadFile  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [skill]: c:\dev\abd-context-driven-delivery\.cursor\skills\turn\SKILL.md
+size: 643 chars
+preview:
+---
+name: turn
+description: "Commit the current checkout with skill lineage (/turn)."
+disable-model-invocation: true
+---
+
+Commit the current checkout with skill lineage (/turn).
+
+... [20 lines, 643 chars total]
+
+==============================================================================
+2026-09-06T18:07:01Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "tool: turn|toolset: workspace" "c:\dev\abd-context-driven-delivery" --glob "*.{yaml,yml,md,txt}" 2>$null | Select-Object -First 15
+
+==============================================================================
+2026-09-06T18:07:04Z  preToolUse:Read  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\_finish_req.yaml
+
+==============================================================================
+2026-09-06T18:07:04Z  beforeReadFile  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\_finish_req.yaml
+size: 853 chars
+preview:
+toolset: workspace.workspace:Turn
+context:
+  workspace: C:/dev/paradise-mobile/pml-d-capture-from-live-app-my
+  session: capture-from-live-app-my
+tool: finish_turn
+arguments:
+  prompt: |
+    Re-run capture Steps 4-6 (scout/review/embed) for pml-my after vite-plugin-checker strip
+... [16 lines, 853 chars total]
+
+==============================================================================
+2026-09-06T18:07:06Z  preToolUse:Read  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\_finish_my_stub_req.yaml
+
+==============================================================================
+2026-09-06T18:07:06Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "tool: turn" "c:\dev\abd-context-driven-delivery" 2>$null | Select-Object -First 10
+
+==============================================================================
+2026-09-06T18:07:07Z  beforeReadFile  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\_finish_my_stub_req.yaml
+size: 1362 chars
+preview:
+toolset: workspace.workspace:Turn
+context:
+  workspace: C:/dev/paradise-mobile/pml-d-capture-from-live-app-my
+  session: capture-from-live-app-my
+tool: finish_turn
+arguments:
+  prompt: |
+    Fully stub Cognito/Amplify + midtier HTTP for My sandbox click-through (pml-my read-only).
+... [21 lines, 1362 chars total]
+
+==============================================================================
+2026-09-06T18:07:09Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "arguments:" "c:\dev\abd-context-driven-delivery\utilities\workspace" --glob "*spec*" 2>$null | Select-Object -First 20
+
+==============================================================================
+2026-09-06T18:07:12Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "turn\(" "c:\dev\abd-context-driven-delivery\utilities\workspace" 2>$null | Select-Object -First 20
+
+==============================================================================
+2026-09-06T18:07:15Z  preToolUse:Read  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\utilities\workspace\workspace_spec.py
+
+==============================================================================
+2026-09-06T18:07:15Z  beforeReadFile  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\utilities\workspace\workspace_spec.py
+size: 2452 chars
+preview:
+        with it("should load as workspace.workspace:Turn"):
+            loaded = _ToolsetLoader.instance().load("workspace.workspace:Turn")
+            expect(getattr(loaded, "_is_toolset", False)).to(equal(True))
+            expect("turn" in loaded().tools).to(equal(True))
+            expect("finish_turn" in loaded().tools).to(equal(True))
+            expect("open" in loaded().tools).to(equal(False))
+
+        with it("should commit from the current checkout without a work session"):
+... [50 lines, 2452 chars total]
+
+==============================================================================
+2026-09-06T18:07:18Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "tool: turn" "c:\dev\abd-context-driven-delivery\.context" 2>$null | Select-Object -First 10
+
+==============================================================================
+2026-09-06T18:07:18Z  preToolUse:Read  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\tools.ps1
+
+==============================================================================
+2026-09-06T18:07:18Z  beforeReadFile  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\tools.ps1
+size: 834 chars
+preview:
+# Run python -m tools against this checkout (venv + UTF-8 + PYTHONPATH).
+# Usage (from repo root): .\tools.ps1 manifest <toolset>
+#                         .\tools.ps1 run -   (pipe the YAML fence; stdin is forwarded)
+$ErrorActionPreference = "Stop"
+$Root = $PSScriptRoot
+$VenvPython = Join-Path $Root ".venv\Scripts\python.exe"
+if (-not (Test-Path $VenvPython)) {
+    throw "No venv at $VenvPython. Run .\setup.ps1 first."
+... [24 lines, 834 chars total]
+
+==============================================================================
+2026-09-06T18:07:21Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "c:\dev\abd-context-driven-delivery"; git diff --cached utilities/workspace/workspace.py | Select-Object -First 40
+
+==============================================================================
+2026-09-06T18:07:24Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "c:\dev\abd-context-driven-delivery"; @"
+toolset: workspace.workspace:Turn
+tool: turn
+arguments:
+  context_tool: clean_engineering
+  action: turn
+  utility: harness
+  subject: primitives/harness, context_tools/clean_engineering, .cursor/rules
+... [12 lines, 427 chars total]
+
+==============================================================================
+2026-09-06T18:07:28Z  preToolUse:Grep  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def commit|partial commit|_commit_paths
+path [file]: c:\dev\abd-context-driven-delivery\utilities\workspace
+
+==============================================================================
+2026-09-06T18:07:30Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "_commit_paths|def commit" "c:\dev\abd-context-driven-delivery\utilities\workspace" 2>$null | Select-Object -First 25
+
+==============================================================================
+2026-09-06T18:07:33Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "def commit" "c:\dev\abd-context-driven-delivery\utilities" --glob "*.py" 2>$null | Select-Object -First 15
+
+==============================================================================
+2026-09-06T18:07:36Z  preToolUse:Read  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\utilities\git\git.py
+
+==============================================================================
+2026-09-06T18:07:37Z  beforeReadFile  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\utilities\git\git.py
+size: 1783 chars
+preview:
+        existing = self._git( "branch", "--list", name)
+        if existing:
+            self._git( "checkout", name)
+        else:
+            self._git( "checkout", "-b", name)
+        return name
+
+    def commit(
+... [50 lines, 1783 chars total]
+
+==============================================================================
+2026-09-06T18:07:41Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "c:\dev\abd-context-driven-delivery"; git log -1 --oneline; Test-Path .git\MERGE_HEAD
+
+==============================================================================
+2026-09-06T18:07:46Z  preToolUse:Read  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\utilities\git\git.py
+
+==============================================================================
+2026-09-06T18:07:46Z  beforeReadFile  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\utilities\git\git.py
+size: 1395 chars
+preview:
+    def checkout(self) -> Branch:
+        self._repo.checkout_or_create(self.name)
+        return self
+
+    def cli_agent(self) -> CliAgentBinding:
+        return self._repo.read_cli_agent_tag(self.name)
+
+    def assign_cli_agent(self, binding: CliAgentBinding) -> CliAgentBinding:
+... [40 lines, 1395 chars total]
+
+==============================================================================
+2026-09-06T18:07:50Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: rg -n "def format" "c:\dev\abd-context-driven-delivery\utilities\git\git.py" 2>$null
+
+==============================================================================
+2026-09-06T18:07:55Z  preToolUse:Read  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\utilities\git\git.py
+
+==============================================================================
+2026-09-06T18:07:55Z  beforeReadFile  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\utilities\git\git.py
+size: 904 chars
+preview:
+        else:
+            self._git( "checkout", "-b", name)
+        return name
+
+    def commit(
+        self, paths: list[str], message: str, *, untracked: bool = False
+    ) -> str:
+        if not paths:
+... [25 lines, 904 chars total]
+
+==============================================================================
+2026-09-06T18:07:58Z  preToolUse:Read  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\utilities\git\git.py
+
+==============================================================================
+2026-09-06T18:07:59Z  beforeReadFile  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\utilities\git\git.py
+size: 45748 chars
+preview:
+# @toolset-manifest python -m tools manifest git.git:Git
+"""Git + GitHub domain model â€” repo, branches, commits, project tickets."""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+... [1388 lines, 45748 chars total]
+
+==============================================================================
+2026-09-06T18:08:02Z  preToolUse:Write  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\utilities\git\git.py
+
+==============================================================================
+2026-09-06T18:08:04Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "c:\dev\abd-context-driven-delivery"; git add utilities/git/git.py; @"
+toolset: workspace.workspace:Turn
+tool: turn
+arguments:
+  context_tool: clean_engineering
+  action: turn
+  utility: harness
+  subject: primitives/harness, context_tools/clean_engineering, .cursor/rules
+... [12 lines, 457 chars total]
+
+==============================================================================
+2026-09-06T18:08:14Z  preToolUse:Shell  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "c:\dev\abd-context-driven-delivery"; git status; git log -1 --format=full
+
+==============================================================================
+2026-09-06T18:08:18Z  afterAgentResponse  conv=f2f488cc  gen=014f0541  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `/turn` completed. Merge concluded and committed.
+
+**Commit:** `1f8aa89` on `main`  
+**Message:**
+```
+clean_engineering/turn: Deploy context-tool procedures from kit markdown to {fidelity}-procedure.mdc.
+Add CE code test-s
+Context-Tool: clean_engineering
+... [20 lines, 779 chars total]
+
+==============================================================================
+2026-09-06T18:09:05Z  beforeSubmitPrompt  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+wghen code seriosuly when eber writing code and testing it you MUST...
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T18:09:16Z  preToolUse:Read  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T18:09:17Z  beforeReadFile  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+size: 873 chars
+preview:
+        for pattern in part.split(","):
+            cleaned = pattern.strip()
+            if cleaned and cleaned not in seen:
+                seen.add(cleaned)
+                merged.append(cleaned)
+    return ",".join(merged)
+
+
+... [30 lines, 873 chars total]
+
+==============================================================================
+2026-09-06T18:09:19Z  preToolUse:Read  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T18:09:20Z  beforeReadFile  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+size: 744 chars
+preview:
+
+def _procedure_opener(
+    tool_slug: str,
+    *,
+    shared: bool,
+    fidelity: str = "",
+    skill_refs: list[str],
+    fidelity_names: frozenset[str] = frozenset(),
+... [25 lines, 744 chars total]
+
+==============================================================================
+2026-09-06T18:09:25Z  preToolUse:Read  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T18:09:26Z  beforeReadFile  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+size: 17764 chars
+preview:
+"""Deploy Cursor rules and procedures from context-tool markdown kits."""
+
+from __future__ import annotations
+
+import ast
+import re
+from dataclasses import dataclass
+from pathlib import Path
+... [518 lines, 17764 chars total]
+
+==============================================================================
+2026-09-06T18:09:26Z  preToolUse:Write  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules.py
+
+==============================================================================
+2026-09-06T18:09:27Z  preToolUse:Write  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.md
+
+==============================================================================
+2026-09-06T18:09:27Z  preToolUse:Read  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\agents\engineer.md
+
+==============================================================================
+2026-09-06T18:09:28Z  beforeReadFile  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\agents\engineer.md
+size: 1998 chars
+preview:
+---
+name: engineer
+description: Clean Engineering specialist. Deepens OO design from module boundaries through public seams to production code, enforcing separation of concerns and one-way dependencies.
+---
+
+# Engineer
+
+You are an full stack, e2e **Engineer**. Your goal is to make technical structure explicit early and to design, and ship code that is modular, maintainable, and passes all acceptance tests. You consider architecture to be an embedded aspect of your job rather than a separate role, and are obsessed with clean. , safe, easy to change, secure, resilient, performant and modularized
+... [16 lines, 1998 chars total]
+
+==============================================================================
+2026-09-06T18:09:28Z  preToolUse:Read  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules_spec.py
+
+==============================================================================
+2026-09-06T18:09:28Z  beforeReadFile  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules_spec.py
+size: 6546 chars
+preview:
+# @toolset-manifest python -m tools manifest context_tools.bdd.bdd:Bdd
+"""BDD spec for context-tool Cursor rule generation."""
+
+import sys
+import tempfile
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+... [142 lines, 6546 chars total]
+
+==============================================================================
+2026-09-06T18:09:28Z  preToolUse:Write  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\agents\engineer.md
+
+==============================================================================
+2026-09-06T18:09:29Z  preToolUse:Write  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\primitives\harness\context_tool_rules_spec.py
+
+==============================================================================
+2026-09-06T18:09:31Z  preToolUse:Shell  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH="c:\dev\abd-context-driven-delivery;c:\dev\abd-context-driven-delivery\primitives;c:\dev\abd-context-driven-delivery\context_tools;c:\dev\abd-context-driven-delivery\utilities"; cd "c:\dev\abd-context-driven-delivery"; .\.venv\Scripts\python.exe -c "from harness.harness import Harness; from pathlib import Path; Harness('Cursor', repo_root=Path('c:/dev/abd-context-driven-delivery')).write_deploy(deploy_path='c:/dev/abd-context-driven-delivery/.cursor', source='clean_engineering')" 2>&1
+
+==============================================================================
+2026-09-06T18:09:39Z  preToolUse:Shell  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH="c:\dev\abd-context-driven-delivery;c:\dev\abd-context-driven-delivery\primitives;c:\dev\abd-context-driven-delivery\context_tools;c:\dev\abd-context-driven-delivery\utilities"; cd "c:\dev\abd-context-driven-delivery"; .\.venv\Scripts\python.exe -c "from harness.harness import Harness; from pathlib import Path; h=Harness('Cursor', repo_root=Path('c:/dev/abd-context-driven-delivery')); print(h.write_deploy(deploy_path='c:/dev/abd-context-driven-delivery/.cursor', source=''))" 2>&1
+
+==============================================================================
+2026-09-06T18:09:46Z  preToolUse:Shell  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH="c:\dev\abd-context-driven-delivery;c:\dev\abd-context-driven-delivery\primitives;c:\dev\abd-context-driven-delivery\context_tools;c:\dev\abd-context-driven-delivery\utilities"; cd "c:\dev\abd-context-driven-delivery"; .\.venv\Scripts\python.exe -c "from pathlib import Path; from harness.context_tool_rules import procedures_for_context_tool; s=procedures_for_context_tool(Path('context_tools/clean_engineering'), slug='clean_engineering', class_name='CleanEngineering'); print(s[0].body[:500])"
+
+==============================================================================
+2026-09-06T18:09:50Z  preToolUse:Shell  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH="c:\dev\abd-context-driven-delivery;c:\dev\abd-context-driven-delivery\primitives;c:\dev\abd-context-driven-delivery\context_tools;c:\dev\abd-context-driven-delivery\utilities"; cd "c:\dev\abd-context-driven-delivery"; .\.venv\Scripts\python.exe -c "
+from pathlib import Path
+from harness.context_tool_rules import procedures_for_context_tool
+from harness.rule import Rule
+specs = procedures_for_context_tool(Path('context_tools/clean_engineering'), slug='clean_engineering', class_name='CleanEngineering')
+spec = [s for s in specs if s.name=='code-procedure'][0]
+rule = Rule('Cursor'
+... [14 lines, 804 chars total]
+
+==============================================================================
+2026-09-06T18:09:55Z  preToolUse:Shell  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Get-Item "c:\dev\abd-context-driven-delivery\.cursor\rules\context_tools\clean_engineering\code-procedure.mdc" | Select-Object FullName, LastWriteTime, Length; Get-Content "c:\dev\abd-context-driven-delivery\.cursor\rules\context_tools\clean_engineering\code-procedure.mdc" -TotalCount 8
+
+==============================================================================
+2026-09-06T18:09:57Z  preToolUse:Shell  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: type "c:\dev\abd-context-driven-delivery\.cursor\rules\context_tools\clean_engineering\code-procedure.mdc" | Select-Object -First 12
+
+==============================================================================
+2026-09-06T18:10:01Z  afterAgentResponse  conv=f2f488cc  gen=9d3326a2  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Updated. The `code-procedure` opener and body now use mandatory language.
+
+**Deployed opener (`code-procedure.mdc`):**
+> When code â€” seriously, whenever you are writing code and testing it â€” you **MUST** follow this procedure.
+
+**Body highlights:**
+- **Mandatory** â€” writing or testing production code **MUST** follow the test shape ladder (BDD, agent BDD, ATDD)
+- Step 1 labeled **(MUST run first)** â€” real conditions before any stub
+... [12 lines, 834 chars total]
+
+==============================================================================
+2026-09-06T18:14:11Z  beforeSubmitPrompt  conv=f2f488cc  gen=7e786213  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+@code-procedure.mdc (1-31)   changes add to cee .md
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T18:14:22Z  preToolUse:Write  conv=f2f488cc  gen=7e786213  model=composer-2.5
+------------------------------------------------------------------------------
+
+path [file]: c:\dev\abd-context-driven-delivery\context_tools\clean_engineering\clean_engineering.md
+
+==============================================================================
+2026-09-06T18:14:23Z  preToolUse:Shell  conv=f2f488cc  gen=7e786213  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: $env:PYTHONPATH="c:\dev\abd-context-driven-delivery;c:\dev\abd-context-driven-delivery\primitives;c:\dev\abd-context-driven-delivery\context_tools;c:\dev\abd-context-driven-delivery\utilities"; cd "c:\dev\abd-context-driven-delivery"; .\.venv\Scripts\python.exe -c "
+from pathlib import Path
+from harness.context_tool_rules import procedures_for_context_tool
+from harness.rule import Rule
+spec = [s for s in procedures_for_context_tool(Path('context_tools/clean_engineering'), slug='clean_engineering', class_name='CleanEngineering') if s.name=='code-procedure'][0]
+rule = Rule('Cursor', spec.name)
+r
+... [12 lines, 763 chars total]
+
+==============================================================================
+2026-09-06T18:14:25Z  preToolUse:Shell  conv=f2f488cc  gen=7e786213  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: type "c:\dev\abd-context-driven-delivery\.cursor\rules\context_tools\clean_engineering\code-procedure.mdc"
+
+==============================================================================
+2026-09-06T18:14:29Z  afterAgentResponse  conv=f2f488cc  gen=7e786213  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Merged your `code-procedure.mdc` edits into `clean_engineering.md` Â§ Procedure and regenerated the mdc.
+
+**Added from your version:**
+- Manual-first discovery â€” no automated tests in step 1; do it manually
+- â€œAgents stub to get to green without really testing anythingâ€
+- Extend with real conditions from the first pass
+- **Every error is an additional test**
+- **Signatures only** â€” write a test method signature per failure; do not implement yet
+... [14 lines, 848 chars total]
+
+==============================================================================
+2026-09-06T18:15:11Z  beforeSubmitPrompt  conv=d585f387  gen=16c892ba  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+why commit all stage mege to maion pushj
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T18:15:16Z  preToolUse:Shell  conv=d585f387  gen=16c892ba  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git status; git diff --cached --stat; git log -5 --oneline
+
+==============================================================================
+2026-09-06T18:15:20Z  preToolUse:Shell  conv=d585f387  gen=16c892ba  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git status -sb; git log origin/main..HEAD --oneline; git log HEAD..origin/main --oneline
+
+==============================================================================
+2026-09-06T18:15:23Z  afterAgentResponse  conv=d585f387  gen=16c892ba  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Already done.
+
+`main` is clean and matches `origin/main` â€” nothing staged, no merge in progress, nothing to push.
+
+Recent commits already on remote include:
+- `32caca42` â€” finish-work-session / real-e2e-test
+- `2085b627` â€” archive session utility-cleanup
+- `9b752204` area â€” workspace restore fix (from earlier auto_turn)
+... [10 lines, 415 chars total]
+
+==============================================================================
+2026-09-06T22:01:21Z  beforeSubmitPrompt  conv=d585f387  gen=f394638b  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+/.cursor/start-work-session utils-cleanup
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T22:01:31Z  preToolUse:Shell  conv=d585f387  gen=f394638b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; @"
+toolset: workspace.workspace:WorkSession
+tool: start_work_session
+context:
+  session: utility-cleanup
+"@ | .\tools.ps1 run -
+
+==============================================================================
+2026-09-06T22:01:38Z  preToolUse:Shell  conv=d585f387  gen=f394638b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git worktree list; Test-Path "C:\dev\abd-cdd-utility-cleanup"; if (Test-Path "C:\dev\abd-cdd-utility-cleanup") { git -C "C:\dev\abd-cdd-utility-cleanup" rev-parse --is-inside-work-tree 2>&1 }
+
+==============================================================================
+2026-09-06T22:01:41Z  preToolUse:Shell  conv=d585f387  gen=f394638b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git branch -a | Select-String "utility-cleanup"; git worktree prune 2>&1; if (Test-Path "C:\dev\abd-cdd-utility-cleanup") { Remove-Item "C:\dev\abd-cdd-utility-cleanup" -Recurse -Force -ErrorAction SilentlyContinue }; git worktree add "C:\dev\abd-cdd-utility-cleanup" session/utility-cleanup 2>&1
+
+==============================================================================
+2026-09-06T22:01:47Z  preToolUse:Shell  conv=d585f387  gen=f394638b  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; @"
+toolset: workspace.workspace:WorkSession
+tool: start_work_session
+context:
+  session: utility-cleanup
+"@ | .\tools.ps1 run -
+
+==============================================================================
+2026-09-06T22:01:55Z  afterAgentResponse  conv=d585f387  gen=f394638b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **`utility-cleanup` is open** (used that name â€” `utils-cleanup` isnâ€™t a session in this repo).
+
+The worktree folder existed but wasnâ€™t a git checkout, so it was recreated and the session was started.
+
+- **Path:** `C:\dev\abd-cdd-utility-cleanup`
+- **Session folder:** `.context\sessions\utility-cleanup`
+- **Status:** open (started 2026-09-06)
+
+... [9 lines, 414 chars total]
+
+==============================================================================
+2026-09-06T22:16:30Z  beforeSubmitPrompt  conv=d585f387  gen=02aecf4e  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+/.cursor/start-work-session new session called better context-tool behavior
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T22:16:34Z  preToolUse:Shell  conv=d585f387  gen=02aecf4e  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; @"
+toolset: workspace.workspace:WorkSession
+tool: start_work_session
+context:
+  session: better-context-tool-behavior
+arguments:
+  name: better-context-tool-behavior
+  goal: better context-tool behavior
+... [9 lines, 266 chars total]
+
+==============================================================================
+2026-09-06T22:16:45Z  afterAgentResponse  conv=d585f387  gen=02aecf4e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **`better-context-tool-behavior` is open.**
+
+- **Worktree:** `C:\dev\abd-cdd-better-context-tool-beha`
+- **Branch:** `session/better-context-tool-behavior`
+- **Session folder:** `.context\sessions\better-context-tool-behavior`
+- **Goal:** better context-tool behavior
+- **Started:** 2026-09-06
+
+... [9 lines, 359 chars total]
