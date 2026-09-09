@@ -17,11 +17,6 @@ skill = skill_decorator
 
 class Skill(HarnessTool):
     def relative_path(self) -> Path:
-        if self.folder:
-            # overview skill: folder ends with slug == name → SKILL.md at folder root
-            if self.folder.endswith(f"/{self.name}") or self.folder == self.name:
-                return Path("skills") / self.folder / "SKILL.md"
-            return Path("skills") / self.folder / self.name / "SKILL.md"
         return Path("skills") / self.name / "SKILL.md"
 
     def render(self) -> str:
@@ -93,6 +88,7 @@ class Skill(HarnessTool):
                     actions=meta.get("actions") or (),
                     extended=meta.get("extended") or False,
                 )
-            if not self.description:
-                self.description = meta.get("overview", name)
+        meta = source if isinstance(source, dict) else {}
+        if not self.description:
+            self.description = meta.get("overview", self.name)
         return super().generate(source, roots)

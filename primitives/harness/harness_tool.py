@@ -112,6 +112,30 @@ def _required_init_params(node: ast.ClassDef) -> list[str]:
     return []
 
 
+def _leading_string_blocks(item: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+    """Return contiguous leading string literals from a function body.
+
+    This keeps support for standard docstrings while also capturing additional
+    leading string blocks used as operation guidance.
+    """
+    chunks: list[str] = []
+    started = False
+    for stmt in item.body:
+        if not isinstance(stmt, ast.Expr):
+            break
+        value = stmt.value
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            text = value.value.strip()
+            if text:
+                chunks.append(text)
+            started = True
+            continue
+        if started:
+            break
+        break
+    return "\n\n".join(chunks)
+
+
 def _local_writes(
     node: ast.ClassDef,
 ) -> tuple[list[tuple[str, str | None, str, str, str]], dict[str, str], set[str]]:
@@ -121,7 +145,7 @@ def _local_writes(
     for item in node.body:
         if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
-        doc = ast.get_docstring(item) or ""
+        doc = _leading_string_blocks(item) or ""
         docs[item.name] = doc
         invoke = _invoke_kind(item)
         for dec in item.decorator_list:

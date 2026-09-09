@@ -1,6 +1,6 @@
 ---
 description: "cdd shared rules — apply across all fidelities"
-globs: **/.context/**/cdd-sketch.md,**/.context/sessions/**
+globs: **/.context/**/cdd-sketch.md,**/.sessions/**
 alwaysApply: false
 ---
 

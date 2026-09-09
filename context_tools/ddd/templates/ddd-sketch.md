@@ -16,6 +16,11 @@ Declare fidelity once at the top. Use only the sketch for that fidelity — do n
 
 Name each **bounded context** (language boundary — **not** a UI theme or page), then the **aggregates it holds** (consistency clusters — usually more than one). Split when language or **change-frequency** diverges (stable identity vs fast line/service lifecycle), not when the UI has another section. A context is not an aggregate; do not wrap each root in its own BC. Use experts' words. List the wrapping / user-facing system first; vendors and systems of record sit downstream. Each context gets **vendor:** (`custom`, `bespoke`, or vendor name). On each **aggregate** that depends on another context, list upstream dependencies under `depends:` — do not invent a Cross-Context Relationships dump.
 
+For bounded_context sketches, nest **Aggregate** entries under each context and include event flow on each aggregate:
+- `emits:` event names this aggregate publishes
+- `consumes:` event names this aggregate reacts to
+Then add a compact cross-context event map at the bottom (`Event: emitted by X; consumed by Y, Z`) to make ownership and integration explicit at scaffold/discovery depth.
+
 
 
 - **`bc-by-lifecycle-not-ui-themes`** — Contexts follow language and change-frequency, not Onboarding/Selfcare/SignIn screen groups.
@@ -44,6 +49,14 @@ fidelity: bounded_context
 
     {{Root}}:
 
+      emits:
+
+        - {{EventName}}
+
+      consumes:
+
+        - {{EventName}}
+
       members:
 
         - {{member}}
@@ -67,6 +80,10 @@ fidelity: bounded_context
     {{Root}}:
 
       …
+
+  event_map:
+
+    - {{EventName}}: emitted by {{Root}}; consumed by {{Root}}, {{Root}}
 
 ```
 

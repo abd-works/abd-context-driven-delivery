@@ -78,7 +78,7 @@ Use when you have a handbook, spec, wiki, or any prose you want the system to re
 - **Deepen fidelity and repeat the loop.**
   When [discovery](fidelities/cdd-discovery.html) is solid, move to the next stage and [sketch](actions/sketch.html) → [generate](actions/generate.html) → [satisfy](actions/satisfy.html) again — same steps, tighter scope.
   [/stories /sketch scenarios](actions/sketch.html) → [/stories /generate scenarios](actions/generate.html)
-  [/clean-engineering /sketch model](actions/sketch.html) → [/clean-engineering /generate model](actions/generate.html)
+  [/clean-engineering-model](actions/sketch.html) → [/clean-engineering-model](actions/generate.html)
   Or set the stage with [/specification](fidelities/cdd-spec.html) or [/engineering](fidelities/cdd-engineer.html) on the tool already in scope.
 
 ---
