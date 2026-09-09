@@ -392,6 +392,9 @@ with description("a harness"):
                 expect((root / ".github" / "skills" / "context_tools" / "stories" / "SKILL.md").is_file()).to(equal(True))
                 expect((root / ".github" / "prompts" / "deploy-harness.prompt.md").is_file()).to(equal(True))
                 expect((root / ".github" / "prompts" / "clean-harness.prompt.md").is_file()).to(equal(True))
+                expect((root / ".github" / "instructions" / "writing-guidelines.md").is_file()).to(equal(True))
+                expect((root / ".github" / "instructions" / "context_tools" / "stories" / "stories.md").is_file()).to(equal(True))
+                expect((root / ".github" / "copilot-instructions.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
                     equal("OLD CONTENT")
                 )
@@ -404,6 +407,17 @@ with description("a harness"):
                 deploy_body = (root / ".kilo" / "skills" / "deploy-harness" / "SKILL.md").read_text(encoding="utf-8")
                 expect(deploy_body).to(contain("Cursor | VS Code | Kilo"))
                 expect(deploy_body).to(contain("arguments.code_language"))
+
+            with it("should write rule .md files under .kilo/rules and update kilo.json"):
+                root = _sandbox()
+                Harness("Kilo", repo_root=root).write_deploy(source="stories")
+                expect((root / ".kilo" / "rules" / "writing-guidelines.md").is_file()).to(equal(True))
+                expect((root / ".kilo" / "rules" / "context_tools" / "stories" / "stories.md").is_file()).to(equal(True))
+                expect((root / ".kilo" / "rules" / "context_tools" / "stories" / "story_map.md").is_file()).to(equal(True))
+                kilo_json = root / ".kilo" / "kilo.json"
+                expect(kilo_json.is_file()).to(equal(True))
+                data = json.loads(kilo_json.read_text(encoding="utf-8"))
+                expect(data.get("instructions")).to(contain(".kilo/rules/**/*.md"))
 
         with context("with type Claude"):
             with it("should not implement yet"):
@@ -1322,8 +1336,14 @@ with description("an instruction"):
 
 with description("a rule"):
     with context("that generates"):
-        with it("should write .cursor/rules/{name}.mdc"):
+        with it("should write .cursor/rules/{name}.mdc for Cursor"):
             expect(Rule("Cursor", "guide").relative_path().as_posix()).to(equal("rules/guide.mdc"))
+
+        with it("should write .kilo/rules/{name}.md for Kilo"):
+            expect(Rule("Kilo", "guide").relative_path().as_posix()).to(equal("rules/guide.md"))
+
+        with it("should write .github/instructions/{name}.md for VS Code"):
+            expect(Rule("VS Code", "guide").relative_path().as_posix()).to(equal("instructions/guide.md"))
 
 
 with description("an agent"):

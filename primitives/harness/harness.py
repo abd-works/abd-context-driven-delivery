@@ -480,20 +480,24 @@ class Harness:
 
     def _drop_unwritten_rules(self, roots: list[Path], written: set[str]) -> None:
         for root in roots:
-            rules_root = root / "rules"
-            if not rules_root.is_dir():
-                continue
-            for mdc in list(rules_root.rglob("*.mdc")):
-                key = mdc.relative_to(rules_root).as_posix()
-                key = key[: -len(".mdc")] if key.endswith(".mdc") else key
-                if key not in written:
-                    mdc.unlink()
-            for dirpath in sorted(rules_root.rglob("*"), key=lambda p: len(p.parts), reverse=True):
-                if dirpath.is_dir():
-                    try:
-                        dirpath.rmdir()
-                    except OSError:
-                        pass
+            for folder_name in ("rules", "instructions"):
+                rules_root = root / folder_name
+                if not rules_root.is_dir():
+                    continue
+                for rule_file in list(rules_root.rglob("*.mdc")) + list(rules_root.rglob("*.md")):
+                    key = rule_file.relative_to(rules_root).as_posix()
+                    if key.endswith(".mdc"):
+                        key = key[: -len(".mdc")]
+                    elif key.endswith(".md"):
+                        key = key[: -len(".md")]
+                    if key not in written:
+                        rule_file.unlink()
+                for dirpath in sorted(rules_root.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+                    if dirpath.is_dir():
+                        try:
+                            dirpath.rmdir()
+                        except OSError:
+                            pass
 
     def _write_rule_spec(
         self,
@@ -523,8 +527,8 @@ class Harness:
         roots: list[Path],
         seen: set[tuple[str, str]],
     ) -> list[str]:
-        """Write repo-level ``rules/*.md`` as top-level ``rules/*.mdc`` (Cursor only)."""
-        if self.type != "Cursor":
+        """Write repo-level ``rules/*.md`` as top-level rules."""
+        if self.type not in ("Cursor", "Kilo", "VS Code"):
             return []
         names: list[str] = []
         for spec in rules_from_repo_rules_folder(self.repo_root):
@@ -539,8 +543,8 @@ class Harness:
         wanted: str,
         seen: set[tuple[str, str]],
     ) -> list[str]:
-        """Write scoped `.mdc` rules and procedures under `rules/context_tools/{slug}/` (Cursor only)."""
-        if self.type != "Cursor":
+        """Write scoped rules and procedures under `rules/context_tools/{slug}/` or `instructions/context_tools/{slug}/`."""
+        if self.type not in ("Cursor", "Kilo", "VS Code"):
             return []
         names: list[str] = []
         for spec in all_context_tool_rule_specs(self.repo_root):
@@ -575,8 +579,48 @@ class Harness:
         wanted: str,
         seen: set[tuple[str, str]],
     ) -> list[str]:
-        """Write scoped `.mdc` rules under `rules/context_tools/{slug}/` (Cursor only)."""
+        """Write scoped rules under `rules/context_tools/{slug}/`."""
         return self._write_context_tool_mdcs(roots, wanted, seen)
+
+    def _update_kilo_json(self, roots: list[Path]) -> None:
+        if self.type != "Kilo":
+            return
+        patterns = [".kilo/rules/**/*.md", "rules/**/*.md"]
+        target_files: set[Path] = set()
+        for root in roots:
+            target_files.add(root / "kilo.json")
+        if (self.repo_root / "kilo.json").is_file():
+            target_files.add(self.repo_root / "kilo.json")
+
+        for path in target_files:
+            data: dict = {}
+            if path.is_file():
+                try:
+                    data = json.loads(path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    data = {}
+            instructions = data.get("instructions")
+            if not isinstance(instructions, list):
+                instructions = []
+            for p in patterns:
+                if p not in instructions:
+                    instructions.append(p)
+            data["instructions"] = instructions
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+    def _update_copilot_instructions(self, roots: list[Path]) -> None:
+        if self.type != "VS Code":
+            return
+        content = (
+            "# GitHub Copilot Workspace Instructions\n\n"
+            "This repository uses context-driven delivery instructions located in `.github/instructions/`.\n"
+            "Refer to `.github/instructions/**/*.md` for coding standards, architectural rules, and context-tool procedures.\n"
+        )
+        for root in roots:
+            copilot_file = root / "copilot-instructions.md"
+            if not copilot_file.is_file():
+                copilot_file.write_text(content, encoding="utf-8")
 
     def _wanted(self, wanted: str, name: str, source_slug: str, derived: str) -> bool:
         if not wanted:
@@ -834,17 +878,27 @@ class Harness:
                         leftover.unlink()
 
     def _deploy_agents(self, roots: list[Path]) -> None:
-        """Copy context_tools/*/agents/*.md → agents/{name}.md in each deploy root."""
+        """Copy context_tools/*/agents/*.md → agents/{name}.md or {name}.agent.md in each deploy root."""
         agent_sources: list[Path] = []
-        for ct_dir in (self.repo_root / "context_tools").iterdir():
-            agents_dir = ct_dir / "agents"
-            if agents_dir.is_dir():
-                agent_sources.extend(agents_dir.glob("*.md"))
-        written_names = {src.name for src in agent_sources}
+        ct_root = self.repo_root / "context_tools"
+        if ct_root.is_dir():
+            for ct_dir in ct_root.iterdir():
+                agents_dir = ct_dir / "agents"
+                if agents_dir.is_dir():
+                    agent_sources.extend(agents_dir.glob("*.md"))
+        written_names = set()
+        for src in agent_sources:
+            stem = src.stem
+            if self.type == "VS Code":
+                dest_name = f"{stem}.agent.md" if not stem.endswith(".agent") else src.name
+            else:
+                dest_name = src.name
+            written_names.add(dest_name)
+
         for root in roots:
             agents_root = root / "agents"
             agents_root.mkdir(parents=True, exist_ok=True)
-            # remove stale items (subdirectories or old .md files no longer in source)
+            # remove stale items (subdirectories or old agent files no longer in source)
             for item in list(agents_root.iterdir()):
                 if item.is_dir():
                     try:
@@ -857,7 +911,12 @@ class Harness:
                     except OSError:
                         pass
             for src in agent_sources:
-                dest = agents_root / src.name
+                stem = src.stem
+                if self.type == "VS Code":
+                    dest_name = f"{stem}.agent.md" if not stem.endswith(".agent") else src.name
+                else:
+                    dest_name = src.name
+                dest = agents_root / dest_name
                 dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
 
     def _save_ide(self, deploy_path: str = "") -> None:
@@ -991,13 +1050,17 @@ class Harness:
         names: list[str] = []
         for entry in json.loads(self.walk(name_filter)):
             names.extend(self._generate_entry(entry, roots, wanted, seen))
-        if self.type == "Cursor":
+        if self.type in ("Cursor", "Kilo", "VS Code"):
             names.extend(self._write_repo_rules(roots, seen))
             if not wanted or any(
                 wanted == spec.tool_slug or wanted.startswith(f"{spec.tool_slug}-")
                 for spec in all_context_tool_mdc_specs(self.repo_root)
             ):
                 names.extend(self._write_context_tool_mdcs(roots, wanted, seen))
+            if self.type == "Kilo":
+                self._update_kilo_json(roots)
+            elif self.type == "VS Code":
+                self._update_copilot_instructions(roots)
         for fmt in _FORMATS:
             if wanted and fmt != wanted:
                 continue
@@ -1014,15 +1077,18 @@ class Harness:
         skill_name_only = {item.name for item in self.skills}
         prompt_names = {item.name for item in self.prompts} | {item.name for item in self.commands}
         rule_names = set()
+        rules_folder = "instructions" if self.type == "VS Code" else "rules"
         for item in self.rules:
             rel = item.relative_path()
             try:
-                rel = rel.relative_to("rules")
+                rel = rel.relative_to(rules_folder)
             except ValueError:
                 pass
             key = rel.as_posix()
             if key.endswith(".mdc"):
                 key = key[: -len(".mdc")]
+            elif key.endswith(".md"):
+                key = key[: -len(".md")]
             rule_names.add(key)
         for prompt_file in self.prompts:
             if prompt_file.name not in skill_name_only:
