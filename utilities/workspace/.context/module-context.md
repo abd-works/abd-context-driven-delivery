@@ -9,7 +9,7 @@ Two folders matter — never confuse them:
 | Folder | Holds |
 |--------|--------|
 | `{working_path}/.context/` | Durable artifacts local to where you work — sketches, generated markdown, grill-answers, `context-index.md` |
-| `{working_path}/.context/sessions/{name}/` | Session temps in the **active checkout** (primary clone or worktree) — `session.md`, `model`, `logs/` |
+| `{repo_root}/.sessions/{name}/` | Session temps at the **repository root** — `session.md`, `model`, `logs/` |
 
 Closed sessions archive to `{repo_root}/.sessions/closed/{name}/`.
 
@@ -23,7 +23,7 @@ Parent of `.context/`. Owns `work_sessions`, `current_work_session`, and `path_o
 
 | Operation | What it does | Impact |
 |-----------|--------------|--------|
-| `load()` | Scan `.context/sessions/*` and read path overrides from `context-index.md` | In-memory only — no writes |
+| `load()` | Scan `.sessions/*` and read path overrides from `context-index.md` | In-memory only — no writes |
 | `save()` | Write the path-override table to `.context/context-index.md` | Updates durable index |
 | `lookup_path(tool, fidelity)` | Resolve a stored path override | Read only |
 | `upsert_path(tool, fidelity, path, default_path)` | Add/update/remove a path override, then `save()` | Rewrites `context-index.md` |
@@ -34,7 +34,7 @@ Parent of `.context/`. Owns `work_sessions`, `current_work_session`, and `path_o
 
 ### `WorkSession`
 
-One named sprint under `.context/sessions/{name}/`. Owns `git`, `open_turn`, `turns`, `repairs`, and the session file kit.
+One named sprint under `.sessions/{name}/`. Owns `git`, `open_turn`, `turns`, `repairs`, and the session file kit.
 
 | Operation | What it does | Impact |
 |-----------|--------------|--------|
@@ -74,7 +74,7 @@ Self-sufficient commit kit — **no WorkSession or Workspace required**.
 
 ## Open impact (`WorkSession.open`)
 
-1. **Folder** — creates `.context/sessions/{name}/` if needed.
+1. **Folder** — creates `.sessions/{name}/` if needed (restores from `.sessions/closed/{name}/` when reopening).
 2. **`session.md`** — written **only on first create** (goal, fidelities, contexts, start date). Resume does **not** rewrite Start.
 3. **Git worktree** — if session branch is not main/default: create or reuse a **sibling worktree** (`{abbrev}-{session-name}` next to the primary clone). Session work happens there; primary checkout is not stolen.
 4. **`model`** — copied from primary session or default when missing.
@@ -91,7 +91,7 @@ Self-sufficient commit kit — **no WorkSession or Workspace required**.
 4. **`session.md`** — **always rewritten** with End date, outcome, handoff.
 5. **Git** — commit `session.md` + scope paths if dirty; push session branch.
 6. **Chats** — transcript paths saved to git notes before bindings cleared.
-7. **Archive** — move `{working_path}/.context/sessions/{name}/` → `{repo_root}/.sessions/closed/{name}/` (creates `.sessions/closed/` when missing). Durable `{working_path}/.context/` artifacts are **not** moved.
+7. **Archive** — move `{repo_root}/.sessions/{name}/` → `{repo_root}/.sessions/closed/{name}/` (creates `.sessions/closed/` when missing). Durable `{working_path}/.context/` artifacts are **not** moved.
 8. **Worktree** — merge session branch onto main **without** checking out main in the session tree; remove worktree **only when clean** (no dirty files, no stash). `events.log` does not count as dirty.
 
 ## On disk after open vs close
@@ -99,11 +99,11 @@ Self-sufficient commit kit — **no WorkSession or Workspace required**.
 | Artifact | After open | After close |
 |----------|------------|-------------|
 | `session.md` | Start block (new) or unchanged (resume) | Start + **End** block — archived to `{repo}/.sessions/closed/{name}/` |
-| `model` | At `{working_path}/.context/sessions/{name}/model` | Moved with session folder to `.sessions/closed/{name}/` |
+| `model` | At `{repo_root}/.sessions/{name}/model` | Moved with session folder to `.sessions/closed/{name}/` |
 | `logs/events.log` | Grows during session | **Deleted** (before archive) |
 | `cli-agent.json` | Present if CLI was bound | **Deleted** (before archive) |
 | `handoff-*.md` | Deleted if consumed on open | — |
-| `.context/sessions/{name}/` | Session temps | **Removed** (folder archived) |
+| `.sessions/{name}/` | Session temps | **Removed** (folder archived) |
 | `.context/` durable files | Untouched by open/close | Untouched (only git-committed if in scope) |
 
 ## Constraint

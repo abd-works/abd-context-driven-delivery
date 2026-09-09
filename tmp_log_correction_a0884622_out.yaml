@@ -1,5 +1,0 @@
-```yaml
-ok: false
-error: session name is not set - confirm working path and session slug with the user,
-  then call create_session before grill/sketch/handoff
-```

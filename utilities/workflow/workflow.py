@@ -816,7 +816,7 @@ class Workflow:
         issue = self._repo(workspace).ticket(ticket)
         if issue is None:
             raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
-        session_folder = repo_root / ".context" / "sessions" / session_name
+        session_folder = repo_root / ".sessions" / session_name
         session_folder.mkdir(parents=True, exist_ok=True)
         target = session_folder / filename
         target.write_text(issue.body, encoding="utf-8")
