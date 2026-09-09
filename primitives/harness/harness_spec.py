@@ -245,7 +245,9 @@ with description("a harness"):
     with context("that generates"):
         with context("with no IDE given"):
             with it("should AskQuestion for the IDE"):
-                expect(_recipe(Harness("Cursor"))).to(contain("Which IDE?"))
+                prose = _recipe(Harness("Cursor"))
+                expect(prose).to(contain("Which IDE?"))
+                expect(prose).to(contain("Cursor | VS Code | Kilo"))
 
         with context("with no name filter given"):
             with it("should AskQuestion all or a substring"):
@@ -266,6 +268,7 @@ with description("a harness"):
             with it("should AskQuestion Python or TypeScript"):
                 prose = _recipe(Harness("Cursor"))
                 expect(prose).to(contain("Python (recommended) | TypeScript"))
+                expect(prose).to(contain("arguments.code_language"))
 
         with context("with no IDE type set in context"):
             with it("should tell the agent to set context.type before running"):
@@ -389,9 +392,32 @@ with description("a harness"):
                 expect((root / ".github" / "skills" / "context_tools" / "stories" / "SKILL.md").is_file()).to(equal(True))
                 expect((root / ".github" / "prompts" / "deploy-harness.prompt.md").is_file()).to(equal(True))
                 expect((root / ".github" / "prompts" / "clean-harness.prompt.md").is_file()).to(equal(True))
+                expect((root / ".github" / "instructions" / "writing-guidelines.md").is_file()).to(equal(True))
+                expect((root / ".github" / "instructions" / "context_tools" / "stories" / "stories.md").is_file()).to(equal(True))
+                expect((root / ".github" / "copilot-instructions.md").is_file()).to(equal(True))
                 expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").read_text(encoding="utf-8")).to(
                     equal("OLD CONTENT")
                 )
+
+        with context("with type Kilo"):
+            with it("should write under .kilo"):
+                root = _sandbox()
+                Harness("Kilo", repo_root=root).write_deploy(source="stories")
+                expect((root / ".kilo" / "skills" / "context_tools" / "stories" / "SKILL.md").is_file()).to(equal(True))
+                deploy_body = (root / ".kilo" / "skills" / "deploy-harness" / "SKILL.md").read_text(encoding="utf-8")
+                expect(deploy_body).to(contain("Cursor | VS Code | Kilo"))
+                expect(deploy_body).to(contain("arguments.code_language"))
+
+            with it("should write rule .md files under .kilo/rules and update kilo.json"):
+                root = _sandbox()
+                Harness("Kilo", repo_root=root).write_deploy(source="stories")
+                expect((root / ".kilo" / "rules" / "writing-guidelines.md").is_file()).to(equal(True))
+                expect((root / ".kilo" / "rules" / "context_tools" / "stories" / "stories.md").is_file()).to(equal(True))
+                expect((root / ".kilo" / "rules" / "context_tools" / "stories" / "story_map.md").is_file()).to(equal(True))
+                kilo_json = root / ".kilo" / "kilo.json"
+                expect(kilo_json.is_file()).to(equal(True))
+                data = json.loads(kilo_json.read_text(encoding="utf-8"))
+                expect(data.get("instructions")).to(contain(".kilo/rules/**/*.md"))
 
         with context("with type Claude"):
             with it("should not implement yet"):
@@ -1260,6 +1286,81 @@ with description("a generated harness tool"):
                     equal(True)
                 )
 
+        with context("with no-manifest mode"):
+            with it("should deploy only actions with direct bodies, never utilities or scanners"):
+                root = Path(tempfile.mkdtemp())
+                stories = root / "context_tools" / "stories" / "stories.py"
+                stories.parent.mkdir(parents=True, exist_ok=True)
+                stories.write_text(
+                    '"""Stories."""\n'
+                    "class Stories:\n"
+                    "    fidelities = {\"discovery\": \"story_map\"}\n",
+                    encoding="utf-8",
+                )
+
+                sketch_py = root / "context_tools" / "actions" / "sketch" / "sketch.py"
+                sketch_py.parent.mkdir(parents=True, exist_ok=True)
+                sketch_py.write_text(
+                    '"""Sketch action."""\n'
+                    "class Sketch:\n"
+                    "    @prompt\n"
+                    "    @agent_instructions\n"
+                    "    def sketch(self):\n"
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                (sketch_py.parent / "sketch.md").write_text(
+                    "# Sketch No Manifest\n\nUse this markdown directly.",
+                    encoding="utf-8",
+                )
+
+                echo = root / "utilities" / "echo" / "echo.py"
+                echo.parent.mkdir(parents=True, exist_ok=True)
+                echo.write_text(
+                    '"""Echo utility."""\n'
+                    "class Echo:\n"
+                    "    @prompt\n"
+                    "    @agent_instructions\n"
+                    "    def echo_session(self):\n"
+                    '        """Echo from docstring."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+
+                scanner = root / "context_tools" / "clean_engineering" / "scanners" / "fake_scanner.py"
+                scanner.parent.mkdir(parents=True, exist_ok=True)
+                scanner.write_text(
+                    '"""Fake scanner."""\n'
+                    "class FakeScanner:\n"
+                    "    @prompt\n"
+                    "    @agent_instructions\n"
+                    "    def run(self):\n"
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+
+                harness = Harness("Cursor", repo_root=root)
+                harness.write_deploy(source="stories", no_manifest=True)
+                expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "context_tools" / "stories" / "SKILL.md").exists()).to(equal(False))
+
+                harness.write_deploy(source="sketch", no_manifest=True)
+                action_text = (root / ".cursor" / "skills" / "actions" / "sketch" / "SKILL.md").read_text(
+                    encoding="utf-8"
+                )
+                expect(action_text).to(contain("# Sketch No Manifest"))
+                expect(action_text).to(contain("Use this markdown directly."))
+                expect(action_text).not_to(contain("tools.ps1 run -"))
+                expect(action_text).not_to(contain("toolset:"))
+                expect(action_text).not_to(contain("action:"))
+
+                harness.write_deploy(source="echo", no_manifest=True)
+                expect((root / ".cursor" / "skills" / "utilities" / "echo" / "SKILL.md").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "echo" / "SKILL.md").exists()).to(equal(False))
+
+                harness.write_deploy(source="fake-scanner", no_manifest=True)
+                expect((root / ".cursor" / "skills" / "fake-scanner" / "SKILL.md").exists()).to(equal(False))
+
 
 with description("a skill"):
     with context("that generates"):
@@ -1310,8 +1411,14 @@ with description("an instruction"):
 
 with description("a rule"):
     with context("that generates"):
-        with it("should write .cursor/rules/{name}.mdc"):
+        with it("should write .cursor/rules/{name}.mdc for Cursor"):
             expect(Rule("Cursor", "guide").relative_path().as_posix()).to(equal("rules/guide.mdc"))
+
+        with it("should write .kilo/rules/{name}.md for Kilo"):
+            expect(Rule("Kilo", "guide").relative_path().as_posix()).to(equal("rules/guide.md"))
+
+        with it("should write .github/instructions/{name}.md for VS Code"):
+            expect(Rule("VS Code", "guide").relative_path().as_posix()).to(equal("instructions/guide.md"))
 
 
 with description("an agent"):

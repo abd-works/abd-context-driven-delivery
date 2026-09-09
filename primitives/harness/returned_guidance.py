@@ -201,7 +201,49 @@ def compound_guidance(
 ) -> str:
     """Compile fidelity guidance by running the tool via the CLI and returning instructions."""
     import subprocess
-    import yaml as _yaml
+
+    def _extract_instructions_without_yaml(raw: str) -> str:
+        """Best-effort parse for tools-run yaml when PyYAML is unavailable.
+
+        Expected shape:
+        ok: true
+        instructions: |
+          line...
+        """
+        if not raw:
+            return ""
+        lines = raw.splitlines()
+        ok_true = any(line.strip().lower() in {"ok: true", "ok:true"} for line in lines)
+        if not ok_true:
+            return ""
+        start = None
+        for idx, line in enumerate(lines):
+            if line.strip().startswith("instructions:"):
+                start = idx
+                break
+        if start is None:
+            return ""
+
+        head = lines[start].strip()
+        if head.endswith("|") or head.endswith("|-"):
+            body: list[str] = []
+            for line in lines[start + 1 :]:
+                if line.startswith("  "):
+                    body.append(line[2:])
+                elif not line.strip():
+                    body.append("")
+                else:
+                    break
+            return "\n".join(body).strip()
+
+        # Single-line scalar fallback: instructions: text...
+        _, _, tail = lines[start].partition(":")
+        return tail.strip().strip('"').strip("'")
+
+    try:
+        import yaml as _yaml  # type: ignore
+    except Exception:
+        _yaml = None
 
     ts = toolset.strip()
     if not ts:
@@ -217,10 +259,27 @@ def compound_guidance(
 
     yaml_input = f"toolset: {ts}\ncontext:\n{ctx_lines}\naction: guidance\n"
 
-    env = {**__import__("os").environ, "PYTHONIOENCODING": "utf-8"}
+    _os = __import__("os")
+    _sys = __import__("sys")
+    source_path = Path(path)
+    repo_root = Path(__file__).resolve().parents[2]
+    py_parts = [
+        str(repo_root),
+        str(repo_root / "primitives"),
+        str(repo_root / "utilities"),
+        str(repo_root / "context_tools"),
+    ]
+    existing_pp = _os.environ.get("PYTHONPATH", "")
+    if existing_pp:
+        py_parts.append(existing_pp)
+    env = {
+        **_os.environ,
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONPATH": _os.pathsep.join(py_parts),
+    }
     try:
         result = subprocess.run(
-            [__import__("sys").executable, "-m", "tools", "run", "-"],
+            [_sys.executable, "-m", "tools", "run", "-"],
             input=yaml_input,
             capture_output=True,
             text=True,
@@ -237,15 +296,19 @@ def compound_guidance(
     if output.endswith("```"):
         output = output[:-3].rstrip()
 
-    try:
-        data = _yaml.safe_load(output)
-    except Exception:
-        return ""
+    if _yaml is not None:
+        try:
+            data = _yaml.safe_load(output)
+        except Exception:
+            return ""
+        if not isinstance(data, dict) or not data.get("ok"):
+            return ""
+        instructions = (data.get("instructions") or "").strip()
+    else:
+        instructions = _extract_instructions_without_yaml(output)
+        if not instructions:
+            return ""
 
-    if not isinstance(data, dict) or not data.get("ok"):
-        return ""
-
-    instructions = (data.get("instructions") or "").strip()
     instructions = _strip_invocation_prose(instructions)
 
     # Strip the leading agent-instructions preamble (method docstring +
@@ -265,7 +328,6 @@ def compound_guidance(
     # Cut off everything from the first file-path heading (examples + inlined
     # templates from the CLI).  We replace them with path references instead.
     import re as _re
-    source_path = Path(path)
     module_dir = source_path.parent
 
     file_heading = _re.compile(

@@ -58,6 +58,8 @@ story("{Story Verb-Noun}", () => {
   background(({ given }) => {
     given("{background given step}", async () => {
       // domain state only
+    }).and("{additional condition on the same background state}", async () => {
+      // chained domain state — not a second sibling given
     });
 
     scenario("{surface check — e.g. rules visible}", ({ when, then }) => {

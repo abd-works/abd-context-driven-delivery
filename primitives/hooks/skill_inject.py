@@ -27,7 +27,7 @@ def notify(title: str, body: str):
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SKILLS_ROOT = _REPO_ROOT / ".cursor" / "skills"
-_STATE_DIR = _REPO_ROOT / ".context" / "sessions" / "_skill_inject"
+_STATE_DIR = _REPO_ROOT / ".sessions" / "_skill_inject"
 _DIGEST_LINES = 50
 
 _TAG_TO_SKILL: dict[str, Path] = {

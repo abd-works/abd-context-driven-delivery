@@ -10,22 +10,38 @@ type WhenChain = {
   and: (s: string, fn: () => void | Promise<void>) => WhenChain;
 };
 
+type GivenStep = (s: string, fn: () => void | Promise<void>) => GivenChain;
+
+type GivenChain = {
+  and: GivenStep;
+};
+
 type ThenChain = {
   and: (s: string, fn: () => void | Promise<void>) => ThenChain;
 };
 
 let activeBackgroundGivens: Array<() => void | Promise<void>> = [];
 
+function makeGivenStep(
+  push: (fn: () => void | Promise<void>) => void,
+): GivenStep {
+  const given: GivenStep = (_s, fn) => {
+    push(fn);
+    return { and: given };
+  };
+  return given;
+}
+
 export function story(name: string, build: () => void): void {
   describe(name, build);
 }
 
 export function background(
-  build: (steps: { given: (s: string, fn: () => void | Promise<void>) => void }) => void,
+  build: (steps: { given: GivenStep }) => void,
 ): void {
   const givens: Array<() => void | Promise<void>> = [];
   build({
-    given: (_s, fn) => givens.push(fn),
+    given: makeGivenStep((fn) => givens.push(fn)),
   });
   activeBackgroundGivens = givens;
 }
@@ -33,7 +49,7 @@ export function background(
 export function scenario(
   name: string,
   build: (steps: {
-    given: (s: string, fn: () => void | Promise<void>) => void;
+    given: GivenStep;
     when: (s: string, fn: () => void | Promise<void>) => WhenChain;
     then: (s: string, fn: () => void | Promise<void>) => ThenChain;
   }) => void,
@@ -59,7 +75,7 @@ export function scenario(
     };
 
     build({
-      given: (_s, fn) => givens.push(fn),
+      given: makeGivenStep((fn) => givens.push(fn)),
       when: (_s, fn) => {
         whens.push(fn);
         return whenChain;

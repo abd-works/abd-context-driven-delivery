@@ -14,13 +14,6 @@ from typing import Any
 
 from tools.tool import toolset
 
-_GIT_DO_NOT_PROCEED = (
-    "Do not proceed unless the user tells you to continue without a git connection."
-)
-_GH_DO_NOT_PROCEED = (
-    "Do not proceed unless the user tells you to continue without GitHub CLI access."
-)
-
 
 class GitConnectError(RuntimeError):
     """Raised when the clone cannot be used for git."""
@@ -191,6 +184,8 @@ class Ticket:
     issue_type: str = ""
     labels: list[str] = field(default_factory=list)
     data: dict[str, str] = field(default_factory=dict)
+    parent_number: int | None = None
+    sub_issue_numbers: list[int] = field(default_factory=list)
     _repo: Repo | None = field(default=None, repr=False, compare=False)
 
     @property
@@ -210,6 +205,58 @@ class Ticket:
         repo._gh("issue", "close", str(self.number))
         self.data["closed"] = "true"
 
+    def update(self, *, title: str | None = None, body: str | None = None) -> Ticket:
+        """Update supplied issue fields while leaving omitted fields unchanged."""
+        repo = self._repo
+        if repo is None:
+            raise RuntimeError("Ticket.update requires a repo")
+        arguments = ["issue", "edit", str(self.number)]
+        if title is not None:
+            arguments.extend(["--title", title])
+        if body is not None:
+            arguments.extend(["--body-file", "-"])
+        if len(arguments) == 3:
+            return self
+        if not repo._memory:
+            repo._gh(*arguments, stdin=body)
+        self.title = title if title is not None else self.title
+        self.body = body if body is not None else self.body
+        return self
+
+    def comment(self, body: str) -> Ticket:
+        """Add a comment to this issue."""
+        repo = self._repo
+        if repo is None:
+            raise RuntimeError("Ticket.comment requires a repo")
+        if repo._memory:
+            repo._ticket_comments.setdefault(self.number, []).append(body)
+            return self
+        repo._gh("issue", "comment", str(self.number), "--body-file", "-", stdin=body)
+        return self
+
+    def add_child(self, child: Ticket) -> Ticket:
+        """Attach an existing issue as a direct sub-issue of this issue."""
+        repo = self._repo
+        if repo is None:
+            raise RuntimeError("Ticket.add_child requires a repo")
+        if child.number not in self.sub_issue_numbers:
+            self.sub_issue_numbers.append(child.number)
+        child.parent_number = self.number
+        if repo._memory:
+            children = repo._ticket_children.setdefault(self.number, [])
+            if child.number not in children:
+                children.append(child.number)
+            repo._ticket_parents[child.number] = self.number
+            return child
+        repo._gh(
+            "issue",
+            "edit",
+            str(self.number),
+            "--add-sub-issue",
+            child.url or str(child.number),
+        )
+        return child
+
     def add_label(self, name: str) -> Ticket:
         """Put a label on this issue (sidebar chip). Empty name is a no-op."""
         label = (name or "").strip()
@@ -224,6 +271,21 @@ class Ticket:
             return self
         repo._gh("label", "create", label, "--force")
         repo._gh("issue", "edit", str(self.number), "--add-label", label)
+        return self
+
+    def remove_label(self, name: str) -> Ticket:
+        """Take a label off this issue. Empty or absent name is a quiet no-op."""
+        label = (name or "").strip()
+        if not label:
+            return self
+        repo = self._repo
+        if repo is None:
+            raise RuntimeError("Ticket.remove_label requires a repo")
+        if label in self.labels:
+            self.labels.remove(label)
+        if repo._memory:
+            return self
+        repo._gh("issue", "edit", str(self.number), "--remove-label", label)
         return self
 
     def add_theme(self, theme: str) -> Ticket:
@@ -310,9 +372,7 @@ class Ticket:
         item = json.loads(item_raw or "{}")
         item_id = item.get("id")
         if not item_id:
-            raise GhConnectError(
-                f"Could not add issue to project. {_GH_DO_NOT_PROCEED}"
-            )
+            raise GhConnectError("Could not add issue to project.")
         gh_value = resolve_github_status_option(
             state_name, project.status_option_names()
         )
@@ -466,9 +526,11 @@ class Project:
         self.states = [TicketState(name) for name in DEFAULT_PROJECT_STATES]
 
     def state_named(self, name: str) -> TicketState:
-        for state in self.states:
-            if state.name == name:
-                return state
+        options = self.status_option_names()
+        resolved = resolve_github_status_option(name, options)
+        for state_name in options or [state.name for state in self.states]:
+            if state_name.lower() == resolved.lower():
+                return TicketState(state_name)
         raise ValueError(f"unknown project state: {name!r}")
 
     def status_option_names(self) -> list[str]:
@@ -506,6 +568,164 @@ class Project:
                 if label:
                     names.append(label)
         return names
+
+    def ticket_rows(self) -> list[dict[str, str | int]]:
+        """Return project issues with their board status."""
+        if self._repo._memory:
+            return self._memory_ticket_rows()
+        raw = self._repo._gh(
+            "project",
+            "item-list",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--limit",
+            "1000",
+            "--format",
+            "json",
+        )
+        payload = json.loads(raw or "{}")
+        return self._ticket_rows_from_items(payload.get("items") or [])
+
+    def set_text_field(self, ticket_number: int, field_name: str, value: str) -> None:
+        """Set an arbitrary text field on one issue's project item."""
+        if self._repo._memory:
+            self._repo._ticket_project_fields.setdefault(ticket_number, {})[
+                field_name
+            ] = value
+            return
+        field_id = self._ensure_text_field(field_name)
+        item_id = self._item_id(ticket_number)
+        project_id = self._project_id()
+        self._repo._gh(
+            "project",
+            "item-edit",
+            "--id",
+            item_id,
+            "--project-id",
+            project_id,
+            "--field-id",
+            field_id,
+            "--text",
+            value,
+        )
+
+    def archive_ticket(self, ticket_number: int) -> None:
+        """Archive an issue's project item without deleting the issue."""
+        if self._repo._memory:
+            self._repo._archived_project_tickets.add(ticket_number)
+            return
+        self._repo._gh(
+            "project",
+            "item-archive",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--id",
+            self._item_id(ticket_number),
+        )
+
+    def _project_id(self) -> str:
+        raw = self._repo._gh(
+            "project",
+            "view",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--format",
+            "json",
+        )
+        project_id = str(json.loads(raw or "{}").get("id") or "")
+        if not project_id:
+            raise ValueError(f"project {self.owner}/{self.number} has no id")
+        return project_id
+
+    def _field_rows(self) -> list[dict[str, object]]:
+        raw = self._repo._gh(
+            "project",
+            "field-list",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--format",
+            "json",
+        )
+        payload = json.loads(raw or "{}")
+        return [row for row in payload.get("fields") or [] if isinstance(row, dict)]
+
+    def _ensure_text_field(self, field_name: str) -> str:
+        for field in self._field_rows():
+            if str(field.get("name") or "") == field_name:
+                return str(field.get("id") or "")
+        raw = self._repo._gh(
+            "project",
+            "field-create",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--name",
+            field_name,
+            "--data-type",
+            "TEXT",
+            "--format",
+            "json",
+        )
+        field_id = str(json.loads(raw or "{}").get("id") or "")
+        if not field_id:
+            raise ValueError(f"project field was not created: {field_name}")
+        return field_id
+
+    def _item_id(self, ticket_number: int) -> str:
+        raw = self._repo._gh(
+            "project",
+            "item-list",
+            str(self.number),
+            "--owner",
+            self.owner,
+            "--limit",
+            "1000",
+            "--format",
+            "json",
+        )
+        for item in json.loads(raw or "{}").get("items") or []:
+            content = item.get("content") if isinstance(item, dict) else None
+            if isinstance(content, dict) and content.get("number") == ticket_number:
+                return str(item.get("id") or "")
+        raise ValueError(f"ticket {ticket_number} is not on the project board")
+
+    def _memory_ticket_rows(self) -> list[dict[str, str | int]]:
+        rows: list[dict[str, str | int]] = []
+        for number, ticket in self._repo._tickets.items():
+            status = self._repo._ticket_project_state.get(number, "")
+            if not status:
+                continue
+            rows.append(
+                {
+                    "number": number,
+                    "title": ticket.title,
+                    "url": ticket.url,
+                    "status": status,
+                }
+            )
+        return rows
+
+    def _ticket_rows_from_items(
+        self, items: list[dict[str, object]]
+    ) -> list[dict[str, str | int]]:
+        rows: list[dict[str, str | int]] = []
+        for item in items:
+            content = item.get("content")
+            if not isinstance(content, dict) or content.get("type") != "Issue":
+                continue
+            rows.append(
+                {
+                    "number": int(content.get("number") or 0),
+                    "title": str(content.get("title") or item.get("title") or ""),
+                    "url": str(content.get("url") or ""),
+                    "status": str(item.get("status") or ""),
+                }
+            )
+        return rows
 
     def theme_option_names(self) -> list[str]:
         """Live GitHub Theme field option names, or empty when listing fails."""
@@ -583,7 +803,12 @@ class Repo:
         self._tickets: dict[int, Ticket] = {}
         self._ticket_project_state: dict[int, str] = {}
         self._ticket_project_theme: dict[int, str] = {}
+        self._ticket_project_fields: dict[int, dict[str, str]] = {}
+        self._ticket_children: dict[int, list[int]] = {}
+        self._ticket_parents: dict[int, int] = {}
+        self._ticket_comments: dict[int, list[str]] = {}
         self._closed_tickets: set[int] = set()
+        self._archived_project_tickets: set[int] = set()
         if memory:
             self._init_memory_state()
 
@@ -620,9 +845,7 @@ class Repo:
                     found = str(candidate)
                     break
         if not found:
-            raise GitConnectError(
-                f"Cannot connect git: `git` is not available. {_GIT_DO_NOT_PROCEED}"
-            )
+            raise GitConnectError("Cannot connect git: `git` is not available.")
         try:
             completed = subprocess.run(
                 [found, "-c", "core.longpaths=true", "-C", str(root), *args],
@@ -632,14 +855,12 @@ class Repo:
                 check=False,
             )
         except OSError as exc:
-            raise GitConnectError(
-                f"Cannot connect git: {exc}. {_GIT_DO_NOT_PROCEED}"
-            ) from exc
+            raise GitConnectError(f"Cannot connect git: {exc}.") from exc
         if completed.returncode != 0:
             err = (completed.stderr or completed.stdout or "").strip()
             raise GitConnectError(
                 f"Cannot connect git: git {' '.join(args)} failed in {root}: "
-                f"{err}. {_GIT_DO_NOT_PROCEED}"
+                f"{err}."
             )
         return (completed.stdout or "").strip()
 
@@ -660,9 +881,7 @@ class Repo:
                     found = str(candidate)
                     break
         if not found:
-            raise GhConnectError(
-                f"Cannot connect gh: `gh` is not available. {_GH_DO_NOT_PROCEED}"
-            )
+            raise GhConnectError("Cannot connect gh: `gh` is not available.")
         try:
             completed = subprocess.run(
                 [found, *args],
@@ -674,14 +893,12 @@ class Repo:
                 input=stdin,
             )
         except OSError as exc:
-            raise GhConnectError(
-                f"Cannot connect gh: {exc}. {_GH_DO_NOT_PROCEED}"
-            ) from exc
+            raise GhConnectError(f"Cannot connect gh: {exc}.") from exc
         if completed.returncode != 0:
             err = (completed.stderr or completed.stdout or "").strip()
             shown = " ".join(a for a in args if a != stdin)
             raise GhConnectError(
-                f"Cannot connect gh: gh {shown} failed: {err}. {_GH_DO_NOT_PROCEED}"
+                f"Cannot connect gh: gh {shown} failed: {err}."
             )
         return (completed.stdout or "").strip()
 
@@ -872,9 +1089,7 @@ class Repo:
         payload = json.loads(raw or "{}")
         name = payload.get("nameWithOwner", "")
         if "/" not in name:
-            raise GhConnectError(
-                f"Cannot resolve owner/repo for {self.root}. {_GH_DO_NOT_PROCEED}"
-            )
+            raise GhConnectError(f"Cannot resolve owner/repo for {self.root}.")
         owner, repo = name.split("/", 1)
         return owner, repo
 
@@ -1266,6 +1481,8 @@ class Repo:
             if state_name:
                 ticket.state = TicketState(state_name)
             ticket.data["closed"] = "true" if number in self._closed_tickets else "false"
+            ticket.sub_issue_numbers = list(self._ticket_children.get(number, []))
+            ticket.parent_number = self._ticket_parents.get(number)
             return ticket
         number = Ticket.parse_number(ref)
         try:
@@ -1274,7 +1491,7 @@ class Repo:
                 "view",
                 str(number),
                 "--json",
-                "number,title,body,url,state",
+                "number,title,body,url,state,parent,subIssues",
             )
         except GhConnectError as exc:
             message = str(exc).lower()
@@ -1310,9 +1527,7 @@ class Repo:
         )
         url = (raw or "").strip().splitlines()[-1].strip() if raw else ""
         if "/issues/" not in url:
-            raise GhConnectError(
-                f"Cannot parse issue URL from gh issue create: {raw!r}. {_GH_DO_NOT_PROCEED}"
-            )
+            raise GhConnectError(f"Cannot parse issue URL from gh issue create: {raw!r}.")
         number = int(url.rstrip("/").rsplit("/", 1)[-1])
         ticket = self.ticket(str(number))
         if ticket is None:
@@ -1342,11 +1557,27 @@ class Repo:
 
     def _ticket_from_payload(self, payload: dict[str, Any]) -> Ticket:
         number = int(payload["number"])
+        parent_data = payload.get("parent")
+        parent_number = (
+            int(parent_data["number"])
+            if isinstance(parent_data, dict) and parent_data.get("number")
+            else None
+        )
+        sub_issues_data = payload.get("subIssues") or []
+        if isinstance(sub_issues_data, dict):
+            sub_issues_data = sub_issues_data.get("nodes") or []
+        sub_numbers = [
+            int(item["number"])
+            for item in sub_issues_data
+            if isinstance(item, dict) and item.get("number")
+        ]
         ticket = Ticket(
             number=number,
             title=str(payload.get("title") or ""),
             body=str(payload.get("body") or ""),
             url=str(payload.get("url") or ""),
+            parent_number=parent_number,
+            sub_issue_numbers=sub_numbers,
             _repo=self,
         )
         self._tickets[number] = ticket

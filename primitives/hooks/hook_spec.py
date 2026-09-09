@@ -583,7 +583,7 @@ with description("session hook logs"):
 
     with context("when no work session is active"):
 
-        with it("should create default session logs under .context/sessions/default/logs"):
+        with it("should create default session logs under .sessions/default/logs"):
             with tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 from hooks.session_logs import ensure_default_session, session_log_path
@@ -592,7 +592,7 @@ with description("session hook logs"):
                 expect(folder.is_dir()).to(be_true)
                 log = session_log_path(root, "prompt-log.txt")
                 expect(log.parent.as_posix()).to(
-                    equal((root / ".context/sessions/default/logs").as_posix())
+                    equal((root / ".sessions/default/logs").as_posix())
                 )
                 log.write_text("probe\n", encoding="utf-8")
                 expect(log.is_file()).to(be_true)

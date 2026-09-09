@@ -2,6 +2,16 @@
 # Conceptual BDD Reference (Python/Mamba style)
 # Refer to context_tools/language-tools.md for tool recommendations.
 # =============================================================================
+# BEHAVIOR (SIGNATURE) — `signature-markers`
+# Every `it` body is exactly `# BDD: SIGNATURE` — nothing else.
+#
+# with description('{DomainEntity}'):
+#     with context('that has been created'):
+#         with it('should have {initial property} assigned'):
+#             # BDD: SIGNATURE
+# =============================================================================
+# DEVELOPMENT — `no-remaining-signatures`
+# Replace each `# BDD: SIGNATURE` with Arrange / Act / Assert. Zero markers when done.
 # Instructions:
 #   1. Replace {DomainEntity} with the class or module under test.
 #   2. Use Arrange / Act / Assert comments in test bodies.

@@ -26,6 +26,7 @@ from primitives.instructions import instruction
 from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
 from workspace.git_repo import Commit, GitConnectError, GitRepo, NullGitRepo, Repo
+from tools.repo_paths import ensure_venv
 from tools.tool import resource, agent_tool, toolset
 from harness.prompt import prompt
 from hooks.hook import hook
@@ -50,9 +51,9 @@ class SessionPaths:
 
     Durable artifacts (sketches, generated markdown, grill-answers) live in
     ``{working_path}/.context/``. Session temps (session.md, handoff, logs) live
-    under the **working path** at ``{working_path}/.context/sessions/{name}/``
-    (the active checkout or sibling worktree — not the primary clone root).
-    Those two are never the same folder.
+    at ``{repository_root}/.sessions/{name}/``. Closed sessions archive to
+    ``{repository_root}/.sessions/closed/{name}/``. Those two roots are never the
+    same folder.
     """
 
     @staticmethod
@@ -65,37 +66,49 @@ class SessionPaths:
 
     @staticmethod
     def sessions_root(working_path: str | Path) -> Path:
-        """All session temps for a working path: ``{working_path}/.context/sessions/``."""
-        return Path(working_path) / ".context" / "sessions"
+        """Active session folders: ``{repository_root}/.sessions/``."""
+        return SessionPaths.repository_root(working_path) / ".sessions"
+
+    @staticmethod
+    def legacy_sessions_root(working_path: str | Path) -> Path:
+        """Pre-migration session root: ``{repository_root}/.context/sessions/``."""
+        return SessionPaths.repository_root(working_path) / ".context" / "sessions"
 
     @staticmethod
     def is_session_folder(destination: str | Path) -> bool:
         dest = Path(destination)
-        return bool(dest.name) and dest.parent.name == "sessions"
+        if not dest.name or dest.name == "closed":
+            return False
+        parent = dest.parent
+        if parent.name == ".sessions":
+            return True
+        # Legacy: ``.context/sessions/{name}``
+        return parent.name == "sessions" and parent.parent.name == ".context"
 
     @staticmethod
     def docs_dir(destination: str | Path) -> Path:
         """Durable artifact dir: ``{path}/.context/`` (sketches, generate, grill-answers).
 
-        Never returns a ``sessions/{name}`` folder. If *destination* is already
-        ``.context``, a session folder, or a mistaken sibling under ``.context``
-        (``{path}/.context/{session-name}``), walk up to that ``.context``.
-        Otherwise ``{destination}/.context/``.
+        Never returns a session folder. If *destination* is already ``.context``, a
+        session folder, or a mistaken sibling under ``.context``, walk up to that
+        ``.context``. Otherwise ``{destination}/.context/``.
         """
         dest = Path(destination)
         if dest.name == ".context":
             return dest
+        if dest.name == ".sessions":
+            return SessionPaths.repository_root(dest) / ".context"
         if dest.name == "sessions" and dest.parent.name == ".context":
             return dest.parent
         if SessionPaths.is_session_folder(dest):
-            return dest.parent.parent
-        if dest.parent.name == ".context" and dest.name != "sessions":
+            return SessionPaths.repository_root(dest) / ".context"
+        if dest.parent.name == ".context" and dest.name not in ("sessions", ".sessions"):
             return dest.parent
         return dest / ".context"
 
     @staticmethod
     def session_dir(working_path: str | Path, name: str = "") -> Path:
-        """Session temp dir: ``{working_path}/.context/sessions/{name}/``.
+        """Session temp dir: ``{repository_root}/.sessions/{name}/``.
 
         *working_path* is the active checkout (primary clone or worktree).
         If *working_path* is already a session folder, return it. Otherwise *name*
@@ -111,15 +124,25 @@ class SessionPaths:
             )
         return SessionPaths.sessions_root(dest) / slug
 
+    @staticmethod
+    def migrate_legacy_session_folder(repo_root: Path, name: str, dest: Path) -> bool:
+        """Move ``.context/sessions/{name}/`` to ``.sessions/{name}/`` when present."""
+        legacy = SessionPaths.legacy_sessions_root(repo_root) / name
+        if not legacy.is_dir() or dest.exists():
+            return False
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(legacy), str(dest))
+        return True
+
 
 docs_dir = SessionPaths.docs_dir
 session_dir = SessionPaths.session_dir
 
 
 class SessionModel:
-    """Persist the preferred Cursor/IDE model under ``{working_path}/.context/sessions/{name}/model``.
+    """Persist the preferred Cursor/IDE model under ``{repository_root}/.sessions/{name}/model``.
 
-    When no work session is active, use ``sessions/default`` under the workspace path.
+    When no work session is active, use ``.sessions/default`` under the repository root.
     """
 
     DEFAULT_SESSION = "default"
@@ -315,9 +338,9 @@ class Turn:
             lineage.append(self.context_tool)
         if self.action:
             lineage.append(self.action)
-        prefix = "/".join(lineage)
+        prefix = "/".join(lineage) if lineage else "turn"
         body = (self.message or "").strip() or "checkpoint"
-        line = f"{prefix}: {body}" if prefix else body
+        line = f"{prefix}: {body}"
         return line[:120]
 
     def _trailers(self) -> dict[str, str]:
@@ -914,6 +937,7 @@ class WorkSession:
         self.cli_doer_pid = 0
         self.cli_judge_pid = 0
         self._transcript_home: Path | None = None
+        self.venv_note = ""
         # False → session folders / turns / logs on the current checkout (no sibling worktree).
         self.isolate = isolate
 
@@ -1305,6 +1329,16 @@ class WorkSession:
         SessionModel.copy_into(self.folder, primary, self.name)
         self._try_fetch_pull()
 
+    def _ensure_worktree_venv(self) -> None:
+        """Give this checkout its own venv — a worktree never borrows the primary's."""
+        git = self.git
+        if getattr(git, "_memory", False):
+            return
+        try:
+            self.venv_note = ensure_venv(Path(git.root))
+        except OSError as error:
+            self.venv_note = f"could not check .venv: {error}"
+
     @staticmethod
     def _abbrev_repo_name(folder: str) -> str:
         """Abbreviate a clone folder: first token, then first letter of each later token."""
@@ -1540,7 +1574,7 @@ class WorkSession:
         return None
 
     def _restore_closed_session_if_needed(self) -> bool:
-        """Move ``.sessions/closed/{name}/`` back to ``.context/sessions/{name}/`` on reopen."""
+        """Move ``.sessions/closed/{name}/`` back to ``.sessions/{name}/`` on reopen."""
         found = self._find_closed_session_archive()
         if found is None:
             return False
@@ -1578,9 +1612,7 @@ class WorkSession:
             self.session_md.write_text(self._render(), encoding="utf-8")
 
     def _archive_root(self) -> Path:
-        """Checkout that owns closed-session archives (worktree when isolated)."""
-        if self.isolate and not getattr(self.git, "_memory", False):
-            return Path(self.git.root)
+        """Repository root that owns ``.sessions/closed/`` archives."""
         return self._repository_root()
 
     def _archive_session_folder(self) -> Path | None:
@@ -1623,7 +1655,7 @@ class WorkSession:
             pass
 
     def _commit_active_session_removal(self) -> None:
-        """Stage tracked deletions under ``.context/sessions/{name}/`` after archive move."""
+        """Stage tracked deletions under ``.sessions/{name}/`` after archive move."""
         slug = (self.name or "").strip()
         if not slug:
             return
@@ -1663,6 +1695,9 @@ class WorkSession:
     ) -> Path:
         if not self.name:
             raise ValueError("session name is required to create a sprint folder")
+        SessionPaths.migrate_legacy_session_folder(
+            self._repository_root(), self.name, self.folder
+        )
         self._ensure_session_worktree()
         self._restore_closed_session_if_needed()
         self.folder.mkdir(parents=True, exist_ok=True)
@@ -1684,6 +1719,7 @@ class WorkSession:
             if not self.started:
                 self.started = date.today().isoformat()
             self.session_md.write_text(self._render(), encoding="utf-8")
+        self._ensure_worktree_venv()
         self._inherit_session_model()
         return self.session_md
 
@@ -1724,6 +1760,8 @@ class WorkSession:
             "sprint docs = folder; "
             "context index loaded when present."
         )
+        if self.venv_note:
+            opened = f"rebuilt .venv in {self.path} — {self.venv_note}\n{opened}"
         warning = self.branch_warning()
         if warning:
             opened = f"{warning}\n{opened}"
@@ -1990,6 +2028,8 @@ class WorkSession:
         Non-default session branches isolate in a sibling worktree named
         ``{abbrev}-{ticket}`` (or a short slug) next to the primary clone.
         Stay in the primary clone when the session branch is the default branch.
+        That checkout gets its own ``.venv`` — rebuilt via ``setup.ps1`` when it is
+        missing or was built for another machine or worktree.
         Pass ``isolate: false`` to keep session folders / turns / logs on the
         current checkout (no sibling worktree) — e.g. track work on main.
 
@@ -2073,10 +2113,12 @@ class WorkSession:
         anything you cannot attribute to disposable temps. Never ask the user whether
         to delete the worktree.
 
-        Then: commits change-related paths (scope + session artifacts), pushes, merges onto main,
-        clears any stash (stash must never keep a worktree), and removes the sibling worktree when
-        the tree is clean and pushed. If untracked or dirty files remain after you removed known
-        temps, leave the worktree and report what blocked removal.
+        Then: treats the worktree as the unit of isolation, commits every modified, staged,
+        deleted, and untracked file under the repository root, pushes, and merges onto main.
+        Do not filter by scope paths, session artifacts, author, or which changes you recognize.
+        Clear any stash (stash must never keep a worktree), and remove the sibling worktree when
+        the tree is clean and pushed. If untracked or dirty files remain after the full-root commit,
+        leave the worktree and report what blocked removal.
 
         When no work session is open (e.g. work landed on main without ``start_work_session``),
         skips session.md / worktree removal and still finishes the turn (commit dirty checkout),
@@ -2123,11 +2165,8 @@ class WorkSession:
         return [str(self.session_md)]
 
     def _commit_paths(self) -> list[str]:
-        paths = list(self.scope_paths)
-        for extra in self._session_artifact_paths():
-            if extra not in paths:
-                paths.append(extra)
-        return paths
+        """Commit the complete worktree; the worktree is the isolation boundary."""
+        return [str(self.git.root)]
 
     def append_trail(self, call: ToolCall) -> None:
         self.trail.append(call)
@@ -2266,7 +2305,11 @@ class Workspace:
         repo_root = str(SessionPaths.repository_root(self.path))
         known = {s.name for s in self.work_sessions}
         for folder in sorted(sessions_root.iterdir()):
-            if not folder.is_dir() or folder.name in known:
+            if (
+                not folder.is_dir()
+                or folder.name in known
+                or folder.name == "closed"
+            ):
                 continue
             self.work_sessions.append(
                 WorkSession(self, folder.name, workspace_root=repo_root)
@@ -2334,7 +2377,7 @@ class Workspace:
     def set_session_model(
         self, model: str, session: str = "", workspace: str = ""
     ) -> str:
-        """Persist {model} under ``.context/sessions/{session}/model`` (default session when none)."""
+        """Persist {model} under ``.sessions/{session}/model`` (default session when none)."""
         root = (workspace or "").strip() or self.path
         slug = self._model_session_name(session)
         path = SessionModel.write(root, model, slug)
@@ -2353,7 +2396,7 @@ class Workspace:
     def model(self, model: str = "", session: str = "", workspace: str = "") -> str:
         """Set the preferred IDE/CLI model for this work session (slash ``/model``).
 
-        Persist under ``.context/sessions/{session}/model``. When no session is open,
+        Persist under ``.sessions/{session}/model``. When no session is open,
         use the root-repo ``sessions/default`` folder. CliAgent and SubAgent read this
         value when present. Never set disable-model-invocation.
         """

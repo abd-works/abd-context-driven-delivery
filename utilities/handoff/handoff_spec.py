@@ -59,7 +59,7 @@ with description("a handoff archive path"):
         expect(str(_h._context_dir("sandbox/play"))).to(equal(str(Path("sandbox/play") / ".context")))
 
     with it("should write handoff files into a sprint folder not parent .context"):
-        sprint = Path("/work/.context/sessions/my-sprint")
+        sprint = Path("/work/.sessions/my-sprint")
         expect(str(_h._write_dir(str(sprint)))).to(equal(str(sprint)))
         expect(str(_h._latest_handoff_path(str(sprint)))).to(
             equal(str(sprint / "handoff-latest.md"))

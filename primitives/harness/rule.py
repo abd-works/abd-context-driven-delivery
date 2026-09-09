@@ -12,7 +12,7 @@ from harness.harness_tool import HarnessTool
 
 
 class Rule(HarnessTool):
-    """One `.cursor/rules/**/*.mdc` file with YAML frontmatter."""
+    """One `.cursor/rules/**/*.mdc` or `.kilo/rules/**/*.md` file with YAML frontmatter."""
 
     def __init__(self, type: str, name: str = "") -> None:
         super().__init__(type, name)
@@ -21,9 +21,19 @@ class Rule(HarnessTool):
         self.subfolder: str = ""
 
     def relative_path(self) -> Path:
+        if self.type == "Cursor":
+            ext = ".mdc"
+            folder = "rules"
+        elif self.type == "VS Code":
+            ext = ".md"
+            folder = "instructions"
+        else:
+            ext = ".md"
+            folder = "rules"
+
         if self.subfolder:
-            return Path("rules") / self.subfolder / f"{self.name}.mdc"
-        return Path("rules") / f"{self.name}.mdc"
+            return Path(folder) / self.subfolder / f"{self.name}{ext}"
+        return Path(folder) / f"{self.name}{ext}"
 
     def _render_body(self) -> str:
         if self.body is None:

@@ -1,4 +1,4 @@
-# Run python -m tools against this checkout (venv + UTF-8 + PYTHONPATH).
+﻿# Run python -m tools against this checkout (venv + UTF-8 + PYTHONPATH).
 # Usage (from repo root): .\tools.ps1 manifest <toolset>
 #                         .\tools.ps1 run -   (pipe the YAML fence; stdin is forwarded)
 $ErrorActionPreference = "Stop"
