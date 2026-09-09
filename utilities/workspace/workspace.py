@@ -337,9 +337,9 @@ class Turn:
             lineage.append(self.context_tool)
         if self.action:
             lineage.append(self.action)
-        prefix = "/".join(lineage)
+        prefix = "/".join(lineage) if lineage else "turn"
         body = (self.message or "").strip() or "checkpoint"
-        line = f"{prefix}: {body}" if prefix else body
+        line = f"{prefix}: {body}"
         return line[:120]
 
     def _trailers(self) -> dict[str, str]:
