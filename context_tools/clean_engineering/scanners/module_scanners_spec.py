@@ -242,7 +242,7 @@ with description("complexity-absorption scanner"):
             expect(violations).to(equal([]))
 
 
-with description("information-hiding scanner"):
+with description("use-typed-signatures scanner"):
     with context("a public method that returns dict[str, Any]"):
         with before.each:
             self.tmp = tempfile.TemporaryDirectory()
@@ -257,7 +257,7 @@ with description("information-hiding scanner"):
 
         with it("should flag the return type"):
             violations = _run(
-                InformationHidingScanner, "information-hiding", self.root
+                InformationHidingScanner, "use-typed-signatures", self.root
             )
             expect(len(violations) >= 1).to(be_true)
 
@@ -276,7 +276,7 @@ with description("information-hiding scanner"):
 
         with it("should produce no violations"):
             violations = _run(
-                InformationHidingScanner, "information-hiding", self.root
+                InformationHidingScanner, "use-typed-signatures", self.root
             )
             expect(violations).to(equal([]))
 

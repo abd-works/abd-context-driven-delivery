@@ -1,4 +1,4 @@
-"""Scanner: `information-hiding` - public signatures don't leak internal representations.
+"""Scanner: `use-typed-signatures` - public signatures use domain types, not dict/Any/untyped lists.
 
 Flags return-type and parameter-type annotations on public methods when they
 expose implementation-shaped structures. Leaky patterns detected:
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     raise SystemExit(
         run_scanner_main(
             InformationHidingScanner,
-            "information-hiding",
+            "use-typed-signatures",
             collect_module_files,
         )
     )

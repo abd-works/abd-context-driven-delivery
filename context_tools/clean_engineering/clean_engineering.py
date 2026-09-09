@@ -69,7 +69,7 @@ class CleanEngineering(BaseContextTool):
     ) -> None:
         if fidelity == "language":
             raise ValueError(
-                "language is not a fidelity - it is a companion prose layer refined at "
+                "language is not a fidelity - it is a prose layer refined at "
                 "every stage. Use fidelity 'modules' (after partition), then 'model', "
                 f"'specification', or 'code'. Choose from: {sorted(_FIDELITY_FORMAT_DEFAULTS)}"
             )

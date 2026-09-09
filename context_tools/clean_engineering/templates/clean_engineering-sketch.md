@@ -70,7 +70,7 @@ ClassName : BaseClass
 | `----` | separator between the primary class block and a peer class it relates to |
 | `-> collaborator.operation` | interaction — a real operation on a property, peer, or `super` |
 | `-> _private_helper` | rare — only when no public collaborator operation exists and the helper is essential to the story |
-| `// …` | invariant or sequencing note (`ce-comments-are-for-invariants-and-sequencing-notes-only` — must/never/before/after only; not descriptive prose) |
+| `// …` | invariant or sequencing note (`write-invariants` / `limit-comments` — must/never/before/after) |
 
 ## Interaction rules (read these)
 
@@ -132,7 +132,7 @@ CartExampleFactory
 
 ## Fidelity progression
 
-- **Language companion** — prose identity refined at every stage (not a fidelity). Names and plain-English bullets only.
+- **Language** — prose identity refined at every stage (not a fidelity). Names and plain-English bullets only.
 - **Modules fidelity** — independent modules, thin terms, **one-way deps**, **build order** (after partition). No types / relationship kinds.
 - **Model fidelity** — typed properties and operation signatures, stubbed empty; relationship kind decided per pair. **`I{Class}` is opt-in, not automatic** — it replaces the direct `Class` stub only when explicitly requested or when the module genuinely has multiple layers/implementations to abstract apart (see `clean_engineering.md` § Interfaces). The rest of this file shows the `I{Class}` form since that is the richer case to document; default to the direct `Class` stub unless that trigger applies.
 - **Code fidelity (Phase 1)** — full typed contracts (`Class(I{Class})` when an interface exists, otherwise `Class` directly), invariants, cardinality; example factories completed. The sketch is superseded once the formal artifact captures all of this.

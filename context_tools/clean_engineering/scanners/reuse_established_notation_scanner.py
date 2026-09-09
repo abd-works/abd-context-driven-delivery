@@ -1,12 +1,12 @@
-"""Scanner: reuse-established-notation-not-a-parallel-one
+"""Scanner: write-interactions-as-operation-calls
 
 Sketch / model interaction notation is templates/clean_engineering-sketch.md's
 `-> collaborator.operation` and `// …`. Inventing a parallel bold-bullet symbol
 set (`- **Interaction:** …` / `- **Invariant:** …` as collaboration markers)
 is a process violation.
 
-Exempt: Language companion identity bullets tagged `<!-- L -->` (or living
-under a `## Language companion` heading) — those keep `- **Invariant:**`.
+Exempt: Language identity bullets tagged `<!-- L -->` (or living
+under a `## Language` heading) — those keep `- **Invariant:**`.
 Exempt: Spec-channel indented `Interaction:` / `Invariant:` without bold.
 """
 from __future__ import annotations
@@ -16,15 +16,15 @@ from pathlib import Path
 
 from scan import Scanner
 
-RULE = "reuse-established-notation-not-a-parallel-one"
+RULE = "write-interactions-as-operation-calls"
 
 _BOLD_INTERACTION = re.compile(r"\*\*Interaction:\*\*", re.IGNORECASE)
 _BOLD_INVARIANT_BULLET = re.compile(
     r"^\s*[-*]\s+\*\*Invariant:\*\*", re.IGNORECASE | re.MULTILINE
 )
 _L_TAG = re.compile(r"<!--\s*L\s*-->", re.IGNORECASE)
-_LANG_COMPANION_HEADING = re.compile(
-    r"^#{1,3}\s+Language companion\b", re.IGNORECASE
+_LANGUAGE_HEADING = re.compile(
+    r"^#{1,3}\s+Language\b", re.IGNORECASE
 )
 _ANY_HEADING = re.compile(r"^#{1,6}\s+")
 # Guidance that quotes the forbidden form while forbidding it.
@@ -58,12 +58,12 @@ class ReuseEstablishedNotationScanner(Scanner):
 
     def _scan_text(self, path: Path, text: str) -> list:
         violations = []
-        in_language_companion = False
+        in_language = False
         for lineno, line in enumerate(text.splitlines(), start=1):
-            if _LANG_COMPANION_HEADING.match(line):
-                in_language_companion = True
-            elif _ANY_HEADING.match(line) and not _LANG_COMPANION_HEADING.match(line):
-                in_language_companion = False
+            if _LANGUAGE_HEADING.match(line):
+                in_language = True
+            elif _ANY_HEADING.match(line) and not _LANGUAGE_HEADING.match(line):
+                in_language = False
 
             if _META_PROHIBITION.search(line):
                 continue
@@ -82,13 +82,13 @@ class ReuseEstablishedNotationScanner(Scanner):
                 continue
 
             if _BOLD_INVARIANT_BULLET.search(line):
-                if in_language_companion or _L_TAG.search(line):
+                if in_language or _L_TAG.search(line):
                     continue
                 violations.append(
                     self.violation(
                         "Bold-bullet Invariant used as sketch/model collaboration "
                         "notation. Reuse `// …` nested under the operation or on "
-                        "the class (Language companion `- **Invariant:**` with "
+                        "the class (Language `- **Invariant:**` with "
                         "<!-- L --> is a different surface).",
                         location=str(path),
                         line=lineno,

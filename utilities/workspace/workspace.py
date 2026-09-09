@@ -315,9 +315,9 @@ class Turn:
             lineage.append(self.context_tool)
         if self.action:
             lineage.append(self.action)
-        prefix = "/".join(lineage) if lineage else "turn"
+        prefix = "/".join(lineage)
         body = (self.message or "").strip() or "checkpoint"
-        line = f"{prefix}: {body}"
+        line = f"{prefix}: {body}" if prefix else body
         return line[:120]
 
     def _trailers(self) -> dict[str, str]:
@@ -431,6 +431,38 @@ class Turn:
             return ""
         return self._compact_subject("\n".join(sorted(names)))
 
+    def _read_session_lineage(self) -> tuple[str, str, str]:
+        """Read context_tool, action, and a summary from the active session log.
+
+        Returns (context_tool, action, message) extracted from the last
+        expansion or run entry in the session events.log. Falls back to
+        empty strings when no log is available.
+        """
+        from hooks.session_logs import session_logs_dir, active_session_name
+
+        root = Path(__file__).resolve().parents[2]
+        log_file = session_logs_dir(root) / "events.log"
+        if not log_file.is_file():
+            return "", "", ""
+        try:
+            lines = log_file.read_text(encoding="utf-8").strip().splitlines()
+        except OSError:
+            return "", "", ""
+        for line in reversed(lines):
+            if "role=expansion" not in line and "role=run" not in line:
+                continue
+            parts = dict(
+                token.split("=", 1) for token in line.split()
+                if "=" in token
+            )
+            toolset = parts.get("toolset", "")
+            action_name = parts.get("name", "")
+            summary = parts.get("summary", "")
+            ct = toolset.split(":")[-1] if ":" in toolset else toolset
+            ct = ct.split(".")[-1] if "." in ct else ct
+            return ct, action_name, summary
+        return "", "", ""
+
     def _record_auto_turn_run(
         self,
         payload: dict,
@@ -468,9 +500,14 @@ class Turn:
             self._record_auto_turn_run(payload, None, skipped="clean")
             return {}
         before_sha = git.current_commit
+        ct, action_name, summary = self._read_session_lineage()
+        if ct:
+            self.context_tool = ct
+        if action_name:
+            self.action = action_name
         self.utility = "auto_turn"
         self.subject = self._auto_turn_subject(git)
-        self.message = "auto turn after agent response"
+        self.message = summary or self._compact_subject(self.subject) or "auto turn"
         self._ensure_named()
         try:
             commit = self._commit(stage_untracked=True)
@@ -2036,10 +2073,12 @@ class WorkSession:
         anything you cannot attribute to disposable temps. Never ask the user whether
         to delete the worktree.
 
-        Then: commits change-related paths (scope + session artifacts), pushes, merges onto main,
-        clears any stash (stash must never keep a worktree), and removes the sibling worktree when
-        the tree is clean and pushed. If untracked or dirty files remain after you removed known
-        temps, leave the worktree and report what blocked removal.
+        Then: treats the worktree as the unit of isolation, commits every modified, staged,
+        deleted, and untracked file under the repository root, pushes, and merges onto main.
+        Do not filter by scope paths, session artifacts, author, or which changes you recognize.
+        Clear any stash (stash must never keep a worktree), and remove the sibling worktree when
+        the tree is clean and pushed. If untracked or dirty files remain after the full-root commit,
+        leave the worktree and report what blocked removal.
 
         When no work session is open (e.g. work landed on main without ``start_work_session``),
         skips session.md / worktree removal and still finishes the turn (commit dirty checkout),
@@ -2086,11 +2125,8 @@ class WorkSession:
         return [str(self.session_md)]
 
     def _commit_paths(self) -> list[str]:
-        paths = list(self.scope_paths)
-        for extra in self._session_artifact_paths():
-            if extra not in paths:
-                paths.append(extra)
-        return paths
+        """Commit the complete worktree; the worktree is the isolation boundary."""
+        return [str(self.git.root)]
 
     def append_trail(self, call: ToolCall) -> None:
         self.trail.append(call)

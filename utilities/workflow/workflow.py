@@ -13,16 +13,14 @@ import yaml
 from git import Ticket, TicketNotFoundError
 from git.git import Repo
 from handoff.handoff import Handoff
-from harness.harness_tool import prompt
+from harness.harness_tool import prompt, skill
+from primitives.actions.action import agent_instructions, agentic_toolset
 from sub_agent.sub_agent import sub_agent
-from tools.tool import agent_tool, toolset
+from tools.tool import agent_tool
 from workflow.work_ticket import WorkTicket
 from workspace import Workspace
 from workspace.git_repo import NullGitRepo
 from workspace.workspace import Turn
-
-
-_PROJECT_STATUSES = ("Backlog", "In Progress", "Done")
 
 
 @dataclass(frozen=True)
@@ -32,7 +30,7 @@ class WorkflowConfig:
     default_branch: str = "main"
 
 
-@toolset
+@agentic_toolset
 class Workflow:
     """Slash /backlog, /start-ticket, /finish-ticket — GitHub issue + session lifecycle."""
 
@@ -45,6 +43,7 @@ class Workflow:
         self._workspace_path = workspace.strip()
         self._repo_override = repo
         self._workspaces: dict[str, Workspace] = {}
+        self._repos: dict[str, Repo] = {}
 
     def _repo_root(self, workspace: str = "") -> Path:
         start = workspace.strip() or self._workspace_path or "."
@@ -56,7 +55,13 @@ class Workflow:
     def _repo(self, workspace: str = "") -> Repo:
         if self._repo_override is not None:
             return self._repo_override
-        return Repo.open(self._repo_root(workspace))
+        root = str(self._repo_root(workspace))
+        cached = self._repos.get(root)
+        if cached is not None:
+            return cached
+        repo = Repo.open(root)
+        self._repos[root] = repo
+        return repo
 
     def _workspace(self, workspace: str = "") -> Workspace:
         root = str(self._repo_root(workspace))
@@ -94,6 +99,18 @@ class Workflow:
 
     def _workflow_config_path(self, repo_root: Path) -> Path:
         return repo_root / ".context" / "workflow.yaml"
+
+    def _workflow_rules_path(self, repo_root: Path) -> Path:
+        return repo_root / ".context" / "workflow-rules.yaml"
+
+    def _load_workflow_rules(self, workspace: str = "") -> list[str]:
+        """Read the repo's agentic workflow rules; empty when the file is absent."""
+        path = self._workflow_rules_path(self._repo_root(workspace))
+        if not path.is_file():
+            return []
+        payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        rules = payload.get("rules") if isinstance(payload, dict) else payload
+        return [str(rule).strip() for rule in (rules or []) if str(rule).strip()]
 
     def _load_workflow_config(self, repo_root: Path) -> WorkflowConfig:
         path = self._workflow_config_path(repo_root)
@@ -394,6 +411,57 @@ class Workflow:
             "default_branch": config.default_branch,
         }
 
+    @prompt(name="ticket-rules")
+    @agent_tool
+    def read_ticket_rules(self, workspace: str = "") -> dict[str, object]:
+        """Read the repo's workflow rules that govern every ticket action."""
+        return {"rules": self._load_workflow_rules(workspace)}
+
+    @prompt(name="update-ticket-labels")
+    @agent_tool
+    def update_ticket_labels(
+        self,
+        ticket: str,
+        add: str = "",
+        remove: str = "",
+        workspace: str = "",
+    ) -> dict[str, str | int]:
+        """Update ticket labels: add and/or remove comma-separated labels."""
+        issue = self._require_ticket(self._repo(workspace), ticket)
+        for label in (part.strip() for part in remove.split(",")):
+            issue.remove_label(label)
+        for label in (part.strip() for part in add.split(",")):
+            issue.add_label(label)
+        return {
+            "number": issue.number,
+            "title": issue.title,
+            "labels": ", ".join(sorted(set(issue.labels))),
+        }
+
+    @skill(name="tickets")
+    @prompt(name="tickets")
+    @agent_instructions
+    def manage_tickets(self, request: str, workspace: str = "") -> str:
+        """Manage project tickets from {{request}}.
+
+        Start by calling read_ticket_rules and follow every rule it returns; the repo's
+        rules override defaults. Display each available ticket tool name and purpose
+        before acting. Then review ticket statuses so board state and left-to-right
+        column order are known. Then call only the tool needed to move a ticket, add a
+        child ticket, merge a completed child into its parent, update a ticket, update
+        labels, align children to parent, or report board status. Never infer a ticket
+        number when the request is ambiguous.
+        """
+        self.read_ticket_rules(workspace=workspace)
+        self.review_ticket_statuses(workspace=workspace)
+        self.move_ticket(ticket="", destination="", workspace=workspace)
+        self.add_child_ticket(parent="", title="", workspace=workspace)
+        self.merge_child_into_parent(child="", summary="", workspace=workspace)
+        self.update_ticket(ticket="", workspace=workspace)
+        self.update_ticket_labels(ticket="", workspace=workspace)
+        self.align_child_tickets_to_parent(parent="", workspace=workspace)
+        return "Ticket request completed."
+
     def parse_ticket(self, ticket: str) -> int:
         return Ticket.parse_number(ticket)
 
@@ -428,6 +496,277 @@ class Workflow:
             "url": issue.url,
         }
 
+    @prompt(name="move-ticket")
+    @agent_tool
+    def move_ticket(
+        self,
+        ticket: str,
+        destination: str,
+        workspace: str = "",
+        align_children: bool = True,
+    ) -> dict[str, object]:
+        """Move a ticket to an exact board state, or to its next/previous state. Follow the repo workflow rules (read_ticket_rules)."""
+        repo_root = self._repo_root(workspace)
+        repo = self._repo(workspace)
+        project = self._ensure_project(repo, repo_root)
+        issue = self._require_ticket(repo, ticket)
+        status = self._destination_status(project, issue.number, destination)
+        issue.set_status(status)
+        result: dict[str, object] = {
+            **self.view_ticket(ticket, workspace),
+            "project_status": status,
+        }
+        if align_children:
+            aligned = self._align_child_tickets_for_parent(
+                project, issue, workspace, self._board_status_map(project)
+            )
+            if aligned:
+                result["aligned_children"] = aligned
+        return result
+
+    def _destination_status(self, project, ticket_number: int, destination: str) -> str:
+        requested = destination.strip()
+        if not requested:
+            raise ValueError("destination requires a board state, next, or previous")
+        direction = requested.lower()
+        if direction not in ("next", "previous", "prev"):
+            return project.state_named(requested).name
+        statuses = project.status_option_names()
+        current = self._ticket_status(project, ticket_number)
+        if not current:
+            raise ValueError(f"ticket {ticket_number} is not on the project board")
+        index = statuses.index(current)
+        offset = 1 if direction == "next" else -1
+        target = max(0, min(index + offset, len(statuses) - 1))
+        return statuses[target]
+
+    def _ticket_status(self, project, ticket_number: int) -> str:
+        for row in project.ticket_rows():
+            if row["number"] == ticket_number:
+                return str(row["status"])
+        return ""
+
+    @prompt(name="add-child-ticket")
+    @agent_tool
+    def add_child_ticket(
+        self,
+        parent: str,
+        title: str,
+        body: str = "",
+        workspace: str = "",
+        project_status: str = "Backlog",
+        theme: str = "",
+        category: str = "",
+    ) -> dict[str, str | int]:
+        """Create a project ticket and attach it as a direct child of a parent issue. Follow the repo workflow rules (read_ticket_rules)."""
+        repo = self._repo(workspace)
+        parent_issue = self._require_ticket(repo, parent)
+        created = self.create_ticket(
+            title=title,
+            body=body,
+            workspace=workspace,
+            project_status=project_status,
+            theme=theme,
+            category=category,
+        )
+        child = self._require_ticket(repo, str(created["number"]))
+        parent_issue.add_child(child)
+        project = self._ensure_project(repo, self._repo_root(workspace))
+        ancestors = self._ticket_ancestors(repo, parent_issue)
+        ultimate_parent = ancestors[-1]
+        for issue in (child, *ancestors):
+            project.set_text_field(issue.number, "Ultimate Parent", ultimate_parent.title)
+        return {
+            **created,
+            "parent": parent_issue.number,
+            "ultimate_parent": ultimate_parent.title,
+        }
+
+    def _ticket_ancestors(self, repo: Repo, issue: Ticket) -> list[Ticket]:
+        ancestors = [issue]
+        seen = {issue.number}
+        while ancestors[-1].parent_number is not None:
+            parent = self._require_ticket(repo, str(ancestors[-1].parent_number))
+            if parent.number in seen:
+                raise ValueError(f"cycle in ticket parents at {parent.number}")
+            ancestors.append(parent)
+            seen.add(parent.number)
+        return ancestors
+
+    @prompt(name="merge-child-into-parent")
+    @agent_tool
+    def merge_child_into_parent(
+        self,
+        child: str,
+        summary: str,
+        workspace: str = "",
+    ) -> dict[str, str | int]:
+        """Roll a completed child result into its parent.
+
+        Close and archive the child while preserving the sub-issue relationship.
+        """
+        repo = self._repo(workspace)
+        child_issue = self._require_ticket(repo, child)
+        if child_issue.parent_number is None:
+            raise ValueError(f"ticket {child_issue.number} has no parent")
+        parent = self._require_ticket(repo, str(child_issue.parent_number))
+        result = summary.strip()
+        if not result:
+            raise ValueError("summary is required")
+        child_link = child_issue.url or f"#{child_issue.number}"
+        heading = f"## Completed child: [{child_issue.title}]({child_link})"
+        merged_section = f"{heading}\n\n{result}"
+        if heading not in parent.body:
+            parent.update(body=f"{parent.body.rstrip()}\n\n{merged_section}\n")
+        child_issue.comment(
+            f"Result merged into parent #{parent.number}.\n\n{result}"
+        )
+        project = self._ensure_project(repo, self._repo_root(workspace))
+        child_issue.set_status(project.state_named("Done").name)
+        child_issue.close()
+        project.archive_ticket(child_issue.number)
+        return {
+            "child": child_issue.number,
+            "parent": parent.number,
+            "project_status": "Done",
+            "archived": "yes",
+        }
+
+    def _require_ticket(self, repo: Repo, ticket: str) -> Ticket:
+        issue = repo.ticket(ticket)
+        if issue is None:
+            raise TicketNotFoundError(f"GitHub issue not found: {ticket}")
+        return issue
+
+    @prompt(name="update-ticket")
+    @agent_tool
+    def update_ticket(
+        self,
+        ticket: str,
+        title: str | None = None,
+        body: str | None = None,
+        workspace: str = "",
+    ) -> dict[str, str | int]:
+        """Update a ticket title and/or body; omitted values remain unchanged. Follow the repo workflow rules (read_ticket_rules)."""
+        issue = self._require_ticket(self._repo(workspace), ticket)
+        normalized_title = title.strip() if title is not None else None
+        issue.update(title=normalized_title, body=body)
+        return self.view_ticket(ticket, workspace)
+
+    @prompt(name="review-ticket-statuses")
+    @agent_tool
+    def review_ticket_statuses(
+        self,
+        workspace: str = "",
+        status: str = "",
+    ) -> dict[str, object]:
+        """List project tickets by board columns from left to right, optionally filtered. Follow the repo workflow rules (read_ticket_rules)."""
+        repo_root = self._repo_root(workspace)
+        repo = self._repo(workspace)
+        project = self._ensure_project(repo, repo_root)
+        statuses = project.status_option_names()
+        if status.strip():
+            statuses = [project.state_named(status.strip()).name]
+        rows = project.ticket_rows()
+        columns = [self._ticket_column(name, rows) for name in statuses]
+        return {
+            "columns": columns,
+            "total": sum(len(column["tickets"]) for column in columns),
+        }
+
+    @prompt(name="align-child-tickets-to-parent")
+    @agent_tool
+    def align_child_tickets_to_parent(
+        self,
+        parent: str = "",
+        workspace: str = "",
+    ) -> dict[str, object]:
+        """Align child tickets so no child is in a board column prior to its parent. Follow the repo workflow rules (read_ticket_rules)."""
+        repo_root = self._repo_root(workspace)
+        repo = self._repo(workspace)
+        project = self._ensure_project(repo, repo_root)
+        aligned: list[dict[str, object]] = []
+
+        if parent.strip():
+            parent_issue = self._require_ticket(repo, parent)
+            aligned.extend(
+                self._align_child_tickets_for_parent(
+                    project, parent_issue, workspace, self._board_status_map(project)
+                )
+            )
+        else:
+            statuses_by_number = self._board_status_map(project)
+            for number in statuses_by_number:
+                parent_issue = repo.ticket(str(number))
+                if parent_issue and parent_issue.sub_issue_numbers:
+                    aligned.extend(
+                        self._align_child_tickets_for_parent(
+                            project, parent_issue, workspace, statuses_by_number
+                        )
+                    )
+
+        return {
+            "parent": parent if parent.strip() else "all",
+            "aligned": aligned,
+            "total_aligned": len(aligned),
+        }
+
+    def _board_status_map(self, project) -> dict[int, str]:
+        """Read the board once and map ticket number to its column."""
+        return {
+            int(row["number"]): str(row["status"])
+            for row in project.ticket_rows()
+        }
+
+    def _align_child_tickets_for_parent(
+        self,
+        project,
+        parent_issue: Ticket,
+        workspace: str,
+        statuses_by_number: dict[int, str],
+    ) -> list[dict[str, object]]:
+        aligned: list[dict[str, object]] = []
+        parent_status = statuses_by_number.get(parent_issue.number, "")
+        if not parent_status:
+            return aligned
+        statuses = project.status_option_names()
+        if parent_status not in statuses:
+            return aligned
+        parent_idx = statuses.index(parent_status)
+
+        repo = self._repo(workspace)
+        for child_num in list(parent_issue.sub_issue_numbers):
+            child_status = statuses_by_number.get(child_num, "")
+            if not child_status or child_status not in statuses:
+                continue
+            child_idx = statuses.index(child_status)
+            if child_idx < parent_idx:
+                child_issue = repo.ticket(str(child_num))
+                if child_issue:
+                    child_issue.set_status(parent_status)
+                    statuses_by_number[child_num] = parent_status
+                    aligned.append(
+                        {
+                            "child": child_num,
+                            "from_status": child_status,
+                            "to_status": parent_status,
+                        }
+                    )
+                    if child_issue.sub_issue_numbers:
+                        aligned.extend(
+                            self._align_child_tickets_for_parent(
+                                project, child_issue, workspace, statuses_by_number
+                            )
+                        )
+        return aligned
+
+    def _ticket_column(
+        self, status: str, rows: list[dict[str, str | int]]
+    ) -> dict[str, object]:
+        tickets = [row for row in rows if row["status"] == status]
+        tickets.sort(key=lambda row: int(row["number"]))
+        return {"status": status, "tickets": tickets}
+
     def create_ticket(
         self,
         title: str,
@@ -438,8 +777,6 @@ class Workflow:
         category: str = "",
         infer_from: str = "",
     ) -> dict[str, str | int]:
-        if project_status not in _PROJECT_STATUSES:
-            raise ValueError(f"project_status must be one of {_PROJECT_STATUSES}")
         repo_root = self._repo_root(workspace)
         repo = self._repo(workspace)
         self._ensure_project(repo, repo_root)
@@ -459,8 +796,6 @@ class Workflow:
         status: str,
         workspace: str = "",
     ) -> str:
-        if status not in _PROJECT_STATUSES:
-            raise ValueError(f"status must be one of {_PROJECT_STATUSES}")
         repo_root = self._repo_root(workspace)
         repo = self._repo(workspace)
         issue = repo.ticket(ticket)

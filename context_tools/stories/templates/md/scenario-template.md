@@ -5,7 +5,15 @@ format: md
 section: body
 ---
 
-<!-- Default: Scenario Outline + Examples table. Alternate: inline sibling scenarios below. -->
+<!-- Default: Scenario Outline + Examples table. Alternate: inline sibling scenarios below.
+
+     Disk layout (`artifacts-mirror-story-hierarchy` + `kebab-case-paths`):
+     tests/{epic-verb-noun}/{sub-epic-verb-noun}/{story-kebab-slug}.py|md
+     — kebab-case folders and file stems; one file per story; no {story}/ folder.
+     Exception: Python epic helper only — {epic_slug}_helper.py at epic root.
+
+     Outcome chaining: first *Then* on a step; further outcomes on the same *When* use *And*
+     (not a second *Then*). New *When* when actor or trigger changes. -->
 
 ### Domain terms
 

@@ -1,6 +1,20 @@
 // Conceptual BDD Reference (TypeScript/Jest style)
 // Refer to context_tools/language-tools.md for tool recommendations.
 // =============================================================================
+// BEHAVIOR (SIGNATURE) — `signature-markers`
+// Every `it` body is exactly `// BDD: SIGNATURE` — nothing else.
+//
+// describe('{DomainEntity}', () => {
+//   describe('that has been created', () => {
+//     it('should have {initial property} assigned', () => {
+//       // BDD: SIGNATURE
+//     });
+//   });
+// });
+// =============================================================================
+// DEVELOPMENT — `no-remaining-signatures`
+// Replace each `// BDD: SIGNATURE` with Arrange / Act / Assert. Zero markers when done.
+// =============================================================================
 
 import { {DomainEntity} } from '../{DomainEntity}';
 

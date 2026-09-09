@@ -216,8 +216,10 @@ with description("CleanEngineering action expansion"):
             self.contexts = self.host.contexts().expand()
             self.examples = self.host.examples().expand()
 
-        with it("should keep Language companion and model contexts only"):
-            expect("## Language companion" in self.contexts).to(be_true)
+        with it("should keep Language and model contexts only"):
+            expect("## Shared rules" in self.contexts).to(be_true)
+            expect("honor-every-rule-in-the-artifact" in self.contexts).to(be_true)
+            expect("## Language" in self.contexts).to(be_true)
             expect("## model" in self.contexts).to(be_true)
             expect("\n## modules\n" in self.contexts).to(equal(False))
             expect("\n## code\n" in self.contexts).to(equal(False))

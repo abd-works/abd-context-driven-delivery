@@ -97,6 +97,7 @@ class ContextToolRuleSpec:
     globs: str
     body: str
     folder: str = "context_tools"
+    always_apply: bool = False
 
 
 def _escape_description(text: str) -> str:
@@ -506,6 +507,73 @@ def iter_context_tool_dirs(repo_root: Path | None = None) -> list[tuple[str, Pat
     return rows
 
 
+def _parse_rule_file_frontmatter(text: str) -> tuple[dict[str, str], str]:
+    """Parse YAML-style frontmatter from a rule file. Returns (meta, body)."""
+    if not text.startswith("---"):
+        return {}, text
+    end = text.find("---", 3)
+    if end == -1:
+        return {}, text
+    meta_block = text[3:end].strip()
+    body = text[end + 3 :].strip()
+    meta: dict[str, str] = {}
+    for line in meta_block.splitlines():
+        if ":" in line:
+            key, _, value = line.partition(":")
+            meta[key.strip()] = value.strip().strip('"').strip("'")
+    return meta, body
+
+
+def _rule_spec_from_md_file(
+    md_file: Path,
+    *,
+    tool_slug: str,
+    folder: str = "context_tools",
+) -> ContextToolRuleSpec | None:
+    text = md_file.read_text(encoding="utf-8", errors="replace")
+    meta, body = _parse_rule_file_frontmatter(text)
+    if not body:
+        return None
+    always_apply = meta.get("alwaysApply", "").lower() == "true"
+    label = tool_slug or md_file.stem
+    return ContextToolRuleSpec(
+        tool_slug=tool_slug,
+        name=md_file.stem,
+        description=meta.get("description", f"{label} {md_file.stem}"),
+        globs=meta.get("globs", ""),
+        body=body,
+        folder=folder,
+        always_apply=always_apply,
+    )
+
+
+def rules_from_rules_folder(tool_dir: Path, slug: str) -> list[ContextToolRuleSpec]:
+    """Discover authored rule files in a context tool's ``rules/`` subfolder."""
+    rules_dir = tool_dir / "rules"
+    if not rules_dir.is_dir():
+        return []
+    specs: list[ContextToolRuleSpec] = []
+    for md_file in sorted(rules_dir.glob("*.md")):
+        spec = _rule_spec_from_md_file(md_file, tool_slug=slug)
+        if spec is not None:
+            specs.append(spec)
+    return specs
+
+
+def rules_from_repo_rules_folder(repo_root: Path | None = None) -> list[ContextToolRuleSpec]:
+    """Discover authored rule files in the repo-level ``rules/`` folder."""
+    root = repo_root or _REPO_ROOT
+    rules_dir = root / "rules"
+    if not rules_dir.is_dir():
+        return []
+    specs: list[ContextToolRuleSpec] = []
+    for md_file in sorted(rules_dir.glob("*.md")):
+        spec = _rule_spec_from_md_file(md_file, tool_slug="", folder="")
+        if spec is not None:
+            specs.append(spec)
+    return specs
+
+
 def all_context_tool_rule_specs(repo_root: Path | None = None) -> list[ContextToolRuleSpec]:
     specs: list[ContextToolRuleSpec] = []
     for slug, tool_dir, class_name in iter_context_tool_dirs(repo_root):
@@ -520,5 +588,17 @@ def all_context_tool_procedure_specs(repo_root: Path | None = None) -> list[Cont
     return specs
 
 
+def all_rules_folder_specs(repo_root: Path | None = None) -> list[ContextToolRuleSpec]:
+    """Collect rule files from ``rules/`` subfolders across all context tools."""
+    specs: list[ContextToolRuleSpec] = []
+    for slug, tool_dir, _class_name in iter_context_tool_dirs(repo_root):
+        specs.extend(rules_from_rules_folder(tool_dir, slug))
+    return specs
+
+
 def all_context_tool_mdc_specs(repo_root: Path | None = None) -> list[ContextToolRuleSpec]:
-    return all_context_tool_rule_specs(repo_root) + all_context_tool_procedure_specs(repo_root)
+    return (
+        all_context_tool_rule_specs(repo_root)
+        + all_context_tool_procedure_specs(repo_root)
+        + all_rules_folder_specs(repo_root)
+    )

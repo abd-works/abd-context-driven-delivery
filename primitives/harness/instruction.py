@@ -55,7 +55,7 @@ class Instruction(HarnessTool):
                 )
             if source.get("overview"):
                 self.description = source["overview"]
-        if self.type == "Cursor":
+        if self.type in ("Cursor", "Kilo"):
             rule = Rule(self.type, self.name)
             rule.description = self.description
             rule.body = self.body

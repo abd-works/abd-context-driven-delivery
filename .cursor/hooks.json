@@ -1,34 +1,6 @@
 {
   "version": 1,
   "hooks": {
-    "preToolUse": [
-      {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
-        "timeout": 10,
-        "failClosed": false
-      }
-    ],
-    "beforeSubmitPrompt": [
-      {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
-        "timeout": 10,
-        "failClosed": false
-      }
-    ],
-    "beforeReadFile": [
-      {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
-        "timeout": 10,
-        "failClosed": false
-      }
-    ],
-    "subagentStart": [
-      {
-        "command": ".venv/Scripts/python.exe primitives/hooks/prompt_log/prompt_log.py",
-        "timeout": 10,
-        "failClosed": false
-      }
-    ],
     "afterAgentResponse": [
       {
         "command": ".venv/Scripts/python.exe primitives/hooks/dispatch.py",

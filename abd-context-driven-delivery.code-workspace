@@ -1,6 +1,10 @@
 {
 	"folders": [
 		{
+			"name": "pml-domainmodel",
+			"path": "../paradise-mobile/pml-domainmodel"
+		},
+		{
 			"name": "abd-context-driven-delivery",
 			"path": "."
 		},

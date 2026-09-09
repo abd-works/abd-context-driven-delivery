@@ -1,30 +1,44 @@
 /**
  * Scenario template — refer to context_tools/language-tools.md for tooling.
  *
- * ```
- * # Params — fill before writing code
- * epic:       {epic-verb-noun}           # kebab folder under tests/
- * sub_epic:   {sub-epic-verb-noun}       # kebab folder under epic/ (omit level if story hangs off epic)
- * story:      {story-verb-noun}          # Verb Noun title from the story map
- * story_file: {story-kebab-slug}         # kebab file slug, e.g. sign-up-create-account
- * tier:       e2e | front-end | back-end | {system}
+ * ## Artifact layout (`artifacts-mirror-story-hierarchy`)
  *
- * # Artifact layout (artifacts-mirror-story-hierarchy)
+ * Mirror Epic → SubEpic → Story on disk:
+ *
+ * ```
  * tests/
- *   {epic-verb-noun}/
+ *   {epic-verb-noun}/                    # kebab-case folder
  *     {sub-epic-verb-noun}/              # omit when the story file lives under epic/
- *       {story-kebab-slug}.{tier}.ts     # one GWT file per story per tier
+ *       {story-kebab-slug}.ts            # one GWT file per story — no {story}/ folder
  *
  * # Machinery — copy once per tests/ tree if missing (do not inline in skills):
  *   context_tools/stories/templates/ts/story-test.ts → tests/story-test.ts
- * story-test: tests/story-test.ts
- *
- * # Naming rules
- * - Epic / SubEpic folders → kebab-case verb-noun (Sign Up → sign-up)
- * - Story test file        → {story-kebab-slug}.{tier}.ts at epic or sub-epic — NO {story}/ folder
- * - Tier                   → file extension segment (.e2e.ts, .front-end.ts, .back-end.ts)
- * - Forbidden              → {story}/ folders, *_story.*, *_test_helper.* splits
  * ```
+ *
+ * ## Path naming (`kebab-case-paths`)
+ *
+ * Epic and SubEpic folders, story file stems, tier segments: lowercase kebab-case.
+ * Exception: Python epic helper only — `{epic_slug}_helper.py` at epic root.
+ *
+ * ## Outcome chaining (`then-and-chaining`)
+ *
+ * First outcome: `then(...)`. Further outcomes on the same interaction: `.and(...)`.
+ *
+ * ## Lifecycle hooks (`infrastructure-in-lifecycle-hooks`)
+ *
+ * Browser boot, app wiring, and initialize in `beforeAll` / `afterAll` — not in `given()`.
+ *
+ * ## Assertion helpers (`extract-assertion-helper`)
+ *
+ * Same assertion shape more than twice → named helper with a data bag; call sites pass values only.
+ *
+ * ## Example fixtures (`shared-example-fixtures`)
+ *
+ * Named domain fixtures under `examples/` at the lowest **shared** folder (epic, sub-epic, or story).
+ * One file per domain concept (`account-credentials.examples.ts`). Import in the story file;
+ * never repeat literals across scenarios. Golden layout: `context_tools/stories/examples/telco-website/`.
+ *
+ * import { validAccountCredentials } from "./examples/account-credentials.examples";
  *
  * Pattern: GWT structure only — // test code goes here in each step callback.
  */
@@ -34,16 +48,18 @@ import { background, scenario, story } from "../../story-test";
 
 story("{Story Verb-Noun}", () => {
   beforeAll(async () => {
-    // boot — test code goes here
+    // infrastructure — boot / wiring (not domain Given)
   });
 
   afterAll(async () => {
-    // teardown — test code goes here
+    // infrastructure — teardown
   });
 
   background(({ given }) => {
     given("{background given step}", async () => {
-      // test code goes here
+      // domain state only
+    }).and("{additional condition on the same background state}", async () => {
+      // chained domain state — not a second sibling given
     });
 
     scenario("{surface check — e.g. rules visible}", ({ when, then }) => {
@@ -52,6 +68,8 @@ story("{Story Verb-Noun}", () => {
       });
       then("{observable surface outcome}", async () => {
         // test code goes here
+      }).and("{further outcome on same interaction}", async () => {
+        // chain with .and(), not a second then()
       });
     });
 

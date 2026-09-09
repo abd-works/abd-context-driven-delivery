@@ -234,19 +234,19 @@ with description("thinning contexts by fidelity"):
             expect(result).to(contain("## acceptance_tests"))
 
     with context("when the kit has no Shared rules heading"):
-        with it("should keep companion prose and the named fidelity only"):
+        with it("should keep language prose and the named fidelity only"):
             from primitives.assets.markdown_extractor import thin_contexts_for_fidelity
 
             ce_shaped = (
                 "# Contexts\n\nintro\n\n"
-                "## Language companion (not a fidelity)\n\nlang\n\n"
+                "## Language\n\nlang\n\n"
                 "## modules\n\nmod\n\n"
                 "## model\n\nmdl\n\n"
                 "## code\n\ncd\n"
             )
             result = thin_contexts_for_fidelity(ce_shaped, "model")
             expect(result).to(contain("intro"))
-            expect(result).to(contain("## Language companion (not a fidelity)"))
+            expect(result).to(contain("## Language"))
             expect(result).to(contain("## model"))
             expect(result).to(contain("mdl"))
             expect("## modules" in result).to(equal(False))
@@ -271,22 +271,22 @@ with description("thinning examples by format"):
             from primitives.assets.markdown_extractor import thin_examples_by_format
 
             items = {
-                "shopping-cart/examples.md": "md cart",
-                "shopping-cart/examples.py": "py cart",
+                "shopping-cart/cart/shopping_cart.md": "md cart",
+                "shopping-cart/cart/shopping_cart.py": "py cart",
                 "evals/faultyAsset.py": "ce eval",
             }
             result = thin_examples_by_format(items, "markdown")
-            expect(result).to(equal({"shopping-cart/examples.md": "md cart"}))
+            expect(result).to(equal({"shopping-cart/cart/shopping_cart.md": "md cart"}))
 
         with it("should keep python suffixes when format is python"):
             from primitives.assets.markdown_extractor import thin_examples_by_format
 
             items = {
-                "shopping-cart/examples.md": "md cart",
-                "shopping-cart/examples.py": "py cart",
+                "shopping-cart/cart/shopping_cart.md": "md cart",
+                "shopping-cart/cart/shopping_cart.py": "py cart",
             }
             result = thin_examples_by_format(items, "python")
-            expect(result).to(equal({"shopping-cart/examples.py": "py cart"}))
+            expect(result).to(equal({"shopping-cart/cart/shopping_cart.py": "py cart"}))
 
 
 with description("thinning examples by fidelity"):
@@ -325,8 +325,8 @@ with description("thinning examples by fidelity"):
             from primitives.assets.markdown_extractor import thin_examples_by_fidelity
 
             items = {
-                "shopping-cart/examples.md": "cart",
+                "shopping-cart/cart/shopping_cart.md": "cart",
                 "evals/faultyAsset.py": "eval",
             }
             result = thin_examples_by_fidelity(items, "model")
-            expect(result).to(equal({"shopping-cart/examples.md": "cart"}))
+            expect(result).to(equal({"shopping-cart/cart/shopping_cart.md": "cart"}))

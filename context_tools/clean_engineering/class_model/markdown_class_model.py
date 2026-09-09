@@ -1,6 +1,6 @@
 """Markdown channel for the CleanEngineering model.
 
-Format (language companion + modules/model markdown, module-first):
+Format (language + modules/model markdown, module-first):
 
     # ModuleName
 

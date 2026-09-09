@@ -18,7 +18,7 @@ from mamba import context, description, it
 
 from agent_bdd.yaml_fence import load_fenced
 from tools.cli import _ToolsCli
-from tools.repo_paths import pythonpath_entries, write_venv_pth
+from tools.repo_paths import pythonpath_entries, venv_pth_entries, write_venv_pth
 
 
 def _run_cli(argv: list[str]) -> tuple[int, dict]:
@@ -148,8 +148,17 @@ with description("this checkout's tools package"):
             for entry in entries:
                 expect(Path(entry).resolve().is_relative_to(_REPO_ROOT.resolve())).to(equal(True))
 
+        with it("should write repo-relative paths into site-packages"):
+            entries = venv_pth_entries(_REPO_ROOT / ".venv", _REPO_ROOT)
+            expect(len(entries)).to(equal(len(pythonpath_entries(_REPO_ROOT))))
+            for entry in entries:
+                expect(Path(entry).is_absolute()).to(equal(False))
+                expect(":" in entry).to(equal(False))
+
         with it("should make a fresh python -m tools import this repo"):
-            write_venv_pth(_REPO_ROOT / ".venv", _REPO_ROOT)
+            pth = write_venv_pth(_REPO_ROOT / ".venv", _REPO_ROOT)
+            expect("site-packages" in str(pth)).to(equal(True))
+            expect((_REPO_ROOT / ".venv" / "abd_cdd_paths.pth").exists()).to(equal(False))
             py = _REPO_ROOT / ".venv" / "Scripts" / "python.exe"
             env = {k: v for k, v in os.environ.items() if k.upper() != "PYTHONPATH"}
             env["PYTHONIOENCODING"] = "utf-8"

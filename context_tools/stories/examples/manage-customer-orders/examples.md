@@ -18,6 +18,7 @@ these verbatim when the hybrid layout differs.
 | Path | What it shows |
 |---|---|
 | `py/manage-customer-orders/` | Acceptance layout for one epic (story-spec leaf files + shared runner/types) |
+| `telco-website/onboard-a-customer/` | Golden layout — story map, sub-epic `examples/`, story markdown + acceptance spec (`shared-example-fixtures`) |
 | `py/manage-customer-orders/*/*/*_stories.py` | Regeneratable story-spec constants (`story`, `actor`, scenarios) |
 | `py/manage-customer-orders/story_runner.py` | Runner that binds scenarios to tier implementations |
 | `py/manage-customer-orders/story_types.py` | Shared story/scenario type shapes |

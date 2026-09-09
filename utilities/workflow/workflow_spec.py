@@ -101,7 +101,23 @@ with description("Workflow manifest"):
             for name, entry in sig.items()
             if isinstance(entry, dict) and entry.get("kind") == "tool"
         )
-        expect(exposed).to(equal(["backlog", "capture_backlog", "finish"]))
+        expect(exposed).to(
+            equal(
+                [
+                    "add_child_ticket",
+                    "align_child_tickets_to_parent",
+                    "backlog",
+                    "capture_backlog",
+                    "finish",
+                    "merge_child_into_parent",
+                    "move_ticket",
+                    "read_ticket_rules",
+                    "review_ticket_statuses",
+                    "update_ticket",
+                    "update_ticket_labels",
+                ]
+            )
+        )
 
 
 with description("a Workflow"):
@@ -455,3 +471,71 @@ with description("a Workflow finish tool"):
             expect(result["project_status"]).to(equal("Done"))
             expect(self.repo._ticket_project_state[87]).to(equal("Done"))
             expect(87 in self.repo._closed_tickets).to(be_true)
+
+
+with description("a Workflow child ticket path"):
+    with before.each:
+        self.tmp, self.repo = _workflow_fixture("wf-child-")
+        _seed_issue(
+            self.repo,
+            title="Onboard a Customer",
+            body="Track onboarding work.",
+        )
+        self.workflow = Workflow(workspace=str(self.tmp), repo=self.repo)
+
+    with it("should set the root title as Ultimate Parent on parent and child"):
+        created = self.workflow.add_child_ticket(
+            parent="87",
+            title="Create a Customer",
+            workspace=str(self.tmp),
+        )
+
+        expect(created["ultimate_parent"]).to(equal("Onboard a Customer"))
+        expect(self.repo._ticket_project_fields[87]["Ultimate Parent"]).to(
+            equal("Onboard a Customer")
+        )
+        expect(
+            self.repo._ticket_project_fields[int(created["number"])]["Ultimate Parent"]
+        ).to(equal("Onboard a Customer"))
+
+    with it("should inherit Ultimate Parent through grandchildren"):
+        child = self.workflow.add_child_ticket(
+            parent="87",
+            title="Create a Customer",
+            workspace=str(self.tmp),
+        )
+        grandchild = self.workflow.add_child_ticket(
+            parent=str(child["number"]),
+            title="Create Unconfirmed User",
+            workspace=str(self.tmp),
+        )
+
+        expect(grandchild["ultimate_parent"]).to(equal("Onboard a Customer"))
+        for number in (87, int(child["number"]), int(grandchild["number"])):
+            expect(self.repo._ticket_project_fields[number]["Ultimate Parent"]).to(
+                equal("Onboard a Customer")
+            )
+
+    with it("should summarize close and archive a completed child"):
+        child = self.workflow.add_child_ticket(
+            parent="87",
+            title="Create a Customer",
+            workspace=str(self.tmp),
+        )
+        child_number = int(child["number"])
+
+        result = self.workflow.merge_child_into_parent(
+            child=str(child_number),
+            summary="Customer creation scenarios approved.",
+            workspace=str(self.tmp),
+        )
+
+        parent = self.repo.ticket("87")
+        expect(parent.body).to(contain("Customer creation scenarios approved."))
+        expect(parent.body).to(contain(f"issues/{child_number}"))
+        expect(child_number in self.repo._closed_tickets).to(be_true)
+        expect(self.repo._ticket_project_state[child_number]).to(equal("Done"))
+        expect(child_number in self.repo._archived_project_tickets).to(be_true)
+        expect(self.repo._ticket_parents[child_number]).to(equal(87))
+        expect(self.repo._ticket_comments[child_number][0]).to(contain("parent #87"))
+        expect(result["archived"]).to(equal("yes"))

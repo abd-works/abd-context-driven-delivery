@@ -25,15 +25,18 @@ from harness.instruction import Instruction
 from harness.prompt import Prompt, prompt
 from harness.returned_guidance import _DEFAULT_CODE_LANGUAGE, compound_guidance
 from harness.context_tool_rules import (
+    ContextToolRuleSpec,
     all_context_tool_mdc_specs,
     all_context_tool_procedure_specs,
     all_context_tool_rule_specs,
+    all_rules_folder_specs,
+    rules_from_repo_rules_folder,
 )
 from harness.rule import Rule
 from harness.skill import Skill
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_IMPLEMENTED = frozenset({"Cursor", "VS Code"})
+_IMPLEMENTED = frozenset({"Cursor", "VS Code", "Kilo"})
 _SKIP_DIRS = frozenset({"__pycache__", "examples"})
 _COMPOSER_CLASSES = frozenset({"BaseContextTool", "LifecycleAction"})
 _WALK_TREES = ("context_tools", "utilities")
@@ -123,6 +126,8 @@ class Harness:
         return self.repo_root / "primitives" / "harness" / ".deploy-state.json"
 
     def _ide_folder(self) -> str:
+        if self.type == "Kilo":
+            return ".kilo"
         return ".cursor" if self.type == "Cursor" else ".github"
 
     def _should_skip(self, path: Path) -> bool:
@@ -196,7 +201,7 @@ class Harness:
         if deploy_path.strip():
             root = Path(deploy_path.strip())
             ide = self._ide_folder()
-            if root.name != ide:
+            if root.name != ide and root.name not in (".kilo", ".cursor", ".github"):
                 root = root / ide
             return [root]
         return [self._suggested_deploy_path()]
@@ -490,6 +495,44 @@ class Harness:
                     except OSError:
                         pass
 
+    def _write_rule_spec(
+        self,
+        spec: ContextToolRuleSpec,
+        roots: list[Path],
+        seen: set[tuple[str, str]],
+        seen_key: tuple[str, str],
+    ) -> str | None:
+        if seen_key in seen:
+            return None
+        seen.add(seen_key)
+        rule = Rule(self.type, spec.name)
+        rule.description = spec.description
+        rule.globs = spec.globs
+        rule.always_apply = spec.always_apply
+        rule.body = spec.body
+        if spec.tool_slug:
+            rule.subfolder = f"{spec.folder}/{spec.tool_slug}" if spec.folder else spec.tool_slug
+        else:
+            rule.subfolder = spec.folder
+        rule.write(roots)
+        self.rules.append(rule)
+        return spec.name
+
+    def _write_repo_rules(
+        self,
+        roots: list[Path],
+        seen: set[tuple[str, str]],
+    ) -> list[str]:
+        """Write repo-level ``rules/*.md`` as top-level ``rules/*.mdc`` (Cursor only)."""
+        if self.type != "Cursor":
+            return []
+        names: list[str] = []
+        for spec in rules_from_repo_rules_folder(self.repo_root):
+            written = self._write_rule_spec(spec, roots, seen, (spec.name, "repo-rule"))
+            if written:
+                names.append(written)
+        return names
+
     def _write_context_tool_mdcs(
         self,
         roots: list[Path],
@@ -503,35 +546,27 @@ class Harness:
         for spec in all_context_tool_rule_specs(self.repo_root):
             if wanted and wanted != spec.tool_slug and not wanted.startswith(f"{spec.tool_slug}-"):
                 continue
-            key = (f"{spec.tool_slug}-{spec.name}", "rule")
-            if key in seen:
-                continue
-            seen.add(key)
-            rule = Rule(self.type, spec.name)
-            rule.description = spec.description
-            rule.globs = spec.globs
-            rule.always_apply = False
-            rule.body = spec.body
-            rule.subfolder = f"context_tools/{spec.tool_slug}"
-            rule.write(roots)
-            self.rules.append(rule)
-            names.append(f"{spec.tool_slug}/{spec.name}")
+            written = self._write_rule_spec(
+                spec, roots, seen, (f"{spec.tool_slug}-{spec.name}", "rule")
+            )
+            if written:
+                names.append(f"{spec.tool_slug}/{written}")
         for spec in all_context_tool_procedure_specs(self.repo_root):
             if wanted and wanted != spec.tool_slug and not wanted.startswith(f"{spec.tool_slug}-"):
                 continue
-            key = (f"{spec.tool_slug}-{spec.name}", "procedure")
-            if key in seen:
+            written = self._write_rule_spec(
+                spec, roots, seen, (f"{spec.tool_slug}-{spec.name}", "procedure")
+            )
+            if written:
+                names.append(f"{spec.tool_slug}/{written}")
+        for spec in all_rules_folder_specs(self.repo_root):
+            if wanted and wanted != spec.tool_slug and not wanted.startswith(f"{spec.tool_slug}-"):
                 continue
-            seen.add(key)
-            rule = Rule(self.type, spec.name)
-            rule.description = spec.description
-            rule.globs = spec.globs
-            rule.always_apply = False
-            rule.body = spec.body
-            rule.subfolder = f"context_tools/{spec.tool_slug}"
-            rule.write(roots)
-            self.rules.append(rule)
-            names.append(f"{spec.tool_slug}/{spec.name}")
+            written = self._write_rule_spec(
+                spec, roots, seen, (f"{spec.tool_slug}-{spec.name}", "rules-folder")
+            )
+            if written:
+                names.append(f"{spec.tool_slug}/{written}")
         return names
 
     def _write_context_tool_rules(
@@ -625,6 +660,8 @@ class Harness:
                 return f"{_BASE_FOLDER['context_tool']}/{s}"
             if k == "action":
                 return _BASE_FOLDER["action"]
+            if k == "utility":
+                return _BASE_FOLDER["utility"]
             return ""
 
         def source_for(name: str, guidance: str, *, operation: str = "", invoke: str = "action") -> dict:
@@ -762,12 +799,13 @@ class Harness:
                 payload["constructor_context"] = harness_cc
             if operation == "generate":
                 payload["guidance"] = (
-                    "With no IDE given, AskQuestion: Which IDE? Cursor | VS Code. "
+                    "With no IDE given, AskQuestion: Which IDE? Cursor | VS Code | Kilo. "
                     "With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring. "
                     "With no deploy path given, call suggested_deploy_path, then AskQuestion: "
                     "deploy to that suggested path (recommended) / enter another path. "
                     "With no code_language given, AskQuestion: Python (recommended) | TypeScript. "
-                    "Set context.type to the chosen IDE and code_language to the chosen language before running."
+                    "Set context.type to the chosen IDE. Pass the chosen language as "
+                    "arguments.code_language to write_deploy."
                 )
             emitted = self._emit(vehicle, payload, roots, seen)
             if emitted:
@@ -828,8 +866,8 @@ class Harness:
         payload = {"type": self.type}
         if deploy_path:
             payload["deploy_path"] = deploy_path
-        if self._extended:
-            payload["extended"] = True
+        if not self._extended:
+            payload["legacy"] = True
         if self._code_language != _DEFAULT_CODE_LANGUAGE:
             payload["code_language"] = self._code_language
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -916,19 +954,20 @@ class Harness:
         source: str = "",
         name_filter: str = "",
         deploy_path: str = "",
-        extended: bool = False,
+        extended: bool = True,
         prod: bool = False,
         code_language: str = _DEFAULT_CODE_LANGUAGE,
+        legacy: bool = False,
     ) -> str:
         """Walk if needed, then write sources plus Harness prompts into the deploy area.
 
-        extended=True writes ct-fidelity skills ({context_tool}-{fidelity}) that
-        bake the guidance the tool returns at each fidelity.
+        By default bakes ct-fidelity guidance into skills ({context_tool}-{fidelity}).
+        legacy=True reverts to the old stub-only fidelity skills that call the tool at runtime.
         prod=True skips any class decorated with @dev_only.
         code_language selects python (default) or typescript for inlined code templates.
         """
         self._require_implemented()
-        self._extended = bool(extended)
+        self._extended = not legacy if extended else False
         self._prod = bool(prod)
         normalized = (code_language or _DEFAULT_CODE_LANGUAGE).strip().lower()
         if normalized not in {"python", "typescript"}:
@@ -953,6 +992,7 @@ class Harness:
         for entry in json.loads(self.walk(name_filter)):
             names.extend(self._generate_entry(entry, roots, wanted, seen))
         if self.type == "Cursor":
+            names.extend(self._write_repo_rules(roots, seen))
             if not wanted or any(
                 wanted == spec.tool_slug or wanted.startswith(f"{spec.tool_slug}-")
                 for spec in all_context_tool_mdc_specs(self.repo_root)
@@ -1011,12 +1051,13 @@ class Harness:
         deploy_path: str | None = None,
         code_language: str | None = None,
     ) -> str:
-        """With no IDE given, AskQuestion: Which IDE? Cursor | VS Code."""
+        """With no IDE given, AskQuestion: Which IDE? Cursor | VS Code | Kilo."""
         """Set context.type to the chosen IDE before running."""
         self._require_implemented()
         """With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring."""
         """With no deploy path given, call suggested_deploy_path, then AskQuestion: deploy to that suggested path (recommended) / enter another path."""
         """With no code_language given, AskQuestion: Python (recommended) | TypeScript."""
+        """Pass the chosen language as arguments.code_language to write_deploy."""
         self.suggested_deploy_path()
         """With no source: walk context_tools/ and utilities/, generate each source into the deploy area, also write Harness prompts (/deploy-harness, /clean-harness). Generate is the deploy — no separate deploy. Do not confirm the scanned list. Overwrite generated files. Remove files this generate did not write. Save the IDE."""
         """With a source: write that source into the deploy area."""
@@ -1034,19 +1075,19 @@ class Harness:
             state = json.loads(path.read_text(encoding="utf-8"))
             saved = state.get("type")
             deploy_path = state.get("deploy_path") or ""
-            extended = bool(state.get("extended"))
+            legacy = bool(state.get("legacy"))
             code_language = state.get("code_language") or _DEFAULT_CODE_LANGUAGE
         except (OSError, json.JSONDecodeError):
             saved = None
             deploy_path = ""
-            extended = False
+            legacy = False
             code_language = _DEFAULT_CODE_LANGUAGE
         if not saved:
             raise RuntimeError("no saved IDE")
         self.type = saved
         return self.write_deploy(
             deploy_path=deploy_path,
-            extended=extended,
+            legacy=legacy,
             code_language=code_language,
         )
 

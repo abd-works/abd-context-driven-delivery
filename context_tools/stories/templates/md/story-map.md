@@ -6,7 +6,12 @@ section: body
 ---
 
 <!-- Discovery fidelity — every sub-epic decomposed to named stories.
-     Do not wrap epic, sub-epic, story, or actor names in backticks. -->
+     Do not wrap epic, sub-epic, story, or actor names in backticks.
+
+     Disk layout (`artifacts-mirror-story-hierarchy` + `kebab-case-paths`):
+     tests/{epic-verb-noun}/{sub-epic-verb-noun}/{story-kebab-slug}.py
+     — epic/sub-epic folders kebab-case; one story file per story (no {story}/ folder).
+     Exception: Python epic helper only — {epic_slug}_helper.py at epic root. -->
 
 # Story Map — Product / Feature Name
 

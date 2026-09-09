@@ -517,7 +517,7 @@ with description("a WorkSession that is closed"):
         expect(session.chats()).to(equal([chat]))
         expect("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" in chat).to(be_true)
 
-    with it("should commit scope paths on close, not only session.md"):
+    with it("should commit the complete worktree on close"):
         from workspace.git_repo import NullGitRepo
         from workspace.workspace import Workspace
 
@@ -547,15 +547,7 @@ with description("a WorkSession that is closed"):
         expect(close_commits).not_to(equal([]))
         paths, message = close_commits[-1]
         expect(message).to(equal("close"))
-        expect(any(str(changed) in path or path.endswith("feature.py") for path in paths)).to(
-            be_true
-        )
-        expect(
-            any(
-                str(session.session_md) in path or path.endswith("session.md")
-                for path in paths
-            )
-        ).to(be_true)
+        expect(paths).to(equal([str(git.root)]))
 
     with it("should write an End section with outcome into session.md"):
         import tempfile
