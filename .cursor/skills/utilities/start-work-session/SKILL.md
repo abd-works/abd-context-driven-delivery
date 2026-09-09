@@ -9,6 +9,8 @@ start_work_session — agent starts or resumes a named work session.
 Non-default session branches isolate in a sibling worktree named
 ``{abbrev}-{ticket}`` (or a short slug) next to the primary clone.
 Stay in the primary clone when the session branch is the default branch.
+That checkout gets its own ``.venv`` — rebuilt via ``setup.ps1`` when it is
+missing or was built for another machine or worktree.
 Pass ``isolate: false`` to keep session folders / turns / logs on the
 current checkout (no sibling worktree) — e.g. track work on main.
 

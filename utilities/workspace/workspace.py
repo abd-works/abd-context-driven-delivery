@@ -26,6 +26,7 @@ from primitives.instructions import instruction
 from record_decisions.record_decisions import RecordDecisions
 from workspace.context_index import ContextIndex
 from workspace.git_repo import Commit, GitConnectError, GitRepo, NullGitRepo, Repo
+from tools.repo_paths import ensure_venv
 from tools.tool import resource, agent_tool, toolset
 from harness.prompt import prompt
 from hooks.hook import hook
@@ -936,6 +937,7 @@ class WorkSession:
         self.cli_doer_pid = 0
         self.cli_judge_pid = 0
         self._transcript_home: Path | None = None
+        self.venv_note = ""
         # False → session folders / turns / logs on the current checkout (no sibling worktree).
         self.isolate = isolate
 
@@ -1327,6 +1329,16 @@ class WorkSession:
         SessionModel.copy_into(self.folder, primary, self.name)
         self._try_fetch_pull()
 
+    def _ensure_worktree_venv(self) -> None:
+        """Give this checkout its own venv — a worktree never borrows the primary's."""
+        git = self.git
+        if getattr(git, "_memory", False):
+            return
+        try:
+            self.venv_note = ensure_venv(Path(git.root))
+        except OSError as error:
+            self.venv_note = f"could not check .venv: {error}"
+
     @staticmethod
     def _abbrev_repo_name(folder: str) -> str:
         """Abbreviate a clone folder: first token, then first letter of each later token."""
@@ -1707,6 +1719,7 @@ class WorkSession:
             if not self.started:
                 self.started = date.today().isoformat()
             self.session_md.write_text(self._render(), encoding="utf-8")
+        self._ensure_worktree_venv()
         self._inherit_session_model()
         return self.session_md
 
@@ -1747,6 +1760,8 @@ class WorkSession:
             "sprint docs = folder; "
             "context index loaded when present."
         )
+        if self.venv_note:
+            opened = f"rebuilt .venv in {self.path} — {self.venv_note}\n{opened}"
         warning = self.branch_warning()
         if warning:
             opened = f"{warning}\n{opened}"
@@ -2013,6 +2028,8 @@ class WorkSession:
         Non-default session branches isolate in a sibling worktree named
         ``{abbrev}-{ticket}`` (or a short slug) next to the primary clone.
         Stay in the primary clone when the session branch is the default branch.
+        That checkout gets its own ``.venv`` — rebuilt via ``setup.ps1`` when it is
+        missing or was built for another machine or worktree.
         Pass ``isolate: false`` to keep session folders / turns / logs on the
         current checkout (no sibling worktree) — e.g. track work on main.
 
