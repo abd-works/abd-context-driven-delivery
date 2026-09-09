@@ -69,8 +69,11 @@ def _is_dev_only_class(tree: ast.AST, class_name: str) -> bool:
 
 
 def _class_slug(name: str) -> str:
-    stepped = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", stepped).lower()
+    stepped = re.sub(r"(.)([A-Z][a-z]+)", r"\1-\2", name)
+    stepped = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", stepped)
+    stepped = re.sub(r"[_.:/\\\s]+", "-", stepped)
+    stepped = re.sub(r"-+", "-", stepped)
+    return stepped.strip("-").lower()
 
 
 def _header_class(manifest_command: str) -> str:
@@ -97,6 +100,21 @@ def _agentic_class_names(tree: ast.AST) -> list[str]:
     return names
 
 
+def _inferred_class_names(tree: ast.AST, source_path: Path) -> list[str]:
+    """Infer likely toolset classes from file name when headers/decorators are absent."""
+    expected_stem = source_path.parent.name if source_path.stem == "__init__" else source_path.stem
+    expected_slug = _class_slug(expected_stem)
+    classes = [node.name for node in tree.body if isinstance(node, ast.ClassDef)]
+    if not classes:
+        return []
+    matching = [name for name in classes if _class_slug(name) == expected_slug]
+    if matching:
+        return matching
+    if len(classes) == 1:
+        return classes
+    return []
+
+
 @agentic_toolset
 class Harness:
     """Deploy workspace toolsets as IDE skills, prompts, and instructions."""
@@ -108,6 +126,7 @@ class Harness:
         self.repo_root = Path(repo_root) if repo_root is not None else _REPO_ROOT
         self._extended = False
         self._prod = False
+        self._no_manifest = False
         self._code_language = _DEFAULT_CODE_LANGUAGE
         self.skills: list[Skill] = []
         self.prompts: list[Prompt] = []
@@ -124,6 +143,9 @@ class Harness:
 
     def _state_path(self) -> Path:
         return self.repo_root / "primitives" / "harness" / ".deploy-state.json"
+
+    def _deploy_slug(self, value: str) -> str:
+        return _class_slug(value or "")
 
     def _ide_folder(self) -> str:
         if self.type == "Kilo":
@@ -391,9 +413,9 @@ class Harness:
                 for vehicle, deploy_name, _operation, _doc, _invoke in writes:
                     if vehicle != "prompt":
                         continue
-                    names.append(deploy_name or slug)
+                    names.append(self._deploy_slug(deploy_name or slug))
             else:
-                names.append(slug)
+                names.append(self._deploy_slug(slug))
         return sorted(self._unique_names(names))
 
     def _context_tool_option_names(self) -> list[str]:
@@ -405,7 +427,7 @@ class Harness:
             slug = entry["skill_slug"]
             if entry.get("class_name") in _COMPOSER_CLASSES:
                 continue
-            names.append(slug)
+            names.append(self._deploy_slug(slug))
         return sorted(self._unique_names(names))
 
     def _drop_action_skill(self, slug: str, roots: list[Path]) -> None:
@@ -413,6 +435,7 @@ class Harness:
             for candidate in (
                 root / "skills" / slug,
                 root / "skills" / "context_tools" / slug,
+                root / "skills" / "context-tools" / slug,
                 root / "skills" / "actions" / slug,
             ):
                 if candidate.is_dir():
@@ -625,16 +648,20 @@ class Harness:
     def _wanted(self, wanted: str, name: str, source_slug: str, derived: str) -> bool:
         if not wanted:
             return True
-        if name == wanted:
+        wanted_slug = self._deploy_slug(wanted)
+        name_slug = self._deploy_slug(name)
+        source_slug_norm = self._deploy_slug(source_slug)
+        if name == wanted or name_slug == wanted_slug:
             return True
         if derived == "fidelity":
             short = name.rsplit("-", 1)[-1]
-            if wanted == short:
+            if wanted == short or wanted_slug == self._deploy_slug(short):
                 return True
-        return source_slug == wanted
+        return source_slug == wanted or source_slug_norm == wanted_slug
 
     def _emit(self, kind: str, source: dict, roots: list[Path], seen: set[tuple[str, str]]) -> str | None:
-        name = source["name"]
+        name = self._deploy_slug(source["name"])
+        source = {**source, "name": name}
         key = (name, kind)
         if key in seen:
             return None
@@ -649,12 +676,14 @@ class Harness:
 
             payloads, events = hook_skill_sources(source)
             for payload in payloads:
-                skill_file = Skill(self.type, payload["name"])
+                payload_name = self._deploy_slug(payload.get("name", ""))
+                payload = {**payload, "name": payload_name}
+                skill_file = Skill(self.type, payload_name)
                 skill_file.disable_model_invocation = True
                 skill_file.generate(payload, roots)
                 self.skills.append(skill_file)
             self._hook_events.update(events)
-            return payloads[0]["name"] if payloads else name
+            return self._deploy_slug(payloads[0]["name"]) if payloads else name
         if kind == "instruction":
             instruction_file = Instruction(self.type, name)
             written = instruction_file.generate(source, roots)
@@ -693,11 +722,28 @@ class Harness:
             except (OSError, SyntaxError):
                 pass
         kind = self._classify_path(str(path))
+        if self._no_manifest:
+            if self._no_manifest_slug_blocked(slug):
+                if self._wanted(wanted, slug, slug, "source"):
+                    self._drop_source_slug(slug, roots)
+                return []
+            if kind == "utility":
+                if self._wanted(wanted, slug, slug, "source"):
+                    self._drop_source_slug(slug, roots)
+                return []
+            if kind not in {"action", "context_tool"}:
+                if self._wanted(wanted, slug, slug, "source"):
+                    self._drop_source_slug(slug, roots)
+                return []
+            if kind == "action" and "scanner" in slug:
+                if self._wanted(wanted, slug, slug, "source"):
+                    self._drop_source_slug(slug, roots)
+                return []
         meta = self._read_meta(path, slug, class_name)
-        toolset = entry.get("manifest_command", "").rsplit(" ", 1)[-1]
+        toolset = entry.get("toolset_ref") or entry.get("manifest_command", "").rsplit(" ", 1)[-1]
         names: list[str] = []
 
-        _BASE_FOLDER = {"context_tool": "context_tools", "action": "actions", "utility": "utilities"}
+        _BASE_FOLDER = {"context_tool": "context-tools", "action": "actions", "utility": "utilities"}
 
         def _folder_for(k: str, s: str) -> str:
             if k == "context_tool":
@@ -740,12 +786,21 @@ class Harness:
         writes = operation_writes(path, class_name, repo_root=self.repo_root)
         if writes:
             for vehicle, deploy_name, operation, doc, invoke in writes:
-                name = deploy_name or slug
+                name = self._deploy_slug(deploy_name or slug)
                 if vehicle == "hook":
-                    name = operation or deploy_name or slug
+                    name = self._deploy_slug(operation or deploy_name or slug)
                 if not self._wanted(wanted, name, slug, "source"):
                     continue
                 payload = source_for(name, doc or meta["guidance"], operation=operation, invoke=invoke)
+                if self._no_manifest and kind in {"action", "utility"}:
+                    payload["body"] = self._direct_skill_body(
+                        name=name,
+                        source_text=doc,
+                        path=path,
+                        slug=slug,
+                        class_name=class_name,
+                        fallback=meta.get("guidance", ""),
+                    )
                 if vehicle == "hook":
                     payload["event"] = deploy_name or ""
                     payload["owner"] = class_name
@@ -766,20 +821,49 @@ class Harness:
                     names.append(written)
         elif kind == "action":
             if self._wanted(wanted, slug, slug, "source"):
-                written = self._emit("prompt", source_for(slug, meta["guidance"]), roots, seen)
+                payload = source_for(slug, meta["guidance"])
+                if self._no_manifest:
+                    payload["body"] = self._direct_skill_body(
+                        name=slug,
+                        source_text=meta.get("guidance", ""),
+                        path=path,
+                        slug=slug,
+                        class_name=class_name,
+                        fallback=meta.get("class_string", ""),
+                    )
+                written = self._emit("prompt", payload, roots, seen)
                 if written:
                     names.append(written)
         elif kind == "context_tool":
             if self._wanted(wanted, slug, slug, "source"):
-                written = self._emit("skill", source_for(slug, meta["guidance"]), roots, seen)
+                payload = source_for(slug, meta["guidance"])
+                if self._no_manifest:
+                    payload["body"] = self._direct_skill_body(
+                        name=slug,
+                        source_text=meta.get("guidance", ""),
+                        path=path,
+                        slug=slug,
+                        class_name=class_name,
+                        fallback=meta.get("overview", ""),
+                    )
+                written = self._emit("skill", payload, roots, seen)
                 if written:
                     names.append(written)
         elif kind == "utility":
-            default_name = toolset.rsplit(":", 1)[0].rsplit(".", 1)[-1] or slug
+            default_name = self._deploy_slug(toolset.rsplit(":", 1)[0].rsplit(".", 1)[-1] or slug)
             if self._wanted(wanted, default_name, slug, "source") and self._has_agent_instructions(
                 path, class_name
             ):
                 payload = source_for(default_name, meta["guidance"])
+                if self._no_manifest:
+                    payload["body"] = self._direct_skill_body(
+                        name=default_name,
+                        source_text=meta.get("guidance", ""),
+                        path=path,
+                        slug=slug,
+                        class_name=class_name,
+                        fallback=meta.get("class_string", ""),
+                    )
                 if cc:
                     payload["constructor_context"] = cc
                 written = self._emit("prompt", payload, roots, seen)
@@ -787,7 +871,7 @@ class Harness:
                     names.append(written)
         if kind != "action":
             for fidelity_name in self._fidelity_option_names(path, class_name):
-                deploy_name = f"{slug}-{fidelity_name}"
+                deploy_name = self._deploy_slug(f"{slug}-{fidelity_name}")
                 if not self._wanted(wanted, deploy_name, slug, "fidelity"):
                     continue
                 payload = source_for(deploy_name, meta["guidance"])
@@ -819,7 +903,7 @@ class Harness:
         for vehicle, deploy_name, operation, doc, invoke in operation_writes(
             path, "Harness", repo_root=self.repo_root
         ):
-            name = deploy_name or operation
+            name = self._deploy_slug(deploy_name or operation)
             if vehicle == "skill":
                 continue
             if not deploy_name and operation == "generate":
@@ -868,6 +952,7 @@ class Harness:
             shorts.update(self._fidelity_names(path, class_name))
         for root in roots:
             for short in shorts:
+                short = self._deploy_slug(short)
                 if short in kept:
                     continue
                 for leftover in (
@@ -919,6 +1004,24 @@ class Harness:
                 dest = agents_root / dest_name
                 dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
 
+    def _prune_vscode_agent_clones(self, roots: list[Path]) -> None:
+        """Remove legacy plain .md agent clones when .agent.md exists (VS Code only)."""
+        if self.type != "VS Code":
+            return
+        for root in roots:
+            agents_root = root / "agents"
+            if not agents_root.is_dir():
+                continue
+            for plain in agents_root.glob("*.md"):
+                if plain.name.endswith(".agent.md"):
+                    continue
+                twin = agents_root / f"{plain.stem}.agent.md"
+                if twin.is_file():
+                    try:
+                        plain.unlink()
+                    except OSError:
+                        pass
+
     def _save_ide(self, deploy_path: str = "") -> None:
         path = self._state_path()
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -929,7 +1032,110 @@ class Harness:
             payload["legacy"] = True
         if self._code_language != _DEFAULT_CODE_LANGUAGE:
             payload["code_language"] = self._code_language
+        if self._no_manifest:
+            payload["no_manifest"] = True
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    def _toolset_ref_from_path(self, path: Path, class_name: str) -> str:
+        """Build module:Class from the source file path."""
+        try:
+            relative = path.resolve().relative_to(self.repo_root.resolve())
+        except ValueError:
+            relative = path
+        module_parts = list(relative.with_suffix("").parts)
+        if module_parts and module_parts[-1] == "__init__":
+            module_parts = module_parts[:-1]
+        module = ".".join(module_parts)
+        return f"{module}:{class_name}" if module and class_name else (module or class_name)
+
+    def _no_manifest_source_allowed(self, path: Path, tree_name: str) -> bool:
+        """Limit no-manifest deploys to context-tool modules and action folders only."""
+        if tree_name == "utilities":
+            return False
+        if tree_name != "context_tools":
+            return True
+        try:
+            parts = path.resolve().relative_to(self.repo_root.resolve()).parts
+        except ValueError:
+            return False
+        if len(parts) == 3:
+            return path.parent.name == path.stem
+        if len(parts) == 4 and parts[1] == "actions":
+            return path.parent.name == path.stem
+        return False
+
+    def _no_manifest_slug_blocked(self, slug: str) -> bool:
+        """Block selected skills/actions from no-manifest deployment."""
+        slug_norm = self._deploy_slug(slug)
+        blocked_exact = {
+            "create-rule",
+            "partition",
+            "repair",
+            "render",
+            "satisfy",
+            "scan",
+            "travel-to",
+        }
+        blocked_prefixes = ("car", "cdd")
+        if slug_norm in blocked_exact:
+            return True
+        return any(slug_norm == prefix or slug_norm.startswith(f"{prefix}-") for prefix in blocked_prefixes)
+
+    def _markdown_file_text(self, path: Path, slug: str, class_name: str) -> str:
+        """Load direct markdown guidance from sibling files when present."""
+        class_slug = _class_slug(class_name)
+        candidates = [
+            path.with_suffix(".md"),
+            path.parent / f"{slug}.md",
+            path.parent / f"{slug.replace('_', '-')}.md",
+            path.parent / f"{class_slug}.md",
+            path.parent / "README.md",
+        ]
+        seen: set[Path] = set()
+        for candidate in candidates:
+            if candidate in seen:
+                continue
+            seen.add(candidate)
+            if not candidate.is_file():
+                continue
+            try:
+                text = candidate.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            if text.strip():
+                return text.strip()
+        for candidate in sorted(path.parent.glob("*.md")):
+            if candidate.name.startswith(".") or candidate in seen:
+                continue
+            try:
+                text = candidate.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            if text.strip():
+                return text.strip()
+        return ""
+
+    def _direct_skill_body(
+        self,
+        *,
+        name: str,
+        source_text: str,
+        path: Path,
+        slug: str,
+        class_name: str,
+        fallback: str = "",
+    ) -> str:
+        """Build direct skill markdown without CLI invoke instructions."""
+        content = self._markdown_file_text(path, slug, class_name)
+        if not content:
+            content = (source_text or "").strip()
+        if not content:
+            content = (fallback or "").strip()
+        if not content:
+            content = name
+        if content.lstrip().startswith("#"):
+            return content
+        return f"# {name}\n\n{content}"
 
     def walk(self, name_filter: str = "") -> str:
         """Walk context_tools/ and utilities/ for agentic classes. Returns a JSON array."""
@@ -943,6 +1149,8 @@ class Harness:
             for py_file in sorted(tree.rglob("*.py")):
                 if self._should_skip(py_file):
                     continue
+                if self._no_manifest and not self._no_manifest_source_allowed(py_file, tree_name):
+                    continue
                 try:
                     text = py_file.read_text(encoding="utf-8")
                     tree_ast = ast.parse(text)
@@ -950,7 +1158,7 @@ class Harness:
                     continue
                 commands = manifest_commands(text)
                 default_manifest = commands[0] if commands else ""
-                if "{" in default_manifest:
+                if not self._no_manifest and "{" in default_manifest:
                     continue
                 manifest_by_class = {
                     _header_class(cmd): cmd
@@ -959,9 +1167,12 @@ class Harness:
                 }
                 classes = _agentic_class_names(tree_ast)
                 if not classes:
-                    named = _header_class(default_manifest)
-                    if named:
-                        classes = [named]
+                    if self._no_manifest:
+                        classes = _inferred_class_names(tree_ast, py_file)
+                    else:
+                        named = _header_class(default_manifest)
+                        if named:
+                            classes = [named]
                 if not classes:
                     continue
                 for class_name in classes:
@@ -979,6 +1190,7 @@ class Harness:
                             "manifest_command": manifest_by_class.get(
                                 class_name, default_manifest
                             ),
+                            "toolset_ref": self._toolset_ref_from_path(py_file, class_name),
                             "file_path": str(py_file),
                         }
                     )
@@ -1016,6 +1228,7 @@ class Harness:
         extended: bool = True,
         prod: bool = False,
         code_language: str = _DEFAULT_CODE_LANGUAGE,
+        no_manifest: bool = False,
         legacy: bool = False,
     ) -> str:
         """Walk if needed, then write sources plus Harness prompts into the deploy area.
@@ -1028,6 +1241,7 @@ class Harness:
         self._require_implemented()
         self._extended = not legacy if extended else False
         self._prod = bool(prod)
+        self._no_manifest = bool(no_manifest)
         normalized = (code_language or _DEFAULT_CODE_LANGUAGE).strip().lower()
         if normalized not in {"python", "typescript"}:
             raise ValueError(
@@ -1050,7 +1264,7 @@ class Harness:
         names: list[str] = []
         for entry in json.loads(self.walk(name_filter)):
             names.extend(self._generate_entry(entry, roots, wanted, seen))
-        if self.type in ("Cursor", "Kilo", "VS Code"):
+        if not self._no_manifest and self.type in ("Cursor", "Kilo", "VS Code"):
             names.extend(self._write_repo_rules(roots, seen))
             if not wanted or any(
                 wanted == spec.tool_slug or wanted.startswith(f"{spec.tool_slug}-")
@@ -1061,15 +1275,16 @@ class Harness:
                 self._update_kilo_json(roots)
             elif self.type == "VS Code":
                 self._update_copilot_instructions(roots)
-        for fmt in _FORMATS:
-            if wanted and fmt != wanted:
-                continue
-            written = self._emit("prompt", {"name": fmt, "format": fmt, "folder": "formats"}, roots, seen)
-            if written:
-                names.append(written)
-        names.extend(self._write_harness_files(roots, seen))
-        if not wanted:
-            self._deploy_agents(roots)
+        if not self._no_manifest:
+            for fmt in _FORMATS:
+                if wanted and fmt != wanted:
+                    continue
+                written = self._emit("prompt", {"name": fmt, "format": fmt, "folder": "formats"}, roots, seen)
+                if written:
+                    names.append(written)
+            names.extend(self._write_harness_files(roots, seen))
+            if not wanted:
+                self._deploy_agents(roots)
         skill_names = {
             "/".join(item.relative_path().parts[1:-1])
             for item in self.skills
@@ -1093,13 +1308,14 @@ class Harness:
         for prompt_file in self.prompts:
             if prompt_file.name not in skill_name_only:
                 self._drop_action_skill(prompt_file.name, roots)
-        if not wanted:
+        if not wanted and not self._no_manifest:
             self._drop_unwritten_skills(roots, skill_names)
             self._drop_unwritten_prompts(roots, prompt_names)
             self._drop_unwritten_rules(roots, rule_names)
+        self._prune_vscode_agent_clones(roots)
         self._remove_unprefixed_fidelity_files(roots)
         self._save_ide(str(roots[0]))
-        if self.type == "Cursor":
+        if self.type == "Cursor" and not self._no_manifest:
             self._deploy_cursor_hooks(wanted)
         return json.dumps(
             {
@@ -1123,6 +1339,7 @@ class Harness:
         """With no name filter given, AskQuestion: all toolsets (recommended) / enter a substring."""
         """With no deploy path given, call suggested_deploy_path, then AskQuestion: deploy to that suggested path (recommended) / enter another path."""
         """With no code_language given, AskQuestion: Python (recommended) | TypeScript."""
+        """When requested, pass arguments.no_manifest=true to write_deploy for path-based no-manifest deployment."""
         """Pass the chosen language as arguments.code_language to write_deploy."""
         self.suggested_deploy_path()
         """With no source: walk context_tools/ and utilities/, generate each source into the deploy area, also write Harness prompts (/deploy-harness, /clean-harness). Generate is the deploy — no separate deploy. Do not confirm the scanned list. Overwrite generated files. Remove files this generate did not write. Save the IDE."""
@@ -1143,11 +1360,13 @@ class Harness:
             deploy_path = state.get("deploy_path") or ""
             legacy = bool(state.get("legacy"))
             code_language = state.get("code_language") or _DEFAULT_CODE_LANGUAGE
+            no_manifest = bool(state.get("no_manifest"))
         except (OSError, json.JSONDecodeError):
             saved = None
             deploy_path = ""
             legacy = False
             code_language = _DEFAULT_CODE_LANGUAGE
+            no_manifest = False
         if not saved:
             raise RuntimeError("no saved IDE")
         self.type = saved
@@ -1155,6 +1374,7 @@ class Harness:
             deploy_path=deploy_path,
             legacy=legacy,
             code_language=code_language,
+            no_manifest=no_manifest,
         )
 
     @prompt(name="clean-harness")

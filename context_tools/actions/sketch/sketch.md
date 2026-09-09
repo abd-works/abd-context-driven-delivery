@@ -97,6 +97,7 @@ When sketching across multiple lenses (Stories / DDD / UX / Modules / BDD):
 - **`scaffold-before-content`** — **Hard gate.** Read the engagement sketch template (`templates/cdd-sketch.md` for CDD) and each active child's `sketch_template` **before** writing the sketch file. Do not invent a free-prose `sketch.md`.
 - **`grill-before-theme-detail`** — **Hard gate.** Before writing any non-scaffold content for a theme, run at least one grill round on that theme's open questions. The session-level lens confirmation does NOT substitute for this per-theme grill.
 - **`one-sketch-per-engagement`** — One sketch file per engagement. Deepening fidelity updates `fidelity:` at the top and deepens blocks in place. Never create a new file for a new fidelity level.
+- **`scaffold-is-sketch-outline`** — **Hard gate.** Scaffold is the first outline pass of that same sketch file. Never create a separate scaffold artifact and never create standalone scaffold heading sections outside theme blocks.
 - **`scaffold-before-detail`** — A scaffold pass is required when the ask is greenfield, spans multiple themes/epics/modules, or no whole-design scaffold exists. Not required for a single narrow theme in an already-scaffolded design. Mark every scaffold line `< scaffold`. Never scaffold and detail in the same pass.
 - **`scaffold-per-epic-not-mega-block`** — One `=========` theme block per epic (or sub-epic for large systems). Do not group all epics into a single mega-theme block.
 - **`detail-updates-scaffold-in-place`** — When detailing a theme, update scaffold lines within the existing `=========` block. Remove `< scaffold` from filled lines. Never create a second parallel block for the same epic — one epic = one theme block for its lifetime.
@@ -118,6 +119,8 @@ When sketching across multiple lenses (Stories / DDD / UX / Modules / BDD):
 ❌ Writing the sketch file before reading the sketch template and child `sketch_template`s
 ❌ Skipping the per-theme grill — lens confirmation does not substitute for it
 ❌ Creating a new sketch file when moving to a deeper fidelity — deepen in place
+❌ Creating a separate scaffold artifact for the same engagement
+❌ Adding top-level scaffold sections outside theme blocks (`## Stories Scaffold`, `## DDD Scaffold`, etc.)
 ❌ Creating a new theme block when detailing — update scaffold lines in the existing block
 ❌ Grouping all epics into one mega-theme block — one block per epic
 ❌ Scaffolding and detailing in the same pass

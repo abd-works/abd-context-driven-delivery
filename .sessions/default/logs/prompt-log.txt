@@ -1,0 +1,390 @@
+
+==============================================================================
+2026-09-06T17:40:18Z  preToolUse:Read  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: C:/dev/abd-context-driven-delivery/tools.ps1
+
+==============================================================================
+2026-09-06T17:40:18Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; @"
+toolset: workspace.workspace:WorkSession
+tool: start_work_session
+name: utility-cleanup
+"@ | .\tools.ps1 run -
+
+==============================================================================
+2026-09-06T17:40:18Z  beforeReadFile  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: C:/dev/abd-context-driven-delivery/tools.ps1
+size: 834 chars
+preview:
+# Run python -m tools against this checkout (venv + UTF-8 + PYTHONPATH).
+# Usage (from repo root): .\tools.ps1 manifest <toolset>
+#                         .\tools.ps1 run -   (pipe the YAML fence; stdin is forwarded)
+$ErrorActionPreference = "Stop"
+$Root = $PSScriptRoot
+$VenvPython = Join-Path $Root ".venv\Scripts\python.exe"
+if (-not (Test-Path $VenvPython)) {
+    throw "No venv at $VenvPython. Run .\setup.ps1 first."
+... [24 lines, 834 chars total]
+
+==============================================================================
+2026-09-06T17:40:25Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; .\tools.ps1 manifest workspace.workspace:WorkSession 2>&1 | Select-String -Pattern "start_work" -Context 0,15
+
+==============================================================================
+2026-09-06T17:40:28Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; .\tools.ps1 manifest workspace.workspace:WorkSession 2>$null
+
+==============================================================================
+2026-09-06T17:40:32Z  preToolUse:Grep  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: 
+path [file]: C:/dev/abd-context-driven-delivery
+
+==============================================================================
+2026-09-06T17:40:32Z  preToolUse:Grep  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: start_work_session|def run
+path [file]: C:/dev/abd-context-driven-delivery/primitives
+
+==============================================================================
+2026-09-06T17:40:36Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; rg "start_work_session" utilities/workspace -n | Select-Object -First 20
+
+==============================================================================
+2026-09-06T17:40:36Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; rg "def run" primitives tools -n | Select-Object -First 30
+
+==============================================================================
+2026-09-06T17:40:39Z  preToolUse:Read  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: C:/dev/abd-context-driven-delivery/primitives/tools/__main__.py
+
+==============================================================================
+2026-09-06T17:40:39Z  preToolUse:Read  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: C:/dev/abd-context-driven-delivery/utilities/workspace/workspace_spec.py
+
+==============================================================================
+2026-09-06T17:40:40Z  beforeReadFile  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: C:/dev/abd-context-driven-delivery/primitives/tools/__main__.py
+size: 86 chars
+preview:
+from tools.cli import _main
+
+if __name__ == '__main__':
+    raise SystemExit(_main())
+
+==============================================================================
+2026-09-06T17:40:40Z  beforeReadFile  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: C:/dev/abd-context-driven-delivery/utilities/workspace/workspace_spec.py
+size: 2195 chars
+preview:
+            kit = WorkSession(workspace=str(tmp), session="sprint-finish-cli")
+            kit.git = git
+            path = kit.finish_work_session(outcome="cli closed")
+            expect("sprint-finish-cli" in path).to(equal(True))
+            expect(kit.ended).not_to(equal(""))
+
+        with it("should finish the default session when no work session name is bound"):
+            from workspace.workspace import SessionModel, WorkSession
+... [50 lines, 2195 chars total]
+
+==============================================================================
+2026-09-06T17:40:42Z  preToolUse:Read  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: C:/dev/abd-context-driven-delivery/primitives/tools/cli.py
+
+==============================================================================
+2026-09-06T17:40:42Z  beforeReadFile  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: C:/dev/abd-context-driven-delivery/primitives/tools/cli.py
+size: 7714 chars
+preview:
+"""CLI entry for python -m tools - manifest and run subcommands."""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+... [200 lines, 7714 chars total]
+
+==============================================================================
+2026-09-06T17:40:44Z  preToolUse:Read  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: C:/dev/abd-context-driven-delivery/primitives/tools/tool.py
+
+==============================================================================
+2026-09-06T17:40:44Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; rg "session:" .cursor -g "*.md" -g "*.yaml" | Select-Object -First 15
+
+==============================================================================
+2026-09-06T17:40:45Z  beforeReadFile  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: C:/dev/abd-context-driven-delivery/primitives/tools/tool.py
+size: 5777 chars
+preview:
+    """Serializes manifest documents to YAML. Subclass and replace ``instance()`` to extend."""
+
+    _instance: _ManifestYaml | None = None
+
+    @classmethod
+    def instance(cls) -> _ManifestYaml:
+        if cls._instance is None:
+            cls._instance = cls()
+... [150 lines, 5777 chars total]
+
+==============================================================================
+2026-09-06T17:40:47Z  preToolUse:Read  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: C:/dev/abd-context-driven-delivery/primitives/tools/tool.py
+
+==============================================================================
+2026-09-06T17:40:47Z  beforeReadFile  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: C:/dev/abd-context-driven-delivery/primitives/tools/tool.py
+size: 7664 chars
+preview:
+        cls._instance = runner
+
+    def run_request(self, request: RunRequestDocument) -> RunResponseDocument:
+        from workspace import SessionLog
+
+        parsed = self._parse_run_request(request)
+        SessionLog.instance().set_session(parsed.session)
+        toolset_cls = self._loader.load(str(parsed.toolset_path))
+... [200 lines, 7664 chars total]
+
+==============================================================================
+2026-09-06T17:40:50Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; rg "class WorkSession" -A 40 utilities/workspace/workspace.py | Select-Object -First 50
+
+==============================================================================
+2026-09-06T17:40:53Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; @"
+toolset: workspace.workspace:WorkSession
+tool: start_work_session
+context:
+  session: utility-cleanup
+"@ | .\tools.ps1 run -
+
+==============================================================================
+2026-09-06T17:40:57Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git worktree list; Test-Path "C:\dev\abd-cdd-utility-cleanup"; if (Test-Path "C:\dev\abd-cdd-utility-cleanup") { Get-ChildItem "C:\dev\abd-cdd-utility-cleanup" -Force | Select-Object -First 10 }
+
+==============================================================================
+2026-09-06T17:41:01Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git worktree prune; git worktree add -b session/utility-cleanup "C:\dev\abd-cdd-utility-cleanup" 2>&1; if ($LASTEXITCODE -ne 0) { git worktree add "C:\dev\abd-cdd-utility-cleanup" session/utility-cleanup 2>&1 }
+
+==============================================================================
+2026-09-06T17:41:01Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Get-ChildItem "C:\dev\abd-context-driven-delivery\.sessions\closed" -ErrorAction SilentlyContinue | Select-Object Name; Get-ChildItem "C:\dev\abd-cdd-utility-cleanup\.context\sessions" -ErrorAction SilentlyContinue | Select-Object Name
+
+==============================================================================
+2026-09-06T17:41:08Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; @"
+toolset: workspace.workspace:WorkSession
+tool: start_work_session
+context:
+  session: utility-cleanup
+"@ | .\tools.ps1 run -
+
+==============================================================================
+2026-09-06T17:41:15Z  preToolUse:Shell  conv=d585f387  gen=06ef9e21  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Test-Path "C:\dev\abd-cdd-utility-cleanup\.context\sessions\utility-cleanup"; Test-Path "C:\dev\abd-context-driven-delivery\.sessions\closed\utility-cleanup"
+
+==============================================================================
+2026-09-06T17:42:58Z  beforeSubmitPrompt  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+USER PROMPT:
+FUCKO GO LOOOK AT SESSIONM F)(LDFER ITYS NOT FUCKIONG OUT OF C:LPOASED THIS IS EASY FUCKIONG TESTRIT PROPER:LY QND DOT STOP UNTIL UJ GWT THIS SHI(T DOLNMEW
+
+ATTACHMENTS:
+  [rule] abd-works-brand/c:\dev\abd-works-repo\abd-works-brand\AGENTS.md
+  [rule] abd-works-website/c:\dev\abd-works-repo\abd-works-website\AGENTS.md
+
+==============================================================================
+2026-09-06T17:43:02Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; Write-Host "=== PRIMARY ==="; Get-ChildItem ".sessions\closed" -ErrorAction SilentlyContinue | Select-Object Name; Get-ChildItem ".context\sessions" -ErrorAction SilentlyContinue | Select-Object Name; Write-Host "=== WORKTREE ==="; Get-ChildItem "C:\dev\abd-cdd-utility-cleanup\.sessions\closed" -ErrorAction SilentlyContinue | Select-Object Name; Get-ChildItem "C:\dev\abd-cdd-utility-cleanup\.context\sessions" -ErrorAction SilentlyContinue | Select-Object Name; Write-Host "=== _active ==="; Get-Content "C:\dev\abd-cdd-utility-cleanup\.context\sessions\_a
+... [1 lines, 742 chars total]
+
+==============================================================================
+2026-09-06T17:43:02Z  preToolUse:Grep  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: _restore_closed|_closed_archive|_reactivate|ensure_started
+path [file]: C:/dev/abd-context-driven-delivery/utilities/workspace/workspace.py
+
+==============================================================================
+2026-09-06T17:43:05Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; dir .sessions\closed 2>&1; dir .context\sessions 2>&1; dir C:\dev\abd-cdd-utility-cleanup\.sessions\closed 2>&1; dir C:\dev\abd-cdd-utility-cleanup\.context\sessions 2>&1; type C:\dev\abd-cdd-utility-cleanup\.context\sessions\_active 2>&1; type .context\sessions\_active 2>&1
+
+==============================================================================
+2026-09-06T17:43:08Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: dir "C:\dev\abd-cdd-utility-cleanup\.sessions\closed\utility-cleanup-2026-09-06"; dir "C:\dev\abd-cdd-utility-cleanup\.context\sessions\utility-cleanup"
+
+==============================================================================
+2026-09-06T17:43:11Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: dir "C:\dev\abd-cdd-utility-cleanup\.sessions\closed\utility-cleanup-2026-09-06\utility-cleanup"; type "C:\dev\abd-cdd-utility-cleanup\.sessions\closed\utility-cleanup-2026-09-06\session.md"; type "C:\dev\abd-cdd-utility-cleanup\.context\sessions\utility-cleanup\session.md"
+
+==============================================================================
+2026-09-06T17:43:18Z  preToolUse:Grep  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+pattern: def close|archive|_archive_root
+path [file]: C:/dev/abd-context-driven-delivery/utilities/workspace/workspace.py
+
+==============================================================================
+2026-09-06T17:43:21Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; rg "_archive_root|def close" utilities/workspace/workspace.py -n
+
+==============================================================================
+2026-09-06T17:43:29Z  preToolUse:Read  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+read [file]: C:/dev/abd-context-driven-delivery/primitives/hooks/session_logs.py
+
+==============================================================================
+2026-09-06T17:43:29Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; git log -3 --oneline; git diff HEAD -- utilities/workspace/workspace.py | Select-Object -First 80; cd "C:\dev\abd-cdd-utility-cleanup"; git log -3 --oneline
+
+==============================================================================
+2026-09-06T17:43:29Z  beforeReadFile  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+READ [file]: C:/dev/abd-context-driven-delivery/primitives/hooks/session_logs.py
+size: 3964 chars
+preview:
+"""Session-scoped hook log paths â€” always under ``.context/sessions/{name}/logs/``."""
+
+from __future__ import annotations
+
+import shutil
+from datetime import date
+from pathlib import Path
+
+... [120 lines, 3964 chars total]
+
+==============================================================================
+2026-09-06T17:43:32Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; $env:PYTHONPATH="utilities;primitives;context_tools;context_tools/actions"; .venv\Scripts\python.exe -c "
+from pathlib import Path
+from workspace.workspace import WorkSession, Workspace
+
+wt = Path(r'C:\dev\abd-cdd-utility-cleanup')
+ws = Workspace(str(wt))
+s = WorkSession(ws, 'utility-cleanup', path=str(wt))
+print('path', s.path)
+... [20 lines, 810 chars total]
+
+==============================================================================
+2026-09-06T17:43:44Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; $env:PYTHONPATH="utilities;primitives;context_tools;context_tools/actions"; .venv\Scripts\python.exe -c "
+from pathlib import Path
+from workspace.workspace import WorkSession, Workspace
+
+wt = Path(r'C:\dev\abd-cdd-utility-cleanup')
+ws = Workspace(str(wt))
+s = WorkSession(ws, 'utility-cleanup', path=str(wt))
+s._attach_existing_session_worktree()
+... [15 lines, 771 chars total]
+
+==============================================================================
+2026-09-06T17:43:47Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: dir "C:\dev\abd-cdd-utility-cleanup\.sessions\closed\utility-cleanup-2026-09-06" -Recurse | Select-Object FullName
+
+==============================================================================
+2026-09-06T17:43:51Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Test-Path "C:\dev\abd-cdd-utility-cleanup\.sessions\closed\utility-cleanup-2026-09-06"; Get-ChildItem "C:\dev\abd-cdd-utility-cleanup\.sessions\closed" | Where-Object { $_.Name -like 'utility*' }
+
+==============================================================================
+2026-09-06T17:43:53Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: Get-ChildItem "C:\dev\abd-cdd-utility-cleanup\.sessions\closed\utility-cleanup-2026-09-06" -Force; Get-ChildItem "C:\dev\abd-cdd-utility-cleanup\.sessions\closed\utility-cleanup-2026-09-06" -Recurse -Force
+
+==============================================================================
+2026-09-06T17:44:01Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; rg "def folder" utilities/workspace/workspace.py -n -A 15
+
+==============================================================================
+2026-09-06T17:44:03Z  preToolUse:Shell  conv=d585f387  gen=909625e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+command: cd "C:\dev\abd-context-driven-delivery"; $env:PYTHONPATH="utilities;primitives;context_tools;context_tools/actions"; .venv\Scripts\python.exe -c "
+from pathlib import Path
+from workspace.workspace import WorkSession
+
+# simulate tools CLI from primary
+s = WorkSession(workspace='.', session='utility-cleanup')
+print('initial path', s.path)
+s.start_work_session()
+... [15 lines, 612 chars total]

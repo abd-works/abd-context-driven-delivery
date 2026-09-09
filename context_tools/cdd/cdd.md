@@ -46,6 +46,8 @@ UX has no engineering fidelity — production UI follows stories + clean_enginee
 Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 
 - **One file per engagement** — deepening fidelity (discovery → explore → spec → engineer) updates `fidelity:` at the top and deepens blocks in place. Never create a new file for a new fidelity.
+- **Scaffold is the first outline of that same sketch** — do not create a separate `*-scaffold.md` artifact when `cdd-sketch.md` exists for the engagement.
+- **No standalone scaffold sections** — do not create top-level headings like `## Stories Scaffold` / `## DDD Scaffold` in CDD output; express scaffold as incomplete lines inside each theme's lens blocks, then refine those lines in place.
 - **Themes** — group lens blocks under one theme (epic, module, user goal, increment, or sub-epic).
 - **`order-themes-by-journey`** — When the theme **is** the customer journey / epic, list themes in story-map experience order (Onboarding before Selfcare). Do not follow UX IA / sitemap order.
 - **Beside each other** — lens blocks under a theme stay close and comparable; not separate files.
@@ -59,6 +61,7 @@ Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 - **`views-agree-before-proceed`** — Recommend proceed only when the views in play for the current scope agree; otherwise more at the same stage. User can override.
 - **`todo-trail-in-sketch`** — Persist actions as TODO/doing/pass #label in the sketch; archive passes under `## log`.
 - **`scaffold-before-content`** — **Hard gate.** Do not write `cdd-sketch.md` (or a file called `sketch.md`) until you have (1) **read** `templates/cdd-sketch.md` and each active child's `sketch_template` from `resolve_targets`, and (2) **AskQuestion** has confirmed which lenses are in play (`confirm-lenses-before-sketch`). Free prose instead of the scaffold is a defect.
+- **`scaffold-inside-sketch-file`** — **Hard gate.** Scaffold and sketch are one artifact lifecycle. Start with scaffold lines in theme lens blocks, then deepen those same lines. Never split scaffold into another file or another standalone section.
 - **`order-themes-by-journey`** — When the theme is the customer journey / epic, order themes by the story map / customer experience (Onboarding before Selfcare), not by UX IA.
 
 ---
@@ -66,6 +69,9 @@ Path: `{session.folder}/cdd-sketch.md` (see `templates/cdd-sketch.md`).
 
 1. Confirm CDD fidelity and **run scope** (defaults above); set `context.fidelity` if needed.
 2. **Grill + sketch** — **`scaffold-before-content` first.** Read `templates/cdd-sketch.md` and each active child's `sketch_template`. AskQuestion to confirm lenses. Only then follow `sketch.md`: scaffold if needed, grill per theme, fill lens blocks from child `sketch_template` notation only. Do not dump free prose into the sketch file.
+   - Scaffold and sketch are one file lifecycle: write scaffold lines directly inside theme lens blocks of `cdd-sketch.md` and deepen those same lines in place.
+   - Never create separate scaffold artifacts (for example `*-scaffold.md`) for the same engagement and never add standalone scaffold heading sections.
+   - For `ddd` lens blocks, keep bounded contexts as parents, nest aggregates beneath them, include aggregate `emits`/`consumes`, and add an event map line for cross-context ownership.
 3. For each chosen row (your order):
    - Mark `doing #…` in the sketch.
    - Pipe `run` to `python -m tools run -`; follow that response (skip nested grill/sketch — CDD already sketched).

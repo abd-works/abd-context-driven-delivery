@@ -1286,6 +1286,81 @@ with description("a generated harness tool"):
                     equal(True)
                 )
 
+        with context("with no-manifest mode"):
+            with it("should deploy only actions with direct bodies, never utilities or scanners"):
+                root = Path(tempfile.mkdtemp())
+                stories = root / "context_tools" / "stories" / "stories.py"
+                stories.parent.mkdir(parents=True, exist_ok=True)
+                stories.write_text(
+                    '"""Stories."""\n'
+                    "class Stories:\n"
+                    "    fidelities = {\"discovery\": \"story_map\"}\n",
+                    encoding="utf-8",
+                )
+
+                sketch_py = root / "context_tools" / "actions" / "sketch" / "sketch.py"
+                sketch_py.parent.mkdir(parents=True, exist_ok=True)
+                sketch_py.write_text(
+                    '"""Sketch action."""\n'
+                    "class Sketch:\n"
+                    "    @prompt\n"
+                    "    @agent_instructions\n"
+                    "    def sketch(self):\n"
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+                (sketch_py.parent / "sketch.md").write_text(
+                    "# Sketch No Manifest\n\nUse this markdown directly.",
+                    encoding="utf-8",
+                )
+
+                echo = root / "utilities" / "echo" / "echo.py"
+                echo.parent.mkdir(parents=True, exist_ok=True)
+                echo.write_text(
+                    '"""Echo utility."""\n'
+                    "class Echo:\n"
+                    "    @prompt\n"
+                    "    @agent_instructions\n"
+                    "    def echo_session(self):\n"
+                    '        """Echo from docstring."""\n'
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+
+                scanner = root / "context_tools" / "clean_engineering" / "scanners" / "fake_scanner.py"
+                scanner.parent.mkdir(parents=True, exist_ok=True)
+                scanner.write_text(
+                    '"""Fake scanner."""\n'
+                    "class FakeScanner:\n"
+                    "    @prompt\n"
+                    "    @agent_instructions\n"
+                    "    def run(self):\n"
+                    "        return None\n",
+                    encoding="utf-8",
+                )
+
+                harness = Harness("Cursor", repo_root=root)
+                harness.write_deploy(source="stories", no_manifest=True)
+                expect((root / ".cursor" / "skills" / "stories" / "SKILL.md").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "context_tools" / "stories" / "SKILL.md").exists()).to(equal(False))
+
+                harness.write_deploy(source="sketch", no_manifest=True)
+                action_text = (root / ".cursor" / "skills" / "actions" / "sketch" / "SKILL.md").read_text(
+                    encoding="utf-8"
+                )
+                expect(action_text).to(contain("# Sketch No Manifest"))
+                expect(action_text).to(contain("Use this markdown directly."))
+                expect(action_text).not_to(contain("tools.ps1 run -"))
+                expect(action_text).not_to(contain("toolset:"))
+                expect(action_text).not_to(contain("action:"))
+
+                harness.write_deploy(source="echo", no_manifest=True)
+                expect((root / ".cursor" / "skills" / "utilities" / "echo" / "SKILL.md").exists()).to(equal(False))
+                expect((root / ".cursor" / "skills" / "echo" / "SKILL.md").exists()).to(equal(False))
+
+                harness.write_deploy(source="fake-scanner", no_manifest=True)
+                expect((root / ".cursor" / "skills" / "fake-scanner" / "SKILL.md").exists()).to(equal(False))
+
 
 with description("a skill"):
     with context("that generates"):
