@@ -39,6 +39,7 @@ plan
 primitives
 record_decisions
 render
+rules
 sandbox
 satisfy
 scan

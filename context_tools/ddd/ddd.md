@@ -1,12 +1,6 @@
 # Contexts
 
-Build a solution that is organized and structured around how the business actually works, described in the words the business already uses. The concepts, structure, and rules in the model and in the code are the same ones the people who do the work would recognise — so there is nothing to translate between a conversation about the business and the code that runs it. When the software mirrors the business, a rule change lands where that rule lives and the code reads as an explanation of the business; when it mirrors a database, a framework, or a screen layout instead, every business conversation has to be re-translated and the rules end up scattered wherever the technology happened to put them.
-
-Start from the business, not from the database or the screens. Listen to the people who do the work and use their words. When the same term means different things between two parts of the organization — or two teams use different words for what sounds like the same thing — you have found a boundary. Hold one consistent picture inside each area so later conversation, model, and code speaks a consistent language.
-
-Inside each area, find what must stay true together. A price, the offer it belongs to, and the plan behind it may all need to change in one breath; a customer's address may change while their subscription rules stay put. Put a single entry point on each aggregate to control how business state is accessed and changed.
-
-Then detail each aggregate — structure, behaviour, invariants, and integrations — with DDD's tactical building blocks. They look technical, but only the business can answer them: what makes one thing the same thing over time, what state counts as valid, how information is stored and synchronized between clusters, and which parts of the system publish events others must react to. You reach for a common set of blocks because each one is designed to hold the answer to a very specific business question in a structured, consistent way.
+Build the solution around how the business actually works, in the words the business already uses. When the software mirrors the business, it holds the business's logic and knowledge where that understanding actually lives; when it mirrors a database, a framework, or a screen layout, every business conversation has to be re-translated and what the business knows ends up scattered wherever the technology happened to put it.
 
 **`clean_engineering`** owns OO structure, one skill per fidelity: **`clean_engineering-modules`** shapes the module boundaries and seams when **`bounded_context`** draws the map; **`clean_engineering-model`** types the classes, operations, and relationships when **`building_blocks`** classifies concepts with stereotypes; **`clean_engineering-code`** implements the seams when **`tactics`** wires repositories, events, and factories. Do not restate module or class analysis here. DDD adds the domain layer on top: where the language changes, which clusters protect which rules, and what each concept actually is.
 
@@ -54,7 +48,7 @@ Then detail each aggregate — structure, behaviour, invariants, and integration
 
 **Then name the candidate contexts — a boundary comes from vocabulary and meaning that genuinely differs.** You cross a context boundary when you reach people or systems that call things by different names: another department with its own working vocabulary, or a vendor-managed or different team's system with its own model and terminology that are simply not yours to change. The boundary protects you from silently merging two vocabularies, in the language and in the code.
 
-**Then name the business concepts, and group which ones change together.** Each group is an **aggregate**. For each one, identify its anchor concept: the **root** (eg a `Customer` root holding `Demographics`, `Address`, and `NetWorth`). The root is the controlled access point for reading and changing that group's business state, so every change lands consistently and completely across the concepts that change together. `Customer`, `Subscription`, and `AvailablePlan` move as one: entitlements must match the plan at every instant, so a feature cannot be withdrawn while subscribers still hold it.
+**For each context, list business concepts, and group which ones change together.** Each group is an **aggregate**. For each one, identify its anchor concept: the **root** (eg a `Customer` root holding `Demographics`, `Address`, and `NetWorth`). The root is the controlled access point for reading and changing that group's business state, so every change lands consistently and completely across the concepts that change together. `Customer`, `Subscription`, and `AvailablePlan` move as one: entitlements must match the plan at every instant, so a feature cannot be withdrawn while subscribers still hold it.
 
 **Then determine how concepts shared across aggregates and bounded contexts are synchronized.** Where the same real thing appears on both sides, decide what triggers the update and what each side holds. `ProductPlan` is separate from `AvailablePlan` — the inventory spans past, present, and future plans, and only on reaching `active` does one publish across, where it is kept as a copy. Left unnamed, the two drift with no agreed moment at which they should match. Most of the modelling value at this fidelity lives here — in the aggregates, the concepts they hold, and how those concepts synchronize across the map.
 
@@ -100,40 +94,27 @@ Key rules: `one-meaning-per-context` — a term's meaning is only valid inside t
 
 ### Guidance
 
-**Work through one bounded context and one aggregate at a time.** Honor the boundaries already drawn at **bounded_context** unless the source or the user changes them. Call clean_engineering at **model** and use its object-oriented analysis to deepen the aggregate in place: begin at the root, work inward through the objects it governs, then work outward through its dependencies. A loose list of stereotypes does not show why an object belongs in this aggregate or how the aggregate stays valid.
+**Work through one bounded context and one aggregate at a time.** Call clean_engineering at **model** fidelity and use its object-oriented analysis to deepen the Bounded Contexts and aggregate inside them: begin at the root, work inward through the objects it governs, then work outward through its dependencies. Refine your object oriented analysis by implementing each concept theough one or more of the DDD **building blocks** mentioned below.
 
-**Validate the Aggregate Root first.** The root is both an **Entity** and the only entry point for changing the aggregate. State what gives it identity, where that identity is valid, and why it remains the same entity when its values change. If the only answer is equality of all its fields, it may be a Value Object rather than an Entity; if callers must enter through several objects, the proposed aggregate boundary is incomplete. Name the business invariants the root keeps true across its members. The members are the objects participating in an invariant; the invariant is the condition the root must preserve whenever any of them changes.
+The building blocks look technical, but only the business can answer them. Fully defining each aggregate is how you flesh out the solution's seams from a *business* lens — boundaries that follow where the business actually changes, not where the technology happened to split.
 
-**Walk inward through every member and classify it by identity, ownership, and lifecycle.** Use clean_engineering's class model to name its properties, operations, relationships, and cardinality, then apply the DDD stereotype:
+**Start with the Aggregate Root.** allow access to the aggregate by identifying it's **root**, do not allow other members to be accessed directly- a single entry point based on business thinking avoids a fragmented calls surface that is too fine-grained or too coarse. 
 
-| Stereotype | Ask |
-|---|---|
-| **Entity** | Does this object keep the same identity while its values change, and how is that identity defined? |
-| **Value Object** | Is it defined only by its values, immutable, and replaceable by an equal value? |
-| **Aggregate Root** | Is it an Entity and the only gateway that can keep this aggregate's invariants true? |
-| **Repository** | Is this Aggregate Root found, added, saved, and retired as an independent collection? |
-| **Factory** | Is valid creation too complex for the root's constructor or named creation operation? |
-| **Service** | Is this domain operation genuinely homeless because no one Entity or Value Object owns the state it needs? |
-| **Domain Event** | Did a domain fact occur that a named consumer outside this aggregate needs to know? |
-| **Specification** | Is this a named rule reused to select, validate, or guide the construction of domain objects? |
+**Give every Aggregate Root a Repository** — implement it as the collection seam for reaching a particular root; define search, access, and update menchanisms that match how the business gets at whole aggregates. This allow you to you reason about transactional proererties from the perspective of the business not technical jargon.
 
-Choose the relationship at the same time. Use composition when the member belongs to the root's lifecycle and has no identity outside it; use association when the other object remains independent. A `Customer` can hold an `Address` Value Object and replace it when the customer moves. The `Address` type is reusable anywhere an address is needed, but each owner holds a value rather than sharing mutable identity. If an address must itself be tracked, shared, and updated independently, it is an Entity reached by association and may belong to another aggregate.
+Determine which concepts are an **Entity** (the root at a minumum) — for each; Define how the the business keeps its identity distinct even as its values change. eg A customer can change their name, sex, or address. A ported number is still the same line. A subscription with an added family member is still the same subscription. - tells you how to maintain consistency and distinctness, what to search, update, replace and retire.
 
-**Put behavior on the object that owns the state and let the root protect the whole aggregate.** Selection, porting, and checkout live on the object that can perform them while preserving its own invariants. Use `Cart.checkout`, not `CheckoutService.placeOrder`; use `Customer.signIn`, not `AuthenticationService.fillEmail`. When two types share identity over time, such as Prospect and Subscriber both being a Customer, model a base type and generalisation rather than duplicating the same entity.
+Define which concepts are instead **Value Objects** — primitives whose whole meaning comes from their values. Do not waste cycles giving identity and mutable state to concepts that do not need it; you bloat the solution and make change harder for no reason.  Instead implement Value Objects so they are shareable, immutable, and cheap. eg A chosen color in a painting system, the delivery address on an order, the product line on a shopping-cart. You will greatly simplify implementation.
 
-**Add a Repository only for an Aggregate Root with an independent collection lifecycle.** Ask how the application finds it by identity or business criteria, adds a newly created root, saves changes, and removes or retires it. Child Entities and Value Objects are persisted through their root rather than receiving repositories of their own. Creation belongs on the root or a Factory; the Repository stores and reconstitutes what was created. A cart reached only through its customer does not need a `CartRepository`.
+**Add a Factory** when creating a valid object is too much for a simple constructor — complex business rules, work that crosses aggregates, an intricate workflow, or a choice among several subtypes behind one interface. This keeps all of that creation logic in one obvious place instead of leaving every caller to figure it out for themselves.
 
-**Add a Factory only when construction is genuinely complex.** Prefer a constructor or named operation on the Aggregate Root for ordinary creation. A Factory earns its place when valid creation chooses subtypes, applies several rules, or needs information obtained through other aggregates' public operations. It may coordinate those inputs, but the object it returns still belongs to one aggregate; creation must not erase the boundaries already drawn.
+**Use a Domain Service** when the business operation belongs to no single object — eg transferring funds from one bank account to another: neither account owns the transfer; debiting one and crediting the other is one piece of work that spans both.
 
-**Use a Domain Service only for a domain operation with no natural owner.** First test every Entity and Value Object involved: if one owns the state needed to perform the operation, put the operation there. A Domain Service may coordinate behavior spanning independent domain objects, but it is not an application `FooService`, an SOA endpoint, or a place to collect verbs. Services with no domain meaning separate behavior from state and leave the aggregate unable to protect its own rules.
+As you define nore and more aggregates and bounded contests, **decide synchronization for every cross agg/bc dependency .** Record which side owns the source fact, what triggers synchronization, what the receiving side copies or derives, how terms are translated, and critically how often.. Use an immediate event when the consumer must react to a fact as it happens; use a scheduled refresh, such as weekly, when that delay is acceptable; use an on-demand query when no local copy is needed. A dependency with no timing and translation decision leaves two valid models with no agreed way to remain consistent.
 
-**Define Domain Events from facts that named consumers need, not from every state change.** Name the fact in past tense, the Aggregate Root that publishes it, the exact condition that triggers it, each consumer, and the smallest domain payload those consumers require. Inventory can publish `InventoryBecameUnavailable` without knowing anything about Shopping Cart. Shopping Cart subscribes because it owns a local availability view and ignores inventory events that do not affect that view. This keeps both aggregates independent: Inventory owns stock calculations; Shopping Cart owns how availability affects a cart.
-
-**Decide synchronization wherever an object model crosses an aggregate or bounded context.** Record which side owns the source fact, what the receiving side copies or derives, how terms are translated, what triggers synchronization, and how stale the receiving view may be. Use an immediate event when the consumer must react to a fact as it happens; use a scheduled refresh, such as weekly, when that delay is acceptable; use an on-demand query when no local copy is needed. A dependency with no timing and translation decision leaves two valid models with no agreed way to remain consistent.
+**Define Domain Events** when building your own system from scratch take advantage of Domain Events primarily for crosss agg/bc synchronization. Events are changes in business state that other parts of your domain need to react to — name them in past tense, define on the publisher, note onsumption on the consuer. define what parts of the aggregates(s) cross the boundary. This inverts the dependency of RPC-style integration: the consumer decides what it needs from the event rather than the producer needing to know what the subscriber wants. Each aggregate is then free to change internally as long as the events it publishes stay the same.
 
 **Use a Specification for a named rule that must mean the same thing in several operations.** A `PreferredCustomerSpecification` can define what makes a Customer preferred, support a query for preferred customers, validate an existing customer, and guide a Factory creating one. Keep the predicate in the Specification and let the Entity or Factory perform the state change; otherwise the same definition is copied into queries, validation, and creation and eventually disagrees with itself.
-
-**Keep design intent here.** Name domain objects, operations, invariants, relationships, collection seams, events, synchronization decisions, and translations. Database tables, message brokers, framework annotations, and REST endpoints belong at **tactics**, after the domain decisions they implement are visible.
 
 ### Rules
 
@@ -161,15 +142,19 @@ Choose the relationship at the same time. Use composition when the member belong
 
 **Default format:** Python
 
-**Goal:** Implement the domain and the building-block seams (repositories, events, factories, services) against a chosen architecture — preserving every name and boundary from upstream.
+**Goal:** Decide one implementation pattern for each building block the model uses, then implement the domain against it — preserving every name and boundary from upstream.
 
 **Produce:** Implementation under the project layout; call clean_engineering at **code**.
 
 ### Guidance
 
-**Preserve names and boundaries from the map and model.** Tactics is where repositories persist, events publish, and factories run — not where you rename concepts to match a framework tutorial.
+**Read the project's architecture before deciding anything.** Check project context (`.context/`, ADRs, stack). If none exists, ask. If nothing is available, default to a Node-shaped app with JSON file persistence (package TBD).
 
-**Ask for architecture before wiring adapters.** Read project context (`.context/`, ADRs, stack). If none exists, ask. If nothing is available, default to a Node-shaped app with JSON file persistence (package TBD).
+**Decide one implementation pattern per building block, then apply it everywhere that block appears.** Work through the blocks the model actually uses — not every solution uses all of them — and settle for each: what technology backs it, how you extend or wrap that technology, and how it is tested. With the pattern fixed, going from model to implementation is a mechanical translation — the model says `<<Repository>>` and the pattern says exactly what that becomes. Without it, every instance is a fresh design problem invented from scratch, and nothing about the model tells you what the code should look like.
+
+**Settle the architectural granularity in the same pass.** Decide what a bounded context is at runtime — are we using container technology and if So what kindand how do we deploy them, or a module inside a larger one — and what an aggregate and its repository are inside it: plain in-process objects, or their own service behind its own database. eg a repository backed by Mongo and micro service calls, the choice clarifies what every caller pays and what every test has to stand up. Make it deliberately, before AI settles it by accident.
+
+**Preserve names and boundaries from the map and model.** Tactics is where repositories persist, events publish, and factories run — not where you rename concepts to match a framework tutorial.
 
 **Keep the domain free of UI and transport.** Persistence and messaging sit behind ports; the domain types do not import screens or HTTP clients.
 
@@ -177,6 +162,8 @@ Choose the relationship at the same time. Use composition when the member belong
 
 ### Rules
 
+- **`one-pattern-per-building-block`** — Each building block in play gets one named implementation pattern — technology, extension mechanism, test approach — used by every instance of that block. Divergent implementations of the same block make the solution unreadable and untestable as a whole.
+- **`architectural-granularity-decided`** — State what a bounded context, an aggregate, and a repository are at runtime (in-process module, container, service with its own store). Left undecided, the first adapter written silently sets it for everything after.
 - **`preserve-upstream-names`** — Public API names match the building_blocks model. Renaming here breaks traceability back to the map and the stories.
 - **`load-with-identity-in-hand`** — A live `load` takes the identity already in hand. Do not assume ambient session state. Reach owned aggregates through their owner.
 - **`ports-behind-adapters`** — Persistence, messaging, and external systems integrate through ports — not direct imports from the domain core.
