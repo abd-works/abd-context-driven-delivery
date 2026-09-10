@@ -1,0 +1,28 @@
+
+==============================================================================
+2026-09-10T03:10:00Z  afterAgentResponse  conv=0e0e3022  gen=9c7247ff  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: It’s a lookup table for GitHub ticket **themes**.
+
+When you create or update a ticket, `/tickets` reads `.context/workflow-packages.yaml` and matches the work to a package. If the issue body mentions `utilities/mcp_server` (or “MCP Invocation Layer”), it stamps the ticket with `theme:mcp-invocation-layer` so the board groups that work.
+
+Right now it has one row:
+
+| location | layer | theme |
+|---|---|---|
+... [13 lines, 814 chars total]
+
+==============================================================================
+2026-09-10T03:11:45Z  afterAgentResponse  conv=0e0e3022  gen=9533bb61  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: You’re right that **location on the ticket is the useful part**. The layer name is not a second source of truth.
+
+**What actually reads the file**
+
+Only `WorkTicket.infer_theme` in `utilities/workflow/work_ticket.py`. Ticket create uses it when nobody passed an explicit theme:
+
+- scan title + body
+- if the text contains `utilities/mcp_server` → label `mcp-invocation-layer`
+... [18 lines, 1268 chars total]

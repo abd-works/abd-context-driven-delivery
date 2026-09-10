@@ -1,0 +1,8 @@
+# Harness deploy
+
+- **`Skill.relative_path()`** must include `self.folder` when set — e.g. `skills/actions/grill/SKILL.md`, `skills/context_tools/stories/SKILL.md`. Flat `skills/{name}/` is only when `folder` is empty (harness prompts, formats). Cursor and Kilo use nested folders; do not flatten all skills to the skills root.
+- **`write_deploy(mcp=True)`** emits `Use MCP tool: \`{slug}.{member}(...)\`` tails instead of YAML/`tools.ps1` blocks. Thread `transport` through every body `from_source` and every `_emit` payload, including format prompts.
+- **Format skills** have no fixed toolset. In MCP mode, tell the agent to call the in-scope tool's `generate` MCP tool with the format in arguments — do not render a placeholder toolset slug like `the in-scope context tool.generate`.
+- **`_write_mcp_json`** runs for Cursor when `mcp=True`. Walk `context_tools/`, `utilities/`, and `primitives/` (examples skipped). Only list toolsets the MCP host can construct with no arguments — skip classes with required `__init__` params such as `CliJobTemplate`, `Supervisor`, and `Harness`. Verify each ref with `_ToolsetLoader.load(ref)()` before writing it to `--toolsets`.
+- On Windows, readonly `.cursor/skills/` folders block `shutil.rmtree` during deploy. Clear attributes before `write_deploy` if drop steps fail with `PermissionError`.
+- **Walk header inference** must only register a manifest header class when that class is defined in the same file. A stray `# @toolset-manifest ... Bdd` on a utility module otherwise collides with `context_tools.bdd` and `_drop_source_slug` deletes the real skill folder.
