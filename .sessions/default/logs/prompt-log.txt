@@ -26,3 +26,129 @@ Only `WorkTicket.infer_theme` in `utilities/workflow/work_ticket.py`. Ticket cre
 - scan title + body
 - if the text contains `utilities/mcp_server` → label `mcp-invocation-layer`
 ... [18 lines, 1268 chars total]
+
+==============================================================================
+2026-09-10T12:16:23Z  afterAgentResponse  conv=f522502a  gen=70917119  model=gemini-2.5-flash
+------------------------------------------------------------------------------
+
+text: It seems there was an issue finding the `handoff_session` tool. I'll check the available tools in the `user-cdd` namespace to confirm the correct tool name and its arguments.
+
+==============================================================================
+2026-09-10T12:18:18Z  afterAgentResponse  conv=f522502a  gen=d725abb6  model=gemini-2.5-flash
+------------------------------------------------------------------------------
+
+text: I have created a handoff document detailing the necessary corrections to the Cart/Customer relationship within the domain model. The document is located at `C:\dev\paradise-mobile\pml-domainmodel\stories\onboard-a-customer\create-customer\.context\handoffs\handoff-2026-09-10-correcting-cart-customer-relationship-design-flaws-and-aligning-with-domain-model-guidance.md` and focuses on ensuring the Cart's constructor and properties align with the domain model's guidance.
+
+==============================================================================
+2026-09-10T12:30:18Z  afterAgentResponse  conv=dff22550  gen=49739c82  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+text: I've rewritten the handoff document at `stories/.context/handoff-latest.md`. It now captures:
+
+- **Where we are**: Deep-dive loop step 1/2 on `story('Validate Cognito User')` in `create_customer_story.spec.ts`, within the `Create Customer` epic of `story-scenarios.md`.
+- **The process**: the 5-step deep-dive loop from `.context/modeling-strategy.md` (transform â†’ review â†’ run â†’ challenge â†’ render), tying together `/clean-engineering-model`, `/stories-scenarios`, and `/render code`.
+- **Key artifacts**: the epic order in the working scenarios file, the domain model sections in scope, eve
+... [8 lines, 1280 chars total]
+
+==============================================================================
+2026-09-10T12:30:55Z  afterAgentResponse  conv=dff22550  gen=0460fca9  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+text: The bulk is from two files that are loaded on every turn because they sit in `always_applied_workspace_rules`:
+
+- `pml-vouchera/apps/web/.agents/skills/vercel-react-best-practices/AGENTS.md` â€” the full Vercel React best-practices doc, 40+ sections, thousands of words.
+- `pml-vouchera/apps/api/.agents/skills/nestjs-best-practices/AGENTS.md` â€” the full NestJS best-practices doc, same scale.
+
+Neither of those is relevant to what you're doing in `pml-domainmodel` right now. They're loaded because Cursor picks up every `AGENTS.md` across all open workspaces unconditionally.
+
+**Where the rest co
+... [17 lines, 1690 chars total]
+
+==============================================================================
+2026-09-10T12:34:57Z  afterAgentResponse  conv=dff22550  gen=7150a2e8  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+text: All done. Summary of what was removed:
+
+| Repo | Notable content deleted |
+|---|---|
+| `abd-context-driven-delivery` | 435 KB of skills, rules, agents |
+| `pml-vouchera` | 165 KB nestjs-best-practices AGENTS.md + 82 KB react AGENTS.md + rules |
+| `pml-my` | agents, skills, rules |
+| `pml-midtier` | whatever was there |
+... [13 lines, 555 chars total]
+
+==============================================================================
+2026-09-10T12:36:18Z  afterAgentResponse  conv=dff22550  gen=7669ce40  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+text: Down from 78 lines to 68, but more importantly the â˜… rules are now just names â€” no wall of text. The non-â˜… rules kept a single tight clause each.
+
+==============================================================================
+2026-09-10T12:38:19Z  afterAgentResponse  conv=dff22550  gen=18db03a2  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+text: Done. Each â˜… rule is now one sentence plus a tight Bad/Good pair â€” no excess prose.
+
+==============================================================================
+2026-09-10T12:38:52Z  afterAgentResponse  conv=dff22550  gen=c7dabf48  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+text: 54 lines â†’ 53, but much tighter. â˜… rules are one sentence + Bad/Good; non-â˜… are names only.
+
+==============================================================================
+2026-09-10T12:45:20Z  afterAgentResponse  conv=b6418d15  gen=a9a9533a  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+text: All 16 pass. Here's what was done:
+
+1. **Import** â€” replaced `customerGateway` (stale, nonexistent) with `midtierCustomerService`
+2. **`Validate Cognito User`** â€” both scenarios now call `midtierCustomerService.validate(token)`. The happy path expects `validAccountCredentials.email` back (validate returns the email extracted from the token, not a customer id)
+3. **`Submit Create Mavenir Customer`** â€” both scenarios call `midtierCustomerService.create(token)`
+4. **`Submit Create Customer Request to Mid-Tier`** spies â€” all four `vi.spyOn(customerGateway, ...)` updated to `vi.spyOn(midtie
+... [7 lines, 783 chars total]
+
+==============================================================================
+2026-09-10T12:51:06Z  afterAgentResponse  conv=b6418d15  gen=d7fc57f6  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+text: Handoff updated. `CustomerMidTierRepository extends CustomerRepository`, carries validation and Mavenir transformation internally, wires to the real `portalGateway` stub, and replaces the `vi.spyOn` approach. `MidtierCustomerService` is gone.
+
+==============================================================================
+2026-09-10T12:51:33Z  afterAgentResponse  conv=b6418d15  gen=dafa10b3  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+text: Got it. Every aggregate that touches mid-tier gets its own `*MidTierRepository` â€” `CartMidTierRepository`, `NumberMidTierRepository`, and so on as they come into scope. No service layers, no spies on internals, one consistent pattern across the whole domain.
+
+==============================================================================
+2026-09-10T12:56:40Z  afterAgentResponse  conv=b6418d15  gen=861b7eb7  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+==============================================================================
+2026-09-10T13:02:28Z  afterAgentResponse  conv=b6418d15  gen=e5108c00  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+text: You're right, that was my suggestion â€” you asked where the protected operations are mapped and whether that's captured in the domain.
+
+The answer from the code: they're in `mavenir.routes.ts` (protected) vs `mavenir.routes.unprotected.ts` (unprotected), wired via `Auth.getMiddleware()` in `app.ts`. The domain model has no record of this.
+
+Where do you want the list captured â€” `story-scenarios.md` for the "Validate Cognito User" story, or a `.context/` file in `pml-domainmodel`?
+
+==============================================================================
+2026-09-10T13:03:24Z  afterAgentResponse  conv=b6418d15  gen=84ac8735  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+text: There's no list or config â€” it's structural. Two separate Express routers: everything in `mavenir.routes.ts` is protected (token required), everything in `mavenir.routes.unprotected.ts` is not. The Auth middleware sits in front of the whole protected router in `app.ts`.
+
+Protected operations (the full list):
+
+**Customer:** create, load, update, order, order/psim-delivered, change-plan, cart create, cart patch, voucher, voucher delete, portability, portability resend, portability verify, payment iframe, payment status, payment failed, billing create, invoice PDF, payment
+
+**Inventory:** msisd
+... [21 lines, 1496 chars total]
+
+==============================================================================
+2026-09-10T13:10:50Z  afterAgentResponse  conv=b6418d15  gen=df414c5c  model=claude-4.6-sonnet-medium-thinking
+------------------------------------------------------------------------------
+
+text: 17/17 passing.

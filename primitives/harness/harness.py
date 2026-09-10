@@ -1099,11 +1099,16 @@ class Harness:
             startable.append(ref)
         return startable
 
-    def _write_mcp_json(self, toolset_refs: list[str], walk_entries: list[dict]) -> None:
+    def _write_mcp_json(
+        self,
+        toolset_refs: list[str],
+        walk_entries: list[dict],
+        cursor_root: Path,
+    ) -> None:
         unique_refs = self._mcp_startable_toolset_refs(toolset_refs, walk_entries)
         if not unique_refs:
             return
-        path = self.repo_root / ".cursor" / "mcp.json"
+        path = cursor_root / "mcp.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "mcpServers": {
@@ -1115,7 +1120,7 @@ class Harness:
                         "--toolsets",
                         ",".join(unique_refs),
                     ],
-                    "cwd": str(self.repo_root.resolve()),
+                "cwd": str(cursor_root.parent.resolve()),
                     "env": {"PYTHONPATH": self._mcp_pythonpath()},
                 }
             }
@@ -1426,7 +1431,7 @@ class Harness:
         self._remove_unprefixed_fidelity_files(roots)
         self._save_ide(str(roots[0]))
         if self._mcp and self.type == "Cursor":
-            self._write_mcp_json(toolset_refs, walk_entries)
+            self._write_mcp_json(toolset_refs, walk_entries, roots[0])
         if self.type == "Cursor" and not self._no_manifest:
             self._deploy_cursor_hooks(wanted)
         return json.dumps(
