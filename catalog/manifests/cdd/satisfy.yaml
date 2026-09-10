@@ -1,7 +1,10 @@
-toolset: context_tools.cdd.cdd:Cdd
-context:
-  fidelity: <fidelity>
-  format: null
-  path: null
-  session: null
+toolset: satisfy.satisfy:Satisfy
 action: satisfy
+arguments:
+  tools:
+  - toolset: context_tools.cdd.cdd:Cdd
+    context:
+      fidelity: <fidelity>
+      format: null
+      path: null
+      session: null

@@ -1,8 +1,11 @@
-toolset: context_tools.stories.stories:Stories
-context:
-  fidelity: <fidelity>
-  format: null
-  path: null
-  session: null
-  workspace: null
+toolset: satisfy.satisfy:Satisfy
 action: satisfy
+arguments:
+  tools:
+  - toolset: context_tools.stories.stories:Stories
+    context:
+      fidelity: <fidelity>
+      format: null
+      path: null
+      session: null
+      workspace: null

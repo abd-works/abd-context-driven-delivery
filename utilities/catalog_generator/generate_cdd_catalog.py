@@ -25,18 +25,7 @@ for _cat in ("context_tools", "primitives", "utilities"):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from catalog_generator.catalog_generator import (
-    Catalog,
-    CatalogAction,
-    CatalogContextTool,
-    CatalogFidelity,
-    CatalogTool,
-    CatalogUtility,
-    load_registry,
-    resolve_lifecycle_actions,
-    resolve_repo_remote,
-)
-from context_tools.base.base_context_tool import BaseContextTool
+from catalog_generator.catalog_generator import Catalog, resolve_repo_remote
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -51,22 +40,9 @@ def main(argv: list[str] | None = None) -> None:
     ref = args.ref or default_ref
     out_root = _REPO_ROOT / args.out
 
-    context_tool_entries, utility_entries = load_registry()
-    lifecycle_actions = resolve_lifecycle_actions()
-
-    catalog_tool = CatalogTool(repo_url, ref)
-    action_page_hrefs = {r.name: f"actions/{r.name}.html" for r in lifecycle_actions}
-    catalog_action = CatalogAction(repo_url, ref, catalog_tool, action_page_hrefs)
-    catalog_fidelity = CatalogFidelity(repo_url, ref, catalog_action, lifecycle_actions)
-    catalog_context_tool = CatalogContextTool(repo_url, ref, catalog_fidelity)
-    catalog_utility = CatalogUtility(repo_url, ref, catalog_tool, catalog_action)
-
-    catalog = Catalog(
-        repo_url, ref, str(out_root), catalog_context_tool, catalog_action, catalog_utility,
-    )
-    action_owner = BaseContextTool()
-    catalog.generate_catalog(context_tool_entries, utility_entries, lifecycle_actions, action_owner)
-    print(f"Catalog regenerated into {out_root} using {repo_url}@{ref}")
+    catalog = Catalog(repo_url=repo_url, ref=ref, out_root=str(out_root))
+    message = catalog.generate_catalog()
+    print(message)
 
 
 if __name__ == "__main__":

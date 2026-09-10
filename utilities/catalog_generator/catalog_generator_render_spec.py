@@ -26,10 +26,10 @@ from catalog_generator.catalog_generator import (
     CatalogTool,
     CatalogUtility,
     load_registry,
+    resolve_lifecycle_action_owner,
     resolve_lifecycle_actions,
     scrape_fidelities,
 )
-from context_tools.base.base_context_tool import BaseContextTool
 from context_tools.ddd.ddd import Ddd
 from diagnose.diagnose import Diagnose
 
@@ -41,7 +41,7 @@ with description("Render Action Page With Fixed Sections"):
     with description("given an action's own name, tools-called list, guide, and module overview"):
         with before.all:
             self.resolutions = {r.name: r for r in resolve_lifecycle_actions()}
-            self.owner = BaseContextTool()
+            self.owner = resolve_lifecycle_action_owner()
             catalog_tool = CatalogTool(_REPO_URL, _REF)
             hrefs = {name: f"actions/{name}.html" for name in self.resolutions}
             self.catalog_action = CatalogAction(_REPO_URL, _REF, catalog_tool, hrefs)
@@ -173,8 +173,8 @@ with description("Render Hub Board With Actions And Utilities Rows"):
             self.catalog = Catalog(
                 _REPO_URL, _REF, str(self.tmp), catalog_context_tool, catalog_action, catalog_utility,
             )
-            self.action_owner = BaseContextTool()
-            self.catalog.generate_catalog(
+            self.action_owner = resolve_lifecycle_action_owner()
+            self.catalog._render_catalog(
                 context_tool_entries, utility_entries, lifecycle_actions, self.action_owner,
             )
             self.index_html = (self.tmp / "index.html").read_text(encoding="utf-8")
@@ -251,8 +251,8 @@ with description("Render Flat Grid Pages"):
             self.catalog = Catalog(
                 _REPO_URL, _REF, str(self.tmp), catalog_context_tool, catalog_action, catalog_utility,
             )
-            self.action_owner = BaseContextTool()
-            self.catalog.generate_catalog(
+            self.action_owner = resolve_lifecycle_action_owner()
+            self.catalog._render_catalog(
                 context_tool_entries, utility_entries, lifecycle_actions, self.action_owner,
             )
 

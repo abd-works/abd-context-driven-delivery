@@ -18,78 +18,96 @@ p{color:#9aa0a6;}
 <section>
 <h2>Context-driven delivery</h2>
 <p class="install-source"><a href="../cdd/validate.yaml">cdd/validate.yaml</a></p>
-<pre><code>toolset: context_tools.cdd.cdd:Cdd
-context:
-  fidelity: &lt;fidelity&gt;
-  format: null
-  path: null
-  session: null
+<pre><code>toolset: validate.validate:Validate
 action: validate
+arguments:
+  tools:
+  - toolset: context_tools.cdd.cdd:Cdd
+    context:
+      fidelity: &lt;fidelity&gt;
+      format: null
+      path: null
+      session: null
 </code></pre>
 </section>
 <section>
 <h2>Stories</h2>
 <p class="install-source"><a href="../stories/validate.yaml">stories/validate.yaml</a></p>
-<pre><code>toolset: context_tools.stories.stories:Stories
-context:
-  fidelity: &lt;fidelity&gt;
-  format: null
-  path: null
-  session: null
-  workspace: null
+<pre><code>toolset: validate.validate:Validate
 action: validate
+arguments:
+  tools:
+  - toolset: context_tools.stories.stories:Stories
+    context:
+      fidelity: &lt;fidelity&gt;
+      format: null
+      path: null
+      session: null
+      workspace: null
 </code></pre>
 </section>
 <section>
 <h2>Clean Engineering</h2>
 <p class="install-source"><a href="../clean_engineering/validate.yaml">clean_engineering/validate.yaml</a></p>
-<pre><code>toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
-context:
-  fidelity: &lt;fidelity&gt;
-  format: null
-  path: null
-  session: null
-  workspace: null
+<pre><code>toolset: validate.validate:Validate
 action: validate
+arguments:
+  tools:
+  - toolset: context_tools.clean_engineering.clean_engineering:CleanEngineering
+    context:
+      fidelity: &lt;fidelity&gt;
+      format: null
+      path: null
+      session: null
+      workspace: null
 </code></pre>
 </section>
 <section>
 <h2>User Experience</h2>
 <p class="install-source"><a href="../ux/validate.yaml">ux/validate.yaml</a></p>
-<pre><code>toolset: context_tools.ux.ux:Ux
-context:
-  fidelity: &lt;fidelity&gt;
-  format: null
-  path: null
-  session: null
-  workspace: null
+<pre><code>toolset: validate.validate:Validate
 action: validate
+arguments:
+  tools:
+  - toolset: context_tools.ux.ux:Ux
+    context:
+      fidelity: &lt;fidelity&gt;
+      format: null
+      path: null
+      session: null
+      workspace: null
 </code></pre>
 </section>
 <section>
 <h2>Behavior-Driven Development</h2>
 <p class="install-source"><a href="../bdd/validate.yaml">bdd/validate.yaml</a></p>
-<pre><code>toolset: context_tools.bdd.bdd:Bdd
-context:
-  fidelity: &lt;fidelity&gt;
-  format: null
-  path: null
-  session: null
-  workspace: null
+<pre><code>toolset: validate.validate:Validate
 action: validate
+arguments:
+  tools:
+  - toolset: context_tools.bdd.bdd:Bdd
+    context:
+      fidelity: &lt;fidelity&gt;
+      format: null
+      path: null
+      session: null
+      workspace: null
 </code></pre>
 </section>
 <section>
 <h2>Domain-Driven Design</h2>
 <p class="install-source"><a href="../ddd/validate.yaml">ddd/validate.yaml</a></p>
-<pre><code>toolset: context_tools.ddd.ddd:Ddd
-context:
-  fidelity: &lt;fidelity&gt;
-  format: null
-  path: null
-  session: null
-  workspace: null
+<pre><code>toolset: validate.validate:Validate
 action: validate
+arguments:
+  tools:
+  - toolset: context_tools.ddd.ddd:Ddd
+    context:
+      fidelity: &lt;fidelity&gt;
+      format: null
+      path: null
+      session: null
+      workspace: null
 </code></pre>
 </section>
 </body>

@@ -1387,3 +1387,171 @@ toolset: generate.generate:Generate
 context:
   path: sandbox/car-rentals
 ... [34 lines, 1457 chars total]
+
+==============================================================================
+2026-09-10T02:21:16Z  afterAgentResponse  conv=da07d78b  gen=60297832  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: **Turn complete** on branch `session/replace-yaml-with-mcp-server`.
+
+Two commits landed:
+
+1. **`523ffa1b`** — `stories/generate: Story map and thin slice from courier fleet discovery sketch.`  
+   - Context-Tool: `stories` · Action: `generate` · Utility: `turn` · Subject: `sandbox/car-rentals/md`  
+   - Included sketch/scaffold updates and the broader session worktree changes that were already tracked.
+
+... [12 lines, 771 chars total]
+
+==============================================================================
+2026-09-10T02:23:52Z  afterAgentResponse  conv=da07d78b  gen=80e1e41e  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Three separate things got conflated — the skill text, the Python method name, and what MCP actually exposes.
+
+## What the skill says
+
+The deployed skill says:
+
+```12:12:c:\dev\abd-context-driven-delivery\.cursor\skills\utilities\generate-catalog\SKILL.md
+Use MCP tool: `catalog_generator.generate`
+... [76 lines, 3861 chars total]
+
+==============================================================================
+2026-09-10T02:30:13Z  afterAgentResponse  conv=da07d78b  gen=4191c595  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: Done. Here's what landed:
+
+**`@agent_tool` on `generate_catalog`**
+- `Catalog.generate_catalog` is now `@prompt` + `@agent_tool` with optional `repo_url`, `ref`, and `out_root`
+- MCP exposes it as `catalog.generate_catalog`
+- `Catalog()` works with defaults (git origin + HEAD, `out_root=catalog`)
+
+**Catalog generation verified**
+... [23 lines, 1207 chars total]
+
+==============================================================================
+2026-09-10T02:35:06Z  afterAgentResponse  conv=32e74762  gen=8053e92d  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: The `cdd` server is configured. It is not attached to this chat.
+
+`.cursor/mcp.json` defines a project server named `cdd`. What this session can actually call is `user-chrome-devtools`, `user-desktop-commander`, and `plugin-miro-miro`. There is no `cdd` namespace in the tool catalog, and no `cdd` folder under the project MCP cache.
+
+That’s why iterate wasn’t callable here. MCP in general is loaded; this workspace’s `cdd` server never made it into the session.
+
+Reload/enable that project MCP in Cursor settings, then I can call `iterate.iterate` for real.
+
+==============================================================================
+2026-09-10T02:36:25Z  afterAgentResponse  conv=32e74762  gen=1e55b344  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: Project MCP stays off until you turn it on. Cursor does that on purpose so a checked-in `.cursor/mcp.json` cannot start a process just because you opened the folder.
+
+**This workspace:** after you clicked Enable, that toggle is stored for this folder. New chats should get `cdd` without clicking again. This chat started before that, so it still will not see the tools.
+
+**Always on, no Enable click:** put the same `cdd` entry in your user config, `C:\Users\thoma\.cursor\mcp.json`. That is why chrome-devtools and desktop-commander already show up here. User-scope servers start without the project
+... [9 lines, 1056 chars total]
+
+==============================================================================
+2026-09-10T02:37:28Z  afterAgentResponse  conv=32e74762  gen=f1c7a84c  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: `cdd` is now in `C:\Users\thoma\.cursor\mcp.json` next to chrome-devtools and desktop-commander. Project `.cursor/mcp.json` is unchanged.
+
+It will start in every Cursor window, using this repo’s venv. Open a new chat for the tools to show up here.
+
+==============================================================================
+2026-09-10T02:38:09Z  afterAgentResponse  conv=32e74762  gen=2f4c353f  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: Removed `cdd` from your user `mcp.json`. It already lives in the repo at `.cursor/mcp.json`; I did not add a second copy.
+
+Project MCP still needs Enable once per machine. Cursor will not auto-start a repo server without that.
+
+==============================================================================
+2026-09-10T02:39:52Z  afterAgentResponse  conv=32e74762  gen=b5466b30  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: Project `cdd` is connected — `cdd.ping` returned `pong`.
+
+`iterate` is not in the tool list. This chat only sees the discovery demo set: `cdd.ping`, `echo_*`, `hosting_demo_*`, and a few `bdd_*` tools. That is not the `--toolsets` list in `.cursor/mcp.json`.
+
+Cursor is still running an older `cdd` process. Disable it and enable it again so it respawns from the current file.
+
+There is also a leftover **user-cdd** in error from the user-config add. Remove that stale user server in Customize — it is not in `~\.cursor\mcp.json` anymore.
+
+==============================================================================
+2026-09-10T02:42:34Z  afterAgentResponse  conv=32e74762  gen=f1812fee  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: The crash was `CliJobTemplate.__init__() missing 1 required positional argument: 'name'`. Copying that dump into user MCP, then telling you to re-enable it, started a host that cannot construct `CliJobTemplate`, `Supervisor`, or `Harness`.
+
+User `~\.cursor\mcp.json` has no `cdd` entry. Repo `.cursor/mcp.json` now lists only default-constructible toolsets. That process starts and registers `iterate.iterate`.
+
+Disable the leftover **user-cdd** in Customize if it is still listed. Then toggle the project `cdd` server once so Cursor respawns from the fixed file.
+
+==============================================================================
+2026-09-10T02:44:22Z  afterAgentResponse  conv=32e74762  gen=472115e4  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `.cursor/mcp.json` is gone — it was never in git. `harness.py` is restored to the last commit.
+
+Your user `mcp.json` still has no `cdd` entry. If Cursor still shows a broken `cdd` server, disable/remove it in Customize.
+
+==============================================================================
+2026-09-10T02:48:37Z  afterAgentResponse  conv=32e74762  gen=ca51bb3f  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: That warning was about the **first** deploy, before the harness fix. **Current state on disk is already fixed.**
+
+Your `.cursor/mcp.json` right now:
+- **41** toolsets on `--toolsets`
+- **No** `CliJobTemplate`, `Harness`, or `Supervisor`
+- Host starts cleanly with **185** tools (including `iterate.iterate`)
+
+The break happened when deploy dumped every walked class into `--toolsets`, including ones that need constructor args (`CliJobTemplate` needs `name`, `Harness` needs `type`). Harness now skips those before writing `mcp.json`.
+... [12 lines, 822 chars total]
+
+==============================================================================
+2026-09-10T02:49:04Z  afterAgentResponse  conv=32e74762  gen=befee73b  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `cdd.ping` → **pong**
+
+The project `cdd` server starts from `.cursor/mcp.json` and responds. This chat session does not have that MCP namespace attached, so I called it through the same stdio path Cursor uses.
+
+Toggle the project `cdd` server off and on in Customize if the IDE still shows it as errored.
+
+==============================================================================
+2026-09-10T02:49:59Z  afterAgentResponse  conv=32e74762  gen=0f3f8b28  model=composer-2.5
+------------------------------------------------------------------------------
+
+text: `cdd` is connected in this chat — `iterate.iterate` and the rest of the toolset are available.
+
+Want to pick up `/clean-engineering-model /iterate` on `courier-fleet-sketch.md`?
+
+==============================================================================
+2026-09-10T02:52:25Z  afterAgentResponse  conv=0e0e3022  gen=7ea28ec3  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: `iterate.iterate` failed because `tools` was the string `"list"`, not a toolset path.
+
+The skill writes `iterate.iterate(tools: 'list')` as a type hint. That was passed as the literal `"list"`. The MCP schema also types `tools` as a string (anything that is not `int`/`float`/`bool` becomes `"string"`), so the host never offered an array.
+
+Python then treated `"list"` as a sequence of characters. The first character `'l'` went into the toolset loader, which requires `module:Class`, and it raised:
+
+`expected <module>:<Class>, got 'l'`
+
+... [11 lines, 669 chars total]
+
+==============================================================================
+2026-09-10T02:54:01Z  afterAgentResponse  conv=0e0e3022  gen=79f4f140  model=cursor-grok-4.6-high
+------------------------------------------------------------------------------
+
+text: **Both** — they stacked. The skill hint made the bad call; the server binding made that the only legal call.
+
+**Server binding is the real contract bug.** `iterate(tools: list)` needs a JSON array of `module:Class` strings. `mcp_host` still maps anything that is not `int`/`float`/`bool` to JSON Schema `"string"`. You already fixed that for `int` after `step` failed the same way. `list` never got the same treatment. The schema Cursor showed me was `tools: string`, so passing `"list"` was schema-valid and then Python walked the characters (`'l'` → `expected <module>:<Class>`).
+
+There is already 
+... [18 lines, 1454 chars total]

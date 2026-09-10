@@ -14,7 +14,7 @@ import shutil
 from pathlib import Path
 
 from primitives.actions.action import agent_instructions, agentic_toolset
-from tools.tool import agent_tool
+from tools.tool import _ToolsetLoader, agent_tool
 from tools.toolset_header import manifest_commands
 
 from harness.agent import Agent
@@ -39,7 +39,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _IMPLEMENTED = frozenset({"Cursor", "VS Code", "Kilo"})
 _SKIP_DIRS = frozenset({"__pycache__", "examples"})
 _COMPOSER_CLASSES = frozenset({"BaseContextTool", "LifecycleAction"})
-_WALK_TREES = ("context_tools", "utilities")
+_WALK_TREES = ("context_tools", "utilities", "primitives")
 _FORMATS = (
     "markdown",
     "code",
@@ -1069,17 +1069,37 @@ class Harness:
         )
         return os.pathsep.join(str(path.resolve()) for path in roots)
 
-    def _write_mcp_json(self, toolset_refs: list[str]) -> None:
-        unique_refs: list[str] = []
+    def _mcp_startable_toolset_refs(
+        self,
+        toolset_refs: list[str],
+        walk_entries: list[dict],
+    ) -> list[str]:
+        """Keep only toolsets the MCP host can construct with no arguments."""
+        ref_meta = {
+            entry["toolset_ref"]: entry
+            for entry in walk_entries
+            if entry.get("toolset_ref")
+        }
+        loader = _ToolsetLoader.instance()
+        startable: list[str] = []
         seen: set[str] = set()
         for ref in toolset_refs:
             if not ref or ref in seen:
                 continue
             seen.add(ref)
-            unique_refs.append(ref)
-        harness_ref = "harness.harness:Harness"
-        if harness_ref not in seen:
-            unique_refs.append(harness_ref)
+            entry = ref_meta.get(ref)
+            if entry:
+                if required_init_params(Path(entry["file_path"]), entry["class_name"]):
+                    continue
+            try:
+                loader.load(ref)()
+            except Exception:
+                continue
+            startable.append(ref)
+        return startable
+
+    def _write_mcp_json(self, toolset_refs: list[str], walk_entries: list[dict]) -> None:
+        unique_refs = self._mcp_startable_toolset_refs(toolset_refs, walk_entries)
         if not unique_refs:
             return
         path = self.repo_root / ".cursor" / "mcp.json"
@@ -1336,8 +1356,9 @@ class Harness:
         wanted = source.strip()
         seen: set[tuple[str, str]] = set()
         names: list[str] = []
+        walk_entries = json.loads(self.walk(name_filter))
         toolset_refs: list[str] = []
-        for entry in json.loads(self.walk(name_filter)):
+        for entry in walk_entries:
             ref = entry.get("toolset_ref")
             if ref:
                 toolset_refs.append(ref)
@@ -1404,7 +1425,7 @@ class Harness:
         self._remove_unprefixed_fidelity_files(roots)
         self._save_ide(str(roots[0]))
         if self._mcp and self.type == "Cursor":
-            self._write_mcp_json(toolset_refs)
+            self._write_mcp_json(toolset_refs, walk_entries)
         if self.type == "Cursor" and not self._no_manifest:
             self._deploy_cursor_hooks(wanted)
         return json.dumps(

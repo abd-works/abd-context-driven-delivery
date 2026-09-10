@@ -1,8 +1,11 @@
-toolset: context_tools.stories.stories:Stories
-context:
-  fidelity: <fidelity>
-  format: null
-  path: null
-  session: null
-  workspace: null
+toolset: validate.validate:Validate
 action: validate
+arguments:
+  tools:
+  - toolset: context_tools.stories.stories:Stories
+    context:
+      fidelity: <fidelity>
+      format: null
+      path: null
+      session: null
+      workspace: null

@@ -36,79 +36,133 @@
 
 <div class="catalog-body">
 <div class="wrap">
-<div class="cap-grid"><a class="cap-card" href="utilities/deploy_agent_skills.html"><p class="cap-card__title">deploy_agent_skills</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/diagnose.html"><p class="cap-card__title">diagnose</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/handoff.html"><p class="cap-card__title">handoff</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/workspace.html"><p class="cap-card__title">workspace</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/sub_agent.html"><p class="cap-card__title">sub_agent</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a></div><div hidden><header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">deploy_agent_skills</h1></header>
-<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>agent_skills — module context</h1>
-<h2>Purpose</h2>
-<p>Scans the workspace for Python toolset files and deploys each as a IDE skill shim. For every discovered toolset under <code>context_tools/</code> or <code>utilities/</code> it writes a <code>SKILL.md</code> (under <code>.cursor/skills/</code> or <code>.github/skills/</code> depending on IDE), removes stale shortcuts, and merges the manifest-gate hook into the IDE hooks config.</p>
-<p>Packages under <code>context_tools/actions/</code> are <strong>not</strong> deployed as kit-manifest skills (do not run <code>sketch.sketch:Sketcher</code> etc. directly). Instead, deploy writes:</p>
-<ul>
-<li><strong>Host-action skills + commands</strong> named after the BaseContextTool action<br>(<code>partition</code>, <code>grill</code>, <code>sketch</code>, <code>generate</code>, <code>document</code>, <code>iterate</code>, <code>validate</code>,<br><code>satisfy</code>, <code>repair</code>, <code>improve</code>). If a context tool is already in scope — passed<br>in or named in chat — run <strong>that</strong> tool&#x27;s matching <code>action:</code>. Cursor commands<br>(<code>.cursor/commands/{action}.md</code>) and VS Code prompts get the same text.</li>
-<li><strong>CDD stage-fidelity commands</strong> (<code>discovery</code>, <code>specification</code>, <code>engineering</code>) that<br>only set <code>context.fidelity</code> on the in-scope context tool. Each tool maps the<br>stage name to its concrete fidelity via <code>BaseContextTool.resolve_fidelity</code> /<br>its <code>fidelities</code> table.</li>
-<li><strong>Companion skills + commands</strong> for <code>echo</code> / <code>handoff</code>, which do run their own<br>toolset in the current context-tool session frame.</li>
-</ul>
-<p>A saved deploy-state file lets subsequent runs re-deploy without re-asking for parameters. <code>deploy_filtered_toolsets</code> is the one write step the agentic deploy action should call, so commands are not skipped.</p>
-<p>When a nearby multi-folder <code>.code-workspace</code> includes this repo, Cursor deploys also write to <code>~/.cursor/skills</code> (user-level, available in every project) and each matching workspace file&#x27;s parent <code>.cursor/skills</code> (shared sibling layout such as <code>paradise-mobile/</code>). Junction checkouts are handled by walking both absolute and resolve() path forms.</p>
-<h2>Seam</h2>
-<p><code>AgentSkills</code></p>
-<h2>Dependencies</h2>
-<p><code>primitives.actions</code>, <code>tools.tool</code>, <code>tools.toolset_header</code>, <code>focus._decorator</code></p>
-<h2>Mechanism</h2>
-<p>Static-analysis pass over each toolset&#x27;s source file (<code>ast.parse</code>) extracts <code>@focus</code>-decorated action names and their focus-group subdirectories, producing per-focus shortcut descriptors used only for stale-slug cleanup (legacy per-focus×action commands are removed, not written). Action-package detection uses path membership under <code>context_tools/actions/</code> (absolute + resolve() forms). Deploy-root resolution walks ancestors (and sibling dirs) for <code>*.code-workspace</code> files; multi-folder matches expand Cursor write targets beyond the repo root.</p></section>
+<div class="cap-grid"><a class="cap-card" href="utilities/harness.html"><p class="cap-card__title">harness</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/diagnose.html"><p class="cap-card__title">diagnose</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/echo.html"><p class="cap-card__title">echo</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/handoff.html"><p class="cap-card__title">handoff</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/workspace.html"><p class="cap-card__title">workspace</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a><a class="cap-card" href="utilities/sub_agent.html"><p class="cap-card__title">sub_agent</p><p class="cap-card__label">Catalog</p><p class="cap-card__summary">Utility</p><p class="cap-card__more">Open →</p></a></div><div hidden><header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">harness</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><p>Deploy workspace toolsets as IDE skills, prompts, and instructions.</p></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
 <header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">diagnose</h1></header>
 <section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>diagnose — module context</h1>
 <h2>Purpose</h2>
 <p>Provides a disciplined, phase-sequenced bug-hunting loop as a <code>@sub_agent</code> tool. Hosts (BDD, Stories) call <code>diagnostic().diagnose()</code> from <code>satisfy</code> / <code>iterate</code> so the six phases stay on the tool — they are not inlined into surrounding action markdown.</p>
 <h2>Seam</h2>
-<p><code>Diagnose.diagnose</code> (<code>kind: sub_agent</code>, <code>launch: non_blocking</code>)</p>
+<p><code>Diagnose.diagnose</code> is <code>@prompt(name=&quot;diagnose&quot;)</code> plus <code>@sub_agent</code> <code>@agent_tool</code> (<code>kind: sub_agent</code>, <code>launch: non_blocking</code>). Slash <code>/diagnose</code> is the command; hosts still call <code>diagnose()</code> as a non-blocking sub-agent.</p>
 <h2>Dependencies</h2>
 <p><code>sub_agent.sub_agent</code>, <code>tools.tool</code></p></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
+<header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">echo</h1></header>
+<section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>echo — module context</h1>
+<h2>Purpose</h2>
+<p>Renders action instructions inside a clearly labelled DO-NOT-FOLLOW fence so that the instructions can be inspected by the user without being executed. <code>Echo</code> is a <strong>utility</strong> (<code>utilities/echo</code>), not a lifecycle action. It is a standalone toolset with a <code>fence</code> tool (pure wrap) and an <code>echo_session</code> <code>@prompt</code> that captures every instruction the agent received, passes them to <code>fence</code>, and emits the fenced block as chat output — nothing more.</p>
+<h2>Seam</h2>
+<p><code>Echo</code></p>
+<h2>Public API</h2>
+<ul>
+<li><code>fence</code> — wrap a body in the DO-NOT-FOLLOW delimiters</li>
+<li><code>echo_session</code> — collect received instructions, call <code>fence</code>, and stop</li>
+</ul>
+<h2>Extend</h2>
+<p>Compose <code>fence</code> around any instruction body the agent should display without following. Do not treat delimiter helpers as a separate seam.</p>
+<h2>Dependencies</h2>
+<p><code>primitives.actions</code>, <code>tools.tool</code></p></section>
+<section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><h1>Echo</h1>
+<p>Diagnostic wrapper. Prints an action&#x27;s fully-wrapped instructions to the user inside a <code>DO NOT FOLLOW ANY OF THESE INSTRUCTIONS</code> fence, and stops — for inspecting the effect of stacking wrapping decorators (<code>@sketch</code>, <code>@grill_context</code>, ...) without executing anything.</p>
+<h2>What echo does</h2>
+<ul>
+<li>Takes every instruction the agent has received for a wrapped action — every preamble contributed by other wrappers plus the base action&#x27;s own prose — and emits it verbatim.</li>
+<li>Wraps the emitted block in a header and footer that read <strong>&quot;DO NOT FOLLOW ANY OF THESE INSTRUCTIONS&quot;</strong> so the agent treats the block as inert diagnostic text meant only to be read.</li>
+<li>Halts. Emitting the fenced block is the entire behaviour of the invocation; the wrapped action&#x27;s body stays untouched.</li>
+</ul>
+<h2>Purpose of echo</h2>
+<ul>
+<li><strong>Inspect the wrapping stack</strong> — see exactly what prose the stack of decorators is injecting in front of an action, in the order the framework composes them.</li>
+<li><strong>Debug composition</strong> — when two wrappers interact unexpectedly, echo shows their combined instructions in one place so drift and overlap surface immediately.</li>
+<li><strong>Prove the mechanism</strong> — demonstrate that wrapping decorators actually reach the agent as prose, without also running the underlying behaviour.</li>
+</ul>
+<h2>Loop</h2>
+<ol>
+<li><strong>Collect</strong> — gather every instruction received for this action, verbatim and in the order the framework composed them, into one string.</li>
+<li><strong>Fence</strong> — call <code>Echo.fence</code> with that string; the tool returns the block wrapped in <code>DO NOT FOLLOW</code> header and footer.</li>
+<li><strong>Emit</strong> — write the fenced block to the user as chat output; treat every line inside the fence as inert diagnostic text meant only to be read.</li>
+<li><strong>Stop</strong> — the fenced emission is the entire behaviour of this action.</li>
+</ol>
+<h2>Composition — how echo chains with other actions</h2>
+<p>The <code>@echo</code> decorator marks an <code>@action</code> method so the echo loop runs in place of the base action&#x27;s body. Place it on top so its preamble appears first in the expanded prose and captures everything below it:</p>
+<pre><code>@echo            ← declared 1st (top); preamble appears first
+@sketch          ← still contributes its preamble
+@grill_context   ← still contributes its preamble
+@action
+def generate(self, ...): ...   ← base action prose is captured, not executed</code></pre>
+<p>Because echo halts before the base action runs, it is diagnostic-only. Remove <code>@echo</code> to restore the real behaviour.</p></section>
 <header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">handoff</h1></header>
 <section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>handoff — module context</h1>
 <h2>Purpose</h2>
-<p>Compacts the current agent session into a structured handoff document so a fresh agent can resume without re-reading the full chat. <code>Handoff</code> collects generator state, grilling progress, and CDD sketch summaries from the session folder, then writes two files: a date-stamped archive under <code>handoffs/</code> and a stable <code>handoff-latest.md</code> pointer at the docs root. When the destination is a named sprint under <code>sessions/</code>, it also closes the <code>Session</code> record.</p>
+<p>Compacts the current agent session into a structured handoff document so a fresh agent can resume without re-reading the full chat. <code>Handoff</code> is a <strong>utility</strong> (<code>utilities/handoff</code>), not a lifecycle action. It does <strong>not</strong> open a work session. If a work session is already open, it opens and finishes a turn; otherwise it just writes the files.</p>
 <h2>Seam</h2>
 <p><code>Handoff</code></p>
 <h2>Dependencies</h2>
-<p><code>sessions</code>, <code>primitives.actions</code>, <code>tools.tool</code></p>
+<p><code>workspace</code>, <code>primitives.actions</code>, <code>tools.tool</code></p>
 <h2>Mechanism</h2>
-<p><code>collect_session_state</code> assembles live state from the working folder (sketches, named artifacts, CDD sketch summary, grill-answer headings) and returns it as JSON. <code>write_handoff</code> resolves the archive slug (<code>handoff-YYYY-MM-DD[-focus]</code>), persists content to both the archive and latest paths, and optionally closes the sprint session.</p></section>
+<p><code>collect_session_state</code> assembles live state from the working folder (sketches, named artifacts, CDD sketch summary, grill-answer headings) and returns it as JSON. <code>preview_handoff</code> collects and renders that markdown without writing files or closing a sprint. <code>write_handoff</code> resolves the archive slug (<code>handoff-YYYY-MM-DD[-focus]</code>), persists content to both the archive and latest paths, and optionally closes the sprint session. <code>handoff_session</code> wraps a turn only when <code>workspace.current_work_session</code> is already set. <code>/backlog</code> uses <code>preview_handoff</code> so the GitHub issue body is canonical.</p></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
 <header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">workspace</h1></header>
 <section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>workspace — module context</h1>
 <h2>Purpose</h2>
-<p>Named sprint + workspace kit (<code>Session</code> in <code>workspace_session.py</code>), append-only <code>@log</code> events (<code>SessionLog</code>), and <code>context-index.md</code> helpers. (<code>WorkspaceSession</code> is a back-compat alias for <code>Session</code>.)</p>
-<h2>Primary use case</h2>
-<p>BaseContextTool holds a composed <code>Session</code> as the plain attribute <code>workspace</code> and calls <strong><code>self.workspace.open()</code></strong> once at the start of lifecycle actions. That opens path + folder + context index together.</p>
-<h2>Layout</h2>
-<pre><code>{path}/                                 # durable tool root (session.path)
-  .context/
-    sessions/{name}/                    # folder (session.folder)
-      session.md
-      logs/
-      …
-
-{workspace_root}/.context/context-index.md</code></pre>
-<h2>Public API</h2>
+<p>Manage a <strong>workspace root</strong> and the <strong>work sessions</strong> under it: where durable artifacts live, where session temps live, how git isolation works, and how turns/commits are tracked.</p>
+<p>Two folders matter — never confuse them:</p>
+<p>Closed sessions archive to <code>{repo_root}/.sessions/closed/{name}/</code>.</p>
+<p>Path helpers: <code>SessionPaths.docs_dir(working_path)</code>, <code>SessionPaths.session_dir(working_path, name)</code>, <code>SessionPaths.repository_root(path)</code>.</p>
+<h2>Public surface</h2>
+<h3><code>Workspace</code></h3>
+<p>Parent of <code>.context/</code>. Owns <code>work_sessions</code>, <code>current_work_session</code>, and <code>path_overrides</code>.</p>
+<h3><code>WorkSession</code></h3>
+<p>One named sprint under <code>.sessions/{name}/</code>. Owns <code>git</code>, <code>open_turn</code>, <code>turns</code>, <code>repairs</code>, and the session file kit.</p>
+<h3><code>Turn</code></h3>
+<p>Self-sufficient commit kit — <strong>no WorkSession or Workspace required</strong>.</p>
+<p><strong>Commit subject</strong> looks like <code>stories/generate: story map for courier</code> with trailers for skill lineage. <strong>Subject</strong> is compact (a few folders, not every file). When metadata is missing, the agent&#x27;s best-guess <strong>message</strong> still lands on the commit.</p>
+<h3><code>SessionPaths</code> / <code>GitRepo</code></h3>
+<h2>Open impact (<code>WorkSession.open</code>)</h2>
+<ol>
+<li><strong>Folder</strong> — creates <code>.sessions/{name}/</code> if needed (restores from <code>.sessions/closed/{name}/</code> when reopening).</li>
+<li><strong><code>session.md</code></strong> — written <strong>only on first create</strong> (goal, fidelities, contexts, start date). Resume does <strong>not</strong> rewrite Start.</li>
+<li><strong>Git worktree</strong> — if session branch is not main/default: create or reuse a <strong>sibling worktree</strong> (<code>{abbrev}-{session-name}</code> next to the primary clone). Session work happens there; primary checkout is not stolen.</li>
+<li><strong><code>model</code></strong> — copied from primary session or default when missing.</li>
+<li><strong>Context index</strong> — read; tool root recorded when <code>context_index_key</code> is set.</li>
+<li><strong>Handoff</strong> — if <code>handoff-latest.md</code> / <code>handoff.md</code> / <code>handoffs/</code> exists: read once, <strong>delete</strong>, return text to caller. Not durable state.</li>
+<li><strong><code>cli-agent.json</code></strong> — read if present (resume CLI bindings).</li>
+<li><strong>Session log</strong> — bound to <code>logs/events.log</code>.</li>
+</ol>
+<h2>Close impact (<code>WorkSession.close</code>)</h2>
+<ol>
+<li><strong>Open turn</strong> — finished first (commit if dirty).</li>
+<li><strong><code>logs/</code></strong> — deleted (<code>cleanup</code>).</li>
+<li><strong><code>cli-agent.json</code></strong> — deleted; CLI processes stopped.</li>
+<li><strong><code>session.md</code></strong> — <strong>always rewritten</strong> with End date, outcome, handoff.</li>
+<li><strong>Git</strong> — commit <code>session.md</code> + scope paths if dirty; push session branch.</li>
+<li><strong>Chats</strong> — transcript paths saved to git notes before bindings cleared.</li>
+<li><strong>Archive</strong> — move <code>{repo_root}/.sessions/{name}/</code> → <code>{repo_root}/.sessions/closed/{name}/</code> (creates <code>.sessions/closed/</code> when missing). Durable <code>{working_path}/.context/</code> artifacts are <strong>not</strong> moved.</li>
+<li><strong>Worktree</strong> — merge session branch onto main <strong>without</strong> checking out main in the session tree; remove worktree <strong>only when clean</strong> (no dirty files, no stash). <code>events.log</code> does not count as dirty.</li>
+</ol>
+<h2>On disk after open vs close</h2>
+<h2>Constraint</h2>
 <ul>
-<li><code>Session</code> — sprint record + kit: <code>path</code>, <code>folder</code>, <code>context_index</code>; <code>load</code> / <code>ensure_started</code> / <code>close</code>; action <strong><code>open</code></strong>; tools <code>ensure_session</code> / <code>create_session</code> / <code>close_session</code> / <code>read_context_index</code> / <code>record_context_root</code></li>
-<li>Prose: <strong><code>workspace_session.md</code></strong> (<code># Session Guidance</code> and tool sections) — resolved via normal <code>@instruction</code> / tool docstring lookup (<code>domain_slug = workspace_session</code>)</li>
-<li><code>docs_dir</code> / <code>SessionPaths.docs_dir</code> (in <code>session.py</code>), <code>SessionLog</code>, <code>@log</code>, <code>ContextIndex</code> helpers</li>
+<li>Durable artifacts and session temps are <strong>different folders</strong> — never write sketches or generate output under <code>sessions/{name}/</code>.</li>
+<li>Session git isolation: non-default branches get a sibling worktree; never checkout the session branch in the primary clone.</li>
+<li><code>events.log</code> is gitignored and is not a dirty signal for worktree removal.</li>
 </ul>
 <h2>Dependencies</h2>
-<p>stdlib (+ optional yaml); <code>tools.tool</code>; consumed by <code>context_tools.base.base_context_tool</code></p></section>
+<p>stdlib (+ optional yaml); <code>tools.tool</code>; consumed by <code>context_tools.base.base_context_tool</code>.</p></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
 <header class="page-hero--detail fidelity-detail-header"><p class="s-name">Utility</p><h1 class="page-headline">sub_agent</h1></header>
 <section class="install-block fidelity-guidance action-section" aria-label="Module overview"><h2>Module overview</h2><h1>sub_agent — module context</h1>
 <h2>Purpose</h2>
-<p><code>sub_agent</code> provides the <code>@sub_agent</code> decorator and <code>SubAgentTool</code> dataclass that together mark a toolset method as a non-blocking background sub-agent launch. When the decorator is applied on top of <code>@tool</code>, it sets <code>_is_sub_agent = True</code> and suppresses <code>_is_tool</code> so the standard tool-discovery path skips it; <code>discover_sub_agent_tools</code> picks it up instead and produces <code>SubAgentTool</code> objects whose <code>signature_entry</code> renders as <code>kind: sub_agent / launch: non_blocking</code> in the manifest.</p>
+<p><code>sub_agent</code> provides the <code>@sub_agent</code> decorator and <code>SubAgentTool</code> dataclass that together mark a toolset method as a non-blocking background sub-agent launch. When the decorator is applied on top of <code>@agent_tool</code> or <code>@agent_instructions</code>, it routes the method as a sub-agent so the standard tool-discovery path skips it; <code>discover_sub_agent_tools</code> picks it up instead and produces <code>SubAgentTool</code> objects whose <code>signature_entry</code> renders as <code>kind: sub_agent / launch: non_blocking</code> in the manifest.</p>
+<p><code>SubAgent.run</code> is the slash action <code>/sub-agent</code>. When <code>actions</code> is listed and non-empty, those kits already open the work session and turn — this kit does <strong>not</strong> wrap them in <code>performTurn</code>. When <code>actions</code> is missing or empty, the worker runs <code>performTurn</code> (<code>workspace.workspace:Turn</code>, <code>action: performTurn</code>) around the listed context-tool work (open the hanging turn, each context tool as its own tools run, <code>finish_turn</code>; report branch and commit). <code>AgenticToolset.context_tools</code> loads <code>tools</code> (context tools) plus optional <code>actions</code> (other action kits). The parent launches <strong>this prompt plus those context tools plus those actions</strong> as one non-blocking sub-agent and does not wait.</p>
+<p>Before launch, read <code>.context/sessions/{session}/model</code> (or <code>sessions/default</code> when none). When set, pass that model id as the sub-agent model; when unset, inherit the parent chat model. Never set disable-model-invocation.</p>
 <h2>Seam</h2>
-<p><code>SubAgentTool</code>, <code>sub_agent</code>, <code>discover_sub_agent_tools</code></p>
+<p><code>SubAgent.run</code> (<code>kind: sub_agent</code>, <code>launch: non_blocking</code>); <code>SubAgentTool</code>, <code>sub_agent</code>, <code>discover_sub_agent_tools</code></p>
+<h2>Extend</h2>
+<p>Decorator stacking — inner <code>@agent_tool</code> / <code>@agent_instructions</code> captures the signature; <code>@sub_agent</code> flips routing so the method surfaces with sub-agent semantics. <code>register()</code> attaches the same discoverer as <code>members(&quot;sub_agent&quot;)</code> so <code>python -m tools run</code> with <code>tool:</code> still executes the method. <code>/sub-agent</code> is that stacking on <code>run</code>, with <code>context_tools(tools)</code> and <code>context_tools(actions)</code> resolved the same way other kits resolve <code>arguments.tools</code>.</p>
 <h2>Dependencies</h2>
-<p><code>tools.tool</code></p>
-<h2>Mechanism</h2>
-<p>Decorator stacking — <code>@tool</code> runs first to capture the signature; <code>@sub_agent</code> then flips the routing flags so the method surfaces in the manifest with sub-agent semantics rather than inline-tool semantics.</p></section>
+<p><code>tools.tool</code>, <code>harness.harness_tool</code>, <code>primitives.actions</code></p></section>
 <section class="install-block fidelity-guidance action-section" aria-label="Guide"><h2>Guide</h2><p>No dedicated guide.</p></section>
 </div>
 </div>

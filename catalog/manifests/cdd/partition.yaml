@@ -5,7 +5,3 @@ context:
   path: null
   session: null
 action: partition
-arguments:
-  context: <context>
-  mode: <mode>
-  out_root: null

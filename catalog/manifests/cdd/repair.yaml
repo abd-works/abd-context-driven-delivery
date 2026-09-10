@@ -5,6 +5,3 @@ context:
   path: null
   session: null
 action: repair
-arguments:
-  asset: <asset>
-  violation: <violation>

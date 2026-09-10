@@ -1,4 +1,4 @@
-﻿---
+---
 type: bdd
 capabilities:
 - tool
@@ -8,12 +8,14 @@ signature:
     \ ce() and transform to avoid circular imports at\n    module load time)."
   read_manifest:
     kind: meta
-    instructions: Author/hook only. Agents must not remanifest — use the slash/skill catalog and pipe the fence to tools.ps1 run -.
+    instructions: Author/hook only. Agents must not remanifest — use the slash/skill
+      catalog and pipe the fence to tools.ps1 run -.
     cmd: python -m tools manifest context_tools.bdd.bdd:Bdd
     returns: manifest
   invoke:
     kind: meta
-    instructions: Pipe the YAML fence to stdin from the repo root. Do not write a request file. Follow response.instructions only.
+    instructions: Pipe the YAML fence to stdin from the repo root. Do not write a
+      request file. Follow response.instructions only.
     cmd: .\tools.ps1 run -
   new:
     kind: constructor
@@ -24,42 +26,16 @@ signature:
       path: str | None
       session: str | None
       workspace: str | None
-  begin_turn:
+  load_template:
     kind: tool
-    instructions: Open a workspace turn on the current work session.
+    instructions: "Return the template content for the given format and fidelity.\n\
+      \n        Pass the format you are about to generate (e.g. ``typescript``,\n\
+      \        ``python``, ``markdown``) and the fidelity (e.g. ``story_map``,\n \
+      \       ``scenarios``, ``code``).  Template lines and files are filtered to\n\
+      \        only those annotated for the requested fidelity.  Falls back to the\n\
+      \        instance's active format/fidelity when not given."
     parameters:
-      action: str
-    returns: str
-  finish_turn:
-    kind: tool
-    instructions: Finish the open workspace turn; commits on the session branch when
-      dirty.
-    parameters:
-      prompt: str
-      result: str
-      context: str
-    returns: str
-  record_correction:
-    kind: tool
-    instructions: Link a correction to mistake entry ids on the open turn.
-    parameters:
-      entry_id: str
-      improved: str
-      how: str
-      status: str
-      entry_ids: list[str] | None]
-    returns: str
-  record_mistake:
-    kind: tool
-    instructions: Annotate a mistake on the introducing commit (git-primary).
-    parameters:
-      artifact: str
-      rule: str
-      wrong: str
-      original: str
-      introducing_commit: str
-      entry_id: str
-      tool: str
+      format: str
       fidelity: str
     returns: str
   render:
@@ -70,11 +46,6 @@ signature:
       format: str
       content: str
     returns: dict
-  scan:
-    kind: tool
-    parameters:
-      paths: list[str]
-    returns: str
   transform:
     kind: tool
     instructions: "Sideways format conversion at the same fidelity.\n        Delegates\
@@ -90,146 +61,20 @@ signature:
   mode:
     kind: resource
     type: str
-  add_generate_header_to_generated:
+  guidance:
     kind: action
     tools: []
-    instructions: Prepend the following block verbatim as the very first lines of
-      the file you are writing - before any imports, before any code.
-    returns: str
-  createRule:
-    kind: action
-    tools: []
-    instructions: '# Create Rule
-
-
-      One action. Do not call this if **scan** already reports a failure that matches
-      the mistake. Do not call this to mint a ban-list rule for a one-off invented
-      shape, or until you have checked that the existing **contexts**, **examples**,
-      **template**, and generator/seed cannot steer the failure.
-
-
-      Take **failed** (what went wrong on the asset) and **wanted** (what should have
-      happened). Using **contexts**, **examples**, and **template**, evaluate a new
-      named rule and a matching scanner that can detect that failure deterministically
-      â€” only when the failure is mechanical and that existing surface cannot carry
-      it.
-
-
-      Write the rule and the scanner into **this tool** (the context tool''s own guidance
-      and `scanners/`). Then **run that rule** via **scan** on the asset and **detect
-      a failure that matches the mistake**. If scan is clean, or the failures are
-      not this mistake, the rule/scanner is not done.
-
-      '
-    parameters:
-      failed: str
-      wanted: str
-    returns: str
-  document:
-    kind: action
-    tools:
-    - generate_output
-    - add_generate_header_to_generated
-    instructions: '# Document
-
-
-      Take the persona of a **neutral observer** â€” describe what exists, do not prescribe
-      what should exist.
-
-
-      1. Follow **`session_guidance`**. Observe and write under the session layout.
-
-      2. Read the **contexts** to understand the vocabulary and structure of the domain.
-
-      3. Fill the **template** scaffold with observed content â€” describe current state
-      only.
-
-      4. Do not apply, suggest, or imply rules or best practices in the generated
-      output.
-
-      5. Call **`scan`** and append all violations to the document as-is â€” flag them,
-      do not correct them.
-
-      6. Save the artifact under the session layout from `session_guidance`.
-
-      7. **Live-app wraps.** DDD `/document` defaults the working area to `domain/`
-      (overridable via `path` or `default_workspace_folder`). Put wraps under `{bounded-context}/{aggregate}/`
-      as `{class}.ts` + `{class}.{tier}.ts` + `stubs/{system}/`. **Generate** may
-      still use `src/`.
-
-
-      ---'
-    parameters:
-      paths: list[str]
-    returns: str
-  generate:
-    kind: action
-    tools: []
-    instructions: "At modules fidelity: delegate entirely to ce().generate() â€” no\
-      \ BDD spec file is written at this stage. Use this to bootstrap CE class structure\
-      \ before writing tests.\n        At behavior fidelity: write all BDD test signatures\
-      \ (SIGNATURE markers).\n        At development fidelity: write full test bodies\
-      \ and production code.\n        When the target module already exists, scan\
-      \ the production source for every public method and property and verify each\
-      \ has test coverage â€” add missing signatures for any gap before writing new\
-      \ ones.\n        BDD tests must conform to CE class structure: describe/it hierarchies\
-      \ must map onto public CE interfaces and operations.\n        When BDD artifacts\
-      \ are complete, call ce().generate() to produce the matching class skeletons."
-    returns: str
-  generate_fixes_from_validate:
-    kind: action
-    tools:
-    - generate_output
-    returns: str
-  generate_output:
-    kind: action
-    tools: []
-    returns: str
-  grill:
-    kind: action
-    tools: []
-    instructions: "Run the BDD grill loop to surface assumptions and gaps.\n     \
-      \   When BDD grill is complete, invoke CleanEngineering via /grill (same session)\
-      \ for the matching classes."
-    returns: str
-  iterate:
-    kind: action
-    tools: []
-    instructions: "Iterate one BDD cycle: write one test, confirm it is RED, then\
-      \ invoke CleanEngineering via /iterate to build the minimum production code\
-      \ until GREEN. Repeat â€” one test, one production change, one GREEN â€” until all\
-      \ tests pass.\n        If the same test is still RED after 2 consecutive fix\
-      \ attempts â€” stop guessing. Call diagnostic().diagnose() before a third fix\
-      \ (wrong exception, wrong line, shifting failure mode, or a re-read of the code\
-      \ that does not explain the failure)."
-    returns: str
-  repair:
-    kind: action
-    tools: []
-    instructions: "Repair the BDD artifact that is failing or malformed.\n       \
-      \ When the BDD artifact is clean, call ce().repair() to repair the matching\
-      \ class artifact."
-    returns: str
-  satisfy:
-    kind: action
-    tools: []
-    instructions: "When running the fixing part of Satisfy, make sure that you create\
-      \ a breaking test that fails first (RED), and then fix the code.\n        When\
-      \ BDD violations are resolved, call ce().satisfy() to do the same for the matching\
-      \ classes.\n        If the same test keeps failing, call diagnostic().diagnose()."
-    returns: str
-  sketch:
-    kind: action
-    tools: []
-    instructions: "Sketch the BDD hierarchy at the current fidelity.\n        When\
-      \ BDD sketch is complete, invoke CleanEngineering via /sketch for the matching\
-      \ classes."
-    returns: str
-  validate:
-    kind: action
-    tools: []
-    instructions: "Validate all BDD artifacts at the current fidelity.\n        When\
-      \ BDD validation passes, call ce().validate() to validate the matching class\
-      \ artifacts."
+    instructions: "Provide guidance for creating behavior skeletons and development\
+      \ tests.\n        At modules fidelity: no BDD spec file is written — bootstrap\
+      \ CE class structure via the companion.\n        At behavior fidelity: write\
+      \ all BDD test signatures (SIGNATURE markers).\n        At development fidelity:\
+      \ write full test bodies and production code.\n        When the target module\
+      \ already exists, scan the production source for every public method and property\
+      \ and verify each has test coverage — add missing signatures for any gap before\
+      \ writing new ones.\n        BDD tests must conform to CE class structure: describe/it\
+      \ hierarchies must map onto public CE interfaces and operations.\n        When\
+      \ this BDD work is done, call guidance on the Clean Engineering companion and\
+      \ pass that companion to this action as a separate tools run. The action already\
+      \ knows what to do for every tool. Do not inline."
     returns: str
 ---

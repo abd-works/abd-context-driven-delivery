@@ -333,6 +333,42 @@ with description("a harness"):
                 )
                 expect(state["code_language"]).to(equal("typescript"))
 
+        with context("with mcp transport"):
+            with it("should omit toolsets that need constructor arguments from mcp.json"):
+                root = _sandbox()
+                required_path = root / "utilities" / "required" / "required.py"
+                required_path.parent.mkdir(parents=True, exist_ok=True)
+                required_path.write_text(
+                    "# @toolset-manifest python -m tools manifest required.required:RequiredTool\n"
+                    "@agentic_toolset\n"
+                    "class RequiredTool:\n"
+                    "    def __init__(self, name: str):\n"
+                    "        self.name = name\n"
+                    "    @agent_tool\n"
+                    "    def ping(self):\n"
+                    '        """Ping."""\n'
+                    "        return self.name\n",
+                    encoding="utf-8",
+                )
+                ok_path = root / "utilities" / "oktool" / "oktool.py"
+                ok_path.parent.mkdir(parents=True, exist_ok=True)
+                ok_path.write_text(
+                    "# @toolset-manifest python -m tools manifest oktool.oktool:OkTool\n"
+                    "@agentic_toolset\n"
+                    "class OkTool:\n"
+                    "    @agent_tool\n"
+                    "    def ping(self):\n"
+                    '        """Ping."""\n'
+                    "        return 'ok'\n",
+                    encoding="utf-8",
+                )
+                Harness("Cursor", repo_root=root).write_deploy(mcp=True)
+                payload = json.loads((root / ".cursor" / "mcp.json").read_text(encoding="utf-8"))
+                refs = payload["mcpServers"]["cdd"]["args"][-1]
+                expect(refs).to(contain("oktool.oktool:OkTool"))
+                expect(refs).not_to(contain("required.required:RequiredTool"))
+                expect(refs).not_to(contain("harness.harness:Harness"))
+
         with context("with a source"):
             with it("should write that source into the deploy area"):
                 root = _sandbox()
